@@ -3,16 +3,14 @@ import React from 'react';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTheme } from '@react-navigation/native';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
+  const { colors } = useTheme();
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+
         headerShown: false,
         tabBarButton: HapticTab,
 
@@ -21,7 +19,8 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name='house.fill' color={color} />,
+          tabBarActiveTintColor: '#6366F1',
+          tabBarIcon: ({ focused }) => <IconSymbol size={28} name='house.fill' color={focused ? '#6366F1' : '#9ca3af'} />,
         }}
       />
 
@@ -29,7 +28,8 @@ export default function TabLayout() {
         name="Notes"
         options={{
           title: 'Notes',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name='note' color={color} />,
+          tabBarActiveTintColor: '#305ff9ff',
+          tabBarIcon: ({ focused }) => <IconSymbol size={28} name='note.text' color={focused ? '#305ff9ff' : '#9ca3af'} />,
         }}
       />
 
@@ -37,7 +37,8 @@ export default function TabLayout() {
         name="Tasks"
         options={{
           title: 'Tasks',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name='checkmark.circle.fill' color={color} />,
+          tabBarActiveTintColor: 'lime',
+          tabBarIcon: ({ focused }) => <IconSymbol size={28} name='checkmark.circle' color={focused ? 'lime' : '#9ca3af'} />,
         }}
       />
     </Tabs>

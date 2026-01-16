@@ -1,6 +1,8 @@
 import ThemedText from '@/components/themed-text';
 import ThemedPressable from '@/components/ui/themed-pressable';
 import {
+    DUMMY_FOLDERS,
+    DUMMY_NOTES,
     Folder,
     getFolderById,
     getFoldersInFolder,
@@ -11,6 +13,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
+
 import {
     FlatList,
     Modal,
@@ -120,46 +123,64 @@ export default function NotesList() {
     const [isSearchVisible, setIsSearchVisible] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
 
-    // Get folders and notes for current location
-    const folders = useMemo(() => getFoldersInFolder(currentFolderId), [currentFolderId]);
-    const notes = useMemo(() => getNotesInFolder(currentFolderId), [currentFolderId]);
+    // Search scope state
+    const [searchScope, setSearchScope] = useState<'current' | 'all'>('current');
 
-    // Filter by search
+    // Browsing Data (Current Folder)
+    const browseFolders = useMemo(() => getFoldersInFolder(currentFolderId), [currentFolderId]);
+    const browseNotes = useMemo(() => getNotesInFolder(currentFolderId), [currentFolderId]);
+
+    const browseData = useMemo((): ListItem[] => {
+        const items: ListItem[] = [];
+        if (browseFolders.length > 0) {
+            items.push({ type: 'section-header', title: 'Folders' });
+            browseFolders.forEach((f) => items.push({ type: 'folder', data: f }));
+        }
+        if (browseNotes.length > 0) {
+            items.push({ type: 'section-header', title: 'Notes' });
+            browseNotes.forEach((n) => items.push({ type: 'note', data: n }));
+        }
+        return items;
+    }, [browseFolders, browseNotes]);
+
+    // Search Data (Filtered based on Scope)
     const filteredFolders = useMemo(() => {
-        if (!searchQuery.trim()) return folders;
+        if (!searchQuery.trim()) return [];
         const query = searchQuery.toLowerCase();
-        return folders.filter((f) => f.name.toLowerCase().includes(query));
-    }, [folders, searchQuery]);
+        const source = searchScope === 'all' ? DUMMY_FOLDERS : browseFolders;
+        return source.filter((f) => f.name.toLowerCase().includes(query));
+    }, [browseFolders, searchQuery, searchScope]);
 
     const filteredNotes = useMemo(() => {
-        if (!searchQuery.trim()) return notes;
+        if (!searchQuery.trim()) return [];
         const query = searchQuery.toLowerCase();
-        return notes.filter(
+        const source = searchScope === 'all' ? DUMMY_NOTES : browseNotes;
+        return source.filter(
             (n) =>
                 n.title.toLowerCase().includes(query) ||
                 n.preview.toLowerCase().includes(query)
         );
-    }, [notes, searchQuery]);
+    }, [browseNotes, searchQuery, searchScope]);
 
-    // Build list data with section headers
-    const listData = useMemo((): ListItem[] => {
+    const searchData = useMemo((): ListItem[] => {
+        if (!searchQuery.trim()) return [];
         const items: ListItem[] = [];
-
         if (filteredFolders.length > 0) {
             items.push({ type: 'section-header', title: 'Folders' });
             filteredFolders.forEach((f) => items.push({ type: 'folder', data: f }));
         }
-
         if (filteredNotes.length > 0) {
             items.push({ type: 'section-header', title: 'Notes' });
             filteredNotes.forEach((n) => items.push({ type: 'note', data: n }));
         }
-
         return items;
-    }, [filteredFolders, filteredNotes]);
+    }, [filteredFolders, filteredNotes, searchQuery]);
+
 
     const handleFolderPress = useCallback(
         (folderId: string) => {
+            setIsSearchVisible(false);
+            setSearchQuery('');
             router.setParams({ folderId });
         },
         [router]
@@ -167,6 +188,8 @@ export default function NotesList() {
 
     const handleNotePress = useCallback(
         (noteId: string) => {
+            setIsSearchVisible(false);
+            setSearchQuery('');
             router.push({ pathname: '/Notes/[id]', params: { id: noteId } });
         },
         [router]
@@ -231,21 +254,21 @@ export default function NotesList() {
             />
 
             <FlatList
-                data={listData}
+                data={browseData}
                 keyExtractor={getItemKey}
                 contentContainerStyle={styles.listContent}
                 ListEmptyComponent={
                     <View style={styles.emptyContainer}>
                         <Ionicons
-                            name={searchQuery ? 'search-outline' : 'folder-open-outline'}
+                            name="folder-open-outline"
                             size={48}
                             color={colors.border}
                         />
                         <Text style={[styles.emptyText, { color: colors.text }]}>
-                            {searchQuery ? 'No results found' : 'This folder is empty'}
+                            This folder is empty
                         </Text>
                         <Text style={[styles.emptyHint, { color: colors.border }]}>
-                            {searchQuery ? 'Try a different search term' : 'Create a note or folder to get started'}
+                            Create a note or folder to get started
                         </Text>
                     </View>
                 }
@@ -259,49 +282,86 @@ export default function NotesList() {
                 transparent
                 onRequestClose={() => setIsSearchVisible(false)}
             >
-                <Pressable
-                    style={styles.modalOverlay}
-                    onPress={() => setIsSearchVisible(false)}
-                >
+                <View style={styles.modalOverlay}>
+                    <Pressable style={StyleSheet.absoluteFill} onPress={() => setIsSearchVisible(false)} />
+
                     <View
                         style={[
                             styles.searchContainer,
                             {
                                 backgroundColor: colors.card,
                                 marginTop: insets.top + 12,
+                                maxHeight: '80%',
                             },
                         ]}
                     >
-                        <Pressable onPress={(e) => e.stopPropagation()}>
-                            <View style={styles.searchInputWrapper}>
-                                <Ionicons
-                                    name="search"
-                                    size={18}
-                                    color={colors.text}
-                                    style={styles.searchIcon}
-                                />
-                                <TextInput
-                                    style={[styles.searchInput, { color: colors.text }]}
-                                    placeholder="Search in this folder..."
-                                    placeholderTextColor={'#888'}
-                                    value={searchQuery}
-                                    onChangeText={setSearchQuery}
-                                    autoFocus
-                                />
-                                {searchQuery.length > 0 && (
-                                    <Pressable onPress={() => setSearchQuery('')}>
-                                        <Ionicons name="close-circle" size={18} color={colors.text} />
-                                    </Pressable>
-                                )}
-                            </View>
-                        </Pressable>
+                        <View style={styles.searchInputWrapper}>
+                            <Ionicons
+                                name="search"
+                                size={18}
+                                color={colors.text}
+                                style={styles.searchIcon}
+                            />
+                            <TextInput
+                                style={[styles.searchInput, { color: colors.text }]}
+                                placeholder={searchScope === 'all' ? "Search all notes..." : "Search in this folder..."}
+                                placeholderTextColor={'#888'}
+                                value={searchQuery}
+                                onChangeText={setSearchQuery}
+                                autoFocus
+                            />
+                            {searchQuery.length > 0 && (
+                                <Pressable onPress={() => setSearchQuery('')}>
+                                    <Ionicons name="close-circle" size={18} color={colors.text} />
+                                </Pressable>
+                            )}
+                        </View>
+
+                        {/* Search Scope Toggle */}
+                        <View style={[styles.scopeToggle, { backgroundColor: colors.background }]}>
+                            <Pressable
+                                style={[
+                                    styles.scopeButton,
+                                    searchScope === 'current' && { backgroundColor: colors.primary }
+                                ]}
+                                onPress={() => setSearchScope('current')}
+                            >
+                                <Text style={[
+                                    styles.scopeText,
+                                    { color: searchScope === 'current' ? '#FFFFFF' : colors.text }
+                                ]}>Current Folder</Text>
+                            </Pressable>
+                            <Pressable
+                                style={[
+                                    styles.scopeButton,
+                                    searchScope === 'all' && { backgroundColor: colors.primary }
+                                ]}
+                                onPress={() => setSearchScope('all')}
+                            >
+                                <Text style={[
+                                    styles.scopeText,
+                                    { color: searchScope === 'all' ? '#FFFFFF' : colors.text }
+                                ]}>All Notes</Text>
+                            </Pressable>
+                        </View>
+
+                        {/* Search Results List */}
                         {searchQuery.length > 0 && (
-                            <Text style={[styles.searchHint, { color: colors.text }]}>
-                                {filteredFolders.length + filteredNotes.length} items found
-                            </Text>
+                            <FlatList
+                                data={searchData}
+                                keyExtractor={getItemKey}
+                                renderItem={renderItem}
+                                contentContainerStyle={styles.searchListContent}
+                                keyboardShouldPersistTaps="handled"
+                                ListEmptyComponent={
+                                    <Text style={[styles.searchHint, { color: colors.text }]}>
+                                        No results found
+                                    </Text>
+                                }
+                            />
                         )}
                     </View>
-                </Pressable>
+                </View>
             </Modal>
         </View>
     );
@@ -411,6 +471,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.15,
         shadowRadius: 12,
         elevation: 8,
+        overflow: 'hidden',
     },
     searchInputWrapper: {
         flexDirection: 'row',
@@ -424,11 +485,34 @@ const styles = StyleSheet.create({
         flex: 1,
         fontSize: 16,
         paddingVertical: 8,
-
     },
     searchHint: {
-        marginTop: 8,
-        fontSize: 12,
+        marginTop: 20,
+        fontSize: 14,
         textAlign: 'center',
+        opacity: 0.6,
     },
+    scopeToggle: {
+        flexDirection: 'row',
+        marginTop: 12,
+        marginBottom: 8,
+        borderRadius: 8,
+        padding: 2,
+        overflow: 'hidden',
+    },
+    scopeButton: {
+        flex: 1,
+        paddingVertical: 6,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: 6,
+    },
+    scopeText: {
+        fontSize: 13,
+        fontWeight: '500',
+    },
+    searchListContent: {
+        paddingTop: 8,
+        paddingBottom: 20,
+    }
 });
