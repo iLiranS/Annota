@@ -1,0 +1,149 @@
+import ThemedText from '@/components/themed-text';
+import { getNoteById, Task } from '@/dev-data/data';
+import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '@react-navigation/native';
+import { Pressable, StyleSheet, View } from 'react-native';
+
+interface TaskItemProps {
+    task: Task;
+    onPress: () => void;
+    /** If true, shows the full date instead of just time */
+    showDate?: boolean;
+}
+
+export default function TaskItem({ task, onPress, showDate = false }: TaskItemProps) {
+    const { colors, dark } = useTheme();
+    const linkedNote = task.linkedNoteId ? getNoteById(task.linkedNoteId) : null;
+
+    const formatTime = (date: Date): string => {
+        return date.toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+        });
+    };
+
+    const formatDate = (date: Date): string => {
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        const isToday =
+            date.getDate() === today.getDate() &&
+            date.getMonth() === today.getMonth() &&
+            date.getFullYear() === today.getFullYear();
+
+        const isTomorrow =
+            date.getDate() === tomorrow.getDate() &&
+            date.getMonth() === tomorrow.getMonth() &&
+            date.getFullYear() === tomorrow.getFullYear();
+
+        if (isToday) return `Today, ${formatTime(date)}`;
+        if (isTomorrow) return `Tomorrow, ${formatTime(date)}`;
+
+        return date.toLocaleDateString('en-US', {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+        });
+    };
+
+    return (
+        <Pressable
+            onPress={onPress}
+            style={({ pressed }) => [
+                styles.taskItem,
+                {
+                    backgroundColor: dark ? 'rgba(255,255,255,0.04)' : colors.card,
+                    borderColor: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
+                    opacity: task.completed ? 0.6 : pressed ? 0.9 : 1,
+                    transform: [{ scale: pressed ? 0.98 : 1 }],
+                },
+            ]}
+        >
+            {/* Completion indicator */}
+            <View
+                style={[
+                    styles.completionDot,
+                    { backgroundColor: task.completed ? '#10B981' : '#6366F1' },
+                ]}
+            />
+
+            <View style={styles.taskItemContent}>
+                <View style={styles.taskItemHeader}>
+                    <ThemedText
+                        style={[
+                            styles.taskItemTitle,
+                            task.completed && { textDecorationLine: 'line-through', opacity: 0.7 },
+                        ]}
+                        numberOfLines={1}
+                    >
+                        {task.title}
+                    </ThemedText>
+                    <ThemedText style={[styles.taskItemTime, { color: colors.text + '60' }]}>
+                        {showDate ? formatDate(task.deadline) : formatTime(task.deadline)}
+                    </ThemedText>
+                </View>
+
+                {linkedNote && (
+                    <View style={styles.linkedNoteRow}>
+                        <Ionicons name="document-text" size={12} color="#6366F1" />
+                        <ThemedText style={[styles.linkedNoteLabel, { color: '#6366F1' }]}>
+                            {linkedNote.title}
+                        </ThemedText>
+                    </View>
+                )}
+            </View>
+
+            <Ionicons name="chevron-forward" size={16} color={colors.text + '40'} />
+        </Pressable>
+    );
+}
+
+const styles = StyleSheet.create({
+    taskItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 14,
+        borderRadius: 14,
+        borderWidth: 1,
+        marginBottom: 10,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.03,
+        shadowRadius: 6,
+        elevation: 2,
+    },
+    completionDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        marginRight: 12,
+    },
+    taskItemContent: {
+        flex: 1,
+    },
+    taskItemHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    taskItemTitle: {
+        fontSize: 15,
+        fontWeight: '600',
+        flex: 1,
+        marginRight: 8,
+    },
+    taskItemTime: {
+        fontSize: 12,
+        fontWeight: '500',
+    },
+    linkedNoteRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        marginTop: 4,
+    },
+    linkedNoteLabel: {
+        fontSize: 11,
+        fontWeight: '600',
+    },
+});
