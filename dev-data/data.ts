@@ -2,6 +2,14 @@
 // INTERFACES
 // =====================
 
+export type SortType =
+    | 'NAME_ASC'
+    | 'NAME_DESC'
+    | 'CREATED_FIRST'
+    | 'CREATED_LAST'
+    | 'UPDATED_FIRST'
+    | 'UPDATED_LAST';
+
 export interface Note {
     id: string;
     title: string;
@@ -16,7 +24,9 @@ export interface Folder {
     id: string;
     name: string;
     parentId: string | null; // null = root level (unlimited nesting)
+    sortType: SortType;
     createdAt: Date;
+    updatedAt: Date;
 }
 
 export interface Task {
@@ -34,11 +44,11 @@ export interface Task {
 // =====================
 
 export const DUMMY_FOLDERS: Folder[] = [
-    { id: 'folder-1', name: 'Work', parentId: null, createdAt: new Date('2026-01-01') },
-    { id: 'folder-2', name: 'Personal', parentId: null, createdAt: new Date('2026-01-02') },
-    { id: 'folder-3', name: 'Projects', parentId: 'folder-1', createdAt: new Date('2026-01-03') }, // nested in Work
-    { id: 'folder-4', name: 'Meetings', parentId: 'folder-1', createdAt: new Date('2026-01-04') }, // nested in Work
-    { id: 'folder-5', name: 'Archive', parentId: 'folder-3', createdAt: new Date('2026-01-05') }, // nested in Projects (2 levels deep)
+    { id: 'folder-1', name: 'Work', parentId: null, sortType: 'UPDATED_LAST', createdAt: new Date('2026-01-01'), updatedAt: new Date('2026-01-01') },
+    { id: 'folder-2', name: 'Personal', parentId: null, sortType: 'UPDATED_LAST', createdAt: new Date('2026-01-02'), updatedAt: new Date('2026-01-02') },
+    { id: 'folder-3', name: 'Projects', parentId: 'folder-1', sortType: 'UPDATED_LAST', createdAt: new Date('2026-01-03'), updatedAt: new Date('2026-01-03') }, // nested in Work
+    { id: 'folder-4', name: 'Meetings', parentId: 'folder-1', sortType: 'UPDATED_LAST', createdAt: new Date('2026-01-04'), updatedAt: new Date('2026-01-04') }, // nested in Work
+    { id: 'folder-5', name: 'Archive', parentId: 'folder-3', sortType: 'UPDATED_LAST', createdAt: new Date('2026-01-05'), updatedAt: new Date('2026-01-05') }, // nested in Projects (2 levels deep)
 ];
 
 export const DUMMY_NOTES: Note[] = [
@@ -220,4 +230,74 @@ export function getTaskDatesInMonth(year: number, month: number): Set<number> {
         }
     });
     return taskDates;
+}
+
+/**
+ * Sort notes by the specified sort type
+ */
+export function sortNotes(notes: Note[], sortType: SortType): Note[] {
+    return [...notes].sort((a, b) => {
+        switch (sortType) {
+            case 'NAME_ASC':
+                return a.title.localeCompare(b.title);
+            case 'NAME_DESC':
+                return b.title.localeCompare(a.title);
+            case 'CREATED_FIRST':
+                return a.createdAt.getTime() - b.createdAt.getTime();
+            case 'CREATED_LAST':
+                return b.createdAt.getTime() - a.createdAt.getTime();
+            case 'UPDATED_FIRST':
+                return a.updatedAt.getTime() - b.updatedAt.getTime();
+            case 'UPDATED_LAST':
+                return b.updatedAt.getTime() - a.updatedAt.getTime();
+            default:
+                return 0;
+        }
+    });
+}
+
+/**
+ * Sort folders by the specified sort type
+ */
+export function sortFolders(folders: Folder[], sortType: SortType): Folder[] {
+    return [...folders].sort((a, b) => {
+        switch (sortType) {
+            case 'NAME_ASC':
+                return a.name.localeCompare(b.name);
+            case 'NAME_DESC':
+                return b.name.localeCompare(a.name);
+            case 'CREATED_FIRST':
+                return a.createdAt.getTime() - b.createdAt.getTime();
+            case 'CREATED_LAST':
+                return b.createdAt.getTime() - a.createdAt.getTime();
+            case 'UPDATED_FIRST':
+                return a.updatedAt.getTime() - b.updatedAt.getTime();
+            case 'UPDATED_LAST':
+                return b.updatedAt.getTime() - a.updatedAt.getTime();
+            default:
+                return 0;
+        }
+    });
+}
+
+/**
+ * Get human-readable label for sort type
+ */
+export function getSortTypeLabel(sortType: SortType): string {
+    switch (sortType) {
+        case 'NAME_ASC':
+            return 'Name (A → Z)';
+        case 'NAME_DESC':
+            return 'Name (Z → A)';
+        case 'CREATED_FIRST':
+            return 'Created (Oldest)';
+        case 'CREATED_LAST':
+            return 'Created (Newest)';
+        case 'UPDATED_FIRST':
+            return 'Updated (Oldest)';
+        case 'UPDATED_LAST':
+            return 'Updated (Newest)';
+        default:
+            return 'Unknown';
+    }
 }

@@ -1,11 +1,11 @@
-import TaskEditModal from '@/components/task-edit-modal';
 import ThemedText from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { getNoteById, getTasksSortedByDeadline, Task } from '@/dev-data/data';
+import { getNoteById, Task } from '@/dev-data/data';
+import { useTasksStore } from '@/stores/tasks-store';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -111,33 +111,16 @@ export default function TasksScreen() {
     const { colors, dark } = useTheme();
     const insets = useSafeAreaInsets();
 
-    const [tasks, setTasks] = useState(() => getTasksSortedByDeadline());
-    const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-    const [isModalVisible, setIsModalVisible] = useState(false);
+    // Use Zustand store for tasks
+    const { tasks, toggleComplete } = useTasksStore();
 
     const handleTaskPress = useCallback((task: Task) => {
-        setSelectedTask(task);
-        setIsModalVisible(true);
-    }, []);
+        router.push(`/Tasks/${task.id}`);
+    }, [router]);
 
     const handleToggle = useCallback((taskId: string) => {
-        setTasks((prevTasks) =>
-            prevTasks.map((t) =>
-                t.id === taskId ? { ...t, completed: !t.completed } : t
-            )
-        );
-    }, []);
-
-    const handleSaveTask = useCallback((updatedTask: Task) => {
-        setTasks((prevTasks) =>
-            prevTasks.map((t) => (t.id === updatedTask.id ? updatedTask : t))
-        );
-    }, []);
-
-    const handleCloseModal = useCallback(() => {
-        setIsModalVisible(false);
-        setSelectedTask(null);
-    }, []);
+        toggleComplete(taskId);
+    }, [toggleComplete]);
 
     // Sort and group tasks
     const sortedTasks = useMemo(
@@ -210,14 +193,6 @@ export default function TasksScreen() {
                 {/* Bottom Spacing */}
                 <View style={{ height: insets.bottom + 100 }} />
             </ScrollView>
-
-            {/* Task Edit Modal */}
-            <TaskEditModal
-                visible={isModalVisible}
-                task={selectedTask}
-                onClose={handleCloseModal}
-                onSave={handleSaveTask}
-            />
         </ThemedView>
     );
 }

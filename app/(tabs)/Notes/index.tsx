@@ -1,14 +1,16 @@
+import FloatingActionButton from '@/components/floating-action-button';
+import FolderNameModal from '@/components/folder-name-modal';
+import OptionsMenu from '@/components/options-menu';
 import ThemedText from '@/components/themed-text';
 import ThemedPressable from '@/components/ui/themed-pressable';
 import {
-    DUMMY_FOLDERS,
-    DUMMY_NOTES,
     Folder,
-    getFolderById,
-    getFoldersInFolder,
-    getNotesInFolder,
     Note,
+    SortType,
+    sortFolders,
+    sortNotes,
 } from '@/dev-data/data';
+import { useNotesStore } from '@/stores/notes-store';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -117,18 +119,40 @@ export default function NotesList() {
     const insets = useSafeAreaInsets();
     const params = useLocalSearchParams<{ folderId?: string }>();
 
+    // Zustand store
+    const {
+        notes,
+        folders,
+        createNote,
+        createFolder,
+        getFolderById,
+        getNotesInFolder,
+        getFoldersInFolder,
+        getSortType,
+        setFolderSortType,
+    } = useNotesStore();
+
     const currentFolderId = params.folderId ?? null;
     const currentFolder = currentFolderId ? getFolderById(currentFolderId) : null;
+    const currentSortType = getSortType(currentFolderId);
 
     const [isSearchVisible, setIsSearchVisible] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [isFolderModalVisible, setIsFolderModalVisible] = useState(false);
 
     // Search scope state
     const [searchScope, setSearchScope] = useState<'current' | 'all'>('current');
 
-    // Browsing Data (Current Folder)
-    const browseFolders = useMemo(() => getFoldersInFolder(currentFolderId), [currentFolderId]);
-    const browseNotes = useMemo(() => getNotesInFolder(currentFolderId), [currentFolderId]);
+    // Browsing Data (Current Folder) - sorted
+    const browseFolders = useMemo(() => {
+        const folderList = getFoldersInFolder(currentFolderId);
+        return sortFolders(folderList, currentSortType);
+    }, [folders, currentFolderId, currentSortType]);
+
+    const browseNotes = useMemo(() => {
+        const noteList = getNotesInFolder(currentFolderId);
+        return sortNotes(noteList, currentSortType);
+    }, [notes, currentFolderId, currentSortType]);
 
     const browseData = useMemo((): ListItem[] => {
         const items: ListItem[] = [];
@@ -147,20 +171,20 @@ export default function NotesList() {
     const filteredFolders = useMemo(() => {
         if (!searchQuery.trim()) return [];
         const query = searchQuery.toLowerCase();
-        const source = searchScope === 'all' ? DUMMY_FOLDERS : browseFolders;
+        const source = searchScope === 'all' ? folders : browseFolders;
         return source.filter((f) => f.name.toLowerCase().includes(query));
-    }, [browseFolders, searchQuery, searchScope]);
+    }, [folders, browseFolders, searchQuery, searchScope]);
 
     const filteredNotes = useMemo(() => {
         if (!searchQuery.trim()) return [];
         const query = searchQuery.toLowerCase();
-        const source = searchScope === 'all' ? DUMMY_NOTES : browseNotes;
+        const source = searchScope === 'all' ? notes : browseNotes;
         return source.filter(
             (n) =>
                 n.title.toLowerCase().includes(query) ||
                 n.preview.toLowerCase().includes(query)
         );
-    }, [browseNotes, searchQuery, searchScope]);
+    }, [notes, browseNotes, searchQuery, searchScope]);
 
     const searchData = useMemo((): ListItem[] => {
         if (!searchQuery.trim()) return [];
@@ -175,7 +199,6 @@ export default function NotesList() {
         }
         return items;
     }, [filteredFolders, filteredNotes, searchQuery]);
-
 
     const handleFolderPress = useCallback(
         (folderId: string) => {
@@ -202,6 +225,33 @@ export default function NotesList() {
             router.setParams({ folderId: undefined });
         }
     }, [currentFolder, router]);
+
+    // Create new note and navigate to it
+    const handleCreateNote = useCallback(() => {
+        const newNote = createNote(currentFolderId);
+        router.push({ pathname: '/Notes/[id]', params: { id: newNote.id } });
+    }, [createNote, currentFolderId, router]);
+
+    // Create new folder
+    const handleCreateFolder = useCallback(
+        (name: string) => {
+            createFolder(currentFolderId, name);
+        },
+        [createFolder, currentFolderId]
+    );
+
+    // Change sort type
+    const handleSortChange = useCallback(
+        (sortType: SortType) => {
+            setFolderSortType(currentFolderId, sortType);
+        },
+        [currentFolderId, setFolderSortType]
+    );
+
+    // Navigate to settings
+    const handleSettings = useCallback(() => {
+        router.push('/settings');
+    }, [router]);
 
     const headerTitle = currentFolder ? currentFolder.name : 'Notes';
 
@@ -273,6 +323,24 @@ export default function NotesList() {
                     </View>
                 }
                 renderItem={renderItem}
+            />
+
+            {/* Floating Action Button for New Note */}
+            <FloatingActionButton onPress={handleCreateNote} />
+
+            {/* Options Menu */}
+            <OptionsMenu
+                currentSortType={currentSortType}
+                onNewFolder={() => setIsFolderModalVisible(true)}
+                onSortChange={handleSortChange}
+                onSettings={handleSettings}
+            />
+
+            {/* Folder Name Modal */}
+            <FolderNameModal
+                visible={isFolderModalVisible}
+                onClose={() => setIsFolderModalVisible(false)}
+                onCreate={handleCreateFolder}
             />
 
             {/* Search Modal */}

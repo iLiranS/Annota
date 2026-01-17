@@ -1,11 +1,11 @@
 import Calendar from '@/components/calendar';
-import TaskEditModal from '@/components/task-edit-modal';
 import TaskItem from '@/components/task-item';
 import ThemedText from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
-import { DUMMY_TASKS, Task } from '@/dev-data/data';
+import { Task } from '@/dev-data/data';
+import { useTasksStore } from '@/stores/tasks-store';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
@@ -20,15 +20,13 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
 
   const [selectedDate, setSelectedDate] = useState(new Date());
-
-  // Task state for modal
-  const [allTasks, setAllTasks] = useState<Task[]>(() => [...DUMMY_TASKS]);
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [isModalVisible, setIsModalVisible] = useState(false);
   const [isCollapsibleOpen, setIsCollapsibleOpen] = useState(true);
 
+  // Use Zustand store for tasks
+  const tasks = useTasksStore((state) => state.tasks);
+
   const tasksForSelectedDate = useMemo(() => {
-    return allTasks.filter((task) => {
+    return tasks.filter((task) => {
       const taskDate = new Date(task.deadline);
       return (
         taskDate.getDate() === selectedDate.getDate() &&
@@ -36,7 +34,7 @@ export default function HomeScreen() {
         taskDate.getFullYear() === selectedDate.getFullYear()
       );
     });
-  }, [selectedDate, allTasks]);
+  }, [selectedDate, tasks]);
 
   // Get next 3 upcoming tasks excluding today
   const upcomingTasks = useMemo(() => {
@@ -45,7 +43,7 @@ export default function HomeScreen() {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    return [...allTasks]
+    return [...tasks]
       .sort((a, b) => a.deadline.getTime() - b.deadline.getTime())
       .filter((task) => {
         const taskDate = new Date(task.deadline);
@@ -53,7 +51,7 @@ export default function HomeScreen() {
         return taskDate >= tomorrow && !task.completed;
       })
       .slice(0, 3);
-  }, [allTasks]);
+  }, [tasks]);
 
   const formattedSelectedDate = useMemo(() => {
     const today = new Date();
@@ -78,20 +76,8 @@ export default function HomeScreen() {
   }, []);
 
   const handleTaskPress = useCallback((task: Task) => {
-    setSelectedTask(task);
-    setIsModalVisible(true);
-  }, []);
-
-  const handleSaveTask = useCallback((updatedTask: Task) => {
-    setAllTasks((prevTasks) =>
-      prevTasks.map((t) => (t.id === updatedTask.id ? updatedTask : t))
-    );
-  }, []);
-
-  const handleCloseModal = useCallback(() => {
-    setIsModalVisible(false);
-    setSelectedTask(null);
-  }, []);
+    router.push(`/Tasks/${task.id}`);
+  }, [router]);
 
   return (
     <ThemedView style={styles.container}>
@@ -187,14 +173,6 @@ export default function HomeScreen() {
         {/* Bottom Spacing */}
         <View style={{ height: insets.bottom + 100 }} />
       </ScrollView>
-
-      {/* Task Edit Modal */}
-      <TaskEditModal
-        visible={isModalVisible}
-        task={selectedTask}
-        onClose={handleCloseModal}
-        onSave={handleSaveTask}
-      />
     </ThemedView>
   );
 }
@@ -222,6 +200,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     letterSpacing: -0.3,
+
   },
   taskCountBadge: {
     paddingHorizontal: 10,
