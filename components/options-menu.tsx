@@ -24,6 +24,7 @@ interface OptionsMenuProps {
     currentSortType: SortType;
     onNewFolder: () => void;
     onSortChange: (sortType: SortType) => void;
+    onTrash: () => void;
     onSettings: () => void;
 }
 
@@ -31,6 +32,7 @@ export default function OptionsMenu({
     currentSortType,
     onNewFolder,
     onSortChange,
+    onTrash,
     onSettings,
 }: OptionsMenuProps) {
     const { colors, dark } = useTheme();
@@ -51,6 +53,11 @@ export default function OptionsMenu({
     const handleSortSelect = (sortType: SortType) => {
         onSortChange(sortType);
         handleClose();
+    };
+
+    const handleTrash = () => {
+        handleClose();
+        onTrash();
     };
 
     const handleSettings = () => {
@@ -121,6 +128,17 @@ export default function OptionsMenu({
                                 </Pressable>
 
                                 <View style={[styles.divider, { backgroundColor: colors.border + '30' }]} />
+
+                                <Pressable
+                                    style={({ pressed }) => [
+                                        styles.menuItem,
+                                        pressed && { backgroundColor: colors.border + '30' },
+                                    ]}
+                                    onPress={handleTrash}
+                                >
+                                    <Ionicons name="trash-outline" size={20} color={colors.text} />
+                                    <Text style={[styles.menuItemText, { color: colors.text }]}>Trash</Text>
+                                </Pressable>
 
                                 <Pressable
                                     style={({ pressed }) => [

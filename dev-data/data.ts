@@ -16,6 +16,9 @@ export interface Note {
     content: string;
     preview: string;
     folderId: string | null; // null = root level
+    isDeleted: boolean;
+    deletedAt: Date | null;
+    originalFolderId?: string | null; // Original location before deletion
     createdAt: Date;
     updatedAt: Date;
 }
@@ -23,8 +26,13 @@ export interface Note {
 export interface Folder {
     id: string;
     name: string;
+    icon: string; // Ionicons icon name (e.g., 'folder', 'folder-open', 'briefcase')
     parentId: string | null; // null = root level (unlimited nesting)
     sortType: SortType;
+    isSystem: boolean; // true for Trash folder (cannot be deleted/renamed)
+    isDeleted: boolean;
+    deletedAt: Date | null;
+    originalParentId?: string | null; // Original parent before deletion
     createdAt: Date;
     updatedAt: Date;
 }
@@ -43,12 +51,29 @@ export interface Task {
 // DUMMY DATA
 // =====================
 
+// System folder IDs
+export const TRASH_FOLDER_ID = 'system-trash';
+
 export const DUMMY_FOLDERS: Folder[] = [
-    { id: 'folder-1', name: 'Work', parentId: null, sortType: 'UPDATED_LAST', createdAt: new Date('2026-01-01'), updatedAt: new Date('2026-01-01') },
-    { id: 'folder-2', name: 'Personal', parentId: null, sortType: 'UPDATED_LAST', createdAt: new Date('2026-01-02'), updatedAt: new Date('2026-01-02') },
-    { id: 'folder-3', name: 'Projects', parentId: 'folder-1', sortType: 'UPDATED_LAST', createdAt: new Date('2026-01-03'), updatedAt: new Date('2026-01-03') }, // nested in Work
-    { id: 'folder-4', name: 'Meetings', parentId: 'folder-1', sortType: 'UPDATED_LAST', createdAt: new Date('2026-01-04'), updatedAt: new Date('2026-01-04') }, // nested in Work
-    { id: 'folder-5', name: 'Archive', parentId: 'folder-3', sortType: 'UPDATED_LAST', createdAt: new Date('2026-01-05'), updatedAt: new Date('2026-01-05') }, // nested in Projects (2 levels deep)
+    // System folder - Trash (cannot be deleted or renamed)
+    {
+        id: TRASH_FOLDER_ID,
+        name: 'Trash',
+        icon: 'trash',
+        parentId: null,
+        sortType: 'UPDATED_LAST',
+        isSystem: true,
+        isDeleted: false,
+        deletedAt: null,
+        createdAt: new Date('2026-01-01'),
+        updatedAt: new Date('2026-01-01')
+    },
+    // Regular folders
+    { id: 'folder-1', name: 'Work', icon: 'briefcase', parentId: null, sortType: 'UPDATED_LAST', isSystem: false, isDeleted: false, deletedAt: null, createdAt: new Date('2026-01-01'), updatedAt: new Date('2026-01-01') },
+    { id: 'folder-2', name: 'Personal', icon: 'person', parentId: null, sortType: 'UPDATED_LAST', isSystem: false, isDeleted: false, deletedAt: null, createdAt: new Date('2026-01-02'), updatedAt: new Date('2026-01-02') },
+    { id: 'folder-3', name: 'Projects', icon: 'folder', parentId: 'folder-1', sortType: 'UPDATED_LAST', isSystem: false, isDeleted: false, deletedAt: null, createdAt: new Date('2026-01-03'), updatedAt: new Date('2026-01-03') }, // nested in Work
+    { id: 'folder-4', name: 'Meetings', icon: 'calendar', parentId: 'folder-1', sortType: 'UPDATED_LAST', isSystem: false, isDeleted: false, deletedAt: null, createdAt: new Date('2026-01-04'), updatedAt: new Date('2026-01-04') }, // nested in Work
+    { id: 'folder-5', name: 'Archive', icon: 'archive', parentId: 'folder-3', sortType: 'UPDATED_LAST', isSystem: false, isDeleted: false, deletedAt: null, createdAt: new Date('2026-01-05'), updatedAt: new Date('2026-01-05') }, // nested in Projects (2 levels deep)
 ];
 
 export const DUMMY_NOTES: Note[] = [
@@ -58,6 +83,8 @@ export const DUMMY_NOTES: Note[] = [
         content: '<p>Project Research</p><p>Gathered initial requirements for the new dashboard including user interviews and competitor analysis.</p>',
         preview: 'Gathered initial requirements for the new dashboard...',
         folderId: 'folder-3', // in Projects folder
+        isDeleted: false,
+        deletedAt: null,
         createdAt: new Date('2026-01-14T10:00:00'),
         updatedAt: new Date('2026-01-14T14:30:00'),
     },
@@ -67,6 +94,8 @@ export const DUMMY_NOTES: Note[] = [
         content: '<p>Weekly Groceries</p><p>Milk, eggs, sourdough bread, avocados, spinach, chicken breast, olive oil, garlic.</p>',
         preview: 'Milk, eggs, sourdough bread, avocados...',
         folderId: 'folder-2', // in Personal folder
+        isDeleted: false,
+        deletedAt: null,
         createdAt: new Date('2026-01-14T08:00:00'),
         updatedAt: new Date('2026-01-14T08:00:00'),
     },
@@ -76,6 +105,8 @@ export const DUMMY_NOTES: Note[] = [
         content: '<p>Workout Routine</p><p>Upper body focus: Bench press 4x8, Pull ups 3x10, Shoulder press 3x12, Dumbbell rows 3x10.</p>',
         preview: 'Upper body focus: Bench press, Pull ups...',
         folderId: null, // root level (unfoldered)
+        isDeleted: false,
+        deletedAt: null,
         createdAt: new Date('2026-01-13T07:00:00'),
         updatedAt: new Date('2026-01-13T07:00:00'),
     },
@@ -85,6 +116,8 @@ export const DUMMY_NOTES: Note[] = [
         content: '<p>Book Recommendations</p><p>Clean Code by Robert Martin, The Pragmatic Programmer, Designing Data-Intensive Applications.</p>',
         preview: 'Clean Code, The Pragmatic Programmer...',
         folderId: null, // root level (unfoldered)
+        isDeleted: false,
+        deletedAt: null,
         createdAt: new Date('2026-01-12T19:00:00'),
         updatedAt: new Date('2026-01-12T19:00:00'),
     },
@@ -94,6 +127,8 @@ export const DUMMY_NOTES: Note[] = [
         content: '<p>Q1 Planning Notes</p><p>Main goals for Q1: Launch MVP, hire 2 engineers, close Series A round.</p>',
         preview: 'Main goals for Q1: Launch MVP, hire 2 engineers...',
         folderId: 'folder-4', // in Meetings folder
+        isDeleted: false,
+        deletedAt: null,
         createdAt: new Date('2026-01-10T15:00:00'),
         updatedAt: new Date('2026-01-15T10:00:00'),
     },
@@ -103,6 +138,8 @@ export const DUMMY_NOTES: Note[] = [
         content: '<p>Archived Specs</p><p>Old specifications from v1.0 release. Kept for reference.</p>',
         preview: 'Old specifications from v1.0 release...',
         folderId: 'folder-5', // in Archive folder (deeply nested)
+        isDeleted: false,
+        deletedAt: null,
         createdAt: new Date('2026-01-05T12:00:00'),
         updatedAt: new Date('2026-01-05T12:00:00'),
     },

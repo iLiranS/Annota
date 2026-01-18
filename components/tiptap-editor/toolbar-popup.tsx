@@ -19,7 +19,7 @@ type MaterialIconName = ComponentProps<typeof MaterialIcons>['name'];
 // Types
 // ============================================================================
 
-export type PopupType = 'headings' | 'highlight' | 'textColor' | 'youtube' | null;
+export type PopupType = 'headings' | 'highlight' | 'textColor' | 'youtube' | 'link' | 'image' | null;
 
 interface BasePopupProps {
     visible: boolean;
@@ -44,7 +44,19 @@ interface YouTubePopupProps extends BasePopupProps {
     onSubmit: (url: string) => void;
 }
 
-export type ToolbarPopupProps = HeadingPopupProps | ColorPopupProps | YouTubePopupProps;
+interface LinkPopupProps extends BasePopupProps {
+    type: 'link';
+    currentUrl: string | null;
+    onSubmit: (url: string) => void;
+    onRemove: () => void;
+}
+
+interface ImagePopupProps extends BasePopupProps {
+    type: 'image';
+    onSubmit: (url: string) => void;
+}
+
+export type ToolbarPopupProps = HeadingPopupProps | ColorPopupProps | YouTubePopupProps | LinkPopupProps | ImagePopupProps;
 
 // ============================================================================
 // Heading Selector
@@ -202,6 +214,156 @@ function YouTubeInput({
 }
 
 // ============================================================================
+// Link Input
+// ============================================================================
+
+function LinkInput({
+    currentUrl,
+    onSubmit,
+    onRemove,
+    onClose,
+}: {
+    currentUrl: string | null;
+    onSubmit: (url: string) => void;
+    onRemove: () => void;
+    onClose: () => void;
+}) {
+    const { colors, dark } = useTheme();
+    const [url, setUrl] = React.useState(currentUrl || '');
+    const inputRef = useRef<TextInput>(null);
+
+    useEffect(() => {
+        // Focus input when opened
+        setTimeout(() => inputRef.current?.focus(), 100);
+    }, []);
+
+    const handleSubmit = () => {
+        const trimmedUrl = url.trim();
+        if (trimmedUrl) {
+            // Auto-add https:// if missing
+            const finalUrl = trimmedUrl.match(/^https?:\/\//) ? trimmedUrl : 'https://' + trimmedUrl;
+            onSubmit(finalUrl);
+        }
+    };
+
+    return (
+        <View style={styles.popupContent}>
+            <Text style={[styles.popupTitle, { color: colors.text }]}>Add Link</Text>
+            <TextInput
+                ref={inputRef}
+                style={[
+                    styles.urlInput,
+                    {
+                        backgroundColor: dark ? '#1C1C1E' : '#F2F2F7',
+                        color: colors.text,
+                        borderColor: dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)',
+                    },
+                ]}
+                placeholder="Enter URL..."
+                placeholderTextColor={dark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)'}
+                value={url}
+                onChangeText={setUrl}
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="url"
+                onSubmitEditing={handleSubmit}
+            />
+            <View style={styles.buttonRow}>
+                <Pressable
+                    style={[styles.button, { backgroundColor: dark ? '#3A3A3C' : '#E5E5EA' }]}
+                    onPress={onClose}
+                >
+                    <Text style={[styles.buttonText, { color: colors.text }]}>Cancel</Text>
+                </Pressable>
+                {currentUrl && (
+                    <Pressable
+                        style={[styles.button, { backgroundColor: '#FF3B30' }]}
+                        onPress={onRemove}
+                    >
+                        <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>Remove</Text>
+                    </Pressable>
+                )}
+                <Pressable
+                    style={[styles.button, { backgroundColor: colors.primary }]}
+                    onPress={handleSubmit}
+                >
+                    <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>
+                        {currentUrl ? 'Update' : 'Add'}
+                    </Text>
+                </Pressable>
+            </View>
+        </View>
+    );
+}
+
+// ============================================================================
+// Image Input
+// ============================================================================
+
+function ImageInput({
+    onSubmit,
+    onClose,
+}: {
+    onSubmit: (url: string) => void;
+    onClose: () => void;
+}) {
+    const { colors, dark } = useTheme();
+    const [url, setUrl] = React.useState('');
+    const inputRef = useRef<TextInput>(null);
+
+    useEffect(() => {
+        // Focus input when opened
+        setTimeout(() => inputRef.current?.focus(), 100);
+    }, []);
+
+    const handleSubmit = () => {
+        if (url.trim()) {
+            onSubmit(url.trim());
+            setUrl('');
+        }
+    };
+
+    return (
+        <View style={styles.popupContent}>
+            <Text style={[styles.popupTitle, { color: colors.text }]}>Insert Image</Text>
+            <TextInput
+                ref={inputRef}
+                style={[
+                    styles.urlInput,
+                    {
+                        backgroundColor: dark ? '#1C1C1E' : '#F2F2F7',
+                        color: colors.text,
+                        borderColor: dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)',
+                    },
+                ]}
+                placeholder="Paste image URL..."
+                placeholderTextColor={dark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)'}
+                value={url}
+                onChangeText={setUrl}
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="url"
+                onSubmitEditing={handleSubmit}
+            />
+            <View style={styles.buttonRow}>
+                <Pressable
+                    style={[styles.button, { backgroundColor: dark ? '#3A3A3C' : '#E5E5EA' }]}
+                    onPress={onClose}
+                >
+                    <Text style={[styles.buttonText, { color: colors.text }]}>Cancel</Text>
+                </Pressable>
+                <Pressable
+                    style={[styles.button, { backgroundColor: colors.primary }]}
+                    onPress={handleSubmit}
+                >
+                    <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>Insert</Text>
+                </Pressable>
+            </View>
+        </View>
+    );
+}
+
+// ============================================================================
 // Main Popup Component
 // ============================================================================
 
@@ -242,6 +404,22 @@ export function ToolbarPopup(props: ToolbarPopupProps) {
                 return (
                     <YouTubeInput
                         onSubmit={(props as YouTubePopupProps).onSubmit}
+                        onClose={onClose}
+                    />
+                );
+            case 'link':
+                return (
+                    <LinkInput
+                        currentUrl={(props as LinkPopupProps).currentUrl}
+                        onSubmit={(props as LinkPopupProps).onSubmit}
+                        onRemove={(props as LinkPopupProps).onRemove}
+                        onClose={onClose}
+                    />
+                );
+            case 'image':
+                return (
+                    <ImageInput
+                        onSubmit={(props as ImagePopupProps).onSubmit}
                         onClose={onClose}
                     />
                 );

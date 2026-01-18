@@ -1,3 +1,4 @@
+
 interface EditorHtmlOptions {
     isDark: boolean;
     primaryColor: string;
@@ -25,6 +26,9 @@ export function getEditorHtml(options: EditorHtmlOptions): string {
     const codeBgColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)';
     const codeBlockBgColor = isDark ? '#1E1E1E' : '#F5F5F5';
 
+
+
+
     // Escape content for safe embedding in HTML
     const escapedContent = initialContent
         .replace(/\\/g, '\\\\')
@@ -46,6 +50,9 @@ export function getEditorHtml(options: EditorHtmlOptions): string {
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    
+    <!-- Tippy.js CSS for Bubble Menu -->
+    <link rel="stylesheet" href="https://unpkg.com/tippy.js@6/animations/scale.css">
     
     <!-- Highlight.js for code syntax highlighting -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/${isDark ? 'github-dark' : 'github'}.min.css">
@@ -116,14 +123,17 @@ export function getEditorHtml(options: EditorHtmlOptions): string {
         
         .ProseMirror p, #display p {
             margin: 0 0 8px 0;
+            unicode-bidi: plaintext;
+            text-align: start;
+            min-height: 1.6em;
         }
         
-        .ProseMirror h1, #display h1 { font-size: 32px; font-weight: 700; margin: 20px 0 12px 0; line-height: 1.2; }
-        .ProseMirror h2, #display h2 { font-size: 26px; font-weight: 600; margin: 18px 0 10px 0; line-height: 1.3; }
-        .ProseMirror h3, #display h3 { font-size: 22px; font-weight: 600; margin: 16px 0 8px 0; line-height: 1.3; }
-        .ProseMirror h4, #display h4 { font-size: 18px; font-weight: 600; margin: 14px 0 6px 0; line-height: 1.4; }
-        .ProseMirror h5, #display h5 { font-size: 16px; font-weight: 600; margin: 12px 0 4px 0; line-height: 1.4; }
-        .ProseMirror h6, #display h6 { font-size: 14px; font-weight: 600; margin: 10px 0 4px 0; line-height: 1.4; color: ${isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.7)'}; }
+        .ProseMirror h1, #display h1 { font-size: 32px; font-weight: 700; margin: 20px 0 12px 0; line-height: 1.2; unicode-bidi: plaintext; text-align: start; }
+        .ProseMirror h2, #display h2 { font-size: 26px; font-weight: 600; margin: 18px 0 10px 0; line-height: 1.3; unicode-bidi: plaintext; text-align: start; }
+        .ProseMirror h3, #display h3 { font-size: 22px; font-weight: 600; margin: 16px 0 8px 0; line-height: 1.3; unicode-bidi: plaintext; text-align: start; }
+        .ProseMirror h4, #display h4 { font-size: 18px; font-weight: 600; margin: 14px 0 6px 0; line-height: 1.4; unicode-bidi: plaintext; text-align: start; }
+        .ProseMirror h5, #display h5 { font-size: 16px; font-weight: 600; margin: 12px 0 4px 0; line-height: 1.4; unicode-bidi: plaintext; text-align: start; }
+        .ProseMirror h6, #display h6 { font-size: 14px; font-weight: 600; margin: 10px 0 4px 0; line-height: 1.4; color: ${isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.7)'}; unicode-bidi: plaintext; text-align: start; }
         
         .ProseMirror ul, .ProseMirror ol,
         #display ul, #display ol {
@@ -131,8 +141,8 @@ export function getEditorHtml(options: EditorHtmlOptions): string {
             margin: 8px 0;
         }
         
-        .ProseMirror li, #display li { margin: 4px 0; }
-        .ProseMirror li p, #display li p { margin: 0; }
+        .ProseMirror li, #display li { margin: 4px 0; unicode-bidi: plaintext; text-align: start; }
+        .ProseMirror li p, #display li p { margin: 0; unicode-bidi: plaintext; text-align: start; }
         
         .ProseMirror blockquote, #display blockquote {
             border-left: 3px solid ${accentColor};
@@ -140,6 +150,9 @@ export function getEditorHtml(options: EditorHtmlOptions): string {
             padding-left: 16px;
             font-style: italic;
             opacity: 0.9;
+            background-color: ${accentColor.replace('rgb', 'rgba').replace(')', ', 0.25)')};
+            border-top-right-radius: 4px;
+            border-bottom-right-radius: 4px;
         }
         
         .ProseMirror code, #display code {
@@ -224,6 +237,24 @@ export function getEditorHtml(options: EditorHtmlOptions): string {
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
         
+        /* Image styles */
+        .ProseMirror img, #display img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin: 8px 0;
+        }
+        
+        .ProseMirror img.ProseMirror-selectednode {
+            outline: 3px solid ${accentColor};
+            border-radius: 8px;
+        }
+
+        /* Image Alignment Classes */
+        .ProseMirror img.img-center, #display img.img-center { margin: 8px auto; display: block; }
+        .ProseMirror img.img-left, #display img.img-left { margin: 8px auto 8px 0; display: block; }
+        .ProseMirror img.img-right, #display img.img-right { margin: 8px 0 8px auto; display: block; }
+        
         /* Link input popover styles */
         .link-popover {
             position: fixed;
@@ -277,20 +308,95 @@ export function getEditorHtml(options: EditorHtmlOptions): string {
             color: white;
         }
     </style>
+    
+    <style>
+        /* Bubble Menu for Images */
+        .bubble-menu {
+            display: flex;
+            align-items: center;
+            background-color: ${isDark ? '#2C2C2E' : '#FFFFFF'};
+            padding: 8px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            border: 1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'};
+            gap: 8px;
+            min-width: 280px;
+        }
+
+        .bubble-menu button {
+            border: none;
+            background: none;
+            color: ${textColor};
+            padding: 6px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 32px;
+        }
+
+        .bubble-menu button:hover {
+            background-color: ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'};
+        }
+
+        .bubble-menu button.active {
+            background-color: ${accentColor};
+            color: white;
+        }
+
+        .bubble-menu .separator {
+            width: 1px;
+            height: 20px;
+            background-color: ${isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'};
+            margin: 0 4px;
+        }
+        
+        .bubble-menu svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+        }
+        
+        .bubble-menu span {
+            font-size: 13px;
+            font-weight: 600;
+        }
+    </style>
 </head>
 <body>
     <div id="editor-container">
         <div id="loading">Loading editor...</div>
         <div id="editor"></div>
-        <div id="display"></div>
+        <div id="display" dir="auto"></div>
     </div>
     
-    <div id="link-popover" class="link-popover">
-        <input type="url" id="link-input" placeholder="Enter URL..." />
-        <div class="link-popover-buttons">
-            <button class="cancel" onclick="closeLinkPopover()">Cancel</button>
-            <button class="confirm" onclick="confirmLink()">Add Link</button>
-        </div>
+    <!-- Link popover removed - now using React Native popup -->
+    
+    <div id="bubble-menu" class="bubble-menu" style="visibility: hidden;">
+        <!-- Alignment -->
+        <button id="btn-align-left" onclick="updateImage({ align: 'left' })">
+            <svg viewBox="0 0 24 24"><path d="M3 21h18v-2H3v2zm0-4h12v-2H3v2zm0-4h18v-2H3v2zm0-4h12V7H3v2zm0-6v2h18V3H3z"/></svg>
+        </button>
+        <button id="btn-align-center" onclick="updateImage({ align: 'center' })">
+            <svg viewBox="0 0 24 24"><path d="M7 15v2h10v-2H7zm-4 6h18v-2H3v2zm0-8h18v-2H3v2zm4-6v2h10V7H7zM3 3v2h18V3H3z"/></svg>
+        </button>
+        <button id="btn-align-right" onclick="updateImage({ align: 'right' })">
+            <svg viewBox="0 0 24 24"><path d="M3 21h18v-2H3v2zm6-4h12v-2H9v2zm-6-4h18v-2H3v2zm6-4h12V7H9v2zm-6-6v2h18V3H3z"/></svg>
+        </button>
+        
+        <div class="separator"></div>
+        
+        <!-- Width -->
+        <button id="btn-width-full" onclick="updateImage({ width: '100%' })">
+            <span>100%</span>
+        </button>
+        <button id="btn-width-med" onclick="updateImage({ width: '75%' })">
+            <span>75%</span>
+        </button>
+        <button id="btn-width-small" onclick="updateImage({ width: '50%' })">
+            <span>50%</span>
+        </button>
     </div>
     
     <script type="module">
@@ -390,7 +496,9 @@ export function getEditorHtml(options: EditorHtmlOptions): string {
                     { default: Highlight },
                     { default: TextStyle },
                     { default: Color },
-                    { default: Youtube }
+                    { default: Youtube },
+                    { default: Image },
+                    { default: BubbleMenu }
                 ] = await Promise.all([
                     import('https://esm.sh/@tiptap/core@2.1.13'),
                     import('https://esm.sh/@tiptap/starter-kit@2.1.13'),
@@ -400,7 +508,9 @@ export function getEditorHtml(options: EditorHtmlOptions): string {
                     import('https://esm.sh/@tiptap/extension-highlight@2.1.13'),
                     import('https://esm.sh/@tiptap/extension-text-style@2.1.13'),
                     import('https://esm.sh/@tiptap/extension-color@2.1.13'),
-                    import('https://esm.sh/@tiptap/extension-youtube@2.1.13')
+                    import('https://esm.sh/@tiptap/extension-youtube@2.1.13'),
+                    import('https://esm.sh/@tiptap/extension-image@2.1.13'),
+                    import('https://esm.sh/@tiptap/extension-bubble-menu@2.1.13')
                 ]);
                 
                 loadingEl.style.display = 'none';
@@ -427,6 +537,26 @@ export function getEditorHtml(options: EditorHtmlOptions): string {
                     const textStyleAttrs = window.editor.getAttributes('textStyle');
                     const textColor = textStyleAttrs.color || null;
                     
+                    // Get link href
+                    const linkAttrs = window.editor.getAttributes('link');
+                    const linkHref = linkAttrs.href || null;
+
+                    // Update Bubble Menu State
+                    if (window.editor.isActive('image')) {
+                        const attrs = window.editor.getAttributes('image');
+                        const align = attrs.align || 'center';
+                        const width = attrs.width || '100%';
+                        
+                        document.querySelectorAll('.bubble-menu button').forEach(b => b.classList.remove('active'));
+                        if (document.getElementById('btn-align-' + align)) 
+                            document.getElementById('btn-align-' + align).classList.add('active');
+                        
+                        // Width logic approximation
+                        if (width === '100%') document.getElementById('btn-width-full')?.classList.add('active');
+                        else if (width === '75%') document.getElementById('btn-width-med')?.classList.add('active');
+                        else if (width === '50%') document.getElementById('btn-width-small')?.classList.add('active');
+                    }
+                    
                     return {
                         isBold: window.editor.isActive('bold'),
                         isItalic: window.editor.isActive('italic'),
@@ -445,15 +575,54 @@ export function getEditorHtml(options: EditorHtmlOptions): string {
                         isHeading6: window.editor.isActive('heading', { level: 6 }),
                         currentHeadingLevel: getCurrentHeadingLevel(),
                         isLink: window.editor.isActive('link'),
+                        linkHref: linkHref,
                         highlightColor: highlightColor,
                         textColor: textColor,
                         canUndo: window.editor.can().undo(),
                         canRedo: window.editor.can().redo(),
                     };
                 }
+
+                const CustomImage = Image.extend({
+                    addAttributes() {
+                        return {
+                            ...this.parent?.(),
+                            width: {
+                                default: '100%',
+                                renderHTML: attributes => ({
+                                    style: \`width: \${attributes.width}; height: auto;\`
+                                }),
+                                parseHTML: element => element.style.width || element.getAttribute('width'),
+                            },
+                            align: {
+                                default: 'center',
+                                renderHTML: attributes => ({
+                                    class: \`img-\${attributes.align}\`
+                                }),
+                                parseHTML: element => {
+                                    if (element.classList.contains('img-left')) return 'left';
+                                    if (element.classList.contains('img-right')) return 'right';
+                                    return 'center';
+                                },
+                            }
+                        }
+                    }
+                });
+
+                // Global function to update image attributes
+                window.updateImage = function(attrs) {
+                    if (window.editor) {
+                        window.editor.chain().focus().updateAttributes('image', attrs).run();
+                    }
+                };
                 
                 window.editor = new Editor({
                     element: editorEl,
+                    editorProps: {
+                        attributes: {
+                            dir: 'auto',
+                        },
+                    },
                     extensions: [
                         StarterKit.configure({
                             heading: { levels: [1, 2, 3, 4, 5, 6] },
@@ -479,9 +648,30 @@ export function getEditorHtml(options: EditorHtmlOptions): string {
                                 referrerpolicy: 'strict-origin-when-cross-origin',
                             },
                         }),
+                        CustomImage.configure({
+                            inline: false,
+                            allowBase64: true,
+                        }),
+                        BubbleMenu.configure({
+                            element: document.getElementById('bubble-menu'),
+                            tippyOptions: {
+                                duration: 100,
+                                placement: 'bottom',
+                                animation: 'fade',
+                                zIndex: 999,
+                            },
+                            shouldShow: ({ editor }) => {
+                                return editor.isActive('image');
+                            },
+                        }),
                     ],
                     content: '${escapedContent}',
                     autofocus: ${autofocus} ? 'end' : false,
+                    onCreate: function({ editor }) {
+                        if (editor.isEmpty) {
+                            editor.chain().focus().toggleHeading({ level: 2 }).run();
+                        }
+                    },
                     onUpdate: function({ editor }) {
                         clearTimeout(debounceTimer);
                         debounceTimer = setTimeout(function() {
@@ -495,10 +685,9 @@ export function getEditorHtml(options: EditorHtmlOptions): string {
                         sendMessage({ type: 'focus' });
                     },
                     onBlur: function() {
-                        // Delay to check if focus moved to link popover
+                        // Small delay before checking if we should enter display mode
                         setTimeout(function() {
-                            const popover = document.getElementById('link-popover');
-                            if (!popover.classList.contains('visible') && !document.activeElement?.closest('#editor')) {
+                            if (!document.activeElement?.closest('#editor')) {
                                 enterDisplayMode();
                             }
                         }, 150);
@@ -506,6 +695,8 @@ export function getEditorHtml(options: EditorHtmlOptions): string {
                     },
                     onSelectionUpdate: function() {
                         sendMessage({ type: 'state', state: getEditorState() });
+                        // Auto-scroll cursor into view, accounting for toolbar height
+                        scrollCursorIntoView();
                     },
                     onTransaction: function() {
                         sendMessage({ type: 'state', state: getEditorState() });
@@ -539,31 +730,46 @@ export function getEditorHtml(options: EditorHtmlOptions): string {
                     }
                 });
                 
-                // Link popover functions
-                window.showLinkPopover = function() {
-                    const popover = document.getElementById('link-popover');
-                    const input = document.getElementById('link-input');
-                    const attrs = window.editor.getAttributes('link');
-                    input.value = attrs.href || '';
-                    popover.classList.add('visible');
-                    input.focus();
-                };
+                // Auto-scroll to keep cursor visible above toolbar
+                // Toolbar + extra safe margin (toolbar ~50px, rounded container, safe area)
+                const TOOLBAR_SAFE_OFFSET = 120;
+                let scrollDebounceTimer = null;
                 
-                window.closeLinkPopover = function() {
-                    document.getElementById('link-popover').classList.remove('visible');
-                    window.editor.commands.focus();
-                };
+                function scrollCursorIntoView() {
+                    if (!window.editor) return;
+                    
+                    // Debounce to prevent jittery scrolling
+                    clearTimeout(scrollDebounceTimer);
+                    scrollDebounceTimer = setTimeout(function() {
+                        doScrollCursorIntoView();
+                    }, 50);
+                }
                 
-                window.confirmLink = function() {
-                    const url = document.getElementById('link-input').value.trim();
-                    if (url) {
-                        const finalUrl = url.match(/^https?:\\/\\//) ? url : 'https://' + url;
-                        window.editor.chain().focus().setLink({ href: finalUrl }).run();
-                    } else {
-                        window.editor.chain().focus().unsetLink().run();
+                function doScrollCursorIntoView() {
+                    if (!window.editor) return;
+                    
+                    // Get the current selection
+                    const { from } = window.editor.state.selection;
+                    const coords = window.editor.view.coordsAtPos(from);
+                    
+                    if (!coords) return;
+                    
+                    const viewportHeight = window.innerHeight;
+                    const cursorBottom = coords.bottom;
+                    
+                    // Calculate where the toolbar starts (from the bottom of viewport)
+                    const toolbarTop = viewportHeight - TOOLBAR_SAFE_OFFSET;
+                    
+                    // Only scroll down if cursor is behind the toolbar
+                    // Use absolute position in viewport (not accounting for scrollY)
+                    if (cursorBottom > toolbarTop) {
+                        const scrollAmount = cursorBottom - toolbarTop + 30; // Extra 30px padding
+                        window.scrollBy({ top: scrollAmount, behavior: 'smooth' });
                     }
-                    closeLinkPopover();
-                };
+                    
+                    // Note: We intentionally don't scroll up automatically
+                    // as that causes jittery behavior when typing at the bottom
+                }
                 
                 // Command handler
                 window.handleCommand = function(command, params) {
@@ -595,10 +801,9 @@ export function getEditorHtml(options: EditorHtmlOptions): string {
                         blur: () => { window.editor.commands.blur(); enterDisplayMode(); },
                         undo: () => window.editor.chain().focus().undo().run(),
                         redo: () => window.editor.chain().focus().redo().run(),
-                        showLinkPopover: () => { showLinkPopover(); return; },
                         setLink: () => params?.href && window.editor.chain().focus().setLink({ href: params.href }).run(),
                         unsetLink: () => window.editor.chain().focus().unsetLink().run(),
-                        // New commands for highlight, color, and YouTube
+                        // Commands for highlight, color, YouTube, and Image
                         setHighlight: () => window.editor.chain().focus().setHighlight({ color: params?.color }).run(),
                         unsetHighlight: () => window.editor.chain().focus().unsetHighlight().run(),
                         setColor: () => window.editor.chain().focus().setColor(params?.color).run(),
@@ -608,13 +813,18 @@ export function getEditorHtml(options: EditorHtmlOptions): string {
                                 window.editor.chain().focus().setYoutubeVideo({ src: params.src }).run();
                             }
                         },
+                        setImage: () => {
+                            if (params?.src) {
+                                window.editor.chain().focus().setImage({ src: params.src }).run();
+                            }
+                        },
                     };
                     
                     if (commands[command]) {
                         commands[command]();
                     }
                     
-                    if (command !== 'showLinkPopover' && command !== 'getContent') {
+                    if (command !== 'getContent') {
                         setTimeout(() => sendMessage({ type: 'state', state: getEditorState() }), 50);
                     }
                 };

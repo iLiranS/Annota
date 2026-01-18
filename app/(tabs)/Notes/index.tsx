@@ -1,14 +1,17 @@
 import FloatingActionButton from '@/components/floating-action-button';
-import FolderNameModal from '@/components/folder-name-modal';
+import FolderEditModal from '@/components/folder-edit-modal';
+import NoteLocationModal from '@/components/note-location-modal';
 import OptionsMenu from '@/components/options-menu';
+import SwipeableItem from '@/components/swipeable-item';
 import ThemedText from '@/components/themed-text';
 import ThemedPressable from '@/components/ui/themed-pressable';
 import {
     Folder,
     Note,
-    SortType,
     sortFolders,
     sortNotes,
+    SortType,
+    TRASH_FOLDER_ID,
 } from '@/dev-data/data';
 import { useNotesStore } from '@/stores/notes-store';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -30,37 +33,45 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 interface FolderItemProps {
     folder: Folder;
     onPress: () => void;
+    onLongPress: () => void;
+    onDelete: () => void;
 }
 
-function FolderCard({ folder, onPress }: FolderItemProps) {
+function FolderCard({ folder, onPress, onLongPress, onDelete }: FolderItemProps) {
     const { colors, dark } = useTheme();
 
     return (
-        <ThemedPressable
-            onPress={onPress}
-            style={({ pressed }) => [
-                styles.folderCard,
-                {
-                    borderColor: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
-                },
-                pressed && styles.pressed,
-            ]}
-        >
-            <View style={[styles.folderIcon, { backgroundColor: '#F59E0B' + '20' }]}>
-                <Ionicons name="folder" size={22} color="#F59E0B" />
-            </View>
-            <ThemedText style={styles.folderName}>{folder.name}</ThemedText>
-            <Ionicons name="chevron-forward" size={18} color={colors.text + '50'} />
-        </ThemedPressable>
+        <SwipeableItem onDelete={onDelete}>
+            <ThemedPressable
+                onPress={onPress}
+                onLongPress={onLongPress}
+                style={({ pressed }) => [
+                    styles.folderCard,
+                    {
+                        backgroundColor: colors.card,
+                        borderColor: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+                    },
+                    pressed && styles.pressed,
+                ]}
+            >
+                <View style={[styles.folderIcon, { backgroundColor: '#F59E0B' + '20' }]}>
+                    <Ionicons name={folder.icon as keyof typeof Ionicons.glyphMap} size={22} color="#F59E0B" />
+                </View>
+                <ThemedText style={styles.folderName}>{folder.name}</ThemedText>
+                <Ionicons name="chevron-forward" size={18} color={colors.text + '50'} />
+            </ThemedPressable>
+        </SwipeableItem>
     );
 }
 
 interface NoteItemProps {
     note: Note;
     onPress: () => void;
+    onLongPress: () => void;
+    onDelete: () => void;
 }
 
-function NoteCard({ note, onPress }: NoteItemProps) {
+function NoteCard({ note, onPress, onLongPress, onDelete }: NoteItemProps) {
     const { colors, dark } = useTheme();
 
     const formatDate = (date: Date): string => {
@@ -77,34 +88,38 @@ function NoteCard({ note, onPress }: NoteItemProps) {
     };
 
     return (
-        <ThemedPressable
-            onPress={onPress}
-            style={({ pressed }) => [
-                styles.noteCard,
-                {
-                    borderColor: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
-                },
-                pressed && styles.pressed,
-            ]}
-        >
-            <View style={styles.noteHeader}>
-                <View style={styles.titleRow}>
-                    <Ionicons name="document-text" size={16} color="#6366F1" />
-                    <ThemedText style={styles.title}>{note.title}</ThemedText>
-                </View>
-                <View style={styles.timestampRow}>
-                    <ThemedText style={[styles.timestamp, { color: colors.text + '60' }]}>
-                        {formatDate(note.updatedAt)}
-                    </ThemedText>
-                </View>
-            </View>
-            <ThemedText
-                style={[styles.preview, { color: colors.text + '70' }]}
-                numberOfLines={1}
+        <SwipeableItem onDelete={onDelete}>
+            <ThemedPressable
+                onPress={onPress}
+                onLongPress={onLongPress}
+                style={({ pressed }) => [
+                    styles.noteCard,
+                    {
+                        backgroundColor: colors.card,
+                        borderColor: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+                    },
+                    pressed && styles.pressed,
+                ]}
             >
-                {note.preview}
-            </ThemedText>
-        </ThemedPressable>
+                <View style={styles.noteHeader}>
+                    <View style={styles.titleRow}>
+                        <Ionicons name="document-text" size={16} color="#6366F1" />
+                        <ThemedText style={styles.title}>{note.title}</ThemedText>
+                    </View>
+                    <View style={styles.timestampRow}>
+                        <ThemedText style={[styles.timestamp, { color: colors.text + '60' }]}>
+                            {formatDate(note.updatedAt)}
+                        </ThemedText>
+                    </View>
+                </View>
+                <ThemedText
+                    style={[styles.preview, { color: colors.text + '70' }]}
+                    numberOfLines={1}
+                >
+                    {note.preview}
+                </ThemedText>
+            </ThemedPressable>
+        </SwipeableItem>
     );
 }
 
@@ -124,7 +139,9 @@ export default function NotesList() {
         notes,
         folders,
         createNote,
-        createFolder,
+        updateFolder,
+        deleteNote,
+        deleteFolder,
         getFolderById,
         getNotesInFolder,
         getFoldersInFolder,
@@ -138,7 +155,11 @@ export default function NotesList() {
 
     const [isSearchVisible, setIsSearchVisible] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const [isFolderModalVisible, setIsFolderModalVisible] = useState(false);
+    const [isCreatingFolder, setIsCreatingFolder] = useState(false);
+
+    // Edit modal state
+    const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
+    const [editingNote, setEditingNote] = useState<Note | null>(null);
 
     // Search scope state
     const [searchScope, setSearchScope] = useState<'current' | 'all'>('current');
@@ -146,7 +167,11 @@ export default function NotesList() {
     // Browsing Data (Current Folder) - sorted
     const browseFolders = useMemo(() => {
         const folderList = getFoldersInFolder(currentFolderId);
-        return sortFolders(folderList, currentSortType);
+        const sorted = sortFolders(folderList, currentSortType);
+        // Ensure Trash folder appears at the bottom
+        const systemFolders = sorted.filter(f => f.isSystem);
+        const regularFolders = sorted.filter(f => !f.isSystem);
+        return [...regularFolders, ...systemFolders];
     }, [folders, currentFolderId, currentSortType]);
 
     const browseNotes = useMemo(() => {
@@ -202,11 +227,17 @@ export default function NotesList() {
 
     const handleFolderPress = useCallback(
         (folderId: string) => {
+            const folder = getFolderById(folderId);
+            // Navigate to dedicated trash screen for system trash folder
+            if (folder?.isSystem && folder.id === TRASH_FOLDER_ID) {
+                router.push('/Notes/trash');
+                return;
+            }
             setIsSearchVisible(false);
             setSearchQuery('');
             router.setParams({ folderId });
         },
-        [router]
+        [router, getFolderById]
     );
 
     const handleNotePress = useCallback(
@@ -232,14 +263,6 @@ export default function NotesList() {
         router.push({ pathname: '/Notes/[id]', params: { id: newNote.id } });
     }, [createNote, currentFolderId, router]);
 
-    // Create new folder
-    const handleCreateFolder = useCallback(
-        (name: string) => {
-            createFolder(currentFolderId, name);
-        },
-        [createFolder, currentFolderId]
-    );
-
     // Change sort type
     const handleSortChange = useCallback(
         (sortType: SortType) => {
@@ -253,6 +276,47 @@ export default function NotesList() {
         router.push('/settings');
     }, [router]);
 
+    // Navigate to trash
+    const handleTrash = useCallback(() => {
+        router.push('/Notes/trash');
+    }, [router]);
+
+    // Delete handlers
+    const handleDeleteFolder = useCallback(
+        (folderId: string) => {
+            const folder = getFolderById(folderId);
+            if (folder?.isSystem) {
+                // Don't allow deleting system folders
+                return;
+            }
+            deleteFolder(folderId);
+        },
+        [deleteFolder, getFolderById]
+    );
+
+    const handleDeleteNote = useCallback(
+        (noteId: string) => {
+            deleteNote(noteId);
+        },
+        [deleteNote]
+    );
+
+    // Long press handlers for edit modals
+    const handleFolderLongPress = useCallback(
+        (folder: Folder) => {
+            if (folder.isSystem) return; // Don't allow editing system folders
+            setEditingFolder(folder);
+        },
+        []
+    );
+
+    const handleNoteLongPress = useCallback(
+        (note: Note) => {
+            setEditingNote(note);
+        },
+        []
+    );
+
     const headerTitle = currentFolder ? currentFolder.name : 'Notes';
 
     const renderItem = ({ item }: { item: ListItem }) => {
@@ -265,12 +329,46 @@ export default function NotesList() {
         }
 
         if (item.type === 'folder') {
+            // Don't allow swiping system folders (like Trash)
+            if (item.data.isSystem) {
+                return (
+                    <ThemedPressable
+                        onPress={() => handleFolderPress(item.data.id)}
+                        style={({ pressed }) => [
+                            styles.folderCard,
+                            {
+                                backgroundColor: colors.card,
+                                borderColor: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+                            },
+                            pressed && styles.pressed,
+                        ]}
+                    >
+                        <View style={[styles.folderIcon, { backgroundColor: '#EF4444' + '20' }]}>
+                            <Ionicons name="trash" size={22} color="#EF4444" />
+                        </View>
+                        <ThemedText style={styles.folderName}>{item.data.name}</ThemedText>
+                        <Ionicons name="chevron-forward" size={18} color={colors.text + '50'} />
+                    </ThemedPressable>
+                );
+            }
             return (
-                <FolderCard folder={item.data} onPress={() => handleFolderPress(item.data.id)} />
+                <FolderCard
+                    folder={item.data}
+                    onPress={() => handleFolderPress(item.data.id)}
+                    onLongPress={() => handleFolderLongPress(item.data)}
+                    onDelete={() => handleDeleteFolder(item.data.id)}
+                />
             );
         }
 
-        return <NoteCard note={item.data} onPress={() => handleNotePress(item.data.id)} />;
+        return (
+            <NoteCard
+                note={item.data}
+                onPress={() => handleNotePress(item.data.id)}
+                onLongPress={() => handleNoteLongPress(item.data)}
+                onDelete={() => handleDeleteNote(item.data.id)}
+            />
+        );
     };
 
     const getItemKey = (item: ListItem, index: number): string => {
@@ -331,16 +429,32 @@ export default function NotesList() {
             {/* Options Menu */}
             <OptionsMenu
                 currentSortType={currentSortType}
-                onNewFolder={() => setIsFolderModalVisible(true)}
+                onNewFolder={() => setIsCreatingFolder(true)}
                 onSortChange={handleSortChange}
+                onTrash={handleTrash}
                 onSettings={handleSettings}
             />
 
-            {/* Folder Name Modal */}
-            <FolderNameModal
-                visible={isFolderModalVisible}
-                onClose={() => setIsFolderModalVisible(false)}
-                onCreate={handleCreateFolder}
+            {/* Folder Create Modal */}
+            <FolderEditModal
+                visible={isCreatingFolder}
+                folder={null}
+                defaultParentId={currentFolderId}
+                onClose={() => setIsCreatingFolder(false)}
+            />
+
+            {/* Folder Edit Modal */}
+            <FolderEditModal
+                visible={editingFolder !== null}
+                folder={editingFolder}
+                onClose={() => setEditingFolder(null)}
+            />
+
+            {/* Note Location Modal */}
+            <NoteLocationModal
+                visible={editingNote !== null}
+                note={editingNote}
+                onClose={() => setEditingNote(null)}
             />
 
             {/* Search Modal */}
@@ -461,7 +575,6 @@ const styles = StyleSheet.create({
         padding: 14,
         borderRadius: 12,
         borderWidth: 1,
-        marginBottom: 8,
         gap: 12,
     },
     folderIcon: {
@@ -480,7 +593,6 @@ const styles = StyleSheet.create({
         padding: 16,
         borderRadius: 12,
         borderWidth: 1,
-        marginBottom: 8,
     },
     pressed: {
         opacity: 0.7,

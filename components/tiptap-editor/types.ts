@@ -41,6 +41,7 @@ export interface EditorState {
 
     // Links
     isLink: boolean;
+    linkHref: string | null;
 
     // Colors
     highlightColor: string | null;
@@ -69,6 +70,7 @@ export const initialEditorState: EditorState = {
     isHeading6: false,
     currentHeadingLevel: null,
     isLink: false,
+    linkHref: null,
     highlightColor: null,
     textColor: null,
     canUndo: false,
@@ -99,4 +101,5 @@ export type EditorCommand =
     | 'unsetHighlight'
     | 'setColor'
     | 'unsetColor'
-    | 'setYoutubeVideo';
+    | 'setYoutubeVideo'
+    | 'setImage';

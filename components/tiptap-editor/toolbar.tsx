@@ -70,7 +70,16 @@ export function EditorToolbar({
                         contentContainerStyle={styles.toolbarScrollContent}
                         keyboardShouldPersistTaps="always"
                     >
-                        {/* Text Formatting */}
+                        {/* Headings - Single button with popup (FIRST) */}
+                        <ToolbarButton
+                            label="H"
+                            isActive={isAnyHeadingActive}
+                            onPress={() => openPopup('headings')}
+                        />
+
+                        <View style={styles.separator} />
+
+                        {/* Text Formatting (inline styles) */}
                         <ToolbarButton
                             label="B"
                             fontWeight="bold"
@@ -93,15 +102,6 @@ export function EditorToolbar({
                             icon="strikethrough-s"
                             isActive={editorState.isStrike}
                             onPress={() => onCommand('toggleStrike')}
-                        />
-
-                        <View style={styles.separator} />
-
-                        {/* Headings - Single button with popup */}
-                        <ToolbarButton
-                            label="H"
-                            isActive={isAnyHeadingActive}
-                            onPress={() => openPopup('headings')}
                         />
 
                         <View style={styles.separator} />
@@ -157,11 +157,17 @@ export function EditorToolbar({
 
                         <View style={styles.separator} />
 
-                        {/* Links */}
+                        {/* Links - Now using popup */}
                         <ToolbarButton
                             icon="link"
                             isActive={editorState.isLink}
-                            onPress={() => onCommand('showLinkPopover')}
+                            onPress={() => openPopup('link')}
+                        />
+
+                        {/* Image */}
+                        <ToolbarButton
+                            icon="image"
+                            onPress={() => openPopup('image')}
                         />
 
                         {/* YouTube */}
@@ -247,6 +253,35 @@ export function EditorToolbar({
                     type="youtube"
                     onSubmit={(url: string) => {
                         onCommand('setYoutubeVideo', { src: url });
+                        closePopup();
+                    }}
+                    onClose={closePopup}
+                />
+            )}
+
+            {activePopup === 'link' && (
+                <ToolbarPopup
+                    visible={true}
+                    type="link"
+                    currentUrl={editorState.linkHref}
+                    onSubmit={(url: string) => {
+                        onCommand('setLink', { href: url });
+                        closePopup();
+                    }}
+                    onRemove={() => {
+                        onCommand('unsetLink');
+                        closePopup();
+                    }}
+                    onClose={closePopup}
+                />
+            )}
+
+            {activePopup === 'image' && (
+                <ToolbarPopup
+                    visible={true}
+                    type="image"
+                    onSubmit={(url: string) => {
+                        onCommand('setImage', { src: url });
                         closePopup();
                     }}
                     onClose={closePopup}
