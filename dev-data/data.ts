@@ -55,7 +55,7 @@ export const DUMMY_NOTES: Note[] = [
     {
         id: 'note-1',
         title: 'Project Research',
-        content: 'Gathered initial requirements for the new dashboard including user interviews and competitor analysis.',
+        content: '<p>Project Research</p><p>Gathered initial requirements for the new dashboard including user interviews and competitor analysis.</p>',
         preview: 'Gathered initial requirements for the new dashboard...',
         folderId: 'folder-3', // in Projects folder
         createdAt: new Date('2026-01-14T10:00:00'),
@@ -64,7 +64,7 @@ export const DUMMY_NOTES: Note[] = [
     {
         id: 'note-2',
         title: 'Weekly Groceries',
-        content: 'Milk, eggs, sourdough bread, avocados, spinach, chicken breast, olive oil, garlic.',
+        content: '<p>Weekly Groceries</p><p>Milk, eggs, sourdough bread, avocados, spinach, chicken breast, olive oil, garlic.</p>',
         preview: 'Milk, eggs, sourdough bread, avocados...',
         folderId: 'folder-2', // in Personal folder
         createdAt: new Date('2026-01-14T08:00:00'),
@@ -73,7 +73,7 @@ export const DUMMY_NOTES: Note[] = [
     {
         id: 'note-3',
         title: 'Workout Routine',
-        content: 'Upper body focus: Bench press 4x8, Pull ups 3x10, Shoulder press 3x12, Dumbbell rows 3x10.',
+        content: '<p>Workout Routine</p><p>Upper body focus: Bench press 4x8, Pull ups 3x10, Shoulder press 3x12, Dumbbell rows 3x10.</p>',
         preview: 'Upper body focus: Bench press, Pull ups...',
         folderId: null, // root level (unfoldered)
         createdAt: new Date('2026-01-13T07:00:00'),
@@ -82,7 +82,7 @@ export const DUMMY_NOTES: Note[] = [
     {
         id: 'note-4',
         title: 'Book Recommendations',
-        content: 'Clean Code by Robert Martin, The Pragmatic Programmer, Designing Data-Intensive Applications.',
+        content: '<p>Book Recommendations</p><p>Clean Code by Robert Martin, The Pragmatic Programmer, Designing Data-Intensive Applications.</p>',
         preview: 'Clean Code, The Pragmatic Programmer...',
         folderId: null, // root level (unfoldered)
         createdAt: new Date('2026-01-12T19:00:00'),
@@ -91,7 +91,7 @@ export const DUMMY_NOTES: Note[] = [
     {
         id: 'note-5',
         title: 'Q1 Planning Notes',
-        content: 'Main goals for Q1: Launch MVP, hire 2 engineers, close Series A round.',
+        content: '<p>Q1 Planning Notes</p><p>Main goals for Q1: Launch MVP, hire 2 engineers, close Series A round.</p>',
         preview: 'Main goals for Q1: Launch MVP, hire 2 engineers...',
         folderId: 'folder-4', // in Meetings folder
         createdAt: new Date('2026-01-10T15:00:00'),
@@ -100,7 +100,7 @@ export const DUMMY_NOTES: Note[] = [
     {
         id: 'note-6',
         title: 'Archived Specs',
-        content: 'Old specifications from v1.0 release. Kept for reference.',
+        content: '<p>Archived Specs</p><p>Old specifications from v1.0 release. Kept for reference.</p>',
         preview: 'Old specifications from v1.0 release...',
         folderId: 'folder-5', // in Archive folder (deeply nested)
         createdAt: new Date('2026-01-05T12:00:00'),

@@ -1,40 +1,119 @@
-import { getNoteById } from '@/dev-data/data';
+import TipTapEditor, { TipTapEditorRef } from '@/components/tiptap-editor';
+import { useNotesStore } from '@/stores/notes-store';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
-    Modal,
     Pressable,
     StyleSheet,
     Text,
-    TextInput,
     View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+/**
+ * Extracts title and preview from HTML content.
+ * - Title: First non-empty text content (first line)
+ * - Preview: Second non-empty line or remaining content
+ */
+function extractTitleAndPreview(html: string): { title: string; preview: string } {
+    // Remove HTML tags to get plain text
+    const plainText = html
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<\/p>/gi, '\n')
+        .replace(/<\/div>/gi, '\n')
+        .replace(/<\/h[1-6]>/gi, '\n')
+        .replace(/<[^>]*>/g, '')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .trim();
 
+    // Split by newlines and filter out empty lines
+    const lines = plainText.split('\n').filter((line) => line.trim().length > 0);
 
+    const title = lines[0]?.trim() || 'Untitled Note';
+    const preview = lines[1]?.trim() || lines[0]?.substring(0, 100).trim() || '';
 
-export default function NoteDetail() {
-    const { id } = useLocalSearchParams();
+    return { title, preview };
+}
+
+export default function NoteEditor() {
+    const { id } = useLocalSearchParams<{ id: string }>();
     const { colors } = useTheme();
     const router = useRouter();
     const insets = useSafeAreaInsets();
-    const [isSearchVisible, setIsSearchVisible] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
+    const editorRef = useRef<TipTapEditorRef>(null);
 
-    const currentNote = typeof id === 'string' ? getNoteById(id) : undefined;
+    const { getNoteById, updateNote } = useNotesStore();
+    const currentNote = id ? getNoteById(id) : undefined;
 
-    const formatDate = (date: Date): string => {
-        return date.toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit',
+    // Track the current title for the header (updates as user types)
+    const [displayTitle, setDisplayTitle] = useState(currentNote?.title || 'Untitled Note');
+
+    // Handle content changes from the editor
+    const handleContentChange = useCallback((html: string) => {
+        if (!id) return;
+
+        // Extract title and preview from the content
+        const { title, preview } = extractTitleAndPreview(html);
+
+        // Update display title for the header
+        setDisplayTitle(title);
+
+        // Update the note in the store
+        updateNote(id, {
+            content: html,
+            title,
+            preview,
         });
-    };
+    }, [id, updateNote]);
+
+    const handleBack = useCallback(() => {
+        // Blur editor before navigating back
+        editorRef.current?.blur();
+        router.back();
+    }, [router]);
+
+    // Handle case where note doesn't exist
+    if (!currentNote) {
+        return (
+            <View style={[styles.container, { backgroundColor: colors.background }]}>
+                <Stack.Screen
+                    options={{
+                        headerShown: true,
+                        headerTitle: 'Note Not Found',
+                        headerLeft: () => (
+                            <Pressable
+                                onPress={() => router.back()}
+                                style={styles.headerButton}
+                                hitSlop={8}
+                            >
+                                <Ionicons
+                                    name="chevron-back"
+                                    size={26}
+                                    color={colors.primary}
+                                />
+                            </Pressable>
+                        ),
+                        headerBackVisible: false,
+                    }}
+                />
+                <View style={styles.errorContainer}>
+                    <Ionicons name="alert-circle-outline" size={48} color={colors.border} />
+                    <Text style={[styles.errorText, { color: colors.text }]}>
+                        Note not found
+                    </Text>
+                    <Text style={[styles.errorHint, { color: colors.border }]}>
+                        This note may have been deleted
+                    </Text>
+                </View>
+            </View>
+        );
+    }
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -46,12 +125,12 @@ export default function NoteDetail() {
                             style={[styles.headerTitle, { color: colors.text }]}
                             numberOfLines={1}
                         >
-                            {currentNote?.title ?? 'Note'}
+                            {displayTitle}
                         </Text>
                     ),
                     headerLeft: () => (
                         <Pressable
-                            onPress={() => router.back()}
+                            onPress={handleBack}
                             style={styles.headerButton}
                             hitSlop={8}
                         >
@@ -62,81 +141,19 @@ export default function NoteDetail() {
                             />
                         </Pressable>
                     ),
-                    headerRight: () => (
-                        <Pressable
-                            onPress={() => setIsSearchVisible(true)}
-                            style={styles.headerButton}
-                            hitSlop={8}
-                        >
-                            <Ionicons
-                                name="search"
-                                size={26}
-                                color={colors.primary}
-                            />
-                        </Pressable>
-                    ),
                     headerBackVisible: false,
                 }}
             />
 
-            <Text style={[{ color: colors.text }]}>{currentNote?.preview}</Text>
-            <Text style={[{ color: colors.text }]}>
-                {currentNote?.createdAt ? formatDate(currentNote.createdAt) : ''}
-            </Text>
-
-            {/* Dummy Search Modal */}
-            <Modal
-                visible={isSearchVisible}
-                animationType="fade"
-                transparent
-                onRequestClose={() => setIsSearchVisible(false)}
-            >
-                <Pressable
-                    style={styles.modalOverlay}
-                    onPress={() => setIsSearchVisible(false)}
-                >
-                    <View
-                        style={[
-                            styles.searchContainer,
-                            {
-                                backgroundColor: colors.card,
-                                marginTop: insets.top + 12,
-                            },
-                        ]}
-                    >
-                        <Pressable onPress={(e) => e.stopPropagation()}>
-                            <View style={styles.searchInputWrapper}>
-                                <Ionicons
-                                    name="search"
-                                    size={18}
-                                    color={colors.text}
-                                    style={styles.searchIcon}
-                                />
-                                <TextInput
-                                    style={[styles.searchInput, { color: colors.text }]}
-                                    placeholder="Search in note..."
-                                    placeholderTextColor={'#888'}
-                                    value={searchQuery}
-                                    onChangeText={setSearchQuery}
-                                    autoFocus
-                                />
-                                {searchQuery.length > 0 && (
-                                    <Pressable onPress={() => setSearchQuery('')}>
-                                        <Ionicons
-                                            name="close-circle"
-                                            size={18}
-                                            color={colors.text}
-                                        />
-                                    </Pressable>
-                                )}
-                            </View>
-                        </Pressable>
-                        <Text style={[styles.searchHint, { color: colors.border }]}>
-                            This is a dummy search interface
-                        </Text>
-                    </View>
-                </Pressable>
-            </Modal>
+            <View style={[styles.editorWrapper,]}>
+                <TipTapEditor
+                    ref={editorRef}
+                    initialContent={currentNote.content}
+                    onContentChange={handleContentChange}
+                    placeholder="Start typing your note..."
+                    autofocus={!currentNote.content || currentNote.content === '<p></p>'}
+                />
+            </View>
         </View>
     );
 }
@@ -144,48 +161,32 @@ export default function NoteDetail() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: 16,
-        gap: 16,
+    },
+    editorWrapper: {
+        flex: 1,
+
     },
     headerTitle: {
         fontSize: 17,
         fontWeight: '600',
+        maxWidth: 200,
     },
     headerButton: {
         padding: 4,
     },
-    modalOverlay: {
+    errorContainer: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        paddingHorizontal: 16,
-    },
-    searchContainer: {
-        borderRadius: 12,
-        padding: 12,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 12,
-        elevation: 8,
-    },
-    searchInputWrapper: {
-        flexDirection: 'row',
         alignItems: 'center',
-        gap: 8,
+        justifyContent: 'center',
+        padding: 24,
+        gap: 12,
     },
-    searchIcon: {
-        opacity: 0.6,
+    errorText: {
+        fontSize: 18,
+        fontWeight: '600',
     },
-    searchInput: {
-        flex: 1,
-        fontSize: 16,
-        paddingVertical: 8,
-    },
-    searchHint: {
-        marginTop: 8,
-        fontSize: 12,
+    errorHint: {
+        fontSize: 14,
         textAlign: 'center',
     },
 });

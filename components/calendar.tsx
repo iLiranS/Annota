@@ -4,6 +4,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@react-navigation/native';
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+    runOnJS,
+    useAnimatedStyle,
+    useSharedValue,
+    withTiming,
+} from 'react-native-reanimated';
 
 interface CalendarProps {
     selectedDate: Date;
@@ -31,6 +38,10 @@ export default function Calendar({ selectedDate, onDateSelect }: CalendarProps) 
     const [viewYear, setViewYear] = useState(selectedDate.getFullYear());
     const [viewMonth, setViewMonth] = useState(selectedDate.getMonth());
 
+    // Animation values for swipe
+    const translateX = useSharedValue(0);
+    const SWIPE_THRESHOLD = 50;
+
     const taskDates = useMemo(
         () => getTaskDatesInMonth(viewYear, viewMonth),
         [viewYear, viewMonth]
@@ -56,6 +67,30 @@ export default function Calendar({ selectedDate, onDateSelect }: CalendarProps) 
             setViewMonth((m) => m + 1);
         }
     }, [viewMonth]);
+
+    // Pan gesture for swiping between months
+    const panGesture = Gesture.Pan()
+        .activeOffsetX([-20, 20]) // Only activate after moving 20px horizontally
+        .failOffsetY([-10, 10]) // Fail if moving too much vertically (for scrolling)
+        .onUpdate((event) => {
+            // Clamp the translation for a rubberband-like effect
+            translateX.value = event.translationX * 0.4;
+        })
+        .onEnd((event) => {
+            if (event.translationX > SWIPE_THRESHOLD) {
+                // Swipe right -> go to previous month
+                runOnJS(handlePrevMonth)();
+            } else if (event.translationX < -SWIPE_THRESHOLD) {
+                // Swipe left -> go to next month
+                runOnJS(handleNextMonth)();
+            }
+            // Animate back to center smoothly without jiggle
+            translateX.value = withTiming(0, { duration: 300 });
+        });
+
+    const animatedStyle = useAnimatedStyle(() => ({
+        transform: [{ translateX: translateX.value }],
+    }));
 
     const isToday = (day: number): boolean => {
         return (
@@ -102,94 +137,99 @@ export default function Calendar({ selectedDate, onDateSelect }: CalendarProps) 
     }
 
     return (
-        <View
-            style={[
-                styles.container,
-                {
-                    backgroundColor: dark ? 'rgba(255,255,255,0.03)' : colors.card,
-                    borderColor: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
-                },
-            ]}
-        >
-            {/* Header with Month Navigation */}
-            <View style={styles.header}>
-                <Pressable onPress={handlePrevMonth} style={styles.navButton} hitSlop={12}>
-                    <Ionicons name="chevron-back" size={22} color={colors.text} />
-                </Pressable>
+        <GestureDetector gesture={panGesture}>
+            <View
+                style={[
+                    styles.container,
+                    {
+                        backgroundColor: dark ? 'rgba(255,255,255,0.03)' : colors.card,
+                        borderColor: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
+                    },
+                ]}
+            >
+                {/* Header with Month Navigation */}
+                <View style={styles.header}>
+                    <Pressable onPress={handlePrevMonth} style={styles.navButton} hitSlop={12}>
+                        <Ionicons name="chevron-back" size={22} color={colors.text} />
+                    </Pressable>
 
-                <ThemedText style={styles.monthTitle}>
-                    {MONTHS[viewMonth]} {viewYear}
-                </ThemedText>
+                    <ThemedText style={styles.monthTitle}>
+                        {MONTHS[viewMonth]} {viewYear}
+                    </ThemedText>
 
-                <Pressable onPress={handleNextMonth} style={styles.navButton} hitSlop={12}>
-                    <Ionicons name="chevron-forward" size={22} color={colors.text} />
-                </Pressable>
-            </View>
-
-            {/* Weekday Headers */}
-            <View style={styles.weekdayRow}>
-                {WEEKDAYS.map((day) => (
-                    <View key={day} style={styles.weekdayCell}>
-                        <ThemedText style={[styles.weekdayText, { color: colors.text + '60' }]}>
-                            {day}
-                        </ThemedText>
-                    </View>
-                ))}
-            </View>
-
-            {/* Calendar Grid */}
-            {weeks.map((week, weekIndex) => (
-                <View key={weekIndex} style={styles.weekRow}>
-                    {week.map((day, dayIndex) => {
-                        if (day === null) {
-                            return <View key={`empty-${dayIndex}`} style={styles.dayCell} />;
-                        }
-
-                        const selected = isSelected(day);
-                        const todayHighlight = isToday(day);
-                        const hasTask = taskDates.has(day);
-
-                        return (
-                            <Pressable
-                                key={day}
-                                style={styles.dayCell}
-                                onPress={() => handleDayPress(day)}
-                            >
-                                <View
-                                    style={[
-                                        styles.dayInner,
-                                        selected && styles.selectedDay,
-                                        selected && { backgroundColor: '#6366F1' },
-                                        todayHighlight && !selected && styles.todayDay,
-                                        todayHighlight && !selected && { borderColor: '#6366F1' },
-                                    ]}
-                                >
-                                    <ThemedText
-                                        style={[
-                                            styles.dayText,
-                                            selected && styles.selectedDayText,
-                                            todayHighlight && !selected && { color: '#6366F1', fontWeight: '700' },
-                                        ]}
-                                    >
-                                        {day}
-                                    </ThemedText>
-                                </View>
-
-                                {/* Task Indicator Dot */}
-                                {hasTask && (
-                                    <View
-                                        style={[
-                                            styles.taskDot,
-                                            { backgroundColor: selected ? '#FFFFFF' : '#6366F1' },
-                                        ]}
-                                    />
-                                )}
-                            </Pressable>
-                        );
-                    })}
+                    <Pressable onPress={handleNextMonth} style={styles.navButton} hitSlop={12}>
+                        <Ionicons name="chevron-forward" size={22} color={colors.text} />
+                    </Pressable>
                 </View>
-            ))}
-        </View>
+
+                {/* Weekday Headers & Calendar Grid with Animation */}
+                <Animated.View style={[styles.calendarContent, animatedStyle]}>
+                    {/* Weekday Headers */}
+                    <View style={styles.weekdayRow}>
+                        {WEEKDAYS.map((day) => (
+                            <View key={day} style={styles.weekdayCell}>
+                                <ThemedText style={[styles.weekdayText, { color: colors.text + '60' }]}>
+                                    {day}
+                                </ThemedText>
+                            </View>
+                        ))}
+                    </View>
+
+                    {/* Calendar Grid */}
+                    {weeks.map((week, weekIndex) => (
+                        <View key={weekIndex} style={styles.weekRow}>
+                            {week.map((day, dayIndex) => {
+                                if (day === null) {
+                                    return <View key={`empty-${dayIndex}`} style={styles.dayCell} />;
+                                }
+
+                                const selected = isSelected(day);
+                                const todayHighlight = isToday(day);
+                                const hasTask = taskDates.has(day);
+
+                                return (
+                                    <Pressable
+                                        key={day}
+                                        style={styles.dayCell}
+                                        onPress={() => handleDayPress(day)}
+                                    >
+                                        <View
+                                            style={[
+                                                styles.dayInner,
+                                                selected && styles.selectedDay,
+                                                selected && { backgroundColor: '#6366F1' },
+                                                todayHighlight && !selected && styles.todayDay,
+                                                todayHighlight && !selected && { borderColor: '#6366F1' },
+                                            ]}
+                                        >
+                                            <ThemedText
+                                                style={[
+                                                    styles.dayText,
+                                                    selected && styles.selectedDayText,
+                                                    todayHighlight && !selected && { color: '#6366F1', fontWeight: '700' },
+                                                ]}
+                                            >
+                                                {day}
+                                            </ThemedText>
+                                        </View>
+
+                                        {/* Task Indicator Dot */}
+                                        {hasTask && (
+                                            <View
+                                                style={[
+                                                    styles.taskDot,
+                                                    { backgroundColor: selected ? '#FFFFFF' : '#6366F1' },
+                                                ]}
+                                            />
+                                        )}
+                                    </Pressable>
+                                );
+                            })}
+                        </View>
+                    ))}
+                </Animated.View>
+            </View>
+        </GestureDetector>
     );
 }
 
@@ -202,12 +242,16 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.03,
         shadowRadius: 8,
         elevation: 2,
+        overflow: 'hidden',
     },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         marginBottom: 16,
+    },
+    calendarContent: {
+        overflow: 'hidden',
     },
     navButton: {
         padding: 8,

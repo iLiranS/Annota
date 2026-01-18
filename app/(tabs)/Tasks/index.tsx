@@ -139,7 +139,22 @@ export default function TasksScreen() {
             >
                 {/* Header */}
                 <View style={styles.header}>
-                    <ThemedText style={styles.title}>Tasks</ThemedText>
+                    <View style={styles.headerRow}>
+                        <ThemedText style={styles.title}>Tasks</ThemedText>
+                        <Pressable
+                            onPress={() => router.push('/Tasks/new')}
+                            style={({ pressed }) => [
+                                styles.addButton,
+                                {
+                                    backgroundColor: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                                    opacity: pressed ? 0.7 : 1,
+                                },
+                            ]}
+                            hitSlop={8}
+                        >
+                            <Ionicons name="add" size={24} color="#6366F1" />
+                        </Pressable>
+                    </View>
                     <ThemedText style={[styles.subtitle, { color: colors.text + '70' }]}>
                         {pendingTasks.length} pending · {completedTasks.length} done
                     </ThemedText>
@@ -209,6 +224,18 @@ const styles = StyleSheet.create({
     },
     header: {
         marginBottom: 28,
+    },
+    headerRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    addButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     title: {
         fontSize: 32,
