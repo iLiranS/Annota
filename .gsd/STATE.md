@@ -1,6 +1,6 @@
 # STATE.md — Project Memory
 
-> Last updated: 2026-01-19T23:20:00+02:00
+> Last updated: 2026-01-19T23:30:00+02:00
 
 ## Current Position
 
@@ -11,48 +11,47 @@
 - 2.1 ✅ Infrastructure
 - 2.2 ✅ Sidebar
 - 2.3 ✅ Folder Stack Navigation
+- 2.4 ✅ Sidebar Polish & Fixes
 
 ## Last Session Summary
 
-Phase 2 complete! All 3 plans executed successfully:
-
-1. **Plan 2.1:** Replaced bottom tabs with Drawer navigator
-2. **Plan 2.2:** Built custom Sidebar with all required sections
-3. **Plan 2.3:** Implemented stack-based folder navigation with Menu/Back header logic
+Polish applied to Sidebar and Navigation (Plan 2.4):
+- **Sidebar**:
+  - Reordered: Home, Tasks, Quick Access, Daily
+  - Added Separators
+  - Middle: All Notes, Folders List
+  - Footer: Trash, Settings
+- **Navigation**:
+  - Disabled Drawer swipe gesture in Note Editor (`[id]/index.tsx`) to prevent conflicts.
 
 Commits:
-- `2ee6487` — Plan 2.1 (Drawer setup)
-- `0fad648` — Plan 2.2 (Sidebar)
-- `dbe3115` — Plan 2.3 (Folder Stack)
+- `2ee6487` — Plan 2.1
+- `0fad648` — Plan 2.2
+- `dbe3115` — Plan 2.3
+- `7794abc` — Plan 2.4 (Polish)
 
 ## Technical Implementation
 
-### Navigation Architecture
+### Sidebar Structure (Final)
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                      ROOT (Stack)                            │
-│  ┌─────────────────────────────────────────────────────────┐│
-│  │               DRAWER (Sidebar)                          ││
-│  │  ┌───────────────┐    ┌───────────────────────────┐    ││
-│  │  │   Sidebar     │ ◀──│   Main Content            │    ││
-│  │  │               │    │                           │    ││
-│  │  │ • Home        │    │  Notes (Stack)            │    ││
-│  │  │ • Daily Note  │    │  ├─ index (root folder)   │    ││
-│  │  │ • All Notes   │    │  ├─ [id] (note editor)    │    ││
-│  │  │ • Quick Access│    │  └─ trash                 │    ││
-│  │  │ • Folders...  │    │                           │    ││
-│  │  │ • Tasks       │    │  Tasks (Stack)            │    ││
-│  │  │ • Trash       │    │  └─ index                 │    ││
-│  │  └───────────────┘    └───────────────────────────┘    ││
-│  └─────────────────────────────────────────────────────────┘│
-│  + Modals (settings, task edit, etc.)                       │
-└─────────────────────────────────────────────────────────────┘
+Top:
+  🏠 Home
+  ✅ Tasks
+  ⭐ Quick Access
+  📅 Daily Note
+  ─────────────── (Separator)
+Middle:
+  📄 All Notes
+  📁 [Folder List]
+  ─────────────── (Separator)
+Footer:
+  🗑️ Trash        ⚙️ Settings
 ```
 
-### Header Logic
-- **Root level:** Menu icon (☰) → Opens drawer
-- **Nested folder:** Back button (←) → Navigates to parent
-- **Note editor:** Back button (←) → Returns to folder
+### Navigation Rules
+- **Root**: Menu icon opens drawer
+- **Folder**: Back button, Swipe Edge opens drawer
+- **Note Editor**: Back button, **Drawer Swipe DISABLED**
 
 ## Next Steps
 
