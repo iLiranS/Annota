@@ -1,6 +1,7 @@
 import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { openDatabaseSync } from 'expo-sqlite';
 import * as schema from './schema';
+import { seedSystemData } from './seed';
 
 // Open SQLite database
 const expoDb = openDatabaseSync('notes.db');
@@ -73,17 +74,23 @@ const CREATE_TABLES_SQL = `
   );
 `;
 
-// Initialize database (create tables)
+// Initialize database (create tables and seed system data)
 export function initDatabase(): void {
-    try {
-        // Create all tables
-        expoDb.execSync(CREATE_TABLES_SQL);
-        console.log('Database tables created successfully');
-    } catch (error) {
-        console.error('Database initialization failed:', error);
-        throw error;
-    }
+  try {
+    // Create all tables
+    expoDb.execSync(CREATE_TABLES_SQL);
+    console.log('Database tables created successfully');
+
+    // Seed system data (Trash folder, Daily Notes folder, default settings)
+    seedSystemData();
+
+    console.log('Database initialized successfully');
+  } catch (error) {
+    console.error('Database initialization failed:', error);
+    throw error;
+  }
 }
 
 // Re-export schema for convenience
 export { schema };
+
