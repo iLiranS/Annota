@@ -210,13 +210,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
             return folderMatch && deletedMatch;
         });
 
-        // Convert to the format expected by sortNotes
-        const notesForSort = filtered.map(n => ({
-            ...n,
-            content: '', // Not needed for sorting
-        }));
-
-        return sortNotes(notesForSort, sortType) as unknown as NoteMetadata[];
+        return sortNotes(filtered, sortType);
     },
 
     getFoldersInFolder: (parentId: string | null, includeDeleted = false) => {
@@ -229,6 +223,6 @@ export const useNotesStore = create<NotesState>((set, get) => ({
             return parentMatch && deletedMatch;
         });
 
-        return sortFolders(filtered as any, sortType) as unknown as Folder[];
+        return sortFolders(filtered, sortType);
     },
 }));

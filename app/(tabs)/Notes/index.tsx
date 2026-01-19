@@ -10,11 +10,11 @@ import {
     sortNotes,
     SortType,
 } from '@/dev-data/data';
-import { TRASH_FOLDER_ID, useNotesStore, type Folder } from '@/stores/notes-store';
+import { NoteMetadata, TRASH_FOLDER_ID, useNotesStore, type Folder } from '@/stores/notes-store';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import {
     FlatList,
@@ -172,7 +172,7 @@ export default function NotesList() {
     // Browsing Data (Current Folder) - sorted
     const browseFolders = useMemo(() => {
         const folderList = getFoldersInFolder(currentFolderId);
-        const sorted = sortFolders(folderList as any, currentSortType);
+        const sorted = sortFolders(folderList, currentSortType);
         // Ensure Trash folder appears at the bottom
         const systemFolders = sorted.filter(f => f.isSystem);
         const regularFolders = sorted.filter(f => !f.isSystem);

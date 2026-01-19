@@ -272,7 +272,10 @@ export function getTaskDatesInMonth(year: number, month: number): Set<number> {
 /**
  * Sort notes by the specified sort type
  */
-export function sortNotes(notes: Note[], sortType: SortType): Note[] {
+/**
+ * Sort notes by the specified sort type
+ */
+export function sortNotes<T extends { title: string; createdAt: Date; updatedAt: Date }>(notes: T[], sortType: SortType): T[] {
     return [...notes].sort((a, b) => {
         switch (sortType) {
             case 'NAME_ASC':
@@ -296,7 +299,7 @@ export function sortNotes(notes: Note[], sortType: SortType): Note[] {
 /**
  * Sort folders by the specified sort type
  */
-export function sortFolders(folders: Folder[], sortType: SortType): Folder[] {
+export function sortFolders<T extends { name: string; createdAt: Date; updatedAt: Date }>(folders: T[], sortType: SortType): T[] {
     return [...folders].sort((a, b) => {
         switch (sortType) {
             case 'NAME_ASC':

@@ -1,3 +1,4 @@
+import type { SortType } from '@/dev-data/data';
 import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
 // ============ NOTE METADATA (fast, for lists) ============
@@ -36,7 +37,7 @@ export const folders = sqliteTable('folders', {
     parentId: text('parent_id'),
     name: text('name').notNull(),
     icon: text('icon').notNull().default('folder'),
-    sortType: text('sort_type').notNull().default('UPDATED_LAST'),
+    sortType: text('sort_type').$type<SortType>().notNull().default('UPDATED_LAST'),
     isSystem: integer('is_system', { mode: 'boolean' }).notNull().default(false),
     isDeleted: integer('is_deleted', { mode: 'boolean' }).notNull().default(false),
     deletedAt: integer('deleted_at', { mode: 'timestamp' }),

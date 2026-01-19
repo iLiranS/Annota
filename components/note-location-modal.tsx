@@ -1,11 +1,10 @@
-import { Note } from '@/dev-data/data';
-import { useNotesStore } from '@/stores/notes-store';
+import { useNotesStore, type NoteMetadata } from '@/stores/notes-store';
 import React, { useEffect, useState } from 'react';
 import LocationPickerModal from './location-picker-modal';
 
 interface NoteLocationModalProps {
     visible: boolean;
-    note: Note | null;
+    note: NoteMetadata | null;
     onClose: () => void;
 }
 

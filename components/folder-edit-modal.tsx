@@ -1,5 +1,4 @@
-import { Folder, TRASH_FOLDER_ID } from '@/dev-data/data';
-import { useNotesStore } from '@/stores/notes-store';
+import { TRASH_FOLDER_ID, useNotesStore, type Folder } from '@/stores/notes-store';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
