@@ -1,53 +1,39 @@
 # STATE.md — Project Memory
 
-> Last updated: 2026-01-19T22:10:00+02:00
+> Last updated: 2026-01-19T23:08:00+02:00
 
 ## Current Position
 
 **Milestone:** 1.0 — Frontend + Local Database
-**Phase:** 1 (Database & Data Architecture)
-**Status:** ✅ Complete — Awaiting verification
+**Phase:** 2 (Navigation — Sidebar & Stack Architecture)
+**Status:** 📋 Planned — Ready to Execute
+**Active Plan:** None (Waiting for start)
 
 ## Last Session Summary
 
-Phase 1 executed successfully:
-- **Plan 1.1:** Installed expo-sqlite and drizzle-orm, created Drizzle schema
-- **Plan 1.2:** Created repository layer for notes, folders, and tasks
-- **Plan 1.3:** Migrated notes-store to SQLite with lazy content loading
-- **Plan 1.4:** Migrated tasks-store to SQLite with database loading
-- **Plan 1.5:** Added system data seeding (Trash, Daily Notes folders)
+Phase 2 Planning completed.
+Created 3 execution plans:
+1. **Plan 2.1:** Infrastructure (Drawer Setup)
+2. **Plan 2.2:** Sidebar Component
+3. **Plan 2.3:** Folder Stack Navigation
+
+Context Check:
+- Phase 1 (Database) is marked complete in STATE.md (though ROADMAP needs sync).
+- Existing Database repositories are ready for Folder Navigation logic.
 
 ## Technical Implementation
 
-### Database Stack
-- **Driver:** expo-sqlite (Expo-native, sync API)
-- **ORM:** Drizzle ORM (type-safe, lightweight)
-- **Schema:** `lib/db/schema.ts` (7 tables)
-- **Initialization:** `lib/db/client.ts` → `initDatabase()`
+### Planned Navigation Architecture
+- **Root:** Stack Navigator (Modals)
+  - **Main:** Drawer Navigator (Sidebar)
+    - **Drawer Screen:** `(drawer)/notes` -> Stack Navigator (Folder Browser)
+    - **Drawer Screen:** `(drawer)/tasks` -> Tasks Screen
 
-### Data Split Architecture
-- `note_metadata` — Fast, for list views (id, folderId, title, preview, updatedAt, flags)
-- `note_content` — Heavy, lazy-loaded only in editor (noteId, content)
-
-### Repository Layer
-- `lib/db/repositories/notes.repository.ts`
-- `lib/db/repositories/folders.repository.ts`
-- `lib/db/repositories/tasks.repository.ts`
-
-### Store Integration
-- `stores/notes-store.ts` — Uses repository, provides `getNoteContent()` for lazy loading
-- `stores/tasks-store.ts` — Uses repository, provides `loadTasks()` on mount
-
-## Verification Needed
-
-Manual testing required:
-1. Fresh install creates Trash and Daily Notes folders
-2. Notes persist across app restart
-3. Folders persist across app restart
-4. Tasks persist across app restart
-5. Deleted items appear in Trash
+### Folders Strategy
+- Using recursive stack navigation.
+- Root is `app/(drawer)/notes/index.tsx`.
+- Child folders: `app/(drawer)/notes/folder/[id].tsx`.
 
 ## Next Steps
 
-1. Run `/verify 1` to validate against phase requirements
-2. Or proceed to `/plan 2` for sidebar navigation phase
+1. Run `/execute 2.1` to strip Tabs and install Drawer.

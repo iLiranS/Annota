@@ -2,18 +2,16 @@ import SwipeableItem from '@/components/swipeable-item';
 import ThemedText from '@/components/themed-text';
 import ThemedPressable from '@/components/ui/themed-pressable';
 import {
-    Folder,
-    Note,
     sortFolders,
     sortNotes,
-    TRASH_FOLDER_ID,
 } from '@/dev-data/data';
-import { useNotesStore } from '@/stores/notes-store';
+import { Folder, NoteMetadata, TRASH_FOLDER_ID, useNotesStore } from '@/stores/notes-store';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
 import { Stack, useRouter } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
+    ActivityIndicator,
     Alert,
     FlatList,
     Pressable,
@@ -73,7 +71,7 @@ function FolderCard({ folder, onPress, onRestore, onPermanentDelete }: FolderIte
 }
 
 interface NoteItemProps {
-    note: Note;
+    note: NoteMetadata;
     onPress: () => void;
     onRestore: () => void;
     onPermanentDelete: () => void;
@@ -130,7 +128,7 @@ function NoteCard({ note, onPress, onRestore, onPermanentDelete }: NoteItemProps
 
 type ListItem =
     | { type: 'folder'; data: Folder }
-    | { type: 'note'; data: Note }
+    | { type: 'note'; data: NoteMetadata }
     | { type: 'section-header'; title: string };
 
 export default function TrashScreen() {
