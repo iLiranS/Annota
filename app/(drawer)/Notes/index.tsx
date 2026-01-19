@@ -127,9 +127,14 @@ type ListItem =
 
 export default function NotesList() {
     const router = useRouter();
+    const navigation = useNavigation();
     const { colors, dark } = useTheme();
     const insets = useSafeAreaInsets();
     const params = useLocalSearchParams<{ folderId?: string }>();
+
+    const openDrawer = useCallback(() => {
+        navigation.dispatch(DrawerActions.openDrawer());
+    }, [navigation]);
 
     // Zustand store
     const {
@@ -391,13 +396,17 @@ export default function NotesList() {
                 options={{
                     headerShown: true,
                     title: headerTitle,
-                    headerLeft: currentFolderId
-                        ? () => (
+                    headerLeft: () => currentFolderId
+                        ? (
                             <Pressable onPress={handleBack} style={styles.headerButton} hitSlop={8}>
                                 <Ionicons name="chevron-back" size={26} color={colors.primary} />
                             </Pressable>
                         )
-                        : undefined,
+                        : (
+                            <Pressable onPress={openDrawer} style={styles.headerButton} hitSlop={8}>
+                                <Ionicons name="menu" size={26} color={colors.primary} />
+                            </Pressable>
+                        ),
                     headerRight: () => (
                         <Pressable
                             onPress={() => setIsSearchVisible(true)}
