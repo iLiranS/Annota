@@ -1,11 +1,11 @@
 import ThemedText from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { getNoteById, Task } from '@/dev-data/data';
-import { useTasksStore } from '@/stores/tasks-store';
+import { useNotesStore } from '@/stores/notes-store';
+import { useTasksStore, type Task } from '@/stores/tasks-store';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -17,6 +17,7 @@ interface TaskCardProps {
 
 function TaskCard({ task, onToggle, onPress }: TaskCardProps) {
     const { colors, dark } = useTheme();
+    const { getNoteById } = useNotesStore();
     const linkedNote = task.linkedNoteId ? getNoteById(task.linkedNoteId) : null;
 
     const now = new Date();
@@ -112,7 +113,12 @@ export default function TasksScreen() {
     const insets = useSafeAreaInsets();
 
     // Use Zustand store for tasks
-    const { tasks, toggleComplete } = useTasksStore();
+    const { tasks, toggleComplete, loadTasks } = useTasksStore();
+
+    // Load tasks from database on mount
+    useEffect(() => {
+        loadTasks();
+    }, [loadTasks]);
 
     const handleTaskPress = useCallback((task: Task) => {
         router.push(`/Tasks/${task.id}`);

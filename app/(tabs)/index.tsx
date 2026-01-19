@@ -4,12 +4,11 @@ import ThemedText from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
-import { Task } from '@/dev-data/data';
-import { useTasksStore } from '@/stores/tasks-store';
+import { useTasksStore, type Task } from '@/stores/tasks-store';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, useColorScheme, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -23,7 +22,12 @@ export default function HomeScreen() {
   const [isCollapsibleOpen, setIsCollapsibleOpen] = useState(true);
 
   // Use Zustand store for tasks
-  const tasks = useTasksStore((state) => state.tasks);
+  const { tasks, loadTasks } = useTasksStore();
+
+  // Load tasks from database on mount
+  useEffect(() => {
+    loadTasks();
+  }, [loadTasks]);
 
   const tasksForSelectedDate = useMemo(() => {
     return tasks.filter((task) => {
