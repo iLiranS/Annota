@@ -6,14 +6,11 @@ import SwipeableItem from '@/components/swipeable-item';
 import ThemedText from '@/components/themed-text';
 import ThemedPressable from '@/components/ui/themed-pressable';
 import {
-    Folder,
-    Note,
     sortFolders,
     sortNotes,
     SortType,
-    TRASH_FOLDER_ID,
 } from '@/dev-data/data';
-import { useNotesStore } from '@/stores/notes-store';
+import { TRASH_FOLDER_ID, useNotesStore, type Folder } from '@/stores/notes-store';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -65,7 +62,7 @@ function FolderCard({ folder, onPress, onLongPress, onDelete }: FolderItemProps)
 }
 
 interface NoteItemProps {
-    note: Note;
+    note: NoteMetadata;
     onPress: () => void;
     onLongPress: () => void;
     onDelete: () => void;
@@ -125,7 +122,7 @@ function NoteCard({ note, onPress, onLongPress, onDelete }: NoteItemProps) {
 
 type ListItem =
     | { type: 'folder'; data: Folder }
-    | { type: 'note'; data: Note }
+    | { type: 'note'; data: NoteMetadata }
     | { type: 'section-header'; title: string };
 
 export default function NotesList() {
@@ -147,6 +144,8 @@ export default function NotesList() {
         getFoldersInFolder,
         getSortType,
         setFolderSortType,
+        loadNotesInFolder,
+        loadFoldersInFolder,
     } = useNotesStore();
 
     const currentFolderId = params.folderId ?? null;
@@ -159,19 +158,25 @@ export default function NotesList() {
 
     // Edit modal state
     const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
-    const [editingNote, setEditingNote] = useState<Note | null>(null);
+    const [editingNote, setEditingNote] = useState<NoteMetadata | null>(null);
 
     // Search scope state
     const [searchScope, setSearchScope] = useState<'current' | 'all'>('current');
 
+    // Load data from database when folder changes
+    useEffect(() => {
+        loadNotesInFolder(currentFolderId);
+        loadFoldersInFolder(currentFolderId);
+    }, [currentFolderId]);
+
     // Browsing Data (Current Folder) - sorted
     const browseFolders = useMemo(() => {
         const folderList = getFoldersInFolder(currentFolderId);
-        const sorted = sortFolders(folderList, currentSortType);
+        const sorted = sortFolders(folderList as any, currentSortType);
         // Ensure Trash folder appears at the bottom
         const systemFolders = sorted.filter(f => f.isSystem);
         const regularFolders = sorted.filter(f => !f.isSystem);
-        return [...regularFolders, ...systemFolders];
+        return [...regularFolders, ...systemFolders] as Folder[];
     }, [folders, currentFolderId, currentSortType]);
 
     const browseNotes = useMemo(() => {
@@ -311,7 +316,7 @@ export default function NotesList() {
     );
 
     const handleNoteLongPress = useCallback(
-        (note: Note) => {
+        (note: NoteMetadata) => {
             setEditingNote(note);
         },
         []

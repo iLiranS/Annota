@@ -3,21 +3,20 @@ import { useNotesStore } from '@/stores/notes-store';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     Pressable,
     StyleSheet,
     Text,
-    View,
+    View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /**
- * Extracts title and preview from HTML content.
+ * Extracts title from HTML content.
  * - Title: First non-empty text content (first line)
- * - Preview: Second non-empty line or remaining content
  */
-function extractTitleAndPreview(html: string): { title: string; preview: string } {
+function extractTitle(html: string): string {
     // Remove HTML tags to get plain text
     const plainText = html
         .replace(/<br\s*\/?>/gi, '\n')
@@ -35,10 +34,7 @@ function extractTitleAndPreview(html: string): { title: string; preview: string 
     // Split by newlines and filter out empty lines
     const lines = plainText.split('\n').filter((line) => line.trim().length > 0);
 
-    const title = lines[0]?.trim() || 'Untitled Note';
-    const preview = lines[1]?.trim() || lines[0]?.substring(0, 100).trim() || '';
-
-    return { title, preview };
+    return lines[0]?.trim() || 'Untitled Note';
 }
 
 export default function NoteEditor() {
@@ -48,29 +44,41 @@ export default function NoteEditor() {
     const insets = useSafeAreaInsets();
     const editorRef = useRef<TipTapEditorRef>(null);
 
-    const { getNoteById, updateNote } = useNotesStore();
+    const { getNoteById, updateNote, getNoteContent, updateNoteContent } = useNotesStore();
     const currentNote = id ? getNoteById(id) : undefined;
+
+    // Lazy-loaded content state
+    const [content, setContent] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
     // Track the current title for the header (updates as user types)
     const [displayTitle, setDisplayTitle] = useState(currentNote?.title || 'Untitled Note');
+
+    // Load content from database on mount
+    useEffect(() => {
+        if (id) {
+            const loadedContent = getNoteContent(id);
+            setContent(loadedContent);
+            setIsLoading(false);
+        }
+    }, [id, getNoteContent]);
 
     // Handle content changes from the editor
     const handleContentChange = useCallback((html: string) => {
         if (!id) return;
 
-        // Extract title and preview from the content
-        const { title, preview } = extractTitleAndPreview(html);
+        // Extract title from the content
+        const title = extractTitle(html);
 
         // Update display title for the header
         setDisplayTitle(title);
 
-        // Update the note in the store
-        updateNote(id, {
-            content: html,
-            title,
-            preview,
-        });
-    }, [id, updateNote]);
+        // Update the note content in the database (this also updates preview)
+        updateNoteContent(id, html);
+
+        // Update the title in metadata
+        updateNote(id, { title });
+    }, [id, updateNote, updateNoteContent]);
 
     const handleBack = useCallback(() => {
         // Blur editor before navigating back
@@ -145,15 +153,21 @@ export default function NoteEditor() {
                 }}
             />
 
-            <View style={[styles.editorWrapper,]}>
-                <TipTapEditor
-                    ref={editorRef}
-                    initialContent={currentNote.content}
-                    onContentChange={handleContentChange}
-                    placeholder="Start typing your note..."
-                    autofocus={!currentNote.content || currentNote.content === '<p></p>'}
-                />
-            </View>
+            {isLoading ? (
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color={colors.primary} />
+                </View>
+            ) : (
+                <View style={[styles.editorWrapper,]}>
+                    <TipTapEditor
+                        ref={editorRef}
+                        initialContent={content ?? ''}
+                        onContentChange={handleContentChange}
+                        placeholder="Start typing your note..."
+                        autofocus={!content || content === '<p></p>'}
+                    />
+                </View>
+            )}
         </View>
     );
 }
@@ -165,6 +179,11 @@ const styles = StyleSheet.create({
     editorWrapper: {
         flex: 1,
 
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     headerTitle: {
         fontSize: 17,
