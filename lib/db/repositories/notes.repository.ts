@@ -154,8 +154,17 @@ export function restoreNote(noteId: string, targetFolderId?: string | null): voi
     if (targetFolderId !== undefined) {
         restoredFolderId = targetFolderId;
     } else if (note.originalFolderId) {
-        // TODO: Check if original folder exists and is not deleted
-        restoredFolderId = note.originalFolderId;
+        // Check if original folder exists and is not deleted
+        const originalFolder = db
+            .select()
+            .from(schema.folders)
+            .where(eq(schema.folders.id, note.originalFolderId))
+            .get();
+
+        if (originalFolder && !originalFolder.isDeleted) {
+            restoredFolderId = note.originalFolderId;
+        }
+        // If original folder is deleted or doesn't exist, restore to root (null)
     }
 
     db
