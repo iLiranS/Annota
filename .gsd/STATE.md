@@ -1,30 +1,33 @@
 # STATE.md — Project Memory
 
-> Last updated: 2026-01-19T10:12:48+02:00
+> Last updated: 2026-01-19T11:15:00+02:00
 
 ## Current Position
 
-**Phase:** Pre-planning (codebase mapped)
-**Status:** Awaiting `/new-project` completion
+**Milestone:** 1.0 — Frontend + Local Database
+**Phase:** 1 (Database & Data Architecture)
+**Status:** ⬜ Not Started
 
 ## Last Session Summary
 
-Codebase mapping complete.
-- 3 main modules identified (Home, Notes, Tasks)
-- 15+ components analyzed
-- 31 dependencies cataloged
-- 6 technical debt items found
+Project initialization complete (`/new-project`).
+- SPEC.md finalized with 15 features for Milestone 1
+- ROADMAP.md created with 10 phases
+- 5 architecture decisions documented
+- Estimated effort: ~15-20 days
 
 ## Next Steps
 
-1. Complete `/new-project` workflow (questioning phase)
-2. Create SPEC.md with project vision
-3. Define ROADMAP.md phases
+1. Run `/plan 1` to create detailed Phase 1 execution plan
+2. Set up SQLite database
+3. Create schema and migration
+4. Update Zustand stores to use SQLite
 
 ## Context
 
-- This is a brownfield project (existing React Native app)
-- App uses Expo SDK 54 with file-based routing
-- State managed via Zustand (notes-store, tasks-store)
-- Rich text editing via TipTap in WebView
-- Currently using dummy data (no persistence)
+- Brownfield project: existing React Native/Expo app
+- Refactoring from tab-based to sidebar navigation
+- Implementing local SQLite database
+- Data split: note_metadata + note_content tables
+- Version history stored locally only
+- Tasks remain separate module
