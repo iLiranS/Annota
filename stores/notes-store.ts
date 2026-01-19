@@ -22,8 +22,8 @@ interface NotesState {
     currentFolderId: string | null;
 
     // Load data from DB
-    loadNotesInFolder: (folderId: string | null) => void;
-    loadFoldersInFolder: (parentId: string | null) => void;
+    loadNotesInFolder: (folderId: string | null, includeDeleted?: boolean) => void;
+    loadFoldersInFolder: (parentId: string | null, includeDeleted?: boolean) => void;
     refreshCurrentFolder: () => void;
 
     // Note operations
@@ -66,14 +66,14 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     currentFolderId: null,
 
     // Load notes from database for a specific folder
-    loadNotesInFolder: (folderId: string | null) => {
-        const notes = notesRepo.getNotesInFolder(folderId);
+    loadNotesInFolder: (folderId: string | null, includeDeleted = false) => {
+        const notes = notesRepo.getNotesInFolder(folderId, includeDeleted);
         set({ notes, currentFolderId: folderId });
     },
 
     // Load folders from database for a specific parent
-    loadFoldersInFolder: (parentId: string | null) => {
-        const folders = foldersRepo.getFoldersInFolder(parentId);
+    loadFoldersInFolder: (parentId: string | null, includeDeleted = false) => {
+        const folders = foldersRepo.getFoldersInFolder(parentId, includeDeleted);
         set({ folders });
     },
 

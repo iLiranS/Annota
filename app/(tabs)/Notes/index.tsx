@@ -13,8 +13,8 @@ import {
 import { NoteMetadata, TRASH_FOLDER_ID, useNotesStore, type Folder } from '@/stores/notes-store';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useMemo, useState } from 'react';
 
 import {
     FlatList,
@@ -163,11 +163,13 @@ export default function NotesList() {
     // Search scope state
     const [searchScope, setSearchScope] = useState<'current' | 'all'>('current');
 
-    // Load data from database when folder changes
-    useEffect(() => {
-        loadNotesInFolder(currentFolderId);
-        loadFoldersInFolder(currentFolderId);
-    }, [currentFolderId]);
+    // Load data from database when folder changes or screen is focused
+    useFocusEffect(
+        useCallback(() => {
+            loadNotesInFolder(currentFolderId);
+            loadFoldersInFolder(currentFolderId);
+        }, [currentFolderId, loadNotesInFolder, loadFoldersInFolder])
+    );
 
     // Browsing Data (Current Folder) - sorted
     const browseFolders = useMemo(() => {

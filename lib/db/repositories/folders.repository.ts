@@ -17,8 +17,15 @@ function generateId(): string {
 
 // ============ FOLDER OPERATIONS ============
 
-export function getFoldersInFolder(parentId: string | null): Folder[] {
+export function getFoldersInFolder(parentId: string | null, includeDeleted = false): Folder[] {
     if (parentId === null) {
+        if (includeDeleted) {
+            return db
+                .select()
+                .from(schema.folders)
+                .where(isNull(schema.folders.parentId))
+                .all();
+        }
         return db
             .select()
             .from(schema.folders)
@@ -28,6 +35,14 @@ export function getFoldersInFolder(parentId: string | null): Folder[] {
                     eq(schema.folders.isDeleted, false)
                 )
             )
+            .all();
+    }
+
+    if (includeDeleted) {
+        return db
+            .select()
+            .from(schema.folders)
+            .where(eq(schema.folders.parentId, parentId))
             .all();
     }
 

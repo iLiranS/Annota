@@ -150,9 +150,17 @@ export default function TrashScreen() {
         getNotesInFolder,
         getFoldersInFolder,
         getFolderById,
+        loadNotesInFolder,
+        loadFoldersInFolder,
     } = useNotesStore();
 
     const currentFolder = currentFolderId ? getFolderById(currentFolderId) : null;
+
+    // Load data from database (including deleted items)
+    React.useEffect(() => {
+        loadNotesInFolder(currentFolderId, true);
+        loadFoldersInFolder(currentFolderId, true);
+    }, [currentFolderId, loadNotesInFolder, loadFoldersInFolder]);
 
     // Get deleted folders and notes in current folder
     const deletedFolders = useMemo(() => {

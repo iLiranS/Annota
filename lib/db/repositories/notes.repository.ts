@@ -27,8 +27,15 @@ function generatePreview(htmlContent: string, maxLength = 100): string {
 
 // ============ METADATA OPERATIONS (fast, for lists) ============
 
-export function getNotesInFolder(folderId: string | null): NoteMetadata[] {
+export function getNotesInFolder(folderId: string | null, includeDeleted = false): NoteMetadata[] {
     if (folderId === null) {
+        if (includeDeleted) {
+            return db
+                .select()
+                .from(schema.noteMetadata)
+                .where(isNull(schema.noteMetadata.folderId))
+                .all();
+        }
         return db
             .select()
             .from(schema.noteMetadata)
@@ -38,6 +45,14 @@ export function getNotesInFolder(folderId: string | null): NoteMetadata[] {
                     eq(schema.noteMetadata.isDeleted, false)
                 )
             )
+            .all();
+    }
+
+    if (includeDeleted) {
+        return db
+            .select()
+            .from(schema.noteMetadata)
+            .where(eq(schema.noteMetadata.folderId, folderId))
             .all();
     }
 
