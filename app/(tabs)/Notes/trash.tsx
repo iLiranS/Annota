@@ -18,7 +18,7 @@ import {
     FlatList,
     Pressable,
     StyleSheet,
-    View,
+    View
 } from 'react-native';
 
 interface FolderItemProps {
@@ -137,6 +137,7 @@ export default function TrashScreen() {
     const router = useRouter();
     const { colors } = useTheme();
     const [currentFolderId, setCurrentFolderId] = useState<string | null>(TRASH_FOLDER_ID);
+    const [isLoading, setIsLoading] = useState(true);
 
     // Zustand store
     const {
@@ -158,8 +159,11 @@ export default function TrashScreen() {
 
     // Load data from database (including deleted items)
     React.useEffect(() => {
+        setIsLoading(true);
         loadNotesInFolder(currentFolderId, true);
         loadFoldersInFolder(currentFolderId, true);
+        // Small delay to allow store to update before rendering
+        setTimeout(() => setIsLoading(false), 50);
     }, [currentFolderId, loadNotesInFolder, loadFoldersInFolder]);
 
     // Get deleted folders and notes in current folder
@@ -348,27 +352,34 @@ export default function TrashScreen() {
                 }}
             />
 
-            <FlatList
-                data={trashData}
-                keyExtractor={getItemKey}
-                contentContainerStyle={styles.listContent}
-                ListEmptyComponent={
-                    <View style={styles.emptyContainer}>
-                        <Ionicons
-                            name="trash-outline"
-                            size={48}
-                            color={colors.border}
-                        />
-                        <ThemedText style={styles.emptyText}>
-                            Trash is empty
-                        </ThemedText>
-                        <ThemedText style={[styles.emptyHint, { color: colors.border }]}>
-                            Deleted items will appear here
-                        </ThemedText>
-                    </View>
-                }
-                renderItem={renderItem}
-            />
+
+            {isLoading ? (
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color={colors.primary} />
+                </View>
+            ) : (
+                <FlatList
+                    data={trashData}
+                    keyExtractor={getItemKey}
+                    contentContainerStyle={styles.listContent}
+                    ListEmptyComponent={
+                        <View style={styles.emptyContainer}>
+                            <Ionicons
+                                name="trash-outline"
+                                size={48}
+                                color={colors.border}
+                            />
+                            <ThemedText style={styles.emptyText}>
+                                Trash is empty
+                            </ThemedText>
+                            <ThemedText style={[styles.emptyHint, { color: colors.border }]}>
+                                Deleted items will appear here
+                            </ThemedText>
+                        </View>
+                    }
+                    renderItem={renderItem}
+                />
+            )}
 
             <View style={[styles.hint, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
                 <Ionicons name="information-circle-outline" size={16} color={colors.text + '60'} />
@@ -474,6 +485,11 @@ const styles = StyleSheet.create({
     },
     emptyHint: {
         fontSize: 14,
+    },
+    loadingContainer: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     hint: {
         flexDirection: 'row',

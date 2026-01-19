@@ -338,6 +338,7 @@ export default function NotesList() {
         if (item.type === 'folder') {
             // Don't allow swiping system folders (like Trash)
             if (item.data.isSystem) {
+                const iconColor = item.data.id === TRASH_FOLDER_ID ? '#EF4444' : '#F59E0B';
                 return (
                     <ThemedPressable
                         onPress={() => handleFolderPress(item.data.id)}
@@ -346,12 +347,13 @@ export default function NotesList() {
                             {
                                 backgroundColor: colors.card,
                                 borderColor: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+                                marginTop: 16, // Add spacing before system folders
                             },
                             pressed && styles.pressed,
                         ]}
                     >
-                        <View style={[styles.folderIcon, { backgroundColor: '#EF4444' + '20' }]}>
-                            <Ionicons name="trash" size={22} color="#EF4444" />
+                        <View style={[styles.folderIcon, { backgroundColor: iconColor + '20' }]}>
+                            <Ionicons name={item.data.icon as keyof typeof Ionicons.glyphMap} size={22} color={iconColor} />
                         </View>
                         <ThemedText style={styles.folderName}>{item.data.name}</ThemedText>
                         <Ionicons name="chevron-forward" size={18} color={colors.text + '50'} />
