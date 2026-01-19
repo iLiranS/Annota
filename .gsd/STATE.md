@@ -1,39 +1,37 @@
 # STATE.md — Project Memory
 
-> Last updated: 2026-01-19T23:08:00+02:00
+> Last updated: 2026-01-19T23:10:00+02:00
 
 ## Current Position
 
 **Milestone:** 1.0 — Frontend + Local Database
 **Phase:** 2 (Navigation — Sidebar & Stack Architecture)
-**Status:** 📋 Planned — Ready to Execute
-**Active Plan:** None (Waiting for start)
+**Status:** 🔄 In Progress
+**Active Plan:** 2.1 ✅ Complete
 
 ## Last Session Summary
 
-Phase 2 Planning completed.
-Created 3 execution plans:
-1. **Plan 2.1:** Infrastructure (Drawer Setup)
-2. **Plan 2.2:** Sidebar Component
-3. **Plan 2.3:** Folder Stack Navigation
+Plan 2.1 (Navigation Infrastructure) completed successfully:
+- Installed `@react-navigation/drawer`
+- Renamed `app/(tabs)` to `app/(drawer)`
+- Converted `_layout.tsx` from Tabs to Drawer navigator
+- Updated root layout anchor
 
-Context Check:
-- Phase 1 (Database) is marked complete in STATE.md (though ROADMAP needs sync).
-- Existing Database repositories are ready for Folder Navigation logic.
+Commit: `2ee6487`
 
 ## Technical Implementation
 
-### Planned Navigation Architecture
+### Current Navigation Architecture
 - **Root:** Stack Navigator (Modals)
-  - **Main:** Drawer Navigator (Sidebar)
-    - **Drawer Screen:** `(drawer)/notes` -> Stack Navigator (Folder Browser)
-    - **Drawer Screen:** `(drawer)/tasks` -> Tasks Screen
+  - **Main:** Drawer Navigator (`app/(drawer)/_layout.tsx`)
+    - Home screen
+    - Notes (nested stack)
+    - Tasks (nested stack)
 
-### Folders Strategy
-- Using recursive stack navigation.
-- Root is `app/(drawer)/notes/index.tsx`.
-- Child folders: `app/(drawer)/notes/folder/[id].tsx`.
+### Dependencies Added
+- `@react-navigation/drawer` ^7.7.13
 
 ## Next Steps
 
-1. Run `/execute 2.1` to strip Tabs and install Drawer.
+1. Run `/execute 2.2` to build the custom Sidebar component
+2. Then `/execute 2.3` for folder stack navigation
