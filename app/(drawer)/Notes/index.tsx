@@ -12,8 +12,8 @@ import {
 } from '@/dev-data/data';
 import { NoteMetadata, TRASH_FOLDER_ID, useNotesStore, type Folder } from '@/stores/notes-store';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useTheme } from '@react-navigation/native';
-import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { DrawerActions, useTheme } from '@react-navigation/native';
+import { Stack, useFocusEffect, useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
 
 import {

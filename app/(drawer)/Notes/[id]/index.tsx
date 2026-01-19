@@ -2,7 +2,7 @@ import TipTapEditor, { TipTapEditorRef } from '@/components/tiptap-editor';
 import { useNotesStore } from '@/stores/notes-store';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useFocusEffect, useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
@@ -42,6 +42,7 @@ export default function NoteEditor() {
     const { id } = useLocalSearchParams<{ id: string }>();
     const { colors } = useTheme();
     const router = useRouter();
+    const navigation = useNavigation();
     const insets = useSafeAreaInsets();
     const editorRef = useRef<TipTapEditorRef>(null);
 
@@ -63,6 +64,19 @@ export default function NoteEditor() {
             setIsLoading(false);
         }
     }, [id, getNoteContent]);
+
+    // Disable drawer swipe gesture when editor is open
+    useFocusEffect(
+        useCallback(() => {
+            // Find parent drawer navigator and disable swipe
+            navigation.getParent()?.setOptions({ swipeEnabled: false });
+
+            return () => {
+                // Re-enable swipe when leaving
+                navigation.getParent()?.setOptions({ swipeEnabled: true });
+            };
+        }, [navigation])
+    );
 
     // Handle content changes from the editor
     const handleContentChange = useCallback((html: string) => {

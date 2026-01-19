@@ -21,7 +21,7 @@ interface SidebarItemProps {
 }
 
 function SidebarItem({ icon, label, onPress, iconColor, isActive }: SidebarItemProps) {
-    const { colors, dark } = useTheme();
+    const { colors } = useTheme();
 
     return (
         <Pressable
@@ -75,18 +75,15 @@ function FolderItem({ folder, onPress }: FolderItemProps) {
     );
 }
 
-function SectionHeader({ title }: { title: string }) {
+function Separator() {
     const { colors } = useTheme();
-
     return (
-        <Text style={[styles.sectionHeader, { color: colors.text + '60' }]}>
-            {title}
-        </Text>
+        <View style={[styles.separator, { backgroundColor: colors.border + '40' }]} />
     );
 }
 
 export default function Sidebar(props: DrawerContentComponentProps) {
-    const { colors, dark } = useTheme();
+    const { colors } = useTheme();
     const insets = useSafeAreaInsets();
     const router = useRouter();
 
@@ -99,8 +96,9 @@ export default function Sidebar(props: DrawerContentComponentProps) {
 
     // Get non-system top-level folders
     const topLevelFolders = useMemo(() => {
-        return getFoldersInFolder(null).filter(f => !f.isSystem);
-    }, [folders, getFoldersInFolder]);
+        // Force refresh from store state
+        return folders.filter(f => f.parentId === null && !f.isSystem);
+    }, [folders]);
 
     const closeDrawer = () => {
         props.navigation.closeDrawer();
@@ -117,7 +115,6 @@ export default function Sidebar(props: DrawerContentComponentProps) {
 
     const navigateToDailyNote = () => {
         closeDrawer();
-        // Navigate to Daily Notes folder
         router.push({ pathname: '/Notes', params: { folderId: DAILY_NOTES_FOLDER_ID } });
     };
 
@@ -136,6 +133,11 @@ export default function Sidebar(props: DrawerContentComponentProps) {
         router.push('/');
     };
 
+    const navigateToSettings = () => {
+        closeDrawer();
+        router.push('/settings');
+    };
+
     return (
         <View style={[styles.container, { backgroundColor: colors.card }]}>
             {/* Header */}
@@ -150,52 +152,13 @@ export default function Sidebar(props: DrawerContentComponentProps) {
                 {...props}
                 contentContainerStyle={styles.scrollContent}
             >
-                {/* Main Navigation */}
+                {/* Top Section */}
                 <View style={styles.section}>
                     <SidebarItem
                         icon="home"
                         label="Home"
                         onPress={navigateToHome}
                     />
-
-                    <SidebarItem
-                        icon="today"
-                        label="Daily Note"
-                        onPress={navigateToDailyNote}
-                        iconColor="#10B981"
-                    />
-
-                    <SidebarItem
-                        icon="documents"
-                        label="All Notes"
-                        onPress={() => navigateToNotes()}
-                    />
-
-                    <SidebarItem
-                        icon="star"
-                        label="Quick Access"
-                        onPress={() => navigateToNotes()} // TODO: Implement Quick Access filter
-                        iconColor="#FBBF24"
-                    />
-                </View>
-
-                {/* Folders Section */}
-                {topLevelFolders.length > 0 && (
-                    <View style={styles.section}>
-                        <SectionHeader title="Folders" />
-                        {topLevelFolders.map((folder) => (
-                            <FolderItem
-                                key={folder.id}
-                                folder={folder}
-                                onPress={() => navigateToNotes(folder.id)}
-                            />
-                        ))}
-                    </View>
-                )}
-
-                {/* Secondary Navigation */}
-                <View style={styles.section}>
-                    <SectionHeader title="More" />
 
                     <SidebarItem
                         icon="checkmark-circle"
@@ -205,13 +168,54 @@ export default function Sidebar(props: DrawerContentComponentProps) {
                     />
 
                     <SidebarItem
-                        icon="trash"
-                        label="Trash"
-                        onPress={navigateToTrash}
-                        iconColor="#EF4444"
+                        icon="star"
+                        label="Quick Access"
+                        onPress={() => navigateToNotes()} // TODO: Implement Quick Access filter
+                        iconColor="#FBBF24"
+                    />
+
+                    <SidebarItem
+                        icon="today"
+                        label="Daily Note"
+                        onPress={navigateToDailyNote}
+                        iconColor="#10B981"
                     />
                 </View>
+
+                <Separator />
+
+                {/* Middle Section: All Notes & Folders */}
+                <View style={styles.section}>
+                    <SidebarItem
+                        icon="documents"
+                        label="All Notes"
+                        onPress={() => navigateToNotes()}
+                    />
+
+                    <View style={styles.folderContainer}>
+                        {/* Folders List */}
+                        {topLevelFolders.map((folder) => (
+                            <FolderItem
+                                key={folder.id}
+                                folder={folder}
+                                onPress={() => navigateToNotes(folder.id)}
+                            />
+                        ))}
+                    </View>
+                </View>
             </DrawerContentScrollView>
+
+            {/* Footer Section */}
+            <View style={[styles.footer, { paddingBottom: insets.bottom + 16, borderTopColor: colors.border + '40' }]}>
+                <Pressable onPress={navigateToTrash} style={styles.footerItem}>
+                    <Ionicons name="trash-outline" size={22} color={colors.text} />
+                    <Text style={[styles.footerText, { color: colors.text }]}>Trash</Text>
+                </Pressable>
+
+                <Pressable onPress={navigateToSettings} style={styles.iconButton}>
+                    <Ionicons name="settings-outline" size={24} color={colors.text} />
+                </Pressable>
+            </View>
         </View>
     );
 }
@@ -248,14 +252,10 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         paddingVertical: 8,
     },
-    sectionHeader: {
-        fontSize: 11,
-        fontWeight: '600',
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
-        marginLeft: 12,
-        marginTop: 8,
-        marginBottom: 8,
+    separator: {
+        height: 1,
+        marginHorizontal: 20,
+        marginVertical: 4,
     },
     sidebarItem: {
         flexDirection: 'row',
@@ -269,12 +269,15 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '500',
     },
+    folderContainer: {
+        marginTop: 4,
+        paddingLeft: 4,
+    },
     folderItem: {
         flexDirection: 'row',
         alignItems: 'center',
         paddingVertical: 10,
         paddingHorizontal: 12,
-        paddingLeft: 16,
         borderRadius: 8,
         gap: 10,
     },
@@ -283,4 +286,24 @@ const styles = StyleSheet.create({
         fontWeight: '400',
         flex: 1,
     },
+    footer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        paddingTop: 16,
+        borderTopWidth: StyleSheet.hairlineWidth,
+    },
+    footerItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    footerText: {
+        fontSize: 16,
+        fontWeight: '500',
+    },
+    iconButton: {
+        padding: 4,
+    }
 });
