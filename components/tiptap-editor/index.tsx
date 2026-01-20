@@ -198,6 +198,7 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
                                 styles.toolbarContainer,
                                 {
                                     backgroundColor: dark ? '#1C1C1E' : '#F2F2F7',
+                                    borderColor: dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
                                 },
                             ]}
                         >
@@ -229,6 +230,7 @@ const styles = StyleSheet.create({
         alignSelf: 'center',
         borderRadius: 12,
         overflow: 'hidden',
+        borderWidth: 1,
     },
     keyboardAvoidingView: {
         position: 'absolute',

@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LocationPickerModal from './location-picker-modal';
+import { COLOR_PALETTE } from './tiptap-editor/color-palette';
 
 // Available folder icons
 const FOLDER_ICONS = [
@@ -27,6 +28,9 @@ const FOLDER_ICONS = [
     'airplane', 'car', 'bicycle', 'train', 'boat',
     'fitness', 'medical', 'nutrition', 'restaurant', 'cafe',
 ];
+
+// Available folder colors
+
 
 interface FolderEditModalProps {
     visible: boolean;
@@ -49,6 +53,7 @@ export default function FolderEditModal({
 
     const [name, setName] = useState('');
     const [icon, setIcon] = useState('folder');
+    const [color, setColor] = useState(COLOR_PALETTE[0].value); // Default amber color
     const [parentId, setParentId] = useState<string | null>(null);
     const [showLocationPicker, setShowLocationPicker] = useState(false);
 
@@ -59,11 +64,13 @@ export default function FolderEditModal({
                 // Edit mode
                 setName(folder.name);
                 setIcon(folder.icon);
+                setColor(folder.color || COLOR_PALETTE[0].value);
                 setParentId(folder.parentId);
             } else {
                 // Create mode
                 setName('');
                 setIcon('folder');
+                setColor(COLOR_PALETTE[0].value);
                 setParentId(defaultParentId);
             }
         }
@@ -122,13 +129,14 @@ export default function FolderEditModal({
         if (!name.trim()) return;
 
         if (isCreateMode) {
-            // Create new folder with selected icon
-            createFolder(parentId, name.trim(), icon);
+            // Create new folder with selected icon and color
+            createFolder(parentId, name.trim(), icon, color);
         } else {
             // Update existing folder
             updateFolder(folder!.id, {
                 name: name.trim(),
                 icon,
+                color,
                 parentId,
             });
         }
@@ -188,7 +196,6 @@ export default function FolderEditModal({
                             onChangeText={setName}
                             placeholder="Folder name"
                             placeholderTextColor={colors.text + '50'}
-                            autoFocus
                         />
                     </View>
 
@@ -202,17 +209,47 @@ export default function FolderEditModal({
                                     onPress={() => setIcon(iconName)}
                                     style={[
                                         styles.iconButton,
-                                        icon === iconName && { backgroundColor: colors.background + '20' }
+                                        icon === iconName && { backgroundColor: color + '20' }
                                     ]}
                                 >
                                     <Ionicons
                                         name={iconName as keyof typeof Ionicons.glyphMap}
                                         size={24}
-                                        color={icon === iconName ? colors.primary : colors.text + '80'}
+                                        color={icon === iconName ? color || folder?.color || colors.primary : colors.text + '80'}
                                     />
                                 </Pressable>
                             ))}
                         </View>
+                    </View>
+
+                    {/* Folder Color */}
+                    <View style={styles.section}>
+                        <Text style={[styles.sectionTitle, { color: colors.text }]}>Color</Text>
+                        <ScrollView
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            style={[styles.colorScroll, { backgroundColor: colors.card, borderColor: colors.border }]}
+                            contentContainerStyle={styles.colorScrollContent}
+                        >
+                            {COLOR_PALETTE.map((colorOption) => (
+                                <Pressable
+                                    key={colorOption.value}
+                                    onPress={() => setColor(colorOption.value)}
+                                    style={[
+                                        styles.colorButton,
+                                        { backgroundColor: colorOption.value },
+                                        color === colorOption.value && {
+                                            borderWidth: 3,
+                                            borderColor: colors.primary,
+                                        }
+                                    ]}
+                                >
+                                    {color === colorOption.value && (
+                                        <Ionicons name="checkmark" size={18} color="#FFFFFF" />
+                                    )}
+                                </Pressable>
+                            ))}
+                        </ScrollView>
                     </View>
 
                     {/* Folder Location */}
@@ -229,7 +266,7 @@ export default function FolderEditModal({
                             ]}
                         >
                             <View style={styles.locationContent}>
-                                <Ionicons name="folder" size={20} color={colors.primary} />
+                                <Ionicons name="folder" size={20} color={folder?.color || colors.primary} />
                                 <Text style={[styles.locationText, { color: colors.text }]}>
                                     {getParentName(parentId)}
                                 </Text>
@@ -313,6 +350,22 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         borderRadius: 10,
+    },
+    colorScroll: {
+        borderRadius: 12,
+        borderWidth: 1,
+    },
+    colorScrollContent: {
+        padding: 12,
+        gap: 12,
+        flexDirection: 'row',
+    },
+    colorButton: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     locationButton: {
         flexDirection: 'row',

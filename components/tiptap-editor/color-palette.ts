@@ -9,8 +9,8 @@ export interface ColorOption {
 }
 
 export const COLOR_PALETTE: ColorOption[] = [
-    { name: 'Red', value: '#FF6B6B' },
     { name: 'Orange', value: '#FFA94D' },
+    { name: 'Red', value: '#FF6B6B' },
     { name: 'Yellow', value: '#FFE066' },
     { name: 'Green', value: '#69DB7C' },
     { name: 'Teal', value: '#38D9A9' },

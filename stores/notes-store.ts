@@ -39,7 +39,7 @@ interface NotesState {
     updateNoteContent: (noteId: string, content: string) => void;
 
     // Folder operations
-    createFolder: (parentId: string | null, name: string, icon?: string) => Folder;
+    createFolder: (parentId: string | null, name: string, icon?: string, color?: string) => Folder;
     updateFolder: (folderId: string, updates: Partial<Omit<Folder, 'id' | 'createdAt'>>) => void;
     deleteFolder: (folderId: string) => void;
     permanentlyDeleteFolder: (folderId: string) => void;
@@ -137,8 +137,8 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     },
 
     // Folder operations
-    createFolder: (parentId: string | null, name: string, icon: string = 'folder') => {
-        const folder = foldersRepo.createFolder(parentId, name, icon);
+    createFolder: (parentId: string | null, name: string, icon: string = 'folder', color: string = '#F59E0B') => {
+        const folder = foldersRepo.createFolder(parentId, name, icon, color);
         if (get().currentFolderId === parentId) {
             get().refreshCurrentFolder();
         }

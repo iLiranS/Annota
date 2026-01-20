@@ -37,6 +37,7 @@ export const folders = sqliteTable('folders', {
     parentId: text('parent_id'),
     name: text('name').notNull(),
     icon: text('icon').notNull().default('folder'),
+    color: text('color').notNull().default('#F59E0B'), // Amber color
     sortType: text('sort_type').$type<SortType>().notNull().default('UPDATED_LAST'),
     isSystem: integer('is_system', { mode: 'boolean' }).notNull().default(false),
     isDeleted: integer('is_deleted', { mode: 'boolean' }).notNull().default(false),

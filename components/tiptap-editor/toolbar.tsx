@@ -59,7 +59,6 @@ export function EditorToolbar({
                     styles.toolbar,
                     {
                         backgroundColor: dark ? '#1C1C1E' : '#F2F2F7',
-                        borderTopColor: dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
                     },
                 ]}
             >
@@ -134,6 +133,18 @@ export function EditorToolbar({
                             icon="format-list-numbered"
                             isActive={editorState.isOrderedList}
                             onPress={() => onCommand('toggleOrderedList')}
+                        />
+
+                        {/* Tab In/Out for nested lists */}
+                        <ToolbarButton
+                            icon="format-indent-increase"
+                            onPress={() => onCommand('sinkListItem')}
+                            disabled={!editorState.canSinkListItem}
+                        />
+                        <ToolbarButton
+                            icon="format-indent-decrease"
+                            onPress={() => onCommand('liftListItem')}
+                            disabled={!editorState.canLiftListItem}
                         />
 
                         <View style={styles.separator} />
@@ -293,7 +304,6 @@ export function EditorToolbar({
 
 const styles = StyleSheet.create({
     toolbar: {
-        borderTopWidth: 1,
         paddingHorizontal: 8,
         paddingVertical: 6,
     },

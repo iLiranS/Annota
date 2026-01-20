@@ -43,6 +43,7 @@ const CREATE_TABLES_SQL = `
     parent_id TEXT,
     name TEXT NOT NULL,
     icon TEXT NOT NULL DEFAULT 'folder',
+    color TEXT NOT NULL DEFAULT '#F59E0B',
     sort_type TEXT NOT NULL DEFAULT 'UPDATED_LAST',
     is_system INTEGER NOT NULL DEFAULT 0,
     is_deleted INTEGER NOT NULL DEFAULT 0,
@@ -80,6 +81,26 @@ export function initDatabase(): void {
     // Create all tables
     expoDb.execSync(CREATE_TABLES_SQL);
     console.log('Database tables created successfully');
+
+    // Run migrations for existing databases
+    try {
+      // Migration: Add color column to folders table if it doesn't exist
+      const folderColumns = expoDb.getAllSync('PRAGMA table_info(folders)') as any[];
+      const hasColorColumn = folderColumns.some((col: any) => col.name === 'color');
+
+      if (!hasColorColumn) {
+        console.log('Running migration: Adding color column to folders table');
+        expoDb.execSync('ALTER TABLE folders ADD COLUMN color TEXT NOT NULL DEFAULT "#F59E0B"');
+
+        // Update system folders with their specific colors
+        expoDb.execSync(`UPDATE folders SET color = '#EF4444' WHERE id = 'system-trash'`);
+        expoDb.execSync(`UPDATE folders SET color = '#F59E0B' WHERE id = 'system-daily-notes'`);
+
+        console.log('Migration complete: color column added');
+      }
+    } catch (migrationError) {
+      console.log('Migration check/run completed or not needed:', migrationError);
+    }
 
     // Seed system data (Trash folder, Daily Notes folder, default settings)
     seedSystemData();

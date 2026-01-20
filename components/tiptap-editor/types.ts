@@ -25,6 +25,8 @@ export interface EditorState {
     // Lists
     isBulletList: boolean;
     isOrderedList: boolean;
+    canSinkListItem: boolean;
+    canLiftListItem: boolean;
 
     // Blocks
     isBlockquote: boolean;
@@ -60,6 +62,8 @@ export const initialEditorState: EditorState = {
     isCode: false,
     isBulletList: false,
     isOrderedList: false,
+    canSinkListItem: false,
+    canLiftListItem: false,
     isBlockquote: false,
     isCodeBlock: false,
     isHeading1: false,
@@ -85,6 +89,8 @@ export type EditorCommand =
     | 'toggleCode'
     | 'toggleBulletList'
     | 'toggleOrderedList'
+    | 'sinkListItem'
+    | 'liftListItem'
     | 'toggleBlockquote'
     | 'toggleCodeBlock'
     | 'toggleHeading'

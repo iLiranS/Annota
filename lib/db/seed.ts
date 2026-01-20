@@ -23,6 +23,7 @@ export function seedSystemData(): void {
             id: TRASH_FOLDER_ID,
             name: 'Trash',
             icon: 'trash',
+            color: '#EF4444', // Red color for trash
             parentId: null,
             isSystem: true,
             isDeleted: false,
@@ -45,6 +46,7 @@ export function seedSystemData(): void {
             id: DAILY_NOTES_FOLDER_ID,
             name: 'Daily Notes',
             icon: 'calendar',
+            color: '#F59E0B', // Amber color for daily notes
             parentId: null,
             isSystem: true,
             isDeleted: false,

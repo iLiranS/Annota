@@ -36,6 +36,7 @@ interface FolderItemProps {
 
 function FolderCard({ folder, onPress, onLongPress, onDelete }: FolderItemProps) {
     const { colors, dark } = useTheme();
+    const folderColor = folder.color || '#F59E0B'; // Fallback to amber if no color set
 
     return (
         <SwipeableItem onDelete={onDelete}>
@@ -51,8 +52,8 @@ function FolderCard({ folder, onPress, onLongPress, onDelete }: FolderItemProps)
                     pressed && styles.pressed,
                 ]}
             >
-                <View style={[styles.folderIcon, { backgroundColor: '#F59E0B' + '20' }]}>
-                    <Ionicons name={folder.icon as keyof typeof Ionicons.glyphMap} size={22} color="#F59E0B" />
+                <View style={[styles.folderIcon, { backgroundColor: folderColor + '20' }]}>
+                    <Ionicons name={folder.icon as keyof typeof Ionicons.glyphMap} size={22} color={folderColor} />
                 </View>
                 <ThemedText style={styles.folderName}>{folder.name}</ThemedText>
                 <Ionicons name="chevron-forward" size={18} color={colors.text + '50'} />
@@ -343,7 +344,7 @@ export default function NotesList() {
         if (item.type === 'folder') {
             // Don't allow swiping system folders (like Trash)
             if (item.data.isSystem) {
-                const iconColor = item.data.id === TRASH_FOLDER_ID ? '#EF4444' : '#F59E0B';
+                const folderColor = item.data.color || '#F59E0B'; // Fallback to amber
                 return (
                     <ThemedPressable
                         onPress={() => handleFolderPress(item.data.id)}
@@ -357,8 +358,8 @@ export default function NotesList() {
                             pressed && styles.pressed,
                         ]}
                     >
-                        <View style={[styles.folderIcon, { backgroundColor: iconColor + '20' }]}>
-                            <Ionicons name={item.data.icon as keyof typeof Ionicons.glyphMap} size={22} color={iconColor} />
+                        <View style={[styles.folderIcon, { backgroundColor: folderColor + '20' }]}>
+                            <Ionicons name={item.data.icon as keyof typeof Ionicons.glyphMap} size={22} color={folderColor} />
                         </View>
                         <ThemedText style={styles.folderName}>{item.data.name}</ThemedText>
                         <Ionicons name="chevron-forward" size={18} color={colors.text + '50'} />

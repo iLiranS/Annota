@@ -71,7 +71,8 @@ export function getFolderById(folderId: string): Folder | null {
 export function createFolder(
     parentId: string | null,
     name: string,
-    icon: string = 'folder'
+    icon: string = 'folder',
+    color: string = '#F59E0B'
 ): Folder {
     const now = new Date();
     const id = generateId();
@@ -81,6 +82,7 @@ export function createFolder(
         parentId,
         name,
         icon,
+        color,
         sortType: 'UPDATED_LAST',
         isSystem: false,
         isDeleted: false,

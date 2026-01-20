@@ -12,6 +12,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+
+
 interface SidebarItemProps {
     icon: keyof typeof Ionicons.glyphMap;
     label: string;
@@ -66,7 +68,7 @@ function FolderItem({ folder, onPress }: FolderItemProps) {
             <Ionicons
                 name={(folder.icon as keyof typeof Ionicons.glyphMap) || 'folder'}
                 size={18}
-                color="#F59E0B"
+                color={folder.color}
             />
             <Text style={[styles.folderItemText, { color: colors.text }]} numberOfLines={1}>
                 {folder.name}
@@ -158,13 +160,21 @@ export default function Sidebar(props: DrawerContentComponentProps) {
                         icon="home"
                         label="Home"
                         onPress={navigateToHome}
+                        iconColor='#d89b55ff'
                     />
 
                     <SidebarItem
                         icon="checkmark-circle"
                         label="Tasks"
                         onPress={navigateToTasks}
-                        iconColor="lime"
+                        iconColor="#6366F1"
+                    />
+
+                    <SidebarItem
+                        icon="today"
+                        label="Daily Note"
+                        onPress={navigateToDailyNote}
+                        iconColor="#4ddfb5ff"
                     />
 
                     <SidebarItem
@@ -174,12 +184,7 @@ export default function Sidebar(props: DrawerContentComponentProps) {
                         iconColor="#FBBF24"
                     />
 
-                    <SidebarItem
-                        icon="today"
-                        label="Daily Note"
-                        onPress={navigateToDailyNote}
-                        iconColor="#10B981"
-                    />
+
                 </View>
 
                 <Separator />
@@ -266,7 +271,7 @@ const styles = StyleSheet.create({
         gap: 12,
     },
     sidebarItemText: {
-        fontSize: 16,
+        fontSize: 17,
         fontWeight: '500',
     },
     folderContainer: {
@@ -282,8 +287,8 @@ const styles = StyleSheet.create({
         gap: 10,
     },
     folderItemText: {
-        fontSize: 15,
-        fontWeight: '400',
+        fontSize: 16,
+        fontWeight: '500',
         flex: 1,
     },
     footer: {
