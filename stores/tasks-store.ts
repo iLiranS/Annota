@@ -24,7 +24,7 @@ interface TasksState {
     getTasksSortedByDeadline: () => Task[];
     getPendingTasks: () => Task[];
     getCompletedTasks: () => Task[];
-    getTaskDatesInMonth: (year: number, month: number) => Set<number>;
+    getTaskDatesInMonth: (year: number, month: number, pendingOnly?: boolean) => Set<number>;
 }
 
 export const useTasksStore = create<TasksState>((set, get) => ({
@@ -103,12 +103,14 @@ export const useTasksStore = create<TasksState>((set, get) => ({
             .sort((a, b) => a.deadline.getTime() - b.deadline.getTime());
     },
 
-    getTaskDatesInMonth: (year: number, month: number) => {
+    getTaskDatesInMonth: (year: number, month: number, pendingOnly: boolean = false) => {
         const dates = new Set<number>();
         get().tasks.forEach((task) => {
             const taskDate = new Date(task.deadline);
             if (taskDate.getFullYear() === year && taskDate.getMonth() === month) {
-                dates.add(taskDate.getDate());
+                if (!pendingOnly || !task.completed) {
+                    dates.add(taskDate.getDate());
+                }
             }
         });
         return dates;

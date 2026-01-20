@@ -1,9 +1,9 @@
 import Calendar from '@/components/calendar';
+import NoteListItem from '@/components/notes/note-list-item';
 import TaskItem from '@/components/task-item';
 import ThemedText from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
+import { useNotesStore } from '@/stores/notes-store';
 import { useTasksStore, type Task } from '@/stores/tasks-store';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@react-navigation/native';
@@ -19,10 +19,11 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
 
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [isCollapsibleOpen, setIsCollapsibleOpen] = useState(true);
 
   // Use Zustand store for tasks
   const { tasks, loadTasks } = useTasksStore();
+  const { getRecentNotes, notes } = useNotesStore();
+
 
   // Load tasks from database on mount
   useEffect(() => {
@@ -56,6 +57,12 @@ export default function HomeScreen() {
       })
       .slice(0, 3);
   }, [tasks]);
+
+  const [activeTab, setActiveTab] = useState<'notes' | 'later'>('later');
+
+  const recentNotes = useMemo(() => {
+    return getRecentNotes(5);
+  }, [getRecentNotes, notes]);
 
   const formattedSelectedDate = useMemo(() => {
     const today = new Date();
@@ -99,24 +106,41 @@ export default function HomeScreen() {
             <ThemedText style={styles.tasksSectionTitle}>
               Tasks for {formattedSelectedDate}
             </ThemedText>
-            {tasksForSelectedDate.length > 0 &&
-              <View
-                style={[
-                  styles.taskCountBadge,
-                  { backgroundColor: tasksForSelectedDate.length > 0 ? '#6366F1' + '20' : colors.text + '10' },
-                ]}
-              >
-
-                <ThemedText
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginLeft: 'auto' }}>
+              {tasksForSelectedDate.length > 0 &&
+                <View
                   style={[
-                    styles.taskCountText,
-                    { color: tasksForSelectedDate.length > 0 ? '#6366F1' : colors.text + '50' },
+                    styles.taskCountBadge,
+                    { backgroundColor: tasksForSelectedDate.length > 0 ? '#6366F1' + '20' : colors.text + '10' },
                   ]}
                 >
-                  {tasksForSelectedDate.length}
-                </ThemedText>
-              </View>
-            }
+
+                  <ThemedText
+                    style={[
+                      styles.taskCountText,
+                      { color: tasksForSelectedDate.length > 0 ? '#6366F1' : colors.text + '50' },
+                    ]}
+                  >
+                    {tasksForSelectedDate.length}
+                  </ThemedText>
+                </View>
+              }
+              {formattedSelectedDate === 'Today' && (
+                <Pressable
+                  onPress={() => router.push('/Tasks/new')}
+                  style={({ pressed }) => [
+                    styles.addTaskButton,
+                    {
+                      backgroundColor: '#6366F1',
+                      opacity: pressed ? 0.8 : 1,
+                    }
+                  ]}
+                  hitSlop={8}
+                >
+                  <Ionicons name="add" size={20} color="#FFFFFF" />
+                </Pressable>
+              )}
+            </View>
           </View>
 
           {tasksForSelectedDate.length > 0 ? (
@@ -148,36 +172,101 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {formattedSelectedDate === 'Today' && upcomingTasks.length > 0 && (
-          <View style={{ marginTop: 12, gap: 12 }}>
-            <Pressable style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }} onPress={() => setIsCollapsibleOpen((value) => !value)}>
-              <ThemedText style={styles.tasksSectionTitle}>Later On</ThemedText>
-              <IconSymbol
-                name="chevron.down"
-                size={18}
-                weight="medium"
-                color={theme === 'light' ? Colors.light.icon : Colors.dark.icon}
-                style={{ transform: [{ rotate: isCollapsibleOpen ? '0deg' : '-90deg' }] }}
-              />
-            </Pressable>
-            {isCollapsibleOpen && <View>
-              {upcomingTasks.map((task) => (
-                <TaskItem
-                  key={task.id}
-                  task={task}
-                  onPress={() => handleTaskPress(task)}
-                  showDate
-                />
-              ))}
-            </View>}
-          </View>
+        {formattedSelectedDate === 'Today' && (
+          <>
+            {/* Tab Switcher */}
+            <View style={[
+              styles.tabContainer,
+              { backgroundColor: dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }
+            ]}>
+              <Pressable
+                onPress={() => setActiveTab('later')}
+                style={[
+                  styles.tab,
+                  activeTab === 'later' && styles.activeTab
+                ]}
+              >
+                <ThemedText style={[
+                  styles.tabText,
+                  activeTab === 'later' && styles.activeTabText
+                ]}>
+                  Later On
+                </ThemedText>
+              </Pressable>
+              <Pressable
+                onPress={() => setActiveTab('notes')}
+                style={[
+                  styles.tab,
+                  activeTab === 'notes' && styles.activeTab
+                ]}
+              >
+                <ThemedText style={[
+                  styles.tabText,
+                  activeTab === 'notes' && styles.activeTabText
+                ]}>
+                  Recent Notes
+                </ThemedText>
+              </Pressable>
+            </View>
 
+            {/* Tab Content */}
+            <View style={styles.tabContent}>
+              {activeTab === 'notes' ? (
+                <View>
+                  <View style={styles.sectionHeaderWithAction}>
+                    <ThemedText style={styles.sectionTitle}>Notes</ThemedText>
+                    <Pressable onPress={() => router.push('/Notes')}>
+                      <ThemedText style={[styles.viewAllText, { color: '#6366F1' }]}>View All</ThemedText>
+                    </Pressable>
+                  </View>
+
+                  {recentNotes.length > 0 ? (
+                    <View style={{ gap: 10 }}>
+                      {recentNotes.map((note) => (
+                        <NoteListItem
+                          key={note.id}
+                          note={note}
+                          onPress={() => router.push(`/Notes/${note.id}`)}
+                        />
+                      ))}
+                    </View>
+                  ) : (
+                    <View style={styles.emptyContent}>
+                      <ThemedText style={{ color: colors.text + '50' }}>No recent notes</ThemedText>
+                    </View>
+                  )}
+                </View>
+              ) : (
+                <View>
+                  <ThemedText style={styles.sectionTitle}>Upcoming Tasks</ThemedText>
+                  <View style={{ height: 16 }} />
+                  {upcomingTasks.length > 0 ? (
+                    <View style={{ gap: 10 }}>
+                      {upcomingTasks.map((task) => (
+                        <TaskItem
+                          key={task.id}
+                          task={task}
+                          onPress={() => handleTaskPress(task)}
+                          showDate
+                        />
+                      ))}
+                    </View>
+                  ) : (
+                    <View style={[styles.emptyState, { height: 120, justifyContent: 'center' }]}>
+                      <ThemedText style={{ color: colors.text + '50' }}>No upcoming tasks</ThemedText>
+                    </View>
+                  )}
+                </View>
+              )}
+            </View>
+          </>
         )}
 
         {/* Bottom Spacing */}
         <View style={{ height: insets.bottom + 100 }} />
       </ScrollView>
     </ThemedView>
+
   );
 }
 
@@ -199,6 +288,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     marginBottom: 16,
+    minHeight: 28,
   },
   tasksSectionTitle: {
     fontSize: 18,
@@ -215,6 +305,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
   },
+  addTaskButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
   emptyState: {
     alignItems: 'center',
     paddingVertical: 40,
@@ -229,5 +330,61 @@ const styles = StyleSheet.create({
   emptyStateSubtext: {
     fontSize: 13,
     marginTop: 4,
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    marginTop: 32,
+    marginBottom: 20,
+    borderRadius: 14,
+    padding: 4,
+    gap: 4,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderRadius: 10,
+  },
+  activeTab: {
+    backgroundColor: '#6366F1',
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    opacity: 0.5,
+  },
+  activeTabText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    opacity: 1,
+  },
+  tabContent: {
+    minHeight: 200,
+  },
+  sectionHeaderWithAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: -0.3,
+  },
+  viewAllText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  emptyContent: {
+    height: 120,
+    alignItems: 'center',
+    justifyContent: 'center',
+    opacity: 0.5,
   },
 });

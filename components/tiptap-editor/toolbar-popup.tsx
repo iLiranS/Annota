@@ -122,17 +122,20 @@ function ColorSelector({
         <View style={styles.popupContent}>
             <Text style={[styles.popupTitle, { color: colors.text }]}>{title}</Text>
             <View style={styles.colorGrid}>
-                {COLOR_PALETTE.map((colorOption) => (
-                    <Pressable
-                        key={colorOption.value}
-                        style={[
-                            styles.colorItem,
-                            { backgroundColor: colorOption.value },
-                            currentColor === colorOption.value && styles.colorItemSelected,
-                        ]}
-                        onPress={() => onSelect(colorOption.value)}
-                    />
-                ))}
+                {COLOR_PALETTE.map((colorOption) => {
+                    const colorValue = colorOption.value;
+                    return (
+                        <Pressable
+                            key={colorValue}
+                            style={[
+                                styles.colorItem,
+                                { backgroundColor: colorValue },
+                                currentColor === colorValue && styles.colorItemSelected,
+                            ]}
+                            onPress={() => onSelect(colorValue)}
+                        />
+                    );
+                })}
             </View>
             {currentColor && (
                 <Pressable

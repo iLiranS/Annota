@@ -20,6 +20,7 @@ export default function DrawerLayout() {
         options={{
           title: 'Home',
           drawerLabel: 'Home',
+          headerShown: false,
         }}
       />
 

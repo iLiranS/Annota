@@ -1,4 +1,4 @@
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, desc, eq, isNull } from 'drizzle-orm';
 import { db, schema } from '../client';
 import type { NoteMetadata, NoteMetadataInsert } from '../schema';
 
@@ -252,4 +252,14 @@ export function updateNoteContent(noteId: string, content: string): void {
         .set({ preview, updatedAt: new Date() })
         .where(eq(schema.noteMetadata.id, noteId))
         .run();
+}
+
+export function getRecentNotes(limitCount: number = 5): NoteMetadata[] {
+    return db
+        .select()
+        .from(schema.noteMetadata)
+        .where(eq(schema.noteMetadata.isDeleted, false))
+        .orderBy(desc(schema.noteMetadata.updatedAt))
+        .limit(limitCount)
+        .all();
 }

@@ -231,24 +231,27 @@ export default function FolderEditModal({
                             style={[styles.colorScroll, { backgroundColor: colors.card, borderColor: colors.border }]}
                             contentContainerStyle={styles.colorScrollContent}
                         >
-                            {COLOR_PALETTE.map((colorOption) => (
-                                <Pressable
-                                    key={colorOption.value}
-                                    onPress={() => setColor(colorOption.value)}
-                                    style={[
-                                        styles.colorButton,
-                                        { backgroundColor: colorOption.value },
-                                        color === colorOption.value && {
-                                            borderWidth: 3,
-                                            borderColor: colors.primary,
-                                        }
-                                    ]}
-                                >
-                                    {color === colorOption.value && (
-                                        <Ionicons name="checkmark" size={18} color="#FFFFFF" />
-                                    )}
-                                </Pressable>
-                            ))}
+                            {COLOR_PALETTE.map((colorOption) => {
+                                const colorValue = colorOption.value;
+                                return (
+                                    <Pressable
+                                        key={colorValue}
+                                        onPress={() => setColor(colorValue)}
+                                        style={[
+                                            styles.colorButton,
+                                            { backgroundColor: colorValue },
+                                            color === colorValue && {
+                                                borderWidth: 3,
+                                                borderColor: colors.primary,
+                                            }
+                                        ]}
+                                    >
+                                        {color === colorValue && (
+                                            <Ionicons name="checkmark" size={18} color="#FFFFFF" />
+                                        )}
+                                    </Pressable>
+                                );
+                            })}
                         </ScrollView>
                     </View>
 

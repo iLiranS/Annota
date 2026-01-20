@@ -1,5 +1,5 @@
 import ThemedText from '@/components/themed-text';
-import { getTaskDatesInMonth } from '@/dev-data/data';
+import { useTasksStore } from '@/stores/tasks-store';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@react-navigation/native';
 import { useCallback, useMemo, useState } from 'react';
@@ -42,10 +42,33 @@ export default function Calendar({ selectedDate, onDateSelect }: CalendarProps) 
     const translateX = useSharedValue(0);
     const SWIPE_THRESHOLD = 50;
 
-    const taskDates = useMemo(
-        () => getTaskDatesInMonth(viewYear, viewMonth),
-        [viewYear, viewMonth]
-    );
+    // Get tasks from store
+    const { tasks } = useTasksStore();
+    const taskDates = useMemo(() => {
+        const dates = new Set<number>();
+        if (!tasks) return dates;
+
+        tasks.forEach((task) => {
+            // Defensive Date parsing
+            const deadline = task.deadline;
+            const taskDate = deadline instanceof Date ? deadline : new Date(deadline);
+
+            if (isNaN(taskDate.getTime())) return;
+
+            const taskYear = taskDate.getFullYear();
+            const taskMonth = taskDate.getMonth();
+            const taskDay = taskDate.getDate();
+
+            if (
+                taskYear === viewYear &&
+                taskMonth === viewMonth &&
+                !task.completed // Only show for uncompleted tasks
+            ) {
+                dates.add(taskDay);
+            }
+        });
+        return dates;
+    }, [viewYear, viewMonth, tasks]);
 
     const daysInMonth = getDaysInMonth(viewYear, viewMonth);
     const firstDayOfMonth = getFirstDayOfMonth(viewYear, viewMonth);

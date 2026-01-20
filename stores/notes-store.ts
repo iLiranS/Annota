@@ -56,6 +56,7 @@ interface NotesState {
     // Getters (operate on cached state)
     getNotesInFolder: (folderId: string | null, includeDeleted?: boolean) => NoteMetadata[];
     getFoldersInFolder: (parentId: string | null, includeDeleted?: boolean) => Folder[];
+    getRecentNotes: (limitCount?: number) => NoteMetadata[];
 }
 
 export const useNotesStore = create<NotesState>((set, get) => ({
@@ -224,5 +225,8 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         });
 
         return sortFolders(filtered, sortType);
+    },
+    getRecentNotes: (limitCount = 5) => {
+        return notesRepo.getRecentNotes(limitCount);
     },
 }));

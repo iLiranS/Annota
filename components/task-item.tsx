@@ -1,5 +1,6 @@
 import ThemedText from '@/components/themed-text';
-import { getNoteById, Task } from '@/dev-data/data';
+import { useNotesStore } from '@/stores/notes-store';
+import { useTasksStore, type Task } from '@/stores/tasks-store';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@react-navigation/native';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -13,6 +14,9 @@ interface TaskItemProps {
 
 export default function TaskItem({ task, onPress, showDate = false }: TaskItemProps) {
     const { colors, dark } = useTheme();
+    const { toggleComplete } = useTasksStore();
+    const { getNoteById } = useNotesStore();
+
     const linkedNote = task.linkedNoteId ? getNoteById(task.linkedNoteId) : null;
 
     const formatTime = (date: Date): string => {
@@ -47,6 +51,10 @@ export default function TaskItem({ task, onPress, showDate = false }: TaskItemPr
         });
     };
 
+    const handleToggle = () => {
+        toggleComplete(task.id);
+    };
+
     return (
         <Pressable
             onPress={onPress}
@@ -60,13 +68,20 @@ export default function TaskItem({ task, onPress, showDate = false }: TaskItemPr
                 },
             ]}
         >
-            {/* Completion indicator */}
-            <View
+            {/* Completion indicator (Interactive Circle) */}
+            <Pressable
+                onPress={handleToggle}
                 style={[
-                    styles.completionDot,
-                    { backgroundColor: task.completed ? '#10B981' : '#6366F1' },
+                    styles.toggleCircle,
+                    { borderColor: '#6366F1' },
+                    task.completed && { backgroundColor: '#6366F1' },
                 ]}
-            />
+                hitSlop={12}
+            >
+                {task.completed && (
+                    <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+                )}
+            </Pressable>
 
             <View style={styles.taskItemContent}>
                 <View style={styles.taskItemHeader}>
@@ -112,11 +127,14 @@ const styles = StyleSheet.create({
         shadowRadius: 6,
         elevation: 2,
     },
-    completionDot: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
+    toggleCircle: {
+        width: 22,
+        height: 22,
+        borderRadius: 11,
+        borderWidth: 2,
         marginRight: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     taskItemContent: {
         flex: 1,

@@ -5,6 +5,7 @@ import { useTheme } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo } from 'react';
 import {
+    Image,
     Pressable,
     StyleSheet,
     Text,
@@ -143,11 +144,13 @@ export default function Sidebar(props: DrawerContentComponentProps) {
     return (
         <View style={[styles.container, { backgroundColor: colors.card }]}>
             {/* Header */}
-            <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-                <View style={styles.appIcon}>
-                    <Ionicons name="document-text" size={24} color="#6366F1" />
-                </View>
-                <Text style={[styles.headerTitle, { color: colors.text }]}>Notes</Text>
+            <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+                <Image
+                    source={require('@/assets/images/icon.png')}
+                    style={styles.logo}
+                    resizeMode="contain"
+                />
+                <Text style={[styles.headerTitle, { color: colors.text }]}>Notela</Text>
             </View>
 
             <DrawerContentScrollView
@@ -194,6 +197,7 @@ export default function Sidebar(props: DrawerContentComponentProps) {
                     <SidebarItem
                         icon="documents"
                         label="All Notes"
+                        iconColor='#559bd8ff'
                         onPress={() => navigateToNotes()}
                     />
 
@@ -238,17 +242,15 @@ const styles = StyleSheet.create({
         borderBottomWidth: StyleSheet.hairlineWidth,
         borderBottomColor: 'rgba(128, 128, 128, 0.2)',
     },
-    appIcon: {
-        width: 40,
-        height: 40,
-        borderRadius: 10,
-        backgroundColor: '#6366F1' + '20',
-        alignItems: 'center',
-        justifyContent: 'center',
+    logo: {
+        width: 32,
+        height: 32,
+        borderRadius: 8,
     },
     headerTitle: {
-        fontSize: 20,
+        fontSize: 22,
         fontWeight: '700',
+        letterSpacing: -0.5,
     },
     scrollContent: {
         paddingTop: 8,

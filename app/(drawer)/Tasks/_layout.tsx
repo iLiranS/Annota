@@ -22,6 +22,7 @@ export default function TasksLayout() {
                 name="index"
                 options={{
                     title: 'Tasks',
+                    headerShown: false,
                     headerLeft: () => (
                         <Pressable
                             onPress={openDrawer}
