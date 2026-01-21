@@ -40,7 +40,7 @@ interface NotesState {
     updateFolder: (folderId: string, updates: Partial<Omit<Folder, 'id' | 'createdAt'>>) => Promise<void>;
     deleteFolder: (folderId: string) => Promise<void>;
     permanentlyDeleteFolder: (folderId: string) => Promise<void>;
-    restoreFolder: (folderId: string, targetParentId?: string | null) => Promise<void>;
+    restoreFolder: (folderId: string) => Promise<void>;
     getFolderById: (folderId: string) => Folder | undefined;
 
     // Trash operations
@@ -268,33 +268,28 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         }));
     },
 
-    restoreFolder: async (folderId, targetParentId) => {
-        const { folderIds, noteIds } = await FolderService.restore(folderId, targetParentId);
+    restoreFolder: async (folderId) => {
+        const { folderIds, noteIds, restoredParentId } = await FolderService.restore(folderId);
         set(state => {
             const now = new Date();
 
             const newFolders = state.folders.map(f => {
-                if (folderIds.includes(f.id)) {
-                    // Determine restored parent ID
-                    let restoredParentId = f.parentId;
-
-                    if (f.id === folderId) {
-                        // This is the root folder being restored
-                        restoredParentId = targetParentId ?? f.originalParentId ?? f.parentId;
-                    } else {
-                        // This is a descendant
-                        // For descendants, their parentId usually didn't change during delete (structurally),
-                        // but we rely on originalParentId if it was set.
-                        restoredParentId = f.originalParentId ?? f.parentId;
-                    }
-
+                if (folderId === f.id) {
                     return {
                         ...f,
                         isDeleted: false,
                         deletedAt: null,
                         parentId: restoredParentId,
                         originalParentId: null,
-                        updatedAt: now
+
+                    };
+                }
+                if (folderIds.includes(f.id)) {
+                    return {
+                        ...f,
+                        isDeleted: false,
+                        deletedAt: null,
+                        originalParentId: null,
                     };
                 }
                 return f;
@@ -314,9 +309,10 @@ export const useNotesStore = create<NotesState>((set, get) => ({
                 return n;
             });
 
+
             return { folders: newFolders, notes: newNotes };
         });
-        get().initApp();
+
     },
 
     getFolderById: (folderId) => {

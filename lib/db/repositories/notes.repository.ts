@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, isNull, sql } from 'drizzle-orm';
 import { db, DbOrTx, schema } from '../client';
 import type { NoteMetadata } from '../schema';
 
@@ -308,8 +308,9 @@ export function softDeleteNotesInFolders(folderIds: string[], now: Date, tx: DbO
         .where(inArray(schema.noteMetadata.folderId, folderIds))
         .run();
 }
-
-export function restoreNotesInFolders(folderIds: string[], now: Date, tx: DbOrTx = db): void {
+// restore notes in folders - called from folders.service.ts when restoring a folder
+// only restore notes that were not deleted before the folder was deleted
+export function restoreNotesInFolders(folderIds: string[], folderDeletedAt: Date, tx: DbOrTx = db): void {
     if (folderIds.length === 0) return;
 
     tx.update(schema.noteMetadata)
@@ -318,9 +319,9 @@ export function restoreNotesInFolders(folderIds: string[], now: Date, tx: DbOrTx
             deletedAt: null,
             folderId: sql`${schema.noteMetadata.originalFolderId}`, // Restore from original
             originalFolderId: null,
-            updatedAt: now,
         })
-        .where(inArray(schema.noteMetadata.originalFolderId, folderIds)) // Matches based on where they CAME from
+        .where(and(gte(schema.noteMetadata.deletedAt, folderDeletedAt),
+            inArray(schema.noteMetadata.originalFolderId, folderIds))) // Matches based on where they CAME from
         .run();
 }
 
@@ -345,12 +346,15 @@ export function permanentlyDeleteDeletedNotes(tx: DbOrTx = db): void {
         .run();
 }
 
-export function getNoteIdsByOriginalFolderIds(folderIds: string[]): string[] {
+export function getNoteIdsByOriginalFolderIds(folderIds: string[], folderDeletedAt: Date): string[] {
     if (folderIds.length === 0) return [];
 
     const results = db.select({ id: schema.noteMetadata.id })
         .from(schema.noteMetadata)
-        .where(inArray(schema.noteMetadata.originalFolderId, folderIds))
+        .where(and(
+            gte(schema.noteMetadata.deletedAt, folderDeletedAt),
+            inArray(schema.noteMetadata.originalFolderId, folderIds)
+        ))
         .all();
 
     return results.map(r => r.id);

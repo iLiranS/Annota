@@ -148,7 +148,7 @@ export function deleteDeletedFolders(tx: DbOrTx = db): void {
         .run();
 }
 
-// Get all descendant folder IDs (recursive)
+
 // Get all descendant folder IDs (recursive)
 export function getAllDescendantFolderIds(folderId: string, includeDeleted = false): string[] {
     const whereClause = includeDeleted

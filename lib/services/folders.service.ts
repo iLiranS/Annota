@@ -78,9 +78,9 @@ export const FolderService = {
     },
 
     // 4. Restore
-    restore: async (folderId: string, targetParentId?: string | null): Promise<{ folderIds: string[], noteIds: string[] }> => {
+    restore: async (folderId: string): Promise<{ folderIds: string[], noteIds: string[], restoredParentId: string | null }> => {
         const folder = foldersRepo.getFolderById(folderId);
-        if (!folder) return { folderIds: [], noteIds: [] };
+        if (!folder) return { folderIds: [], noteIds: [], restoredParentId: null };
 
         const now = new Date();
         // 1. Get ALL descendants (including deleted ones!)
@@ -88,13 +88,11 @@ export const FolderService = {
         const allFolderIds = [folderId, ...allDescendantIds];
 
         // 2. Identify affected notes BEFORE update (so we know what to restore in store)
-        const affectedNoteIds = notesRepo.getNoteIdsByOriginalFolderIds(allFolderIds);
+        const affectedNoteIds = notesRepo.getNoteIdsByOriginalFolderIds(allFolderIds, folder.deletedAt || now);
 
-        // Determine restore location
+        // Determine restore location of the restored folder
         let restoredParentId: string | null = null;
-        if (targetParentId !== undefined) {
-            restoredParentId = targetParentId;
-        } else if (folder.originalParentId) {
+        if (folder.originalParentId) {
             const originalParent = foldersRepo.getFolderById(folder.originalParentId);
             if (originalParent && !originalParent.isDeleted) {
                 restoredParentId = folder.originalParentId;
@@ -109,7 +107,6 @@ export const FolderService = {
                     deletedAt: null,
                     parentId: restoredParentId,
                     originalParentId: null,
-                    updatedAt: now,
                 })
                 .where(eq(schema.folders.id, folderId))
                 .run();
@@ -120,19 +117,17 @@ export const FolderService = {
                     .set({
                         isDeleted: false,
                         deletedAt: null,
-                        parentId: sql`COALESCE(original_parent_id, parent_id)`,
                         originalParentId: null,
-                        updatedAt: now
                     })
                     .where(inArray(schema.folders.id, allDescendantIds))
                     .run();
             }
 
             // 3. Restore NOTES
-            notesRepo.restoreNotesInFolders(allFolderIds, now, tx);
+            notesRepo.restoreNotesInFolders(allFolderIds, folder.deletedAt || now, tx);
         });
 
-        return { folderIds: allFolderIds, noteIds: affectedNoteIds };
+        return { folderIds: allFolderIds, noteIds: affectedNoteIds, restoredParentId };
     },
 
     // 5. Permanent Delete

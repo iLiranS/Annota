@@ -215,7 +215,7 @@ export default function NotesSearchModal({
                             <Text style={[
                                 styles.scopeText,
                                 { color: searchScope === 'all' ? '#FFFFFF' : colors.text }
-                            ]}>All Notes</Text>
+                            ]}>All Folders</Text>
                         </Pressable>
                     </View>
 
