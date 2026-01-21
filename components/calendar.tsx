@@ -220,16 +220,16 @@ export default function Calendar({ selectedDate, onDateSelect }: CalendarProps) 
                                             style={[
                                                 styles.dayInner,
                                                 selected && styles.selectedDay,
-                                                selected && { backgroundColor: '#6366F1' },
+                                                selected && { backgroundColor: colors.primary },
                                                 todayHighlight && !selected && styles.todayDay,
-                                                todayHighlight && !selected && { borderColor: '#6366F1' },
+                                                todayHighlight && !selected && { borderColor: colors.primary },
                                             ]}
                                         >
                                             <ThemedText
                                                 style={[
                                                     styles.dayText,
                                                     selected && styles.selectedDayText,
-                                                    todayHighlight && !selected && { color: '#6366F1', fontWeight: '700' },
+                                                    todayHighlight && !selected && { color: colors.primary, fontWeight: '700' },
                                                 ]}
                                             >
                                                 {day}
@@ -241,7 +241,7 @@ export default function Calendar({ selectedDate, onDateSelect }: CalendarProps) 
                                             <View
                                                 style={[
                                                     styles.taskDot,
-                                                    { backgroundColor: selected ? '#FFFFFF' : '#6366F1' },
+                                                    { backgroundColor: selected ? '#FFFFFF' : colors.primary },
                                                 ]}
                                             />
                                         )}

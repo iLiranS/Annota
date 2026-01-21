@@ -1,9 +1,8 @@
 import Calendar from '@/components/calendar';
-import NoteListItem from '@/components/notes/note-list-item';
+import RecentNotes from '@/components/notes/recent-notes';
 import TaskItem from '@/components/task-item';
 import ThemedText from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { useNotesStore } from '@/stores/notes-store';
 import { useTasksStore, type Task } from '@/stores/tasks-store';
 import { Ionicons } from '@expo/vector-icons';
 import { DrawerNavigationProp } from '@react-navigation/drawer';
@@ -24,7 +23,6 @@ export default function HomeScreen() {
 
   // Use Zustand store for tasks
   const { tasks, loadTasks } = useTasksStore();
-  const { getRecentNotes, notes } = useNotesStore();
 
 
   // Load tasks from database on mount
@@ -62,9 +60,7 @@ export default function HomeScreen() {
 
   const [activeTab, setActiveTab] = useState<'notes' | 'later'>('later');
 
-  const recentNotes = useMemo(() => {
-    return getRecentNotes(5);
-  }, [getRecentNotes, notes]);
+
 
   const formattedSelectedDate = useMemo(() => {
     const today = new Date();
@@ -120,7 +116,7 @@ export default function HomeScreen() {
           </Pressable>
           <View style={styles.greetingContainer}>
             <ThemedText style={styles.greetingText}>
-              {greeting}, <ThemedText style={styles.userName}>User</ThemedText>
+              {greeting}, <ThemedText style={[styles.userName, { color: colors.primary }]}>User</ThemedText>
             </ThemedText>
           </View>
         </View>
@@ -139,14 +135,14 @@ export default function HomeScreen() {
                 <View
                   style={[
                     styles.taskCountBadge,
-                    { backgroundColor: tasksForSelectedDate.length > 0 ? '#6366F1' + '20' : colors.text + '10' },
+                    { backgroundColor: tasksForSelectedDate.length > 0 ? colors.primary + '20' : colors.text + '10' },
                   ]}
                 >
 
                   <ThemedText
                     style={[
                       styles.taskCountText,
-                      { color: tasksForSelectedDate.length > 0 ? '#6366F1' : colors.text + '50' },
+                      { color: tasksForSelectedDate.length > 0 ? colors.primary + '50' : colors.text + '50' },
                     ]}
                   >
                     {tasksForSelectedDate.length}
@@ -159,7 +155,7 @@ export default function HomeScreen() {
                   style={({ pressed }) => [
                     styles.addTaskButton,
                     {
-                      backgroundColor: '#6366F1',
+                      backgroundColor: colors.primary + '80',
                       opacity: pressed ? 0.8 : 1,
                     }
                   ]}
@@ -211,7 +207,7 @@ export default function HomeScreen() {
                 onPress={() => setActiveTab('later')}
                 style={[
                   styles.tab,
-                  activeTab === 'later' && styles.activeTab
+                  activeTab === 'later' && [styles.activeTab, { backgroundColor: colors.primary + '80', shadowColor: colors.primary + '80' }],
                 ]}
               >
                 <ThemedText style={[
@@ -240,30 +236,7 @@ export default function HomeScreen() {
             {/* Tab Content */}
             <View style={styles.tabContent}>
               {activeTab === 'notes' ? (
-                <View>
-                  <View style={styles.sectionHeaderWithAction}>
-                    <ThemedText style={styles.sectionTitle}>Notes</ThemedText>
-                    <Pressable onPress={() => router.push('/Notes')}>
-                      <ThemedText style={[styles.viewAllText, { color: '#6366F1' }]}>View All</ThemedText>
-                    </Pressable>
-                  </View>
-
-                  {recentNotes.length > 0 ? (
-                    <View style={{ gap: 10 }}>
-                      {recentNotes.map((note) => (
-                        <NoteListItem
-                          key={note.id}
-                          note={note}
-                          onPress={() => router.push(`/Notes/${note.id}`)}
-                        />
-                      ))}
-                    </View>
-                  ) : (
-                    <View style={styles.emptyContent}>
-                      <ThemedText style={{ color: colors.text + '50' }}>No recent notes</ThemedText>
-                    </View>
-                  )}
-                </View>
+                <RecentNotes />
               ) : (
                 <View>
                   <ThemedText style={styles.sectionTitle}>Upcoming Tasks</ThemedText>
@@ -324,7 +297,7 @@ const styles = StyleSheet.create({
   },
   userName: {
     fontWeight: '700',
-    color: '#6366F1',
+
   },
   tasksSection: {
     marginTop: 28,
@@ -392,8 +365,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   activeTab: {
-    backgroundColor: '#6366F1',
-    shadowColor: '#6366F1',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -412,25 +383,10 @@ const styles = StyleSheet.create({
   tabContent: {
     minHeight: 200,
   },
-  sectionHeaderWithAction: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
     letterSpacing: -0.3,
   },
-  viewAllText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  emptyContent: {
-    height: 120,
-    alignItems: 'center',
-    justifyContent: 'center',
-    opacity: 0.5,
-  },
+
 });

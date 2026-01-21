@@ -39,7 +39,7 @@ export default function NoteCard({
         >
             <View style={styles.noteHeader}>
                 <View style={styles.titleRow}>
-                    <Ionicons name="document-text" size={16} color="#6366F1" />
+                    <Ionicons name="document-text" size={16} color={colors.primary} />
                     <ThemedText style={styles.title} numberOfLines={1}>
                         {note.title || 'Untitled Note'}
                     </ThemedText>

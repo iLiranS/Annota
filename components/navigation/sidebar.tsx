@@ -165,7 +165,7 @@ export default function Sidebar(props: DrawerContentComponentProps) {
                         icon="checkmark-circle"
                         label="Tasks"
                         onPress={navigateToTasks}
-                        iconColor="#6366F1"
+                        iconColor={colors.primary}
                     />
 
                     <SidebarItem

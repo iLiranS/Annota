@@ -113,7 +113,7 @@ export default function FolderNameModal({
                                 styles.button,
                                 styles.createButton,
                                 {
-                                    backgroundColor: isValid ? '#6366F1' : '#6366F1' + '60',
+                                    backgroundColor: isValid ? colors.primary : colors.primary + '60',
                                 },
                                 pressed && isValid && styles.buttonPressed,
                             ]}

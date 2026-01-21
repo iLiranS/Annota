@@ -11,7 +11,8 @@ import {
     View,
 } from 'react-native';
 
-import { COLOR_PALETTE, HEADING_LEVELS, HeadingLevel } from './color-palette';
+import { COLOR_PALETTE } from '@/constants/colors';
+import { HEADING_LEVELS, HeadingLevel } from '@/constants/editor';
 
 type MaterialIconName = ComponentProps<typeof MaterialIcons>['name'];
 

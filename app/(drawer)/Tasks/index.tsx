@@ -91,9 +91,9 @@ function TaskCard({ task, onToggle, onPress }: TaskCardProps) {
                     </View>
 
                     {linkedNote && (
-                        <View style={[styles.linkedNoteBadge, { backgroundColor: '#6366F1' + '20' }]}>
-                            <Ionicons name="document-text" size={10} color="#6366F1" />
-                            <ThemedText style={[styles.linkedNoteText, { color: '#6366F1' }]}>
+                        <View style={[styles.linkedNoteBadge, { backgroundColor: colors.primary + '20' }]}>
+                            <Ionicons name="document-text" size={10} color={colors.primary} />
+                            <ThemedText style={[styles.linkedNoteText, { color: colors.primary }]}>
                                 {linkedNote.title}
                             </ThemedText>
                         </View>
@@ -158,7 +158,7 @@ export default function TasksScreen() {
                             ]}
                             hitSlop={8}
                         >
-                            <Ionicons name="add" size={24} color="#6366F1" />
+                            <Ionicons name="add" size={24} color={colors.primary} />
                         </Pressable>
                     </View>
                     <ThemedText style={[styles.subtitle, { color: colors.text + '70' }]}>

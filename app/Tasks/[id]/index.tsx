@@ -242,8 +242,8 @@ export default function TaskEditScreen() {
                                 style={[
                                     styles.dateTimeButton,
                                     {
-                                        backgroundColor: showDatePicker ? '#6366F1' + '15' : inputBgColor,
-                                        borderColor: showDatePicker ? '#6366F1' : inputBorderColor,
+                                        backgroundColor: showDatePicker ? colors.primary + '15' : inputBgColor,
+                                        borderColor: showDatePicker ? colors.primary : inputBorderColor,
                                     },
                                 ]}
                                 onPress={toggleDatePicker}
@@ -251,10 +251,10 @@ export default function TaskEditScreen() {
                                 <Ionicons
                                     name="calendar-outline"
                                     size={18}
-                                    color={showDatePicker ? '#6366F1' : '#6366F1'}
+                                    color={showDatePicker ? colors.primary : colors.primary}
                                 />
                                 <ThemedText
-                                    style={[styles.dateTimeText, showDatePicker && { color: '#6366F1' }]}
+                                    style={[styles.dateTimeText, showDatePicker && { color: colors.primary }]}
                                 >
                                     {formatDate(deadline)}
                                 </ThemedText>
@@ -264,8 +264,8 @@ export default function TaskEditScreen() {
                                 style={[
                                     styles.dateTimeButton,
                                     {
-                                        backgroundColor: showTimePicker ? '#6366F1' + '15' : inputBgColor,
-                                        borderColor: showTimePicker ? '#6366F1' : inputBorderColor,
+                                        backgroundColor: showTimePicker ? colors.primary + '15' : inputBgColor,
+                                        borderColor: showTimePicker ? colors.primary : inputBorderColor,
                                     },
                                 ]}
                                 onPress={toggleTimePicker}
@@ -273,10 +273,10 @@ export default function TaskEditScreen() {
                                 <Ionicons
                                     name="time-outline"
                                     size={18}
-                                    color={showTimePicker ? '#6366F1' : '#6366F1'}
+                                    color={showTimePicker ? colors.primary : colors.primary}
                                 />
                                 <ThemedText
-                                    style={[styles.dateTimeText, showTimePicker && { color: '#6366F1' }]}
+                                    style={[styles.dateTimeText, showTimePicker && { color: colors.primary }]}
                                 >
                                     {formatTime(deadline)}
                                 </ThemedText>
@@ -355,7 +355,7 @@ export default function TaskEditScreen() {
                                 styles.noteSelector,
                                 {
                                     backgroundColor: inputBgColor,
-                                    borderColor: linkedNoteId ? '#6366F1' : inputBorderColor,
+                                    borderColor: linkedNoteId ? colors.primary : inputBorderColor,
                                 },
                             ]}
                             onPress={() => setShowNotePicker(!showNotePicker)}
@@ -363,7 +363,7 @@ export default function TaskEditScreen() {
                             {linkedNote ? (
                                 <View style={styles.selectedNote}>
                                     <Link push href={`/Notes/${linkedNote.id}`}>
-                                        <Ionicons name="document-text" size={18} color="#6366F1" />
+                                        <Ionicons name="document-text" size={18} color={colors.primary} />
                                         <ThemedText style={styles.selectedNoteText} numberOfLines={1}>
                                             {linkedNote.title}
                                         </ThemedText>
@@ -410,7 +410,7 @@ export default function TaskEditScreen() {
                                         style={[
                                             styles.notePickerItem,
                                             linkedNoteId === note.id && {
-                                                backgroundColor: '#6366F1' + '15',
+                                                backgroundColor: colors.primary + '15',
                                             },
                                         ]}
                                         onPress={() => {
@@ -421,13 +421,13 @@ export default function TaskEditScreen() {
                                         <Ionicons
                                             name="document-text"
                                             size={16}
-                                            color={linkedNoteId === note.id ? '#6366F1' : colors.text + '60'}
+                                            color={linkedNoteId === note.id ? colors.primary : colors.text + '60'}
                                         />
                                         <View style={styles.notePickerItemContent}>
                                             <ThemedText
                                                 style={[
                                                     styles.notePickerItemTitle,
-                                                    linkedNoteId === note.id && { color: '#6366F1' },
+                                                    linkedNoteId === note.id && { color: colors.primary },
                                                 ]}
                                                 numberOfLines={1}
                                             >
@@ -441,7 +441,7 @@ export default function TaskEditScreen() {
                                             </ThemedText>
                                         </View>
                                         {linkedNoteId === note.id && (
-                                            <Ionicons name="checkmark" size={18} color="#6366F1" />
+                                            <Ionicons name="checkmark" size={18} color={colors.primary} />
                                         )}
                                     </Pressable>
                                 ))}

@@ -68,7 +68,7 @@ export default function OptionsMenu({
     return (
         <>
             {/* Options Button */}
-            <View style={[styles.buttonContainer, { bottom: 16, right: 16 }]}>
+            <View style={[styles.buttonContainer, { bottom: 20 + insets.bottom, right: 20 }]}>
                 <Pressable
                     onPress={() => setIsVisible(true)}
                     style={({ pressed }) => [
@@ -97,7 +97,7 @@ export default function OptionsMenu({
                             styles.menuContainer,
                             {
                                 backgroundColor: colors.card,
-                                bottom: 100 + insets.bottom,
+                                bottom: 75 + insets.bottom,
                             },
                         ]}
                     >
@@ -180,14 +180,14 @@ export default function OptionsMenu({
                                     >
                                         <View style={styles.sortIconContainer}>
                                             {currentSortType === sortType && (
-                                                <Ionicons name="checkmark" size={18} color="#6366F1" />
+                                                <Ionicons name="checkmark" size={18} color={colors.primary} />
                                             )}
                                         </View>
                                         <Text
                                             style={[
                                                 styles.menuItemText,
                                                 { color: colors.text },
-                                                currentSortType === sortType && { color: '#6366F1', fontWeight: '600' },
+                                                currentSortType === sortType && { color: colors.primary, fontWeight: '600' },
                                             ]}
                                         >
                                             {getSortTypeLabel(sortType)}
@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
     },
     menuContainer: {
         position: 'absolute',
-        right: 16,
+        right: 20,
         width: 220,
         borderRadius: 14,
         paddingVertical: 8,

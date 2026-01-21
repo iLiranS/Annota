@@ -73,8 +73,8 @@ export default function TaskItem({ task, onPress, showDate = false }: TaskItemPr
                 onPress={handleToggle}
                 style={[
                     styles.toggleCircle,
-                    { borderColor: '#6366F1' },
-                    task.completed && { backgroundColor: '#6366F1' },
+                    { borderColor: colors.primary },
+                    task.completed && { backgroundColor: colors.primary },
                 ]}
                 hitSlop={12}
             >
@@ -101,8 +101,8 @@ export default function TaskItem({ task, onPress, showDate = false }: TaskItemPr
 
                 {linkedNote && (
                     <View style={styles.linkedNoteRow}>
-                        <Ionicons name="document-text" size={12} color="#6366F1" />
-                        <ThemedText style={[styles.linkedNoteLabel, { color: '#6366F1' }]}>
+                        <Ionicons name="document-text" size={12} color={colors.primary} />
+                        <ThemedText style={[styles.linkedNoteLabel, { color: colors.primary }]}>
                             {linkedNote.title}
                         </ThemedText>
                     </View>

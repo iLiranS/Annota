@@ -1,3 +1,4 @@
+import { COLOR_PALETTE } from '@/constants/colors';
 import { TRASH_FOLDER_ID, useNotesStore, type Folder } from '@/stores/notes-store';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
@@ -13,7 +14,6 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LocationPickerModal from './location-picker-modal';
-import { COLOR_PALETTE } from './tiptap-editor/color-palette';
 
 // Available folder icons
 const FOLDER_ICONS = [

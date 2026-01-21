@@ -25,8 +25,8 @@ export default function NoteListItem({ note, onPress }: NoteListItemProps) {
                 },
             ]}
         >
-            <View style={[styles.noteIconContainer, { backgroundColor: '#6366F1' + '15' }]}>
-                <Ionicons name="document-text" size={20} color="#6366F1" />
+            <View style={[styles.noteIconContainer, { backgroundColor: colors.primary + '15' }]}>
+                <Ionicons name="document-text" size={20} color={colors.primary} />
             </View>
             <View style={styles.noteItemContent}>
                 <ThemedText style={styles.noteItemTitle} numberOfLines={1}>
