@@ -1,5 +1,5 @@
 import ThemedText from '@/components/themed-text';
-import { DUMMY_NOTES } from '@/dev-data/data';
+import { useNotesStore } from '@/stores/notes-store';
 import { useTasksStore } from '@/stores/tasks-store';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -21,6 +21,7 @@ export default function NewTaskScreen() {
     const router = useRouter();
     const { colors, dark } = useTheme();
     const insets = useSafeAreaInsets();
+    const notes = useNotesStore((state) => state.notes);
 
     // Get createTask from store
     const { createTask } = useTasksStore();
@@ -42,7 +43,7 @@ export default function NewTaskScreen() {
     const [showNotePicker, setShowNotePicker] = useState(false);
 
     const linkedNote = useMemo(
-        () => (linkedNoteId ? DUMMY_NOTES.find((n) => n.id === linkedNoteId) : null),
+        () => (linkedNoteId ? notes.find((n) => n.id === linkedNoteId) : null),
         [linkedNoteId]
     );
 
@@ -332,7 +333,7 @@ export default function NewTaskScreen() {
                                     },
                                 ]}
                             >
-                                {DUMMY_NOTES.map((note) => (
+                                {notes.map((note) => (
                                     <Pressable
                                         key={note.id}
                                         style={[

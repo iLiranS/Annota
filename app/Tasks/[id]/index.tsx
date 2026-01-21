@@ -1,12 +1,13 @@
 import ThemedText from '@/components/themed-text';
-import { DUMMY_NOTES } from '@/dev-data/data';
+import { useNotesStore, type NoteMetadata } from '@/stores/notes-store';
 import { useTasksStore } from '@/stores/tasks-store';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useTheme } from '@react-navigation/native';
-import { Link, Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import {
+    Alert,
     KeyboardAvoidingView,
     Platform,
     Pressable,
@@ -24,8 +25,11 @@ export default function TaskEditScreen() {
     const insets = useSafeAreaInsets();
 
     // Get task from store
-    const { getTaskById, updateTask } = useTasksStore();
+    const { getTaskById, updateTask, deleteTask } = useTasksStore();
     const task = getTaskById(id);
+
+    // Get notes from store
+    const { notes } = useNotesStore();
 
     // Form state
     const [title, setTitle] = useState('');
@@ -51,8 +55,8 @@ export default function TaskEditScreen() {
     }, [task]);
 
     const linkedNote = useMemo(
-        () => (linkedNoteId ? DUMMY_NOTES.find((n) => n.id === linkedNoteId) : null),
-        [linkedNoteId]
+        () => (linkedNoteId ? notes.find((n) => n.id === linkedNoteId) : null),
+        [linkedNoteId, notes]
     );
 
     const handleSave = () => {
@@ -67,6 +71,26 @@ export default function TaskEditScreen() {
         });
 
         router.back();
+    };
+
+    const handleDelete = () => {
+        if (!task) return;
+
+        Alert.alert(
+            'Delete Task',
+            'Are you sure you want to delete this task?',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: () => {
+                        deleteTask(task.id);
+                        router.back();
+                    },
+                },
+            ]
+        );
     };
 
     const handleClose = () => {
@@ -362,12 +386,10 @@ export default function TaskEditScreen() {
                         >
                             {linkedNote ? (
                                 <View style={styles.selectedNote}>
-                                    <Link push href={`/Notes/${linkedNote.id}`}>
-                                        <Ionicons name="document-text" size={18} color={colors.primary} />
-                                        <ThemedText style={styles.selectedNoteText} numberOfLines={1}>
-                                            {linkedNote.title}
-                                        </ThemedText>
-                                    </Link>
+                                    <Ionicons name="document-text" size={18} color={colors.primary} />
+                                    <ThemedText style={styles.selectedNoteText} numberOfLines={1}>
+                                        {linkedNote.title}
+                                    </ThemedText>
                                     <Pressable
                                         onPress={(e) => {
                                             e.stopPropagation();
@@ -404,49 +426,69 @@ export default function TaskEditScreen() {
                                     },
                                 ]}
                             >
-                                {DUMMY_NOTES.map((note) => (
-                                    <Pressable
-                                        key={note.id}
-                                        style={[
-                                            styles.notePickerItem,
-                                            linkedNoteId === note.id && {
-                                                backgroundColor: colors.primary + '15',
-                                            },
-                                        ]}
-                                        onPress={() => {
-                                            setLinkedNoteId(note.id);
-                                            setShowNotePicker(false);
-                                        }}
-                                    >
-                                        <Ionicons
-                                            name="document-text"
-                                            size={16}
-                                            color={linkedNoteId === note.id ? colors.primary : colors.text + '60'}
-                                        />
-                                        <View style={styles.notePickerItemContent}>
-                                            <ThemedText
-                                                style={[
-                                                    styles.notePickerItemTitle,
-                                                    linkedNoteId === note.id && { color: colors.primary },
-                                                ]}
-                                                numberOfLines={1}
-                                            >
-                                                {note.title}
-                                            </ThemedText>
-                                            <ThemedText
-                                                style={[styles.notePickerItemPreview, { color: colors.text + '50' }]}
-                                                numberOfLines={1}
-                                            >
-                                                {note.preview}
-                                            </ThemedText>
-                                        </View>
-                                        {linkedNoteId === note.id && (
-                                            <Ionicons name="checkmark" size={18} color={colors.primary} />
-                                        )}
-                                    </Pressable>
-                                ))}
+                                <ScrollView nestedScrollEnabled style={{ maxHeight: 200 }}>
+                                    {notes.map((note: NoteMetadata) => (
+                                        <Pressable
+                                            key={note.id}
+                                            style={[
+                                                styles.notePickerItem,
+                                                linkedNoteId === note.id && {
+                                                    backgroundColor: colors.primary + '15',
+                                                },
+                                            ]}
+                                            onPress={() => {
+                                                setLinkedNoteId(note.id);
+                                                setShowNotePicker(false);
+                                            }}
+                                        >
+                                            <Ionicons
+                                                name="document-text"
+                                                size={16}
+                                                color={linkedNoteId === note.id ? colors.primary : colors.text + '60'}
+                                            />
+                                            <View style={styles.notePickerItemContent}>
+                                                <ThemedText
+                                                    style={[
+                                                        styles.notePickerItemTitle,
+                                                        linkedNoteId === note.id && { color: colors.primary },
+                                                    ]}
+                                                    numberOfLines={1}
+                                                >
+                                                    {note.title}
+                                                </ThemedText>
+                                                {note.preview ? (
+                                                    <ThemedText
+                                                        style={[
+                                                            styles.notePickerItemPreview,
+                                                            { color: colors.text + '50' },
+                                                        ]}
+                                                        numberOfLines={1}
+                                                    >
+                                                        {note.preview}
+                                                    </ThemedText>
+                                                ) : null}
+                                            </View>
+                                            {linkedNoteId === note.id && (
+                                                <Ionicons name="checkmark" size={18} color={colors.primary} />
+                                            )}
+                                        </Pressable>
+                                    ))}
+                                </ScrollView>
                             </View>
                         )}
+                    </View>
+
+                    {/* Delete Button */}
+                    <View style={{ marginTop: 20 }}>
+                        <Pressable
+                            style={[styles.deleteButton, { backgroundColor: '#EF4444' + '15' }]}
+                            onPress={handleDelete}
+                        >
+                            <Ionicons name="trash-outline" size={20} color="#EF4444" />
+                            <ThemedText style={[styles.deleteButtonText, { color: '#EF4444' }]}>
+                                Delete Task
+                            </ThemedText>
+                        </Pressable>
                     </View>
 
                     {/* Bottom Spacing */}
@@ -623,5 +665,17 @@ const styles = StyleSheet.create({
     pickerContainer: {
         marginTop: 12,
         alignItems: 'center',
+    },
+    deleteButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        paddingVertical: 14,
+        borderRadius: 10,
+    },
+    deleteButtonText: {
+        fontSize: 16,
+        fontWeight: '600',
     },
 });

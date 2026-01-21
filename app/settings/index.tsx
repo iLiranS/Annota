@@ -24,18 +24,24 @@ export default function SettingsIndex() {
                         icon="color-palette-outline"
                         onPress={() => router.push('/settings/theme')}
                         description="Theme, accent color"
+                        iconColor="#FFFFFF"
+                        iconBackgroundColor="#007AFF"
                     />
                     <SettingItem
                         label="Editor"
                         icon="text-outline"
                         onPress={() => router.push('/settings/editor')}
                         description="Font, spacing, direction"
+                        iconColor="#FFFFFF"
+                        iconBackgroundColor="#5856D6"
                     />
                     <SettingItem
                         label="General"
                         icon="options-outline"
                         onPress={() => router.push('/settings/general')}
                         description="Start of week, view options"
+                        iconColor="#FFFFFF"
+                        iconBackgroundColor="#8E8E93"
                     />
                 </View>
             </View>
@@ -49,6 +55,8 @@ export default function SettingsIndex() {
                         onPress={() => { }}
                         type="link"
                         description="Profile, subscription"
+                        iconColor="#FFFFFF"
+                        iconBackgroundColor="#34C759"
                     />
                 </View>
             </View>

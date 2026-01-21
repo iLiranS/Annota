@@ -12,6 +12,8 @@ interface SettingItemProps {
     onToggle?: (value: boolean) => void;
     description?: string;
     textColor?: string;
+    iconColor?: string;
+    iconBackgroundColor?: string;
 }
 
 export default function SettingItem({
@@ -23,6 +25,8 @@ export default function SettingItem({
     onToggle,
     description,
     textColor,
+    iconColor,
+    iconBackgroundColor,
 }: SettingItemProps) {
     const { colors, dark } = useTheme();
 
@@ -37,8 +41,11 @@ export default function SettingItem({
         >
             <View style={styles.content}>
                 {icon && (
-                    <View style={[styles.iconContainer, { backgroundColor: dark ? '#3A3A3C' : '#E5E5EA' }]}>
-                        <Ionicons name={icon} size={20} color={colors.text} />
+                    <View style={[
+                        styles.iconContainer,
+                        { backgroundColor: iconBackgroundColor || (dark ? '#3A3A3C' : '#E5E5EA') }
+                    ]}>
+                        <Ionicons name={icon} size={20} color={iconColor || colors.text} />
                     </View>
                 )}
                 <View style={[styles.textContainer, !icon && { marginLeft: 0 }]}>

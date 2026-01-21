@@ -220,7 +220,7 @@ export default function Calendar({ selectedDate, onDateSelect }: CalendarProps) 
                                             style={[
                                                 styles.dayInner,
                                                 selected && styles.selectedDay,
-                                                selected && { backgroundColor: colors.primary },
+                                                selected && { backgroundColor: colors.primary + '90' },
                                                 todayHighlight && !selected && styles.todayDay,
                                                 todayHighlight && !selected && { borderColor: colors.primary },
                                             ]}
@@ -333,9 +333,10 @@ const styles = StyleSheet.create({
         borderWidth: 2,
     },
     taskDot: {
+        position: 'absolute',
+        bottom: -4,
         width: 5,
         height: 5,
         borderRadius: 2.5,
-        marginTop: 2,
     },
 });

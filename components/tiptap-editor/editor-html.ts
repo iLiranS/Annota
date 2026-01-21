@@ -74,6 +74,7 @@ export function getEditorHtml(options: EditorHtmlOptions): string {
             font-size: 16px;
             line-height: 1.6;
             -webkit-text-size-adjust: 100%;
+            overflow-x: hidden;
         }
         
         #editor-container {
@@ -81,6 +82,7 @@ export function getEditorHtml(options: EditorHtmlOptions): string {
             padding-bottom: 80px;
             min-height: 100vh;
             position: relative;
+            overflow-x: hidden;
         }
         
         #loading {
@@ -100,6 +102,7 @@ export function getEditorHtml(options: EditorHtmlOptions): string {
             display: none;
             min-height: calc(100vh - 100px);
             cursor: text;
+            overflow-x: hidden;
         }
         
         #display.visible {
@@ -150,7 +153,7 @@ export function getEditorHtml(options: EditorHtmlOptions): string {
             padding-left: 16px;
             font-style: italic;
             opacity: 0.9;
-            background-color: ${accentColor.replace('rgb', 'rgba').replace(')', ', 0.25)')};
+            background-color: ${accentColor + "40"};
             border-top-right-radius: 4px;
             border-bottom-right-radius: 4px;
         }
@@ -306,6 +309,55 @@ export function getEditorHtml(options: EditorHtmlOptions): string {
         .link-popover button.confirm {
             background: ${accentColor};
             color: white;
+        }
+        
+        /* Table Styles */
+        /* Wrapper to enable horizontal scroll for tables */
+        .ProseMirror .tableWrapper, #display .tableWrapper {
+            overflow-x: auto;
+            margin: 16px 0;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .ProseMirror table, #display table {
+            border-collapse: collapse;
+            width: max-content;
+            min-width: 100%;
+            table-layout: auto;
+        }
+        
+        .ProseMirror td, .ProseMirror th,
+        #display td, #display th {
+            min-width: 80px;
+            padding: 8px 12px;
+            border: 1px solid ${isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)'};
+            text-align: left;
+            vertical-align: top;
+            position: relative;
+            word-wrap: break-word;
+        }
+        
+        .ProseMirror th, #display th {
+            background-color: ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)'};
+            font-weight: 600;
+        }
+        
+        .ProseMirror .selectedCell {
+            background-color: ${accentColor}22;
+        }
+        
+        .ProseMirror .column-resize-handle {
+            position: absolute;
+            right: -2px;
+            top: 0;
+            bottom: -2px;
+            width: 4px;
+            background-color: ${accentColor};
+            pointer-events: none;
+        }
+        
+        .ProseMirror.resize-cursor {
+            cursor: col-resize;
         }
     </style>
     
@@ -473,6 +525,16 @@ export function getEditorHtml(options: EditorHtmlOptions): string {
             displayEl.innerHTML = html;
             displayEl.classList.toggle('empty', isEmpty);
             
+            // Wrap tables in scrollable containers for display mode
+            displayEl.querySelectorAll('table').forEach(table => {
+                if (!table.parentElement?.classList.contains('tableWrapper')) {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'tableWrapper';
+                    table.parentNode.insertBefore(wrapper, table);
+                    wrapper.appendChild(table);
+                }
+            });
+            
             // Render LaTeX and highlight code
             renderLatex();
             highlightCode();
@@ -498,7 +560,11 @@ export function getEditorHtml(options: EditorHtmlOptions): string {
                     { default: Color },
                     { default: Youtube },
                     { default: Image },
-                    { default: BubbleMenu }
+                    { default: BubbleMenu },
+                    { default: Table },
+                    { default: TableRow },
+                    { default: TableCell },
+                    { default: TableHeader }
                 ] = await Promise.all([
                     import('https://esm.sh/@tiptap/core@2.1.13'),
                     import('https://esm.sh/@tiptap/starter-kit@2.1.13'),
@@ -510,7 +576,11 @@ export function getEditorHtml(options: EditorHtmlOptions): string {
                     import('https://esm.sh/@tiptap/extension-color@2.1.13'),
                     import('https://esm.sh/@tiptap/extension-youtube@2.1.13'),
                     import('https://esm.sh/@tiptap/extension-image@2.1.13'),
-                    import('https://esm.sh/@tiptap/extension-bubble-menu@2.1.13')
+                    import('https://esm.sh/@tiptap/extension-bubble-menu@2.1.13'),
+                    import('https://esm.sh/@tiptap/extension-table@2.1.13'),
+                    import('https://esm.sh/@tiptap/extension-table-row@2.1.13'),
+                    import('https://esm.sh/@tiptap/extension-table-cell@2.1.13'),
+                    import('https://esm.sh/@tiptap/extension-table-header@2.1.13')
                 ]);
                 
                 loadingEl.style.display = 'none';
@@ -557,6 +627,9 @@ export function getEditorHtml(options: EditorHtmlOptions): string {
                         else if (width === '50%') document.getElementById('btn-width-small')?.classList.add('active');
                     }
                     
+                    // Table state
+                    const isInTable = window.editor.isActive('table');
+                    
                     return {
                         isBold: window.editor.isActive('bold'),
                         isItalic: window.editor.isActive('italic'),
@@ -582,6 +655,15 @@ export function getEditorHtml(options: EditorHtmlOptions): string {
                         textColor: textColor,
                         canUndo: window.editor.can().undo(),
                         canRedo: window.editor.can().redo(),
+                        // Table state
+                        isInTable: isInTable,
+                        canAddRowBefore: isInTable && window.editor.can().addRowBefore(),
+                        canAddRowAfter: isInTable && window.editor.can().addRowAfter(),
+                        canAddColumnBefore: isInTable && window.editor.can().addColumnBefore(),
+                        canAddColumnAfter: isInTable && window.editor.can().addColumnAfter(),
+                        canDeleteRow: isInTable && window.editor.can().deleteRow(),
+                        canDeleteColumn: isInTable && window.editor.can().deleteColumn(),
+                        canDeleteTable: isInTable && window.editor.can().deleteTable(),
                     };
                 }
 
@@ -654,6 +736,15 @@ export function getEditorHtml(options: EditorHtmlOptions): string {
                             inline: false,
                             allowBase64: true,
                         }),
+                        Table.configure({
+                            resizable: true,
+                            HTMLAttributes: {
+                                class: 'editor-table',
+                            },
+                        }),
+                        TableRow,
+                        TableCell,
+                        TableHeader,
                         BubbleMenu.configure({
                             element: document.getElementById('bubble-menu'),
                             tippyOptions: {
@@ -822,6 +913,20 @@ export function getEditorHtml(options: EditorHtmlOptions): string {
                                 window.editor.chain().focus().setImage({ src: params.src }).run();
                             }
                         },
+                        // Table commands
+                        insertTable: () => {
+                            const rows = params?.rows || 3;
+                            const cols = params?.cols || 3;
+                            const withHeaderRow = params?.withHeaderRow !== false;
+                            window.editor.chain().focus().insertTable({ rows, cols, withHeaderRow }).run();
+                        },
+                        addRowBefore: () => window.editor.chain().focus().addRowBefore().run(),
+                        addRowAfter: () => window.editor.chain().focus().addRowAfter().run(),
+                        addColumnBefore: () => window.editor.chain().focus().addColumnBefore().run(),
+                        addColumnAfter: () => window.editor.chain().focus().addColumnAfter().run(),
+                        deleteRow: () => window.editor.chain().focus().deleteRow().run(),
+                        deleteColumn: () => window.editor.chain().focus().deleteColumn().run(),
+                        deleteTable: () => window.editor.chain().focus().deleteTable().run(),
                     };
                     
                     if (commands[command]) {

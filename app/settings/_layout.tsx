@@ -19,10 +19,21 @@ export default function SettingsLayout() {
                 },
                 headerLeft: ({ canGoBack }) =>
                     canGoBack ? (
-                        <Pressable onPress={() => router.back()} style={{ marginRight: 16 }}>
+                        <Pressable
+                            onPress={() => router.back()}
+                            style={{ width: 40, height: 40, justifyContent: 'center', alignItems: 'center' }}
+                        >
                             <Ionicons name="chevron-back" size={24} color={colors.primary} />
                         </Pressable>
-                    ) : undefined
+                    ) : undefined,
+                headerRight: () => (
+                    <Pressable
+                        onPress={() => router.dismissAll()}
+                        style={{ width: 40, height: 40, justifyContent: 'center', alignItems: 'center' }}
+                    >
+                        <Ionicons name="close" size={24} color={colors.primary} />
+                    </Pressable>
+                ),
             }}
         >
             <Stack.Screen

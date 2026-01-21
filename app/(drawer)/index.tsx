@@ -142,7 +142,7 @@ export default function HomeScreen() {
                   <ThemedText
                     style={[
                       styles.taskCountText,
-                      { color: tasksForSelectedDate.length > 0 ? colors.primary + '50' : colors.text + '50' },
+                      { color: tasksForSelectedDate.length > 0 ? colors.primary + '90' : colors.text + '50' },
                     ]}
                   >
                     {tasksForSelectedDate.length}
@@ -155,7 +155,7 @@ export default function HomeScreen() {
                   style={({ pressed }) => [
                     styles.addTaskButton,
                     {
-                      backgroundColor: colors.primary + '80',
+                      backgroundColor: colors.primary + '90',
                       opacity: pressed ? 0.8 : 1,
                     }
                   ]}
@@ -221,7 +221,7 @@ export default function HomeScreen() {
                 onPress={() => setActiveTab('notes')}
                 style={[
                   styles.tab,
-                  activeTab === 'notes' && styles.activeTab
+                  activeTab === 'notes' && [styles.activeTab, { backgroundColor: colors.primary + '80', shadowColor: colors.primary + '80' }]
                 ]}
               >
                 <ThemedText style={[
@@ -239,7 +239,7 @@ export default function HomeScreen() {
                 <RecentNotes />
               ) : (
                 <View>
-                  <ThemedText style={styles.sectionTitle}>Upcoming Tasks</ThemedText>
+                  <ThemedText style={styles.sectionTitle}>Future Tasks</ThemedText>
                   <View style={{ height: 16 }} />
                   {upcomingTasks.length > 0 ? (
                     <View style={{ gap: 10 }}>

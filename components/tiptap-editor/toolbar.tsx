@@ -2,10 +2,10 @@ import { useTheme } from '@react-navigation/native';
 import React, { useState } from 'react';
 import { Keyboard, ScrollView, StyleSheet, View } from 'react-native';
 
-import { HeadingLevel } from './color-palette';
+import { HeadingLevel } from '@/constants/editor';
 import { ToolbarButton } from './toolbar-button';
-import { PopupType, ToolbarPopup } from './toolbar-popup';
-import type { EditorState } from './types';
+import { ToolbarPopup } from './toolbar-popup';
+import type { EditorState, PopupType } from './types';
 
 interface EditorToolbarProps {
     editorState: EditorState;
@@ -187,6 +187,19 @@ export function EditorToolbar({
                             onPress={() => openPopup('youtube')}
                         />
 
+                        {/* Table - opens popup when in table, inserts new one when not */}
+                        <ToolbarButton
+                            icon="table-chart"
+                            isActive={editorState.isInTable}
+                            onPress={() => {
+                                if (editorState.isInTable) {
+                                    openPopup('table');
+                                } else {
+                                    onCommand('insertTable', { rows: 3, cols: 3, withHeaderRow: true });
+                                }
+                            }}
+                        />
+
                         <View style={styles.separator} />
 
                         {/* Undo/Redo */}
@@ -294,6 +307,24 @@ export function EditorToolbar({
                     onSubmit={(url: string) => {
                         onCommand('setImage', { src: url });
                         closePopup();
+                    }}
+                    onClose={closePopup}
+                />
+            )}
+
+            {activePopup === 'table' && (
+                <ToolbarPopup
+                    visible={true}
+                    type="table"
+                    canAddRowBefore={editorState.canAddRowBefore}
+                    canAddRowAfter={editorState.canAddRowAfter}
+                    canAddColumnBefore={editorState.canAddColumnBefore}
+                    canAddColumnAfter={editorState.canAddColumnAfter}
+                    canDeleteRow={editorState.canDeleteRow}
+                    canDeleteColumn={editorState.canDeleteColumn}
+                    canDeleteTable={editorState.canDeleteTable}
+                    onCommand={(command: string, params?: Record<string, unknown>) => {
+                        onCommand(command, params);
                     }}
                     onClose={closePopup}
                 />

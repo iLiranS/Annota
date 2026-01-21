@@ -38,7 +38,7 @@ export function ToolbarButton({
             disabled={disabled}
             style={({ pressed }) => [
                 styles.toolbarButton,
-                isActive && styles.toolbarButtonActive,
+                isActive && { backgroundColor: colors.primary + '25' },
                 pressed && { opacity: 0.6 },
                 disabled && { opacity: 0.3 },
             ]}

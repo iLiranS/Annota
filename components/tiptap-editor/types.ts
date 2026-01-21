@@ -1,4 +1,4 @@
-import { HeadingLevel } from './color-palette';
+import { HeadingLevel } from '@/constants/editor';
 
 export interface TipTapEditorRef {
     getContent: () => Promise<string>;
@@ -52,6 +52,16 @@ export interface EditorState {
     // History
     canUndo: boolean;
     canRedo: boolean;
+
+    // Table
+    isInTable: boolean;
+    canAddRowBefore: boolean;
+    canAddRowAfter: boolean;
+    canAddColumnBefore: boolean;
+    canAddColumnAfter: boolean;
+    canDeleteRow: boolean;
+    canDeleteColumn: boolean;
+    canDeleteTable: boolean;
 }
 
 export const initialEditorState: EditorState = {
@@ -79,6 +89,15 @@ export const initialEditorState: EditorState = {
     textColor: null,
     canUndo: false,
     canRedo: false,
+    // Table
+    isInTable: false,
+    canAddRowBefore: false,
+    canAddRowAfter: false,
+    canAddColumnBefore: false,
+    canAddColumnAfter: false,
+    canDeleteRow: false,
+    canDeleteColumn: false,
+    canDeleteTable: false,
 };
 
 export type EditorCommand =
@@ -108,4 +127,70 @@ export type EditorCommand =
     | 'setColor'
     | 'unsetColor'
     | 'setYoutubeVideo'
-    | 'setImage';
+    | 'setImage'
+    // Table commands
+    | 'insertTable'
+    | 'addRowBefore'
+    | 'addRowAfter'
+    | 'addColumnBefore'
+    | 'addColumnAfter'
+    | 'deleteRow'
+    | 'deleteColumn'
+    | 'deleteTable';
+
+// ============================================================================
+// Popup Types
+// ============================================================================
+
+export type PopupType = 'headings' | 'highlight' | 'textColor' | 'youtube' | 'link' | 'image' | 'table' | null;
+
+export interface BasePopupProps {
+    visible: boolean;
+    onClose: () => void;
+}
+
+export interface HeadingPopupProps extends BasePopupProps {
+    type: 'headings';
+    currentLevel: HeadingLevel | null;
+    onSelect: (level: HeadingLevel) => void;
+}
+
+export interface ColorPopupProps extends BasePopupProps {
+    type: 'highlight' | 'textColor';
+    currentColor: string | null;
+    onSelect: (color: string) => void;
+    onClear: () => void;
+}
+
+export interface YouTubePopupProps extends BasePopupProps {
+    type: 'youtube';
+    onSubmit: (url: string) => void;
+}
+
+export interface LinkPopupProps extends BasePopupProps {
+    type: 'link';
+    currentUrl: string | null;
+    onSubmit: (url: string) => void;
+    onRemove: () => void;
+}
+
+export interface ImagePopupProps extends BasePopupProps {
+    type: 'image';
+    onSubmit: (url: string) => void;
+}
+
+export interface TablePopupProps extends BasePopupProps {
+    type: 'table';
+    canAddRowBefore: boolean;
+    canAddRowAfter: boolean;
+    canAddColumnBefore: boolean;
+    canAddColumnAfter: boolean;
+    canDeleteRow: boolean;
+    canDeleteColumn: boolean;
+    canDeleteTable: boolean;
+    onCommand: (command: string, params?: Record<string, unknown>) => void;
+}
+
+export type ToolbarPopupProps = HeadingPopupProps | ColorPopupProps | YouTubePopupProps | LinkPopupProps | ImagePopupProps | TablePopupProps;
+
+
