@@ -1,5 +1,5 @@
-import { and, eq, isNull } from 'drizzle-orm';
-import { db, schema } from '../client';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
+import { db, DbOrTx, schema } from '../client';
 import type { Folder, FolderInsert, NoteMetadata } from '../schema';
 import { getDeletedNotes } from './notes.repository';
 
@@ -128,196 +128,46 @@ export function updateFolder(
         .run();
 }
 
-// Get all descendant folder IDs (recursive)
-function getAllDescendantFolderIds(folderId: string): string[] {
-    const children = db
-        .select()
-        .from(schema.folders)
-        .where(
-            and(
-                eq(schema.folders.parentId, folderId),
-                eq(schema.folders.isDeleted, false)
-            )
-        )
-        .all();
+// ============ BULK OPERATIONS ============
 
-    const childIds = children.map(f => f.id);
-    const grandchildIds = childIds.flatMap(id => getAllDescendantFolderIds(id));
-
-    return [...childIds, ...grandchildIds];
+export function deleteFolders(folderIds: string[], tx: DbOrTx = db): void {
+    if (folderIds.length === 0) return;
+    tx.delete(schema.folders)
+        .where(inArray(schema.folders.id, folderIds))
+        .run();
 }
 
-export function softDeleteFolder(folderId: string): void {
-    const folder = getFolderById(folderId);
-
-    // Prevent deleting system folders
-    if (!folder || folder.isSystem) return;
-
-    const now = new Date();
-    const allFolderIds = [folderId, ...getAllDescendantFolderIds(folderId)];
-
-    // Soft delete all descendant folders
-    for (const id of allFolderIds) {
-        const f = getFolderById(id);
-        if (!f) continue;
-
-        db
-            .update(schema.folders)
-            .set({
-                isDeleted: true,
-                deletedAt: now,
-                originalParentId: f.parentId,
-                // Only top folder moves to trash, children keep their parent
-                parentId: id === folderId ? TRASH_FOLDER_ID : f.parentId,
-                updatedAt: now,
-            })
-            .where(eq(schema.folders.id, id))
-            .run();
-    }
-
-    // Soft delete all notes in these folders
-    for (const id of allFolderIds) {
-        const notes = db
-            .select()
-            .from(schema.noteMetadata)
-            .where(eq(schema.noteMetadata.folderId, id))
-            .all();
-
-        for (const note of notes) {
-            db
-                .update(schema.noteMetadata)
-                .set({
-                    isDeleted: true,
-                    deletedAt: now,
-                    originalFolderId: note.folderId,
-                    updatedAt: now,
-                })
-                .where(eq(schema.noteMetadata.id, note.id))
-                .run();
-        }
-    }
-}
-
-export function restoreFolder(folderId: string, targetParentId?: string | null): void {
-    const folder = getFolderById(folderId);
-    if (!folder) return;
-
-    const now = new Date();
-    const allFolderIds = [folderId, ...getAllDescendantFolderIds(folderId)];
-
-    // Determine restore location for top folder
-    let restoredParentId: string | null = null;
-    if (targetParentId !== undefined) {
-        restoredParentId = targetParentId;
-    } else if (folder.originalParentId) {
-        const originalParent = getFolderById(folder.originalParentId);
-        if (originalParent && !originalParent.isDeleted) {
-            restoredParentId = folder.originalParentId;
-        }
-    }
-
-    // Restore all folders
-    for (const id of allFolderIds) {
-        const f = getFolderById(id);
-        if (!f) continue;
-
-        const newParentId = id === folderId
-            ? restoredParentId
-            : (f.originalParentId ?? f.parentId);
-
-        db
-            .update(schema.folders)
-            .set({
-                isDeleted: false,
-                deletedAt: null,
-                parentId: newParentId,
-                originalParentId: null,
-                updatedAt: now,
-            })
-            .where(eq(schema.folders.id, id))
-            .run();
-    }
-
-    // Restore notes in these folders
-    for (const id of allFolderIds) {
-        const notes = db
-            .select()
-            .from(schema.noteMetadata)
-            .where(eq(schema.noteMetadata.originalFolderId, id))
-            .all();
-
-        for (const note of notes) {
-            db
-                .update(schema.noteMetadata)
-                .set({
-                    isDeleted: false,
-                    deletedAt: null,
-                    folderId: note.originalFolderId,
-                    originalFolderId: null,
-                    updatedAt: now,
-                })
-                .where(eq(schema.noteMetadata.id, note.id))
-                .run();
-        }
-    }
-}
-
-export function permanentlyDeleteFolder(folderId: string): void {
-    const folder = getFolderById(folderId);
-
-    // Prevent permanently deleting system folders
-    if (!folder || folder.isSystem) return;
-
-    const allFolderIds = [folderId, ...getAllDescendantFolderIds(folderId)];
-
-    // Delete all notes in these folders (including content and versions)
-    for (const id of allFolderIds) {
-        const notes = db
-            .select()
-            .from(schema.noteMetadata)
-            .where(eq(schema.noteMetadata.folderId, id))
-            .all();
-
-        for (const note of notes) {
-            db.delete(schema.noteContent).where(eq(schema.noteContent.noteId, note.id)).run();
-            db.delete(schema.noteVersions).where(eq(schema.noteVersions.noteId, note.id)).run();
-            db.delete(schema.noteMetadata).where(eq(schema.noteMetadata.id, note.id)).run();
-        }
-    }
-
-    // Delete all folders (in reverse order to handle children first)
-    for (const id of allFolderIds.reverse()) {
-        db.delete(schema.folders).where(eq(schema.folders.id, id)).run();
-    }
-}
-
-export function emptyTrash(): void {
-    // Get all deleted notes
-    const deletedNotes = getDeletedNotes();
-
-    // Permanently delete all deleted notes
-    for (const note of deletedNotes) {
-        db.delete(schema.noteContent).where(eq(schema.noteContent.noteId, note.id)).run();
-        db.delete(schema.noteVersions).where(eq(schema.noteVersions.noteId, note.id)).run();
-        db.delete(schema.noteMetadata).where(eq(schema.noteMetadata.id, note.id)).run();
-    }
-
-    // Get all deleted folders (non-system)
-    const deletedFolders = db
-        .select()
-        .from(schema.folders)
+export function deleteDeletedFolders(tx: DbOrTx = db): void {
+    tx.delete(schema.folders)
         .where(
             and(
                 eq(schema.folders.isDeleted, true),
                 eq(schema.folders.isSystem, false)
             )
         )
+        .run();
+}
+
+// Get all descendant folder IDs (recursive)
+// Get all descendant folder IDs (recursive)
+export function getAllDescendantFolderIds(folderId: string, includeDeleted = false): string[] {
+    const whereClause = includeDeleted
+        ? eq(schema.folders.parentId, folderId)
+        : and(
+            eq(schema.folders.parentId, folderId),
+            eq(schema.folders.isDeleted, false)
+        );
+
+    const children = db
+        .select()
+        .from(schema.folders)
+        .where(whereClause)
         .all();
 
-    // Permanently delete all deleted folders
-    for (const folder of deletedFolders) {
-        db.delete(schema.folders).where(eq(schema.folders.id, folder.id)).run();
-    }
+    const childIds = children.map(f => f.id);
+    const grandchildIds = childIds.flatMap(id => getAllDescendantFolderIds(id, includeDeleted));
+
+    return [...childIds, ...grandchildIds];
 }
 
 export function getTrashContents(): { folders: Folder[], notes: NoteMetadata[] } {

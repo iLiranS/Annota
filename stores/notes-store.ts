@@ -1,12 +1,11 @@
 import { SortType, sortFolders, sortNotes } from '@/dev-data/data';
-import type { Folder } from '@/lib/db/repositories/folders.repository';
-import * as foldersRepo from '@/lib/db/repositories/folders.repository';
-import type { NoteMetadata } from '@/lib/db/repositories/notes.repository';
-import * as notesRepo from '@/lib/db/repositories/notes.repository';
+import type { Folder, NoteMetadata } from '@/lib/db/schema';
+import { DAILY_NOTES_FOLDER_ID, FolderService, TRASH_FOLDER_ID } from '@/lib/services/folders.service';
+import { NoteService } from '@/lib/services/notes.service';
 import { create } from 'zustand';
 
 // Re-export types for convenience
-export { DAILY_NOTES_FOLDER_ID, TRASH_FOLDER_ID } from '@/lib/db/repositories/folders.repository';
+export { DAILY_NOTES_FOLDER_ID, TRASH_FOLDER_ID };
 export type { Folder, NoteMetadata };
 
 // Root folder sorting preference (stored separately since root has no folder entity)
@@ -15,39 +14,37 @@ interface RootSettings {
 }
 
 interface NotesState {
-    // Data (cached from DB)
+    // Data (All cached in memory - "Aggressive Caching")
     notes: NoteMetadata[];
     folders: Folder[];
     rootSettings: RootSettings;
-    currentFolderId: string | null;
+    isInitialized: boolean;
 
-    // Load data from DB
-    loadNotesInFolder: (folderId: string | null, includeDeleted?: boolean) => void;
-    loadFoldersInFolder: (parentId: string | null, includeDeleted?: boolean) => void;
-    refreshCurrentFolder: () => void;
+    // Initialization
+    initApp: () => void;
 
     // Note operations
-    createNote: (folderId: string | null) => NoteMetadata;
-    updateNote: (noteId: string, updates: Partial<Omit<NoteMetadata, 'id' | 'createdAt'>>) => void;
-    deleteNote: (noteId: string) => void;
-    permanentlyDeleteNote: (noteId: string) => void;
-    restoreNote: (noteId: string, targetFolderId?: string | null) => void;
+    createNote: (folderId: string | null) => Promise<NoteMetadata>;
+    updateNote: (noteId: string, updates: Partial<Omit<NoteMetadata, 'id' | 'createdAt'>>) => Promise<void>;
+    deleteNote: (noteId: string) => Promise<void>;
+    permanentlyDeleteNote: (noteId: string) => Promise<void>;
+    restoreNote: (noteId: string, targetFolderId?: string | null) => Promise<void>;
     getNoteById: (noteId: string) => NoteMetadata | undefined;
 
     // Content operations (lazy loaded)
     getNoteContent: (noteId: string) => string;
-    updateNoteContent: (noteId: string, content: string) => void;
+    updateNoteContent: (noteId: string, content: string) => Promise<void>;
 
     // Folder operations
-    createFolder: (parentId: string | null, name: string, icon?: string, color?: string) => Folder;
-    updateFolder: (folderId: string, updates: Partial<Omit<Folder, 'id' | 'createdAt'>>) => void;
-    deleteFolder: (folderId: string) => void;
-    permanentlyDeleteFolder: (folderId: string) => void;
-    restoreFolder: (folderId: string, targetParentId?: string | null) => void;
+    createFolder: (parentId: string | null, name: string, icon?: string, color?: string) => Promise<Folder>;
+    updateFolder: (folderId: string, updates: Partial<Omit<Folder, 'id' | 'createdAt'>>) => Promise<void>;
+    deleteFolder: (folderId: string) => Promise<void>;
+    permanentlyDeleteFolder: (folderId: string) => Promise<void>;
+    restoreFolder: (folderId: string, targetParentId?: string | null) => Promise<void>;
     getFolderById: (folderId: string) => Folder | undefined;
 
     // Trash operations
-    emptyTrash: () => void;
+    emptyTrash: () => Promise<void>;
 
     // Sorting
     setFolderSortType: (folderId: string | null, sortType: SortType) => void;
@@ -64,135 +61,286 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     notes: [],
     folders: [],
     rootSettings: { sortType: 'UPDATED_LAST' },
-    currentFolderId: null,
+    isInitialized: false,
 
-    // Load notes from database for a specific folder
-    loadNotesInFolder: (folderId: string | null, includeDeleted = false) => {
-        const notes = notesRepo.getNotesInFolder(folderId, includeDeleted);
-        set({ notes, currentFolderId: folderId });
+    // Initialize App - Load ALL data on startup
+    initApp: () => {
+        const allFolders = FolderService.getFoldersInFolder(null, true);
+        const allNotes = NoteService.getNotesInFolder(null, true);
+
+        // Recursively load all folders
+        const loadAllFolders = (): Folder[] => {
+            const result: Folder[] = [];
+            const queue = [...allFolders];
+
+            while (queue.length > 0) {
+                const folder = queue.shift()!;
+                result.push(folder);
+                const children = FolderService.getFoldersInFolder(folder.id, true);
+                queue.push(...children);
+            }
+
+            return result;
+        };
+
+        // Recursively load all notes
+        const loadAllNotes = (): NoteMetadata[] => {
+            const result: NoteMetadata[] = [...allNotes];
+            const allFoldersData = loadAllFolders();
+
+            for (const folder of allFoldersData) {
+                const notes = NoteService.getNotesInFolder(folder.id, true);
+                result.push(...notes);
+            }
+
+            return result;
+        };
+
+        const folders = loadAllFolders();
+        const notes = loadAllNotes();
+
+        set({ folders, notes, isInitialized: true });
+        console.log(`[Store] Initialized with ${folders.length} folders and ${notes.length} notes.`);
     },
 
-    // Load folders from database for a specific parent
-    loadFoldersInFolder: (parentId: string | null, includeDeleted = false) => {
-        const folders = foldersRepo.getFoldersInFolder(parentId, includeDeleted);
-        set({ folders });
+    // ============ NOTE OPERATIONS ============
+
+    createNote: async (folderId) => {
+        // 1. Service Call (writes to DB)
+        const newNote = await NoteService.create(folderId);
+
+        // 2. Manual State Mutation (update local cache)
+        set(state => ({
+            notes: [...state.notes, newNote]
+        }));
+
+        return newNote;
     },
 
-    // Refresh current folder data
-    refreshCurrentFolder: () => {
-        const { currentFolderId } = get();
-        const notes = notesRepo.getNotesInFolder(currentFolderId);
-        const folders = foldersRepo.getFoldersInFolder(currentFolderId);
-        set({ notes, folders });
+    updateNote: async (noteId, updates) => {
+        // 1. Service Call
+        await NoteService.update(noteId, updates);
+
+        // 2. Manual State Mutation
+        set(state => ({
+            notes: state.notes.map(n =>
+                n.id === noteId ? { ...n, ...updates, updatedAt: new Date() } : n
+            )
+        }));
     },
 
-    // Note operations
-    createNote: (folderId: string | null) => {
-        const note = notesRepo.createNoteMetadata(folderId);
-        // Refresh if we're in the same folder
-        if (get().currentFolderId === folderId) {
-            get().refreshCurrentFolder();
+    deleteNote: async (noteId) => {
+        // 1. Service Call
+        await NoteService.softDelete(noteId);
+
+        // 2. Manual State Mutation
+        set(state => ({
+            notes: state.notes.map(n =>
+                n.id === noteId
+                    ? { ...n, isDeleted: true, folderId: 'system-trash', deletedAt: new Date(), updatedAt: new Date() }
+                    : n
+            )
+        }));
+    },
+
+    permanentlyDeleteNote: async (noteId) => {
+        await NoteService.permanentlyDelete(noteId);
+
+        set(state => ({
+            notes: state.notes.filter(n => n.id !== noteId)
+        }));
+    },
+
+    restoreNote: async (noteId, targetFolderId) => {
+        await NoteService.restore(noteId, targetFolderId);
+
+        // Fetch the updated note to get the correct restored state
+        const restoredNote = NoteService.getNoteById(noteId);
+
+        if (restoredNote) {
+            set(state => ({
+                notes: state.notes.map(n => n.id === noteId ? restoredNote : n)
+            }));
         }
-        return note;
     },
 
-    updateNote: (noteId: string, updates: Partial<Omit<NoteMetadata, 'id' | 'createdAt'>>) => {
-        notesRepo.updateNoteMetadata(noteId, updates);
-        get().refreshCurrentFolder();
+    getNoteById: (noteId) => {
+        return get().notes.find(n => n.id === noteId);
     },
 
-    deleteNote: (noteId: string) => {
-        notesRepo.softDeleteNote(noteId);
-        get().refreshCurrentFolder();
+    // ============ CONTENT OPERATIONS ============
+
+    getNoteContent: (noteId) => {
+        // Content is heavy, still lazy loaded from DB
+        return NoteService.getNoteContent(noteId);
     },
 
-    permanentlyDeleteNote: (noteId: string) => {
-        notesRepo.permanentlyDeleteNote(noteId);
-        get().refreshCurrentFolder();
-    },
+    updateNoteContent: async (noteId, content) => {
+        await NoteService.updateContent(noteId, content);
 
-    restoreNote: (noteId: string, targetFolderId?: string | null) => {
-        notesRepo.restoreNote(noteId, targetFolderId);
-        get().refreshCurrentFolder();
-    },
-
-    getNoteById: (noteId: string) => {
-        // First check cached notes
-        const cached = get().notes.find((n) => n.id === noteId);
-        if (cached) return cached;
-
-        // Fallback to DB query
-        const note = notesRepo.getNoteMetadataById(noteId);
-        return note ?? undefined;
-    },
-
-    // Content operations
-    getNoteContent: (noteId: string) => {
-        return notesRepo.getNoteContent(noteId);
-    },
-
-    updateNoteContent: (noteId: string, content: string) => {
-        notesRepo.updateNoteContent(noteId, content);
-        // Note: This also updates preview in metadata
-        get().refreshCurrentFolder();
-    },
-
-    // Folder operations
-    createFolder: (parentId: string | null, name: string, icon: string = 'folder', color: string = '#F59E0B') => {
-        const folder = foldersRepo.createFolder(parentId, name, icon, color);
-        if (get().currentFolderId === parentId) {
-            get().refreshCurrentFolder();
+        // Fetch updated metadata (with new preview)
+        const updatedNote = NoteService.getNoteById(noteId);
+        if (updatedNote) {
+            set(state => ({
+                notes: state.notes.map(n => n.id === noteId ? updatedNote : n)
+            }));
         }
-        return folder;
     },
 
-    updateFolder: (folderId: string, updates: Partial<Omit<Folder, 'id' | 'createdAt'>>) => {
-        foldersRepo.updateFolder(folderId, updates);
-        get().refreshCurrentFolder();
+    // ============ FOLDER OPERATIONS ============
+
+    createFolder: async (parentId, name, icon = 'folder', color = '#F59E0B') => {
+        const newFolder = await FolderService.create(parentId, name, icon, color);
+
+        set(state => ({
+            folders: [...state.folders, newFolder]
+        }));
+
+        return newFolder;
     },
 
-    deleteFolder: (folderId: string) => {
-        foldersRepo.softDeleteFolder(folderId);
-        get().refreshCurrentFolder();
+    updateFolder: async (folderId, updates) => {
+        await FolderService.update(folderId, updates);
+
+        set(state => ({
+            folders: state.folders.map(f =>
+                f.id === folderId ? { ...f, ...updates, updatedAt: new Date() } : f
+            )
+        }));
     },
 
-    permanentlyDeleteFolder: (folderId: string) => {
-        foldersRepo.permanentlyDeleteFolder(folderId);
-        get().refreshCurrentFolder();
+    deleteFolder: async (folderId) => {
+        // Service handles cascading soft delete and returns deleted IDs
+        const deletedIds = await FolderService.softDelete(folderId);
+
+        const now = new Date();
+
+        // Manual State Mutation: Mark all as deleted
+        set(state => {
+            const newFolders = state.folders.map(f => {
+                if (deletedIds.includes(f.id)) {
+                    return {
+                        ...f,
+                        isDeleted: true,
+                        deletedAt: now,
+                        originalParentId: f.parentId,
+                        parentId: f.id === folderId ? TRASH_FOLDER_ID : f.parentId,
+                        updatedAt: now
+                    };
+                }
+                return f;
+            });
+
+            // Also mark notes in these folders as deleted
+            const newNotes = state.notes.map(n => {
+                if (n.folderId && deletedIds.includes(n.folderId)) {
+                    return {
+                        ...n,
+                        isDeleted: true,
+                        deletedAt: now,
+                        originalFolderId: n.folderId,
+                        updatedAt: now
+                    };
+                }
+                return n;
+            });
+
+            return { folders: newFolders, notes: newNotes };
+        });
     },
 
-    restoreFolder: (folderId: string, targetParentId?: string | null) => {
-        foldersRepo.restoreFolder(folderId, targetParentId);
-        get().refreshCurrentFolder();
+    permanentlyDeleteFolder: async (folderId) => {
+        // Calculate descendants from local state
+        const getLocalDescendants = (rootId: string, allFolders: Folder[]): string[] => {
+            const children = allFolders.filter(f => f.parentId === rootId).map(f => f.id);
+            const grandChildren = children.flatMap(id => getLocalDescendants(id, allFolders));
+            return [...children, ...grandChildren];
+        };
+
+        const descendants = getLocalDescendants(folderId, get().folders);
+        const allIdsToRemove = [folderId, ...descendants];
+
+        await FolderService.permanentlyDelete(folderId);
+
+        set(state => ({
+            folders: state.folders.filter(f => !allIdsToRemove.includes(f.id)),
+            notes: state.notes.filter(n => !n.folderId || !allIdsToRemove.includes(n.folderId))
+        }));
     },
 
-    getFolderById: (folderId: string) => {
-        // First check cached folders
-        const cached = get().folders.find((f) => f.id === folderId);
-        if (cached) return cached;
+    restoreFolder: async (folderId, targetParentId) => {
+        const { folderIds, noteIds } = await FolderService.restore(folderId, targetParentId);
+        set(state => {
+            const now = new Date();
 
-        // Fallback to DB query
-        const folder = foldersRepo.getFolderById(folderId);
-        return folder ?? undefined;
+            const newFolders = state.folders.map(f => {
+                if (folderIds.includes(f.id)) {
+                    // Determine restored parent ID
+                    let restoredParentId = f.parentId;
+
+                    if (f.id === folderId) {
+                        // This is the root folder being restored
+                        restoredParentId = targetParentId ?? f.originalParentId ?? f.parentId;
+                    } else {
+                        // This is a descendant
+                        // For descendants, their parentId usually didn't change during delete (structurally),
+                        // but we rely on originalParentId if it was set.
+                        restoredParentId = f.originalParentId ?? f.parentId;
+                    }
+
+                    return {
+                        ...f,
+                        isDeleted: false,
+                        deletedAt: null,
+                        parentId: restoredParentId,
+                        originalParentId: null,
+                        updatedAt: now
+                    };
+                }
+                return f;
+            });
+
+            const newNotes = state.notes.map(n => {
+                if (noteIds.includes(n.id)) {
+                    return {
+                        ...n,
+                        isDeleted: false,
+                        deletedAt: null,
+                        folderId: n.originalFolderId ?? n.folderId,
+                        originalFolderId: null,
+                        updatedAt: now
+                    };
+                }
+                return n;
+            });
+
+            return { folders: newFolders, notes: newNotes };
+        });
+        get().initApp();
     },
 
-    // Trash operations
-    emptyTrash: () => {
-        foldersRepo.emptyTrash();
-        get().refreshCurrentFolder();
+    getFolderById: (folderId) => {
+        return get().folders.find(f => f.id === folderId);
     },
 
-    // Sorting
-    setFolderSortType: (folderId: string | null, sortType: SortType) => {
+    // ============ TRASH ============
+
+    emptyTrash: async () => {
+        await FolderService.emptyTrash();
+        get().initApp();
+    },
+
+    // ============ SORTING & GETTERS ============
+
+    setFolderSortType: (folderId, sortType) => {
         if (folderId === null) {
             set({ rootSettings: { sortType } });
         } else {
-            foldersRepo.updateFolder(folderId, { sortType });
-            get().refreshCurrentFolder();
+            get().updateFolder(folderId, { sortType });
         }
     },
 
-    getSortType: (folderId: string | null) => {
+    getSortType: (folderId) => {
         if (folderId === null) {
             return get().rootSettings.sortType;
         }
@@ -200,8 +348,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         return (folder?.sortType as SortType) ?? 'UPDATED_LAST';
     },
 
-    // Getters (operate on cached state with sorting)
-    getNotesInFolder: (folderId: string | null, includeDeleted = false) => {
+    getNotesInFolder: (folderId, includeDeleted = false) => {
         const { notes } = get();
         const sortType = get().getSortType(folderId);
 
@@ -214,7 +361,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         return sortNotes(filtered, sortType);
     },
 
-    getFoldersInFolder: (parentId: string | null, includeDeleted = false) => {
+    getFoldersInFolder: (parentId, includeDeleted = false) => {
         const { folders } = get();
         const sortType = get().getSortType(parentId);
 
@@ -226,7 +373,12 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
         return sortFolders(filtered, sortType);
     },
+
     getRecentNotes: (limitCount = 5) => {
-        return notesRepo.getRecentNotes(limitCount);
-    },
+        const activeNotes = get().notes.filter(n => !n.isDeleted);
+        const sorted = [...activeNotes].sort((a, b) => {
+            return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+        });
+        return sorted.slice(0, limitCount);
+    }
 }));

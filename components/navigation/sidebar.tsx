@@ -3,7 +3,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { DrawerContentComponentProps, DrawerContentScrollView } from '@react-navigation/drawer';
 import { useTheme } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import {
     Image,
     Pressable,
@@ -90,12 +90,7 @@ export default function Sidebar(props: DrawerContentComponentProps) {
     const insets = useSafeAreaInsets();
     const router = useRouter();
 
-    const { folders, loadFoldersInFolder, getFoldersInFolder } = useNotesStore();
-
-    // Load top-level folders on mount
-    useEffect(() => {
-        loadFoldersInFolder(null);
-    }, [loadFoldersInFolder]);
+    const { folders, getFoldersInFolder } = useNotesStore();
 
     // Get non-system top-level folders
     const topLevelFolders = useMemo(() => {

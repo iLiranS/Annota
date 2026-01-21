@@ -6,14 +6,16 @@ import { ThemedView } from '@/components/themed-view';
 import { useNotesStore } from '@/stores/notes-store';
 import { useTasksStore, type Task } from '@/stores/tasks-store';
 import { Ionicons } from '@expo/vector-icons';
+import { DrawerNavigationProp } from '@react-navigation/drawer';
 import { useTheme } from '@react-navigation/native';
-import { useRouter } from 'expo-router';
+import { useNavigation, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, useColorScheme, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
   const router = useRouter();
+  const navigation = useNavigation<DrawerNavigationProp<any>>();
   const theme = useColorScheme() ?? 'light';
   const { colors, dark } = useTheme();
   const insets = useSafeAreaInsets();
@@ -82,6 +84,13 @@ export default function HomeScreen() {
     });
   }, [selectedDate]);
 
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) return 'Good Morning';
+    if (hour >= 12 && hour < 18) return 'Good Afternoon';
+    return 'Good Evening';
+  }, []);
+
   const handleDateSelect = useCallback((date: Date) => {
     setSelectedDate(date);
   }, []);
@@ -94,9 +103,28 @@ export default function HomeScreen() {
     <ThemedView style={styles.container}>
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 20 }]}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 10 }]}
         showsVerticalScrollIndicator={false}
       >
+        {/* Header */}
+        <View style={styles.header}>
+          <Pressable
+            onPress={() => navigation.openDrawer()}
+            style={({ pressed }) => ({
+              opacity: pressed ? 0.7 : 1,
+              padding: 4,
+              marginLeft: -4,
+            })}
+          >
+            <Ionicons name="menu-outline" size={28} color={colors.text} />
+          </Pressable>
+          <View style={styles.greetingContainer}>
+            <ThemedText style={styles.greetingText}>
+              {greeting}, <ThemedText style={styles.userName}>User</ThemedText>
+            </ThemedText>
+          </View>
+        </View>
+
         {/* Calendar */}
         <Calendar selectedDate={selectedDate} onDateSelect={handleDateSelect} />
 
@@ -279,6 +307,24 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 20,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+    gap: 12,
+  },
+  greetingContainer: {
+    flex: 1,
+  },
+  greetingText: {
+    fontSize: 20,
+    fontWeight: '600',
+    letterSpacing: -0.5,
+  },
+  userName: {
+    fontWeight: '700',
+    color: '#6366F1',
   },
   tasksSection: {
     marginTop: 28,

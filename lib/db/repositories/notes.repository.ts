@@ -1,6 +1,6 @@
-import { and, desc, eq, isNull } from 'drizzle-orm';
-import { db, schema } from '../client';
-import type { NoteMetadata, NoteMetadataInsert } from '../schema';
+import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { db, DbOrTx, schema } from '../client';
+import type { NoteMetadata } from '../schema';
 
 // Re-export types for convenience
 export type { NoteMetadata } from '../schema';
@@ -12,17 +12,18 @@ function generateId(): string {
 
 // Helper to generate preview from HTML content
 function generatePreview(htmlContent: string, maxLength = 100): string {
-    // Strip HTML tags and get plain text
-    const plainText = htmlContent
-        .replace(/<[^>]*>/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
+    const lines = htmlContent
+        .split(/<br\s*\/?>|<\/p>|<\/div>|<\/h[1-6]>|\n/i)
+        .map(line => line.replace(/<[^>]*>/g, '').trim())
+        .filter(line => line.length > 0);
 
-    if (plainText.length <= maxLength) {
-        return plainText;
+    const secondLine = lines[1] || '';
+
+    if (secondLine.length <= maxLength) {
+        return secondLine;
     }
 
-    return plainText.substring(0, maxLength).trim() + '...';
+    return secondLine.substring(0, maxLength).trim() + '...';
 }
 
 // ============ METADATA OPERATIONS (fast, for lists) ============
@@ -80,9 +81,10 @@ export function getNoteMetadataById(noteId: string): NoteMetadata | null {
 
 export function createNoteMetadata(folderId: string | null): NoteMetadata {
     const now = new Date();
-    const id = generateId();
+    const id = generateId(); // e.g. UUID
 
-    const noteData: NoteMetadataInsert = {
+    // 1. Construct the object in memory first
+    const noteData: NoteMetadata = {
         id,
         folderId,
         title: 'Untitled Note',
@@ -93,25 +95,23 @@ export function createNoteMetadata(folderId: string | null): NoteMetadata {
         deletedAt: null,
         isPinned: false,
         isQuickAccess: false,
-        tags: '[]',
+        tags: '[]', // Drizzle usually handles JSON parsing/stringifying automatically if defined in schema
         originalFolderId: null,
     };
 
-    // Insert metadata
-    db.insert(schema.noteMetadata).values(noteData).run();
+    // 2. Run as a TRANSACTION (All or Nothing)
+    db.transaction(() => {
+        // A. Insert Metadata
+        db.insert(schema.noteMetadata).values(noteData).run();
 
-    // Also create empty content row
-    db.insert(schema.noteContent).values({
-        noteId: id,
-        content: '',
-    }).run();
+        // B. Insert Empty Content
+        db.insert(schema.noteContent).values({
+            noteId: id,
+            content: '',
+        }).run();
+    });
 
-    // Return the created note
-    return db
-        .select()
-        .from(schema.noteMetadata)
-        .where(eq(schema.noteMetadata.id, id))
-        .get()!;
+    return noteData;
 }
 
 export function updateNoteMetadata(
@@ -262,4 +262,96 @@ export function getRecentNotes(limitCount: number = 5): NoteMetadata[] {
         .orderBy(desc(schema.noteMetadata.updatedAt))
         .limit(limitCount)
         .all();
+}
+
+// ============ BULK OPERATIONS (for Folder Service Cascading) ============
+
+export function permanentlyDeleteNotesInFolders(folderIds: string[], tx: DbOrTx = db): void {
+    if (folderIds.length === 0) return;
+
+    // 1. Get note IDs to delete content/versions (we need subqueries or separate fetch)
+    // SQLite doesn't support DELETE ... WHERE .. IN (SELECT ..) with strict ordering easily in Drizzle without raw SQL sometimes,
+    // but Drizzle's delete(..).where(inArray(..)) is standard.
+
+    // Using subquery for deletion in SQLite with Drizzle:
+    const notesInFolders = tx.select({ id: schema.noteMetadata.id })
+        .from(schema.noteMetadata)
+        .where(inArray(schema.noteMetadata.folderId, folderIds));
+
+    // 1. Delete content
+    tx.delete(schema.noteContent)
+        .where(inArray(schema.noteContent.noteId, notesInFolders))
+        .run();
+
+    // 2. Delete versions
+    tx.delete(schema.noteVersions)
+        .where(inArray(schema.noteVersions.noteId, notesInFolders))
+        .run();
+
+    // 3. Delete metadata
+    tx.delete(schema.noteMetadata)
+        .where(inArray(schema.noteMetadata.folderId, folderIds))
+        .run();
+}
+
+export function softDeleteNotesInFolders(folderIds: string[], now: Date, tx: DbOrTx = db): void {
+    if (folderIds.length === 0) return;
+
+    tx.update(schema.noteMetadata)
+        .set({
+            isDeleted: true,
+            deletedAt: now,
+            originalFolderId: sql`${schema.noteMetadata.folderId}`, // Snapshot current folder as original
+            folderId: 'system-trash',
+            updatedAt: now,
+        })
+        .where(inArray(schema.noteMetadata.folderId, folderIds))
+        .run();
+}
+
+export function restoreNotesInFolders(folderIds: string[], now: Date, tx: DbOrTx = db): void {
+    if (folderIds.length === 0) return;
+
+    tx.update(schema.noteMetadata)
+        .set({
+            isDeleted: false,
+            deletedAt: null,
+            folderId: sql`${schema.noteMetadata.originalFolderId}`, // Restore from original
+            originalFolderId: null,
+            updatedAt: now,
+        })
+        .where(inArray(schema.noteMetadata.originalFolderId, folderIds)) // Matches based on where they CAME from
+        .run();
+}
+
+export function permanentlyDeleteDeletedNotes(tx: DbOrTx = db): void {
+    const deletedNotes = tx.select({ id: schema.noteMetadata.id })
+        .from(schema.noteMetadata)
+        .where(eq(schema.noteMetadata.isDeleted, true));
+
+    // 1. Delete content
+    tx.delete(schema.noteContent)
+        .where(inArray(schema.noteContent.noteId, deletedNotes))
+        .run();
+
+    // 2. Delete versions
+    tx.delete(schema.noteVersions)
+        .where(inArray(schema.noteVersions.noteId, deletedNotes))
+        .run();
+
+    // 3. Delete metadata
+    tx.delete(schema.noteMetadata)
+        .where(eq(schema.noteMetadata.isDeleted, true))
+        .run();
+}
+
+export function getNoteIdsByOriginalFolderIds(folderIds: string[]): string[] {
+    if (folderIds.length === 0) return [];
+
+    const results = db.select({ id: schema.noteMetadata.id })
+        .from(schema.noteMetadata)
+        .where(inArray(schema.noteMetadata.originalFolderId, folderIds))
+        .all();
+
+    return results.map(r => r.id);
 }

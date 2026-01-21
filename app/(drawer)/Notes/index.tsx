@@ -14,7 +14,7 @@ import {
 import { NoteMetadata, TRASH_FOLDER_ID, useNotesStore, type Folder } from '@/stores/notes-store';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { DrawerActions, useTheme } from '@react-navigation/native';
-import { Stack, useFocusEffect, useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import {
     FlatList,
@@ -51,8 +51,6 @@ export default function NotesList() {
         getFoldersInFolder,
         getSortType,
         setFolderSortType,
-        loadNotesInFolder,
-        loadFoldersInFolder,
     } = useNotesStore();
 
     const currentFolderId = params.folderId ?? null;
@@ -65,14 +63,6 @@ export default function NotesList() {
     // Edit modal state
     const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
     const [editingNote, setEditingNote] = useState<NoteMetadata | null>(null);
-
-    // Load data from database when folder changes or screen is focused
-    useFocusEffect(
-        useCallback(() => {
-            loadNotesInFolder(currentFolderId);
-            loadFoldersInFolder(currentFolderId);
-        }, [currentFolderId, loadNotesInFolder, loadFoldersInFolder])
-    );
 
     // Browsing Data (Current Folder) - sorted
     const browseFolders = useMemo(() => {
@@ -131,8 +121,8 @@ export default function NotesList() {
     }, [currentFolder, router]);
 
     // Create new note and navigate to it
-    const handleCreateNote = useCallback(() => {
-        const newNote = createNote(currentFolderId);
+    const handleCreateNote = useCallback(async () => {
+        const newNote = await createNote(currentFolderId);
         router.push({ pathname: '/Notes/[id]', params: { id: newNote.id } });
     }, [createNote, currentFolderId, router]);
 
@@ -156,20 +146,20 @@ export default function NotesList() {
 
     // Delete handlers
     const handleDeleteFolder = useCallback(
-        (folderId: string) => {
+        async (folderId: string) => {
             const folder = getFolderById(folderId);
             if (folder?.isSystem) {
                 // Don't allow deleting system folders
                 return;
             }
-            deleteFolder(folderId);
+            await deleteFolder(folderId);
         },
         [deleteFolder, getFolderById]
     );
 
     const handleDeleteNote = useCallback(
-        (noteId: string) => {
-            deleteNote(noteId);
+        async (noteId: string) => {
+            await deleteNote(noteId);
         },
         [deleteNote]
     );

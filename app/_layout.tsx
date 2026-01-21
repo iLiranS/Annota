@@ -21,6 +21,11 @@ export default function RootLayout() {
   useEffect(() => {
     try {
       initDatabase();
+
+      // Initialize store (load all data into memory)
+      const { useNotesStore } = require('@/stores/notes-store');
+      useNotesStore.getState().initApp();
+
       setDbReady(true);
     } catch (error) {
       console.error('Database initialization failed:', error);

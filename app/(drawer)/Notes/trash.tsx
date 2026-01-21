@@ -11,7 +11,6 @@ import { useTheme } from '@react-navigation/native';
 import { Stack, useRouter } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
-    ActivityIndicator,
     Alert,
     FlatList,
     Pressable,
@@ -55,8 +54,8 @@ function FolderCard({ folder, onPress, onRestore, onPermanentDelete }: FolderIte
                     pressed && styles.pressed,
                 ]}
             >
-                <View style={[styles.folderIcon, { backgroundColor: '#EF4444' + '20' }]}>
-                    <Ionicons name="folder" size={22} color="#EF4444" />
+                <View style={[styles.folderIcon, { backgroundColor: folder.color + '20' }]}>
+                    <Ionicons name={folder.icon as keyof typeof Ionicons.glyphMap} size={22} color={folder.color} />
                 </View>
                 <View style={styles.folderContent}>
                     <ThemedText style={styles.folderName}>{folder.name}</ThemedText>
@@ -135,7 +134,7 @@ export default function TrashScreen() {
     const router = useRouter();
     const { colors } = useTheme();
     const [currentFolderId, setCurrentFolderId] = useState<string | null>(TRASH_FOLDER_ID);
-    const [isLoading, setIsLoading] = useState(true);
+
 
     // Zustand store
     const {
@@ -149,20 +148,9 @@ export default function TrashScreen() {
         getNotesInFolder,
         getFoldersInFolder,
         getFolderById,
-        loadNotesInFolder,
-        loadFoldersInFolder,
     } = useNotesStore();
 
     const currentFolder = currentFolderId ? getFolderById(currentFolderId) : null;
-
-    // Load data from database (including deleted items)
-    React.useEffect(() => {
-        setIsLoading(true);
-        loadNotesInFolder(currentFolderId, true);
-        loadFoldersInFolder(currentFolderId, true);
-        // Small delay to allow store to update before rendering
-        setTimeout(() => setIsLoading(false), 50);
-    }, [currentFolderId, loadNotesInFolder, loadFoldersInFolder]);
 
     // Get deleted folders and notes in current folder
     const deletedFolders = useMemo(() => {
@@ -211,15 +199,15 @@ export default function TrashScreen() {
     }, [currentFolder]);
 
     const handleRestoreFolder = useCallback(
-        (folderId: string) => {
-            restoreFolder(folderId);
+        async (folderId: string) => {
+            await restoreFolder(folderId);
         },
         [restoreFolder]
     );
 
     const handleRestoreNote = useCallback(
-        (noteId: string) => {
-            restoreNote(noteId);
+        async (noteId: string) => {
+            await restoreNote(noteId);
         },
         [restoreNote]
     );
@@ -234,7 +222,7 @@ export default function TrashScreen() {
                     {
                         text: 'Delete',
                         style: 'destructive',
-                        onPress: () => permanentlyDeleteFolder(folderId),
+                        onPress: async () => await permanentlyDeleteFolder(folderId),
                     },
                 ]
             );
@@ -252,7 +240,7 @@ export default function TrashScreen() {
                     {
                         text: 'Delete',
                         style: 'destructive',
-                        onPress: () => permanentlyDeleteNote(noteId),
+                        onPress: async () => await permanentlyDeleteNote(noteId),
                     },
                 ]
             );
@@ -269,8 +257,8 @@ export default function TrashScreen() {
                 {
                     text: 'Empty Trash',
                     style: 'destructive',
-                    onPress: () => {
-                        emptyTrash();
+                    onPress: async () => {
+                        await emptyTrash();
                         setCurrentFolderId(TRASH_FOLDER_ID);
                     },
                 },
@@ -351,33 +339,28 @@ export default function TrashScreen() {
             />
 
 
-            {isLoading ? (
-                <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color={colors.primary} />
-                </View>
-            ) : (
-                <FlatList
-                    data={trashData}
-                    keyExtractor={getItemKey}
-                    contentContainerStyle={styles.listContent}
-                    ListEmptyComponent={
-                        <View style={styles.emptyContainer}>
-                            <Ionicons
-                                name="trash-outline"
-                                size={48}
-                                color={colors.border}
-                            />
-                            <ThemedText style={styles.emptyText}>
-                                Trash is empty
-                            </ThemedText>
-                            <ThemedText style={[styles.emptyHint, { color: colors.border }]}>
-                                Deleted items will appear here
-                            </ThemedText>
-                        </View>
-                    }
-                    renderItem={renderItem}
-                />
-            )}
+
+            <FlatList
+                data={trashData}
+                keyExtractor={getItemKey}
+                contentContainerStyle={styles.listContent}
+                ListEmptyComponent={
+                    <View style={styles.emptyContainer}>
+                        <Ionicons
+                            name="trash-outline"
+                            size={48}
+                            color={colors.border}
+                        />
+                        <ThemedText style={styles.emptyText}>
+                            Trash is empty
+                        </ThemedText>
+                        <ThemedText style={[styles.emptyHint, { color: colors.border }]}>
+                            Deleted items will appear here
+                        </ThemedText>
+                    </View>
+                }
+                renderItem={renderItem}
+            />
 
             <View style={[styles.hint, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
                 <Ionicons name="information-circle-outline" size={16} color={colors.text + '60'} />

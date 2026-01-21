@@ -8,6 +8,9 @@ const expoDb = openDatabaseSync('notes.db');
 
 // Create Drizzle client with schema
 export const db = drizzle(expoDb, { schema });
+export type DbType = typeof db;
+export type TxType = Parameters<Parameters<typeof db.transaction>[0]>[0];
+export type DbOrTx = DbType | TxType;
 
 // SQL for creating tables (CREATE TABLE IF NOT EXISTS)
 const CREATE_TABLES_SQL = `
