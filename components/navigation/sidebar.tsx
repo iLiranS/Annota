@@ -145,7 +145,7 @@ export default function Sidebar(props: DrawerContentComponentProps) {
                     style={styles.logo}
                     resizeMode="contain"
                 />
-                <Text style={[styles.headerTitle, { color: colors.text }]}>Notela</Text>
+                <Text style={[styles.headerTitle, { color: colors.text }]}>Annota</Text>
             </View>
 
             <DrawerContentScrollView
