@@ -1,16 +1,16 @@
 {
   "expo": {
-    "name": "Notela",
-    "slug": "notela",
+    "name": "Annota",
+    "slug": "annota",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "notela",
+    "scheme": "annota",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.notela"
+      "bundleIdentifier": "com.anonymous.annota"
     },
     "android": {
       "adaptiveIcon": {
@@ -21,7 +21,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.notela"
+      "package": "com.anonymous.annota"
     },
     "web": {
       "output": "static",

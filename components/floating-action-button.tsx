@@ -1,5 +1,5 @@
+import { useAppTheme } from '@/hooks/use-app-theme';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useTheme } from '@react-navigation/native';
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -14,7 +14,7 @@ export default function FloatingActionButton({
     icon = 'add',
     size = 60,
 }: FloatingActionButtonProps) {
-    const { colors, dark } = useTheme();
+    const theme = useAppTheme();
 
     return (
         <View style={[styles.container, { bottom: 16 }]}>
@@ -26,8 +26,8 @@ export default function FloatingActionButton({
                         width: size,
                         height: size,
                         borderRadius: size / 2,
-                        backgroundColor: '#305ff9ff',
-                        shadowColor: '#305ff9ff',
+                        backgroundColor: theme.colors.primary,
+                        shadowColor: theme.colors.primary,
                     },
                     pressed && styles.pressed,
                 ]}
