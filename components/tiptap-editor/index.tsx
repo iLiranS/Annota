@@ -119,7 +119,7 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
                             // Blur handled via keyboard listeners
                             break;
                         case 'imageSelected':
-                            console.log('Image selected:', data);
+                            // console.log('Image selected:', data);
                             setSelectedImageAttrs(data);
                             setGalleryImages(data.images || []);
                             setGalleryCurrentIndex(data.currentIndex || 0);
@@ -179,8 +179,22 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
         const showToolbar = isKeyboardVisible || isPopupOpen;
 
         const source = __DEV__
-            ? { uri: 'http://192.168.7.9:5174' }
+            ? { uri: 'http://192.168.7.9:5173' }
             : require('./assets/editor.html');
+
+        const themeInjectionScript = `
+            (function() {
+                var root = document.documentElement;
+                var bg = '${dark ? '#000000' : '#FFFFFF'}';
+                var fg = '${dark ? '#FFFFFF' : '#000000'}';
+                root.style.setProperty('--bg-color', bg);
+                root.style.setProperty('--text-color', fg);
+                root.style.setProperty('--accent-color', '${colors.primary}');
+                // Set root background immediately to prevent flash
+                root.style.backgroundColor = bg;
+            })();
+            true;
+        `;
 
         return (
             <View style={styles.container}>
@@ -188,6 +202,7 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
                     ref={webViewRef}
                     source={source}
                     onMessage={handleMessage}
+                    injectedJavaScriptBeforeContentLoaded={themeInjectionScript}
                     scrollEnabled={true}
                     keyboardDisplayRequiresUserAction={false}
                     hideKeyboardAccessoryView={true}

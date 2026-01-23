@@ -158,21 +158,21 @@ export default function Sidebar(props: DrawerContentComponentProps) {
                         icon="home"
                         label="Home"
                         onPress={navigateToHome}
-                        iconColor='#d89b55ff'
+                        iconColor={'#4F7DF3'}
                     />
 
                     <SidebarItem
                         icon="checkmark-circle"
                         label="Tasks"
                         onPress={navigateToTasks}
-                        iconColor={'#6366F1'}
+                        iconColor={'#2ECC71'}
                     />
 
                     <SidebarItem
                         icon="today"
                         label="Daily Note"
                         onPress={navigateToDailyNote}
-                        iconColor="#4ddfb5ff"
+                        iconColor='#ef7b6cff'
                     />
 
                     <SidebarItem
@@ -270,6 +270,13 @@ const styles = StyleSheet.create({
     sidebarItemText: {
         fontSize: 17,
         fontWeight: '500',
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 1,
+        },
+        shadowOpacity: 0.1,
+        shadowRadius: 1,
     },
     folderContainer: {
         marginTop: 4,

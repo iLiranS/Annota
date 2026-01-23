@@ -274,7 +274,7 @@ function highlightCode() {
     });
 }
 
-function enterEditMode() {
+function enterEditMode(coords?: { x: number, y: number }) {
     if (isInEditMode) return;
     isInEditMode = true;
     displayEl.classList.remove('visible');
@@ -283,7 +283,16 @@ function enterEditMode() {
     // Focus immediately to preserve user gesture chain (required for mobile keyboard)
     // Use requestAnimationFrame instead of setTimeout to stay within gesture context
     requestAnimationFrame(() => {
-        window.editor?.commands.focus('end');
+        if (window.editor) {
+            if (coords) {
+                const pos = window.editor.view.posAtCoords({ left: coords.x, top: coords.y });
+                if (pos) {
+                    window.editor.commands.focus(pos.pos);
+                    return;
+                }
+            }
+            window.editor.commands.focus('end');
+        }
     });
 }
 
@@ -368,7 +377,8 @@ function getEditorState() {
 function scrollCursorIntoView() {
     if (!window.editor) return;
     if (scrollDebounceTimer) clearTimeout(scrollDebounceTimer);
-    scrollDebounceTimer = setTimeout(doScrollCursorIntoView, 50);
+    // Use requestAnimationFrame for smoother sync with render
+    requestAnimationFrame(doScrollCursorIntoView);
 }
 
 function doScrollCursorIntoView() {
@@ -379,12 +389,13 @@ function doScrollCursorIntoView() {
 
     const viewportHeight = window.innerHeight;
     const cursorBottom = coords.bottom;
-    const TOOLBAR_SAFE_OFFSET = 120;
-    const toolbarTop = viewportHeight - TOOLBAR_SAFE_OFFSET; // Approx toolbar pos
+    const TOOLBAR_SAFE_OFFSET = 150; // Toolbar + Keyboard accessory + Margin
+    const toolbarTop = viewportHeight - TOOLBAR_SAFE_OFFSET;
 
     if (cursorBottom > toolbarTop) {
-        // const scrollAmount = cursorBottom - toolbarTop + 30;
-        // window.scrollBy({ top: scrollAmount, behavior: 'smooth' });
+        // Scroll just enough to bring it into view with margin
+        const scrollAmount = cursorBottom - toolbarTop;
+        window.scrollBy({ top: scrollAmount, behavior: 'auto' }); // 'auto' (instant) prevents "clumsy" smooth scroll lag
     }
 }
 
@@ -559,6 +570,19 @@ window.setupEditor = function (options: any) {
             element: editorEl,
             editorProps: {
                 attributes: { dir: 'auto' },
+                // Aggressive scrolling to keep cursor visible above keyboard/toolbar
+                scrollThreshold: {
+                    top: 0,
+                    bottom: 200, // Trigger scroll when within 200px of bottom
+                    left: 0,
+                    right: 0
+                },
+                scrollMargin: {
+                    top: 0,
+                    bottom: 200, // Add 200px margin when scrolling
+                    left: 0,
+                    right: 0
+                }
             },
             extensions: [
                 StarterKit.configure({
@@ -594,15 +618,37 @@ window.setupEditor = function (options: any) {
                 // Removed BubbleMenu as we use native popups now
             ],
             content: content,
-            autofocus: autofocus ? 'end' : false,
+            // We handle autofocus manually in onCreate to ensure correct placement
+            autofocus: false,
             onCreate: function ({ editor }) {
                 if (editor.isEmpty) {
+                    // Initialize with Heading 2
                     if (typeof editor.chain === 'function') {
-                        editor.chain().focus().toggleHeading({ level: 2 }).run();
+                        editor.chain()
+                            .focus()
+                            .toggleHeading({ level: 2 })
+                            // Ensure the spare line exists immediately
+                            .insertContentAt(editor.state.doc.content.size, '<p></p>')
+                            // Force focus back to the start (the heading)
+                            .setTextSelection(1)
+                            .run();
                     }
+                } else if (autofocus) {
+                    // If content exists and autofocus requested, go to end
+                    editor.commands.focus('end');
                 }
             },
             onUpdate: function ({ editor }) {
+                // Ensure trailing paragraph
+                const { doc } = editor.state;
+                const lastNode = doc.lastChild;
+                if (lastNode && lastNode.type.name !== 'paragraph') {
+                    // Check if we are already dealing with an update to avoid loops?
+                    // insertContent triggers transaction > update.
+                    // But then lastNode will be paragraph, so it stops.
+                    editor.commands.insertContentAt(doc.content.size, '<p></p>');
+                }
+
                 if (debounceTimer) clearTimeout(debounceTimer);
                 debounceTimer = setTimeout(() => {
                     sendMessage({ type: 'content', html: editor.getHTML() });
@@ -631,6 +677,8 @@ window.setupEditor = function (options: any) {
                 sendMessage({ type: 'state', state: getEditorState() });
             }
         });
+
+        editorEl.style.paddingBottom = '50vh'; // Huge padding to allow scrolling content to middle of screen
 
         loadingEl.style.display = 'none';
 
@@ -794,7 +842,7 @@ displayEl.addEventListener('click', function (e) {
     if (target.closest('a')) return;
 
     // Enter edit mode and focus the editor
-    enterEditMode();
+    enterEditMode({ x: e.clientX, y: e.clientY });
 });
 
 // Notify Ready
