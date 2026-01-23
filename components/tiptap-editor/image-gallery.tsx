@@ -22,6 +22,8 @@ interface ImageGalleryProps {
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height;
+const MODAL_HEIGHT = SCREEN_HEIGHT * 0.9;
+const DISMISS_THRESHOLD = 100;
 
 export function ImageGallery({
     visible,
@@ -49,12 +51,16 @@ export function ImageGallery({
     // Swipe shared values
     const swipeX = useSharedValue(0);
 
+    // Dismiss shared value (vertical drag to close)
+    const dismissY = useSharedValue(0);
+
     // Sync state when props change
     useEffect(() => {
         if (visible) {
             setActiveIndex(initialIndex);
             setControlsVisible(true);
             resetZoom();
+            dismissY.value = 0;
         }
     }, [visible, initialIndex]);
 
@@ -136,8 +142,18 @@ export function ImageGallery({
                 translateX.value = savedTranslateX.value + e.translationX;
                 translateY.value = savedTranslateY.value + e.translationY;
             } else {
-                // Swipe to navigate (only X axis)
-                swipeX.value = e.translationX;
+                // Determine if primarily horizontal or vertical swipe
+                const isHorizontal = Math.abs(e.translationX) > Math.abs(e.translationY);
+
+                if (isHorizontal) {
+                    // Swipe to navigate (only X axis)
+                    swipeX.value = e.translationX;
+                    dismissY.value = 0;
+                } else if (e.translationY > 0) {
+                    // Only allow downward drag for dismiss
+                    dismissY.value = e.translationY;
+                    swipeX.value = 0;
+                }
             }
         })
         .onEnd((e) => {
@@ -145,25 +161,33 @@ export function ImageGallery({
                 savedTranslateX.value = translateX.value;
                 savedTranslateY.value = translateY.value;
             } else {
-                // Handle swipe navigation threshold
-                if (e.translationX > SCREEN_WIDTH * 0.2) {
-                    if (canGoPrev) {
-                        swipeX.value = withTiming(SCREEN_WIDTH, { duration: 200 }, () => {
-                            runOnJS(navigatePrev)();
-                        });
-                    } else {
-                        swipeX.value = withTiming(0);
-                    }
-                } else if (e.translationX < -SCREEN_WIDTH * 0.2) {
-                    if (canGoNext) {
-                        swipeX.value = withTiming(-SCREEN_WIDTH, { duration: 200 }, () => {
-                            runOnJS(navigateNext)();
-                        });
-                    } else {
-                        swipeX.value = withTiming(0);
-                    }
+                // Check for vertical dismiss first
+                if (dismissY.value > DISMISS_THRESHOLD || e.velocityY > 800) {
+                    dismissY.value = withTiming(SCREEN_HEIGHT, { duration: 200 }, () => {
+                        runOnJS(onClose)();
+                    });
+                    return;
+                } else if (dismissY.value > 0) {
+                    dismissY.value = withTiming(0, { duration: 150 });
+                }
+
+                // Handle swipe navigation - lower threshold + velocity for easier swiping
+                const swipeThreshold = SCREEN_WIDTH * 0.1; // 10% of screen width
+                const velocityThreshold = 500; // Flick velocity threshold
+
+                const shouldGoNext = e.translationX < -swipeThreshold || e.velocityX < -velocityThreshold;
+                const shouldGoPrev = e.translationX > swipeThreshold || e.velocityX > velocityThreshold;
+
+                if (shouldGoPrev && canGoPrev) {
+                    swipeX.value = withTiming(SCREEN_WIDTH, { duration: 150 }, () => {
+                        runOnJS(navigatePrev)();
+                    });
+                } else if (shouldGoNext && canGoNext) {
+                    swipeX.value = withTiming(-SCREEN_WIDTH, { duration: 150 }, () => {
+                        runOnJS(navigateNext)();
+                    });
                 } else {
-                    swipeX.value = withTiming(0);
+                    swipeX.value = withTiming(0, { duration: 150 });
                 }
             }
         });
@@ -202,6 +226,11 @@ export function ImageGallery({
         ],
     }));
 
+    const animatedContainerStyle = useAnimatedStyle(() => ({
+        transform: [{ translateY: dismissY.value }],
+        opacity: 1 - (dismissY.value / SCREEN_HEIGHT) * 0.5,
+    }));
+
     const resizeOptions = [
         { label: 'XS', value: '25%' },
         { label: 'S', value: '50%' },
@@ -214,163 +243,202 @@ export function ImageGallery({
     return (
         <Modal
             visible={visible}
-            transparent={false}
+            transparent={true}
             animationType="fade"
             onRequestClose={onClose}
             statusBarTranslucent={true}
         >
-            <GestureHandlerRootView style={[styles.container, { backgroundColor: '#000000' }]}>
-                {/* Main Image View with Gestures */}
-                <GestureDetector gesture={Gesture.Race(tapsGesture, composedGesture)}>
-                    <View style={styles.imageContainer}>
-                        {currentImage ? (
-                            <Animated.View style={[styles.imageWrapper, animatedImageStyle]}>
-                                <Image
-                                    source={{ uri: currentImage.src }}
-                                    style={styles.image}
-                                    contentFit="contain"
-                                    cachePolicy="memory-disk"
-                                />
-                            </Animated.View>
-                        ) : (
-                            <Text style={styles.errorText}>Image not found</Text>
-                        )}
-                    </View>
-                </GestureDetector>
-
-                {/* Overlays / Controls */}
-                {controlsVisible && (
-                    <>
-                        {/* Header with Close Button */}
-                        <View style={styles.header}>
-                            <View style={styles.counterContainer}>
-                                <Text style={styles.counterText}>
-                                    {activeIndex + 1} / {images.length}
-                                </Text>
-                            </View>
-
-                            <Pressable
-                                style={({ pressed }) => [styles.closeButton, pressed && styles.buttonPressed]}
-                                onPress={onClose}
-                            >
-                                <MaterialCommunityIcons name="close" size={28} color="#FFFFFF" />
-                            </Pressable>
+            <View style={styles.modalBackdrop}>
+                <Pressable style={styles.backdropPressable} onPress={onClose} />
+                <Animated.View style={[styles.modalContent, animatedContainerStyle]}>
+                    <GestureHandlerRootView style={styles.container}>
+                        {/* Drag Handle */}
+                        <View style={styles.dragHandle}>
+                            <View style={styles.dragIndicator} />
                         </View>
 
-                        {/* Navigation Arrows */}
-                        {images.length > 1 && (
-                            <>
-                                <Pressable
-                                    style={[
-                                        styles.navButton,
-                                        styles.navButtonLeft,
-                                        !canGoPrev && styles.navButtonDisabled
-                                    ]}
-                                    onPress={handlePrev}
-                                    disabled={!canGoPrev}
-                                >
-                                    <MaterialCommunityIcons
-                                        name="chevron-left"
-                                        size={32}
-                                        color={canGoPrev ? '#FFFFFF' : 'rgba(255,255,255,0.3)'}
-                                    />
-                                </Pressable>
+                        {/* Main Image View with Gestures */}
+                        <GestureDetector gesture={Gesture.Race(tapsGesture, composedGesture)}>
+                            <View style={styles.imageContainer}>
+                                {currentImage ? (
+                                    <Animated.View style={[styles.imageWrapper, animatedImageStyle]}>
+                                        <Image
+                                            source={{ uri: currentImage.src }}
+                                            style={styles.image}
+                                            contentFit="contain"
+                                            cachePolicy="memory-disk"
+                                        />
+                                    </Animated.View>
+                                ) : (
+                                    <Text style={styles.errorText}>Image not found</Text>
+                                )}
+                            </View>
+                        </GestureDetector>
 
-                                <Pressable
-                                    style={[
-                                        styles.navButton,
-                                        styles.navButtonRight,
-                                        !canGoNext && styles.navButtonDisabled
-                                    ]}
-                                    onPress={handleNext}
-                                    disabled={!canGoNext}
-                                >
-                                    <MaterialCommunityIcons
-                                        name="chevron-right"
-                                        size={32}
-                                        color={canGoNext ? '#FFFFFF' : 'rgba(255,255,255,0.3)'}
-                                    />
-                                </Pressable>
+                        {/* Overlays / Controls */}
+                        {controlsVisible && (
+                            <>
+                                {/* Header with Close Button */}
+                                <View style={styles.header}>
+                                    <View style={styles.counterContainer}>
+                                        <Text style={styles.counterText}>
+                                            {activeIndex + 1} / {images.length}
+                                        </Text>
+                                    </View>
+
+                                    <Pressable
+                                        style={({ pressed }) => [styles.closeButton, pressed && styles.buttonPressed]}
+                                        onPress={onClose}
+                                    >
+                                        <MaterialCommunityIcons name="close" size={28} color="#FFFFFF" />
+                                    </Pressable>
+                                </View>
+
+                                {/* Navigation Arrows */}
+                                {images.length > 1 && (
+                                    <>
+                                        <Pressable
+                                            style={[
+                                                styles.navButton,
+                                                styles.navButtonLeft,
+                                                !canGoPrev && styles.navButtonDisabled
+                                            ]}
+                                            onPress={handlePrev}
+                                            disabled={!canGoPrev}
+                                        >
+                                            <MaterialCommunityIcons
+                                                name="chevron-left"
+                                                size={32}
+                                                color={canGoPrev ? '#FFFFFF' : 'rgba(255,255,255,0.3)'}
+                                            />
+                                        </Pressable>
+
+                                        <Pressable
+                                            style={[
+                                                styles.navButton,
+                                                styles.navButtonRight,
+                                                !canGoNext && styles.navButtonDisabled
+                                            ]}
+                                            onPress={handleNext}
+                                            disabled={!canGoNext}
+                                        >
+                                            <MaterialCommunityIcons
+                                                name="chevron-right"
+                                                size={32}
+                                                color={canGoNext ? '#FFFFFF' : 'rgba(255,255,255,0.3)'}
+                                            />
+                                        </Pressable>
+                                    </>
+                                )}
+
+                                {/* Bottom Actions Bar - Transparent Background */}
+                                <View style={styles.bottomBar}>
+                                    {/* Resize Options */}
+                                    <View style={styles.resizeGroup}>
+                                        {resizeOptions.map((opt) => (
+                                            <Pressable
+                                                key={opt.value}
+                                                style={({ pressed }) => [
+                                                    styles.resizeBtn,
+                                                    { backgroundColor: dark ? 'rgba(58, 58, 60, 0.8)' : 'rgba(229, 229, 234, 0.8)' },
+                                                    pressed && { opacity: 0.7 }
+                                                ]}
+                                                onPress={() => {
+                                                    onResize(opt.value);
+                                                    onClose();
+                                                }}
+                                            >
+                                                <Text style={[styles.resizeText, { color: colors.text }]}>{opt.label}</Text>
+                                            </Pressable>
+                                        ))}
+                                    </View>
+
+                                    {/* Action Icons */}
+                                    <View style={styles.iconGroup}>
+                                        <Pressable
+                                            style={({ pressed }) => [
+                                                styles.iconBtn,
+                                                { backgroundColor: dark ? 'rgba(58, 58, 60, 0.8)' : 'rgba(229, 229, 234, 0.8)' },
+                                                pressed && { opacity: 0.7 }
+                                            ]}
+                                            onPress={() => {
+                                                onDownload();
+                                                onClose();
+                                            }}
+                                        >
+                                            <MaterialCommunityIcons name="download" size={24} color={colors.text} />
+                                        </Pressable>
+
+                                        <Pressable
+                                            style={({ pressed }) => [
+                                                styles.iconBtn,
+                                                { backgroundColor: dark ? 'rgba(58, 58, 60, 0.8)' : 'rgba(229, 229, 234, 0.8)' },
+                                                pressed && { opacity: 0.7 }
+                                            ]}
+                                            onPress={() => {
+                                                onCut();
+                                                onClose();
+                                            }}
+                                        >
+                                            <MaterialCommunityIcons name="content-cut" size={24} color={colors.text} />
+                                        </Pressable>
+
+                                        <Pressable
+                                            style={({ pressed }) => [
+                                                styles.iconBtn,
+                                                { backgroundColor: dark ? 'rgba(255, 69, 58, 0.3)' : 'rgba(255, 59, 48, 0.25)' },
+                                                pressed && { opacity: 0.7 }
+                                            ]}
+                                            onPress={() => {
+                                                onDelete();
+                                                onClose();
+                                            }}
+                                        >
+                                            <MaterialCommunityIcons name="delete" size={24} color="#FF453A" />
+                                        </Pressable>
+                                    </View>
+                                </View>
                             </>
                         )}
-
-                        {/* Bottom Actions Bar - Transparent Background */}
-                        <View style={styles.bottomBar}>
-                            {/* Resize Options */}
-                            <View style={styles.resizeGroup}>
-                                {resizeOptions.map((opt) => (
-                                    <Pressable
-                                        key={opt.value}
-                                        style={({ pressed }) => [
-                                            styles.resizeBtn,
-                                            { backgroundColor: dark ? 'rgba(58, 58, 60, 0.8)' : 'rgba(229, 229, 234, 0.8)' },
-                                            pressed && { opacity: 0.7 }
-                                        ]}
-                                        onPress={() => {
-                                            onResize(opt.value);
-                                            onClose();
-                                        }}
-                                    >
-                                        <Text style={[styles.resizeText, { color: colors.text }]}>{opt.label}</Text>
-                                    </Pressable>
-                                ))}
-                            </View>
-
-                            {/* Action Icons */}
-                            <View style={styles.iconGroup}>
-                                <Pressable
-                                    style={({ pressed }) => [
-                                        styles.iconBtn,
-                                        { backgroundColor: dark ? 'rgba(58, 58, 60, 0.8)' : 'rgba(229, 229, 234, 0.8)' },
-                                        pressed && { opacity: 0.7 }
-                                    ]}
-                                    onPress={() => {
-                                        onDownload();
-                                        onClose();
-                                    }}
-                                >
-                                    <MaterialCommunityIcons name="download" size={24} color={colors.text} />
-                                </Pressable>
-
-                                <Pressable
-                                    style={({ pressed }) => [
-                                        styles.iconBtn,
-                                        { backgroundColor: dark ? 'rgba(58, 58, 60, 0.8)' : 'rgba(229, 229, 234, 0.8)' },
-                                        pressed && { opacity: 0.7 }
-                                    ]}
-                                    onPress={() => {
-                                        onCut();
-                                        onClose();
-                                    }}
-                                >
-                                    <MaterialCommunityIcons name="content-cut" size={24} color={colors.text} />
-                                </Pressable>
-
-                                <Pressable
-                                    style={({ pressed }) => [
-                                        styles.iconBtn,
-                                        { backgroundColor: dark ? 'rgba(255, 69, 58, 0.3)' : 'rgba(255, 59, 48, 0.25)' },
-                                        pressed && { opacity: 0.7 }
-                                    ]}
-                                    onPress={() => {
-                                        onDelete();
-                                        onClose();
-                                    }}
-                                >
-                                    <MaterialCommunityIcons name="delete" size={24} color="#FF453A" />
-                                </Pressable>
-                            </View>
-                        </View>
-                    </>
-                )}
-            </GestureHandlerRootView>
+                    </GestureHandlerRootView>
+                </Animated.View>
+            </View>
         </Modal>
     );
 }
 
 const styles = StyleSheet.create({
+    modalBackdrop: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        justifyContent: 'flex-end',
+    },
+    backdropPressable: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+    },
+    modalContent: {
+        height: MODAL_HEIGHT,
+        backgroundColor: '#000000',
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        overflow: 'hidden',
+    },
     container: {
         flex: 1,
+    },
+    dragHandle: {
+        alignItems: 'center',
+        paddingVertical: 12,
+    },
+    dragIndicator: {
+        width: 40,
+        height: 4,
+        backgroundColor: 'rgba(255, 255, 255, 0.4)',
+        borderRadius: 2,
     },
     imageContainer: {
         flex: 1,
@@ -394,7 +462,7 @@ const styles = StyleSheet.create({
     },
     header: {
         position: 'absolute',
-        top: 60, // Safe area approximation
+        top: 20, // Below drag handle
         left: 20,
         right: 20,
         flexDirection: 'row',

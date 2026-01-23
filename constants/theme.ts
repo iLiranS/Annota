@@ -13,7 +13,7 @@ export const Colors = {
     text: '#171717',
     background: '#ffffff',   // page
     card: '#fafafa',         // raised surface
-    border: '#abababff',
+    border: '#dcdcdcff',
     icon: '#737373',
     tabIconDefault: '#A3A3A3',
     tabIconSelected: tintColorLight,

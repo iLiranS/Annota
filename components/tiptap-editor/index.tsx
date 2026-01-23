@@ -38,6 +38,7 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
         const [galleryImages, setGalleryImages] = useState<any[]>([]);
         const [galleryCurrentIndex, setGalleryCurrentIndex] = useState(0);
         const [toolbarHeight, setToolbarHeight] = useState(50); // it's height is fixed 50
+        const [currentLatex, setCurrentLatex] = useState<string | null>(null);
         const contentResolverRef = useRef<((html: string) => void) | null>(null);
         const { keyboardHeight } = useKeyboard();
 
@@ -131,6 +132,11 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
                             break;
                         case 'codeBlockSelected':
                             setActivePopup('codeLanguage');
+                            setIsPopupOpen(true);
+                            break;
+                        case 'mathSelected':
+                            setCurrentLatex(data.latex);
+                            setActivePopup('math');
                             setIsPopupOpen(true);
                             break;
                     }
@@ -269,6 +275,12 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
                                 }
                             }}
                             onCommand={sendCommand}
+                            currentLatex={currentLatex}
+                            onInsertMath={() => {
+                                setCurrentLatex(null);
+                                setActivePopup('math');
+                                setIsPopupOpen(true);
+                            }}
                         />
                     </View>
                 )}

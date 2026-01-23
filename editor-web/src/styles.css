@@ -62,47 +62,27 @@ body {
     min-height: calc(100vh - 100px);
 }
 
-/* Display mode */
-#display {
-    display: none;
-    min-height: calc(100vh - 100px);
-    cursor: text;
-    overflow-x: hidden;
-}
-
-#display.visible {
-    display: block;
-}
-
+/* Hidden state */
 #editor-content.hidden {
     display: none;
 }
 
-/* Empty state placeholder for display mode */
-#display.empty::before {
-    /* Note: placeholder text is set via JS/CSS var if needed, or we just rely on JS toggling the class/content */
-    content: 'Write something...';
-    /* Ideally this should be dynamic too, but CSS content attr support is ... limited for vars. 
-       We can set it via style="--placeholder: '...'" */
-    color: var(--placeholder-color);
-}
 
-.ProseMirror,
-#display {
+/* ProseMirror Styles matched to old Display Mode for consistency */
+
+.ProseMirror {
     outline: none;
     min-height: calc(100vh - 100px);
 }
 
-.ProseMirror p,
-#display p {
+.ProseMirror p {
     margin: 0 0 8px 0;
     unicode-bidi: plaintext;
     text-align: start;
     min-height: 1.6em;
 }
 
-.ProseMirror h1,
-#display h1 {
+.ProseMirror h1 {
     font-size: 32px;
     font-weight: 700;
     margin: 20px 0 12px 0;
@@ -111,8 +91,7 @@ body {
     text-align: start;
 }
 
-.ProseMirror h2,
-#display h2 {
+.ProseMirror h2 {
     font-size: 26px;
     font-weight: 600;
     margin: 18px 0 10px 0;
@@ -121,8 +100,7 @@ body {
     text-align: start;
 }
 
-.ProseMirror h3,
-#display h3 {
+.ProseMirror h3 {
     font-size: 22px;
     font-weight: 600;
     margin: 16px 0 8px 0;
@@ -131,8 +109,7 @@ body {
     text-align: start;
 }
 
-.ProseMirror h4,
-#display h4 {
+.ProseMirror h4 {
     font-size: 18px;
     font-weight: 600;
     margin: 14px 0 6px 0;
@@ -141,8 +118,7 @@ body {
     text-align: start;
 }
 
-.ProseMirror h5,
-#display h5 {
+.ProseMirror h5 {
     font-size: 16px;
     font-weight: 600;
     margin: 12px 0 4px 0;
@@ -151,8 +127,7 @@ body {
     text-align: start;
 }
 
-.ProseMirror h6,
-#display h6 {
+.ProseMirror h6 {
     font-size: 14px;
     font-weight: 600;
     margin: 10px 0 4px 0;
@@ -163,53 +138,45 @@ body {
 }
 
 .ProseMirror ul,
-.ProseMirror ol,
-#display ul,
-#display ol {
+.ProseMirror ol {
     padding-left: 24px;
     margin: 8px 0;
 }
 
-.ProseMirror li,
-#display li {
+.ProseMirror li {
     margin: 4px 0;
     unicode-bidi: plaintext;
     text-align: start;
 }
 
-.ProseMirror li p,
-#display li p {
+.ProseMirror li p {
     margin: 0;
     unicode-bidi: plaintext;
     text-align: start;
 }
 
 /* Task List */
-.ProseMirror ul[data-type="taskList"],
-#display ul[data-type="taskList"] {
+.ProseMirror ul[data-type="taskList"] {
     list-style: none;
     padding-left: 0;
     margin: 8px 0;
 }
 
-.ProseMirror ul[data-type="taskList"] li,
-#display ul[data-type="taskList"] li {
+.ProseMirror ul[data-type="taskList"] li {
     display: flex;
     align-items: flex-start;
     gap: 8px;
     margin: 6px 0;
 }
 
-.ProseMirror ul[data-type="taskList"] li>label,
-#display ul[data-type="taskList"] li>label {
+.ProseMirror ul[data-type="taskList"] li>label {
     flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
-.ProseMirror ul[data-type="taskList"] li>label input[type="checkbox"],
-#display ul[data-type="taskList"] li>label input[type="checkbox"] {
+.ProseMirror ul[data-type="taskList"] li>label input[type="checkbox"] {
     width: 18px;
     height: 18px;
     appearance: none;
@@ -221,14 +188,12 @@ body {
     position: relative;
 }
 
-.ProseMirror ul[data-type="taskList"] li>label input[type="checkbox"]:checked,
-#display ul[data-type="taskList"] li>label input[type="checkbox"]:checked {
+.ProseMirror ul[data-type="taskList"] li>label input[type="checkbox"]:checked {
     background: var(--accent-color);
     border-color: var(--accent-color);
 }
 
-.ProseMirror ul[data-type="taskList"] li>label input[type="checkbox"]:checked::after,
-#display ul[data-type="taskList"] li>label input[type="checkbox"]:checked::after {
+.ProseMirror ul[data-type="taskList"] li>label input[type="checkbox"]:checked::after {
     content: '';
     position: absolute;
     left: 4px;
@@ -240,18 +205,15 @@ body {
     transform: rotate(45deg);
 }
 
-.ProseMirror ul[data-type="taskList"] li>div,
-#display ul[data-type="taskList"] li>div {
+.ProseMirror ul[data-type="taskList"] li>div {
     flex: 1;
 }
 
-.ProseMirror ul[data-type="taskList"] li[data-checked="true"]>div,
-#display ul[data-type="taskList"] li[data-checked="true"]>div {
+.ProseMirror ul[data-type="taskList"] li[data-checked="true"]>div {
     opacity: 0.5;
 }
 
-.ProseMirror blockquote,
-#display blockquote {
+.ProseMirror blockquote {
     border-left: 3px solid var(--accent-color);
     margin: 12px 0;
     padding-left: 16px;
@@ -262,8 +224,7 @@ body {
     border-bottom-right-radius: 4px;
 }
 
-.ProseMirror code,
-#display code {
+.ProseMirror code {
     background-color: var(--code-bg);
     padding: 2px 6px;
     border-radius: 4px;
@@ -271,8 +232,7 @@ body {
     font-size: 13px;
 }
 
-.ProseMirror pre,
-#display pre {
+.ProseMirror pre {
     background-color: var(--code-block-bg);
     padding: 16px;
     border-radius: 12px;
@@ -284,17 +244,11 @@ body {
     position: relative;
 }
 
-.ProseMirror pre code,
-#display pre code {
+.ProseMirror pre code {
     background: none;
     padding: 0;
     font-size: inherit;
     font-family: inherit;
-}
-
-#display pre code.hljs {
-    background: transparent;
-    padding: 0;
 }
 
 /* Code block wrapper with header */
@@ -321,7 +275,6 @@ body {
     border-bottom: 1px solid var(--border-color);
     position: relative;
     z-index: 10;
-    /* Ensure dropdown appears above code content */
 }
 
 /* Language selector button (LEFT) */
@@ -362,59 +315,6 @@ body {
     border-top: 4px solid currentColor;
 }
 
-/* Language dropdown */
-.code-lang-dropdown {
-    display: none;
-    position: absolute;
-    top: 100%;
-    left: 12px;
-    z-index: 100;
-    background: var(--bg-color);
-    border: 1px solid var(--border-color);
-    border-radius: 10px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
-    max-height: 200px;
-    overflow-y: auto;
-    min-width: 140px;
-    padding: 6px;
-    margin-top: 4px;
-}
-
-.code-lang-dropdown.open {
-    display: block;
-}
-
-.code-lang-option {
-    display: block;
-    width: 100%;
-    padding: 8px 12px;
-    margin: 0;
-    border: none;
-    background: transparent;
-    color: var(--text-color);
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px;
-    font-weight: 500;
-    text-align: left;
-    cursor: pointer;
-    border-radius: 6px;
-    transition: background-color 0.1s ease;
-    touch-action: manipulation;
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    user-select: none;
-}
-
-.code-lang-option:hover,
-.code-lang-option:active {
-    background: var(--code-bg);
-}
-
-.code-lang-option.selected {
-    background: var(--accent-color);
-    color: white;
-}
-
 /* Copy button (RIGHT) */
 .code-copy-btn {
     display: flex;
@@ -447,85 +347,19 @@ body {
     flex-shrink: 0;
 }
 
-/* =============================================
-   DISPLAY MODE - Header with language + copy 
-   ============================================= */
-#display .code-block-display {
-    position: relative;
-    margin: 12px 0;
-}
-
-#display .code-block-display pre {
-    margin: 0;
-    border-top-left-radius: 0;
-    border-top-right-radius: 0;
-}
-
-#display .code-display-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 8px 12px;
-    background-color: var(--code-block-bg);
-    border-top-left-radius: 12px;
-    border-top-right-radius: 12px;
-    border-bottom: 1px solid var(--border-color);
-}
-
-#display .code-lang-badge {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--accent-color);
-    background: var(--code-bg);
-    padding: 5px 10px;
-    border-radius: 6px;
-}
-
-#display .code-copy-display {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    padding: 5px 10px;
-    border-radius: 6px;
-    background: var(--code-bg);
-    border: none;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    font-size: 11px;
-    font-weight: 500;
-    color: var(--text-color);
-    cursor: pointer;
-    transition: background-color 0.15s ease, color 0.15s ease;
-}
-
-#display .code-copy-display:hover {
-    background: var(--accent-color);
-    color: white;
-}
-
-#display .code-copy-display.copied {
-    background: #22c55e;
-    color: white;
-}
-
-.ProseMirror hr,
-#display hr {
+.ProseMirror hr {
     border: none;
     border-top: 1px solid var(--border-color);
     margin: 16px 0;
 }
 
-.ProseMirror a,
-#display a {
+.ProseMirror a {
     color: var(--accent-color);
     text-decoration: underline;
     cursor: pointer;
 }
 
-.ProseMirror mark,
-#display mark {
+.ProseMirror mark {
     border-radius: 2px;
     padding: 0 2px;
 }
@@ -542,22 +376,34 @@ body {
     outline: none;
 }
 
-.katex-display {
-    margin: 16px 0;
-    overflow-x: auto;
-    overflow-y: hidden;
+/* Math / Katex Styles */
+.math-node {
+    display: inline-block;
+    padding: 0 4px;
+    border-radius: 4px;
+    cursor: pointer;
+    unicode-bidi: isolate;
+    direction: ltr;
+    /* Force LTR for math */
 }
 
-.ProseMirror div[data-youtube-video],
-#display div[data-youtube-video] {
+.math-node.ProseMirror-selectednode {
+    outline: 2px solid var(--accent-color);
+    background-color: var(--code-bg);
+}
+
+.math-error {
+    color: #FF6B6B;
+}
+
+.ProseMirror div[data-youtube-video] {
     margin: 16px 0;
     width: 100%;
     display: flex;
     justify-content: center;
 }
 
-.ProseMirror iframe,
-#display iframe {
+.ProseMirror iframe {
     width: 100% !important;
     height: auto !important;
     aspect-ratio: 16 / 9;
@@ -565,8 +411,7 @@ body {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.ProseMirror img,
-#display img {
+.ProseMirror img {
     max-width: 100%;
     max-height: 350px;
     height: auto;
@@ -580,34 +425,29 @@ body {
     border-radius: 8px;
 }
 
-.ProseMirror img.img-center,
-#display img.img-center {
+.ProseMirror img.img-center {
     margin: 8px auto;
     display: block;
 }
 
-.ProseMirror img.img-left,
-#display img.img-left {
+.ProseMirror img.img-left {
     margin: 8px auto 8px 0;
     display: block;
 }
 
-.ProseMirror img.img-right,
-#display img.img-right {
+.ProseMirror img.img-right {
     margin: 8px 0 8px auto;
     display: block;
 }
 
 /* Table Styles */
-.ProseMirror .tableWrapper,
-#display .tableWrapper {
+.ProseMirror .tableWrapper {
     overflow-x: auto;
     margin: 16px 0;
     -webkit-overflow-scrolling: touch;
 }
 
-.ProseMirror table,
-#display table {
+.ProseMirror table {
     border-collapse: collapse;
     width: max-content;
     min-width: 100%;
@@ -615,9 +455,7 @@ body {
 }
 
 .ProseMirror td,
-.ProseMirror th,
-#display td,
-#display th {
+.ProseMirror th {
     min-width: 80px;
     padding: 8px 12px;
     border: 1px solid var(--border-color);
@@ -627,15 +465,13 @@ body {
     word-wrap: break-word;
 }
 
-.ProseMirror td img,
-#display td img {
+.ProseMirror td img {
     max-width: 100%;
     max-height: 350px;
     object-fit: contain;
 }
 
-.ProseMirror th,
-#display th {
+.ProseMirror th {
     background-color: var(--table-header-bg);
     font-weight: 600;
 }
@@ -657,60 +493,4 @@ body {
 
 .ProseMirror.resize-cursor {
     cursor: col-resize;
-}
-
-/* Bubble Menu for Images */
-.bubble-menu {
-    display: flex;
-    align-items: center;
-    background-color: var(--bg-color);
-    /* Need contrast if bg is same */
-    /* Improve bubble menu contrast/shadow */
-    background: var(--bg-color);
-    padding: 8px;
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-    border: 1px solid var(--border-color);
-    gap: 8px;
-    min-width: 280px;
-}
-
-.bubble-menu button {
-    border: none;
-    background: none;
-    color: var(--text-color);
-    padding: 6px;
-    border-radius: 6px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 32px;
-}
-
-.bubble-menu button:hover {
-    background-color: var(--table-header-bg);
-}
-
-.bubble-menu button.active {
-    background-color: var(--accent-color);
-    color: white;
-}
-
-.bubble-menu .separator {
-    width: 1px;
-    height: 20px;
-    background-color: var(--border-color);
-    margin: 0 4px;
-}
-
-.bubble-menu svg {
-    width: 18px;
-    height: 18px;
-    fill: currentColor;
-}
-
-.bubble-menu span {
-    font-size: 13px;
-    font-weight: 600;
 }

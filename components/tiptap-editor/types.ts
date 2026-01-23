@@ -152,7 +152,7 @@ export type EditorCommand =
 // Popup Types
 // ============================================================================
 
-export type PopupType = 'headings' | 'highlight' | 'textColor' | 'youtube' | 'link' | 'image' | 'table' | 'codeLanguage' | 'imageActions' | null;
+export type PopupType = 'headings' | 'highlight' | 'textColor' | 'youtube' | 'link' | 'image' | 'table' | 'codeLanguage' | 'imageActions' | 'math' | null;
 
 export interface BasePopupProps {
     visible: boolean;
@@ -215,6 +215,12 @@ export interface ImageInfo {
 
 
 
-export type ToolbarPopupProps = HeadingPopupProps | ColorPopupProps | YouTubePopupProps | LinkPopupProps | ImagePopupProps | TablePopupProps | CodeLanguagePopupProps;
+export interface MathPopupProps extends BasePopupProps {
+    type: 'math';
+    currentLatex: string | null;
+    onSubmit: (latex: string) => void;
+}
+
+export type ToolbarPopupProps = HeadingPopupProps | ColorPopupProps | YouTubePopupProps | LinkPopupProps | ImagePopupProps | TablePopupProps | CodeLanguagePopupProps | MathPopupProps;
 
 

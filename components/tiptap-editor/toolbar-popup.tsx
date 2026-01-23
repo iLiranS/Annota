@@ -13,6 +13,7 @@ import { HeadingSelector } from './popups/heading-selector';
 
 import { ImageInput } from './popups/image-input';
 import { LinkInput } from './popups/link-input';
+import { MathInput } from './popups/math-input';
 import { TableActions } from './popups/table-actions';
 import { YouTubeInput } from './popups/youtube-input';
 import {
@@ -21,6 +22,7 @@ import {
     HeadingPopupProps,
     ImagePopupProps,
     LinkPopupProps,
+    MathPopupProps,
     TablePopupProps,
     ToolbarPopupProps,
     YouTubePopupProps
@@ -105,6 +107,14 @@ export function ToolbarPopup(props: ToolbarPopupProps) {
                     <CodeLanguageSelector
                         currentLanguage={(props as CodeLanguagePopupProps).currentLanguage}
                         onSelect={(props as CodeLanguagePopupProps).onSelect}
+                    />
+                );
+            case 'math':
+                return (
+                    <MathInput
+                        currentLatex={(props as MathPopupProps).currentLatex}
+                        onSubmit={(props as MathPopupProps).onSubmit}
+                        onClose={onClose}
                     />
                 );
 

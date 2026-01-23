@@ -15,6 +15,8 @@ interface EditorToolbarProps {
     onActivePopupChange: (type: PopupType) => void;
     /** Callback to notify parent when popup opens/closes - helps keep toolbar visible */
     onPopupStateChange?: (isOpen: boolean) => void;
+    currentLatex?: string | null;
+    onInsertMath?: () => void;
 }
 
 /**
@@ -27,7 +29,9 @@ export function EditorToolbar({
     onDismissKeyboard,
     activePopup,
     onActivePopupChange,
-    onPopupStateChange
+    onPopupStateChange,
+    currentLatex,
+    onInsertMath
 }: EditorToolbarProps) {
     const { dark, colors } = useTheme();
 
@@ -172,6 +176,12 @@ export function EditorToolbar({
                             icon="format-quote"
                             isActive={editorState.isBlockquote}
                             onPress={() => onCommand('toggleBlockquote')}
+                        />
+
+                        {/* Math Equation */}
+                        <ToolbarButton
+                            icon="functions"
+                            onPress={() => onInsertMath?.()}
                         />
 
                         <View style={styles.separator} />
@@ -348,6 +358,19 @@ export function EditorToolbar({
                     canDeleteTable={editorState.canDeleteTable}
                     onCommand={(command: string, params?: Record<string, unknown>) => {
                         onCommand(command, params);
+                    }}
+                    onClose={closePopup}
+                />
+            )}
+
+            {activePopup === 'math' && (
+                <ToolbarPopup
+                    visible={true}
+                    type="math"
+                    currentLatex={currentLatex || null}
+                    onSubmit={(latex: string) => {
+                        onCommand('setMath', { latex });
+                        closePopup();
                     }}
                     onClose={closePopup}
                 />
