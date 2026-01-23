@@ -25,12 +25,14 @@ export interface EditorState {
     // Lists
     isBulletList: boolean;
     isOrderedList: boolean;
+    isTaskList: boolean;
     canSinkListItem: boolean;
     canLiftListItem: boolean;
 
     // Blocks
     isBlockquote: boolean;
     isCodeBlock: boolean;
+    currentCodeLanguage: string | null;
 
     // Headings
     isHeading1: boolean;
@@ -62,6 +64,7 @@ export interface EditorState {
     canDeleteRow: boolean;
     canDeleteColumn: boolean;
     canDeleteTable: boolean;
+    imageAttrs: any | null;
 }
 
 export const initialEditorState: EditorState = {
@@ -72,10 +75,12 @@ export const initialEditorState: EditorState = {
     isCode: false,
     isBulletList: false,
     isOrderedList: false,
+    isTaskList: false,
     canSinkListItem: false,
     canLiftListItem: false,
     isBlockquote: false,
     isCodeBlock: false,
+    currentCodeLanguage: null,
     isHeading1: false,
     isHeading2: false,
     isHeading3: false,
@@ -98,6 +103,7 @@ export const initialEditorState: EditorState = {
     canDeleteRow: false,
     canDeleteColumn: false,
     canDeleteTable: false,
+    imageAttrs: null,
 };
 
 export type EditorCommand =
@@ -108,6 +114,7 @@ export type EditorCommand =
     | 'toggleCode'
     | 'toggleBulletList'
     | 'toggleOrderedList'
+    | 'toggleTaskList'
     | 'sinkListItem'
     | 'liftListItem'
     | 'toggleBlockquote'
@@ -136,13 +143,16 @@ export type EditorCommand =
     | 'addColumnAfter'
     | 'deleteRow'
     | 'deleteColumn'
-    | 'deleteTable';
+    | 'deleteTable'
+    | 'setCellBackground'
+    | 'unsetCellBackground'
+    | 'setCodeBlockLanguage';
 
 // ============================================================================
 // Popup Types
 // ============================================================================
 
-export type PopupType = 'headings' | 'highlight' | 'textColor' | 'youtube' | 'link' | 'image' | 'table' | null;
+export type PopupType = 'headings' | 'highlight' | 'textColor' | 'youtube' | 'link' | 'image' | 'table' | 'codeLanguage' | 'imageActions' | null;
 
 export interface BasePopupProps {
     visible: boolean;
@@ -191,6 +201,20 @@ export interface TablePopupProps extends BasePopupProps {
     onCommand: (command: string, params?: Record<string, unknown>) => void;
 }
 
-export type ToolbarPopupProps = HeadingPopupProps | ColorPopupProps | YouTubePopupProps | LinkPopupProps | ImagePopupProps | TablePopupProps;
+export interface CodeLanguagePopupProps extends BasePopupProps {
+    type: 'codeLanguage';
+    currentLanguage: string | null;
+    onSelect: (language: string) => void;
+}
+
+export interface ImageInfo {
+    src: string;
+    width: string;
+    position: number;
+}
+
+
+
+export type ToolbarPopupProps = HeadingPopupProps | ColorPopupProps | YouTubePopupProps | LinkPopupProps | ImagePopupProps | TablePopupProps | CodeLanguagePopupProps;
 
 

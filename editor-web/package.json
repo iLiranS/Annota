@@ -1,0 +1,39 @@
+{
+    "name": "editor-web",
+    "private": true,
+    "version": "0.0.0",
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "vite build && mkdir -p ../components/tiptap-editor/assets && cp dist/index.html ../components/tiptap-editor/assets/editor.html",
+        "preview": "vite preview"
+    },
+    "dependencies": {
+        "@tiptap/core": "^2.1.13",
+        "@tiptap/starter-kit": "^2.1.13",
+        "@tiptap/extension-placeholder": "^2.1.13",
+        "@tiptap/extension-underline": "^2.1.13",
+        "@tiptap/extension-link": "^2.1.13",
+        "@tiptap/extension-highlight": "^2.1.13",
+        "@tiptap/extension-text-style": "^2.1.13",
+        "@tiptap/extension-color": "^2.1.13",
+        "@tiptap/extension-youtube": "^2.1.13",
+        "@tiptap/extension-image": "^2.1.13",
+        "@tiptap/extension-bubble-menu": "^2.1.13",
+        "@tiptap/extension-table": "^2.1.13",
+        "@tiptap/extension-table-row": "^2.1.13",
+        "@tiptap/extension-table-cell": "^2.1.13",
+        "@tiptap/extension-table-header": "^2.1.13",
+        "@tiptap/extension-task-list": "^2.1.13",
+        "@tiptap/extension-task-item": "^2.1.13",
+        "@tiptap/extension-code-block-lowlight": "^2.1.13",
+        "lowlight": "^3.1.0",
+        "katex": "^0.16.9",
+        "highlight.js": "^11.9.0"
+    },
+    "devDependencies": {
+        "typescript": "^5.2.2",
+        "vite": "^5.0.0",
+        "vite-plugin-singlefile": "^2.0.1"
+    }
+}

@@ -7,20 +7,23 @@ import {
     View,
 } from 'react-native';
 
+import { CodeLanguageSelector } from './popups/code-language-selector';
 import { ColorSelector } from './popups/color-selector';
 import { HeadingSelector } from './popups/heading-selector';
+
 import { ImageInput } from './popups/image-input';
 import { LinkInput } from './popups/link-input';
 import { TableActions } from './popups/table-actions';
 import { YouTubeInput } from './popups/youtube-input';
 import {
+    CodeLanguagePopupProps,
     ColorPopupProps,
     HeadingPopupProps,
     ImagePopupProps,
     LinkPopupProps,
     TablePopupProps,
     ToolbarPopupProps,
-    YouTubePopupProps,
+    YouTubePopupProps
 } from './types';
 
 // ============================================================================
@@ -97,10 +100,20 @@ export function ToolbarPopup(props: ToolbarPopupProps) {
                         onClose={onClose}
                     />
                 );
+            case 'codeLanguage':
+                return (
+                    <CodeLanguageSelector
+                        currentLanguage={(props as CodeLanguagePopupProps).currentLanguage}
+                        onSelect={(props as CodeLanguagePopupProps).onSelect}
+                    />
+                );
+
             default:
                 return null;
         }
     };
+
+
 
     return (
         <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -145,4 +158,5 @@ const styles = StyleSheet.create({
         shadowRadius: 12,
         elevation: 8,
     },
+
 });

@@ -1,7 +1,9 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useTheme } from '@react-navigation/native';
-import React, { ComponentProps } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { ComponentProps, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+
+import { COLOR_PALETTE } from '@/constants/colors';
 
 type MaterialIconName = ComponentProps<typeof MaterialIcons>['name'];
 
@@ -58,15 +60,67 @@ export function TableActions({
     onClose,
 }: TableActionsProps) {
     const { colors, dark } = useTheme();
+    const [selectedBgColor, setSelectedBgColor] = useState<string | null>(null);
 
     const handleCommand = (command: string, params?: Record<string, unknown>) => {
         onCommand(command, params);
         onClose();
     };
 
+    const handleCellBackground = (color: string) => {
+        setSelectedBgColor(color);
+        onCommand('setCellBackground', { color });
+        onClose();
+    };
+
+    const handleClearCellBackground = () => {
+        setSelectedBgColor(null);
+        onCommand('unsetCellBackground');
+        onClose();
+    };
+
     return (
         <View style={styles.popupContent}>
             <Text style={[styles.popupTitle, { color: colors.text }]}>Table Options</Text>
+
+            {/* Cell Background Section */}
+            <View style={styles.tableSection}>
+                <Text style={[styles.tableSectionTitle, { color: dark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)' }]}>
+                    Cell Background
+                </Text>
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.colorGrid}
+                >
+                    {COLOR_PALETTE.map((colorOption) => {
+                        const colorValue = colorOption.value;
+                        const isSelected = selectedBgColor === colorValue;
+                        return (
+                            <Pressable
+                                key={colorValue}
+                                style={[
+                                    styles.colorItem,
+                                    { backgroundColor: colorValue },
+                                    isSelected && styles.colorItemSelected,
+                                ]}
+                                onPress={() => handleCellBackground(colorValue)}
+                            >
+                                {isSelected && (
+                                    <MaterialIcons name="check" size={18} color="#FFFFFF" />
+                                )}
+                            </Pressable>
+                        );
+                    })}
+                    <Pressable
+                        style={[styles.colorItem, styles.colorItemClear]}
+                        onPress={handleClearCellBackground}
+                        hitSlop={8}
+                    >
+                        <MaterialIcons name="format-color-reset" size={18} color={dark ? '#fff' : '#000'} />
+                    </Pressable>
+                </ScrollView>
+            </View>
 
             {/* Row Section */}
             <View style={styles.tableSection}>
@@ -193,5 +247,24 @@ const styles = StyleSheet.create({
         fontSize: 15,
         fontWeight: '500',
         color: '#FF453A',
+    },
+    colorGrid: {
+        flexDirection: 'row',
+        paddingRight: 20,
+    },
+    colorItem: {
+        width: 32,
+        height: 32,
+        borderRadius: 8,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 8,
+    },
+    colorItemSelected: {
+        borderWidth: 2,
+        borderColor: '#FFFFFF',
+    },
+    colorItemClear: {
+        backgroundColor: 'rgba(128,128,128,0.2)',
     },
 });

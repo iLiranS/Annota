@@ -147,6 +147,74 @@ export function getEditorHtml(options: EditorHtmlOptions): string {
         .ProseMirror li, #display li { margin: 4px 0; unicode-bidi: plaintext; text-align: start; }
         .ProseMirror li p, #display li p { margin: 0; unicode-bidi: plaintext; text-align: start; }
         
+        /* Task List / Checkbox Styles */
+        .ProseMirror ul[data-type="taskList"],
+        #display ul[data-type="taskList"] {
+            list-style: none;
+            padding-left: 0;
+            margin: 8px 0;
+        }
+        
+        .ProseMirror ul[data-type="taskList"] li,
+        #display ul[data-type="taskList"] li {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            margin: 6px 0;
+        }
+        
+        .ProseMirror ul[data-type="taskList"] li > label,
+        #display ul[data-type="taskList"] li > label {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+        }
+        
+        .ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"],
+        #display ul[data-type="taskList"] li > label input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            appearance: none;
+            -webkit-appearance: none;
+            border: 2px solid ${isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.3)'};
+            border-radius: 4px;
+            background: transparent;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"]:checked,
+        #display ul[data-type="taskList"] li > label input[type="checkbox"]:checked {
+            background: ${accentColor};
+            border-color: ${accentColor};
+        }
+        
+        .ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"]:checked::after,
+        #display ul[data-type="taskList"] li > label input[type="checkbox"]:checked::after {
+            content: '';
+            position: absolute;
+            left: 4px;
+            top: 1px;
+            width: 4px;
+            height: 8px;
+            border: solid white;
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+        }
+        
+        .ProseMirror ul[data-type="taskList"] li > div,
+        #display ul[data-type="taskList"] li > div {
+            flex: 1;
+        }
+        
+        /* Checked task item - gray out text (no strikethrough) */
+        .ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div,
+        #display ul[data-type="taskList"] li[data-checked="true"] > div {
+            opacity: 0.5;
+        }
+        
         .ProseMirror blockquote, #display blockquote {
             border-left: 3px solid ${accentColor};
             margin: 12px 0;
@@ -187,6 +255,24 @@ export function getEditorHtml(options: EditorHtmlOptions): string {
         #display pre code.hljs {
             background: transparent;
             padding: 0;
+        }
+        
+        /* Code block language label */
+        .ProseMirror pre {
+            position: relative;
+        }
+        
+        .ProseMirror pre::before {
+            content: attr(data-language);
+            position: absolute;
+            top: 6px;
+            right: 10px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: ${accentColor};
+            opacity: 0.8;
+            pointer-events: none;
         }
         
         .ProseMirror hr, #display hr {
@@ -564,7 +650,11 @@ export function getEditorHtml(options: EditorHtmlOptions): string {
                     { default: Table },
                     { default: TableRow },
                     { default: TableCell },
-                    { default: TableHeader }
+                    { default: TableHeader },
+                    { default: TaskList },
+                    { default: TaskItem },
+                    { default: CodeBlockLowlight },
+                    lowlightModule
                 ] = await Promise.all([
                     import('https://esm.sh/@tiptap/core@2.1.13'),
                     import('https://esm.sh/@tiptap/starter-kit@2.1.13'),
@@ -580,8 +670,15 @@ export function getEditorHtml(options: EditorHtmlOptions): string {
                     import('https://esm.sh/@tiptap/extension-table@2.1.13'),
                     import('https://esm.sh/@tiptap/extension-table-row@2.1.13'),
                     import('https://esm.sh/@tiptap/extension-table-cell@2.1.13'),
-                    import('https://esm.sh/@tiptap/extension-table-header@2.1.13')
+                    import('https://esm.sh/@tiptap/extension-table-header@2.1.13'),
+                    import('https://esm.sh/@tiptap/extension-task-list@2.1.13'),
+                    import('https://esm.sh/@tiptap/extension-task-item@2.1.13'),
+                    import('https://esm.sh/@tiptap/extension-code-block-lowlight@2.1.13'),
+                    import('https://esm.sh/lowlight@2.9.0/lib/common')
                 ]);
+                
+                // lowlight v2's common bundle exports { lowlight } with common languages pre-registered
+                const lowlight = lowlightModule.lowlight;
                 
                 loadingEl.style.display = 'none';
                 
@@ -630,18 +727,25 @@ export function getEditorHtml(options: EditorHtmlOptions): string {
                     // Table state
                     const isInTable = window.editor.isActive('table');
                     
+                    // Code block language
+                    const isCodeBlock = window.editor.isActive('codeBlock');
+                    const codeBlockAttrs = window.editor.getAttributes('codeBlock');
+                    const currentCodeLanguage = isCodeBlock ? (codeBlockAttrs.language || 'plaintext') : null;
+                    
                     return {
                         isBold: window.editor.isActive('bold'),
                         isItalic: window.editor.isActive('italic'),
                         isUnderline: window.editor.isActive('underline'),
                         isStrike: window.editor.isActive('strike'),
+                        isTaskList: window.editor.isActive('taskList'),
                         isCode: window.editor.isActive('code'),
                         isBulletList: window.editor.isActive('bulletList'),
                         isOrderedList: window.editor.isActive('orderedList'),
                         canSinkListItem: window.editor.can().sinkListItem('listItem'),
                         canLiftListItem: window.editor.can().liftListItem('listItem'),
                         isBlockquote: window.editor.isActive('blockquote'),
-                        isCodeBlock: window.editor.isActive('codeBlock'),
+                        isCodeBlock: isCodeBlock,
+                        currentCodeLanguage: currentCodeLanguage,
                         isHeading1: window.editor.isActive('heading', { level: 1 }),
                         isHeading2: window.editor.isActive('heading', { level: 2 }),
                         isHeading3: window.editor.isActive('heading', { level: 3 }),
@@ -710,6 +814,7 @@ export function getEditorHtml(options: EditorHtmlOptions): string {
                     extensions: [
                         StarterKit.configure({
                             heading: { levels: [1, 2, 3, 4, 5, 6] },
+                            codeBlock: false, // Use CodeBlockLowlight instead
                         }),
                         Underline,
                         Placeholder.configure({
@@ -743,8 +848,46 @@ export function getEditorHtml(options: EditorHtmlOptions): string {
                             },
                         }),
                         TableRow,
-                        TableCell,
-                        TableHeader,
+                        // Extend TableCell to support backgroundColor
+                        TableCell.extend({
+                            addAttributes() {
+                                return {
+                                    ...this.parent?.(),
+                                    backgroundColor: {
+                                        default: null,
+                                        renderHTML: attributes => {
+                                            if (!attributes.backgroundColor) return {};
+                                            return { style: \`background-color: \${attributes.backgroundColor}\` };
+                                        },
+                                        parseHTML: element => element.style.backgroundColor || null,
+                                    },
+                                };
+                            },
+                        }),
+                        // Extend TableHeader to support backgroundColor too
+                        TableHeader.extend({
+                            addAttributes() {
+                                return {
+                                    ...this.parent?.(),
+                                    backgroundColor: {
+                                        default: null,
+                                        renderHTML: attributes => {
+                                            if (!attributes.backgroundColor) return {};
+                                            return { style: \`background-color: \${attributes.backgroundColor}\` };
+                                        },
+                                        parseHTML: element => element.style.backgroundColor || null,
+                                    },
+                                };
+                            },
+                        }),
+                        TaskList,
+                        TaskItem.configure({
+                            nested: true,
+                        }),
+                        CodeBlockLowlight.configure({
+                            lowlight,
+                            defaultLanguage: 'plaintext',
+                        }),
                         BubbleMenu.configure({
                             element: document.getElementById('bubble-menu'),
                             tippyOptions: {
@@ -885,6 +1028,7 @@ export function getEditorHtml(options: EditorHtmlOptions): string {
                         toggleCode: () => window.editor.chain().focus().toggleCode().run(),
                         toggleBulletList: () => window.editor.chain().focus().toggleBulletList().run(),
                         toggleOrderedList: () => window.editor.chain().focus().toggleOrderedList().run(),
+                        toggleTaskList: () => window.editor.chain().focus().toggleTaskList().run(),
                         sinkListItem: () => window.editor.chain().focus().sinkListItem('listItem').run(),
                         liftListItem: () => window.editor.chain().focus().liftListItem('listItem').run(),
                         toggleBlockquote: () => window.editor.chain().focus().toggleBlockquote().run(),
@@ -899,7 +1043,14 @@ export function getEditorHtml(options: EditorHtmlOptions): string {
                         setLink: () => params?.href && window.editor.chain().focus().setLink({ href: params.href }).run(),
                         unsetLink: () => window.editor.chain().focus().unsetLink().run(),
                         // Commands for highlight, color, YouTube, and Image
-                        setHighlight: () => window.editor.chain().focus().setHighlight({ color: params?.color }).run(),
+                        setHighlight: () => {
+                            // Add ~30% opacity to highlight colors for subtle highlighting
+                            let color = params?.color;
+                            if (color && color.startsWith('#') && color.length === 7) {
+                                color = color + '4D'; // Add 30% opacity
+                            }
+                            window.editor.chain().focus().setHighlight({ color }).run();
+                        },
                         unsetHighlight: () => window.editor.chain().focus().unsetHighlight().run(),
                         setColor: () => window.editor.chain().focus().setColor(params?.color).run(),
                         unsetColor: () => window.editor.chain().focus().unsetColor().run(),
@@ -927,6 +1078,20 @@ export function getEditorHtml(options: EditorHtmlOptions): string {
                         deleteRow: () => window.editor.chain().focus().deleteRow().run(),
                         deleteColumn: () => window.editor.chain().focus().deleteColumn().run(),
                         deleteTable: () => window.editor.chain().focus().deleteTable().run(),
+                        setCellBackground: () => {
+                            if (params?.color) {
+                                window.editor.chain().focus().setCellAttribute('backgroundColor', params.color).run();
+                            }
+                        },
+                        unsetCellBackground: () => {
+                            window.editor.chain().focus().setCellAttribute('backgroundColor', null).run();
+                        },
+                        // Code block language
+                        setCodeBlockLanguage: () => {
+                            if (params?.language) {
+                                window.editor.chain().focus().updateAttributes('codeBlock', { language: params.language }).run();
+                            }
+                        },
                     };
                     
                     if (commands[command]) {

@@ -22,6 +22,7 @@
     "@react-navigation/native": "^7.1.8",
     "drizzle-orm": "^0.45.1",
     "expo": "~54.0.31",
+    "expo-clipboard": "^8.0.8",
     "expo-constants": "~18.0.13",
     "expo-dev-client": "~6.0.20",
     "expo-font": "~14.0.10",

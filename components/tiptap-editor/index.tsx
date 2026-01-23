@@ -1,11 +1,12 @@
 import { useTheme } from '@react-navigation/native';
+import * as ExpoClipboard from 'expo-clipboard';
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { Keyboard, KeyboardAvoidingView, Linking, Platform, StyleSheet, View } from 'react-native';
+import { Keyboard, KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
 
-import { getEditorHtml } from './editor-html';
+import { ImageGallery } from './image-gallery';
 import { EditorToolbar } from './toolbar';
-import { EditorState, initialEditorState, TipTapEditorProps, TipTapEditorRef } from './types';
+import { EditorState, initialEditorState, PopupType, TipTapEditorProps, TipTapEditorRef } from './types';
 
 /**
  * TipTap-based rich text editor component for React Native.
@@ -31,16 +32,20 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
         const [editorState, setEditorState] = useState<EditorState>(initialEditorState);
         const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
         const [isPopupOpen, setIsPopupOpen] = useState(false);
+        const [activePopup, setActivePopup] = useState<PopupType>(null);
+        const [selectedImageAttrs, setSelectedImageAttrs] = useState<any>(null);
+        const [galleryImages, setGalleryImages] = useState<any[]>([]);
+        const [galleryCurrentIndex, setGalleryCurrentIndex] = useState(0);
         const contentResolverRef = useRef<((html: string) => void) | null>(null);
 
         const sendCommand = useCallback(
             (command: string, params: Record<string, unknown> = {}) => {
-                if (!webViewRef.current || !isReady) return;
+                if (!webViewRef.current) return;
                 const paramsStr = JSON.stringify(params).replace(/'/g, "\\'");
                 const js = `window.handleCommand && window.handleCommand('${command}', ${paramsStr}); true;`;
                 webViewRef.current.injectJavaScript(js);
             },
-            [isReady]
+            []
         );
 
         useImperativeHandle(
@@ -79,6 +84,13 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
                     switch (data.type) {
                         case 'ready':
                             setIsReady(true);
+                            sendCommand('setOptions', {
+                                isDark: dark,
+                                primaryColor: colors.primary,
+                                content: initialContent,
+                                placeholder,
+                                autofocus,
+                            });
                             break;
                         case 'content':
                             onContentChange?.(data.html);
@@ -95,26 +107,45 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
                         case 'error':
                             console.warn('TipTap Editor error:', data.message);
                             break;
+                        case 'copyToClipboard':
+                            if (data.content) {
+                                ExpoClipboard.setStringAsync(data.content);
+                            }
+                            break;
                         case 'focus':
                             // Focus handled via keyboard listeners
                             break;
                         case 'blur':
                             // Blur handled via keyboard listeners
                             break;
-                        case 'openLink':
-                            if (data.href) {
-                                Linking.openURL(data.href).catch((err) => {
-                                    console.warn('Failed to open link:', err);
-                                });
-                            }
+                        case 'imageSelected':
+                            console.log('Image selected:', data);
+                            setSelectedImageAttrs(data);
+                            setGalleryImages(data.images || []);
+                            setGalleryCurrentIndex(data.currentIndex || 0);
+                            setActivePopup('imageActions');
+                            setIsPopupOpen(true);
+                            break;
+                        case 'codeBlockSelected':
+                            setActivePopup('codeLanguage');
+                            setIsPopupOpen(true);
                             break;
                     }
                 } catch (e) {
                     console.warn('Failed to parse WebView message:', e);
                 }
             },
-            [onContentChange]
+            [onContentChange, dark, colors.primary, initialContent, placeholder, autofocus, sendCommand]
         );
+
+        useEffect(() => {
+            if (isReady) {
+                sendCommand('setOptions', {
+                    isDark: dark,
+                    primaryColor: colors.primary,
+                });
+            }
+        }, [dark, colors.primary, isReady, sendCommand]);
 
         useEffect(() => {
             const showSubscription = Keyboard.addListener(
@@ -124,7 +155,6 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
             const hideSubscription = Keyboard.addListener(
                 Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
                 () => {
-                    // Don't hide toolbar if popup is open
                     if (!isPopupOpen) {
                         setIsKeyboardVisible(false);
                     }
@@ -144,32 +174,19 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
 
         const handlePopupStateChange = useCallback((isOpen: boolean) => {
             setIsPopupOpen(isOpen);
-            // When popup closes and keyboard is not visible, hide toolbar
-            if (!isOpen) {
-                // Small delay to allow keyboard to potentially reappear
-                setTimeout(() => {
-                    // Check keyboard state again
-                    // If keyboard is not visible within this time, the toolbar will hide naturally
-                }, 100);
-            }
         }, []);
 
-        const htmlContent = getEditorHtml({
-            isDark: dark,
-            primaryColor: colors.primary,
-            initialContent,
-            placeholder,
-            autofocus,
-        });
-
-        // Show toolbar if keyboard is visible OR if popup is open
         const showToolbar = isKeyboardVisible || isPopupOpen;
+
+        const source = __DEV__
+            ? { uri: 'http://192.168.7.9:5174' }
+            : require('./assets/editor.html');
 
         return (
             <View style={styles.container}>
                 <WebView
                     ref={webViewRef}
-                    source={{ html: htmlContent, baseUrl: 'https://localhost' }}
+                    source={source}
                     onMessage={handleMessage}
                     scrollEnabled={true}
                     keyboardDisplayRequiresUserAction={false}
@@ -180,6 +197,7 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
                     domStorageEnabled={true}
                     allowsInlineMediaPlayback={true}
                     mixedContentMode="always"
+                    contentInsetAdjustmentBehavior="never"
                     onError={(syntheticEvent) => {
                         const { nativeEvent } = syntheticEvent;
                         console.warn('WebView error: ', nativeEvent);
@@ -204,13 +222,59 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
                         >
                             <EditorToolbar
                                 editorState={editorState}
-                                onCommand={sendCommand}
                                 onDismissKeyboard={handleDismissKeyboard}
-                                onPopupStateChange={handlePopupStateChange}
+                                activePopup={activePopup === 'imageActions' ? null : activePopup}
+                                onActivePopupChange={(type) => {
+                                    setActivePopup(type);
+                                    handlePopupStateChange(!!type);
+                                }}
+                                onPopupStateChange={(isOpen) => {
+                                    if (activePopup !== 'imageActions') {
+                                        handlePopupStateChange(isOpen);
+                                    }
+                                }}
+                                onCommand={sendCommand}
                             />
                         </View>
                     )}
                 </KeyboardAvoidingView>
+
+                {/* Full Screen Image Gallery */}
+                <ImageGallery
+                    visible={isPopupOpen && activePopup === 'imageActions'}
+                    images={galleryImages}
+                    initialIndex={galleryCurrentIndex}
+                    onClose={() => {
+                        setActivePopup(null);
+                        setIsPopupOpen(false);
+                    }}
+                    onNavigate={(index) => {
+                        setGalleryCurrentIndex(index);
+                        if (galleryImages[index]) {
+                            sendCommand('selectImageAtPosition', { position: galleryImages[index].position });
+                        }
+                    }}
+                    onResize={(width) => {
+                        sendCommand('updateImage', { width });
+                        setActivePopup(null);
+                        setIsPopupOpen(false);
+                    }}
+                    onDownload={() => {
+                        console.log('Download image (dummy)');
+                        setActivePopup(null);
+                        setIsPopupOpen(false);
+                    }}
+                    onCut={() => {
+                        sendCommand('cutImage');
+                        setActivePopup(null);
+                        setIsPopupOpen(false);
+                    }}
+                    onDelete={() => {
+                        sendCommand('deleteImage');
+                        setActivePopup(null);
+                        setIsPopupOpen(false);
+                    }}
+                />
             </View>
         );
     }
@@ -224,6 +288,8 @@ const styles = StyleSheet.create({
     },
     webView: {
         flex: 1,
+        // transparent background to let container color show through if needed
+        backgroundColor: 'transparent',
     },
     toolbarContainer: {
         width: '95%',

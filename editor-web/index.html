@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <title>TipTap Editor</title>
+    <!-- Modern monospace font for code blocks -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-color: #FFFFFF;
+            --text-color: #000000;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-color: #000000;
+                --text-color: #FFFFFF;
+            }
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        #loading {
+            /* Center loading text */
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: -apple-system, system-ui, sans-serif;
+            color: var(--text-color);
+            opacity: 0.6;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="editor-container">
+        <div id="loading">Loading...</div>
+        <div id="editor-content"></div>
+        <div id="display" dir="auto"></div>
+    </div>
+
+    <div id="bubble-menu" class="bubble-menu" style="visibility: hidden;">
+        <!-- Alignment -->
+        <button id="btn-align-left">
+            <svg viewBox="0 0 24 24">
+                <path d="M3 21h18v-2H3v2zm0-4h12v-2H3v2zm0-4h18v-2H3v2zm0-4h12V7H3v2zm0-6v2h18V3H3z" />
+            </svg>
+        </button>
+        <button id="btn-align-center">
+            <svg viewBox="0 0 24 24">
+                <path d="M7 15v2h10v-2H7zm-4 6h18v-2H3v2zm0-8h18v-2H3v2zm4-6v2h10V7H7zM3 3v2h18V3H3z" />
+            </svg>
+        </button>
+        <button id="btn-align-right">
+            <svg viewBox="0 0 24 24">
+                <path d="M3 21h18v-2H3v2zm6-4h12v-2H9v2zm-6-4h18v-2H3v2zm6-4h12V7H9v2zm-6-6v2h18V3H3z" />
+            </svg>
+        </button>
+
+        <div class="separator"></div>
+
+        <!-- Width -->
+        <button id="btn-width-full">
+            <span>100%</span>
+        </button>
+        <button id="btn-width-med">
+            <span>75%</span>
+        </button>
+        <button id="btn-width-small">
+            <span>50%</span>
+        </button>
+    </div>
+
+    <script>
+        window.onerror = function (msg, url, line, col, error) {
+            var loading = document.getElementById('loading');
+            if (loading) {
+                loading.textContent = 'Error: ' + msg + ' (' + url + ':' + line + ')';
+                loading.style.color = 'red';
+            }
+        };
+    </script>
+    <script type="module" src="/src/main.ts"></script>
+</body>
+
+</html>

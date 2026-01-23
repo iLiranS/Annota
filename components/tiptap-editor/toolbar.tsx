@@ -1,5 +1,5 @@
 import { useTheme } from '@react-navigation/native';
-import React, { useState } from 'react';
+import React from 'react';
 import { Keyboard, ScrollView, StyleSheet, View } from 'react-native';
 
 import { HeadingLevel } from '@/constants/editor';
@@ -11,6 +11,8 @@ interface EditorToolbarProps {
     editorState: EditorState;
     onCommand: (command: string, params?: Record<string, unknown>) => void;
     onDismissKeyboard: () => void;
+    activePopup: PopupType;
+    onActivePopupChange: (type: PopupType) => void;
     /** Callback to notify parent when popup opens/closes - helps keep toolbar visible */
     onPopupStateChange?: (isOpen: boolean) => void;
 }
@@ -23,10 +25,11 @@ export function EditorToolbar({
     editorState,
     onCommand,
     onDismissKeyboard,
+    activePopup,
+    onActivePopupChange,
     onPopupStateChange
 }: EditorToolbarProps) {
     const { dark, colors } = useTheme();
-    const [activePopup, setActivePopup] = useState<PopupType>(null);
 
     const handleDismiss = () => {
         onDismissKeyboard();
@@ -34,12 +37,12 @@ export function EditorToolbar({
     };
 
     const openPopup = (type: PopupType) => {
-        setActivePopup(type);
+        onActivePopupChange(type);
         onPopupStateChange?.(true);
     };
 
     const closePopup = () => {
-        setActivePopup(null);
+        onActivePopupChange(null);
         onPopupStateChange?.(false);
     };
 
@@ -133,6 +136,11 @@ export function EditorToolbar({
                             icon="format-list-numbered"
                             isActive={editorState.isOrderedList}
                             onPress={() => onCommand('toggleOrderedList')}
+                        />
+                        <ToolbarButton
+                            icon="check-box"
+                            isActive={editorState.isTaskList}
+                            onPress={() => onCommand('toggleTaskList')}
                         />
 
                         {/* Tab In/Out for nested lists */}
@@ -306,6 +314,21 @@ export function EditorToolbar({
                     type="image"
                     onSubmit={(url: string) => {
                         onCommand('setImage', { src: url });
+                        closePopup();
+                    }}
+                    onClose={closePopup}
+                />
+            )}
+
+
+
+            {activePopup === 'codeLanguage' && (
+                <ToolbarPopup
+                    visible={true}
+                    type="codeLanguage"
+                    currentLanguage={editorState.currentCodeLanguage}
+                    onSelect={(language: string) => {
+                        onCommand('setCodeBlockLanguage', { language });
                         closePopup();
                     }}
                     onClose={closePopup}
