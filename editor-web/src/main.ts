@@ -187,6 +187,8 @@ let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 let scrollDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 let keyboardHeight = 0; // Passed from native app
 
+
+
 // Communicator
 function sendMessage(data: any) {
     if (window.ReactNativeWebView) {
@@ -376,35 +378,37 @@ function getEditorState() {
 }
 
 function scrollCursorIntoView() {
+    // Let ProseMirror handle scrolling natively - it already has scrollIntoView built in
+    // We just need to ensure proper padding exists for the keyboard
     if (!window.editor) return;
+
     // Debounce to avoid excessive calls
     if (scrollDebounceTimer) clearTimeout(scrollDebounceTimer);
-    scrollDebounceTimer = setTimeout(doScrollCursorIntoView, 50);
-}
+    scrollDebounceTimer = setTimeout(() => {
+        if (!window.editor) return;
 
-function doScrollCursorIntoView() {
-    if (!window.editor) return;
+        try {
+            // Get the cursor position and use native scrollIntoView
+            const { from } = window.editor.state.selection;
+            const domAtPos = window.editor.view.domAtPos(from);
 
-    // Simply use ProseMirror's native scrollIntoView which respects the padding-bottom we set
-    // The padding-bottom on editorEl ensures there's space to scroll cursor above keyboard/toolbar
-    const { from } = window.editor.state.selection;
-    try {
-        const domAtPos = window.editor.view.domAtPos(from);
-        if (domAtPos && domAtPos.node) {
-            const element = domAtPos.node.nodeType === Node.TEXT_NODE
-                ? domAtPos.node.parentElement
-                : domAtPos.node as Element;
+            if (domAtPos && domAtPos.node) {
+                const element = domAtPos.node.nodeType === Node.TEXT_NODE
+                    ? domAtPos.node.parentElement
+                    : domAtPos.node as Element;
 
-            if (element && element.scrollIntoView) {
-                element.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+                if (element && element instanceof HTMLElement) {
+                    // Use scrollIntoView with block: 'nearest' to minimize scrolling
+                    element.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+                }
             }
+        } catch (e) {
+            // Silently fail - ProseMirror's own scroll handling will work
         }
-    } catch {
-        // Fallback: do nothing, rely on editor's own scroll handling
-    }
+    }, 100);
 }
 
-// Update padding based on keyboard height from native
+
 
 
 // Extensions setup
@@ -609,10 +613,12 @@ window.setupEditor = function (options: any) {
                 Youtube.configure({
                     width: 320,
                     height: 180,
+                    nocookie: true, // Use youtube-nocookie.com to avoid tracking/embedding restrictions
                     HTMLAttributes: {
-                        referrerPolicy: 'strict-origin-when-cross-origin' as any,
+                        referrerPolicy: 'no-referrer-when-downgrade' as any,
                         // Ensure it plays nice on mobile
                         playsinline: 'true',
+                        allow: 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share',
                     },
                 }),
                 CustomImage.configure({ inline: false, allowBase64: true }),
@@ -679,7 +685,7 @@ window.setupEditor = function (options: any) {
             },
             onSelectionUpdate: function () {
                 sendMessage({ type: 'state', state: getEditorState() });
-                scrollCursorIntoView();
+                // scrollCursorIntoView();
             },
             onTransaction: function () {
                 sendMessage({ type: 'state', state: getEditorState() });
@@ -717,7 +723,7 @@ window.handleCommand = function (command, params) {
         return;
     }
 
-    if (command !== 'blur' && command !== 'getContent' && command !== 'setKeyboardHeight' && command !== 'setToolbarHeight') {
+    if (command !== 'blur' && command !== 'getContent' && command !== 'setKeyboardHeight') {
         if (!isInEditMode) enterEditMode();
     }
 
@@ -826,6 +832,12 @@ window.handleCommand = function (command, params) {
         case 'setKeyboardHeight':
             if (typeof params?.height === 'number') {
                 keyboardHeight = params.height;
+                // Add padding to container so content can scroll above keyboard
+                const container = document.getElementById('editor-container');
+                if (container) {
+                    container.style.paddingBottom = keyboardHeight > 0 ? `${keyboardHeight + 20}px` : '80px';
+                }
+                scrollCursorIntoView();
             }
             break;
     }

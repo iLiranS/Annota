@@ -360,6 +360,7 @@ const styles = StyleSheet.create({
     toolbar: {
         paddingHorizontal: 8,
         paddingVertical: 6,
+        height: 50,
     },
     toolbarContainer: {
         flexDirection: 'row',

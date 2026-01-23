@@ -37,7 +37,7 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
         const [selectedImageAttrs, setSelectedImageAttrs] = useState<any>(null);
         const [galleryImages, setGalleryImages] = useState<any[]>([]);
         const [galleryCurrentIndex, setGalleryCurrentIndex] = useState(0);
-        const [toolbarHeight, setToolbarHeight] = useState(50); // Default estimate
+        const [toolbarHeight, setToolbarHeight] = useState(50); // it's height is fixed 50
         const contentResolverRef = useRef<((html: string) => void) | null>(null);
         const { keyboardHeight } = useKeyboard();
 
@@ -151,16 +151,28 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
         }, [dark, colors.primary, isReady, sendCommand]);
 
         useEffect(() => {
+            const handleKeyboardShow = (height: number) => {
+                setIsKeyboardVisible(true);
+                // Send total obscured height (keyboard + toolbar) to webview
+                // Use height from event + current toolbar height
+                sendCommand('setKeyboardHeight', { height: height + toolbarHeight });
+            };
+
             const showSubscription = Keyboard.addListener(
                 Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
                 (e) => {
-                    setIsKeyboardVisible(true);
-                    // Send total obscured height (keyboard + toolbar) to webview
-                    if (e.endCoordinates?.height) {
-                        sendCommand('setKeyboardHeight', { height: keyboardHeight + toolbarHeight });
-                    }
+                    handleKeyboardShow(e.endCoordinates.height);
                 }
             );
+
+            // Robustness: Re-scroll after keyboard animation fully finishes (iOS mainly)
+            let didShowSubscription: any = null;
+            if (Platform.OS === 'ios') {
+                didShowSubscription = Keyboard.addListener('keyboardDidShow', (e) => {
+                    handleKeyboardShow(e.endCoordinates.height);
+                });
+            }
+
             const hideSubscription = Keyboard.addListener(
                 Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
                 () => {
@@ -174,9 +186,10 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
 
             return () => {
                 showSubscription.remove();
+                didShowSubscription?.remove();
                 hideSubscription.remove();
             };
-        }, [isPopupOpen, sendCommand]);
+        }, [isPopupOpen, sendCommand, toolbarHeight]);
 
         const handleDismissKeyboard = useCallback(() => {
             sendCommand('blur');
