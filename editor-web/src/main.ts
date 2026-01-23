@@ -185,6 +185,7 @@ const displayEl = document.getElementById('display')!;
 let isInEditMode = false;
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 let scrollDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+let keyboardHeight = 0; // Passed from native app
 
 // Communicator
 function sendMessage(data: any) {
@@ -376,28 +377,35 @@ function getEditorState() {
 
 function scrollCursorIntoView() {
     if (!window.editor) return;
+    // Debounce to avoid excessive calls
     if (scrollDebounceTimer) clearTimeout(scrollDebounceTimer);
-    // Use requestAnimationFrame for smoother sync with render
-    requestAnimationFrame(doScrollCursorIntoView);
+    scrollDebounceTimer = setTimeout(doScrollCursorIntoView, 50);
 }
 
 function doScrollCursorIntoView() {
     if (!window.editor) return;
+
+    // Simply use ProseMirror's native scrollIntoView which respects the padding-bottom we set
+    // The padding-bottom on editorEl ensures there's space to scroll cursor above keyboard/toolbar
     const { from } = window.editor.state.selection;
-    const coords = window.editor.view.coordsAtPos(from);
-    if (!coords) return;
+    try {
+        const domAtPos = window.editor.view.domAtPos(from);
+        if (domAtPos && domAtPos.node) {
+            const element = domAtPos.node.nodeType === Node.TEXT_NODE
+                ? domAtPos.node.parentElement
+                : domAtPos.node as Element;
 
-    const viewportHeight = window.innerHeight;
-    const cursorBottom = coords.bottom;
-    const TOOLBAR_SAFE_OFFSET = 150; // Toolbar + Keyboard accessory + Margin
-    const toolbarTop = viewportHeight - TOOLBAR_SAFE_OFFSET;
-
-    if (cursorBottom > toolbarTop) {
-        // Scroll just enough to bring it into view with margin
-        const scrollAmount = cursorBottom - toolbarTop;
-        window.scrollBy({ top: scrollAmount, behavior: 'auto' }); // 'auto' (instant) prevents "clumsy" smooth scroll lag
+            if (element && element.scrollIntoView) {
+                element.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+            }
+        }
+    } catch {
+        // Fallback: do nothing, rely on editor's own scroll handling
     }
 }
+
+// Update padding based on keyboard height from native
+
 
 // Extensions setup
 const CustomImage = Image.extend({
@@ -678,8 +686,6 @@ window.setupEditor = function (options: any) {
             }
         });
 
-        editorEl.style.paddingBottom = '50vh'; // Huge padding to allow scrolling content to middle of screen
-
         loadingEl.style.display = 'none';
 
         if (!autofocus) {
@@ -711,7 +717,7 @@ window.handleCommand = function (command, params) {
         return;
     }
 
-    if (command !== 'blur' && command !== 'getContent') {
+    if (command !== 'blur' && command !== 'getContent' && command !== 'setKeyboardHeight' && command !== 'setToolbarHeight') {
         if (!isInEditMode) enterEditMode();
     }
 
@@ -815,6 +821,11 @@ window.handleCommand = function (command, params) {
         case 'selectImageAtPosition':
             if (typeof params?.position === 'number') {
                 e.chain().focus().setNodeSelection(params.position).run();
+            }
+            break;
+        case 'setKeyboardHeight':
+            if (typeof params?.height === 'number') {
+                keyboardHeight = params.height;
             }
             break;
     }

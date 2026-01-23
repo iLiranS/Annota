@@ -1,7 +1,8 @@
+import { useKeyboard } from '@react-native-community/hooks';
 import { useTheme } from '@react-navigation/native';
 import * as ExpoClipboard from 'expo-clipboard';
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { Keyboard, KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
+import { Keyboard, Platform, StyleSheet, View } from 'react-native';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
 
 import { ImageGallery } from './image-gallery';
@@ -36,7 +37,9 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
         const [selectedImageAttrs, setSelectedImageAttrs] = useState<any>(null);
         const [galleryImages, setGalleryImages] = useState<any[]>([]);
         const [galleryCurrentIndex, setGalleryCurrentIndex] = useState(0);
+        const [toolbarHeight, setToolbarHeight] = useState(50); // Default estimate
         const contentResolverRef = useRef<((html: string) => void) | null>(null);
+        const { keyboardHeight } = useKeyboard();
 
         const sendCommand = useCallback(
             (command: string, params: Record<string, unknown> = {}) => {
@@ -150,7 +153,13 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
         useEffect(() => {
             const showSubscription = Keyboard.addListener(
                 Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-                () => setIsKeyboardVisible(true)
+                (e) => {
+                    setIsKeyboardVisible(true);
+                    // Send total obscured height (keyboard + toolbar) to webview
+                    if (e.endCoordinates?.height) {
+                        sendCommand('setKeyboardHeight', { height: keyboardHeight + toolbarHeight });
+                    }
+                }
             );
             const hideSubscription = Keyboard.addListener(
                 Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
@@ -158,6 +167,8 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
                     if (!isPopupOpen) {
                         setIsKeyboardVisible(false);
                     }
+                    // Reset keyboard height when hidden
+                    sendCommand('setKeyboardHeight', { height: 0 });
                 }
             );
 
@@ -165,7 +176,7 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
                 showSubscription.remove();
                 hideSubscription.remove();
             };
-        }, [isPopupOpen]);
+        }, [isPopupOpen, sendCommand]);
 
         const handleDismissKeyboard = useCallback(() => {
             sendCommand('blur');
@@ -219,40 +230,35 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
                     }}
                 />
 
-                <KeyboardAvoidingView
-                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                    style={styles.keyboardAvoidingView}
-                    pointerEvents="box-none"
-                    keyboardVerticalOffset={Platform.OS === 'ios' ? 120 : 0}
-                >
-                    {showToolbar && (
-                        <View
-                            style={[
-                                styles.toolbarContainer,
-                                {
-                                    backgroundColor: dark ? '#1C1C1E' : '#F2F2F7',
-                                    borderColor: dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
-                                },
-                            ]}
-                        >
-                            <EditorToolbar
-                                editorState={editorState}
-                                onDismissKeyboard={handleDismissKeyboard}
-                                activePopup={activePopup === 'imageActions' ? null : activePopup}
-                                onActivePopupChange={(type) => {
-                                    setActivePopup(type);
-                                    handlePopupStateChange(!!type);
-                                }}
-                                onPopupStateChange={(isOpen) => {
-                                    if (activePopup !== 'imageActions') {
-                                        handlePopupStateChange(isOpen);
-                                    }
-                                }}
-                                onCommand={sendCommand}
-                            />
-                        </View>
-                    )}
-                </KeyboardAvoidingView>
+                {showToolbar && (
+                    <View
+                        style={[
+                            styles.toolbarContainer,
+                            { marginBottom: keyboardHeight },
+                            {
+                                backgroundColor: dark ? '#1C1C1E' : '#F2F2F7',
+                                borderTopColor: dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+                            },
+                        ]}
+                    >
+                        <EditorToolbar
+                            editorState={editorState}
+                            onDismissKeyboard={handleDismissKeyboard}
+                            activePopup={activePopup === 'imageActions' ? null : activePopup}
+                            onActivePopupChange={(type) => {
+                                setActivePopup(type);
+                                handlePopupStateChange(!!type);
+                            }}
+                            onPopupStateChange={(isOpen) => {
+                                if (activePopup !== 'imageActions') {
+                                    handlePopupStateChange(isOpen);
+                                }
+                            }}
+                            onCommand={sendCommand}
+                        />
+                    </View>
+                )}
+
 
                 {/* Full Screen Image Gallery */}
                 <ImageGallery
@@ -290,7 +296,7 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
                         setIsPopupOpen(false);
                     }}
                 />
-            </View>
+            </View >
         );
     }
 );
@@ -307,11 +313,10 @@ const styles = StyleSheet.create({
         backgroundColor: 'transparent',
     },
     toolbarContainer: {
-        width: '95%',
+        width: '100%',
         alignSelf: 'center',
-        borderRadius: 12,
         overflow: 'hidden',
-        borderWidth: 1,
+        borderTopWidth: 1,
     },
     keyboardAvoidingView: {
         position: 'absolute',
