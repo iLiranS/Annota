@@ -1,17 +1,17 @@
+import { useAppTheme } from '@/hooks/use-app-theme';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useTheme } from '@react-navigation/native';
 import { Stack, useRouter } from 'expo-router';
 import { Pressable } from 'react-native';
 
 export default function SettingsLayout() {
-    const { colors, dark } = useTheme();
+    const { colors } = useAppTheme();
     const router = useRouter();
 
     return (
         <Stack
             screenOptions={{
                 headerStyle: {
-                    backgroundColor: colors.background,
+                    backgroundColor: colors.card,
                 },
                 headerTintColor: colors.text,
                 headerTitleStyle: {

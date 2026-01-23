@@ -3,20 +3,20 @@ import RecentNotes from '@/components/notes/recent-notes';
 import TaskItem from '@/components/task-item';
 import ThemedText from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useAppTheme } from '@/hooks/use-app-theme';
 import { useTasksStore, type Task } from '@/stores/tasks-store';
 import { Ionicons } from '@expo/vector-icons';
 import { DrawerNavigationProp } from '@react-navigation/drawer';
-import { useTheme } from '@react-navigation/native';
 import { useNavigation, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, useColorScheme, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
   const router = useRouter();
   const navigation = useNavigation<DrawerNavigationProp<any>>();
-  const theme = useColorScheme() ?? 'light';
-  const { colors, dark } = useTheme();
+
+  const { colors, dark } = useAppTheme();
   const insets = useSafeAreaInsets();
 
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -180,8 +180,8 @@ export default function HomeScreen() {
               style={[
                 styles.emptyState,
                 {
-                  backgroundColor: dark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
-                  borderColor: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
+                  backgroundColor: colors.card,
+                  borderColor: colors.border,
                 },
               ]}
             >
@@ -201,7 +201,7 @@ export default function HomeScreen() {
             {/* Tab Switcher */}
             <View style={[
               styles.tabContainer,
-              { backgroundColor: dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }
+              { backgroundColor: colors.card }
             ]}>
               <Pressable
                 onPress={() => setActiveTab('later')}

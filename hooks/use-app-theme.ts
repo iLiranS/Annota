@@ -1,3 +1,4 @@
+import { Colors } from '@/constants/theme';
 import { useSettingsStore } from '@/stores/settings-store';
 import { DarkTheme, DefaultTheme, Theme } from '@react-navigation/native';
 import { useMemo } from 'react';
@@ -12,12 +13,17 @@ export function useAppTheme(): Theme {
     const BaseTheme = isDark ? DarkTheme : DefaultTheme;
 
     return useMemo(() => {
+        const customColors = Colors[isDark ? 'dark' : 'light'];
+
         return {
             ...BaseTheme,
             colors: {
                 ...BaseTheme.colors,
                 primary: accentColor,
-                // We can extend this further if needed, e.g. tint colors
+                background: customColors.background,
+                text: customColors.text,
+                card: customColors.card,
+                border: customColors.border,
             },
         };
     }, [isDark, accentColor, BaseTheme]);

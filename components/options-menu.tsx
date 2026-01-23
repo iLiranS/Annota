@@ -1,6 +1,6 @@
 import { getSortTypeLabel, SortType } from '@/dev-data/data';
+import { useAppTheme } from '@/hooks/use-app-theme';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useTheme } from '@react-navigation/native';
 import React, { useState } from 'react';
 import {
     Modal,
@@ -35,7 +35,7 @@ export default function OptionsMenu({
     onTrash,
     onSettings,
 }: OptionsMenuProps) {
-    const { colors, dark } = useTheme();
+    const { colors, dark } = useAppTheme();
     const insets = useSafeAreaInsets();
     const [isVisible, setIsVisible] = useState(false);
     const [showSortSubmenu, setShowSortSubmenu] = useState(false);
@@ -74,8 +74,8 @@ export default function OptionsMenu({
                     style={({ pressed }) => [
                         styles.optionsButton,
                         {
-                            backgroundColor: dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
-                            borderColor: dark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)',
+                            backgroundColor: colors.background,
+                            borderColor: colors.border,
                         },
                         pressed && styles.pressed,
                     ]}

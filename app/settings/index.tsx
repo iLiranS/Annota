@@ -1,5 +1,5 @@
 import SettingItem from '@/components/settings/setting-item';
-import { useTheme } from '@react-navigation/native';
+import { useAppTheme } from '@/hooks/use-app-theme';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function SettingsIndex() {
     const router = useRouter();
-    const { colors } = useTheme();
+    const { colors } = useAppTheme();
     const insets = useSafeAreaInsets();
 
     return (

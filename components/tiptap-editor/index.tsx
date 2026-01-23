@@ -1,10 +1,10 @@
 import { useKeyboard } from '@react-native-community/hooks';
-import { useTheme } from '@react-navigation/native';
 import * as ExpoClipboard from 'expo-clipboard';
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { Keyboard, Platform, StyleSheet, View } from 'react-native';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
 
+import { useAppTheme } from '@/hooks/use-app-theme';
 import { ImageGallery } from './image-gallery';
 import { EditorToolbar } from './toolbar';
 import { EditorState, initialEditorState, PopupType, TipTapEditorProps, TipTapEditorRef } from './types';
@@ -27,7 +27,7 @@ import { EditorState, initialEditorState, PopupType, TipTapEditorProps, TipTapEd
  */
 const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
     ({ initialContent = '', onContentChange, placeholder = 'Start typing...', autofocus = false }, ref) => {
-        const { colors, dark } = useTheme();
+        const { colors, dark } = useAppTheme();
         const webViewRef = useRef<WebView>(null);
         const [isReady, setIsReady] = useState(false);
         const [editorState, setEditorState] = useState<EditorState>(initialEditorState);
@@ -89,7 +89,7 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
                             setIsReady(true);
                             sendCommand('setOptions', {
                                 isDark: dark,
-                                primaryColor: colors.primary,
+                                colors,
                                 content: initialContent,
                                 placeholder,
                                 autofocus,
@@ -138,17 +138,17 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
                     console.warn('Failed to parse WebView message:', e);
                 }
             },
-            [onContentChange, dark, colors.primary, initialContent, placeholder, autofocus, sendCommand]
+            [onContentChange, dark, colors, initialContent, placeholder, autofocus, sendCommand]
         );
 
         useEffect(() => {
             if (isReady) {
                 sendCommand('setOptions', {
                     isDark: dark,
-                    primaryColor: colors.primary,
+                    colors,
                 });
             }
-        }, [dark, colors.primary, isReady, sendCommand]);
+        }, [dark, colors, isReady, sendCommand]);
 
         useEffect(() => {
             const handleKeyboardShow = (height: number) => {
@@ -206,6 +206,7 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
             ? { uri: 'http://192.168.7.9:5173' }
             : require('./assets/editor.html');
 
+
         const themeInjectionScript = `
             (function() {
                 var root = document.documentElement;
@@ -249,8 +250,8 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
                             styles.toolbarContainer,
                             { marginBottom: keyboardHeight },
                             {
-                                backgroundColor: dark ? '#1C1C1E' : '#F2F2F7',
-                                borderTopColor: dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+                                backgroundColor: colors.background,
+                                borderTopColor: colors.border
                             },
                         ]}
                     >

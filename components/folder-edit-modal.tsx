@@ -1,7 +1,7 @@
 import { COLOR_PALETTE } from '@/constants/colors';
+import { useAppTheme } from '@/hooks/use-app-theme';
 import { TRASH_FOLDER_ID, useNotesStore, type Folder } from '@/stores/notes-store';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useTheme } from '@react-navigation/native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     Modal,
@@ -17,7 +17,7 @@ import LocationPickerModal from './location-picker-modal';
 
 // Available folder icons
 const FOLDER_ICONS = [
-    'folder', 'folder-open', 'briefcase', 'person', 'people',
+    'folder', 'briefcase', 'person', 'people',
     'home', 'star', 'heart', 'bookmark', 'flag',
     'calendar', 'time', 'alarm', 'notifications', 'mail',
     'document', 'documents', 'archive', 'file-tray',
@@ -27,6 +27,15 @@ const FOLDER_ICONS = [
     'cart', 'card', 'cash', 'wallet', 'gift',
     'airplane', 'car', 'bicycle', 'train', 'boat',
     'fitness', 'medical', 'nutrition', 'restaurant', 'cafe',
+    'analytics', 'attach', 'bar-chart', 'basket', 'build',
+    'chatbox', 'construct', 'cube', 'diamond', 'flask',
+    'game-controller', 'hammer', 'key', 'leaf', 'mic',
+    'paw', 'pencil', 'planet', 'rocket', 'scissors',
+    'shirt', 'trophy', 'umbrella', 'videocam', 'wine',
+    'bulb', 'color-palette', 'compass', 'cut',
+    'flash', 'glasses', 'ice-cream', 'magnet', 'map',
+    'pint', 'podium', 'ribbon', 'skull', 'speedometer',
+    'thermometer', 'thunderstorm', 'watch', 'water'
 ];
 
 // Available folder colors
@@ -45,7 +54,7 @@ export default function FolderEditModal({
     defaultParentId = null,
     onClose,
 }: FolderEditModalProps) {
-    const { colors, dark } = useTheme();
+    const { colors } = useAppTheme();
     const insets = useSafeAreaInsets();
     const { folders, createFolder, updateFolder, getFolderById } = useNotesStore();
 
@@ -152,150 +161,175 @@ export default function FolderEditModal({
         <Modal
             visible={visible}
             animationType="slide"
-            presentationStyle="pageSheet"
+            transparent={true}
             onRequestClose={handleClose}
         >
-            <View style={[styles.container, { backgroundColor: colors.background }]}>
-                {/* Header */}
-                <View style={[styles.header, { borderBottomColor: colors.border }]}>
-                    <Pressable onPress={handleClose} style={styles.headerButton}>
-                        <Text style={[styles.headerButtonText, { color: colors.primary }]}>Cancel</Text>
-                    </Pressable>
-                    <Text style={[styles.headerTitle, { color: colors.text }]}>
-                        {isCreateMode ? 'New Folder' : 'Edit Folder'}
-                    </Text>
-                    <Pressable
-                        onPress={handleSave}
-                        style={styles.headerButton}
-                        disabled={!name.trim()}
-                    >
-                        <Text style={[
-                            styles.headerButtonText,
-                            { color: !name.trim() ? colors.border : colors.primary }
-                        ]}>{isCreateMode ? 'Create' : 'Save'}</Text>
-                    </Pressable>
-                </View>
-
-                <ScrollView
-                    style={styles.content}
-                    contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
-                >
-                    {/* Folder Name */}
-                    <View style={styles.section}>
-                        <Text style={[styles.sectionTitle, { color: colors.text }]}>Name</Text>
-                        <TextInput
-                            style={[
-                                styles.textInput,
-                                {
-                                    backgroundColor: colors.card,
-                                    color: colors.text,
-                                    borderColor: colors.border,
-                                }
-                            ]}
-                            value={name}
-                            onChangeText={setName}
-                            placeholder="Folder name"
-                            placeholderTextColor={colors.text + '50'}
-                        />
-                    </View>
-
-                    {/* Folder Icon */}
-                    <View style={styles.section}>
-                        <Text style={[styles.sectionTitle, { color: colors.text }]}>Icon</Text>
-                        <View style={[styles.iconGrid, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                            {FOLDER_ICONS.map((iconName) => (
-                                <Pressable
-                                    key={iconName}
-                                    onPress={() => setIcon(iconName)}
-                                    style={[
-                                        styles.iconButton,
-                                        icon === iconName && { backgroundColor: color + '20' }
-                                    ]}
-                                >
-                                    <Ionicons
-                                        name={iconName as keyof typeof Ionicons.glyphMap}
-                                        size={24}
-                                        color={icon === iconName ? color || folder?.color || colors.primary : colors.text + '80'}
-                                    />
-                                </Pressable>
-                            ))}
-                        </View>
-                    </View>
-
-                    {/* Folder Color */}
-                    <View style={styles.section}>
-                        <Text style={[styles.sectionTitle, { color: colors.text }]}>Color</Text>
-                        <ScrollView
-                            horizontal
-                            showsHorizontalScrollIndicator={false}
-                            style={[styles.colorScroll, { backgroundColor: colors.card, borderColor: colors.border }]}
-                            contentContainerStyle={styles.colorScrollContent}
-                        >
-                            {COLOR_PALETTE.map((colorOption) => {
-                                const colorValue = colorOption.value;
-                                return (
-                                    <Pressable
-                                        key={colorValue}
-                                        onPress={() => setColor(colorValue)}
-                                        style={[
-                                            styles.colorButton,
-                                            { backgroundColor: colorValue },
-                                            color === colorValue && {
-                                                borderWidth: 3,
-                                                borderColor: colors.primary,
-                                            }
-                                        ]}
-                                    >
-                                        {color === colorValue && (
-                                            <Ionicons name="checkmark" size={18} color="#FFFFFF" />
-                                        )}
-                                    </Pressable>
-                                );
-                            })}
-                        </ScrollView>
-                    </View>
-
-                    {/* Folder Location */}
-                    <View style={styles.section}>
-                        <Text style={[styles.sectionTitle, { color: colors.text }]}>Location</Text>
+            <View style={styles.modalOverlay}>
+                <Pressable style={styles.modalBackdrop} onPress={handleClose} />
+                <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+                    {/* Header */}
+                    <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.card }]}>
+                        <Pressable onPress={handleClose} style={styles.headerButton}>
+                            <Text style={[styles.headerButtonText, { color: colors.primary }]}>Cancel</Text>
+                        </Pressable>
+                        <Text style={[styles.headerTitle, { color: colors.text }]}>
+                            {isCreateMode ? 'New Folder' : 'Edit Folder'}
+                        </Text>
                         <Pressable
-                            onPress={() => setShowLocationPicker(true)}
-                            style={[
-                                styles.locationButton,
-                                {
-                                    backgroundColor: colors.card,
-                                    borderColor: colors.border,
-                                }
-                            ]}
+                            onPress={handleSave}
+                            style={styles.headerButton}
+                            disabled={!name.trim()}
                         >
-                            <View style={styles.locationContent}>
-                                <Ionicons name="folder" size={20} color={folder?.color || colors.primary} />
-                                <Text style={[styles.locationText, { color: colors.text }]}>
-                                    {getParentName(parentId)}
-                                </Text>
-                            </View>
-                            <Ionicons name="chevron-forward" size={20} color={colors.text + '50'} />
+                            <Text style={[
+                                styles.headerButtonText,
+                                { color: !name.trim() ? colors.border : colors.primary }
+                            ]}>{isCreateMode ? 'Create' : 'Save'}</Text>
                         </Pressable>
                     </View>
-                </ScrollView>
 
-                {/* Location Picker Modal */}
-                <LocationPickerModal
-                    visible={showLocationPicker}
-                    currentFolderId={folder?.id}
-                    selectedParentId={parentId}
-                    onSelect={(newParentId) => {
-                        setParentId(newParentId);
-                        setShowLocationPicker(false);
-                    }}
-                    onClose={() => setShowLocationPicker(false)}
-                />
+                    <ScrollView
+                        style={styles.content}
+                        contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
+                    >
+                        {/* Folder Name */}
+                        <View style={styles.section}>
+                            <Text style={[styles.sectionTitle, { color: colors.text }]}>Name</Text>
+                            <TextInput
+                                style={[
+                                    styles.textInput,
+                                    {
+                                        backgroundColor: colors.card,
+                                        color: colors.text,
+                                        borderColor: colors.border,
+                                    }
+                                ]}
+                                value={name}
+                                onChangeText={setName}
+                                placeholder="Folder name"
+                                placeholderTextColor={colors.text + '50'}
+                            />
+                        </View>
+
+                        {/* Folder Location */}
+                        <View style={styles.section}>
+                            <Text style={[styles.sectionTitle, { color: colors.text }]}>Location</Text>
+                            <Pressable
+                                onPress={() => setShowLocationPicker(true)}
+                                style={[
+                                    styles.locationButton,
+                                    {
+                                        backgroundColor: colors.card,
+                                        borderColor: colors.border,
+                                    }
+                                ]}
+                            >
+                                <View style={styles.locationContent}>
+                                    <Ionicons name="folder" size={20} color={folder?.color || colors.primary} />
+                                    <Text style={[styles.locationText, { color: colors.text }]}>
+                                        {getParentName(parentId)}
+                                    </Text>
+                                </View>
+                                <Ionicons name="chevron-forward" size={20} color={colors.text + '50'} />
+                            </Pressable>
+                        </View>
+
+                        {/* Folder Icon */}
+                        <View style={styles.section}>
+                            <Text style={[styles.sectionTitle, { color: colors.text }]}>Icon</Text>
+                            <View style={[styles.iconScrollContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                                <ScrollView
+                                    style={styles.iconScroll}
+                                    contentContainerStyle={styles.iconGrid}
+                                    nestedScrollEnabled={true}
+                                    showsVerticalScrollIndicator={true}
+                                >
+                                    {FOLDER_ICONS.map((iconName) => (
+                                        <Pressable
+                                            key={iconName}
+                                            onPress={() => setIcon(iconName)}
+                                            style={[
+                                                styles.iconButton,
+                                                icon === iconName && { backgroundColor: color + '20' }
+                                            ]}
+                                        >
+                                            <Ionicons
+                                                name={iconName as keyof typeof Ionicons.glyphMap}
+                                                size={24}
+                                                color={icon === iconName ? color || folder?.color || colors.primary : colors.text + '80'}
+                                            />
+                                        </Pressable>
+                                    ))}
+                                </ScrollView>
+                            </View>
+                        </View>
+
+                        {/* Folder Color */}
+                        <View style={styles.section}>
+                            <Text style={[styles.sectionTitle, { color: colors.text }]}>Color</Text>
+                            <ScrollView
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                style={[styles.colorScroll, { backgroundColor: colors.card, borderColor: colors.border }]}
+                                contentContainerStyle={styles.colorScrollContent}
+                            >
+                                {COLOR_PALETTE.map((colorOption) => {
+                                    const colorValue = colorOption.value;
+                                    return (
+                                        <Pressable
+                                            key={colorValue}
+                                            onPress={() => setColor(colorValue)}
+                                            style={[
+                                                styles.colorButton,
+                                                { backgroundColor: colorValue },
+                                                color === colorValue && {
+                                                    borderWidth: 3,
+                                                    borderColor: colors.primary,
+                                                }
+                                            ]}
+                                        >
+                                            {color === colorValue && (
+                                                <Ionicons name="checkmark" size={18} color="#FFFFFF" />
+                                            )}
+                                        </Pressable>
+                                    );
+                                })}
+                            </ScrollView>
+                        </View>
+                    </ScrollView>
+
+                    {/* Location Picker Modal */}
+                    <LocationPickerModal
+                        visible={showLocationPicker}
+                        currentFolderId={folder?.id}
+                        selectedParentId={parentId}
+                        onSelect={(newParentId) => {
+                            setParentId(newParentId);
+                            setShowLocationPicker(false);
+                        }}
+                        onClose={() => setShowLocationPicker(false)}
+                    />
+                </View>
             </View>
         </Modal>
     );
 }
 
 const styles = StyleSheet.create({
+    modalOverlay: {
+        flex: 1,
+        justifyContent: 'flex-end',
+        backgroundColor: 'rgba(0,0,0,0.5)',
+    },
+    modalBackdrop: {
+        ...StyleSheet.absoluteFillObject,
+    },
+    modalContent: {
+        height: '85%', // Slightly more than 70% to account for safe area
+        width: '100%',
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        overflow: 'hidden',
+    },
     container: {
         flex: 1,
     },
@@ -339,13 +373,21 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         borderWidth: 1,
     },
+    iconScrollContainer: {
+        maxHeight: 220,
+        borderRadius: 12,
+        borderWidth: 1,
+        overflow: 'hidden',
+    },
+    iconScroll: {
+        flex: 0,
+    },
     iconGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        padding: 8,
-        borderRadius: 12,
-        borderWidth: 1,
-        gap: 4,
+        padding: 12,
+        gap: 8,
+        justifyContent: 'center',
     },
     iconButton: {
         width: 44,

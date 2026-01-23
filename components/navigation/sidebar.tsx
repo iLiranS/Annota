@@ -1,3 +1,4 @@
+import { useAppTheme } from '@/hooks/use-app-theme';
 import { DAILY_NOTES_FOLDER_ID, useNotesStore, type Folder } from '@/stores/notes-store';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { DrawerContentComponentProps, DrawerContentScrollView } from '@react-navigation/drawer';
@@ -24,7 +25,7 @@ interface SidebarItemProps {
 }
 
 function SidebarItem({ icon, label, onPress, iconColor, isActive }: SidebarItemProps) {
-    const { colors } = useTheme();
+    const { colors } = useAppTheme();
 
     return (
         <Pressable
@@ -81,7 +82,7 @@ function FolderItem({ folder, onPress }: FolderItemProps) {
 function Separator() {
     const { colors } = useTheme();
     return (
-        <View style={[styles.separator, { backgroundColor: colors.border + '40' }]} />
+        <View style={[styles.separator, { backgroundColor: colors.border }]} />
     );
 }
 
@@ -137,9 +138,9 @@ export default function Sidebar(props: DrawerContentComponentProps) {
     };
 
     return (
-        <View style={[styles.container, { backgroundColor: colors.card }]}>
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
             {/* Header */}
-            <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+            <View style={[styles.header, { paddingTop: insets.top + 16, borderBottomColor: colors.border }]}>
                 <Image
                     source={require('@/assets/images/icon.png')}
                     style={styles.logo}
@@ -210,7 +211,7 @@ export default function Sidebar(props: DrawerContentComponentProps) {
             </DrawerContentScrollView>
 
             {/* Footer Section */}
-            <View style={[styles.footer, { paddingBottom: insets.bottom + 16, borderTopColor: colors.border + '40' }]}>
+            <View style={[styles.footer, { paddingBottom: insets.bottom + 16, borderTopColor: colors.border }]}>
                 <Pressable onPress={navigateToTrash} style={styles.footerItem}>
                     <Ionicons name="trash-outline" size={22} color={colors.text} />
                     <Text style={[styles.footerText, { color: colors.text }]}>Trash</Text>
@@ -235,7 +236,6 @@ const styles = StyleSheet.create({
         paddingBottom: 16,
         gap: 12,
         borderBottomWidth: StyleSheet.hairlineWidth,
-        borderBottomColor: 'rgba(128, 128, 128, 0.2)',
     },
     logo: {
         width: 32,
@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
         paddingVertical: 8,
     },
     separator: {
-        height: 1,
+        height: 0.5,
         marginHorizontal: 20,
         marginVertical: 4,
     },

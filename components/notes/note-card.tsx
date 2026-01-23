@@ -1,10 +1,10 @@
 import SwipeableItem from '@/components/swipeable-item';
 import ThemedText from '@/components/themed-text';
 import ThemedPressable from '@/components/ui/themed-pressable';
+import { useAppTheme } from '@/hooks/use-app-theme';
 import { NoteMetadata } from '@/stores/notes-store';
 import { formatRelativeDate } from '@/utils/date-formatter';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useTheme } from '@react-navigation/native';
 import { StyleSheet, View } from 'react-native';
 
 interface NoteCardProps {
@@ -22,7 +22,7 @@ export default function NoteCard({
     onDelete,
     swipeable = true
 }: NoteCardProps) {
-    const { colors, dark } = useTheme();
+    const { colors, dark } = useAppTheme();
 
     const CardContent = (
         <ThemedPressable

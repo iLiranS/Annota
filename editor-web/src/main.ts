@@ -14,6 +14,7 @@ import TaskList from '@tiptap/extension-task-list';
 import TextStyle from '@tiptap/extension-text-style';
 import Underline from '@tiptap/extension-underline';
 import Youtube from '@tiptap/extension-youtube';
+import { NodeSelection, TextSelection } from '@tiptap/pm/state';
 import StarterKit from '@tiptap/starter-kit';
 import hljs from 'highlight.js';
 import 'highlight.js/styles/atom-one-dark.css'; // Better looking theme
@@ -207,6 +208,7 @@ function showError(msg: string) {
 // Since we installed 'katex', let's fix renderLatex to use it.
 // @ts-ignore
 import renderMathInElement from 'katex/dist/contrib/auto-render.js';
+import { hexToRgba } from './helpers';
 
 function runRenderLatex() {
     renderMathInElement(displayEl, {
@@ -287,14 +289,33 @@ function enterEditMode(coords?: { x: number, y: number }) {
     // Use requestAnimationFrame instead of setTimeout to stay within gesture context
     requestAnimationFrame(() => {
         if (window.editor) {
+            // Get the editable DOM element and focus it directly (no scroll)
+            const editorDOM = window.editor.view.dom as HTMLElement;
+
             if (coords) {
                 const pos = window.editor.view.posAtCoords({ left: coords.x, top: coords.y });
                 if (pos) {
-                    window.editor.commands.focus(pos.pos);
+                    // Focus DOM without scrolling
+                    editorDOM.focus({ preventScroll: true });
+                    // Set selection without scrolling via raw transaction
+                    const selection = TextSelection.create(window.editor.state.doc, pos.pos);
+                    window.editor.view.dispatch(
+                        window.editor.state.tr
+                            .setSelection(selection)
+                            .setMeta('scrollIntoView', false)
+                    );
                     return;
                 }
             }
-            window.editor.commands.focus('end');
+            // Fallback: focus at end without scroll
+            editorDOM.focus({ preventScroll: true });
+            const endPos = window.editor.state.doc.content.size;
+            const selection = TextSelection.create(window.editor.state.doc, endPos);
+            window.editor.view.dispatch(
+                window.editor.state.tr
+                    .setSelection(selection)
+                    .setMeta('scrollIntoView', false)
+            );
         }
     });
 }
@@ -443,7 +464,13 @@ const CustomImage = Image.extend({
                 e.stopPropagation();
                 if (typeof getPos === 'function') {
                     const currentPos = getPos();
-                    editor.chain().focus().setNodeSelection(currentPos).run();
+                    // Use raw transaction with scrollIntoView: false to avoid jumping to top
+                    const nodeSelection = NodeSelection.create(editor.state.doc, currentPos);
+                    editor.view.dispatch(
+                        editor.state.tr
+                            .setSelection(nodeSelection)
+                            .setMeta('scrollIntoView', false)
+                    );
 
                     // Collect all images in the document
                     const images: { src: string; width: string; position: number }[] = [];
@@ -550,20 +577,21 @@ window.updateImage = function (attrs) {
 window.setupEditor = function (options: any) {
     const {
         isDark = false,
-        primaryColor = '#007AFF',
+        colors = {},
         content = '',
         placeholder = 'Write something...',
         autofocus = false
     } = options;
 
     // Set CSS variables for theme
-    document.documentElement.style.setProperty('--bg-color', isDark ? '#000000' : '#FFFFFF');
-    document.documentElement.style.setProperty('--text-color', isDark ? '#FFFFFF' : '#000000');
-    document.documentElement.style.setProperty('--accent-color', primaryColor);
+    document.documentElement.style.setProperty('--bg-color', colors.background);
+    document.documentElement.style.setProperty('--text-color', colors.text);
+    document.documentElement.style.setProperty('--accent-color', colors.primary);
     document.documentElement.style.setProperty('--placeholder-color', isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)');
     document.documentElement.style.setProperty('--code-bg', isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)');
     document.documentElement.style.setProperty('--code-block-bg', isDark ? '#1E1E1E' : '#F5F5F5');
     document.documentElement.style.setProperty('--border-color', isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)');
+    document.documentElement.style.setProperty('--quote-bg', hexToRgba(colors.primary, 0.2));
 
     // If editor already exists, ONLY update what's necessary, DO NOT DESTROY
     if (window.editor) {

@@ -61,7 +61,7 @@ export function EditorToolbar({
                 style={[
                     styles.toolbar,
                     {
-                        backgroundColor: dark ? '#1C1C1E' : '#F2F2F7',
+                        backgroundColor: colors.background,
                     },
                 ]}
             >
