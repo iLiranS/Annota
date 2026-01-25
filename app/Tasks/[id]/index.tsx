@@ -48,7 +48,7 @@ export default function TaskEditScreen() {
             deadline: values.deadline,
             isWholeDay: values.isWholeDay ?? false,
             completed: values.completed ?? false,
-            linkedNoteId: values.linkedNoteId,
+            folderId: values.folderId,
         });
 
         router.back();
@@ -98,7 +98,7 @@ export default function TaskEditScreen() {
                     deadline: new Date(task.deadline),
                     isWholeDay: task.isWholeDay,
                     completed: task.completed,
-                    linkedNoteId: task.linkedNoteId,
+                    folderId: task.folderId,
                 }}
                 onSubmit={handleSave}
                 onDelete={handleDelete}

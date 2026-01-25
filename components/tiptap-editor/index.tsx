@@ -258,7 +258,7 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
                         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                         style={[
                             styles.toolbarContainer,
-                            { marginBottom: 20 },
+                            { marginBottom: 25 },
 
                             {
                                 backgroundColor: colors.background,

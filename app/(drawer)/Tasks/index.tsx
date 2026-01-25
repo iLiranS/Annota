@@ -17,8 +17,8 @@ interface TaskCardProps {
 
 function TaskCard({ task, onToggle, onPress }: TaskCardProps) {
     const { colors, dark } = useTheme();
-    const { getNoteById } = useNotesStore();
-    const linkedNote = task.linkedNoteId ? getNoteById(task.linkedNoteId) : null;
+    const { getFolderById } = useNotesStore();
+    const linkedFolder = task.folderId ? getFolderById(task.folderId) : null;
 
     const now = new Date();
     const isOverdue = task.deadline < now && !task.completed;
@@ -90,11 +90,11 @@ function TaskCard({ task, onToggle, onPress }: TaskCardProps) {
                         </ThemedText>
                     </View>
 
-                    {linkedNote && (
-                        <View style={[styles.linkedNoteBadge, { backgroundColor: colors.primary + '20' }]}>
-                            <Ionicons name="document-text" size={10} color={colors.primary} />
-                            <ThemedText style={[styles.linkedNoteText, { color: colors.primary }]}>
-                                {linkedNote.title}
+                    {linkedFolder && (
+                        <View style={[styles.linkedNoteBadge, { backgroundColor: linkedFolder.color + '20' }]}>
+                            <Ionicons name="folder" size={10} color={linkedFolder.color || colors.primary} />
+                            <ThemedText style={[styles.linkedNoteText, { color: linkedFolder.color || colors.primary }]}>
+                                {linkedFolder.name}
                             </ThemedText>
                         </View>
                     )}

@@ -67,12 +67,11 @@ const CREATE_TABLES_SQL = `
     deadline INTEGER NOT NULL,
     is_whole_day INTEGER NOT NULL DEFAULT 0,
     completed INTEGER NOT NULL DEFAULT 0,
-    linked_note_id TEXT,
+    folder_id TEXT,
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL,
     is_dirty INTEGER NOT NULL DEFAULT 0,
-    last_synced_at INTEGER,
-    FOREIGN KEY (linked_note_id) REFERENCES note_metadata(id) ON DELETE SET NULL
+    last_synced_at INTEGER
   );
 
   CREATE TABLE IF NOT EXISTS tags (

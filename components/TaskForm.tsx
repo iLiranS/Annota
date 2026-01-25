@@ -1,5 +1,5 @@
 import ThemedText from '@/components/themed-text';
-import { useNotesStore, type NoteMetadata } from '@/stores/notes-store';
+import { useNotesStore, type Folder } from '@/stores/notes-store';
 import { Ionicons } from '@expo/vector-icons';
 import { zodResolver } from '@hookform/resolvers/zod';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -42,7 +42,7 @@ export default function TaskForm({
 }: TaskFormProps) {
     const { colors, dark } = useTheme();
     const insets = useSafeAreaInsets();
-    const { notes } = useNotesStore();
+    const { notes, folders } = useNotesStore();
 
     // Setup React Hook Form
     const {
@@ -59,20 +59,20 @@ export default function TaskForm({
             deadline: initialValues?.deadline ? new Date(initialValues.deadline) : new Date(initialDate.setHours(new Date().getHours() + 1)),
             isWholeDay: initialValues?.isWholeDay || false,
             completed: initialValues?.completed || false,
-            linkedNoteId: initialValues?.linkedNoteId || null,
+            folderId: initialValues?.folderId || null,
         },
     });
 
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [showTimePicker, setShowTimePicker] = useState(false);
-    const [showNotePicker, setShowNotePicker] = useState(false);
+    const [showFolderPicker, setShowFolderPicker] = useState(false);
 
-    const linkedNoteId = watch('linkedNoteId');
+    const folderId = watch('folderId');
     const deadline = watch('deadline');
     const isWholeDay = watch('isWholeDay');
     const completed = watch('completed');
 
-    const linkedNote = linkedNoteId ? notes.find((n) => n.id === linkedNoteId) : null;
+    const linkedFolder = folderId ? folders.find((f) => f.id === folderId) : null;
 
     // Reset time when Whole Day is toggled on (optional UX choice)
     useEffect(() => {
@@ -355,31 +355,31 @@ export default function TaskForm({
                     </Pressable>
                 )}
 
-                {/* Linked Note */}
+                {/* Linked Folder */}
                 <View style={[styles.field, { marginTop: 20 }]}>
                     <ThemedText style={[styles.label, { color: colors.text + '80' }]}>
-                        Linked Note (Optional)
+                        Linked Folder (Optional)
                     </ThemedText>
                     <Pressable
                         style={[
                             styles.noteSelector,
                             {
                                 backgroundColor: inputBgColor,
-                                borderColor: linkedNoteId ? colors.primary : inputBorderColor,
+                                borderColor: folderId ? colors.primary : inputBorderColor,
                             },
                         ]}
-                        onPress={() => setShowNotePicker(!showNotePicker)}
+                        onPress={() => setShowFolderPicker(!showFolderPicker)}
                     >
-                        {linkedNote ? (
+                        {linkedFolder ? (
                             <View style={styles.selectedNote}>
-                                <Ionicons name="document-text" size={18} color={colors.primary} />
+                                <Ionicons name="folder" size={18} color={linkedFolder.color || colors.primary} />
                                 <ThemedText style={styles.selectedNoteText} numberOfLines={1}>
-                                    {linkedNote.title}
+                                    {linkedFolder.name}
                                 </ThemedText>
                                 <Pressable
                                     onPress={(e) => {
                                         e.stopPropagation();
-                                        setValue('linkedNoteId', null);
+                                        setValue('folderId', null);
                                     }}
                                     hitSlop={8}
                                 >
@@ -388,21 +388,21 @@ export default function TaskForm({
                             </View>
                         ) : (
                             <View style={styles.notePlaceholder}>
-                                <Ionicons name="add-circle-outline" size={18} color={colors.text + '50'} />
+                                <Ionicons name="folder-outline" size={18} color={colors.text + '50'} />
                                 <ThemedText style={[styles.notePlaceholderText, { color: colors.text + '50' }]}>
-                                    Link a note
+                                    Link a folder
                                 </ThemedText>
                             </View>
                         )}
                         <Ionicons
-                            name={showNotePicker ? 'chevron-up' : 'chevron-down'}
+                            name={showFolderPicker ? 'chevron-up' : 'chevron-down'}
                             size={18}
                             color={colors.text + '50'}
                         />
                     </Pressable>
 
-                    {/* Note Picker Dropdown */}
-                    {showNotePicker && (
+                    {/* Folder Picker Dropdown */}
+                    {showFolderPicker && (
                         <View
                             style={[
                                 styles.notePickerDropdown,
@@ -413,52 +413,43 @@ export default function TaskForm({
                             ]}
                         >
                             <ScrollView nestedScrollEnabled style={{ maxHeight: 200 }}>
-                                {notes.map((note: NoteMetadata) => (
-                                    <Pressable
-                                        key={note.id}
-                                        style={[
-                                            styles.notePickerItem,
-                                            linkedNoteId === note.id && {
-                                                backgroundColor: colors.primary + '15',
-                                            },
-                                        ]}
-                                        onPress={() => {
-                                            setValue('linkedNoteId', note.id);
-                                            setShowNotePicker(false);
-                                        }}
-                                    >
-                                        <Ionicons
-                                            name="document-text"
-                                            size={16}
-                                            color={linkedNoteId === note.id ? colors.primary : colors.text + '60'}
-                                        />
-                                        <View style={styles.notePickerItemContent}>
-                                            <ThemedText
-                                                style={[
-                                                    styles.notePickerItemTitle,
-                                                    linkedNoteId === note.id && { color: colors.primary },
-                                                ]}
-                                                numberOfLines={1}
-                                            >
-                                                {note.title}
-                                            </ThemedText>
-                                            {note.preview ? (
+                                {folders
+                                    .filter(f => !f.isDeleted && !f.isSystem) // Optional: filter out system/trash folders if desired
+                                    .map((folder: Folder) => (
+                                        <Pressable
+                                            key={folder.id}
+                                            style={[
+                                                styles.notePickerItem,
+                                                folderId === folder.id && {
+                                                    backgroundColor: colors.primary + '15',
+                                                },
+                                            ]}
+                                            onPress={() => {
+                                                setValue('folderId', folder.id);
+                                                setShowFolderPicker(false);
+                                            }}
+                                        >
+                                            <Ionicons
+                                                name="folder"
+                                                size={16}
+                                                color={folder.color || colors.text + '60'}
+                                            />
+                                            <View style={styles.notePickerItemContent}>
                                                 <ThemedText
                                                     style={[
-                                                        styles.notePickerItemPreview,
-                                                        { color: colors.text + '50' },
+                                                        styles.notePickerItemTitle,
+                                                        folderId === folder.id && { color: colors.primary },
                                                     ]}
                                                     numberOfLines={1}
                                                 >
-                                                    {note.preview}
+                                                    {folder.name}
                                                 </ThemedText>
-                                            ) : null}
-                                        </View>
-                                        {linkedNoteId === note.id && (
-                                            <Ionicons name="checkmark" size={18} color={colors.primary} />
-                                        )}
-                                    </Pressable>
-                                ))}
+                                            </View>
+                                            {folderId === folder.id && (
+                                                <Ionicons name="checkmark" size={18} color={colors.primary} />
+                                            )}
+                                        </Pressable>
+                                    ))}
                             </ScrollView>
                         </View>
                     )}

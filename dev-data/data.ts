@@ -43,7 +43,7 @@ export interface Task {
     description: string;
     deadline: Date;
     completed: boolean;
-    linkedNoteId: string | null; // optional note association
+    folderId: string | null; // optional folder association
     createdAt: Date;
 }
 
@@ -152,7 +152,7 @@ export const DUMMY_TASKS: Task[] = [
         description: 'Code review for authentication module refactor',
         deadline: new Date('2026-01-16T18:00:00'), // Today
         completed: false,
-        linkedNoteId: 'note-1',
+        folderId: 'folder-3',
         createdAt: new Date('2026-01-15T09:00:00'),
     },
     {
@@ -161,7 +161,7 @@ export const DUMMY_TASKS: Task[] = [
         description: 'Pick up items from the weekly list',
         deadline: new Date('2026-01-16T20:00:00'), // Today
         completed: true,
-        linkedNoteId: 'note-2',
+        folderId: 'folder-2',
         createdAt: new Date('2026-01-14T08:00:00'),
     },
     {
@@ -170,7 +170,7 @@ export const DUMMY_TASKS: Task[] = [
         description: 'Q1 goals presentation for team meeting',
         deadline: new Date('2026-01-17T10:00:00'), // Tomorrow
         completed: false,
-        linkedNoteId: 'note-5',
+        folderId: 'folder-4',
         createdAt: new Date('2026-01-13T14:00:00'),
     },
     {
@@ -179,7 +179,7 @@ export const DUMMY_TASKS: Task[] = [
         description: 'Annual checkup - call Dr. Smith office',
         deadline: new Date('2026-01-18T12:00:00'),
         completed: false,
-        linkedNoteId: null,
+        folderId: null,
         createdAt: new Date('2026-01-10T11:00:00'),
     },
     {
@@ -188,7 +188,7 @@ export const DUMMY_TASKS: Task[] = [
         description: 'Complete chapters 10-14',
         deadline: new Date('2026-01-20T23:59:00'),
         completed: false,
-        linkedNoteId: 'note-4',
+        folderId: null,
         createdAt: new Date('2026-01-08T20:00:00'),
     },
     {
@@ -197,7 +197,7 @@ export const DUMMY_TASKS: Task[] = [
         description: 'December travel expenses',
         deadline: new Date('2026-01-15T17:00:00'), // Overdue (yesterday)
         completed: false,
-        linkedNoteId: null,
+        folderId: null,
         createdAt: new Date('2026-01-05T10:00:00'),
     },
 ];

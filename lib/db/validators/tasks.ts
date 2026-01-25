@@ -12,5 +12,5 @@ export const insertTaskSchema = createInsertSchema(tasks, {
     deadline: true,
     isWholeDay: true,
     completed: true,
-    linkedNoteId: true,
+    folderId: true,
 });

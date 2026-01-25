@@ -57,7 +57,7 @@ export function ToolbarButton({
                 </Text>
             ) : icon ? (
                 <View style={styles.iconContainer}>
-                    <MaterialIcons name={icon} size={20} color={buttonColor} />
+                    <MaterialIcons name={icon} size={22} color={buttonColor} />
                     {colorIndicator && (
                         <View
                             style={[styles.colorIndicator, { backgroundColor: colorIndicator }]}
@@ -81,7 +81,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(0, 122, 255, 0.15)',
     },
     toolbarButtonText: {
-        fontSize: 17,
+        fontSize: 20,
         fontWeight: '500',
     },
     iconContainer: {

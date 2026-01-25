@@ -15,9 +15,9 @@ interface TaskItemProps {
 export default function TaskItem({ task, onPress, showDate = false }: TaskItemProps) {
     const { colors, dark } = useTheme();
     const { toggleComplete } = useTasksStore();
-    const { getNoteById } = useNotesStore();
+    const { getFolderById } = useNotesStore();
 
-    const linkedNote = task.linkedNoteId ? getNoteById(task.linkedNoteId) : null;
+    const linkedFolder = task.folderId ? getFolderById(task.folderId) : null;
 
     const formatTime = (date: Date): string => {
         return date.toLocaleTimeString('en-US', {
@@ -97,39 +97,37 @@ export default function TaskItem({ task, onPress, showDate = false }: TaskItemPr
             </Pressable>
 
             <View style={styles.taskItemContent}>
-                <View style={styles.taskItemHeader}>
-                    <ThemedText
-                        style={[
-                            styles.taskItemTitle,
-                            task.completed && { textDecorationLine: 'line-through', opacity: 0.7 },
-                        ]}
-                        numberOfLines={1}
-                    >
-                        {task.title}
-                    </ThemedText>
-                    {task.deadline && !task.isWholeDay && (
-                        <ThemedText style={[styles.taskItemTime, { color: colors.text + '60' }]}>
-                            {showDate ? formatDate(task.deadline) : formatTime(task.deadline)}
-                        </ThemedText>
-                    )}
-                    {task.isWholeDay && (
-                        <ThemedText style={[styles.taskItemTime, { color: colors.text + '60' }]}>
-                            {formatDate(task.deadline)}
-                        </ThemedText>
-                    )}
-                </View>
+                <ThemedText
+                    style={[
+                        styles.taskItemTitle,
+                        task.completed && { textDecorationLine: 'line-through', opacity: 0.7 },
+                    ]}
+                    numberOfLines={1}
+                >
+                    {task.title}
+                </ThemedText>
 
-                {linkedNote && (
-                    <View style={styles.linkedNoteRow}>
-                        <Ionicons name="document-text" size={12} color={colors.primary} />
-                        <ThemedText style={[styles.linkedNoteLabel, { color: colors.primary }]}>
-                            {linkedNote.title}
+                {linkedFolder && (
+                    <View style={[
+                        styles.folderBadge,
+                        { backgroundColor: (linkedFolder.color || colors.primary) + '15' }
+                    ]}>
+                        <Ionicons name="folder" size={10} color={linkedFolder.color || colors.primary} />
+                        <ThemedText style={[styles.folderLabel, { color: linkedFolder.color || colors.primary }]}>
+                            {linkedFolder.name}
                         </ThemedText>
                     </View>
                 )}
             </View>
 
-            <Ionicons name="chevron-forward" size={16} color={colors.text + '40'} />
+            <View style={styles.rightSection}>
+                {task.deadline && (
+                    <ThemedText style={[styles.taskItemTime, { color: colors.text + '60' }]}>
+                        {task.isWholeDay ? formatDate(task.deadline) : (showDate ? formatDate(task.deadline) : formatTime(task.deadline))}
+                    </ThemedText>
+                )}
+                <Ionicons name="chevron-forward" size={16} color={colors.text + '40'} />
+            </View>
         </Pressable>
     );
 }
@@ -138,8 +136,8 @@ const styles = StyleSheet.create({
     taskItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 14,
-        borderRadius: 14,
+        padding: 12,
+        borderRadius: 16,
         borderWidth: 1,
         marginBottom: 10,
         shadowOffset: { width: 0, height: 2 },
@@ -158,29 +156,34 @@ const styles = StyleSheet.create({
     },
     taskItemContent: {
         flex: 1,
-    },
-    taskItemHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
+        justifyContent: 'center',
     },
     taskItemTitle: {
-        fontSize: 15,
+        fontSize: 16,
         fontWeight: '600',
-        flex: 1,
-        marginRight: 8,
+        marginBottom: 2,
+    },
+    rightSection: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginLeft: 8,
     },
     taskItemTime: {
         fontSize: 12,
         fontWeight: '500',
     },
-    linkedNoteRow: {
+    folderBadge: {
         flexDirection: 'row',
         alignItems: 'center',
+        alignSelf: 'flex-start',
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 6,
         gap: 4,
-        marginTop: 4,
+        marginTop: 2,
     },
-    linkedNoteLabel: {
+    folderLabel: {
         fontSize: 11,
         fontWeight: '600',
     },

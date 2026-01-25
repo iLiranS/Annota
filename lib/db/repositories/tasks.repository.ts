@@ -11,7 +11,7 @@ export interface CreateTaskInput {
     title: string;
     description?: string;
     deadline: Date;
-    linkedNoteId?: string | null;
+    folderId?: string | null;
     isWholeDay?: boolean;
 }
 
@@ -80,21 +80,8 @@ export function getCompletedTasks(): Task[] {
         .all();
 }
 
-export function createTask(data: CreateTaskInput): Task {
-    const now = new Date();
-
-    const taskData: TaskInsert = {
-        id: data.id,
-        title: data.title || 'Untitled Task',
-        description: data.description || '',
-        deadline: data.deadline,
-        completed: false,
-        linkedNoteId: data.linkedNoteId || null,
-        isWholeDay: data.isWholeDay || false,
-        createdAt: now,
-    };
-
-    db.insert(schema.tasks).values(taskData).run();
+export function createTask(data: TaskInsert): Task {
+    db.insert(schema.tasks).values(data).run();
 
     return db
         .select()

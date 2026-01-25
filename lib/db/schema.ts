@@ -59,7 +59,7 @@ export const tasks = sqliteTable('tasks', {
     deadline: integer('deadline', { mode: 'timestamp' }).notNull(),
     isWholeDay: integer('is_whole_day', { mode: 'boolean' }).notNull().default(false),
     completed: integer('completed', { mode: 'boolean' }).notNull().default(false),
-    linkedNoteId: text('linked_note_id'), // FK to note_metadata.id
+    folderId: text('folder_id'), // Folder ID (no FK constraint)
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
     updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
     isDirty: integer('is_dirty', { mode: 'boolean' }).notNull().default(false),

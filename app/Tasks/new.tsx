@@ -22,7 +22,7 @@ export default function NewTaskScreen() {
             description: values.description ?? '',
             deadline: values.deadline,
             isWholeDay: values.isWholeDay ?? false,
-            linkedNoteId: values.linkedNoteId,
+            folderId: values.folderId,
             isDirty: true,
         });
 
