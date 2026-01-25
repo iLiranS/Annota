@@ -1,14 +1,12 @@
+import { useAppTheme } from '@/hooks/use-app-theme';
 import { useKeyboard } from '@react-native-community/hooks';
 import * as ExpoClipboard from 'expo-clipboard';
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { Keyboard, Platform, StyleSheet, View } from 'react-native';
+import { Keyboard, KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
-
-import { useAppTheme } from '@/hooks/use-app-theme';
 import { ImageGallery } from './image-gallery';
 import { EditorToolbar } from './toolbar';
 import { EditorState, initialEditorState, PopupType, TipTapEditorProps, TipTapEditorRef } from './types';
-
 /**
  * TipTap-based rich text editor component for React Native.
  * 
@@ -41,6 +39,8 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
         const [currentLatex, setCurrentLatex] = useState<string | null>(null);
         const contentResolverRef = useRef<((html: string) => void) | null>(null);
         const { keyboardHeight } = useKeyboard();
+
+
 
         const sendCommand = useCallback(
             (command: string, params: Record<string, unknown> = {}) => {
@@ -210,7 +210,9 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
 
         const source = __DEV__
             ? { uri: 'http://192.168.7.9:5173' }
-            : require('./assets/editor.html');
+            : Platform.OS === 'android'
+                ? { uri: 'file:///android_asset/editor.html' }
+                : require('./assets/editor.html');
 
 
         const themeInjectionScript = `
@@ -230,6 +232,7 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
         return (
             <View style={styles.container}>
                 <WebView
+                    allowFileAccess
                     ref={webViewRef}
                     source={source}
                     onMessage={handleMessage}
@@ -251,10 +254,12 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
                 />
 
                 {showToolbar && (
-                    <View
+                    <KeyboardAvoidingView
+                        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                         style={[
                             styles.toolbarContainer,
-                            { marginBottom: keyboardHeight },
+                            { marginBottom: 20 },
+
                             {
                                 backgroundColor: colors.background,
                                 borderTopColor: colors.border
@@ -282,7 +287,7 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
                                 setIsPopupOpen(true);
                             }}
                         />
-                    </View>
+                    </KeyboardAvoidingView>
                 )}
 
 
@@ -342,14 +347,10 @@ const styles = StyleSheet.create({
         width: '100%',
         alignSelf: 'center',
         overflow: 'hidden',
+        flex: 1,
         borderTopWidth: 1,
     },
-    keyboardAvoidingView: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-    },
+
 });
 
 export default TipTapEditor;

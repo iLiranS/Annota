@@ -1,5 +1,5 @@
 import { SortType, sortFolders, sortNotes } from '@/dev-data/data';
-import type { Folder, NoteMetadata } from '@/lib/db/schema';
+import type { Folder, FolderInsert, NoteMetadata } from '@/lib/db/schema';
 import { DAILY_NOTES_FOLDER_ID, FolderService, TRASH_FOLDER_ID } from '@/lib/services/folders.service';
 import { NoteService } from '@/lib/services/notes.service';
 import { create } from 'zustand';
@@ -24,8 +24,8 @@ interface NotesState {
     initApp: () => void;
 
     // Note operations
-    createNote: (folderId: string | null) => Promise<NoteMetadata>;
-    updateNote: (noteId: string, updates: Partial<Omit<NoteMetadata, 'id' | 'createdAt'>>) => Promise<void>;
+    createNote: (data: Partial<NoteMetadata>) => Promise<NoteMetadata>;
+    updateNoteMetadata: (noteId: string, updates: Partial<Omit<NoteMetadata, 'id' | 'createdAt'>>) => Promise<void>;
     deleteNote: (noteId: string) => Promise<void>;
     permanentlyDeleteNote: (noteId: string) => Promise<void>;
     restoreNote: (noteId: string, targetFolderId?: string | null) => Promise<void>;
@@ -36,7 +36,7 @@ interface NotesState {
     updateNoteContent: (noteId: string, content: string) => Promise<void>;
 
     // Folder operations
-    createFolder: (parentId: string | null, name: string, icon?: string, color?: string) => Promise<Folder>;
+    createFolder: (data: Partial<FolderInsert>) => Promise<Folder>;
     updateFolder: (folderId: string, updates: Partial<Omit<Folder, 'id' | 'createdAt'>>) => Promise<void>;
     deleteFolder: (folderId: string) => Promise<void>;
     permanentlyDeleteFolder: (folderId: string) => Promise<void>;
@@ -100,13 +100,15 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
         set({ folders, notes, isInitialized: true });
         console.log(`[Store] Initialized with ${folders.length} folders and ${notes.length} notes.`);
+
+        console.log(notes.map(n => n.title));
     },
 
     // ============ NOTE OPERATIONS ============
 
-    createNote: async (folderId) => {
+    createNote: async (data: Partial<NoteMetadata>) => {
         // 1. Service Call (writes to DB)
-        const newNote = await NoteService.create(folderId);
+        const newNote = await NoteService.create(data);
 
         // 2. Manual State Mutation (update local cache)
         set(state => ({
@@ -116,14 +118,15 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         return newNote;
     },
 
-    updateNote: async (noteId, updates) => {
+    updateNoteMetadata: async (noteId, updates) => {
         // 1. Service Call
-        await NoteService.update(noteId, updates);
+        const res = await NoteService.updateMetadata(noteId, updates);
+        if (!res) return;
 
         // 2. Manual State Mutation
         set(state => ({
             notes: state.notes.map(n =>
-                n.id === noteId ? { ...n, ...updates, updatedAt: new Date() } : n
+                n.id === noteId ? res : n
             )
         }));
     },
@@ -136,7 +139,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         set(state => ({
             notes: state.notes.map(n =>
                 n.id === noteId
-                    ? { ...n, isDeleted: true, folderId: 'system-trash', deletedAt: new Date(), updatedAt: new Date() }
+                    ? { ...n, isDeleted: true, folderId: 'system-trash', originalFolderId: n.folderId, deletedAt: new Date(), updatedAt: new Date() }
                     : n
             )
         }));
@@ -188,8 +191,8 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
     // ============ FOLDER OPERATIONS ============
 
-    createFolder: async (parentId, name, icon = 'folder', color = '#F59E0B') => {
-        const newFolder = await FolderService.create(parentId, name, icon, color);
+    createFolder: async (data: Partial<FolderInsert>) => {
+        const newFolder = await FolderService.create(data);
 
         set(state => ({
             folders: [...state.folders, newFolder]
@@ -321,8 +324,14 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     // ============ TRASH ============
 
     emptyTrash: async () => {
-        await FolderService.emptyTrash();
-        get().initApp();
+        const success = await FolderService.emptyTrash();
+
+        if (success) {
+            set(state => ({
+                folders: state.folders.filter(f => !f.isDeleted),
+                notes: state.notes.filter(n => !n.isDeleted)
+            }));
+        }
     },
 
     // ============ SORTING & GETTERS ============

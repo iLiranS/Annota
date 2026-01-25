@@ -17,7 +17,7 @@ const CREATE_TABLES_SQL = `
   CREATE TABLE IF NOT EXISTS note_metadata (
     id TEXT PRIMARY KEY,
     folder_id TEXT,
-    title TEXT NOT NULL DEFAULT 'Untitled Note',
+    title TEXT NOT NULL DEFAULT 'Untitled Note' CHECK(length(title) <= 50),
     preview TEXT NOT NULL DEFAULT '',
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL,
@@ -26,11 +26,13 @@ const CREATE_TABLES_SQL = `
     is_pinned INTEGER NOT NULL DEFAULT 0,
     is_quick_access INTEGER NOT NULL DEFAULT 0,
     tags TEXT NOT NULL DEFAULT '[]',
-    original_folder_id TEXT
+    original_folder_id TEXT,
+    is_dirty INTEGER NOT NULL DEFAULT 0,
+    last_synced_at INTEGER
   );
 
   CREATE TABLE IF NOT EXISTS note_content (
-    note_id TEXT PRIMARY KEY,
+    id TEXT PRIMARY KEY,
     content TEXT NOT NULL DEFAULT ''
   );
 
@@ -44,7 +46,7 @@ const CREATE_TABLES_SQL = `
   CREATE TABLE IF NOT EXISTS folders (
     id TEXT PRIMARY KEY,
     parent_id TEXT,
-    name TEXT NOT NULL,
+    name TEXT NOT NULL CHECK(length(name) <= 50),
     icon TEXT NOT NULL DEFAULT 'folder',
     color TEXT NOT NULL DEFAULT '#F59E0B',
     sort_type TEXT NOT NULL DEFAULT 'UPDATED_LAST',
@@ -53,17 +55,24 @@ const CREATE_TABLES_SQL = `
     deleted_at INTEGER,
     original_parent_id TEXT,
     created_at INTEGER NOT NULL,
-    updated_at INTEGER NOT NULL
+    updated_at INTEGER NOT NULL,
+    is_dirty INTEGER NOT NULL DEFAULT 0,
+    last_synced_at INTEGER
   );
 
   CREATE TABLE IF NOT EXISTS tasks (
     id TEXT PRIMARY KEY,
-    title TEXT NOT NULL,
-    description TEXT NOT NULL DEFAULT '',
+    title TEXT NOT NULL CHECK(length(title) <= 50),
+    description TEXT NOT NULL DEFAULT '' CHECK(length(description) <= 200),
     deadline INTEGER NOT NULL,
+    is_whole_day INTEGER NOT NULL DEFAULT 0,
     completed INTEGER NOT NULL DEFAULT 0,
     linked_note_id TEXT,
-    created_at INTEGER NOT NULL
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    is_dirty INTEGER NOT NULL DEFAULT 0,
+    last_synced_at INTEGER,
+    FOREIGN KEY (linked_note_id) REFERENCES note_metadata(id) ON DELETE SET NULL
   );
 
   CREATE TABLE IF NOT EXISTS tags (
@@ -76,6 +85,12 @@ const CREATE_TABLES_SQL = `
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
   );
+
+  -- Indices for better performance
+  CREATE INDEX IF NOT EXISTS idx_tasks_deadline ON tasks(deadline);
+  CREATE INDEX IF NOT EXISTS idx_tasks_completed ON tasks(completed);
+  CREATE INDEX IF NOT EXISTS idx_note_metadata_updated_at ON note_metadata(updated_at);
+  CREATE INDEX IF NOT EXISTS idx_note_metadata_folder_id ON note_metadata(folder_id);
 `;
 
 // Initialize database (create tables and seed system data)
@@ -101,6 +116,16 @@ export function initDatabase(): void {
 
         console.log('Migration complete: color column added');
       }
+
+      // Migration: Add is_whole_day column to tasks table if it doesn't exist
+      const taskColumns = expoDb.getAllSync('PRAGMA table_info(tasks)') as any[];
+      const hasIsWholeDayColumn = taskColumns.some((col: any) => col.name === 'is_whole_day');
+
+      if (!hasIsWholeDayColumn) {
+        console.log('Running migration: Adding is_whole_day column to tasks table');
+        expoDb.execSync('ALTER TABLE tasks ADD COLUMN is_whole_day INTEGER NOT NULL DEFAULT 0');
+        console.log('Migration complete: is_whole_day column added');
+      }
     } catch (migrationError) {
       console.log('Migration check/run completed or not needed:', migrationError);
     }
@@ -111,6 +136,31 @@ export function initDatabase(): void {
     console.log('Database initialized successfully');
   } catch (error) {
     console.error('Database initialization failed:', error);
+    throw error;
+  }
+}
+
+// Reset database (drop all tables and re-initialize) - USE WITH CAUTION
+export function resetDatabase(): void {
+  try {
+    const tables = [
+      'note_metadata',
+      'note_content',
+      'note_versions',
+      'folders',
+      'tasks',
+      'tags',
+      'settings'
+    ];
+
+    tables.forEach(table => {
+      expoDb.execSync(`DROP TABLE IF EXISTS ${table}`);
+    });
+
+    console.log('All tables dropped successfully');
+    initDatabase();
+  } catch (error) {
+    console.error('Database reset failed:', error);
     throw error;
   }
 }

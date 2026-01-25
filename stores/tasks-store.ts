@@ -1,9 +1,9 @@
-import type { CreateTaskInput, Task } from '@/lib/db/repositories/tasks.repository';
-import * as tasksRepo from '@/lib/db/repositories/tasks.repository';
+import type { Task, TaskInsert } from '@/lib/db/schema';
+import { TaskService } from '@/lib/services/tasks.service';
 import { create } from 'zustand';
 
 // Re-export types
-export type { CreateTaskInput, Task };
+export type { Task, TaskInsert };
 
 interface TasksState {
     // Data (cached from DB)
@@ -13,7 +13,7 @@ interface TasksState {
     loadTasks: () => void;
 
     // Task operations
-    createTask: (data: CreateTaskInput) => Task;
+    createTask: (data: Partial<TaskInsert>) => Task;
     updateTask: (taskId: string, updates: Partial<Omit<Task, 'id' | 'createdAt'>>) => void;
     deleteTask: (taskId: string) => void;
     toggleComplete: (taskId: string) => void;
@@ -33,13 +33,14 @@ export const useTasksStore = create<TasksState>((set, get) => ({
 
     // Load tasks from database
     loadTasks: () => {
-        const tasks = tasksRepo.getAllTasks();
+        const tasks = TaskService.getAllTasks();
         set({ tasks });
     },
 
     // Task operations
     createTask: (data) => {
-        const task = tasksRepo.createTask(data);
+        // Service handles ID generation and DB insertion
+        const task = TaskService.create(data);
         set((state) => ({
             tasks: [...state.tasks, task],
         }));
@@ -47,7 +48,7 @@ export const useTasksStore = create<TasksState>((set, get) => ({
     },
 
     updateTask: (taskId: string, updates) => {
-        tasksRepo.updateTask(taskId, updates);
+        TaskService.update(taskId, updates);
         set((state) => ({
             tasks: state.tasks.map((task) =>
                 task.id === taskId ? { ...task, ...updates } : task
@@ -56,14 +57,14 @@ export const useTasksStore = create<TasksState>((set, get) => ({
     },
 
     deleteTask: (taskId: string) => {
-        tasksRepo.deleteTask(taskId);
+        TaskService.delete(taskId);
         set((state) => ({
             tasks: state.tasks.filter((task) => task.id !== taskId),
         }));
     },
 
     toggleComplete: (taskId: string) => {
-        tasksRepo.toggleTaskComplete(taskId);
+        TaskService.toggleComplete(taskId);
         set((state) => ({
             tasks: state.tasks.map((task) =>
                 task.id === taskId ? { ...task, completed: !task.completed } : task
@@ -71,7 +72,7 @@ export const useTasksStore = create<TasksState>((set, get) => ({
         }));
     },
 
-    // Getters (operate on cached state)
+    // Getters (operate on cached state - same as before)
     getTaskById: (taskId: string) => {
         return get().tasks.find((task) => task.id === taskId);
     },

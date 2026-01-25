@@ -15,6 +15,7 @@ import {
     FlatList,
     Pressable,
     StyleSheet,
+    Text,
     View
 } from 'react-native';
 
@@ -23,6 +24,30 @@ interface FolderItemProps {
     onPress: () => void;
     onRestore: () => void;
     onPermanentDelete: () => void;
+}
+
+function OriginalFolderBadge({ folderId }: { folderId: string | null }) {
+    const { colors } = useTheme();
+    const folder = useNotesStore((state) => folderId ? state.folders.find(f => f.id === folderId) : null);
+
+    if (folderId === TRASH_FOLDER_ID) return null;
+
+    // If the parent folder is also deleted, show "Notes" (root)
+    const isParentDeleted = folder?.isDeleted ?? false;
+    const displayFolder = !isParentDeleted ? folder : null;
+
+    return (
+        <View style={[styles.folderInfo, { backgroundColor: displayFolder?.color + '10' || colors.background + '10' }]}>
+            <Ionicons
+                name={displayFolder ? (displayFolder.icon as any) : 'home'}
+                size={12}
+                color={displayFolder?.color || colors.text + '80'}
+            />
+            <Text style={[styles.folderBadgeName, { color: displayFolder?.color || colors.text + '80' }]}>
+                {displayFolder ? displayFolder.name : 'Notes'}
+            </Text>
+        </View>
+    );
 }
 
 function FolderCard({ folder, onPress, onRestore, onPermanentDelete }: FolderItemProps) {
@@ -59,9 +84,12 @@ function FolderCard({ folder, onPress, onRestore, onPermanentDelete }: FolderIte
                 </View>
                 <View style={styles.folderContent}>
                     <ThemedText style={styles.folderName}>{folder.name}</ThemedText>
-                    <ThemedText style={[styles.deletedDate, { color: colors.text + '60' }]}>
-                        Deleted {formatDate(folder.deletedAt)}
-                    </ThemedText>
+                    <View style={styles.footerRow}>
+                        <ThemedText style={[styles.deletedDate, { color: colors.text + '60' }]}>
+                            Deleted {formatDate(folder.deletedAt)}
+                        </ThemedText>
+                        <OriginalFolderBadge folderId={folder.originalParentId} />
+                    </View>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={colors.text + '50'} />
             </ThemedPressable>
@@ -111,15 +139,13 @@ function NoteCard({ note, onPress, onRestore, onPermanentDelete }: NoteItemProps
                         <ThemedText style={styles.title}>{note.title}</ThemedText>
                     </View>
                 </View>
-                <ThemedText
-                    style={[styles.preview, { color: colors.text + '70' }]}
-                    numberOfLines={1}
-                >
-                    {note.preview}
-                </ThemedText>
-                <ThemedText style={[styles.deletedDate, { color: colors.text + '60' }]}>
-                    Deleted {formatDate(note.deletedAt)}
-                </ThemedText>
+
+                <View style={styles.footerRow}>
+                    <ThemedText style={[styles.deletedDate, { color: colors.text + '60' }]}>
+                        Deleted {formatDate(note.deletedAt)}
+                    </ThemedText>
+                    <OriginalFolderBadge folderId={note.originalFolderId} />
+                </View>
             </ThemedPressable>
         </SwipeableItem>
     );
@@ -201,6 +227,7 @@ export default function TrashScreen() {
     const handleRestoreFolder = useCallback(
         async (folderId: string) => {
             await restoreFolder(folderId);
+
         },
         [restoreFolder]
     );
@@ -453,6 +480,23 @@ const styles = StyleSheet.create({
     },
     deletedDate: {
         fontSize: 12,
+    },
+    footerRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    folderInfo: {
+        flexDirection: 'row',
+        borderRadius: 4,
+        paddingHorizontal: 4,
+        paddingVertical: 2,
+        alignItems: 'center',
+        gap: 4,
+    },
+    folderBadgeName: {
+        fontSize: 10,
+        fontWeight: '600',
     },
     emptyContainer: {
         alignItems: 'center',

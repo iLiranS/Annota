@@ -5,17 +5,14 @@ import type { Task, TaskInsert } from '../schema';
 // Re-export types
 export type { Task } from '../schema';
 
-// Helper to generate unique IDs
-function generateId(): string {
-    return `task-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-}
-
-// Input type for creating tasks
+// Input type for creating tasks (now just pure data)
 export interface CreateTaskInput {
+    id: string; // ID is now required here
     title: string;
     description?: string;
     deadline: Date;
     linkedNoteId?: string | null;
+    isWholeDay?: boolean;
 }
 
 // ============ TASK OPERATIONS ============
@@ -85,15 +82,15 @@ export function getCompletedTasks(): Task[] {
 
 export function createTask(data: CreateTaskInput): Task {
     const now = new Date();
-    const id = generateId();
 
     const taskData: TaskInsert = {
-        id,
+        id: data.id,
         title: data.title || 'Untitled Task',
         description: data.description || '',
         deadline: data.deadline,
         completed: false,
         linkedNoteId: data.linkedNoteId || null,
+        isWholeDay: data.isWholeDay || false,
         createdAt: now,
     };
 
@@ -102,7 +99,7 @@ export function createTask(data: CreateTaskInput): Task {
     return db
         .select()
         .from(schema.tasks)
-        .where(eq(schema.tasks.id, id))
+        .where(eq(schema.tasks.id, data.id))
         .get()!;
 }
 

@@ -21,9 +21,8 @@ export default function RecentNotes() {
     return (
         <View>
             <View style={styles.sectionHeaderWithAction}>
-                <ThemedText style={styles.sectionTitle}>Notes</ThemedText>
                 <Pressable onPress={() => router.push('/Notes')}>
-                    <ThemedText style={[styles.viewAllText, { color: colors.primary }]}>View All</ThemedText>
+                    <ThemedText style={[styles.viewAllText, { color: colors.primary }]}>View Notes</ThemedText>
                 </Pressable>
             </View>
 
@@ -50,7 +49,7 @@ const styles = StyleSheet.create({
     sectionHeaderWithAction: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
+        justifyContent: 'flex-end',
         marginBottom: 16,
     },
     sectionTitle: {

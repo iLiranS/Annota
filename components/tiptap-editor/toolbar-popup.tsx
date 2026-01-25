@@ -1,4 +1,3 @@
-import { useTheme } from '@react-navigation/native';
 import React from 'react';
 import {
     Modal,
@@ -11,6 +10,7 @@ import { CodeLanguageSelector } from './popups/code-language-selector';
 import { ColorSelector } from './popups/color-selector';
 import { HeadingSelector } from './popups/heading-selector';
 
+import { useAppTheme } from '@/hooks/use-app-theme';
 import { ImageInput } from './popups/image-input';
 import { LinkInput } from './popups/link-input';
 import { MathInput } from './popups/math-input';
@@ -34,7 +34,7 @@ import {
 
 export function ToolbarPopup(props: ToolbarPopupProps) {
     const { visible, onClose, type } = props;
-    const { dark } = useTheme();
+    const { colors } = useAppTheme();
 
     if (!visible || !type) return null;
 
@@ -126,14 +126,14 @@ export function ToolbarPopup(props: ToolbarPopupProps) {
 
 
     return (
-        <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+        <Modal visible={visible} transparent animationType='fade' onRequestClose={onClose}>
             <TouchableWithoutFeedback onPress={onClose}>
                 <View style={styles.overlay}>
                     <TouchableWithoutFeedback>
                         <View
                             style={[
                                 styles.popup,
-                                { backgroundColor: dark ? '#2C2C2E' : '#FFFFFF' },
+                                { backgroundColor: colors.background, borderColor: colors.border },
                             ]}
                         >
                             {renderContent()}
@@ -159,8 +159,10 @@ const styles = StyleSheet.create({
     },
     popup: {
         borderRadius: 16,
+        borderWidth: 1,
         padding: 16,
         width: '100%',
+
         maxWidth: 320,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },

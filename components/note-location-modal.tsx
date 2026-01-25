@@ -16,7 +16,7 @@ export default function NoteLocationModal({
     note,
     onClose,
 }: NoteLocationModalProps) {
-    const { updateNote } = useNotesStore();
+    const { updateNoteMetadata } = useNotesStore();
     const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
 
     // Reset state when note changes
@@ -29,7 +29,7 @@ export default function NoteLocationModal({
     const handleSelect = (folderId: string | null) => {
         if (!note) return;
 
-        updateNote(note.id, {
+        updateNoteMetadata(note.id, {
             folderId,
         });
         onClose();

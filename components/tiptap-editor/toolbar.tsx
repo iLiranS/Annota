@@ -383,7 +383,7 @@ const styles = StyleSheet.create({
     toolbar: {
         paddingHorizontal: 8,
         paddingVertical: 6,
-        height: 50,
+        backgroundColor: 'red',
     },
     toolbarContainer: {
         flexDirection: 'row',

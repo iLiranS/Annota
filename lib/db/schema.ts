@@ -15,12 +15,14 @@ export const noteMetadata = sqliteTable('note_metadata', {
     isQuickAccess: integer('is_quick_access', { mode: 'boolean' }).notNull().default(false),
     tags: text('tags').notNull().default('[]'), // JSON array of tag IDs
     originalFolderId: text('original_folder_id'),
+    isDirty: integer('is_dirty', { mode: 'boolean' }).notNull().default(false),
+    lastSyncedAt: integer('last_synced_at', { mode: 'timestamp' }),
 });
 
 // ============ NOTE CONTENT (heavy, lazy loaded) ============
 export const noteContent = sqliteTable('note_content', {
-    noteId: text('note_id').primaryKey(),
-    content: text('content').notNull().default(''),
+    id: text('id').primaryKey(),
+    content: text('content').notNull().default(''), // Heavy content, loaded lazily
 });
 
 // ============ NOTE VERSIONS ============
@@ -45,17 +47,23 @@ export const folders = sqliteTable('folders', {
     originalParentId: text('original_parent_id'),
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
     updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+    isDirty: integer('is_dirty', { mode: 'boolean' }).notNull().default(false),
+    lastSyncedAt: integer('last_synced_at', { mode: 'timestamp' }),
 });
 
 // ============ TASKS ============
 export const tasks = sqliteTable('tasks', {
     id: text('id').primaryKey(),
-    title: text('title').notNull(),
-    description: text('description').notNull().default(''),
+    title: text('title').notNull(), // Max 50 chars
+    description: text('description').notNull().default(''), // Max 200 chars
     deadline: integer('deadline', { mode: 'timestamp' }).notNull(),
+    isWholeDay: integer('is_whole_day', { mode: 'boolean' }).notNull().default(false),
     completed: integer('completed', { mode: 'boolean' }).notNull().default(false),
-    linkedNoteId: text('linked_note_id'),
+    linkedNoteId: text('linked_note_id'), // FK to note_metadata.id
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+    isDirty: integer('is_dirty', { mode: 'boolean' }).notNull().default(false),
+    lastSyncedAt: integer('last_synced_at', { mode: 'timestamp' }),
 });
 
 // ============ TAGS ============

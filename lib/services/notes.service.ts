@@ -1,5 +1,7 @@
 import * as notesRepo from '@/lib/db/repositories/notes.repository';
 import type { NoteMetadata } from '@/lib/db/schema';
+import { insertNoteMetadataSchema } from '../db/validators/notes';
+import { generateNoteMetadata, generatePreview, generateTitle } from '../utils/notes';
 
 export const NoteService = {
     // 0. Getters
@@ -16,18 +18,28 @@ export const NoteService = {
     },
 
     // 1. Create
-    create: async (folderId: string | null): Promise<NoteMetadata> => {
-        return notesRepo.createNoteMetadata(folderId);
+    create: async (data: Partial<NoteMetadata>): Promise<NoteMetadata> => {
+        const metadata = generateNoteMetadata(data);
+        return notesRepo.createNoteMetadata(metadata);
     },
 
     // 2. Update Metadata
-    update: async (noteId: string, updates: Partial<Omit<NoteMetadata, 'id' | 'createdAt'>>) => {
-        notesRepo.updateNoteMetadata(noteId, updates);
+    updateMetadata: async (noteId: string, updates: Partial<Omit<NoteMetadata, 'id' | 'createdAt'>>): Promise<NoteMetadata | null> => {
+        const title = generateTitle(updates.title ?? '');
+        try {
+            insertNoteMetadataSchema.pick({ title: true }).parse({ title });
+            const noteMetadata = notesRepo.updateNoteMetadata(noteId, { ...updates, title, isDirty: true });
+            return noteMetadata
+        } catch (err) {
+            console.error(err)
+            return null
+        }
     },
 
     // 3. Update Content
     updateContent: async (noteId: string, content: string) => {
-        notesRepo.updateNoteContent(noteId, content);
+        const preview = generatePreview(content);
+        notesRepo.updateNoteContent(noteId, content, preview);
     },
 
     // 4. Soft Delete

@@ -27,6 +27,7 @@ export default function RootLayout() {
   useEffect(() => {
     try {
       initDatabase();
+      // resetDatabase(); // TODO: Comment this out after first run to stop resetting DB
 
       // Initialize store (load all data into memory)
       const { useNotesStore } = require('@/stores/notes-store');
@@ -55,6 +56,7 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <ThemeProvider value={theme}>
+
         <Stack>
           <Stack.Screen name="(drawer)" options={{ headerShown: false }} />
           <Stack.Screen name="modal" options={{ headerShown: false, presentation: 'modal', title: 'Modal' }} />

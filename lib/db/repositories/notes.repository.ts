@@ -1,30 +1,14 @@
 import { and, desc, eq, gte, inArray, isNull, sql } from 'drizzle-orm';
 import { db, DbOrTx, schema } from '../client';
-import type { NoteMetadata } from '../schema';
+import type { NoteMetadata, NoteMetadataInsert } from '../schema';
 
 // Re-export types for convenience
 export type { NoteMetadata } from '../schema';
 
-// Helper to generate unique IDs
-function generateId(): string {
-    return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-}
 
-// Helper to generate preview from HTML content
-function generatePreview(htmlContent: string, maxLength = 100): string {
-    const lines = htmlContent
-        .split(/<br\s*\/?>|<\/p>|<\/div>|<\/h[1-6]>|\n/i)
-        .map(line => line.replace(/<[^>]*>/g, '').trim())
-        .filter(line => line.length > 0);
 
-    const secondLine = lines[1] || '';
 
-    if (secondLine.length <= maxLength) {
-        return secondLine;
-    }
 
-    return secondLine.substring(0, maxLength).trim() + '...';
-}
 
 // ============ METADATA OPERATIONS (fast, for lists) ============
 
@@ -79,51 +63,34 @@ export function getNoteMetadataById(noteId: string): NoteMetadata | null {
     return result ?? null;
 }
 
-export function createNoteMetadata(folderId: string | null): NoteMetadata {
-    const now = new Date();
-    const id = generateId(); // e.g. UUID
-
-    // 1. Construct the object in memory first
-    const noteData: NoteMetadata = {
-        id,
-        folderId,
-        title: 'Untitled Note',
-        preview: '',
-        createdAt: now,
-        updatedAt: now,
-        isDeleted: false,
-        deletedAt: null,
-        isPinned: false,
-        isQuickAccess: false,
-        tags: '[]', // Drizzle usually handles JSON parsing/stringifying automatically if defined in schema
-        originalFolderId: null,
-    };
-
+export function createNoteMetadata(metadata: NoteMetadataInsert): NoteMetadata {
     // 2. Run as a TRANSACTION (All or Nothing)
-    db.transaction(() => {
+    return db.transaction((tx) => {
         // A. Insert Metadata
-        db.insert(schema.noteMetadata).values(noteData).run();
+        const insertedNote = tx.insert(schema.noteMetadata)
+            .values(metadata)
+            .returning()
+            .get();
 
         // B. Insert Empty Content
-        db.insert(schema.noteContent).values({
-            noteId: id,
+        tx.insert(schema.noteContent).values({
+            id: metadata.id,
             content: '',
         }).run();
+
+        return insertedNote;
     });
-
-    return noteData;
 }
-
-export function updateNoteMetadata(
-    noteId: string,
-    updates: Partial<Omit<NoteMetadata, 'id' | 'createdAt'>>
-): void {
-    db
+export function updateNoteMetadata(noteId: string, updates: Partial<Omit<NoteMetadata, 'id' | 'createdAt'>>): NoteMetadata {
+    const noteMetadata = db
         .update(schema.noteMetadata)
         .set({ ...updates, updatedAt: new Date() })
         .where(eq(schema.noteMetadata.id, noteId))
-        .run();
+        .returning()
+        .get();
+    return noteMetadata
 }
+
 
 export function softDeleteNote(noteId: string): void {
     const note = getNoteMetadataById(noteId);
@@ -182,7 +149,7 @@ export function restoreNote(noteId: string, targetFolderId?: string | null): voi
 
 export function permanentlyDeleteNote(noteId: string): void {
     // Delete content first (foreign key)
-    db.delete(schema.noteContent).where(eq(schema.noteContent.noteId, noteId)).run();
+    db.delete(schema.noteContent).where(eq(schema.noteContent.id, noteId)).run();
     // Delete versions
     db.delete(schema.noteVersions).where(eq(schema.noteVersions.noteId, noteId)).run();
     // Delete metadata
@@ -230,20 +197,18 @@ export function getNoteContent(noteId: string): string {
     const result = db
         .select()
         .from(schema.noteContent)
-        .where(eq(schema.noteContent.noteId, noteId))
+        .where(eq(schema.noteContent.id, noteId))
         .get();
 
     return result?.content ?? '';
 }
 
-export function updateNoteContent(noteId: string, content: string): void {
-    const preview = generatePreview(content);
-
+export function updateNoteContent(noteId: string, content: string, preview: string): void {
     // Update content
     db
         .update(schema.noteContent)
         .set({ content })
-        .where(eq(schema.noteContent.noteId, noteId))
+        .where(eq(schema.noteContent.id, noteId))
         .run();
 
     // Update preview in metadata
@@ -280,7 +245,7 @@ export function permanentlyDeleteNotesInFolders(folderIds: string[], tx: DbOrTx 
 
     // 1. Delete content
     tx.delete(schema.noteContent)
-        .where(inArray(schema.noteContent.noteId, notesInFolders))
+        .where(inArray(schema.noteContent.id, notesInFolders))
         .run();
 
     // 2. Delete versions
@@ -332,7 +297,7 @@ export function permanentlyDeleteDeletedNotes(tx: DbOrTx = db): void {
 
     // 1. Delete content
     tx.delete(schema.noteContent)
-        .where(inArray(schema.noteContent.noteId, deletedNotes))
+        .where(inArray(schema.noteContent.id, deletedNotes))
         .run();
 
     // 2. Delete versions

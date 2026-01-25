@@ -41,9 +41,9 @@ export default function LocationPickerModal({
     // Reset browsing position when modal opens
     React.useEffect(() => {
         if (visible) {
-            setBrowsingFolderId(null); // Start at root
+            setBrowsingFolderId(selectedParentId);
         }
-    }, [visible]);
+    }, [visible, selectedParentId]);
 
     // Get all descendant folder IDs (to exclude from selection)
     const getDescendantIds = useCallback((folderId: string): string[] => {

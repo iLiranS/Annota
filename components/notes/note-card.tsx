@@ -13,6 +13,8 @@ interface NoteCardProps {
     onLongPress?: () => void;
     onDelete?: () => void;
     swipeable?: boolean;
+    description?: React.ReactNode;
+    showDescription?: boolean;
 }
 
 export default function NoteCard({
@@ -20,6 +22,8 @@ export default function NoteCard({
     onPress,
     onLongPress,
     onDelete,
+    description,
+    showDescription = true,
     swipeable = true
 }: NoteCardProps) {
     const { colors, dark } = useAppTheme();
@@ -50,12 +54,16 @@ export default function NoteCard({
                     </ThemedText>
                 </View>
             </View>
-            <ThemedText
-                style={[styles.preview, { color: colors.text + '70' }]}
-                numberOfLines={1}
-            >
-                {note.preview}
-            </ThemedText>
+            {description && showDescription ? (
+                description
+            ) : (
+                <ThemedText
+                    style={[styles.preview, { color: colors.text + '70' }]}
+                    numberOfLines={1}
+                >
+                    {note.preview}
+                </ThemedText>
+            )}
         </ThemedPressable>
     );
 

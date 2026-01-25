@@ -1,8 +1,9 @@
 import { db, schema } from '@/lib/db/client';
 import * as foldersRepo from '@/lib/db/repositories/folders.repository';
 import * as notesRepo from '@/lib/db/repositories/notes.repository';
-import type { Folder } from '@/lib/db/schema';
+import type { Folder, FolderInsert } from '@/lib/db/schema';
 import { eq, inArray, sql } from 'drizzle-orm';
+import { generateFolder } from '../utils/folders';
 
 // Re-export constants
 export { DAILY_NOTES_FOLDER_ID, TRASH_FOLDER_ID } from '@/lib/db/repositories/folders.repository';
@@ -20,13 +21,15 @@ export const FolderService = {
     },
 
     // 1. Create
-    create: async (parentId: string | null, name: string, icon: string = 'folder', color: string = '#F59E0B') => {
-        return foldersRepo.createFolder(parentId, name, icon, color);
+
+    create: async (folderData: Partial<FolderInsert>): Promise<Folder> => {
+        const folder = generateFolder(folderData);
+        return foldersRepo.createFolder(folder);
     },
 
     // 2. Update
     update: async (folderId: string, updates: Partial<Omit<Folder, 'id' | 'createdAt'>>) => {
-        foldersRepo.updateFolder(folderId, updates);
+        foldersRepo.updateFolder(folderId, { ...updates, isDirty: true });
     },
 
     // 3. Soft Delete (Cascading - with Transaction)
@@ -149,10 +152,17 @@ export const FolderService = {
 
     // 6. Empty Trash
     emptyTrash: async () => {
-        await db.transaction(async (tx) => {
-            notesRepo.permanentlyDeleteDeletedNotes(tx);
-            foldersRepo.deleteDeletedFolders(tx);
-        });
+        try {
+
+            await db.transaction(async (tx) => {
+                notesRepo.permanentlyDeleteDeletedNotes(tx);
+                foldersRepo.deleteDeletedFolders(tx);
+            });
+        } catch (err) {
+            console.error('Failed to empty trash:', err);
+            return false
+        }
+        return true
     }
 };
 

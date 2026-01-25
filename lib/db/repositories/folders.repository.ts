@@ -3,6 +3,7 @@ import { db, DbOrTx, schema } from '../client';
 import type { Folder, FolderInsert, NoteMetadata } from '../schema';
 import { getDeletedNotes } from './notes.repository';
 
+
 // Re-export types
 export type { Folder } from '../schema';
 
@@ -10,10 +11,7 @@ export type { Folder } from '../schema';
 export const TRASH_FOLDER_ID = 'system-trash';
 export const DAILY_NOTES_FOLDER_ID = 'system-daily-notes';
 
-// Helper to generate unique IDs
-function generateId(): string {
-    return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-}
+
 
 // ============ FOLDER OPERATIONS ============
 
@@ -68,37 +66,12 @@ export function getFolderById(folderId: string): Folder | null {
     return result ?? null;
 }
 
-export function createFolder(
-    parentId: string | null,
-    name: string,
-    icon: string = 'folder',
-    color: string = '#F59E0B'
-): Folder {
-    const now = new Date();
-    const id = generateId();
-
-    const folderData: FolderInsert = {
-        id,
-        parentId,
-        name,
-        icon,
-        color,
-        sortType: 'UPDATED_LAST',
-        isSystem: false,
-        isDeleted: false,
-        deletedAt: null,
-        originalParentId: null,
-        createdAt: now,
-        updatedAt: now,
-    };
-
-    db.insert(schema.folders).values(folderData).run();
-
-    return db
-        .select()
-        .from(schema.folders)
-        .where(eq(schema.folders.id, id))
-        .get()!;
+export function createFolder(folderData: FolderInsert): Folder {
+    const folder = db.insert(schema.folders).values(folderData).returning().get();
+    if (!folder) {
+        throw new Error('Failed to create folder');
+    }
+    return folder;
 }
 
 export function updateFolder(

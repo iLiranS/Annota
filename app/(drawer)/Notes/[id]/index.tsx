@@ -1,4 +1,5 @@
 import TipTapEditor, { TipTapEditorRef } from '@/components/tiptap-editor';
+import { generateTitle } from '@/lib/utils/notes';
 import { useNotesStore } from '@/stores/notes-store';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
@@ -17,26 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
  * Extracts title from HTML content.
  * - Title: First non-empty text content (first line)
  */
-function extractTitle(html: string): string {
-    // Remove HTML tags to get plain text
-    const plainText = html
-        .replace(/<br\s*\/?>/gi, '\n')
-        .replace(/<\/p>/gi, '\n')
-        .replace(/<\/div>/gi, '\n')
-        .replace(/<\/h[1-6]>/gi, '\n')
-        .replace(/<[^>]*>/g, '')
-        .replace(/&nbsp;/g, ' ')
-        .replace(/&amp;/g, '&')
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&quot;/g, '"')
-        .trim();
 
-    // Split by newlines and filter out empty lines
-    const lines = plainText.split('\n').filter((line) => line.trim().length > 0);
-
-    return lines[0]?.trim() || 'Untitled Note';
-}
 
 export default function NoteEditor() {
     const { id } = useLocalSearchParams<{ id: string }>();
@@ -46,7 +28,7 @@ export default function NoteEditor() {
     const insets = useSafeAreaInsets();
     const editorRef = useRef<TipTapEditorRef>(null);
 
-    const { getNoteById, updateNote, getNoteContent, updateNoteContent } = useNotesStore();
+    const { getNoteById, updateNoteMetadata, getNoteContent, updateNoteContent } = useNotesStore();
     const currentNote = id ? getNoteById(id) : undefined;
 
     // Lazy-loaded content state
@@ -83,7 +65,7 @@ export default function NoteEditor() {
         if (!id) return;
 
         // Extract title from the content
-        const title = extractTitle(html);
+        const title = generateTitle(html);
 
         // Update display title for the header
         setDisplayTitle(title);
@@ -92,8 +74,8 @@ export default function NoteEditor() {
         updateNoteContent(id, html);
 
         // Update the title in metadata
-        updateNote(id, { title });
-    }, [id, updateNote, updateNoteContent]);
+        updateNoteMetadata(id, { title });
+    }, [id, updateNoteMetadata, updateNoteContent]);
 
     const handleBack = useCallback(() => {
         // Blur editor before navigating back

@@ -61,7 +61,10 @@ export default function NotesSearchModal({
         if (!searchQuery.trim()) return [];
         const query = searchQuery.toLowerCase();
         const source = searchScope === 'all' ? allFolders : browseFolders;
-        return source.filter((f) => f.name.toLowerCase().includes(query));
+        return source.filter((f) =>
+            !f.isDeleted
+            && !f.isSystem
+            && f.name.toLowerCase().includes(query));
     }, [allFolders, browseFolders, searchQuery, searchScope]);
 
     const filteredNotes = useMemo(() => {
@@ -69,7 +72,7 @@ export default function NotesSearchModal({
         const query = searchQuery.toLowerCase();
         const source = searchScope === 'all' ? allNotes : browseNotes;
         return source.filter(
-            (n) =>
+            (n) => !n.isDeleted &&
                 n.title.toLowerCase().includes(query) ||
                 n.preview.toLowerCase().includes(query)
         );
@@ -78,14 +81,15 @@ export default function NotesSearchModal({
     const searchData = useMemo((): ListItem[] => {
         if (!searchQuery.trim()) return [];
         const items: ListItem[] = [];
-        if (filteredFolders.length > 0) {
-            items.push({ type: 'section-header', title: 'Folders' });
-            filteredFolders.forEach((f) => items.push({ type: 'folder', data: f }));
-        }
         if (filteredNotes.length > 0) {
             items.push({ type: 'section-header', title: 'Notes' });
             filteredNotes.forEach((n) => items.push({ type: 'note', data: n }));
         }
+        if (filteredFolders.length > 0) {
+            items.push({ type: 'section-header', title: 'Folders' });
+            filteredFolders.forEach((f) => items.push({ type: 'folder', data: f }));
+        }
+
         return items;
     }, [filteredFolders, filteredNotes, searchQuery]);
 
@@ -132,16 +136,46 @@ export default function NotesSearchModal({
                 );
             }
 
-            return (
-                <NoteCard
-                    note={item.data}
-                    onPress={() => handleNotePress(item.data.id)}
-                    onLongPress={onNoteLongPress ? () => onNoteLongPress(item.data) : undefined}
-                    onDelete={() => onDeleteNote(item.data.id)}
-                />
-            );
+            if (item.type === 'note') {
+                const note = item.data;
+                const folder = allFolders.find((f) => f.id === note.folderId);
+
+                const footer = (
+                    <View style={styles.noteFooter}>
+                        <ThemedText
+                            style={[styles.preview, { color: colors.text + '70' }]}
+                            numberOfLines={1}
+                        >
+                            {note.preview}
+                        </ThemedText>
+                        <View style={[styles.folderInfo, { backgroundColor: folder?.color + '10' || colors.background + '10' }]}>
+                            <Ionicons
+                                name={folder ? (folder.icon as any) : 'home'}
+                                size={12}
+                                color={folder?.color || colors.text + '80'}
+                            />
+                            <Text style={[styles.folderName, { color: folder?.color || colors.text + '80' }]}>
+                                {folder ? folder.name : 'Notes'}
+                            </Text>
+                        </View>
+                    </View>
+                );
+
+                return (
+                    <View style={{ marginVertical: 4 }}>
+                        <NoteCard
+                            note={note}
+                            onPress={() => handleNotePress(note.id)}
+                            onLongPress={onNoteLongPress ? () => onNoteLongPress(note) : undefined}
+                            description={footer}
+                        />
+                    </View>
+                );
+            }
+
+            return null;
         },
-        [colors, handleFolderPress, handleNotePress, onDeleteFolder, onDeleteNote, onFolderLongPress, onNoteLongPress]
+        [colors, handleFolderPress, handleNotePress, onDeleteFolder, onDeleteNote, onFolderLongPress, onNoteLongPress, allFolders]
     );
 
     const getItemKey = (item: ListItem, index: number): string => {
@@ -221,11 +255,12 @@ export default function NotesSearchModal({
 
                     {/* Search Results List */}
                     {searchQuery.length > 0 && (
-                        <FlatList
+                        <FlatList style={{ gap: 8 }}
                             data={searchData}
                             keyExtractor={getItemKey}
                             renderItem={renderItem}
                             contentContainerStyle={styles.searchListContent}
+
                             keyboardShouldPersistTaps="handled"
                             ListEmptyComponent={
                                 <Text style={[styles.searchHint, { color: colors.text }]}>
@@ -295,8 +330,8 @@ const styles = StyleSheet.create({
         fontWeight: '500',
     },
     searchListContent: {
-        paddingTop: 8,
-        paddingBottom: 20,
+        paddingTop: 4,
+        paddingBottom: 10,
     },
     sectionHeader: {
         fontSize: 12,
@@ -306,5 +341,27 @@ const styles = StyleSheet.create({
         marginTop: 12,
         marginBottom: 10,
         marginLeft: 4,
+    },
+    folderInfo: {
+        flexDirection: 'row',
+        borderRadius: 4,
+        paddingHorizontal: 4,
+        paddingVertical: 2,
+        alignItems: 'center',
+        gap: 4,
+    },
+    folderName: {
+        fontSize: 10,
+        fontWeight: '600',
+    },
+    noteFooter: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 8,
+    },
+    preview: {
+        flex: 1,
+        fontSize: 14,
     },
 });

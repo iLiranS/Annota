@@ -41,8 +41,21 @@ export default function TaskItem({ task, onPress, showDate = false }: TaskItemPr
             date.getMonth() === tomorrow.getMonth() &&
             date.getFullYear() === tomorrow.getFullYear();
 
-        if (isToday) return `Today, ${formatTime(date)}`;
-        if (isTomorrow) return `Tomorrow, ${formatTime(date)}`;
+        const timeStr = formatTime(date);
+
+        // If whole day, just show "Today" or "Tomorrow" without time
+        if (task.isWholeDay) {
+            if (isToday) return 'Today';
+            if (isTomorrow) return 'Tomorrow';
+            return date.toLocaleDateString('en-US', {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+            });
+        }
+
+        if (isToday) return `Today, ${timeStr}`;
+        if (isTomorrow) return `Tomorrow, ${timeStr}`;
 
         return date.toLocaleDateString('en-US', {
             weekday: 'short',
@@ -94,9 +107,16 @@ export default function TaskItem({ task, onPress, showDate = false }: TaskItemPr
                     >
                         {task.title}
                     </ThemedText>
-                    <ThemedText style={[styles.taskItemTime, { color: colors.text + '60' }]}>
-                        {showDate ? formatDate(task.deadline) : formatTime(task.deadline)}
-                    </ThemedText>
+                    {task.deadline && !task.isWholeDay && (
+                        <ThemedText style={[styles.taskItemTime, { color: colors.text + '60' }]}>
+                            {showDate ? formatDate(task.deadline) : formatTime(task.deadline)}
+                        </ThemedText>
+                    )}
+                    {task.isWholeDay && (
+                        <ThemedText style={[styles.taskItemTime, { color: colors.text + '60' }]}>
+                            {formatDate(task.deadline)}
+                        </ThemedText>
+                    )}
                 </View>
 
                 {linkedNote && (

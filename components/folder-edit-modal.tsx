@@ -2,9 +2,11 @@ import { COLOR_PALETTE } from '@/constants/colors';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { TRASH_FOLDER_ID, useNotesStore, type Folder } from '@/stores/notes-store';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { PlatformPressable } from '@react-navigation/elements';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     Modal,
+    Platform,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -30,7 +32,7 @@ const FOLDER_ICONS = [
     'analytics', 'attach', 'bar-chart', 'basket', 'build',
     'chatbox', 'construct', 'cube', 'diamond', 'flask',
     'game-controller', 'hammer', 'key', 'leaf', 'mic',
-    'paw', 'pencil', 'planet', 'rocket', 'scissors',
+    'paw', 'pencil', 'planet', 'rocket',
     'shirt', 'trophy', 'umbrella', 'videocam', 'wine',
     'bulb', 'color-palette', 'compass', 'cut',
     'flash', 'glasses', 'ice-cream', 'magnet', 'map',
@@ -139,7 +141,7 @@ export default function FolderEditModal({
 
         if (isCreateMode) {
             // Create new folder with selected icon and color
-            createFolder(parentId, name.trim(), icon, color);
+            createFolder({ parentId, name: name.trim(), icon, color });
         } else {
             // Update existing folder
             updateFolder(folder!.id, {
@@ -161,154 +163,151 @@ export default function FolderEditModal({
         <Modal
             visible={visible}
             animationType="slide"
-            transparent={true}
+            presentationStyle="pageSheet"
             onRequestClose={handleClose}
         >
-            <View style={styles.modalOverlay}>
-                <Pressable style={styles.modalBackdrop} onPress={handleClose} />
-                <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
-                    {/* Header */}
-                    <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.card }]}>
-                        <Pressable onPress={handleClose} style={styles.headerButton}>
-                            <Text style={[styles.headerButtonText, { color: colors.primary }]}>Cancel</Text>
-                        </Pressable>
-                        <Text style={[styles.headerTitle, { color: colors.text }]}>
-                            {isCreateMode ? 'New Folder' : 'Edit Folder'}
-                        </Text>
+            <View style={[styles.container, { backgroundColor: colors.background }]}>
+                {/* Header */}
+                <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.card }]}>
+                    <PlatformPressable onPress={handleClose} style={[styles.headerButton]}>
+                        <Text style={[styles.headerButtonCancelText, { color: colors.primary }]}>Cancel</Text>
+                    </PlatformPressable>
+                    <Text style={[styles.headerTitle, { color: colors.text }]}>
+                        {isCreateMode ? 'New Folder' : 'Edit Folder'}
+                    </Text>
+                    <PlatformPressable
+                        onPress={handleSave}
+                        style={styles.headerButton}
+                        disabled={!name.trim()}
+                    >
+                        <Text style={[
+                            styles.headerButtonSaveText,
+                            { color: !name.trim() ? colors.border : colors.primary }
+                        ]}>{isCreateMode ? 'Create' : 'Save'}</Text>
+                    </PlatformPressable>
+                </View>
+
+                <ScrollView
+                    style={styles.content}
+                    contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
+                >
+                    {/* Folder Name */}
+                    <View style={styles.section}>
+                        <Text style={[styles.sectionTitle, { color: colors.text }]}>Name</Text>
+                        <TextInput
+                            style={[
+                                styles.textInput,
+                                {
+                                    backgroundColor: colors.card,
+                                    color: colors.text,
+                                    borderColor: colors.border,
+                                }
+                            ]}
+                            value={name}
+                            onChangeText={setName}
+                            placeholder="Folder name"
+                            placeholderTextColor={colors.text + '50'}
+                        />
+                    </View>
+
+                    {/* Folder Location */}
+                    <View style={styles.section}>
+                        <Text style={[styles.sectionTitle, { color: colors.text }]}>Location</Text>
                         <Pressable
-                            onPress={handleSave}
-                            style={styles.headerButton}
-                            disabled={!name.trim()}
+                            onPress={() => setShowLocationPicker(true)}
+                            style={[
+                                styles.locationButton,
+                                {
+                                    backgroundColor: colors.card,
+                                    borderColor: colors.border,
+                                }
+                            ]}
                         >
-                            <Text style={[
-                                styles.headerButtonText,
-                                { color: !name.trim() ? colors.border : colors.primary }
-                            ]}>{isCreateMode ? 'Create' : 'Save'}</Text>
+                            <View style={styles.locationContent}>
+                                <Ionicons name="folder" size={20} color={folder?.color || colors.primary} />
+                                <Text style={[styles.locationText, { color: colors.text }]}>
+                                    {getParentName(parentId)}
+                                </Text>
+                            </View>
+                            <Ionicons name="chevron-forward" size={20} color={colors.text + '50'} />
                         </Pressable>
                     </View>
 
-                    <ScrollView
-                        style={styles.content}
-                        contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
-                    >
-                        {/* Folder Name */}
-                        <View style={styles.section}>
-                            <Text style={[styles.sectionTitle, { color: colors.text }]}>Name</Text>
-                            <TextInput
-                                style={[
-                                    styles.textInput,
-                                    {
-                                        backgroundColor: colors.card,
-                                        color: colors.text,
-                                        borderColor: colors.border,
-                                    }
-                                ]}
-                                value={name}
-                                onChangeText={setName}
-                                placeholder="Folder name"
-                                placeholderTextColor={colors.text + '50'}
-                            />
-                        </View>
-
-                        {/* Folder Location */}
-                        <View style={styles.section}>
-                            <Text style={[styles.sectionTitle, { color: colors.text }]}>Location</Text>
-                            <Pressable
-                                onPress={() => setShowLocationPicker(true)}
-                                style={[
-                                    styles.locationButton,
-                                    {
-                                        backgroundColor: colors.card,
-                                        borderColor: colors.border,
-                                    }
-                                ]}
-                            >
-                                <View style={styles.locationContent}>
-                                    <Ionicons name="folder" size={20} color={folder?.color || colors.primary} />
-                                    <Text style={[styles.locationText, { color: colors.text }]}>
-                                        {getParentName(parentId)}
-                                    </Text>
-                                </View>
-                                <Ionicons name="chevron-forward" size={20} color={colors.text + '50'} />
-                            </Pressable>
-                        </View>
-
-                        {/* Folder Icon */}
-                        <View style={styles.section}>
-                            <Text style={[styles.sectionTitle, { color: colors.text }]}>Icon</Text>
-                            <View style={[styles.iconScrollContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                                <ScrollView
-                                    style={styles.iconScroll}
-                                    contentContainerStyle={styles.iconGrid}
-                                    nestedScrollEnabled={true}
-                                    showsVerticalScrollIndicator={true}
-                                >
-                                    {FOLDER_ICONS.map((iconName) => (
-                                        <Pressable
-                                            key={iconName}
-                                            onPress={() => setIcon(iconName)}
-                                            style={[
-                                                styles.iconButton,
-                                                icon === iconName && { backgroundColor: color + '20' }
-                                            ]}
-                                        >
-                                            <Ionicons
-                                                name={iconName as keyof typeof Ionicons.glyphMap}
-                                                size={24}
-                                                color={icon === iconName ? color || folder?.color || colors.primary : colors.text + '80'}
-                                            />
-                                        </Pressable>
-                                    ))}
-                                </ScrollView>
-                            </View>
-                        </View>
-
-                        {/* Folder Color */}
-                        <View style={styles.section}>
-                            <Text style={[styles.sectionTitle, { color: colors.text }]}>Color</Text>
+                    {/* Folder Icon */}
+                    <View style={styles.section}>
+                        <Text style={[styles.sectionTitle, { color: colors.text }]}>Icon</Text>
+                        <View style={[styles.iconScrollContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
                             <ScrollView
-                                horizontal
-                                showsHorizontalScrollIndicator={false}
-                                style={[styles.colorScroll, { backgroundColor: colors.card, borderColor: colors.border }]}
-                                contentContainerStyle={styles.colorScrollContent}
+                                style={styles.iconScroll}
+                                contentContainerStyle={styles.iconGrid}
+                                nestedScrollEnabled={true}
+                                showsVerticalScrollIndicator={true}
                             >
-                                {COLOR_PALETTE.map((colorOption) => {
-                                    const colorValue = colorOption.value;
-                                    return (
-                                        <Pressable
-                                            key={colorValue}
-                                            onPress={() => setColor(colorValue)}
-                                            style={[
-                                                styles.colorButton,
-                                                { backgroundColor: colorValue },
-                                                color === colorValue && {
-                                                    borderWidth: 3,
-                                                    borderColor: colors.primary,
-                                                }
-                                            ]}
-                                        >
-                                            {color === colorValue && (
-                                                <Ionicons name="checkmark" size={18} color="#FFFFFF" />
-                                            )}
-                                        </Pressable>
-                                    );
-                                })}
+                                {FOLDER_ICONS.map((iconName) => (
+                                    <Pressable
+                                        key={iconName}
+                                        onPress={() => setIcon(iconName)}
+                                        style={[
+                                            styles.iconButton,
+                                            icon === iconName && { backgroundColor: color + '20' }
+                                        ]}
+                                    >
+                                        <Ionicons
+                                            name={iconName as keyof typeof Ionicons.glyphMap}
+                                            size={24}
+                                            color={icon === iconName ? color || folder?.color || colors.primary : colors.text + '80'}
+                                        />
+                                    </Pressable>
+                                ))}
                             </ScrollView>
                         </View>
-                    </ScrollView>
+                    </View>
 
-                    {/* Location Picker Modal */}
-                    <LocationPickerModal
-                        visible={showLocationPicker}
-                        currentFolderId={folder?.id}
-                        selectedParentId={parentId}
-                        onSelect={(newParentId) => {
-                            setParentId(newParentId);
-                            setShowLocationPicker(false);
-                        }}
-                        onClose={() => setShowLocationPicker(false)}
-                    />
-                </View>
+                    {/* Folder Color */}
+                    <View style={styles.section}>
+                        <Text style={[styles.sectionTitle, { color: colors.text }]}>Color</Text>
+                        <ScrollView
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            style={[styles.colorScroll, { backgroundColor: colors.card, borderColor: colors.border }]}
+                            contentContainerStyle={styles.colorScrollContent}
+                        >
+                            {COLOR_PALETTE.map((colorOption) => {
+                                const colorValue = colorOption.value;
+                                return (
+                                    <Pressable
+                                        key={colorValue}
+                                        onPress={() => setColor(colorValue)}
+                                        style={[
+                                            styles.colorButton,
+                                            { backgroundColor: colorValue },
+                                            color === colorValue && {
+                                                borderWidth: 3,
+                                                borderColor: colors.primary,
+                                            }
+                                        ]}
+                                    >
+                                        {color === colorValue && (
+                                            <Ionicons name="checkmark" size={18} color="#FFFFFF" />
+                                        )}
+                                    </Pressable>
+                                );
+                            })}
+                        </ScrollView>
+                    </View>
+                </ScrollView>
+
+                {/* Location Picker Modal */}
+                <LocationPickerModal
+                    visible={showLocationPicker}
+                    currentFolderId={folder?.id}
+                    selectedParentId={parentId}
+                    onSelect={(newParentId) => {
+                        setParentId(newParentId);
+                        setShowLocationPicker(false);
+                    }}
+                    onClose={() => setShowLocationPicker(false)}
+                />
             </View>
         </Modal>
     );
@@ -324,7 +323,6 @@ const styles = StyleSheet.create({
         ...StyleSheet.absoluteFillObject,
     },
     modalContent: {
-        height: '85%', // Slightly more than 70% to account for safe area
         width: '100%',
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
@@ -343,14 +341,21 @@ const styles = StyleSheet.create({
     },
     headerButton: {
         minWidth: 60,
+        paddingVertical: 8,
+        justifyContent: 'center',
     },
-    headerButtonText: {
-        fontSize: 16,
-        fontWeight: '500',
+    headerButtonCancelText: {
+        fontSize: Platform.OS === 'ios' ? 17 : 14,
+        fontWeight: '400',
+    },
+    headerButtonSaveText: {
+        fontSize: Platform.OS === 'ios' ? 17 : 14,
+        fontWeight: Platform.OS === 'ios' ? '600' : '700',
+        textTransform: Platform.OS === 'android' ? 'uppercase' : 'none',
     },
     headerTitle: {
-        fontSize: 17,
-        fontWeight: '600',
+        fontSize: Platform.OS === 'ios' ? 17 : 20,
+        fontWeight: Platform.OS === 'ios' ? '600' : '500',
     },
     content: {
         flex: 1,
