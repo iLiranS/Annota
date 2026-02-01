@@ -65,6 +65,10 @@ export interface EditorState {
     canDeleteColumn: boolean;
     canDeleteTable: boolean;
     imageAttrs: any | null;
+
+    // Details
+    isDetails: boolean;
+    detailsBackgroundColor: string | null;
 }
 
 export const initialEditorState: EditorState = {
@@ -104,6 +108,9 @@ export const initialEditorState: EditorState = {
     canDeleteColumn: false,
     canDeleteTable: false,
     imageAttrs: null,
+    // Details
+    isDetails: false,
+    detailsBackgroundColor: null,
 };
 
 export type EditorCommand =
@@ -146,17 +153,34 @@ export type EditorCommand =
     | 'deleteTable'
     | 'setCellBackground'
     | 'unsetCellBackground'
-    | 'setCodeBlockLanguage';
+    | 'setCodeBlockLanguage'
+    // Details commands
+    | 'toggleDetails'
+    | 'setDetailsBackground'
+    | 'unsetDetailsBackground';
 
 // ============================================================================
 // Popup Types
 // ============================================================================
 
-export type PopupType = 'headings' | 'highlight' | 'textColor' | 'youtube' | 'link' | 'image' | 'table' | 'codeLanguage' | 'imageActions' | 'math' | null;
+export type PopupType = 'headings' | 'highlight' | 'textColor' | 'youtube' | 'link' | 'image' | 'table' | 'codeLanguage' | 'imageActions' | 'math' | 'detailsBackground' | 'blockMenu' | null;
 
 export interface BasePopupProps {
     visible: boolean;
     onClose: () => void;
+}
+
+export interface BlockMenuPopupProps extends BasePopupProps {
+    type: 'blockMenu';
+    blockType: 'codeBlock' | 'details' | string;
+    onAction: (action: string, data?: any) => void;
+    // Data passed from web view
+    data: {
+        content?: string;
+        language?: string;
+        currentColor?: string;
+        [key: string]: any;
+    };
 }
 
 export interface HeadingPopupProps extends BasePopupProps {
@@ -213,14 +237,19 @@ export interface ImageInfo {
     position: number;
 }
 
-
-
 export interface MathPopupProps extends BasePopupProps {
     type: 'math';
     currentLatex: string | null;
     onSubmit: (latex: string) => void;
 }
 
-export type ToolbarPopupProps = HeadingPopupProps | ColorPopupProps | YouTubePopupProps | LinkPopupProps | ImagePopupProps | TablePopupProps | CodeLanguagePopupProps | MathPopupProps;
+export interface DetailsBackgroundPopupProps extends BasePopupProps {
+    type: 'detailsBackground';
+    currentColor: string | null;
+    onSelect: (color: string) => void;
+    onClear: () => void;
+}
+
+export type ToolbarPopupProps = HeadingPopupProps | ColorPopupProps | YouTubePopupProps | LinkPopupProps | ImagePopupProps | TablePopupProps | CodeLanguagePopupProps | MathPopupProps | DetailsBackgroundPopupProps | BlockMenuPopupProps;
 
 

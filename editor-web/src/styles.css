@@ -315,35 +315,33 @@ body {
     border-top: 4px solid currentColor;
 }
 
-/* Copy button (RIGHT) */
-.code-copy-btn {
+
+
+/* Menu button (RIGHT) */
+.code-menu-btn {
     display: flex;
     align-items: center;
-    gap: 5px;
-    padding: 5px 10px;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
     border-radius: 6px;
-    background: var(--code-bg);
+    background: transparent;
     border: none;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    font-size: 11px;
-    font-weight: 500;
     color: var(--text-color);
     cursor: pointer;
     transition: background-color 0.15s ease, color 0.15s ease;
     user-select: none;
+    opacity: 0.6;
 }
 
-.code-copy-btn:hover {
-    background: var(--accent-color);
-    color: white;
+.code-menu-btn:hover,
+.code-menu-btn:active {
+    background: var(--code-bg);
+    color: var(--text-color);
+    opacity: 1;
 }
 
-.code-copy-btn.copied {
-    background: #22c55e;
-    color: white;
-}
-
-.code-copy-btn svg {
+.code-menu-btn svg {
     flex-shrink: 0;
 }
 
@@ -491,6 +489,123 @@ body {
     pointer-events: none;
 }
 
+
 .ProseMirror.resize-cursor {
     cursor: col-resize;
+}
+
+/* ========================================
+   Details / Collapsible Section Styles
+   Modern, clean design matching React Native
+   ======================================== */
+
+/* Main wrapper */
+.ProseMirror .details-wrapper,
+.ProseMirror [data-type="details"] {
+    margin: 8px 0;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+    background-color: transparent;
+    transition: background-color 0.2s ease;
+}
+
+/* Summary/Header - editable title with arrow toggle */
+.ProseMirror .details-summary,
+.ProseMirror [data-type="detailsSummary"] {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    padding-left: 0;
+    font-weight: 600;
+    gap: 0;
+    transition: background-color 0.15s ease;
+}
+
+.details-menu-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    background: transparent;
+    border: none;
+    color: var(--text-color);
+    cursor: pointer;
+    opacity: 0.5;
+    transition: all 0.2s ease;
+    margin-right: 8px;
+}
+
+.details-menu-btn:hover {
+    background-color: rgba(128, 128, 128, 0.1);
+    opacity: 1;
+}
+
+.ProseMirror .details-summary:hover,
+.ProseMirror [data-type="detailsSummary"]:hover {
+    background-color: rgba(128, 128, 128, 0.04);
+}
+
+/* Arrow indicator - clickable toggle button on the left */
+.ProseMirror .details-summary::before,
+.ProseMirror [data-type="detailsSummary"]::before {
+    content: '▶';
+    font-size: 10px;
+    color: var(--text-color);
+    opacity: 0.5;
+    transition: transform 0.2s ease, opacity 0.15s ease;
+    flex-shrink: 0;
+    cursor: pointer;
+    /* Make arrow area 40px wide to match JS detection */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 100%;
+    min-height: 24px;
+}
+
+/* Arrow hover state */
+.ProseMirror .details-summary::before:hover,
+.ProseMirror [data-type="detailsSummary"]::before:hover {
+    opacity: 0.8;
+}
+
+/* Arrow rotates when open */
+.ProseMirror [data-type="details"][data-open="true"] .details-summary::before,
+.ProseMirror [data-type="details"][data-open="true"] [data-type="detailsSummary"]::before,
+.ProseMirror [data-type="details"][open] .details-summary::before,
+.ProseMirror [data-type="details"][open] [data-type="detailsSummary"]::before {
+    transform: rotate(90deg);
+}
+
+/* Content area - below the header */
+.ProseMirror .details-content,
+.ProseMirror [data-type="detailsContent"] {
+    padding: 0 12px 12px 12px;
+}
+
+/* Hide content when collapsed */
+.ProseMirror [data-type="details"]:not([data-open="true"]):not([open]) .details-content,
+.ProseMirror [data-type="details"]:not([data-open="true"]):not([open]) [data-type="detailsContent"] {
+    display: none;
+}
+
+/* Remove default margins in content */
+.ProseMirror .details-content>*:first-child,
+.ProseMirror [data-type="detailsContent"]>*:first-child {
+    margin-top: 0;
+}
+
+.ProseMirror .details-content>*:last-child,
+.ProseMirror [data-type="detailsContent"]>*:last-child {
+    margin-bottom: 0;
+}
+
+/* Selected state */
+.ProseMirror [data-type="details"].ProseMirror-selectednode {
+    outline: 2px solid var(--accent-color);
+    outline-offset: -2px;
 }

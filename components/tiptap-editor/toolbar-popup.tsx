@@ -1,9 +1,12 @@
+import { MaterialIcons } from '@expo/vector-icons';
 import React from 'react';
 import {
     Modal,
     StyleSheet,
+    Text,
+    TouchableOpacity,
     TouchableWithoutFeedback,
-    View,
+    View
 } from 'react-native';
 
 import { CodeLanguageSelector } from './popups/code-language-selector';
@@ -17,8 +20,10 @@ import { MathInput } from './popups/math-input';
 import { TableActions } from './popups/table-actions';
 import { YouTubeInput } from './popups/youtube-input';
 import {
+    BlockMenuPopupProps,
     CodeLanguagePopupProps,
     ColorPopupProps,
+    DetailsBackgroundPopupProps,
     HeadingPopupProps,
     ImagePopupProps,
     LinkPopupProps,
@@ -27,6 +32,82 @@ import {
     ToolbarPopupProps,
     YouTubePopupProps
 } from './types';
+
+// ============================================================================
+// Block Action Menu (Modular)
+// ============================================================================
+
+interface BlockAction {
+    id: string;
+    label: string;
+    icon: string;
+    action: string;
+}
+
+const COMMON_ACTIONS: BlockAction[] = [
+    { id: 'copy', label: 'Copy', icon: 'content-copy', action: 'copy' },
+    { id: 'cut', label: 'Cut', icon: 'content-cut', action: 'cut' },
+    { id: 'delete', label: 'Delete', icon: 'delete-outline', action: 'delete' },
+];
+
+const getBlockActions = (blockType: string): BlockAction[] => {
+    const actions = [...COMMON_ACTIONS];
+
+    switch (blockType) {
+        case 'details':
+            // Add background option for details
+            actions.splice(0, 0, { id: 'background', label: 'Background', icon: 'palette', action: 'background' });
+            break;
+        case 'codeBlock':
+            actions.splice(0, 0, { id: 'language', label: 'Language', icon: 'code', action: 'language' });
+            break;
+    }
+
+    return actions;
+};
+
+function BlockActionMenu({ blockType, onAction, onClose }: { blockType: string, onAction: (action: string) => void, onClose: () => void }) {
+    const { colors } = useAppTheme();
+    const actions = getBlockActions(blockType);
+
+    return (
+        <View>
+            <Text style={{
+                fontSize: 16,
+                fontWeight: '600',
+                color: colors.text,
+                marginBottom: 16,
+                textAlign: 'center'
+            }}>
+                {blockType === 'codeBlock' ? 'Code Block' : blockType === 'details' ? 'Section' : 'Block Options'}
+            </Text>
+
+            <View style={{ gap: 8 }}>
+                {actions.map((item) => (
+                    <TouchableOpacity
+                        key={item.id}
+                        style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            padding: 12,
+                            borderRadius: 8,
+                            backgroundColor: colors.card,
+                        }}
+                        onPress={() => {
+                            onAction(item.action);
+                            if (item.action !== 'background' && item.action !== 'language') {
+                                onClose();
+                            }
+                        }}
+                    >
+                        <MaterialIcons name={item.icon as any} size={20} color={colors.text} style={{ marginRight: 12 }} />
+                        <Text style={{ fontSize: 16, color: colors.text }}>{item.label}</Text>
+                    </TouchableOpacity>
+                ))}
+            </View>
+        </View>
+    );
+}
 
 // ============================================================================
 // Main Popup Component
@@ -40,6 +121,14 @@ export function ToolbarPopup(props: ToolbarPopupProps) {
 
     const renderContent = () => {
         switch (type) {
+            case 'blockMenu':
+                return (
+                    <BlockActionMenu
+                        blockType={(props as BlockMenuPopupProps).blockType}
+                        onAction={(action) => (props as BlockMenuPopupProps).onAction(action, (props as BlockMenuPopupProps).data)}
+                        onClose={onClose}
+                    />
+                );
             case 'headings':
                 return (
                     <HeadingSelector
@@ -115,6 +204,15 @@ export function ToolbarPopup(props: ToolbarPopupProps) {
                         currentLatex={(props as MathPopupProps).currentLatex}
                         onSubmit={(props as MathPopupProps).onSubmit}
                         onClose={onClose}
+                    />
+                );
+            case 'detailsBackground':
+                return (
+                    <ColorSelector
+                        title="Section Background"
+                        currentColor={(props as DetailsBackgroundPopupProps).currentColor}
+                        onSelect={(props as DetailsBackgroundPopupProps).onSelect}
+                        onClear={(props as DetailsBackgroundPopupProps).onClear}
                     />
                 );
 

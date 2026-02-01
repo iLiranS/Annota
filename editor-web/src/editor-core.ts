@@ -14,7 +14,7 @@ import { StarterKit } from '@tiptap/starter-kit';
 
 import { Mathematics, migrateMathStrings } from '@tiptap/extension-mathematics';
 import { loadingEl, sendMessage, showError } from './bridge';
-import { CustomCodeBlock, CustomImage, CustomTableCell, CustomTableHeader } from './extensions';
+import { CustomCodeBlock, CustomImage, CustomTableCell, CustomTableHeader, Details, DetailsContent, DetailsSummary } from './extensions';
 import { hexToRgba } from './utils';
 
 import './types';
@@ -28,7 +28,6 @@ export const editorEl = document.getElementById('editor-content')!;
 // For now, assume always active.
 
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-let scrollDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 // --- Logic ---
 
@@ -80,40 +79,56 @@ export function getEditorState() {
         canDeleteTable: isInTable && e.can().deleteTable(),
         isImage: e.isActive('image'),
         imageAttrs: e.isActive('image') ? imageAttrs : null,
+        isDetails: e.isActive('details'),
+        detailsBackgroundColor: e.isActive('details') ? e.getAttributes('details').backgroundColor : null,
     };
 }
 
+let scrollDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
 export function scrollCursorIntoView() {
-    // Let ProseMirror handle scrolling natively - it already has scrollIntoView built in
-    // We just need to ensure proper padding exists for the keyboard
     if (!window.editor) return;
 
     // Debounce to avoid excessive calls
     if (scrollDebounceTimer) clearTimeout(scrollDebounceTimer);
     scrollDebounceTimer = setTimeout(() => {
-        if (!window.editor) return;
-
-        // Only scroll if the editor is actually focused. 
-        // If the keyboard is dismissed (blur), we shouldn't force scrolling.
-        if (!window.editor.isFocused) return;
+        if (!window.editor || !window.editor.isFocused) return;
 
         try {
-            // Get the cursor position and use native scrollIntoView
             const { from } = window.editor.state.selection;
+            const coords = window.editor.view.coordsAtPos(from);
+
+            if (!coords) return;
+
+            // Get viewport dimensions
+            const viewportHeight = window.innerHeight;
+            const keyboardOffset = 100; // Extra padding for keyboard/toolbar area
+
+            // Check if cursor is outside visible area
+            const isAboveViewport = coords.top < 0;
+            const isBelowViewport = coords.bottom > (viewportHeight - keyboardOffset);
+
+            // Only scroll if cursor is actually outside visible area
+            if (!isAboveViewport && !isBelowViewport) return;
+
+            // Get the DOM element at cursor position
             const domAtPos = window.editor.view.domAtPos(from);
+            if (!domAtPos || !domAtPos.node) return;
 
-            if (domAtPos && domAtPos.node) {
-                const element = domAtPos.node.nodeType === Node.TEXT_NODE
-                    ? domAtPos.node.parentElement
-                    : domAtPos.node as Element;
+            const element = domAtPos.node.nodeType === Node.TEXT_NODE
+                ? domAtPos.node.parentElement
+                : domAtPos.node as Element;
 
-                if (element && element instanceof HTMLElement) {
-                    // Use scrollIntoView with block: 'nearest' to minimize scrolling
-                    element.scrollIntoView({ block: 'center', behavior: 'smooth' });
-                }
+            if (element && element instanceof HTMLElement) {
+                // Use 'nearest' to minimize scroll amount - it only scrolls enough to show the element
+                element.scrollIntoView({
+                    block: 'center',
+                    inline: 'center',
+                    behavior: 'instant'
+                });
             }
         } catch (e) {
-            // Silently fail - ProseMirror's own scroll handling will work
+            // Silently fail - don't break the editor
         }
     }, 100);
 }
@@ -153,8 +168,8 @@ export function setupEditor(options: any) {
             element: editorEl,
             editorProps: {
                 attributes: { dir: 'auto' },
-                scrollThreshold: { top: 0, bottom: 200, left: 0, right: 0 },
-                scrollMargin: { top: 0, bottom: 200, left: 0, right: 0 }
+                scrollThreshold: { top: 0, bottom: 80, left: 0, right: 0 },
+                scrollMargin: { top: 0, bottom: 80, left: 0, right: 0 }
             },
             extensions: [
                 StarterKit.configure({
@@ -188,6 +203,12 @@ export function setupEditor(options: any) {
                 TaskList,
                 TaskItem.configure({ nested: true }),
                 CustomCodeBlock,
+                // @ts-ignore - Type mismatch due to tiptap version difference between packages
+                Details,
+                // @ts-ignore - Type mismatch due to tiptap version difference between packages
+                DetailsSummary,
+                // @ts-ignore - Type mismatch due to tiptap version difference between packages
+                DetailsContent,
                 Mathematics.configure({
                     katexOptions: {
                         throwOnError: false,

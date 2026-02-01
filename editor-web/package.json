@@ -16,6 +16,7 @@
     "@tiptap/extension-bubble-menu": "^3.17.0",
     "@tiptap/extension-code-block-lowlight": "^3.17.0",
     "@tiptap/extension-color": "^3.17.0",
+    "@tiptap/extension-details": "^3.18.0",
     "@tiptap/extension-highlight": "^3.17.0",
     "@tiptap/extension-image": "^3.17.0",
     "@tiptap/extension-link": "^3.17.0",

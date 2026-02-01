@@ -14,20 +14,136 @@ setupImageUpdater();
 
 editorEl.addEventListener('click', function (e) {
     const target = e.target as HTMLElement;
+
+    // Handle link clicks
     const link = target.closest('a');
     if (link && (link as HTMLAnchorElement).href) {
-        // Prevent default only if we are not in editable state? 
-        // Actually for now let's just allow editing links by click? 
-        // Or if we want to follow, we need ctrl+click? 
-        // Native behavior: usually long press or bubble menu. 
-        // But for this webview, if it's a link, we might want to intercept.
-        // Let's keep existing logic to open external links.
-
         e.preventDefault();
         e.stopPropagation();
         sendMessage({ type: 'openLink', href: (link as HTMLAnchorElement).href });
+        return;
     }
 });
+
+// Details toggle handler - properly syncs DOM and Tiptap model
+let lastToggleTime = 0;
+const TOGGLE_DEBOUNCE_MS = 300;
+const ARROW_CLICK_ZONE_WIDTH = 40; // px from the left edge of summary where arrow is
+
+function toggleDetailsSection(detailsEl: Element) {
+    const editor = (window as any).editor;
+    if (!editor) return;
+
+    // Debounce to prevent double toggles
+    const now = Date.now();
+    if (now - lastToggleTime < TOGGLE_DEBOUNCE_MS) {
+        return;
+    }
+    lastToggleTime = now;
+
+    try {
+        // Find the position of this details element in the document
+        let targetPos: number | null = null;
+        let targetNode: any = null;
+
+        editor.state.doc.descendants((node: any, pos: number) => {
+            if (node.type.name === 'details' && targetPos === null) {
+                try {
+                    const domNode = editor.view.nodeDOM(pos);
+                    if (domNode === detailsEl || (domNode && domNode.contains(detailsEl)) || detailsEl.contains(domNode as Node)) {
+                        targetPos = pos;
+                        targetNode = node;
+                        return false;
+                    }
+                } catch (e) {
+                    // Continue searching
+                }
+            }
+            return true;
+        });
+
+        if (targetPos !== null && targetNode) {
+            const isCurrentlyOpen = targetNode.attrs.open;
+            const newOpenState = !isCurrentlyOpen;
+
+            editor.chain()
+                .command(({ tr }: any) => {
+                    tr.setNodeMarkup(targetPos, undefined, { ...targetNode.attrs, open: newOpenState });
+                    return true;
+                })
+                .run();
+        } else {
+            // Fallback: Just toggle DOM
+            const isCurrentlyOpen = detailsEl.getAttribute('data-open') === 'true';
+            const newOpenState = !isCurrentlyOpen;
+            detailsEl.setAttribute('data-open', newOpenState ? 'true' : 'false');
+            if (newOpenState) {
+                detailsEl.setAttribute('open', '');
+            } else {
+                detailsEl.removeAttribute('open');
+            }
+        }
+    } catch (err) {
+        console.warn('Failed to toggle details:', err);
+        // Fallback: Just toggle DOM
+        const isCurrentlyOpen = detailsEl.getAttribute('data-open') === 'true';
+        const newOpenState = !isCurrentlyOpen;
+        detailsEl.setAttribute('data-open', newOpenState ? 'true' : 'false');
+        if (newOpenState) {
+            detailsEl.setAttribute('open', '');
+        } else {
+            detailsEl.removeAttribute('open');
+        }
+    }
+}
+
+// Check if click is in the arrow zone (left side of summary)
+function isClickInArrowZone(e: MouseEvent, summary: Element): boolean {
+    const rect = summary.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    return clickX <= ARROW_CLICK_ZONE_WIDTH;
+}
+
+// Handle click on summary - only toggle if clicking on arrow zone
+function handleSummaryClick(e: MouseEvent) {
+    const target = e.target as HTMLElement;
+    if (!target) return;
+
+    const summary = target.closest('[data-type="detailsSummary"]') || target.closest('.details-summary');
+    if (!summary) return;
+
+    // Only toggle if clicking in the arrow zone (left side)
+    if (!isClickInArrowZone(e, summary)) return;
+
+    const details = summary.closest('[data-type="details"]') || summary.closest('.details-wrapper');
+    if (!details) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Clear any selection that might have started
+    window.getSelection()?.removeAllRanges();
+
+    toggleDetailsSection(details);
+}
+
+// Prevent text selection when mousedown on arrow zone
+function handleSummaryMousedown(e: MouseEvent) {
+    const target = e.target as HTMLElement;
+    if (!target) return;
+
+    const summary = target.closest('[data-type="detailsSummary"]') || target.closest('.details-summary');
+    if (!summary) return;
+
+    // Only prevent default in arrow zone
+    if (isClickInArrowZone(e, summary)) {
+        e.preventDefault();
+    }
+}
+
+// Event listeners
+document.addEventListener('click', handleSummaryClick, true);
+document.addEventListener('mousedown', handleSummaryMousedown, true);
 
 // Notify Ready
 sendMessage({ type: 'ready' });

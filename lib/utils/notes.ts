@@ -54,10 +54,11 @@ export function generatePreview(htmlContent: string, maxLength = MAX_PREVIEW_LEN
 export function generateNoteMetadata(data: Partial<NoteMetadataInsert>): NoteMetadataInsert {
     const id = Crypto.randomUUID();
     const now = new Date();
-
+    let folderId = null
+    if (data && data.folderId && data.folderId.length > 0) folderId = data.folderId
     return {
         id,
-        folderId: data?.folderId,
+        folderId,
         title: data?.title ?? 'Untitled Note',
         preview: data?.preview ?? '',
         createdAt: now,

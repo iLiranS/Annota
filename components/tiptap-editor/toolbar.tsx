@@ -15,7 +15,9 @@ interface EditorToolbarProps {
     onActivePopupChange: (type: PopupType) => void;
     /** Callback to notify parent when popup opens/closes - helps keep toolbar visible */
     onPopupStateChange?: (isOpen: boolean) => void;
+
     currentLatex?: string | null;
+    blockData?: any;
     onInsertMath?: () => void;
 }
 
@@ -30,7 +32,9 @@ export function EditorToolbar({
     activePopup,
     onActivePopupChange,
     onPopupStateChange,
+
     currentLatex,
+    blockData,
     onInsertMath
 }: EditorToolbarProps) {
     const { dark, colors } = useTheme();
@@ -177,6 +181,15 @@ export function EditorToolbar({
                             isActive={editorState.isBlockquote}
                             onPress={() => onCommand('toggleBlockquote')}
                         />
+
+                        {/* Collapsible Section */}
+                        <ToolbarButton
+                            icon='post-add'
+                            isActive={editorState.isDetails}
+                            onPress={() => onCommand('toggleDetails')}
+                        />
+
+
 
                         {/* Math Equation */}
                         <ToolbarButton
@@ -371,6 +384,56 @@ export function EditorToolbar({
                     onSubmit={(latex: string) => {
                         onCommand('setMath', { latex });
                         closePopup();
+                    }}
+                    onClose={closePopup}
+                />
+            )}
+
+            {activePopup === 'detailsBackground' && (
+                <ToolbarPopup
+                    visible={true}
+                    type="detailsBackground"
+                    currentColor={editorState.detailsBackgroundColor}
+                    onSelect={(color: string) => {
+                        onCommand('setDetailsBackground', { color });
+                        closePopup();
+                    }}
+                    onClear={() => {
+                        onCommand('unsetDetailsBackground');
+                        closePopup();
+                    }}
+                    onClose={closePopup}
+                />
+            )}
+
+            {activePopup === 'blockMenu' && blockData && (
+                <ToolbarPopup
+                    visible={true}
+                    type="blockMenu"
+                    blockType={blockData.blockType}
+                    data={blockData}
+                    onAction={(action: string, data: any) => {
+                        switch (action) {
+                            case 'copy':
+                                onCommand('copyToClipboard', { pos: data.pos });
+                                closePopup();
+                                break;
+                            case 'cut':
+                                onCommand('copyToClipboard', { pos: data.pos });
+                                onCommand('deleteSelection', { pos: data.pos });
+                                closePopup();
+                                break;
+                            case 'delete':
+                                onCommand('deleteSelection', { pos: data.pos });
+                                closePopup();
+                                break;
+                            case 'background':
+                                openPopup('detailsBackground');
+                                break;
+                            case 'language':
+                                openPopup('codeLanguage');
+                                break;
+                        }
                     }}
                     onClose={closePopup}
                 />

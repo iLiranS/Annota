@@ -36,6 +36,7 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
         const [galleryImages, setGalleryImages] = useState<any[]>([]);
         const [galleryCurrentIndex, setGalleryCurrentIndex] = useState(0);
         const [toolbarHeight, setToolbarHeight] = useState(50); // it's height is fixed 50
+        const [tempBlockData, setTempBlockData] = useState<any>(null); // Data for valid block menu
         const [currentLatex, setCurrentLatex] = useState<string | null>(null);
         const contentResolverRef = useRef<((html: string) => void) | null>(null);
         const { keyboardHeight } = useKeyboard();
@@ -139,6 +140,17 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
                             setActivePopup('math');
                             setIsPopupOpen(true);
                             break;
+                        case 'openBlockMenu':
+                            setActivePopup('blockMenu');
+                            // Store the block data temporarily or in state
+                            if (data) {
+                                // We can piggyback on a new state or just pass it when rendering
+                                // But since activePopup is just a string, we might need a separate state for popup data
+                                // For now, let's use selectedImageAttrs as a generic "active item data" or create a new one
+                                setTempBlockData(data);
+                            }
+                            setIsPopupOpen(true);
+                            break;
                     }
                 } catch (e) {
                     console.warn('Failed to parse WebView message:', e);
@@ -209,7 +221,7 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
         const showToolbar = isKeyboardVisible || isPopupOpen;
 
         const source = __DEV__
-            ? { uri: 'http://192.168.7.9:5173' }
+            ? { uri: 'http://192.168.7.12:5173' }
             : Platform.OS === 'android'
                 ? { uri: 'file:///android_asset/editor.html' }
                 : require('./assets/editor.html');
@@ -280,6 +292,7 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
                                 }
                             }}
                             onCommand={sendCommand}
+                            blockData={tempBlockData}
                             currentLatex={currentLatex}
                             onInsertMath={() => {
                                 setCurrentLatex(null);

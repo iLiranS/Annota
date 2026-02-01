@@ -67,43 +67,49 @@ export const CustomCodeBlock = CodeBlockLowlight.extend({
                 e.preventDefault();
                 e.stopPropagation();
                 if (typeof getPos === 'function') {
+                    const pos = getPos();
+                    if (typeof pos !== 'number') return;
+
                     // Force selection of the code block
-                    editor.chain().focus().setNodeSelection(getPos()).run();
+                    editor.chain().focus().setNodeSelection(pos).run();
                     // Send message to RN to open native language selector
                     sendMessage({
                         type: 'codeBlockSelected',
-                        language: node.attrs.language
+                        language: node.attrs.language,
+                        pos
                     });
                 }
             };
 
-            // Copy button (RIGHT)
-            const copyButton = document.createElement('button');
-            copyButton.className = 'code-copy-btn';
-            copyButton.type = 'button';
-            copyButton.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg><span>Copy</span>`;
+            // Menu button (RIGHT) - 3 vertical dots
+            const menuButton = document.createElement('button');
+            menuButton.className = 'code-menu-btn';
+            menuButton.type = 'button';
+            menuButton.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>`;
 
-            copyButton.onclick = (e) => {
+            menuButton.onclick = (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                const codeText = code.innerText || code.textContent || '';
-                // Send message to RN
-                sendMessage({ type: 'copyToClipboard', content: codeText });
 
-                // Show feedback immediately
-                copyButton.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg><span>Copied!</span>`;
-                copyButton.classList.add('copied');
-                setTimeout(() => {
-                    copyButton.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg><span>Copy</span>`;
-                    copyButton.classList.remove('copied');
-                }, 2000);
+                if (typeof getPos === 'function') {
+                    const pos = getPos();
+                    if (typeof pos !== 'number') return;
+
+                    // Send message to RN
+                    sendMessage({
+                        type: 'openBlockMenu',
+                        blockType: 'codeBlock',
+                        language: node.attrs.language,
+                        pos
+                    });
+                }
             };
 
             // Ensure header is not treated as part of the editor content
             header.contentEditable = 'false';
 
             header.appendChild(langButton);
-            header.appendChild(copyButton);
+            header.appendChild(menuButton);
 
             container.appendChild(header);
             container.appendChild(pre);

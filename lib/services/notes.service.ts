@@ -25,10 +25,15 @@ export const NoteService = {
 
     // 2. Update Metadata
     updateMetadata: async (noteId: string, updates: Partial<Omit<NoteMetadata, 'id' | 'createdAt'>>): Promise<NoteMetadata | null> => {
-        const title = generateTitle(updates.title ?? '');
+        let title = updates.title;
+        if (updates.title) {
+            title = generateTitle(updates.title);
+        }
         try {
             insertNoteMetadataSchema.pick({ title: true }).parse({ title });
-            const noteMetadata = notesRepo.updateNoteMetadata(noteId, { ...updates, title, isDirty: true });
+            let noteMetadata: NoteMetadata;
+            if (title) noteMetadata = notesRepo.updateNoteMetadata(noteId, { ...updates, title, isDirty: true });
+            else noteMetadata = notesRepo.updateNoteMetadata(noteId, { ...updates, isDirty: true });
             return noteMetadata
         } catch (err) {
             console.error(err)

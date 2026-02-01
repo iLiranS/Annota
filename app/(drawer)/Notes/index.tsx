@@ -122,7 +122,7 @@ export default function NotesList() {
 
     // Create new note and navigate to it
     const handleCreateNote = useCallback(async () => {
-        const newNote = await createNote(currentFolderId);
+        const newNote = await createNote({ folderId: currentFolderId ?? '' });
         router.push({ pathname: '/Notes/[id]', params: { id: newNote.id } });
     }, [createNote, currentFolderId, router]);
 

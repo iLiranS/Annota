@@ -4,6 +4,7 @@ import {
     scrollCursorIntoView,
     setupEditor
 } from './editor-core';
+import { hexToRgba } from './utils';
 
 export function setupCommands() {
     window.handleCommand = function (command, params) {
@@ -112,6 +113,24 @@ export function setupCommands() {
                     document.execCommand('cut');
                 }
                 break;
+            case 'deleteSelection':
+                if (typeof params?.pos === 'number') {
+                    e.chain().focus().setNodeSelection(params.pos).deleteSelection().run();
+                } else {
+                    e.chain().focus().deleteSelection().run();
+                }
+                break;
+            case 'copyToClipboard':
+                // Use native web copy to preserve block structure (Rich Text/HTML)
+                if (typeof params?.pos === 'number') {
+                    e.chain().focus().setNodeSelection(params.pos).run();
+                } else {
+                    e.chain().focus().run();
+                }
+                document.execCommand('copy');
+                // Optional: Unselect after copy if desired, but standard behavior usually keeps selection.
+                // Given the user request to avoid visual selection *during menu*, selecting now is inevitable for copy.
+                break;
             case 'insertTable':
                 c.insertTable({ rows: params?.rows || 3, cols: params?.cols || 3, withHeaderRow: params?.withHeaderRow !== false }).run();
                 break;
@@ -159,6 +178,45 @@ export function setupCommands() {
                         }).run();
                     }
                 }
+                break;
+            case 'toggleDetails':
+                // Check if we're in a details node
+                if (e.isActive('details')) {
+                    e.chain().focus().unsetDetails().run();
+                } else {
+                    e.chain().focus().setDetails().run();
+                }
+                break;
+            case 'setDetailsBackground':
+                if (params?.color) {
+                    let bgColor = params.color;
+                    // Use hexToRgba for 15% opacity (approx 0.15)
+                    if (bgColor.startsWith('#')) {
+                        bgColor = hexToRgba(bgColor, 0.3);
+                    }
+                    e.chain().focus().setDetailsBackground(bgColor).run();
+
+                    // Force immediate DOM update to prevent lag if NodeView doesn't re-render immediately
+                    setTimeout(() => {
+                        try {
+                            const { from } = e.state.selection;
+                            const domInfo = e.view.domAtPos(from);
+                            const target = domInfo.node instanceof HTMLElement
+                                ? domInfo.node
+                                : domInfo.node.parentElement;
+
+                            const detailsEl = target?.closest('[data-type="details"]') as HTMLElement;
+                            if (detailsEl) {
+                                detailsEl.style.backgroundColor = bgColor;
+                            }
+                        } catch (err) {
+                            console.warn('Failed to force update details background:', err);
+                        }
+                    }, 0);
+                }
+                break;
+            case 'unsetDetailsBackground':
+                e.chain().focus().unsetDetailsBackground().run();
                 break;
         }
 
