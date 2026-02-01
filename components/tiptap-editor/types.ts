@@ -5,6 +5,11 @@ export interface TipTapEditorRef {
     setContent: (content: string) => void;
     focus: () => void;
     blur: () => void;
+    // Search methods
+    search: (term: string) => void;
+    searchNext: () => void;
+    searchPrev: () => void;
+    clearSearch: () => void;
 }
 
 export interface TipTapEditorProps {
@@ -12,6 +17,8 @@ export interface TipTapEditorProps {
     onContentChange?: (html: string) => void;
     placeholder?: string;
     autofocus?: boolean;
+    /** Callback for search results from the editor */
+    onSearchResults?: (count: number, currentIndex: number) => void;
 }
 
 export interface EditorState {

@@ -609,3 +609,20 @@ body {
     outline: 2px solid var(--accent-color);
     outline-offset: -2px;
 }
+
+/* ========================================
+   Search Highlight Styles
+   ======================================== */
+
+.search-match {
+    background-color: var(--accent-color);
+    opacity: 0.4;
+    border-radius: 2px;
+}
+
+.search-match-active {
+    background-color: var(--accent-color);
+    opacity: 0.7;
+    border-radius: 2px;
+    box-shadow: 0 0 0 2px var(--accent-color);
+}

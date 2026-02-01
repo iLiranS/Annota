@@ -1,16 +1,20 @@
 import Sidebar from '@/components/navigation/sidebar';
 import { Drawer } from 'expo-router/drawer';
 import React from 'react';
+import { useWindowDimensions } from 'react-native';
 
 export default function DrawerLayout() {
+  const { width } = useWindowDimensions();
+  const isLargeScreen = width >= 768;
+  const drawerWidth = isLargeScreen ? 280 : Math.min(width * 0.8, 300);
+
   return (
     <Drawer
       screenOptions={{
         headerShown: true,
         drawerType: 'slide',
         drawerStyle: {
-          width: '80%',
-          maxWidth: 320,
+          width: drawerWidth,
         },
       }}
       drawerContent={(props) => <Sidebar {...props} />}

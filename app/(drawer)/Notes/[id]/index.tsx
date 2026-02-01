@@ -1,3 +1,5 @@
+import NoteHeaderMenu from '@/components/notes/note-header-menu';
+import { SearchOverlay } from '@/components/notes/search-overlay';
 import TipTapEditor, { TipTapEditorRef } from '@/components/tiptap-editor';
 import { generateTitle } from '@/lib/utils/notes';
 import { useNotesStore } from '@/stores/notes-store';
@@ -37,6 +39,12 @@ export default function NoteEditor() {
 
     // Track the current title for the header (updates as user types)
     const [displayTitle, setDisplayTitle] = useState(currentNote?.title || 'Untitled Note');
+
+    // Search state
+    const [isSearching, setIsSearching] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [searchResultCount, setSearchResultCount] = useState(0);
+    const [currentSearchIndex, setCurrentSearchIndex] = useState(-1);
 
     // Load content from database on mount
     useEffect(() => {
@@ -82,6 +90,43 @@ export default function NoteEditor() {
         editorRef.current?.blur();
         router.back();
     }, [router]);
+
+    // Search handlers
+    const handleOpenSearch = useCallback(() => {
+        setIsSearching(true);
+    }, []);
+
+    const handleCloseSearch = useCallback(() => {
+        setIsSearching(false);
+        setSearchTerm('');
+        setSearchResultCount(0);
+        setCurrentSearchIndex(-1);
+        editorRef.current?.clearSearch();
+    }, []);
+
+    const handleSearchTermChange = useCallback((term: string) => {
+        setSearchTerm(term);
+        if (term.length > 0) {
+            editorRef.current?.search(term);
+        } else {
+            editorRef.current?.clearSearch();
+            setSearchResultCount(0);
+            setCurrentSearchIndex(-1);
+        }
+    }, []);
+
+    const handleSearchResults = useCallback((count: number, currentIndex: number) => {
+        setSearchResultCount(count);
+        setCurrentSearchIndex(currentIndex);
+    }, []);
+
+    const handleSearchNext = useCallback(() => {
+        editorRef.current?.searchNext();
+    }, []);
+
+    const handleSearchPrev = useCallback(() => {
+        editorRef.current?.searchPrev();
+    }, []);
 
     // Handle case where note doesn't exist
     if (!currentNote) {
@@ -147,6 +192,9 @@ export default function NoteEditor() {
                         </Pressable>
                     ),
                     headerBackVisible: false,
+                    headerRight: () => (
+                        <NoteHeaderMenu noteId={id} onSearch={handleOpenSearch} />
+                    ),
                 }}
             />
 
@@ -155,11 +203,24 @@ export default function NoteEditor() {
                     <ActivityIndicator size="large" color={colors.primary} />
                 </View>
             ) : (
-                <View style={[styles.editorWrapper,]}>
+                <View style={styles.editorWrapper}>
+                    {/* Search Overlay - absolutely positioned at top of editor */}
+                    <SearchOverlay
+                        visible={isSearching}
+                        onClose={handleCloseSearch}
+                        searchTerm={searchTerm}
+                        onSearchTermChange={handleSearchTermChange}
+                        resultCount={searchResultCount}
+                        currentResultIndex={currentSearchIndex}
+                        onNext={handleSearchNext}
+                        onPrev={handleSearchPrev}
+                    />
+
                     <TipTapEditor
                         ref={editorRef}
                         initialContent={content ?? ''}
                         onContentChange={handleContentChange}
+                        onSearchResults={handleSearchResults}
                         placeholder="Start typing your note..."
                         autofocus={!content || content === '<p></p>'}
                     />

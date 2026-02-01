@@ -218,6 +218,19 @@ export function setupCommands() {
             case 'unsetDetailsBackground':
                 e.chain().focus().unsetDetailsBackground().run();
                 break;
+            // Search commands
+            case 'search':
+                e.commands.search(params?.term || '');
+                break;
+            case 'searchNext':
+                e.commands.searchNext();
+                break;
+            case 'searchPrev':
+                e.commands.searchPrev();
+                break;
+            case 'clearSearch':
+                e.commands.clearSearch();
+                break;
         }
 
         if (command !== 'getContent') {

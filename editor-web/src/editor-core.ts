@@ -14,7 +14,7 @@ import { StarterKit } from '@tiptap/starter-kit';
 
 import { Mathematics, migrateMathStrings } from '@tiptap/extension-mathematics';
 import { loadingEl, sendMessage, showError } from './bridge';
-import { CustomCodeBlock, CustomImage, CustomTableCell, CustomTableHeader, Details, DetailsContent, DetailsSummary } from './extensions';
+import { CustomCodeBlock, CustomImage, CustomTableCell, CustomTableHeader, Details, DetailsContent, DetailsSummary, SearchExtension } from './extensions';
 import { hexToRgba } from './utils';
 
 import './types';
@@ -231,6 +231,7 @@ export function setupEditor(options: any) {
                         }
                     }
                 }),
+                SearchExtension,
             ],
             content: content,
             autofocus: autofocus, // Pass directly

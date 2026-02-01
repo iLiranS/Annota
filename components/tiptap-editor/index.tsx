@@ -2,7 +2,7 @@ import { useAppTheme } from '@/hooks/use-app-theme';
 import { useKeyboard } from '@react-native-community/hooks';
 import * as ExpoClipboard from 'expo-clipboard';
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { Keyboard, KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
+import { Keyboard, Platform, StyleSheet, View } from 'react-native';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
 import { ImageGallery } from './image-gallery';
 import { EditorToolbar } from './toolbar';
@@ -24,7 +24,7 @@ import { EditorState, initialEditorState, PopupType, TipTapEditorProps, TipTapEd
  * - Native toolbar that appears with keyboard
  */
 const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
-    ({ initialContent = '', onContentChange, placeholder = 'Start typing...', autofocus = false }, ref) => {
+    ({ initialContent = '', onContentChange, placeholder = 'Start typing...', autofocus = false, onSearchResults }, ref) => {
         const { colors, dark } = useAppTheme();
         const webViewRef = useRef<WebView>(null);
         const [isReady, setIsReady] = useState(false);
@@ -40,6 +40,8 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
         const [currentLatex, setCurrentLatex] = useState<string | null>(null);
         const contentResolverRef = useRef<((html: string) => void) | null>(null);
         const { keyboardHeight } = useKeyboard();
+
+
 
 
 
@@ -76,6 +78,19 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
                 },
                 blur: () => {
                     sendCommand('blur');
+                },
+                // Search methods
+                search: (term: string) => {
+                    sendCommand('search', { term });
+                },
+                searchNext: () => {
+                    sendCommand('searchNext');
+                },
+                searchPrev: () => {
+                    sendCommand('searchPrev');
+                },
+                clearSearch: () => {
+                    sendCommand('clearSearch');
                 },
             }),
             [sendCommand]
@@ -151,12 +166,16 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
                             }
                             setIsPopupOpen(true);
                             break;
+                        case 'searchResults':
+                            // Forward search results to parent component
+                            onSearchResults?.(data.count, data.currentIndex);
+                            break;
                     }
                 } catch (e) {
                     console.warn('Failed to parse WebView message:', e);
                 }
             },
-            [onContentChange, dark, colors, initialContent, placeholder, autofocus, sendCommand]
+            [onContentChange, onSearchResults, dark, colors, initialContent, placeholder, autofocus, sendCommand]
         );
 
         useEffect(() => {
@@ -266,13 +285,11 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
                 />
 
                 {showToolbar && (
-                    <KeyboardAvoidingView
-                        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    <View
                         style={[
                             styles.toolbarContainer,
-                            { marginBottom: 25 },
-
                             {
+                                bottom: keyboardHeight,
                                 backgroundColor: colors.background,
                                 borderTopColor: colors.border
                             },
@@ -300,7 +317,7 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
                                 setIsPopupOpen(true);
                             }}
                         />
-                    </KeyboardAvoidingView>
+                    </View>
                 )}
 
 
@@ -357,10 +374,9 @@ const styles = StyleSheet.create({
         backgroundColor: 'transparent',
     },
     toolbarContainer: {
-        width: '100%',
-        alignSelf: 'center',
-        overflow: 'hidden',
-        flex: 1,
+        position: 'absolute',
+        left: 0,
+        right: 0,
         borderTopWidth: 1,
     },
 
