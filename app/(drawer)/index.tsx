@@ -3,6 +3,7 @@ import RecentNotes from '@/components/notes/recent-notes';
 import TaskItem from '@/components/task-item';
 import ThemedText from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { HapticPressable } from '@/components/ui/haptic-pressable';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { useTasksStore, type Task } from '@/stores/tasks-store';
 import { Ionicons } from '@expo/vector-icons';
@@ -107,7 +108,7 @@ export default function HomeScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Pressable
+          <HapticPressable
             onPress={() => navigation.openDrawer()}
             style={({ pressed }) => ({
               opacity: pressed ? 0.7 : 1,
@@ -116,7 +117,7 @@ export default function HomeScreen() {
             })}
           >
             <Ionicons name="menu-outline" size={28} color={colors.text} />
-          </Pressable>
+          </HapticPressable>
           <View style={styles.greetingContainer}>
             <ThemedText style={styles.greetingText}>
               {greeting}, <ThemedText style={[styles.userName, { color: colors.primary }]}>User</ThemedText>

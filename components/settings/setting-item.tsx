@@ -1,7 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
 import React from 'react';
-import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { StyleSheet, Switch, Text, View } from 'react-native';
+import { HapticPressable } from '../ui/haptic-pressable';
 
 interface SettingItemProps {
     label: string;
@@ -31,7 +32,7 @@ export default function SettingItem({
     const { colors, dark } = useTheme();
 
     return (
-        <Pressable
+        <HapticPressable
             onPress={type === 'toggle' ? () => onToggle?.(!value) : onPress}
             style={({ pressed }) => [
                 styles.container,
@@ -84,7 +85,7 @@ export default function SettingItem({
                     </Text>
                 )}
             </View>
-        </Pressable>
+        </HapticPressable>
     );
 }
 

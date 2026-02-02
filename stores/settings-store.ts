@@ -17,6 +17,7 @@ export interface GeneralSettings {
     startOfWeek: StartOfWeek;
     compactMode: boolean;
     showTitle: boolean;
+    hapticFeedback: boolean;
 }
 
 export interface SettingsState {
@@ -51,6 +52,7 @@ const DEFAULT_GENERAL_SETTINGS: GeneralSettings = {
     startOfWeek: 'sunday',
     compactMode: false,
     showTitle: true,
+    hapticFeedback: true,
 };
 
 export const useSettingsStore = create<SettingsState>()(

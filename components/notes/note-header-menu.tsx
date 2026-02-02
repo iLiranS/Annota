@@ -1,3 +1,4 @@
+import { HapticPressable } from '@/components/ui/haptic-pressable';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
@@ -45,17 +46,17 @@ function MenuItem({ icon, label, onPress, iconColor, textColor, rightElement }: 
     const { colors } = useAppTheme();
 
     return (
-        <Pressable
+        <HapticPressable
             style={({ pressed }) => [
                 styles.menuItem,
-                pressed && { backgroundColor: colors.border + '30' },
+                pressed && { backgroundColor: colors.text + '20' },
             ]}
             onPress={onPress}
         >
             <Ionicons name={icon} size={20} color={iconColor || colors.text} />
             <Text style={[styles.menuItemText, { color: textColor || colors.text }]}>{label}</Text>
             {rightElement}
-        </Pressable>
+        </HapticPressable>
     );
 }
 
@@ -130,16 +131,16 @@ export default function NoteHeaderMenu({
     return (
         <>
             {/* Three dots button */}
-            <Pressable
+            <HapticPressable
                 onPress={() => setIsVisible(true)}
                 style={({ pressed }) => [
                     styles.headerButton,
-                    pressed && { opacity: 0.7 },
+                    pressed && { backgroundColor: colors.text + '15' },
                 ]}
                 hitSlop={8}
             >
                 <Ionicons name="ellipsis-horizontal" size={24} color={colors.text} />
-            </Pressable>
+            </HapticPressable>
 
             {/* Menu Modal */}
             <Modal
@@ -237,6 +238,7 @@ export default function NoteHeaderMenu({
 const styles = StyleSheet.create({
     headerButton: {
         padding: 4,
+        borderRadius: 20,
     },
     overlay: {
         flex: 1,
@@ -259,7 +261,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: 16,
-        paddingVertical: 12,
+        paddingVertical: 10,
         gap: 12,
     },
     menuItemText: {
@@ -268,6 +270,6 @@ const styles = StyleSheet.create({
     },
     divider: {
         height: 1,
-        marginVertical: 4,
+        marginVertical: 2,
     },
 });

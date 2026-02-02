@@ -1,3 +1,4 @@
+import { HapticPressable } from '@/components/ui/haptic-pressable';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Stack, useRouter } from 'expo-router';
@@ -19,12 +20,12 @@ export default function SettingsLayout() {
                 },
                 headerLeft: ({ canGoBack }) =>
                     canGoBack ? (
-                        <Pressable
+                        <HapticPressable
                             onPress={() => router.back()}
                             style={{ width: 40, height: 40, justifyContent: 'center', alignItems: 'center' }}
                         >
                             <Ionicons name="chevron-back" size={24} color={colors.primary} />
-                        </Pressable>
+                        </HapticPressable>
                     ) : undefined,
                 headerRight: () => (
                     <Pressable

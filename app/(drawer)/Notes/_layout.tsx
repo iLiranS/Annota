@@ -1,8 +1,8 @@
+import { HapticPressable } from '@/components/ui/haptic-pressable';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { DrawerActions, useTheme } from '@react-navigation/native';
 import { Stack, useNavigation } from 'expo-router';
 import React from 'react';
-import { Pressable } from 'react-native';
 
 export default function NotesLayout() {
     const { colors } = useTheme();
@@ -25,13 +25,13 @@ export default function NotesLayout() {
                 options={{
                     title: 'Notes',
                     headerLeft: () => (
-                        <Pressable
+                        <HapticPressable
                             onPress={openDrawer}
                             style={{ padding: 4, marginLeft: -4 }}
                             hitSlop={8}
                         >
                             <Ionicons name="menu" size={26} color={colors.primary} />
-                        </Pressable>
+                        </HapticPressable>
                     ),
                 }}
             />

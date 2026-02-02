@@ -13,6 +13,7 @@ import {
     View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { HapticPressable } from '../ui/haptic-pressable';
 
 
 
@@ -28,7 +29,7 @@ function SidebarItem({ icon, label, onPress, iconColor, isActive }: SidebarItemP
     const { colors } = useAppTheme();
 
     return (
-        <Pressable
+        <HapticPressable
             onPress={onPress}
             style={({ pressed }) => [
                 styles.sidebarItem,
@@ -47,7 +48,7 @@ function SidebarItem({ icon, label, onPress, iconColor, isActive }: SidebarItemP
             ]}>
                 {label}
             </Text>
-        </Pressable>
+        </HapticPressable>
     );
 }
 
@@ -212,14 +213,14 @@ export default function Sidebar(props: DrawerContentComponentProps) {
 
             {/* Footer Section */}
             <View style={[styles.footer, { paddingBottom: insets.bottom + 16, borderTopColor: colors.border }]}>
-                <Pressable onPress={navigateToTrash} style={styles.footerItem}>
+                <HapticPressable onPress={navigateToTrash} style={styles.footerItem}>
                     <Ionicons name="trash-outline" size={22} color={colors.text} />
                     <Text style={[styles.footerText, { color: colors.text }]}>Trash</Text>
-                </Pressable>
+                </HapticPressable>
 
-                <Pressable onPress={navigateToSettings} style={styles.iconButton}>
+                <HapticPressable onPress={navigateToSettings} style={styles.iconButton}>
                     <Ionicons name="settings-outline" size={24} color={colors.text} />
-                </Pressable>
+                </HapticPressable>
             </View>
         </View>
     );

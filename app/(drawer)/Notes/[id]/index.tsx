@@ -1,6 +1,7 @@
 import NoteHeaderMenu from '@/components/notes/note-header-menu';
 import { SearchOverlay } from '@/components/notes/search-overlay';
 import TipTapEditor, { TipTapEditorRef } from '@/components/tiptap-editor';
+import { HapticPressable } from '@/components/ui/haptic-pressable';
 import { generateTitle } from '@/lib/utils/notes';
 import { useNotesStore } from '@/stores/notes-store';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -179,7 +180,7 @@ export default function NoteEditor() {
                         </Text>
                     ),
                     headerLeft: () => (
-                        <Pressable
+                        <HapticPressable
                             onPress={handleBack}
                             style={styles.headerButton}
                             hitSlop={8}
@@ -189,7 +190,7 @@ export default function NoteEditor() {
                                 size={26}
                                 color={colors.primary}
                             />
-                        </Pressable>
+                        </HapticPressable>
                     ),
                     headerBackVisible: false,
                     headerRight: () => (

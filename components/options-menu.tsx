@@ -4,12 +4,12 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import React, { useState } from 'react';
 import {
     Modal,
-    Pressable,
     StyleSheet,
     Text,
-    View,
+    View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { HapticPressable } from './ui/haptic-pressable';
 
 const SORT_OPTIONS: SortType[] = [
     'NAME_ASC',
@@ -69,7 +69,7 @@ export default function OptionsMenu({
         <>
             {/* Options Button */}
             <View style={[styles.buttonContainer, { bottom: 20 + insets.bottom, right: 20 }]}>
-                <Pressable
+                <HapticPressable
                     onPress={() => setIsVisible(true)}
                     style={({ pressed }) => [
                         styles.optionsButton,
@@ -81,7 +81,7 @@ export default function OptionsMenu({
                     ]}
                 >
                     <Ionicons name="ellipsis-vertical" size={22} color={colors.text} />
-                </Pressable>
+                </HapticPressable>
             </View>
 
             {/* Options Modal */}
@@ -91,7 +91,7 @@ export default function OptionsMenu({
                 animationType="fade"
                 onRequestClose={handleClose}
             >
-                <Pressable style={styles.overlay} onPress={handleClose}>
+                <HapticPressable style={styles.overlay} onPress={handleClose}>
                     <View
                         style={[
                             styles.menuContainer,
@@ -104,7 +104,7 @@ export default function OptionsMenu({
                         {/* Main Menu */}
                         {!showSortSubmenu && (
                             <>
-                                <Pressable
+                                <HapticPressable
                                     style={({ pressed }) => [
                                         styles.menuItem,
                                         pressed && { backgroundColor: colors.border + '30' },
@@ -113,9 +113,9 @@ export default function OptionsMenu({
                                 >
                                     <Ionicons name="folder-open-outline" size={20} color={colors.text} />
                                     <Text style={[styles.menuItemText, { color: colors.text }]}>New Folder</Text>
-                                </Pressable>
+                                </HapticPressable>
 
-                                <Pressable
+                                <HapticPressable
                                     style={({ pressed }) => [
                                         styles.menuItem,
                                         pressed && { backgroundColor: colors.border + '30' },
@@ -125,11 +125,11 @@ export default function OptionsMenu({
                                     <Ionicons name="swap-vertical-outline" size={20} color={colors.text} />
                                     <Text style={[styles.menuItemText, { color: colors.text }]}>Sort By</Text>
                                     <Ionicons name="chevron-forward" size={18} color={colors.text + '60'} style={styles.chevron} />
-                                </Pressable>
+                                </HapticPressable>
 
                                 <View style={[styles.divider, { backgroundColor: colors.border + '30' }]} />
 
-                                <Pressable
+                                <HapticPressable
                                     style={({ pressed }) => [
                                         styles.menuItem,
                                         pressed && { backgroundColor: colors.border + '30' },
@@ -138,9 +138,9 @@ export default function OptionsMenu({
                                 >
                                     <Ionicons name="trash-outline" size={20} color={colors.text} />
                                     <Text style={[styles.menuItemText, { color: colors.text }]}>Trash</Text>
-                                </Pressable>
+                                </HapticPressable>
 
-                                <Pressable
+                                <HapticPressable
                                     style={({ pressed }) => [
                                         styles.menuItem,
                                         pressed && { backgroundColor: colors.border + '30' },
@@ -149,14 +149,14 @@ export default function OptionsMenu({
                                 >
                                     <Ionicons name="settings-outline" size={20} color={colors.text} />
                                     <Text style={[styles.menuItemText, { color: colors.text }]}>Settings</Text>
-                                </Pressable>
+                                </HapticPressable>
                             </>
                         )}
 
                         {/* Sort Submenu */}
                         {showSortSubmenu && (
                             <>
-                                <Pressable
+                                <HapticPressable
                                     style={({ pressed }) => [
                                         styles.menuItem,
                                         pressed && { backgroundColor: colors.border + '30' },
@@ -165,12 +165,12 @@ export default function OptionsMenu({
                                 >
                                     <Ionicons name="chevron-back" size={20} color={colors.text} />
                                     <Text style={[styles.menuItemText, { color: colors.text, fontWeight: '600' }]}>Sort By</Text>
-                                </Pressable>
+                                </HapticPressable>
 
                                 <View style={[styles.divider, { backgroundColor: colors.border + '30' }]} />
 
                                 {SORT_OPTIONS.map((sortType) => (
-                                    <Pressable
+                                    <HapticPressable
                                         key={sortType}
                                         style={({ pressed }) => [
                                             styles.menuItem,
@@ -192,12 +192,12 @@ export default function OptionsMenu({
                                         >
                                             {getSortTypeLabel(sortType)}
                                         </Text>
-                                    </Pressable>
+                                    </HapticPressable>
                                 ))}
                             </>
                         )}
                     </View>
-                </Pressable>
+                </HapticPressable>
             </Modal>
         </>
     );

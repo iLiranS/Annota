@@ -29,7 +29,7 @@ export default function SettingsSlider({
     label
 }: SettingsSliderProps) {
     const { colors, dark } = useTheme();
-    const { accentColor } = useSettingsStore();
+    const { accentColor, general } = useSettingsStore();
 
     return (
         <View style={[styles.container, { backgroundColor: colors.card }]}>
@@ -51,7 +51,7 @@ export default function SettingsSlider({
                     value={value}
                     onValueChange={(val) => {
                         onValueChange(val);
-                        Haptics.selectionAsync();
+                        if (general.hapticFeedback) Haptics.selectionAsync();
                     }}
                     minimumTrackTintColor={accentColor}
                     maximumTrackTintColor={dark ? '#3A3A3C' : '#E5E5EA'}

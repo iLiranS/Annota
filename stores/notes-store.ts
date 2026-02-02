@@ -101,7 +101,6 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         set({ folders, notes, isInitialized: true });
         console.log(`[Store] Initialized with ${folders.length} folders and ${notes.length} notes.`);
 
-        console.log(notes.map(n => n.title));
     },
 
     // ============ NOTE OPERATIONS ============

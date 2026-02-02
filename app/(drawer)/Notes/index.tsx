@@ -6,6 +6,7 @@ import NoteCard from '@/components/notes/note-card';
 import OptionsMenu from '@/components/options-menu';
 import NotesSearchModal from '@/components/search/notes-search-modal';
 import ThemedText from '@/components/themed-text';
+import { HapticPressable } from '@/components/ui/haptic-pressable';
 import {
     sortFolders,
     sortNotes,
@@ -18,10 +19,9 @@ import { Stack, useLocalSearchParams, useNavigation, useRouter } from 'expo-rout
 import { useCallback, useMemo, useState } from 'react';
 import {
     FlatList,
-    Pressable,
     StyleSheet,
     Text,
-    View,
+    View
 } from 'react-native';
 
 type ListItem =
@@ -227,23 +227,23 @@ export default function NotesList() {
                     title: headerTitle,
                     headerLeft: () => currentFolderId
                         ? (
-                            <Pressable onPress={handleBack} style={styles.headerButton} hitSlop={8}>
+                            <HapticPressable onPress={handleBack} style={styles.headerButton} hitSlop={8}>
                                 <Ionicons name="chevron-back" size={26} color={colors.primary} />
-                            </Pressable>
+                            </HapticPressable>
                         )
                         : (
-                            <Pressable onPress={openDrawer} style={styles.headerButton} hitSlop={8}>
+                            <HapticPressable onPress={openDrawer} style={styles.headerButton} hitSlop={8}>
                                 <Ionicons name="menu" size={26} color={colors.primary} />
-                            </Pressable>
+                            </HapticPressable>
                         ),
                     headerRight: () => (
-                        <Pressable
+                        <HapticPressable
                             onPress={() => setIsSearchVisible(true)}
                             style={styles.headerButton}
                             hitSlop={8}
                         >
                             <Ionicons name="search" size={24} color={colors.primary} />
-                        </Pressable>
+                        </HapticPressable>
                     ),
                 }}
             />

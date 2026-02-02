@@ -1,7 +1,8 @@
 import { useAppTheme } from '@/hooks/use-app-theme';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import React from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { HapticPressable } from './ui/haptic-pressable';
 
 interface FloatingActionButtonProps {
     onPress: () => void;
@@ -18,7 +19,7 @@ export default function FloatingActionButton({
 
     return (
         <View style={[styles.container, { bottom: 16 }]}>
-            <Pressable
+            <HapticPressable
                 onPress={onPress}
                 style={({ pressed }) => [
                     styles.button,
@@ -33,7 +34,7 @@ export default function FloatingActionButton({
                 ]}
             >
                 <Ionicons name={icon} size={28} color="#FFFFFF" />
-            </Pressable>
+            </HapticPressable>
         </View>
     );
 }

@@ -47,6 +47,13 @@ export default function GeneralSettings() {
                         onToggle={(val) => updateGeneralSettings({ showTitle: val })}
                         icon="text-outline"
                     />
+                    <SettingItem
+                        label="Haptic Feedback"
+                        type="toggle"
+                        value={general.hapticFeedback}
+                        onToggle={(val) => updateGeneralSettings({ hapticFeedback: val })}
+                        icon="finger-print-outline"
+                    />
                 </View>
             </View>
         </ScrollView>
