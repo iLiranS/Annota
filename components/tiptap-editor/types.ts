@@ -19,6 +19,8 @@ export interface TipTapEditorProps {
     autofocus?: boolean;
     /** Callback for search results from the editor */
     onSearchResults?: (count: number, currentIndex: number) => void;
+    /** Extra padding at the top of the content (useful for transparent headers) */
+    contentPaddingTop?: number;
 }
 
 export interface EditorState {

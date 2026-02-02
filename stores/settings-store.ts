@@ -16,7 +16,7 @@ export interface EditorSettings {
 export interface GeneralSettings {
     startOfWeek: StartOfWeek;
     compactMode: boolean;
-    showTitle: boolean;
+    floatingNoteHeader: boolean;
     hapticFeedback: boolean;
 }
 
@@ -51,7 +51,7 @@ const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
 const DEFAULT_GENERAL_SETTINGS: GeneralSettings = {
     startOfWeek: 'sunday',
     compactMode: false,
-    showTitle: true,
+    floatingNoteHeader: true,
     hapticFeedback: true,
 };
 

@@ -24,7 +24,7 @@ import { EditorState, initialEditorState, PopupType, TipTapEditorProps, TipTapEd
  * - Native toolbar that appears with keyboard
  */
 const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
-    ({ initialContent = '', onContentChange, placeholder = 'Start typing...', autofocus = false, onSearchResults }, ref) => {
+    ({ initialContent = '', onContentChange, placeholder = 'Start typing...', autofocus = false, onSearchResults, contentPaddingTop = 0 }, ref) => {
         const { colors, dark } = useAppTheme();
         const webViewRef = useRef<WebView>(null);
         const [isReady, setIsReady] = useState(false);
@@ -110,6 +110,7 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
                                 content: initialContent,
                                 placeholder,
                                 autofocus,
+                                paddingTop: contentPaddingTop,
                             });
                             break;
                         case 'content':
@@ -183,9 +184,10 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
                 sendCommand('setOptions', {
                     isDark: dark,
                     colors,
+                    paddingTop: contentPaddingTop,
                 });
             }
-        }, [dark, colors, isReady, sendCommand]);
+        }, [dark, colors, isReady, sendCommand, contentPaddingTop]);
 
         useEffect(() => {
             const handleKeyboardShow = (height: number) => {

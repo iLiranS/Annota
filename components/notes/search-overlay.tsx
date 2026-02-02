@@ -19,6 +19,7 @@ interface SearchOverlayProps {
     currentResultIndex: number;
     onNext: () => void;
     onPrev: () => void;
+    topOffset?: number;
 }
 
 export function SearchOverlay({
@@ -30,17 +31,18 @@ export function SearchOverlay({
     currentResultIndex,
     onNext,
     onPrev,
+    topOffset = 0,
 }: SearchOverlayProps) {
     const { colors } = useAppTheme();
     const inputRef = useRef<TextInput>(null);
-    const translateY = useRef(new Animated.Value(-60)).current;
+    const translateY = useRef(new Animated.Value(-100)).current;
     const opacity = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
         if (visible) {
             Animated.parallel([
                 Animated.spring(translateY, {
-                    toValue: 0,
+                    toValue: topOffset,
                     useNativeDriver: true,
                     tension: 100,
                     friction: 12,
@@ -57,7 +59,7 @@ export function SearchOverlay({
         } else {
             Animated.parallel([
                 Animated.timing(translateY, {
-                    toValue: -60,
+                    toValue: -100,
                     duration: 150,
                     useNativeDriver: true,
                 }),
@@ -68,7 +70,7 @@ export function SearchOverlay({
                 }),
             ]).start();
         }
-    }, [visible, translateY, opacity]);
+    }, [visible, translateY, opacity, topOffset]);
 
     if (!visible) return null;
 
@@ -89,6 +91,17 @@ export function SearchOverlay({
                     transform: [{ translateY }],
                     opacity,
                 },
+                topOffset > 0 && {
+                    marginHorizontal: 12,
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderBottomWidth: 1, // Ensure consistent border when floating
+                    borderColor: colors.border,
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.15,
+                    shadowRadius: 10,
+                    elevation: 5,
+                }
             ]}
         >
             <View style={styles.content}>

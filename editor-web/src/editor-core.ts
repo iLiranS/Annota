@@ -141,7 +141,8 @@ export function setupEditor(options: any) {
         colors = {},
         content = '',
         placeholder = 'Write something...',
-        autofocus = false
+        autofocus = false,
+        paddingTop = 0
     } = options;
 
     // Set CSS variables for theme
@@ -153,6 +154,11 @@ export function setupEditor(options: any) {
     document.documentElement.style.setProperty('--code-block-bg', isDark ? '#1E1E1E' : '#F5F5F5');
     document.documentElement.style.setProperty('--border-color', isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)');
     document.documentElement.style.setProperty('--quote-bg', hexToRgba(colors.primary, 0.2));
+
+    // Apply content padding to the body so it scrolls with the header
+    document.body.style.paddingTop = `${paddingTop}px`;
+    document.body.style.height = 'auto'; // Ensure body can grow with padding
+    document.body.style.minHeight = '100%';
 
     // If editor already exists, ONLY update what's necessary, DO NOT DESTROY
     if (window.editor) {

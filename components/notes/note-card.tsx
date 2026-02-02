@@ -3,6 +3,7 @@ import ThemedText from '@/components/themed-text';
 import ThemedPressable from '@/components/ui/themed-pressable';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { NoteMetadata } from '@/stores/notes-store';
+import { useSettingsStore } from '@/stores/settings-store';
 import { formatRelativeDate } from '@/utils/date-formatter';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, View } from 'react-native';
@@ -15,6 +16,7 @@ interface NoteCardProps {
     swipeable?: boolean;
     description?: React.ReactNode;
     showDescription?: boolean;
+    showTimestamp?: boolean;
 }
 
 export default function NoteCard({
@@ -24,9 +26,13 @@ export default function NoteCard({
     onDelete,
     description,
     showDescription = true,
+    showTimestamp,
     swipeable = true
 }: NoteCardProps) {
     const { colors, dark } = useAppTheme();
+    const { general } = useSettingsStore();
+    const isCompact = general.compactMode;
+    const shouldShowTimestamp = showTimestamp ?? !isCompact;
 
     const CardContent = (
         <ThemedPressable
@@ -38,32 +44,35 @@ export default function NoteCard({
                     backgroundColor: colors.card,
                     borderColor: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
                 },
+                isCompact && { paddingVertical: 12 },
                 pressed && styles.pressed,
             ]}
         >
-            <View style={styles.noteHeader}>
+            <View style={[styles.noteHeader, isCompact && !description && { marginBottom: 0 }]}>
                 <View style={styles.titleRow}>
                     <Ionicons name="document-text" size={16} color={colors.primary} />
                     <ThemedText style={styles.title} numberOfLines={1}>
                         {note.title || 'Untitled Note'}
                     </ThemedText>
                 </View>
-                <View style={styles.timestampRow}>
-                    <ThemedText style={[styles.timestamp, { color: colors.text + '60' }]}>
-                        {formatRelativeDate(note.updatedAt)}
-                    </ThemedText>
-                </View>
+                {shouldShowTimestamp && (
+                    <View style={styles.timestampRow}>
+                        <ThemedText style={[styles.timestamp, { color: colors.text + '60' }]}>
+                            {formatRelativeDate(note.updatedAt)}
+                        </ThemedText>
+                    </View>
+                )}
             </View>
             {description && showDescription ? (
                 description
-            ) : (
+            ) : !isCompact ? (
                 <ThemedText
                     style={[styles.preview, { color: colors.text + '70' }]}
                     numberOfLines={1}
                 >
                     {note.preview}
                 </ThemedText>
-            )}
+            ) : null}
         </ThemedPressable>
     );
 

@@ -4,7 +4,7 @@ import { useNotesStore } from '@/stores/notes-store';
 import { useTheme } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import React, { useMemo } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 export default function RecentNotes() {
     const router = useRouter();
@@ -20,11 +20,7 @@ export default function RecentNotes() {
 
     return (
         <View>
-            <View style={styles.sectionHeaderWithAction}>
-                <Pressable onPress={() => router.push('/Notes')}>
-                    <ThemedText style={[styles.viewAllText, { color: colors.primary }]}>View Notes</ThemedText>
-                </Pressable>
-            </View>
+
 
             {recentNotes.length > 0 ? (
                 <View style={{ gap: 10 }}>
@@ -32,7 +28,7 @@ export default function RecentNotes() {
                         <NoteListItem
                             key={note.id}
                             note={note}
-                            onPress={() => router.push(`/Notes/${note.id}`)}
+                            onPress={() => router.push({ pathname: `/Notes/[id]`, params: { id: note.id, source: 'home' } })}
                         />
                     ))}
                 </View>

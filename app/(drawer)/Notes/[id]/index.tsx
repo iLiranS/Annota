@@ -4,13 +4,13 @@ import TipTapEditor, { TipTapEditorRef } from '@/components/tiptap-editor';
 import { HapticPressable } from '@/components/ui/haptic-pressable';
 import { generateTitle } from '@/lib/utils/notes';
 import { useNotesStore } from '@/stores/notes-store';
+import { useSettingsStore } from '@/stores/settings-store';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
 import { Stack, useFocusEffect, useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
-    Pressable,
     StyleSheet,
     Text,
     View
@@ -24,12 +24,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 
 export default function NoteEditor() {
-    const { id } = useLocalSearchParams<{ id: string }>();
+    const { id, source } = useLocalSearchParams<{ id: string, source: string }>();
     const { colors } = useTheme();
     const router = useRouter();
     const navigation = useNavigation();
     const insets = useSafeAreaInsets();
     const editorRef = useRef<TipTapEditorRef>(null);
+    const { general } = useSettingsStore();
+
 
     const { getNoteById, updateNoteMetadata, getNoteContent, updateNoteContent } = useNotesStore();
     const currentNote = id ? getNoteById(id) : undefined;
@@ -89,8 +91,13 @@ export default function NoteEditor() {
     const handleBack = useCallback(() => {
         // Blur editor before navigating back
         editorRef.current?.blur();
-        router.back();
-    }, [router]);
+        if (source === 'home') {
+            // Use replace to go directly to home without stack issues
+            router.replace('/');
+        } else {
+            router.back();
+        }
+    }, [router, source]);
 
     // Search handlers
     const handleOpenSearch = useCallback(() => {
@@ -138,7 +145,7 @@ export default function NoteEditor() {
                         headerShown: true,
                         headerTitle: 'Note Not Found',
                         headerLeft: () => (
-                            <Pressable
+                            <HapticPressable
                                 onPress={() => router.back()}
                                 style={styles.headerButton}
                                 hitSlop={8}
@@ -148,7 +155,7 @@ export default function NoteEditor() {
                                     size={26}
                                     color={colors.primary}
                                 />
-                            </Pressable>
+                            </HapticPressable>
                         ),
                         headerBackVisible: false,
                     }}
@@ -171,7 +178,12 @@ export default function NoteEditor() {
             <Stack.Screen
                 options={{
                     headerShown: true,
-                    headerTitle: () => (
+                    gestureEnabled: source !== 'home', // Disable swipe when coming from home to force correct back navigation
+                    headerTransparent: general.floatingNoteHeader,
+                    headerBackground: general.floatingNoteHeader ? () => <View style={{ flex: 1, backgroundColor: 'transparent' }} /> : undefined,
+                    headerBlurEffect: undefined,
+                    headerShadowVisible: !general.floatingNoteHeader,
+                    headerTitle: general.floatingNoteHeader ? '' : () => (
                         <Text
                             style={[styles.headerTitle, { color: colors.text }]}
                             numberOfLines={1}
@@ -215,6 +227,7 @@ export default function NoteEditor() {
                         currentResultIndex={currentSearchIndex}
                         onNext={handleSearchNext}
                         onPrev={handleSearchPrev}
+                        topOffset={general.floatingNoteHeader ? insets.top + 50 : 0}
                     />
 
                     <TipTapEditor
@@ -222,6 +235,7 @@ export default function NoteEditor() {
                         initialContent={content ?? ''}
                         onContentChange={handleContentChange}
                         onSearchResults={handleSearchResults}
+                        contentPaddingTop={general.floatingNoteHeader ? insets.top + 44 : 0}
                         placeholder="Start typing your note..."
                         autofocus={!content || content === '<p></p>'}
                     />

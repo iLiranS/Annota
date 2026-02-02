@@ -13,6 +13,7 @@ import {
     SortType,
 } from '@/dev-data/data';
 import { NoteMetadata, TRASH_FOLDER_ID, useNotesStore, type Folder } from '@/stores/notes-store';
+import { useSettingsStore } from '@/stores/settings-store';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { DrawerActions, useTheme } from '@react-navigation/native';
 import { Stack, useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
@@ -52,6 +53,9 @@ export default function NotesList() {
         getSortType,
         setFolderSortType,
     } = useNotesStore();
+
+    const { general } = useSettingsStore();
+    const isCompact = general.compactMode;
 
     const currentFolderId = params.folderId ?? null;
     const currentFolder = currentFolderId ? getFolderById(currentFolderId) : null;
@@ -185,7 +189,11 @@ export default function NotesList() {
     const renderItem = ({ item }: { item: ListItem }) => {
         if (item.type === 'section-header') {
             return (
-                <ThemedText style={[styles.sectionHeader, { color: colors.text + '60' }]}>
+                <ThemedText style={[
+                    styles.sectionHeader,
+                    { color: colors.text + '60' },
+                    isCompact && { marginTop: 8, marginBottom: 4 }
+                ]}>
                     {item.title}
                 </ThemedText>
             );
@@ -205,12 +213,14 @@ export default function NotesList() {
         }
 
         return (
-            <NoteCard
-                note={item.data}
-                onPress={() => handleNotePress(item.data.id)}
-                onLongPress={() => handleNoteLongPress(item.data)}
-                onDelete={() => handleDeleteNote(item.data.id)}
-            />
+            <View style={{ marginBottom: isCompact ? 0 : 6 }}>
+                <NoteCard
+                    note={item.data}
+                    onPress={() => handleNotePress(item.data.id)}
+                    onLongPress={() => handleNoteLongPress(item.data)}
+                    onDelete={() => handleDeleteNote(item.data.id)}
+                />
+            </View>
         );
     };
 

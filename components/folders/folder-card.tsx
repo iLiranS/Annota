@@ -2,6 +2,7 @@ import SwipeableItem from '@/components/swipeable-item';
 import ThemedText from '@/components/themed-text';
 import ThemedPressable from '@/components/ui/themed-pressable';
 import { Folder } from '@/stores/notes-store';
+import { useSettingsStore } from '@/stores/settings-store';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
 import { StyleSheet, View } from 'react-native';
@@ -24,6 +25,8 @@ export default function FolderCard({
     extraMarginTop = false
 }: FolderCardProps) {
     const { colors, dark } = useTheme();
+    const { general } = useSettingsStore();
+    const isCompact = general.compactMode;
     const folderColor = folder.color || '#F59E0B'; // Fallback to amber if no color set
 
     const CardContent = (
@@ -35,15 +38,23 @@ export default function FolderCard({
                 {
                     backgroundColor: colors.card,
                     borderColor: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
-                    marginTop: extraMarginTop ? 16 : 0,
+                    marginTop: extraMarginTop ? (isCompact ? 8 : 16) : 0,
+                    padding: isCompact ? 10 : 14,
                 },
                 pressed && styles.pressed,
             ]}
         >
-            <View style={[styles.folderIcon, { backgroundColor: folderColor + '20' }]}>
-                <Ionicons name={folder.icon as keyof typeof Ionicons.glyphMap} size={22} color={folderColor} />
+            <View style={[
+                styles.folderIcon,
+                {
+                    backgroundColor: folderColor + '20',
+                    width: isCompact ? 32 : 40,
+                    height: isCompact ? 32 : 40,
+                }
+            ]}>
+                <Ionicons name={folder.icon as keyof typeof Ionicons.glyphMap} size={isCompact ? 18 : 22} color={folderColor} />
             </View>
-            <ThemedText style={styles.folderName}>{folder.name}</ThemedText>
+            <ThemedText style={[styles.folderName, isCompact && { fontSize: 15 }]}>{folder.name}</ThemedText>
             <Ionicons name="chevron-forward" size={18} color={colors.text + '50'} />
         </ThemedPressable>
     );

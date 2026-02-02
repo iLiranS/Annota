@@ -41,10 +41,10 @@ export default function GeneralSettings() {
                         description="Show more items in lists"
                     />
                     <SettingItem
-                        label="Show Note Titles"
+                        label="Floating Note Header"
                         type="toggle"
-                        value={general.showTitle}
-                        onToggle={(val) => updateGeneralSettings({ showTitle: val })}
+                        value={general.floatingNoteHeader}
+                        onToggle={(val) => updateGeneralSettings({ floatingNoteHeader: val })}
                         icon="text-outline"
                     />
                     <SettingItem

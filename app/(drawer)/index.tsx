@@ -241,7 +241,7 @@ export default function HomeScreen() {
                   ))
                 ) : (
                   <View style={[styles.emptyState, { backgroundColor: colors.card, borderColor: colors.border, paddingVertical: 30 }]}>
-                    <ThemedText style={{ color: colors.text + '50', fontWeight: '600' }}>Full focus! No tasks for today</ThemedText>
+                    <ThemedText style={{ color: colors.text + '50', fontWeight: '600' }}>No tasks for today</ThemedText>
                   </View>
                 )}
 

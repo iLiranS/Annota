@@ -2,6 +2,7 @@ import FolderCard from '@/components/folders/folder-card';
 import NoteCard from '@/components/notes/note-card';
 import ThemedText from '@/components/themed-text';
 import { Folder, NoteMetadata } from '@/stores/notes-store';
+import { useSettingsStore } from '@/stores/settings-store';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
 import { useCallback, useMemo, useState } from 'react';
@@ -52,6 +53,8 @@ export default function NotesSearchModal({
 }: NotesSearchModalProps) {
     const { colors } = useTheme();
     const insets = useSafeAreaInsets();
+    const { general } = useSettingsStore();
+    const isCompact = general.compactMode;
 
     const [searchQuery, setSearchQuery] = useState('');
     const [searchScope, setSearchScope] = useState<'current' | 'all'>('current');
@@ -142,12 +145,16 @@ export default function NotesSearchModal({
 
                 const footer = (
                     <View style={styles.noteFooter}>
-                        <ThemedText
-                            style={[styles.preview, { color: colors.text + '70' }]}
-                            numberOfLines={1}
-                        >
-                            {note.preview}
-                        </ThemedText>
+                        {!isCompact ? (
+                            <ThemedText
+                                style={[styles.preview, { color: colors.text + '70' }]}
+                                numberOfLines={1}
+                            >
+                                {note.preview}
+                            </ThemedText>
+                        ) : (
+                            <View style={{ flex: 1 }} />
+                        )}
                         <View style={[styles.folderInfo, { backgroundColor: folder?.color + '10' || colors.background + '10' }]}>
                             <Ionicons
                                 name={folder ? (folder.icon as any) : 'home'}
@@ -168,6 +175,7 @@ export default function NotesSearchModal({
                             onPress={() => handleNotePress(note.id)}
                             onLongPress={onNoteLongPress ? () => onNoteLongPress(note) : undefined}
                             description={footer}
+                            showTimestamp={true}
                         />
                     </View>
                 );
