@@ -5,11 +5,15 @@ import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
     Modal,
+    Platform,
     Pressable,
+    ScrollView,
     StyleSheet,
     Text,
-    View,
+    useWindowDimensions,
+    View
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface NoteHeaderMenuProps {
     noteId: string;
@@ -75,6 +79,11 @@ export default function NoteHeaderMenu({
     const { colors } = useAppTheme();
     const router = useRouter();
     const [isVisible, setIsVisible] = useState(false);
+    const insets = useSafeAreaInsets();
+    const { width, height } = useWindowDimensions();
+
+    // Detect iPhone landscape mode (not tablet, width > height)
+    const isIPhoneLandscape = Platform.OS === 'ios' && Platform.isPad === false && width > height;
 
     // Local state for dummy toggles
     const [isQuickAccess, setIsQuickAccess] = useState(initialQuickAccess);
@@ -148,86 +157,99 @@ export default function NoteHeaderMenu({
                 transparent
                 animationType="fade"
                 onRequestClose={handleClose}
+                supportedOrientations={['portrait', 'landscape', 'landscape-left', 'landscape-right']}
             >
                 <Pressable style={styles.overlay} onPress={handleClose}>
                     <View
                         style={[
                             styles.menuContainer,
-                            { backgroundColor: colors.card },
+                            {
+                                backgroundColor: colors.card,
+                                // Adjust positioning for safe areas
+                                top: insets.top + 10,
+                                right: Math.max(16, insets.right + 8),
+                                // Limit max height on iPhone landscape to make it scrollable
+                                maxHeight: isIPhoneLandscape ? height - insets.top - insets.bottom - 20 : undefined,
+                            },
                         ]}
                         onStartShouldSetResponder={() => true}
                     >
-                        <MenuItem
-                            icon="search-outline"
-                            label="Search in note"
-                            onPress={handleSearch}
-                        />
+                        <ScrollView
+                            showsVerticalScrollIndicator={isIPhoneLandscape}
+                            bounces={false}
+                        >
+                            <MenuItem
+                                icon="search-outline"
+                                label="Search in note"
+                                onPress={handleSearch}
+                            />
 
-                        <MenuItem
-                            icon={isQuickAccess ? 'star' : 'star-outline'}
-                            label="Quick access"
-                            onPress={handleToggleQuickAccess}
-                            iconColor="#FBBF24"
-                            rightElement={
-                                <Ionicons
-                                    name={isQuickAccess ? 'checkmark-circle' : 'ellipse-outline'}
-                                    size={20}
-                                    color={isQuickAccess ? colors.primary : colors.text + '60'}
-                                />
-                            }
-                        />
+                            <MenuItem
+                                icon={isQuickAccess ? 'star' : 'star-outline'}
+                                label="Quick access"
+                                onPress={handleToggleQuickAccess}
+                                iconColor="#FBBF24"
+                                rightElement={
+                                    <Ionicons
+                                        name={isQuickAccess ? 'checkmark-circle' : 'ellipse-outline'}
+                                        size={20}
+                                        color={isQuickAccess ? colors.primary : colors.text + '60'}
+                                    />
+                                }
+                            />
 
-                        <MenuItem
-                            icon={isPinned ? 'pin' : 'pin-outline'}
-                            label="Pin note"
-                            onPress={handleTogglePin}
-                            iconColor={isPinned ? colors.primary : colors.text}
-                            rightElement={
-                                <Ionicons
-                                    name={isPinned ? 'checkmark-circle' : 'ellipse-outline'}
-                                    size={20}
-                                    color={isPinned ? colors.primary : colors.text + '60'}
-                                />
-                            }
-                        />
+                            <MenuItem
+                                icon={isPinned ? 'pin' : 'pin-outline'}
+                                label="Pin note"
+                                onPress={handleTogglePin}
+                                iconColor={isPinned ? colors.primary : colors.text}
+                                rightElement={
+                                    <Ionicons
+                                        name={isPinned ? 'checkmark-circle' : 'ellipse-outline'}
+                                        size={20}
+                                        color={isPinned ? colors.primary : colors.text + '60'}
+                                    />
+                                }
+                            />
 
-                        <View style={[styles.divider, { backgroundColor: colors.border + '30' }]} />
+                            <View style={[styles.divider, { backgroundColor: colors.border + '30' }]} />
 
-                        <MenuItem
-                            icon="time-outline"
-                            label="Version history"
-                            onPress={handleVersionHistory}
-                        />
+                            <MenuItem
+                                icon="time-outline"
+                                label="Version history"
+                                onPress={handleVersionHistory}
+                            />
 
-                        <MenuItem
-                            icon="link-outline"
-                            label="Copy link to note"
-                            onPress={handleCopyLink}
-                        />
+                            <MenuItem
+                                icon="link-outline"
+                                label="Copy link to note"
+                                onPress={handleCopyLink}
+                            />
 
-                        <MenuItem
-                            icon="share-outline"
-                            label="Export"
-                            onPress={handleExport}
-                        />
+                            <MenuItem
+                                icon="share-outline"
+                                label="Export"
+                                onPress={handleExport}
+                            />
 
-                        <View style={[styles.divider, { backgroundColor: colors.border + '30' }]} />
+                            <View style={[styles.divider, { backgroundColor: colors.border + '30' }]} />
 
-                        <MenuItem
-                            icon="settings-outline"
-                            label="Settings"
-                            onPress={handleSettings}
-                        />
+                            <MenuItem
+                                icon="settings-outline"
+                                label="Settings"
+                                onPress={handleSettings}
+                            />
 
-                        <View style={[styles.divider, { backgroundColor: colors.border + '30' }]} />
+                            <View style={[styles.divider, { backgroundColor: colors.border + '30' }]} />
 
-                        <MenuItem
-                            icon="trash-outline"
-                            label="Delete note"
-                            onPress={handleDelete}
-                            iconColor="#EF4444"
-                            textColor="#EF4444"
-                        />
+                            <MenuItem
+                                icon="trash-outline"
+                                label="Delete note"
+                                onPress={handleDelete}
+                                iconColor="#EF4444"
+                                textColor="#EF4444"
+                            />
+                        </ScrollView>
                     </View>
                 </Pressable>
             </Modal>
@@ -246,8 +268,7 @@ const styles = StyleSheet.create({
     },
     menuContainer: {
         position: 'absolute',
-        top: 60,
-        right: 16,
+        // top and right are set dynamically based on safe area insets
         width: 240,
         borderRadius: 14,
         paddingVertical: 8,

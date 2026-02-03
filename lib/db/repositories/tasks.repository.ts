@@ -116,6 +116,10 @@ export function toggleTaskComplete(taskId: string): void {
         .run();
 }
 
+export function deleteCompletedTasks(): void {
+    db.delete(schema.tasks).where(eq(schema.tasks.completed, true)).run();
+}
+
 // ============ CALENDAR HELPERS ============
 
 export function getTaskDatesInMonth(year: number, month: number): Set<number> {

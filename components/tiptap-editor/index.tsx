@@ -1,31 +1,21 @@
 import { useAppTheme } from '@/hooks/use-app-theme';
+import { useSettingsStore } from '@/stores/settings-store';
 import { useKeyboard } from '@react-native-community/hooks';
 import * as ExpoClipboard from 'expo-clipboard';
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { Keyboard, Platform, StyleSheet, View } from 'react-native';
+import { Keyboard, Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
 import { ImageGallery } from './image-gallery';
 import { EditorToolbar } from './toolbar';
 import { EditorState, initialEditorState, PopupType, TipTapEditorProps, TipTapEditorRef } from './types';
 /**
  * TipTap-based rich text editor component for React Native.
- * 
- * Features:
- * - Dual mode: Edit mode (raw text) and Display mode (rendered LaTeX)
- * - Rich text formatting with colors and highlights
- * - Headings H1-H6
- * - Lists (bullet, ordered)
- * - Code (inline and blocks with syntax highlighting)
- * - Blockquotes
- * - Links (clickable, opens in browser)
- * - LaTeX/Math support (rendered in display mode using KaTeX)
- * - YouTube embeds
- * - Auto-save with debouncing
- * - Native toolbar that appears with keyboard
  */
 const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
     ({ initialContent = '', onContentChange, placeholder = 'Start typing...', autofocus = false, onSearchResults, contentPaddingTop = 0 }, ref) => {
         const { colors, dark } = useAppTheme();
+        const { editor: editorSettings } = useSettingsStore();
         const webViewRef = useRef<WebView>(null);
         const [isReady, setIsReady] = useState(false);
         const [editorState, setEditorState] = useState<EditorState>(initialEditorState);
@@ -40,6 +30,11 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
         const [currentLatex, setCurrentLatex] = useState<string | null>(null);
         const contentResolverRef = useRef<((html: string) => void) | null>(null);
         const { keyboardHeight } = useKeyboard();
+        const insets = useSafeAreaInsets();
+        const { width, height } = useWindowDimensions();
+
+        // Detect iPhone landscape mode (not tablet, width > height)
+        const isIPhoneLandscape = Platform.OS === 'ios' && Platform.isPad === false && width > height;
 
 
 
@@ -111,6 +106,7 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
                                 placeholder,
                                 autofocus,
                                 paddingTop: contentPaddingTop,
+                                direction: editorSettings.direction,
                             });
                             break;
                         case 'content':
@@ -185,9 +181,10 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
                     isDark: dark,
                     colors,
                     paddingTop: contentPaddingTop,
+                    direction: editorSettings.direction,
                 });
             }
-        }, [dark, colors, isReady, sendCommand, contentPaddingTop]);
+        }, [dark, colors, isReady, sendCommand, contentPaddingTop, editorSettings.direction]);
 
         useEffect(() => {
             const handleKeyboardShow = (height: number) => {
@@ -242,7 +239,7 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
         const showToolbar = isKeyboardVisible || isPopupOpen;
 
         const source = __DEV__
-            ? { uri: 'http://192.168.7.12:5173' }
+            ? { uri: 'http://192.168.7.14:5173' }
             : Platform.OS === 'android'
                 ? { uri: 'file:///android_asset/editor.html' }
                 : require('./assets/editor.html');
@@ -293,7 +290,10 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
                             {
                                 bottom: keyboardHeight,
                                 backgroundColor: colors.background,
-                                borderTopColor: colors.border
+                                borderTopColor: colors.border,
+                                // On iPhone landscape, add horizontal padding for notch/home indicator
+                                paddingLeft: isIPhoneLandscape ? insets.left : 0,
+                                paddingRight: isIPhoneLandscape ? insets.right : 0,
                             },
                         ]}
                     >

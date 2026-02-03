@@ -1,132 +1,85 @@
 import ThemedText from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useNotesStore } from '@/stores/notes-store';
+import { useSettingsStore } from '@/stores/settings-store';
 import { useTasksStore, type Task } from '@/stores/tasks-store';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { LayoutAnimation, Platform, Pressable, ScrollView, StyleSheet, UIManager, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { CollapsibleGroup, CompactTaskCard, TaskCard } from './components';
 
-interface TaskCardProps {
-    task: Task;
-    onToggle: () => void;
-    onPress: () => void;
+// Enable LayoutAnimation on Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+    UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-function TaskCard({ task, onToggle, onPress }: TaskCardProps) {
-    const { colors, dark } = useTheme();
-    const { getFolderById } = useNotesStore();
-    const linkedFolder = task.folderId ? getFolderById(task.folderId) : null;
-
-    const now = new Date();
-    const isOverdue = task.deadline < now && !task.completed;
-    const isToday =
-        task.deadline.getDate() === now.getDate() &&
-        task.deadline.getMonth() === now.getMonth() &&
-        task.deadline.getFullYear() === now.getFullYear();
-
-    const deadlineColor = isOverdue ? '#EF4444' : isToday ? '#F59E0B' : colors.text + '80';
-
-    const formatDeadline = (date: Date): string => {
-        const options: Intl.DateTimeFormatOptions = {
-            month: 'short',
-            day: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit',
-        };
-        return date.toLocaleDateString('en-US', options);
-    };
-
-    return (
-        <Pressable
-            onPress={onPress}
-            style={({ pressed }) => [
-                styles.taskCard,
-                {
-                    backgroundColor: dark ? 'rgba(255,255,255,0.04)' : colors.card,
-                    borderColor: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
-                    opacity: task.completed ? 0.6 : pressed ? 0.9 : 1,
-                    transform: [{ scale: pressed ? 0.98 : 1 }],
-                },
-            ]}
-        >
-            {/* Checkbox */}
-            <Pressable onPress={onToggle} style={styles.checkbox} hitSlop={8}>
-                <View
-                    style={[
-                        styles.checkboxInner,
-                        {
-                            backgroundColor: task.completed ? '#10B981' : 'transparent',
-                            borderColor: task.completed ? '#10B981' : colors.text + '40',
-                        },
-                    ]}
-                >
-                    {task.completed && <Ionicons name="checkmark" size={14} color="#FFFFFF" />}
-                </View>
-            </Pressable>
-
-            {/* Content */}
-            <View style={styles.taskContent}>
-                <ThemedText
-                    style={[
-                        styles.taskTitle,
-                        task.completed && { textDecorationLine: 'line-through', opacity: 0.7 },
-                    ]}
-                    numberOfLines={1}
-                >
-                    {task.title}
-                </ThemedText>
-                <ThemedText style={[styles.taskDescription, { color: colors.text + '70' }]} numberOfLines={1}>
-                    {task.description}
-                </ThemedText>
-
-                <View style={styles.taskMeta}>
-                    <View style={styles.deadlineBadge}>
-                        <Ionicons name="time-outline" size={12} color={deadlineColor} />
-                        <ThemedText style={[styles.deadlineText, { color: deadlineColor }]}>
-                            {formatDeadline(task.deadline)}
-                        </ThemedText>
-                    </View>
-
-                    {linkedFolder && (
-                        <View style={[styles.linkedNoteBadge, { backgroundColor: linkedFolder.color + '20' }]}>
-                            <Ionicons name="folder" size={10} color={linkedFolder.color || colors.primary} />
-                            <ThemedText style={[styles.linkedNoteText, { color: linkedFolder.color || colors.primary }]}>
-                                {linkedFolder.name}
-                            </ThemedText>
-                        </View>
-                    )}
-                </View>
-            </View>
-
-            {/* Chevron */}
-            <Ionicons name="chevron-forward" size={18} color={colors.text + '40'} />
-        </Pressable>
-    );
-}
+type GroupByOption = 'none' | 'folder' | 'date';
 
 export default function TasksScreen() {
     const router = useRouter();
     const { colors, dark } = useTheme();
     const insets = useSafeAreaInsets();
 
-    // Use Zustand store for tasks
-    const { tasks, toggleComplete, loadTasks } = useTasksStore();
+    // Stores
+    const { tasks, toggleComplete, loadTasks, clearCompletedTasks } = useTasksStore();
+    const { general } = useSettingsStore();
+    const { getFolderById } = useNotesStore();
+    const compactMode = general.compactMode;
+
+    // Local state
+    const [showCompleted, setShowCompleted] = useState(true);
+    const [groupBy, setGroupBy] = useState<GroupByOption>('none');
+    const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
     // Load tasks from database on mount
     useEffect(() => {
         loadTasks();
     }, [loadTasks]);
 
-    const handleTaskPress = useCallback((task: Task) => {
-        router.push(`/Tasks/${task.id}`);
-    }, [router]);
+    const handleTaskPress = useCallback(
+        (task: Task) => {
+            router.push(`/Tasks/${task.id}`);
+        },
+        [router]
+    );
 
-    const handleToggle = useCallback((taskId: string) => {
-        toggleComplete(taskId);
-    }, [toggleComplete]);
+    const handleToggle = useCallback(
+        (taskId: string) => {
+            toggleComplete(taskId);
+        },
+        [toggleComplete]
+    );
+
+    const toggleGroupCollapse = useCallback((groupId: string) => {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        setCollapsedGroups((prev) => {
+            const next = new Set(prev);
+            if (next.has(groupId)) {
+                next.delete(groupId);
+            } else {
+                next.add(groupId);
+            }
+            return next;
+        });
+    }, []);
+
+    const handleClearCompleted = useCallback(() => {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        clearCompletedTasks();
+    }, [clearCompletedTasks]);
+
+    const cycleGroupBy = useCallback(() => {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        setGroupBy((prev) => {
+            if (prev === 'none') return 'folder';
+            if (prev === 'folder') return 'date';
+            return 'none';
+        });
+        setCollapsedGroups(new Set()); // Reset collapsed state when changing group
+    }, []);
 
     // Sort and group tasks
     const sortedTasks = useMemo(
@@ -136,11 +89,69 @@ export default function TasksScreen() {
     const pendingTasks = sortedTasks.filter((t) => !t.completed);
     const completedTasks = sortedTasks.filter((t) => t.completed);
 
+    // Group pending tasks
+    const groupedPendingTasks = useMemo(() => {
+        if (groupBy === 'none') return null;
+
+        const groups: Map<string, { title: string; color?: string; tasks: Task[] }> = new Map();
+
+        if (groupBy === 'folder') {
+            // Group by folder
+            pendingTasks.forEach((task) => {
+                const folder = task.folderId ? getFolderById(task.folderId) : null;
+                const groupId = task.folderId || '__no_folder__';
+                const groupTitle = folder ? folder.name : 'No Folder';
+                const groupColor = folder?.color;
+
+                if (!groups.has(groupId)) {
+                    groups.set(groupId, { title: groupTitle, color: groupColor, tasks: [] });
+                }
+                groups.get(groupId)!.tasks.push(task);
+            });
+        } else if (groupBy === 'date') {
+            // Group by date
+            pendingTasks.forEach((task) => {
+                const dateKey = task.deadline.toDateString();
+                const now = new Date();
+                const isToday = task.deadline.toDateString() === now.toDateString();
+                const tomorrow = new Date(now);
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                const isTomorrow = task.deadline.toDateString() === tomorrow.toDateString();
+
+                let displayTitle = task.deadline.toLocaleDateString('en-US', {
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric',
+                });
+                if (isToday) displayTitle = 'Today';
+                if (isTomorrow) displayTitle = 'Tomorrow';
+
+                const isOverdue = task.deadline < now;
+                const groupColor = isOverdue ? '#EF4444' : isToday ? '#F59E0B' : undefined;
+
+                if (!groups.has(dateKey)) {
+                    groups.set(dateKey, { title: displayTitle, color: groupColor, tasks: [] });
+                }
+                groups.get(dateKey)!.tasks.push(task);
+            });
+        }
+
+        return Array.from(groups.entries()).map(([id, data]) => ({ id, ...data }));
+    }, [groupBy, pendingTasks, getFolderById]);
+
+    const getGroupByLabel = () => {
+        if (groupBy === 'none') return 'Group';
+        if (groupBy === 'folder') return 'Folder';
+        return 'Date';
+    };
+
+    const CardComponent = compactMode ? CompactTaskCard : TaskCard;
+
     return (
         <ThemedView style={styles.container}>
             <ScrollView
                 style={styles.scrollView}
-                contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 20 }]}
+                contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 16 }]}
                 showsVerticalScrollIndicator={false}
             >
                 {/* Header */}
@@ -158,37 +169,123 @@ export default function TasksScreen() {
                             ]}
                             hitSlop={8}
                         >
-                            <Ionicons name="add" size={24} color={colors.primary} />
+                            <Ionicons name="add" size={22} color={colors.primary} />
                         </Pressable>
                     </View>
                     <ThemedText style={[styles.subtitle, { color: colors.text + '70' }]}>
                         {pendingTasks.length} pending · {completedTasks.length} done
                     </ThemedText>
+
+                    {/* Controls Row */}
+                    <View style={styles.controlsRow}>
+                        {/* Group By Button */}
+                        <Pressable
+                            onPress={cycleGroupBy}
+                            style={[
+                                styles.controlButton,
+                                {
+                                    backgroundColor: groupBy !== 'none' ? colors.primary + '15' : dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                                },
+                            ]}
+                        >
+                            <Ionicons
+                                name="layers-outline"
+                                size={14}
+                                color={groupBy !== 'none' ? colors.primary : colors.text + '70'}
+                            />
+                            <ThemedText
+                                style={[
+                                    styles.controlButtonText,
+                                    { color: groupBy !== 'none' ? colors.primary : colors.text + '70' },
+                                ]}
+                            >
+                                {getGroupByLabel()}
+                            </ThemedText>
+                        </Pressable>
+
+                        {/* Toggle Completed */}
+                        <Pressable
+                            onPress={() => {
+                                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                                setShowCompleted(!showCompleted);
+                            }}
+                            style={[
+                                styles.controlButton,
+                                {
+                                    backgroundColor: showCompleted ? colors.primary + '15' : dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                                },
+                            ]}
+                        >
+                            <Ionicons
+                                name={showCompleted ? 'eye' : 'eye-off'}
+                                size={14}
+                                color={showCompleted ? colors.primary : colors.text + '70'}
+                            />
+                            <ThemedText
+                                style={[
+                                    styles.controlButtonText,
+                                    { color: showCompleted ? colors.primary : colors.text + '70' },
+                                ]}
+                            >
+                                Done
+                            </ThemedText>
+                        </Pressable>
+                    </View>
                 </View>
 
-                {/* Pending Tasks */}
+                {/* Pending Tasks - Grouped or Flat */}
                 {pendingTasks.length > 0 && (
                     <View style={styles.section}>
-                        <ThemedText style={styles.sectionTitle}>Upcoming</ThemedText>
-                        {pendingTasks.map((task) => (
-                            <TaskCard
-                                key={task.id}
-                                task={task}
-                                onPress={() => handleTaskPress(task)}
-                                onToggle={() => handleToggle(task.id)}
-                            />
-                        ))}
+                        {groupBy === 'none' ? (
+                            <>
+                                <ThemedText style={styles.sectionTitle}>Upcoming</ThemedText>
+                                {pendingTasks.map((task) => (
+                                    <CardComponent
+                                        key={task.id}
+                                        task={task}
+                                        onPress={() => handleTaskPress(task)}
+                                        onToggle={() => handleToggle(task.id)}
+                                    />
+                                ))}
+                            </>
+                        ) : (
+                            groupedPendingTasks?.map((group) => (
+                                <CollapsibleGroup
+                                    key={group.id}
+                                    title={group.title}
+                                    color={group.color}
+                                    tasks={group.tasks}
+                                    isCollapsed={collapsedGroups.has(group.id)}
+                                    onToggleCollapse={() => toggleGroupCollapse(group.id)}
+                                    onTaskPress={handleTaskPress}
+                                    onTaskToggle={handleToggle}
+                                    compact={compactMode}
+                                />
+                            ))
+                        )}
                     </View>
                 )}
 
                 {/* Completed Tasks */}
-                {completedTasks.length > 0 && (
+                {showCompleted && completedTasks.length > 0 && (
                     <View style={styles.section}>
-                        <ThemedText style={[styles.sectionTitle, { color: colors.text + '60' }]}>
-                            Completed
-                        </ThemedText>
+                        <View style={styles.completedHeader}>
+                            <ThemedText style={[styles.sectionTitle, { color: colors.text + '60', marginBottom: 0 }]}>
+                                Completed
+                            </ThemedText>
+                            <Pressable
+                                onPress={handleClearCompleted}
+                                style={({ pressed }) => [
+                                    styles.clearButton,
+                                    { opacity: pressed ? 0.6 : 1 },
+                                ]}
+                            >
+                                <Ionicons name="trash-outline" size={12} color="#EF4444" />
+                                <ThemedText style={styles.clearButtonText}>Clear</ThemedText>
+                            </Pressable>
+                        </View>
                         {completedTasks.map((task) => (
-                            <TaskCard
+                            <CardComponent
                                 key={task.id}
                                 task={task}
                                 onPress={() => handleTaskPress(task)}
@@ -201,7 +298,7 @@ export default function TasksScreen() {
                 {/* Empty State */}
                 {tasks.length === 0 && (
                     <View style={styles.emptyState}>
-                        <Ionicons name="checkmark-done-circle-outline" size={64} color={colors.text + '30'} />
+                        <Ionicons name="checkmark-done-circle-outline" size={56} color={colors.text + '30'} />
                         <ThemedText style={[styles.emptyTitle, { color: colors.text + '60' }]}>
                             No tasks yet
                         </ThemedText>
@@ -226,10 +323,10 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     scrollContent: {
-        paddingHorizontal: 20,
+        paddingHorizontal: 16,
     },
     header: {
-        marginBottom: 28,
+        marginBottom: 20,
     },
     headerRow: {
         flexDirection: 'row',
@@ -237,105 +334,78 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
     },
     addButton: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
+        width: 36,
+        height: 36,
+        borderRadius: 18,
         alignItems: 'center',
         justifyContent: 'center',
     },
     title: {
-        fontSize: 32,
+        fontSize: 30,
         fontWeight: '700',
         letterSpacing: -0.5,
     },
     subtitle: {
-        fontSize: 14,
-        marginTop: 4,
+        fontSize: 13,
+        marginTop: 2,
+    },
+    controlsRow: {
+        flexDirection: 'row',
+        gap: 8,
+        marginTop: 14,
+    },
+    controlButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 5,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 8,
+    },
+    controlButtonText: {
+        fontSize: 12,
+        fontWeight: '600',
     },
     section: {
-        marginBottom: 28,
+        marginBottom: 20,
     },
     sectionTitle: {
-        fontSize: 14,
+        fontSize: 12,
         fontWeight: '600',
         textTransform: 'uppercase',
         letterSpacing: 0.5,
-        marginBottom: 12,
-    },
-    taskCard: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 16,
-        borderRadius: 14,
-        borderWidth: 1,
         marginBottom: 10,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.03,
-        shadowRadius: 8,
-        elevation: 2,
     },
-    checkbox: {
-        marginRight: 14,
-    },
-    checkboxInner: {
-        width: 24,
-        height: 24,
-        borderRadius: 12,
-        borderWidth: 2,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    taskContent: {
-        flex: 1,
-    },
-    taskTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        marginBottom: 2,
-    },
-    taskDescription: {
-        fontSize: 13,
-        marginBottom: 8,
-    },
-    taskMeta: {
+    completedHeader: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 10,
-        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+        marginBottom: 10,
     },
-    deadlineBadge: {
+    clearButton: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 4,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
     },
-    deadlineText: {
-        fontSize: 11,
+    clearButtonText: {
+        fontSize: 12,
         fontWeight: '500',
-    },
-    linkedNoteBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-        paddingHorizontal: 6,
-        paddingVertical: 2,
-        borderRadius: 4,
-    },
-    linkedNoteText: {
-        fontSize: 10,
-        fontWeight: '600',
+        color: '#EF4444',
     },
     emptyState: {
         alignItems: 'center',
         justifyContent: 'center',
-        paddingTop: 80,
+        paddingTop: 60,
     },
     emptyTitle: {
-        fontSize: 18,
+        fontSize: 17,
         fontWeight: '600',
-        marginTop: 16,
+        marginTop: 14,
     },
     emptySubtitle: {
-        fontSize: 14,
+        fontSize: 13,
         marginTop: 4,
     },
 });

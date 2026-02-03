@@ -9,8 +9,8 @@ import { useTasksStore, type Task } from '@/stores/tasks-store';
 import { Ionicons } from '@expo/vector-icons';
 import { DrawerNavigationProp } from '@react-navigation/drawer';
 import { useNavigation, useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, LayoutChangeEvent, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
@@ -69,6 +69,30 @@ export default function HomeScreen() {
   }, [selectedDate]);
 
   const [activeTab, setActiveTab] = useState<'tasks' | 'notes'>('tasks');
+
+  // Animation for tab sliding background
+  const slideAnim = useRef(new Animated.Value(0)).current;
+  const [tabWidth, setTabWidth] = useState(0);
+
+  // Handle tab container layout to get individual tab width
+  const onTabContainerLayout = useCallback((event: LayoutChangeEvent) => {
+    const containerWidth = event.nativeEvent.layout.width;
+    // Account for container padding (4px each side) and gap (4px)
+    const availableWidth = containerWidth - 8 - 4;
+    setTabWidth(availableWidth / 2);
+  }, []);
+
+  // Animate slide when activeTab changes
+  useEffect(() => {
+    const toValue = activeTab === 'tasks' ? 0 : 1;
+    Animated.spring(slideAnim, {
+      toValue,
+      useNativeDriver: true,
+      // Jelly-like spring configuration
+      tension: 68,
+      friction: 10,
+    }).start();
+  }, [activeTab, slideAnim]);
 
 
 
@@ -184,13 +208,32 @@ export default function HomeScreen() {
         ) : (
           <View style={{ marginTop: 24 }}>
             {/* Tab Switcher */}
-            <View style={[styles.tabContainer, { backgroundColor: colors.card, marginBottom: 18 }]}>
+            <View
+              style={[styles.tabContainer, { backgroundColor: colors.card, marginBottom: 18 }]}
+              onLayout={onTabContainerLayout}
+            >
+              {/* Animated sliding background */}
+              <Animated.View
+                style={[
+                  styles.tabIndicator,
+                  {
+                    backgroundColor: colors.primary + '80',
+                    shadowColor: colors.primary,
+                    width: tabWidth,
+                    transform: [
+                      {
+                        translateX: slideAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0, tabWidth + 4], // 4 is the gap
+                        }),
+                      },
+                    ],
+                  },
+                ]}
+              />
               <Pressable
                 onPress={() => setActiveTab('tasks')}
-                style={[
-                  styles.tab,
-                  activeTab === 'tasks' && [styles.activeTab, { backgroundColor: colors.primary + '80', shadowColor: colors.primary + '80' }]
-                ]}
+                style={styles.tab}
               >
                 <ThemedText style={[styles.tabText, activeTab === 'tasks' && styles.activeTabText]}>
                   Tasks
@@ -198,10 +241,7 @@ export default function HomeScreen() {
               </Pressable>
               <Pressable
                 onPress={() => setActiveTab('notes')}
-                style={[
-                  styles.tab,
-                  activeTab === 'notes' && [styles.activeTab, { backgroundColor: colors.primary + '80', shadowColor: colors.primary + '80' }]
-                ]}
+                style={styles.tab}
               >
                 <ThemedText style={[styles.tabText, activeTab === 'notes' && styles.activeTabText]}>
                   Recent Notes
@@ -240,29 +280,30 @@ export default function HomeScreen() {
                     <TaskItem key={task.id} task={task} onPress={() => handleTaskPress(task)} />
                   ))
                 ) : (
-                  <View style={[styles.emptyState, { backgroundColor: colors.card, borderColor: colors.border, paddingVertical: 30 }]}>
-                    <ThemedText style={{ color: colors.text + '50', fontWeight: '600' }}>No tasks for today</ThemedText>
+                  <View style={[styles.emptyState, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                    <Ionicons name="calendar-outline" size={40} color={colors.text + '25'} />
+                    <ThemedText style={[styles.emptyStateText, { color: colors.text + '50' }]}>
+                      No tasks scheduled
+                    </ThemedText>
                   </View>
                 )}
 
                 {/* Upcoming Tasks Header */}
-                <View style={styles.upcomingHeader}>
-                  <Ionicons name="calendar-outline" size={14} color={colors.text + '40'} />
-                  <ThemedText style={[styles.upcomingHeaderText, { color: colors.text + '40' }]}>
-                    Coming Up
-                  </ThemedText>
-                </View>
+                {upcomingTasks.length > 0 && (
+                  <>
+                    <View style={styles.upcomingHeader}>
+                      <Ionicons name="calendar-outline" size={14} color={colors.text + '40'} />
+                      <ThemedText style={[styles.upcomingHeaderText, { color: colors.text + '40' }]}>
+                        Coming Up
+                      </ThemedText>
+                    </View>
 
-                {upcomingTasks.length > 0 ? (
-                  <View style={{ gap: 10 }}>
-                    {upcomingTasks.map((task) => (
-                      <TaskItem key={task.id} task={task} onPress={() => handleTaskPress(task)} showDate />
-                    ))}
-                  </View>
-                ) : (
-                  <View style={[styles.emptyState, { height: 80, justifyContent: 'center', borderColor: colors.border }]}>
-                    <ThemedText style={{ color: colors.text + '50' }}>No upcoming tasks</ThemedText>
-                  </View>
+                    <View style={{ gap: 10 }}>
+                      {upcomingTasks.map((task) => (
+                        <TaskItem key={task.id} task={task} onPress={() => handleTaskPress(task)} showDate />
+                      ))}
+                    </View>
+                  </>
                 )}
               </View>
             ) : (
@@ -365,6 +406,17 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 4,
     gap: 4,
+  },
+  tabIndicator: {
+    position: 'absolute',
+    top: 4,
+    left: 4,
+    height: 44, // matches paddingVertical: 12 * 2 + approximate text height
+    borderRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 4,
   },
   tab: {
     flex: 1,

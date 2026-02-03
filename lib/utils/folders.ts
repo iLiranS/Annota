@@ -7,7 +7,7 @@ export const generateFolder = (data: Partial<FolderInsert>): FolderInsert => {
 
     return {
         id,
-        parentId: data?.parentId,
+        parentId: data?.parentId ?? null,
         name: data?.name ?? 'New Folder',
         icon: data?.icon ?? 'folder',
         color: data?.color ?? '#F59E0B',

@@ -274,7 +274,7 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     calendarContent: {
-        overflow: 'hidden',
+        overflowX: 'hidden',
     },
     navButton: {
         padding: 8,

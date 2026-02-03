@@ -142,7 +142,8 @@ export function setupEditor(options: any) {
         content = '',
         placeholder = 'Write something...',
         autofocus = false,
-        paddingTop = 0
+        paddingTop = 0,
+        direction = 'auto'
     } = options;
 
     // Set CSS variables for theme
@@ -160,9 +161,16 @@ export function setupEditor(options: any) {
     document.body.style.height = 'auto'; // Ensure body can grow with padding
     document.body.style.minHeight = '100%';
 
+    // Apply text direction to the editor element
+    editorEl.setAttribute('dir', direction);
+
     // If editor already exists, ONLY update what's necessary, DO NOT DESTROY
     if (window.editor) {
         // Just update theme variables (already done above)
+        // Update direction attribute on the editor's DOM element
+        if (window.editor.view?.dom) {
+            window.editor.view.dom.setAttribute('dir', direction);
+        }
         return;
     }
 
@@ -171,9 +179,10 @@ export function setupEditor(options: any) {
 
     try {
         window.editor = new Editor({
+            textDirection: direction,
             element: editorEl,
             editorProps: {
-                attributes: { dir: 'auto' },
+                attributes: { dir: direction },
                 scrollThreshold: { top: 0, bottom: 80, left: 0, right: 0 },
                 scrollMargin: { top: 0, bottom: 80, left: 0, right: 0 }
             },

@@ -17,6 +17,7 @@ interface TasksState {
     updateTask: (taskId: string, updates: Partial<Omit<Task, 'id' | 'createdAt'>>) => void;
     deleteTask: (taskId: string) => void;
     toggleComplete: (taskId: string) => void;
+    clearCompletedTasks: () => void;
 
     // Getters (operate on cached state)
     getTaskById: (taskId: string) => Task | undefined;
@@ -69,6 +70,13 @@ export const useTasksStore = create<TasksState>((set, get) => ({
             tasks: state.tasks.map((task) =>
                 task.id === taskId ? { ...task, completed: !task.completed } : task
             ),
+        }));
+    },
+
+    clearCompletedTasks: () => {
+        TaskService.clearCompleted();
+        set((state) => ({
+            tasks: state.tasks.filter((task) => !task.completed),
         }));
     },
 

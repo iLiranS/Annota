@@ -4,7 +4,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { DrawerContentComponentProps, DrawerContentScrollView } from '@react-navigation/drawer';
 import { useTheme } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
     Image,
     Pressable,
@@ -52,31 +52,71 @@ function SidebarItem({ icon, label, onPress, iconColor, isActive }: SidebarItemP
     );
 }
 
-interface FolderItemProps {
+interface FolderTreeItemProps {
     folder: Folder;
-    onPress: () => void;
+    depth: number;
+    isExpanded: boolean;
+    hasChildren: boolean;
+    onToggle: () => void;
+    onNavigate: () => void;
+    renderChildren: () => React.ReactNode;
 }
 
-function FolderItem({ folder, onPress }: FolderItemProps) {
+function FolderTreeItem({
+    folder,
+    depth,
+    isExpanded,
+    hasChildren,
+    onToggle,
+    onNavigate,
+    renderChildren,
+}: FolderTreeItemProps) {
     const { colors } = useTheme();
 
     return (
-        <Pressable
-            onPress={onPress}
-            style={({ pressed }) => [
-                styles.folderItem,
-                pressed && { opacity: 0.7 },
-            ]}
-        >
-            <Ionicons
-                name={(folder.icon as keyof typeof Ionicons.glyphMap) || 'folder'}
-                size={18}
-                color={folder.color}
-            />
-            <Text style={[styles.folderItemText, { color: colors.text }]} numberOfLines={1}>
-                {folder.name}
-            </Text>
-        </Pressable>
+        <View>
+            <Pressable
+                onPress={hasChildren ? onToggle : undefined}
+                style={({ pressed }) => [
+                    styles.folderRow,
+                    { paddingLeft: 12 + depth * 14 },
+                    pressed && hasChildren && { backgroundColor: colors.border + '20' },
+
+                ]}
+            >
+                <Pressable
+                    onPress={onNavigate}
+                    style={({ pressed }) => [
+                        styles.folderItemButton,
+                        pressed && { opacity: 0.7 },
+                    ]}
+                >
+                    <Ionicons
+                        name={(folder.icon as keyof typeof Ionicons.glyphMap) || 'folder'}
+                        size={18}
+                        color={folder.color}
+                    />
+                    <Text style={[styles.folderItemText, { color: colors.text }]} numberOfLines={1}>
+                        {folder.name}
+                    </Text>
+                </Pressable>
+
+                {hasChildren ? (
+                    <View style={styles.folderToggle}>
+                        <Ionicons
+                            name={isExpanded ? 'chevron-down' : 'chevron-forward'}
+                            size={16}
+                            color={colors.text}
+                        />
+                    </View>
+                ) : (
+                    <View style={styles.folderTogglePlaceholder} />
+                )}
+            </Pressable>
+
+            {hasChildren && isExpanded ? renderChildren() : null}
+
+        </View>
     );
 }
 
@@ -93,10 +133,10 @@ export default function Sidebar(props: DrawerContentComponentProps) {
     const router = useRouter();
 
     const { folders, getFoldersInFolder } = useNotesStore();
+    const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
 
     // Get non-system top-level folders
     const topLevelFolders = useMemo(() => {
-        // Force refresh from store state
         return folders.filter(f => f.parentId === null && !f.isSystem);
     }, [folders]);
 
@@ -136,6 +176,46 @@ export default function Sidebar(props: DrawerContentComponentProps) {
     const navigateToSettings = () => {
         closeDrawer();
         router.push('/settings');
+    };
+
+    const toggleFolder = (folderId: string) => {
+        setExpandedFolders((prev) => {
+            const next = new Set(prev);
+            if (next.has(folderId)) {
+                next.delete(folderId);
+            } else {
+                next.add(folderId);
+            }
+            return next;
+        });
+    };
+
+    const renderFolderTree = (parentId: string | null, depth: number): React.ReactNode => {
+        const children = folders.filter(f => f.parentId === parentId && !f.isSystem);
+        if (children.length === 0) return null;
+
+        return (
+            <View>
+                {children.map((folder) => {
+                    const nested = folders.filter(f => f.parentId === folder.id && !f.isSystem);
+                    const hasChildren = nested.length > 0;
+                    const isExpanded = expandedFolders.has(folder.id);
+
+                    return (
+                        <FolderTreeItem
+                            key={folder.id}
+                            folder={folder}
+                            depth={depth}
+                            isExpanded={isExpanded}
+                            hasChildren={hasChildren}
+                            onToggle={() => toggleFolder(folder.id)}
+                            onNavigate={() => navigateToNotes(folder.id)}
+                            renderChildren={() => renderFolderTree(folder.id, depth + 1)}
+                        />
+                    );
+                })}
+            </View>
+        );
     };
 
     return (
@@ -199,14 +279,24 @@ export default function Sidebar(props: DrawerContentComponentProps) {
                     />
 
                     <View style={styles.folderContainer}>
-                        {/* Folders List */}
-                        {topLevelFolders.map((folder) => (
-                            <FolderItem
-                                key={folder.id}
-                                folder={folder}
-                                onPress={() => navigateToNotes(folder.id)}
-                            />
-                        ))}
+                        {topLevelFolders.map((folder) => {
+                            const nested = folders.filter(f => f.parentId === folder.id && !f.isSystem);
+                            const hasChildren = nested.length > 0;
+                            const isExpanded = expandedFolders.has(folder.id);
+
+                            return (
+                                <FolderTreeItem
+                                    key={folder.id}
+                                    folder={folder}
+                                    depth={0}
+                                    isExpanded={isExpanded}
+                                    hasChildren={hasChildren}
+                                    onToggle={() => toggleFolder(folder.id)}
+                                    onNavigate={() => navigateToNotes(folder.id)}
+                                    renderChildren={() => renderFolderTree(folder.id, 1)}
+                                />
+                            );
+                        })}
                     </View>
                 </View>
             </DrawerContentScrollView>
@@ -283,13 +373,31 @@ const styles = StyleSheet.create({
         marginTop: 4,
         paddingLeft: 4,
     },
-    folderItem: {
+    folderToggle: {
+        width: 20,
+        height: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 2,
+    },
+    folderTogglePlaceholder: {
+        width: 20,
+        height: 20,
+        marginRight: 2,
+    },
+    folderRow: {
         flexDirection: 'row',
         alignItems: 'center',
         paddingVertical: 10,
-        paddingHorizontal: 12,
+        paddingRight: 12,
         borderRadius: 8,
+    },
+    folderItemButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
         gap: 10,
+        flex: 1,
+        marginRight: 8,
     },
     folderItemText: {
         fontSize: 16,

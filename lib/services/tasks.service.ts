@@ -54,4 +54,9 @@ export const TaskService = {
     toggleComplete: (taskId: string) => {
         tasksRepo.toggleTaskComplete(taskId);
     },
+
+    // 5. Clear Completed
+    clearCompleted: () => {
+        tasksRepo.deleteCompletedTasks();
+    },
 };

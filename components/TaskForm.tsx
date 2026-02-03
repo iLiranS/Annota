@@ -1,5 +1,6 @@
+import LocationPickerModal from '@/components/location-picker-modal';
 import ThemedText from '@/components/themed-text';
-import { useNotesStore, type Folder } from '@/stores/notes-store';
+import { useNotesStore } from '@/stores/notes-store';
 import { Ionicons } from '@expo/vector-icons';
 import { zodResolver } from '@hookform/resolvers/zod';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -109,8 +110,11 @@ export default function TaskForm({
     const toggleDatePicker = () => {
         if (showDatePicker) {
             setShowDatePicker(false);
-        } else {
+        } else if (showTimePicker) {
+            // Close time picker first, then open date picker after a brief delay
             setShowTimePicker(false);
+            setTimeout(() => setShowDatePicker(true), 150);
+        } else {
             setShowDatePicker(true);
         }
     };
@@ -118,8 +122,11 @@ export default function TaskForm({
     const toggleTimePicker = () => {
         if (showTimePicker) {
             setShowTimePicker(false);
-        } else {
+        } else if (showDatePicker) {
+            // Close date picker first, then open time picker after a brief delay
             setShowDatePicker(false);
+            setTimeout(() => setShowTimePicker(true), 150);
+        } else {
             setShowTimePicker(true);
         }
     };
@@ -368,7 +375,7 @@ export default function TaskForm({
                                 borderColor: folderId ? colors.primary : inputBorderColor,
                             },
                         ]}
-                        onPress={() => setShowFolderPicker(!showFolderPicker)}
+                        onPress={() => setShowFolderPicker(true)}
                     >
                         {linkedFolder ? (
                             <View style={styles.selectedNote}>
@@ -395,65 +402,23 @@ export default function TaskForm({
                             </View>
                         )}
                         <Ionicons
-                            name={showFolderPicker ? 'chevron-up' : 'chevron-down'}
+                            name="chevron-forward"
                             size={18}
                             color={colors.text + '50'}
                         />
                     </Pressable>
-
-                    {/* Folder Picker Dropdown */}
-                    {showFolderPicker && (
-                        <View
-                            style={[
-                                styles.notePickerDropdown,
-                                {
-                                    backgroundColor: dark ? colors.card : '#FFFFFF',
-                                    borderColor: inputBorderColor,
-                                },
-                            ]}
-                        >
-                            <ScrollView nestedScrollEnabled style={{ maxHeight: 200 }}>
-                                {folders
-                                    .filter(f => !f.isDeleted && !f.isSystem) // Optional: filter out system/trash folders if desired
-                                    .map((folder: Folder) => (
-                                        <Pressable
-                                            key={folder.id}
-                                            style={[
-                                                styles.notePickerItem,
-                                                folderId === folder.id && {
-                                                    backgroundColor: colors.primary + '15',
-                                                },
-                                            ]}
-                                            onPress={() => {
-                                                setValue('folderId', folder.id);
-                                                setShowFolderPicker(false);
-                                            }}
-                                        >
-                                            <Ionicons
-                                                name="folder"
-                                                size={16}
-                                                color={folder.color || colors.text + '60'}
-                                            />
-                                            <View style={styles.notePickerItemContent}>
-                                                <ThemedText
-                                                    style={[
-                                                        styles.notePickerItemTitle,
-                                                        folderId === folder.id && { color: colors.primary },
-                                                    ]}
-                                                    numberOfLines={1}
-                                                >
-                                                    {folder.name}
-                                                </ThemedText>
-                                            </View>
-                                            {folderId === folder.id && (
-                                                <Ionicons name="checkmark" size={18} color={colors.primary} />
-                                            )}
-                                        </Pressable>
-                                    ))}
-                            </ScrollView>
-                        </View>
-                    )}
                 </View>
+
+                {/* Location Picker Modal */}
+                <LocationPickerModal
+                    visible={showFolderPicker}
+                    selectedParentId={folderId ?? null}
+                    onSelect={(parentId) => {
+                        setValue('folderId', parentId);
+                        setShowFolderPicker(false);
+                    }}
+                    onClose={() => setShowFolderPicker(false)}
+                />
 
                 {/* Actions */}
                 <View style={{ marginTop: 30, gap: 12 }}>

@@ -30,7 +30,7 @@ export function ToolbarButton({
     colorIndicator,
 }: ToolbarButtonProps) {
     const { colors, dark } = useTheme();
-    const buttonColor = isActive ? colors.primary : dark ? '#FFFFFF' : '#333333';
+    const buttonColor = isActive ? colors.primary : colors.text + '99';
 
     return (
         <Pressable
