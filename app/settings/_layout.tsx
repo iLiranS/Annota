@@ -62,6 +62,13 @@ export default function SettingsLayout() {
                 }}
             />
             <Stack.Screen
+                name="font"
+                options={{
+                    title: 'Font',
+                    presentation: 'card',
+                }}
+            />
+            <Stack.Screen
                 name="general"
                 options={{
                     title: 'General',

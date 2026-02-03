@@ -1,6 +1,7 @@
 import { sendMessage, showError } from './bridge';
 import {
     getEditorState,
+    applyFontFamily,
     scrollCursorIntoView,
     setupEditor
 } from './editor-core';
@@ -31,6 +32,11 @@ export function setupCommands() {
         const e = window.editor;
 
         // Handle commands that shouldn't trigger a focus chain immediately
+        if (command === 'setFontFamily') {
+            applyFontFamily(params?.fontFamily);
+            return;
+        }
+
         if (command === 'setKeyboardHeight') {
             if (params?.height && params.height > 0) {
                 // Keyboard is opening

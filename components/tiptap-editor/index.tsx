@@ -107,6 +107,7 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
                                 autofocus,
                                 paddingTop: contentPaddingTop,
                                 direction: editorSettings.direction,
+                                fontFamily: editorSettings.fontFamily,
                             });
                             break;
                         case 'content':
@@ -182,9 +183,16 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
                     colors,
                     paddingTop: contentPaddingTop,
                     direction: editorSettings.direction,
+                    fontFamily: editorSettings.fontFamily,
                 });
             }
         }, [dark, colors, isReady, sendCommand, contentPaddingTop, editorSettings.direction]);
+
+        useEffect(() => {
+            if (isReady) {
+                sendCommand('setFontFamily', { fontFamily: editorSettings.fontFamily });
+            }
+        }, [editorSettings.fontFamily, isReady, sendCommand]);
 
         useEffect(() => {
             const handleKeyboardShow = (height: number) => {
@@ -387,4 +395,3 @@ const styles = StyleSheet.create({
 export default TipTapEditor;
 export type { TipTapEditorProps, TipTapEditorRef } from './types';
 export { TipTapEditor };
-

@@ -5,6 +5,7 @@ import ThemedText from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { HapticPressable } from '@/components/ui/haptic-pressable';
 import { useAppTheme } from '@/hooks/use-app-theme';
+import { useSettingsStore } from '@/stores/settings-store';
 import { useTasksStore, type Task } from '@/stores/tasks-store';
 import { Ionicons } from '@expo/vector-icons';
 import { DrawerNavigationProp } from '@react-navigation/drawer';
@@ -16,6 +17,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 export default function HomeScreen() {
   const router = useRouter();
   const navigation = useNavigation<DrawerNavigationProp<any>>();
+  const { editor } = useSettingsStore();
+
 
   const { colors, dark } = useAppTheme();
   const insets = useSafeAreaInsets();
@@ -143,7 +146,7 @@ export default function HomeScreen() {
             <Ionicons name="menu-outline" size={28} color={colors.text} />
           </HapticPressable>
           <View style={styles.greetingContainer}>
-            <ThemedText style={styles.greetingText}>
+            <ThemedText style={[styles.greetingText, { fontFamily: editor.fontFamily }]}>
               {greeting}, <ThemedText style={[styles.userName, { color: colors.primary }]}>User</ThemedText>
             </ThemedText>
           </View>
@@ -156,7 +159,7 @@ export default function HomeScreen() {
         {!isToday ? (
           <View style={styles.tasksSection}>
             <View style={styles.tasksSectionHeader}>
-              <ThemedText style={styles.tasksSectionTitle}>
+              <ThemedText style={[styles.tasksSectionTitle, { color: colors.text + '80' }]}>
                 Tasks for {formattedSelectedDate}
               </ThemedText>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginLeft: 'auto' }}>
@@ -254,7 +257,7 @@ export default function HomeScreen() {
               <View>
                 {/* Today's Tasks */}
                 <View style={styles.tasksSectionHeader}>
-                  <ThemedText style={styles.tasksSectionTitle}>Today's Focus</ThemedText>
+                  <ThemedText style={[styles.tasksSectionTitle, { color: colors.text + '80' }]}>Today's Focus</ThemedText>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginLeft: 'auto' }}>
                     {tasksForSelectedDate.length > 0 &&
                       <View style={[styles.taskCountBadge, { backgroundColor: colors.primary + '20' }]}>
@@ -360,7 +363,7 @@ const styles = StyleSheet.create({
   },
   tasksSectionTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '600',
     letterSpacing: -0.3,
 
   },

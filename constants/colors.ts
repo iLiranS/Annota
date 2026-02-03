@@ -18,4 +18,5 @@ export const COLOR_PALETTE: ColorOption[] = [
     { name: 'Purple', value: '#6366F1' },
     { name: 'Pink', value: '#F783AC' },
     { name: 'Gray', value: '#727272' },
+    { name: 'Brown', value: '#A07855' }
 ];

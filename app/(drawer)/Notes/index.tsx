@@ -24,6 +24,7 @@ import {
     Text,
     View
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type ListItem =
     | { type: 'folder'; data: Folder }
@@ -34,7 +35,8 @@ export default function NotesList() {
     const router = useRouter();
     const navigation = useNavigation();
     const { colors } = useTheme();
-    const params = useLocalSearchParams<{ folderId?: string }>();
+    const insets = useSafeAreaInsets();
+    const params = useLocalSearchParams<{ folderId?: string, source?: string }>();
 
     const openDrawer = useCallback(() => {
         navigation.dispatch(DrawerActions.openDrawer());
@@ -117,6 +119,7 @@ export default function NotesList() {
     );
 
     const handleBack = useCallback(() => {
+
         if (currentFolder?.parentId) {
             router.setParams({ folderId: currentFolder.parentId });
         } else {
@@ -235,6 +238,7 @@ export default function NotesList() {
                 options={{
                     headerShown: true,
                     title: headerTitle,
+                    gestureEnabled: false,
                     headerLeft: () => currentFolderId
                         ? (
                             <HapticPressable onPress={handleBack} style={styles.headerButton} hitSlop={8}>
@@ -280,17 +284,35 @@ export default function NotesList() {
                 renderItem={renderItem}
             />
 
-            {/* Floating Action Button for New Note */}
-            <FloatingActionButton onPress={handleCreateNote} />
+            {/* Bottom Footer */}
+            <View style={[
+                styles.footer,
+                {
+                    paddingBottom: Math.max(insets.bottom, 16),
+                    backgroundColor: colors.background,
+                    borderTopColor: colors.border,
+                }
+            ]}>
+                <View style={styles.footerContent}>
+                    <View style={styles.footerSide} />
 
-            {/* Options Menu */}
-            <OptionsMenu
-                currentSortType={currentSortType}
-                onNewFolder={() => setIsCreatingFolder(true)}
-                onSortChange={handleSortChange}
-                onTrash={handleTrash}
-                onSettings={handleSettings}
-            />
+                    <FloatingActionButton
+                        onPress={handleCreateNote}
+                        isFloating={false}
+                        size={52}
+                    />
+
+                    <View style={styles.footerSide}>
+                        <OptionsMenu
+                            currentSortType={currentSortType}
+                            onNewFolder={() => setIsCreatingFolder(true)}
+                            onSortChange={handleSortChange}
+                            onTrash={handleTrash}
+                            onSettings={handleSettings}
+                        />
+                    </View>
+                </View>
+            </View>
 
             {/* Folder Create Modal */}
             <FolderEditModal
@@ -320,8 +342,6 @@ export default function NotesList() {
                 onClose={() => setIsSearchVisible(false)}
                 onFolderPress={handleFolderPress}
                 onNotePress={handleNotePress}
-                onDeleteFolder={handleDeleteFolder}
-                onDeleteNote={handleDeleteNote}
                 onFolderLongPress={handleFolderLongPress}
                 onNoteLongPress={handleNoteLongPress}
                 allFolders={folders}
@@ -365,5 +385,23 @@ const styles = StyleSheet.create({
     },
     emptyHint: {
         fontSize: 14,
+    },
+    footer: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        borderTopWidth: 1,
+        paddingTop: 12,
+        paddingHorizontal: 20,
+    },
+    footerContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    footerSide: {
+        flex: 1,
+        alignItems: 'flex-end',
     },
 });

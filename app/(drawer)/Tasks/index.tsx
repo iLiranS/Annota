@@ -1,3 +1,4 @@
+import FloatingActionButton from '@/components/floating-action-button';
 import ThemedText from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useNotesStore } from '@/stores/notes-store';
@@ -7,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { LayoutAnimation, Platform, Pressable, ScrollView, StyleSheet, UIManager, View } from 'react-native';
+import { Alert, LayoutAnimation, Platform, Pressable, ScrollView, StyleSheet, UIManager, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CollapsibleGroup, CompactTaskCard, TaskCard } from './components';
 
@@ -67,8 +68,21 @@ export default function TasksScreen() {
     }, []);
 
     const handleClearCompleted = useCallback(() => {
-        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-        clearCompletedTasks();
+        Alert.alert(
+            'Clear Completed Tasks',
+            'Are you sure you want to permanently delete all completed tasks?',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Clear All',
+                    style: 'destructive',
+                    onPress: () => {
+                        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                        clearCompletedTasks();
+                    },
+                },
+            ]
+        );
     }, [clearCompletedTasks]);
 
     const cycleGroupBy = useCallback(() => {
@@ -190,7 +204,7 @@ export default function TasksScreen() {
                         >
                             <Ionicons
                                 name="layers-outline"
-                                size={14}
+                                size={16}
                                 color={groupBy !== 'none' ? colors.primary : colors.text + '70'}
                             />
                             <ThemedText
@@ -218,7 +232,7 @@ export default function TasksScreen() {
                         >
                             <Ionicons
                                 name={showCompleted ? 'eye' : 'eye-off'}
-                                size={14}
+                                size={16}
                                 color={showCompleted ? colors.primary : colors.text + '70'}
                             />
                             <ThemedText
@@ -308,9 +322,29 @@ export default function TasksScreen() {
                     </View>
                 )}
 
-                {/* Bottom Spacing */}
-                <View style={{ height: insets.bottom + 100 }} />
             </ScrollView>
+
+            {/* Bottom Footer */}
+            <View style={[
+                styles.footer,
+                {
+                    paddingBottom: Math.max(insets.bottom, 16),
+                    backgroundColor: colors.background,
+                    borderTopColor: colors.border,
+                }
+            ]}>
+                <View style={styles.footerContent}>
+                    <View style={styles.footerSide} />
+
+                    <FloatingActionButton
+                        onPress={() => router.push('/Tasks/new')}
+                        isFloating={false}
+                        size={52}
+                    />
+
+                    <View style={styles.footerSide} />
+                </View>
+            </View>
         </ThemedView>
     );
 }
@@ -324,6 +358,7 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         paddingHorizontal: 16,
+        paddingBottom: 100,
     },
     header: {
         marginBottom: 20,
@@ -357,13 +392,13 @@ const styles = StyleSheet.create({
     controlButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 5,
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-        borderRadius: 8,
+        gap: 6,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 10,
     },
     controlButtonText: {
-        fontSize: 12,
+        fontSize: 13,
         fontWeight: '600',
     },
     section: {
@@ -381,16 +416,19 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         marginBottom: 10,
+        marginTop: 10,
     },
     clearButton: {
         flexDirection: 'row',
         alignItems: 'center',
+        backgroundColor: '#EF444415',
+        borderRadius: 4,
         gap: 4,
         paddingHorizontal: 8,
         paddingVertical: 4,
     },
     clearButtonText: {
-        fontSize: 12,
+        fontSize: 13,
         fontWeight: '500',
         color: '#EF4444',
     },
@@ -407,5 +445,23 @@ const styles = StyleSheet.create({
     emptySubtitle: {
         fontSize: 13,
         marginTop: 4,
+    },
+    footer: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        borderTopWidth: 1,
+        paddingTop: 12,
+        paddingHorizontal: 20,
+    },
+    footerContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    footerSide: {
+        flex: 1,
+        alignItems: 'flex-end',
     },
 });

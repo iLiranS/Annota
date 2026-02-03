@@ -26,6 +26,8 @@ interface OptionsMenuProps {
     onSortChange: (sortType: SortType) => void;
     onTrash: () => void;
     onSettings: () => void;
+    containerStyle?: any;
+    hideDefaultButton?: boolean;
 }
 
 export default function OptionsMenu({
@@ -34,6 +36,8 @@ export default function OptionsMenu({
     onSortChange,
     onTrash,
     onSettings,
+    containerStyle,
+    hideDefaultButton = false,
 }: OptionsMenuProps) {
     const { colors, dark } = useAppTheme();
     const insets = useSafeAreaInsets();
@@ -68,21 +72,23 @@ export default function OptionsMenu({
     return (
         <>
             {/* Options Button */}
-            <View style={[styles.buttonContainer, { bottom: 20 + insets.bottom, right: 20 }]}>
-                <HapticPressable
-                    onPress={() => setIsVisible(true)}
-                    style={({ pressed }) => [
-                        styles.optionsButton,
-                        {
-                            backgroundColor: colors.background,
-                            borderColor: colors.border,
-                        },
-                        pressed && styles.pressed,
-                    ]}
-                >
-                    <Ionicons name="ellipsis-vertical" size={22} color={colors.text} />
-                </HapticPressable>
-            </View>
+            {!hideDefaultButton && (
+                <View style={[styles.container, containerStyle]}>
+                    <HapticPressable
+                        onPress={() => setIsVisible(true)}
+                        style={({ pressed }) => [
+                            styles.optionsButton,
+                            pressed && styles.pressed,
+                        ]}
+                    >
+                        <Ionicons
+                            name="ellipsis-horizontal-circle"
+                            size={36}
+                            color={colors.primary}
+                        />
+                    </HapticPressable>
+                </View>
+            )}
 
             {/* Options Modal */}
             <Modal
@@ -204,18 +210,15 @@ export default function OptionsMenu({
 }
 
 const styles = StyleSheet.create({
-    buttonContainer: {
-        position: 'absolute',
+    container: {
         zIndex: 100,
-
     },
     optionsButton: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
+        width: 44,
+        height: 44,
+        borderRadius: 12,
         alignItems: 'center',
         justifyContent: 'center',
-        borderWidth: 1,
     },
     pressed: {
         opacity: 0.7,
@@ -223,7 +226,7 @@ const styles = StyleSheet.create({
     },
     overlay: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+        backgroundColor: '#00000066',
         justifyContent: 'flex-end',
     },
     menuContainer: {

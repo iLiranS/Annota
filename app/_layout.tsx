@@ -41,11 +41,13 @@ export default function RootLayout() {
   }, []);
 
   // Show loading state while database initializes
+  const errorMessage = dbError;
+
   if (!dbReady) {
     return (
       <View style={styles.loadingContainer}>
-        {dbError ? (
-          <Text style={styles.errorText}>Database Error: {dbError}</Text>
+        {errorMessage ? (
+          <Text style={styles.errorText}>Startup Error: {errorMessage}</Text>
         ) : (
           <ActivityIndicator size="large" />
         )}

@@ -7,7 +7,7 @@ import { Table } from '@tiptap/extension-table';
 import { TableRow } from '@tiptap/extension-table-row';
 import { TaskItem } from '@tiptap/extension-task-item';
 import { TaskList } from '@tiptap/extension-task-list';
-import { TextStyle } from '@tiptap/extension-text-style';
+import { FontFamily, TextStyle } from '@tiptap/extension-text-style';
 import { Underline } from '@tiptap/extension-underline';
 import { Youtube } from '@tiptap/extension-youtube';
 import { StarterKit } from '@tiptap/starter-kit';
@@ -28,6 +28,53 @@ export const editorEl = document.getElementById('editor-content')!;
 // For now, assume always active.
 
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+let currentFontFamily: string | null = null;
+let hasAppliedFontToContent = false;
+
+const WEB_FONT_FAMILIES: Record<string, string> = {
+    system: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+    serif: "Georgia, 'Times New Roman', serif",
+    mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+    poppins: 'Poppins',
+    varela: 'VarelaRound',
+    'varela round': 'VarelaRound',
+    'system (default)': "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+};
+
+function resolveFontFamily(value?: string) {
+    if (!value) return WEB_FONT_FAMILIES.system;
+    const key = value.toLowerCase();
+    return WEB_FONT_FAMILIES[key] ?? value;
+}
+
+function applyFontFamilyToContent(value?: string) {
+    if (!window.editor) return;
+    const normalized = (value ?? 'system').toLowerCase();
+
+    if (normalized === 'system' || normalized === 'system (default)') {
+        window.editor.commands.unsetFontFamily();
+    } else {
+        window.editor.chain().selectAll().setFontFamily(resolveFontFamily(value)).run();
+    }
+
+    hasAppliedFontToContent = true;
+}
+
+export function applyFontFamily(value?: string) {
+    const resolved = resolveFontFamily(value);
+    const normalized = (value ?? 'system').toLowerCase();
+
+    if (currentFontFamily === normalized && hasAppliedFontToContent) {
+        return;
+    }
+
+    document.documentElement.style.setProperty('--editor-font-family', resolved);
+    document.body.style.fontFamily = resolved;
+    editorEl.style.fontFamily = resolved;
+
+    applyFontFamilyToContent(value);
+    currentFontFamily = normalized;
+}
 
 // --- Logic ---
 
@@ -143,7 +190,8 @@ export function setupEditor(options: any) {
         placeholder = 'Write something...',
         autofocus = false,
         paddingTop = 0,
-        direction = 'auto'
+        direction = 'auto',
+        fontFamily = 'system'
     } = options;
 
     // Set CSS variables for theme
@@ -155,6 +203,7 @@ export function setupEditor(options: any) {
     document.documentElement.style.setProperty('--code-block-bg', isDark ? '#1E1E1E' : '#F5F5F5');
     document.documentElement.style.setProperty('--border-color', isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)');
     document.documentElement.style.setProperty('--quote-bg', hexToRgba(colors.primary, 0.2));
+    applyFontFamily(fontFamily);
 
     // Apply content padding to the body so it scrolls with the header
     document.body.style.paddingTop = `${paddingTop}px`;
@@ -170,6 +219,9 @@ export function setupEditor(options: any) {
         // Update direction attribute on the editor's DOM element
         if (window.editor.view?.dom) {
             window.editor.view.dom.setAttribute('dir', direction);
+        }
+        if (currentFontFamily !== (fontFamily ?? 'system').toLowerCase()) {
+            applyFontFamily(fontFamily);
         }
         return;
     }
@@ -199,6 +251,9 @@ export function setupEditor(options: any) {
                 }),
                 Highlight.configure({ multicolor: true }),
                 TextStyle,
+                FontFamily.configure({
+                    types: ['textStyle'],
+                }),
                 Color,
                 Youtube.configure({
                     width: 320,
@@ -296,6 +351,7 @@ export function setupEditor(options: any) {
             }
         });
 
+        applyFontFamily(fontFamily);
         loadingEl.style.display = 'none';
 
     } catch (e) {

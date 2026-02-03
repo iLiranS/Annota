@@ -1,13 +1,16 @@
 import DummySlider from '@/components/settings/dummy-slider';
 import SettingItem from '@/components/settings/setting-item';
+import { getEditorFontLabel } from '@/constants/editor-fonts';
 import { useSettingsStore } from '@/stores/settings-store';
 import { useTheme } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
 import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 export default function EditorSettings() {
     const { colors } = useTheme();
     const { editor, updateEditorSettings } = useSettingsStore();
+    const router = useRouter();
 
     const directionLabels: Record<string, string> = {
         'ltr': 'Left to Right',
@@ -80,10 +83,9 @@ export default function EditorSettings() {
                 <View style={[styles.card, { backgroundColor: colors.card }]}>
                     <SettingItem
                         label="Font"
-                        type="value"
-                        value="System (Default)"
-                        // Dummy for now
-                        onPress={() => { }}
+                        type="link"
+                        value={getEditorFontLabel(editor.fontFamily)}
+                        onPress={() => router.push('/settings/font')}
                         icon="text"
                     />
                 </View>

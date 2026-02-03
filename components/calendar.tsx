@@ -176,9 +176,16 @@ export default function Calendar({ selectedDate, onDateSelect }: CalendarProps) 
                         <Ionicons name="chevron-back" size={22} color={colors.text} />
                     </Pressable>
 
-                    <ThemedText style={styles.monthTitle}>
-                        {MONTHS[viewMonth]} {viewYear}
-                    </ThemedText>
+                    <Pressable onPress={() => {
+                        setViewMonth(today.getMonth());
+                        setViewYear(today.getFullYear());
+                        handleDayPress(today.getDate());
+                        onDateSelect(today);
+                    }}>
+                        <ThemedText style={[styles.monthTitle, !isToday(today.getDate()) && { borderBottomWidth: 1, borderBottomColor: colors.text + '60' }]}>
+                            {MONTHS[viewMonth]} {viewYear}
+                        </ThemedText>
+                    </Pressable>
 
                     <Pressable onPress={handleNextMonth} style={styles.navButton} hitSlop={12}>
                         <Ionicons name="chevron-forward" size={22} color={colors.text} />
@@ -241,7 +248,7 @@ export default function Calendar({ selectedDate, onDateSelect }: CalendarProps) 
                                             <View
                                                 style={[
                                                     styles.taskDot,
-                                                    { backgroundColor: selected ? '#FFFFFF' : colors.primary },
+                                                    { backgroundColor: colors.primary },
                                                 ]}
                                             />
                                         )}

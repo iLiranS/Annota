@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { EditorFontId } from '@/constants/editor-fonts';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
@@ -11,6 +12,7 @@ export interface EditorSettings {
     fontSize: number;
     lineSpacing: number; // multiplier (e.g. 1.0, 1.5)
     paragraphSpacing: number; // pixels (e.g. 10, 20)
+    fontFamily: EditorFontId | string;
 }
 
 export interface GeneralSettings {
@@ -46,6 +48,7 @@ const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
     fontSize: 16,
     lineSpacing: 1.5,
     paragraphSpacing: 16,
+    fontFamily: 'system',
 };
 
 const DEFAULT_GENERAL_SETTINGS: GeneralSettings = {

@@ -27,8 +27,6 @@ interface NotesSearchModalProps {
     onClose: () => void;
     onFolderPress: (folderId: string) => void;
     onNotePress: (noteId: string) => void;
-    onDeleteFolder: (folderId: string) => void;
-    onDeleteNote: (noteId: string) => void;
     onFolderLongPress?: (folder: Folder) => void;
     onNoteLongPress?: (note: NoteMetadata) => void;
     allFolders: Folder[];
@@ -42,8 +40,7 @@ export default function NotesSearchModal({
     onClose,
     onFolderPress,
     onNotePress,
-    onDeleteFolder,
-    onDeleteNote,
+
     onFolderLongPress,
     onNoteLongPress,
     allFolders,
@@ -133,7 +130,6 @@ export default function NotesSearchModal({
                         folder={item.data}
                         onPress={() => handleFolderPress(item.data.id)}
                         onLongPress={onFolderLongPress ? () => onFolderLongPress(item.data) : undefined}
-                        onDelete={() => onDeleteFolder(item.data.id)}
                         swipeable={!item.data.isSystem}
                     />
                 );
@@ -183,7 +179,7 @@ export default function NotesSearchModal({
 
             return null;
         },
-        [colors, handleFolderPress, handleNotePress, onDeleteFolder, onDeleteNote, onFolderLongPress, onNoteLongPress, allFolders]
+        [colors, handleFolderPress, handleNotePress, onFolderLongPress, onNoteLongPress, allFolders]
     );
 
     const getItemKey = (item: ListItem, index: number): string => {
@@ -220,7 +216,7 @@ export default function NotesSearchModal({
                         />
                         <TextInput
                             style={[styles.searchInput, { color: colors.text }]}
-                            placeholder={searchScope === 'all' ? "Search all notes..." : "Search in this folder..."}
+                            placeholder={searchScope === 'all' ? "Search in all folders..." : "Search in this folder..."}
                             placeholderTextColor={'#888'}
                             value={searchQuery}
                             onChangeText={setSearchQuery}

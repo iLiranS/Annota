@@ -8,17 +8,25 @@ interface FloatingActionButtonProps {
     onPress: () => void;
     icon?: keyof typeof Ionicons.glyphMap;
     size?: number;
+    isFloating?: boolean;
+    style?: any;
 }
 
 export default function FloatingActionButton({
     onPress,
     icon = 'add',
-    size = 60,
+    size = 56,
+    isFloating = true,
+    style,
 }: FloatingActionButtonProps) {
     const theme = useAppTheme();
 
     return (
-        <View style={[styles.container, { bottom: 16 }]}>
+        <View style={[
+            isFloating && styles.floatingContainer,
+            isFloating && { bottom: 16 },
+            style
+        ]}>
             <HapticPressable
                 onPress={onPress}
                 style={({ pressed }) => [
@@ -29,18 +37,24 @@ export default function FloatingActionButton({
                         borderRadius: size / 2,
                         backgroundColor: theme.colors.primary,
                         shadowColor: theme.colors.primary,
+                        shadowOffset: { width: 0, height: isFloating ? 8 : 4 },
+                        shadowOpacity: isFloating ? 0.6 : 0.4,
+                        shadowRadius: isFloating ? 12 : 8,
+                        elevation: isFloating ? 12 : 6,
+                        borderWidth: 1.5,
+                        borderColor: theme.colors.card + '30',
                     },
                     pressed && styles.pressed,
                 ]}
             >
-                <Ionicons name={icon} size={28} color="#FFFFFF" />
+                <Ionicons name={icon} size={Math.floor(size * 0.5)} color="#FFFFFF" />
             </HapticPressable>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
+    floatingContainer: {
         position: 'absolute',
         left: 0,
         right: 0,
@@ -50,10 +64,6 @@ const styles = StyleSheet.create({
     button: {
         alignItems: 'center',
         justifyContent: 'center',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.35,
-        shadowRadius: 8,
-        elevation: 8,
     },
     pressed: {
         opacity: 0.85,
