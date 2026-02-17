@@ -438,6 +438,42 @@ export function EditorToolbar({
                     onClose={closePopup}
                 />
             )}
+
+            {activePopup === 'imageMenu' && blockData && (
+                <ToolbarPopup
+                    visible={true}
+                    type="imageMenu"
+                    src={blockData.src}
+                    width={blockData.width}
+                    position={blockData.position}
+                    onAction={(action: string, data?: any) => {
+                        switch (action) {
+                            case 'download':
+                                // TODO: implement actual download
+                                console.log('Download image:', blockData.src);
+                                closePopup();
+                                break;
+                            case 'copy':
+                                onCommand('copyImage', { pos: blockData.position });
+                                closePopup();
+                                break;
+                            case 'cut':
+                                onCommand('cutImage', { pos: blockData.position });
+                                closePopup();
+                                break;
+                            case 'delete':
+                                onCommand('deleteImage', { pos: blockData.position });
+                                closePopup();
+                                break;
+                            case 'resize':
+                                onCommand('updateImage', { width: data?.width });
+                                closePopup();
+                                break;
+                        }
+                    }}
+                    onClose={closePopup}
+                />
+            )}
         </>
     );
 }

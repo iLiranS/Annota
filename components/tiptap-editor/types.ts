@@ -21,6 +21,8 @@ export interface TipTapEditorProps {
     onSearchResults?: (count: number, currentIndex: number) => void;
     /** Extra padding at the top of the content (useful for transparent headers) */
     contentPaddingTop?: number;
+    /** Called when the full-screen image gallery opens or closes */
+    onGalleryVisibilityChange?: (visible: boolean) => void;
 }
 
 export interface EditorState {
@@ -172,7 +174,7 @@ export type EditorCommand =
 // Popup Types
 // ============================================================================
 
-export type PopupType = 'headings' | 'highlight' | 'textColor' | 'youtube' | 'link' | 'image' | 'table' | 'codeLanguage' | 'imageActions' | 'math' | 'detailsBackground' | 'blockMenu' | null;
+export type PopupType = 'headings' | 'highlight' | 'textColor' | 'youtube' | 'link' | 'image' | 'table' | 'codeLanguage' | 'math' | 'detailsBackground' | 'blockMenu' | 'imageMenu' | null;
 
 export interface BasePopupProps {
     visible: boolean;
@@ -259,6 +261,14 @@ export interface DetailsBackgroundPopupProps extends BasePopupProps {
     onClear: () => void;
 }
 
-export type ToolbarPopupProps = HeadingPopupProps | ColorPopupProps | YouTubePopupProps | LinkPopupProps | ImagePopupProps | TablePopupProps | CodeLanguagePopupProps | MathPopupProps | DetailsBackgroundPopupProps | BlockMenuPopupProps;
+export interface ImageMenuPopupProps extends BasePopupProps {
+    type: 'imageMenu';
+    src: string;
+    width: string;
+    position: number;
+    onAction: (action: string, data?: any) => void;
+}
+
+export type ToolbarPopupProps = HeadingPopupProps | ColorPopupProps | YouTubePopupProps | LinkPopupProps | ImagePopupProps | TablePopupProps | CodeLanguagePopupProps | MathPopupProps | DetailsBackgroundPopupProps | BlockMenuPopupProps | ImageMenuPopupProps;
 
 

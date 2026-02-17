@@ -169,7 +169,7 @@ export function scrollCursorIntoView() {
             if (element && element instanceof HTMLElement) {
                 // Use 'nearest' to minimize scroll amount - it only scrolls enough to show the element
                 element.scrollIntoView({
-                    block: 'center',
+                    block: 'end',
                     inline: 'center',
                     behavior: 'instant'
                 });

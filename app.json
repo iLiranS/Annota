@@ -15,6 +15,15 @@
         "dark": "./assets/images/icon-dark.png",
         "light": "./assets/images/icon-light.png",
         "tinted": "./assets/images/adaptive-icon.png"
+      },
+      "requireFullScreen": true,
+      "infoPlist": {
+        "UISupportedInterfaceOrientations": [
+          "UIInterfaceOrientationPortrait",
+          "UIInterfaceOrientationPortraitUpsideDown",
+          "UIInterfaceOrientationLandscapeLeft",
+          "UIInterfaceOrientationLandscapeRight"
+        ]
       }
     },
     "android": {

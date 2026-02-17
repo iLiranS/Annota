@@ -176,7 +176,7 @@ export default function HomeScreen() {
                   </View>
                 }
                 <Pressable
-                  onPress={() => router.push({ pathname: '/Tasks/new', params: { day: selectedDate.getDate() } })}
+                  onPress={() => router.push({ pathname: '/Tasks/new', params: { date: selectedDate.toISOString() } })}
                   style={({ pressed }) => [
                     styles.addTaskButton,
                     {
@@ -267,7 +267,7 @@ export default function HomeScreen() {
                       </View>
                     }
                     <Pressable
-                      onPress={() => router.push({ pathname: '/Tasks/new', params: { day: selectedDate.getDate() } })}
+                      onPress={() => router.push({ pathname: '/Tasks/new', params: { date: selectedDate.toISOString() } })}
                       style={({ pressed }) => [
                         styles.addTaskButton,
                         { backgroundColor: colors.primary + '90', opacity: pressed ? 0.8 : 1 }

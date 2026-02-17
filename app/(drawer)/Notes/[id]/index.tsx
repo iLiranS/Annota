@@ -11,8 +11,10 @@ import { Stack, useFocusEffect, useLocalSearchParams, useNavigation, useRouter }
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
+    Platform,
     StyleSheet,
     Text,
+    useWindowDimensions,
     View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -31,6 +33,9 @@ export default function NoteEditor() {
     const insets = useSafeAreaInsets();
     const editorRef = useRef<TipTapEditorRef>(null);
     const { general } = useSettingsStore();
+    const { width, height } = useWindowDimensions();
+    const isIPhoneLandscape = Platform.OS === 'ios' && width > height && height < 450;
+
 
 
     const { getNoteById, updateNoteMetadata, getNoteContent, updateNoteContent } = useNotesStore();
@@ -48,6 +53,9 @@ export default function NoteEditor() {
     const [searchTerm, setSearchTerm] = useState('');
     const [searchResultCount, setSearchResultCount] = useState(0);
     const [currentSearchIndex, setCurrentSearchIndex] = useState(-1);
+
+    // Gallery visibility — hide header when gallery is open
+    const [isGalleryOpen, setIsGalleryOpen] = useState(false);
 
     // Load content from database on mount
     useEffect(() => {
@@ -147,12 +155,18 @@ export default function NoteEditor() {
                         headerLeft: () => (
                             <HapticPressable
                                 onPress={() => router.back()}
-                                style={styles.headerButton}
-                                hitSlop={8}
+                                style={[
+                                    styles.headerButton,
+                                    {
+                                        padding: 4,
+                                        marginLeft: Platform.OS === 'ios' ? -4 : 0,
+                                    }
+                                ]}
+                                hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
                             >
                                 <Ionicons
                                     name="chevron-back"
-                                    size={26}
+                                    size={28}
                                     color={colors.primary}
                                 />
                             </HapticPressable>
@@ -177,7 +191,7 @@ export default function NoteEditor() {
         <View style={[styles.container, { backgroundColor: colors.background }]}>
             <Stack.Screen
                 options={{
-                    headerShown: true,
+                    headerShown: !isGalleryOpen,
                     gestureEnabled: source !== 'home', // Disable swipe when coming from home to force correct back navigation
                     headerTransparent: general.floatingNoteHeader,
                     headerBackground: general.floatingNoteHeader ? () => <View style={{ flex: 1, backgroundColor: 'transparent' }} /> : undefined,
@@ -194,12 +208,18 @@ export default function NoteEditor() {
                     headerLeft: () => (
                         <HapticPressable
                             onPress={handleBack}
-                            style={styles.headerButton}
-                            hitSlop={8}
+                            style={[
+                                styles.headerButton,
+                                {
+                                    padding: 4,
+                                    marginLeft: Platform.OS === 'ios' ? -4 : 0,
+                                }
+                            ]}
+                            hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
                         >
                             <Ionicons
                                 name="chevron-back"
-                                size={26}
+                                size={28}
                                 color={colors.primary}
                             />
                         </HapticPressable>
@@ -238,6 +258,7 @@ export default function NoteEditor() {
                         contentPaddingTop={general.floatingNoteHeader ? insets.top + 44 : 0}
                         placeholder="Start typing your note..."
                         autofocus={!content || content === '<p></p>'}
+                        onGalleryVisibilityChange={setIsGalleryOpen}
                     />
                 </View>
             )}
@@ -264,7 +285,8 @@ const styles = StyleSheet.create({
         maxWidth: 200,
     },
     headerButton: {
-        padding: 4,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     errorContainer: {
         flex: 1,

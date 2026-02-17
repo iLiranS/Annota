@@ -3,7 +3,7 @@ import { useSettingsStore } from '@/stores/settings-store';
 import { useKeyboard } from '@react-native-community/hooks';
 import * as ExpoClipboard from 'expo-clipboard';
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { Keyboard, Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Keyboard, Modal, Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
 import { ImageGallery } from './image-gallery';
@@ -13,7 +13,7 @@ import { EditorState, initialEditorState, PopupType, TipTapEditorProps, TipTapEd
  * TipTap-based rich text editor component for React Native.
  */
 const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
-    ({ initialContent = '', onContentChange, placeholder = 'Start typing...', autofocus = false, onSearchResults, contentPaddingTop = 0 }, ref) => {
+    ({ initialContent = '', onContentChange, placeholder = 'Start typing...', autofocus = false, onSearchResults, contentPaddingTop = 0, onGalleryVisibilityChange }, ref) => {
         const { colors, dark } = useAppTheme();
         const { editor: editorSettings } = useSettingsStore();
         const webViewRef = useRef<WebView>(null);
@@ -22,9 +22,10 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
         const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
         const [isPopupOpen, setIsPopupOpen] = useState(false);
         const [activePopup, setActivePopup] = useState<PopupType>(null);
-        const [selectedImageAttrs, setSelectedImageAttrs] = useState<any>(null);
         const [galleryImages, setGalleryImages] = useState<any[]>([]);
         const [galleryCurrentIndex, setGalleryCurrentIndex] = useState(0);
+        const [isGalleryVisible, setIsGalleryVisible] = useState(false);
+        const isGalleryVisibleRef = useRef(false);
         const [toolbarHeight, setToolbarHeight] = useState(50); // it's height is fixed 50
         const [tempBlockData, setTempBlockData] = useState<any>(null); // Data for valid block menu
         const [currentLatex, setCurrentLatex] = useState<string | null>(null);
@@ -137,11 +138,23 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
                             // Blur handled via keyboard listeners
                             break;
                         case 'imageSelected':
-                            // console.log('Image selected:', data);
-                            setSelectedImageAttrs(data);
+                            // Always dismiss keyboard and blur - prevents keyboard from opening
+                            // when webview selects/focuses a new image node
+                            sendCommand('blur');
+                            Keyboard.dismiss();
+                            setIsKeyboardVisible(false);
                             setGalleryImages(data.images || []);
                             setGalleryCurrentIndex(data.currentIndex || 0);
-                            setActivePopup('imageActions');
+                            setIsGalleryVisible(true);
+                            isGalleryVisibleRef.current = true;
+                            onGalleryVisibilityChange?.(true);
+                            break;
+                        case 'openImageMenu':
+                            sendCommand('blur');
+                            Keyboard.dismiss();
+                            setIsKeyboardVisible(false);
+                            setTempBlockData(data);
+                            setActivePopup('imageMenu');
                             setIsPopupOpen(true);
                             break;
                         case 'codeBlockSelected':
@@ -244,10 +257,11 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
             setIsPopupOpen(isOpen);
         }, []);
 
-        const showToolbar = isKeyboardVisible || isPopupOpen;
+        // Hide toolbar when gallery is open
+        const showToolbar = (isKeyboardVisible || isPopupOpen) && !isGalleryVisible;
 
         const source = __DEV__
-            ? { uri: 'http://192.168.7.14:5173' }
+            ? { uri: 'http://192.168.7.11:5173' }
             : Platform.OS === 'android'
                 ? { uri: 'file:///android_asset/editor.html' }
                 : require('./assets/editor.html');
@@ -308,16 +322,12 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
                         <EditorToolbar
                             editorState={editorState}
                             onDismissKeyboard={handleDismissKeyboard}
-                            activePopup={activePopup === 'imageActions' ? null : activePopup}
+                            activePopup={activePopup}
                             onActivePopupChange={(type) => {
                                 setActivePopup(type);
                                 handlePopupStateChange(!!type);
                             }}
-                            onPopupStateChange={(isOpen) => {
-                                if (activePopup !== 'imageActions') {
-                                    handlePopupStateChange(isOpen);
-                                }
-                            }}
+                            onPopupStateChange={handlePopupStateChange}
                             onCommand={sendCommand}
                             blockData={tempBlockData}
                             currentLatex={currentLatex}
@@ -331,42 +341,33 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
                 )}
 
 
-                {/* Full Screen Image Gallery */}
-                <ImageGallery
-                    visible={isPopupOpen && activePopup === 'imageActions'}
-                    images={galleryImages}
-                    initialIndex={galleryCurrentIndex}
-                    onClose={() => {
-                        setActivePopup(null);
-                        setIsPopupOpen(false);
+                {/* Full Screen Image Gallery — rendered in a Modal to avoid WebView touch interception */}
+                <Modal
+                    visible={isGalleryVisible}
+                    transparent
+                    animationType="none"
+                    statusBarTranslucent
+                    supportedOrientations={['portrait', 'landscape', 'landscape-left', 'landscape-right']}
+                    onRequestClose={() => {
+                        setIsGalleryVisible(false);
+                        isGalleryVisibleRef.current = false;
+                        onGalleryVisibilityChange?.(false);
                     }}
-                    onNavigate={(index) => {
-                        setGalleryCurrentIndex(index);
-                        if (galleryImages[index]) {
-                            sendCommand('selectImageAtPosition', { position: galleryImages[index].position });
-                        }
-                    }}
-                    onResize={(width) => {
-                        sendCommand('updateImage', { width });
-                        setActivePopup(null);
-                        setIsPopupOpen(false);
-                    }}
-                    onDownload={() => {
-                        console.log('Download image (dummy)');
-                        setActivePopup(null);
-                        setIsPopupOpen(false);
-                    }}
-                    onCut={() => {
-                        sendCommand('cutImage');
-                        setActivePopup(null);
-                        setIsPopupOpen(false);
-                    }}
-                    onDelete={() => {
-                        sendCommand('deleteImage');
-                        setActivePopup(null);
-                        setIsPopupOpen(false);
-                    }}
-                />
+                >
+                    <ImageGallery
+                        visible={isGalleryVisible}
+                        images={galleryImages}
+                        initialIndex={galleryCurrentIndex}
+                        onClose={() => {
+                            setIsGalleryVisible(false);
+                            isGalleryVisibleRef.current = false;
+                            onGalleryVisibilityChange?.(false);
+                        }}
+                        onNavigate={(index) => {
+                            setGalleryCurrentIndex(index);
+                        }}
+                    />
+                </Modal>
             </View >
         );
     }
@@ -395,3 +396,4 @@ const styles = StyleSheet.create({
 export default TipTapEditor;
 export type { TipTapEditorProps, TipTapEditorRef } from './types';
 export { TipTapEditor };
+

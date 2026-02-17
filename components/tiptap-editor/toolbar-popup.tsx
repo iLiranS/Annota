@@ -25,6 +25,7 @@ import {
     ColorPopupProps,
     DetailsBackgroundPopupProps,
     HeadingPopupProps,
+    ImageMenuPopupProps,
     ImagePopupProps,
     LinkPopupProps,
     MathPopupProps,
@@ -102,6 +103,99 @@ function BlockActionMenu({ blockType, onAction, onClose }: { blockType: string, 
                     >
                         <MaterialIcons name={item.icon as any} size={20} color={colors.text} style={{ marginRight: 12 }} />
                         <Text style={{ fontSize: 16, color: colors.text }}>{item.label}</Text>
+                    </TouchableOpacity>
+                ))}
+            </View>
+        </View>
+    );
+}
+
+// ============================================================================
+// Image Action Menu
+// ============================================================================
+
+const IMAGE_ACTIONS: BlockAction[] = [
+    { id: 'download', label: 'Download', icon: 'file-download', action: 'download' },
+    { id: 'copy', label: 'Copy', icon: 'content-copy', action: 'copy' },
+    { id: 'cut', label: 'Cut', icon: 'content-cut', action: 'cut' },
+    { id: 'delete', label: 'Delete', icon: 'delete-outline', action: 'delete' },
+];
+
+const RESIZE_OPTIONS = [
+    { label: '25%', value: '25%' },
+    { label: '50%', value: '50%' },
+    { label: '75%', value: '75%' },
+    { label: '100%', value: '100%' },
+];
+
+function ImageActionMenu({ onAction, onClose }: { onAction: (action: string, data?: any) => void, onClose: () => void }) {
+    const { colors } = useAppTheme();
+
+    return (
+        <View>
+            <Text style={{
+                fontSize: 16,
+                fontWeight: '600',
+                color: colors.text,
+                marginBottom: 16,
+                textAlign: 'center'
+            }}>
+                Image Options
+            </Text>
+
+            {/* Action buttons */}
+            <View style={{ gap: 8 }}>
+                {IMAGE_ACTIONS.map((item) => (
+                    <TouchableOpacity
+                        key={item.id}
+                        style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            padding: 12,
+                            borderRadius: 8,
+                            backgroundColor: colors.card,
+                        }}
+                        onPress={() => {
+                            onAction(item.action);
+                            onClose();
+                        }}
+                    >
+                        <MaterialIcons name={item.icon as any} size={20} color={item.id === 'delete' ? '#FF453A' : colors.text} style={{ marginRight: 12 }} />
+                        <Text style={{ fontSize: 16, color: item.id === 'delete' ? '#FF453A' : colors.text }}>{item.label}</Text>
+                    </TouchableOpacity>
+                ))}
+            </View>
+
+            {/* Resize section */}
+            <Text style={{
+                fontSize: 13,
+                fontWeight: '600',
+                color: colors.text,
+                opacity: 0.5,
+                marginTop: 16,
+                marginBottom: 8,
+                textTransform: 'uppercase',
+                letterSpacing: 0.5,
+            }}>
+                Resize
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+                {RESIZE_OPTIONS.map((opt) => (
+                    <TouchableOpacity
+                        key={opt.value}
+                        style={{
+                            flex: 1,
+                            paddingVertical: 10,
+                            borderRadius: 8,
+                            backgroundColor: colors.card,
+                            alignItems: 'center',
+                        }}
+                        onPress={() => {
+                            onAction('resize', { width: opt.value });
+                            onClose();
+                        }}
+                    >
+                        <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text }}>{opt.label}</Text>
                     </TouchableOpacity>
                 ))}
             </View>
@@ -213,6 +307,13 @@ export function ToolbarPopup(props: ToolbarPopupProps) {
                         currentColor={(props as DetailsBackgroundPopupProps).currentColor}
                         onSelect={(props as DetailsBackgroundPopupProps).onSelect}
                         onClear={(props as DetailsBackgroundPopupProps).onClear}
+                    />
+                );
+            case 'imageMenu':
+                return (
+                    <ImageActionMenu
+                        onAction={(props as ImageMenuPopupProps).onAction}
+                        onClose={onClose}
                     />
                 );
 

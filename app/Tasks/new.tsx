@@ -8,10 +8,8 @@ import { Pressable, StyleSheet, View } from 'react-native';
 export default function NewTaskScreen() {
     const router = useRouter();
     const { colors } = useTheme();
-    const { day } = useLocalSearchParams()
-    // day is just number of the month
-    const date = new Date();
-    date.setDate(Number(day));
+    const { date: dateParam } = useLocalSearchParams<{ date?: string }>()
+    const date = dateParam ? new Date(dateParam) : new Date();
 
     // Get createTask from store
     const { createTask } = useTasksStore();

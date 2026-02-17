@@ -1,12 +1,77 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useTheme } from '@react-navigation/native';
 import { Image } from 'expo-image';
-import React, { useEffect, useState } from 'react';
-import { Dimensions, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+    BackHandler,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
+    useWindowDimensions
+} from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
-import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
+import Animated, {
+    Extrapolation,
+    SharedValue,
+    interpolate,
+    runOnJS,
+    useAnimatedStyle,
+    useSharedValue,
+    withSpring,
+    withTiming
+} from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ImageInfo } from './types';
+
+// ============================================================================
+// GallerySlide — a single image positioned by absolute offset
+// ============================================================================
+
+interface GallerySlideProps {
+    image: ImageInfo;
+    index: number;
+    totalOffset: SharedValue<number>;
+    screenWidthSV: SharedValue<number>;
+    zoomScale: SharedValue<number>;
+    zoomTranslateX: SharedValue<number>;
+    zoomTranslateY: SharedValue<number>;
+    isActive: boolean;
+}
+
+function GallerySlide({
+    image, index, totalOffset, screenWidthSV,
+    zoomScale, zoomTranslateX, zoomTranslateY, isActive,
+}: GallerySlideProps) {
+    const animatedStyle = useAnimatedStyle(() => {
+        const baseX = index * screenWidthSV.value - totalOffset.value;
+        if (isActive) {
+            return {
+                transform: [
+                    { translateX: baseX + zoomTranslateX.value },
+                    { translateY: zoomTranslateY.value },
+                    { scale: zoomScale.value },
+                ],
+            };
+        }
+        return { transform: [{ translateX: baseX }] };
+    });
+
+    return (
+        <Animated.View style={[styles.slideContainer, animatedStyle]}>
+            <Image
+                source={{ uri: image.src }}
+                style={styles.image}
+                contentFit="contain"
+                cachePolicy="memory-disk"
+            />
+        </Animated.View>
+    );
+}
+
+// ============================================================================
+// ImageGallery — main component
+// ============================================================================
 
 interface ImageGalleryProps {
     visible: boolean;
@@ -14,33 +79,26 @@ interface ImageGalleryProps {
     initialIndex: number;
     onClose: () => void;
     onNavigate: (index: number) => void;
-    onResize: (width: string) => void;
-    onDownload: () => void;
-    onDelete: () => void;
-    onCut: () => void;
 }
 
-const SCREEN_WIDTH = Dimensions.get('window').width;
-const SCREEN_HEIGHT = Dimensions.get('window').height;
-const MODAL_HEIGHT = SCREEN_HEIGHT * 0.9;
 const DISMISS_THRESHOLD = 100;
 
 export function ImageGallery({
-    visible,
-    images,
-    initialIndex = 0,
-    onClose,
-    onNavigate,
-    onResize,
-    onDownload,
-    onCut,
-    onDelete
+    visible, images, initialIndex = 0, onClose, onNavigate,
 }: ImageGalleryProps) {
-    const { colors, dark } = useTheme();
+    const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+    const insets = useSafeAreaInsets();
     const [activeIndex, setActiveIndex] = useState(initialIndex);
-    const [controlsVisible, setControlsVisible] = useState(true);
 
-    // Zoom & Pan shared values
+    // Shared values for screen dimensions (fixes landscape)
+    const screenWidthSV = useSharedValue(screenWidth);
+    const screenHeightSV = useSharedValue(screenHeight);
+
+    // Navigation offset — purely UI-thread driven, no React-state timing issues
+    const totalOffset = useSharedValue(initialIndex * screenWidth);
+    const savedOffset = useSharedValue(initialIndex * screenWidth);
+
+    // Zoom & Pan
     const scale = useSharedValue(1);
     const savedScale = useSharedValue(1);
     const translateX = useSharedValue(0);
@@ -48,122 +106,160 @@ export function ImageGallery({
     const savedTranslateX = useSharedValue(0);
     const savedTranslateY = useSharedValue(0);
 
-    // Swipe shared values
-    const swipeX = useSharedValue(0);
-
-    // Dismiss shared value (vertical drag to close)
+    // Dismiss (vertical drag)
     const dismissY = useSharedValue(0);
 
-    // Sync state when props change
-    useEffect(() => {
-        if (visible) {
-            setActiveIndex(initialIndex);
-            setControlsVisible(true);
-            resetZoom();
-            dismissY.value = 0;
-        }
-    }, [visible, initialIndex]);
+    // Enter animation
+    const enterProgress = useSharedValue(0);
 
-    const resetZoom = () => {
+    const resetZoom = useCallback(() => {
+        'worklet';
         scale.value = 1;
         savedScale.value = 1;
         translateX.value = 0;
         translateY.value = 0;
         savedTranslateX.value = 0;
         savedTranslateY.value = 0;
-    };
+    }, []);
 
-    const currentImage = images[activeIndex];
-    const canGoPrev = activeIndex > 0;
-    const canGoNext = activeIndex < images.length - 1;
+    // Update shared screen dimensions on rotation
+    useEffect(() => {
+        screenWidthSV.value = screenWidth;
+        screenHeightSV.value = screenHeight;
+        totalOffset.value = activeIndex * screenWidth;
+        savedOffset.value = activeIndex * screenWidth;
+    }, [screenWidth, screenHeight]);
 
-    const handlePrev = () => {
-        if (canGoPrev) {
-            // If triggered by button, animate out first
-            swipeX.value = withTiming(SCREEN_WIDTH, { duration: 200 }, () => {
-                runOnJS(navigatePrev)();
-            });
+    // Handle Android back button
+    useEffect(() => {
+        if (!visible) return;
+        const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+            onClose();
+            return true;
+        });
+        return () => sub.remove();
+    }, [visible, onClose]);
+
+    // Sync when opened
+    useEffect(() => {
+        if (visible) {
+            setActiveIndex(initialIndex);
+            totalOffset.value = initialIndex * screenWidth;
+            savedOffset.value = initialIndex * screenWidth;
+            scale.value = 1;
+            savedScale.value = 1;
+            translateX.value = 0;
+            translateY.value = 0;
+            savedTranslateX.value = 0;
+            savedTranslateY.value = 0;
+            dismissY.value = 0;
+            enterProgress.value = withTiming(1, { duration: 200 });
+        } else {
+            enterProgress.value = 0;
         }
-    };
+    }, [visible, initialIndex]);
 
-    const navigatePrev = () => {
-        const newIndex = activeIndex - 1;
-        setActiveIndex(newIndex);
-        onNavigate(newIndex);
-        resetZoom();
-        // Start from left side and slide in
-        swipeX.value = -SCREEN_WIDTH;
-        swipeX.value = withTiming(0, { duration: 250 });
-    };
-
-    const handleNext = () => {
-        if (canGoNext) {
-            // If triggered by button, animate out first
-            swipeX.value = withTiming(-SCREEN_WIDTH, { duration: 200 }, () => {
-                runOnJS(navigateNext)();
-            });
-        }
-    };
-
-    const navigateNext = () => {
-        const newIndex = activeIndex + 1;
-        setActiveIndex(newIndex);
-        onNavigate(newIndex);
-        resetZoom();
-        // Start from right side and slide in
-        swipeX.value = SCREEN_WIDTH;
-        swipeX.value = withTiming(0, { duration: 250 });
-    };
-
-    const toggleControls = () => {
-        setControlsVisible(!controlsVisible);
-    };
+    const handleClose = useCallback(() => {
+        enterProgress.value = withTiming(0, { duration: 150 }, () => {
+            runOnJS(onClose)();
+        });
+    }, [onClose, enterProgress]);
 
     // --- Gestures ---
 
+    // Helper: clamp translate to image boundaries + buffer
+    const PAN_BUFFER = 20;
+    const clampTranslate = (tx: number, ty: number, s: number) => {
+        'worklet';
+        const sw = screenWidthSV.value;
+        const sh = screenHeightSV.value;
+        const maxTx = Math.max(0, (sw * s - sw) / 2) + PAN_BUFFER;
+        const maxTy = Math.max(0, (sh * s - sh) / 2) + PAN_BUFFER;
+        return {
+            x: Math.max(-maxTx, Math.min(tx, maxTx)),
+            y: Math.max(-maxTy, Math.min(ty, maxTy)),
+        };
+    };
+
     const pinchGesture = Gesture.Pinch()
         .onUpdate((e) => {
+            'worklet';
             scale.value = savedScale.value * e.scale;
         })
         .onEnd(() => {
+            'worklet';
             if (scale.value < 1) {
                 scale.value = withSpring(1);
                 savedScale.value = 1;
+                translateX.value = withSpring(0);
+                translateY.value = withSpring(0);
+                savedTranslateX.value = 0;
+                savedTranslateY.value = 0;
+            } else if (scale.value > 5) {
+                scale.value = withSpring(5);
+                savedScale.value = 5;
+                // Clamp translate for the capped scale
+                const clamped = clampTranslate(translateX.value, translateY.value, 5);
+                translateX.value = withSpring(clamped.x);
+                translateY.value = withSpring(clamped.y);
+                savedTranslateX.value = clamped.x;
+                savedTranslateY.value = clamped.y;
             } else {
                 savedScale.value = scale.value;
+                // Clamp translate for the current scale
+                const clamped = clampTranslate(translateX.value, translateY.value, scale.value);
+                if (clamped.x !== translateX.value || clamped.y !== translateY.value) {
+                    translateX.value = withSpring(clamped.x);
+                    translateY.value = withSpring(clamped.y);
+                }
+                savedTranslateX.value = clamped.x;
+                savedTranslateY.value = clamped.y;
             }
         });
 
     const panGesture = Gesture.Pan()
         .averageTouches(true)
+        .onStart(() => {
+            'worklet';
+            savedOffset.value = totalOffset.value;
+        })
         .onUpdate((e) => {
-            if (scale.value > 1) {
-                // Pan around zoomed image
-                translateX.value = savedTranslateX.value + e.translationX;
-                translateY.value = savedTranslateY.value + e.translationY;
+            'worklet';
+            if (scale.value > 1.05) {
+                // Zoomed — pan around the image, clamped to borders
+                const clamped = clampTranslate(
+                    savedTranslateX.value + e.translationX,
+                    savedTranslateY.value + e.translationY,
+                    scale.value
+                );
+                translateX.value = clamped.x;
+                translateY.value = clamped.y;
             } else {
-                // Determine if primarily horizontal or vertical swipe
                 const isHorizontal = Math.abs(e.translationX) > Math.abs(e.translationY);
-
                 if (isHorizontal) {
-                    // Swipe to navigate (only X axis)
-                    swipeX.value = e.translationX;
+                    const sw = screenWidthSV.value;
+                    const maxOffset = (images.length - 1) * sw;
+                    totalOffset.value = Math.max(0, Math.min(
+                        savedOffset.value - e.translationX, maxOffset
+                    ));
                     dismissY.value = 0;
                 } else if (e.translationY > 0) {
-                    // Only allow downward drag for dismiss
                     dismissY.value = e.translationY;
-                    swipeX.value = 0;
+                    totalOffset.value = savedOffset.value;
                 }
             }
         })
         .onEnd((e) => {
-            if (scale.value > 1) {
-                savedTranslateX.value = translateX.value;
-                savedTranslateY.value = translateY.value;
+            'worklet';
+            if (scale.value > 1.05) {
+                // Save clamped position
+                const clamped = clampTranslate(translateX.value, translateY.value, scale.value);
+                savedTranslateX.value = clamped.x;
+                savedTranslateY.value = clamped.y;
             } else {
-                // Check for vertical dismiss first
+                // Dismiss check
                 if (dismissY.value > DISMISS_THRESHOLD || e.velocityY > 800) {
-                    dismissY.value = withTiming(SCREEN_HEIGHT, { duration: 200 }, () => {
+                    dismissY.value = withTiming(screenHeightSV.value, { duration: 200 }, () => {
                         runOnJS(onClose)();
                     });
                     return;
@@ -171,36 +267,35 @@ export function ImageGallery({
                     dismissY.value = withTiming(0, { duration: 150 });
                 }
 
-                // Handle swipe navigation - lower threshold + velocity for easier swiping
-                const swipeThreshold = SCREEN_WIDTH * 0.1; // 10% of screen width
-                const velocityThreshold = 500; // Flick velocity threshold
+                // Snap to nearest page
+                const sw = screenWidthSV.value;
+                const currentPage = Math.round(savedOffset.value / sw);
+                let targetPage: number;
 
-                const shouldGoNext = e.translationX < -swipeThreshold || e.velocityX < -velocityThreshold;
-                const shouldGoPrev = e.translationX > swipeThreshold || e.velocityX > velocityThreshold;
-
-                if (shouldGoPrev && canGoPrev) {
-                    swipeX.value = withTiming(SCREEN_WIDTH, { duration: 150 }, () => {
-                        runOnJS(navigatePrev)();
-                    });
-                } else if (shouldGoNext && canGoNext) {
-                    swipeX.value = withTiming(-SCREEN_WIDTH, { duration: 150 }, () => {
-                        runOnJS(navigateNext)();
-                    });
+                if (e.velocityX < -500) {
+                    targetPage = Math.ceil(totalOffset.value / sw);
+                } else if (e.velocityX > 500) {
+                    targetPage = Math.floor(totalOffset.value / sw);
                 } else {
-                    swipeX.value = withTiming(0, { duration: 150 });
+                    targetPage = Math.round(totalOffset.value / sw);
                 }
-            }
-        });
+                targetPage = Math.max(0, Math.min(targetPage, images.length - 1));
 
-    const tapGesture = Gesture.Tap()
-        .numberOfTaps(1)
-        .onStart(() => {
-            runOnJS(toggleControls)();
+                totalOffset.value = withTiming(targetPage * sw, { duration: 200 }, () => {
+                    savedOffset.value = targetPage * sw;
+                    if (targetPage !== currentPage) {
+                        resetZoom();
+                    }
+                    runOnJS(setActiveIndex)(targetPage);
+                    runOnJS(onNavigate)(targetPage);
+                });
+            }
         });
 
     const doubleTapGesture = Gesture.Tap()
         .numberOfTaps(2)
         .onStart(() => {
+            'worklet';
             if (scale.value > 1) {
                 scale.value = withSpring(1);
                 savedScale.value = 1;
@@ -215,240 +310,78 @@ export function ImageGallery({
         });
 
     const composedGesture = Gesture.Simultaneous(pinchGesture, panGesture);
-    const tapsGesture = Gesture.Exclusive(doubleTapGesture, tapGesture);
+    const combined = Gesture.Race(doubleTapGesture, composedGesture);
 
-    const animatedImageStyle = useAnimatedStyle(() => ({
+    // Container animation (enter + dismiss)
+    const containerAnimatedStyle = useAnimatedStyle(() => ({
+        opacity: enterProgress.value * interpolate(
+            dismissY.value, [0, screenHeightSV.value], [1, 0.3], Extrapolation.CLAMP
+        ),
         transform: [
-            { translateX: swipeX.value },
-            { translateX: translateX.value },
-            { translateY: translateY.value },
-            { scale: scale.value },
+            { translateY: dismissY.value },
+            { scale: interpolate(enterProgress.value, [0, 1], [0.95, 1], Extrapolation.CLAMP) },
         ],
     }));
 
-    const animatedContainerStyle = useAnimatedStyle(() => ({
-        transform: [{ translateY: dismissY.value }],
-        opacity: 1 - (dismissY.value / SCREEN_HEIGHT) * 0.5,
-    }));
-
-    const resizeOptions = [
-        { label: 'XS', value: '25%' },
-        { label: 'S', value: '50%' },
-        { label: 'M', value: '75%' },
-        { label: 'L', value: '100%' },
-    ];
+    // Determine which slides to render (activeIndex ± 1)
+    const visibleIndices: number[] = [];
+    for (let i = activeIndex - 1; i <= activeIndex + 1; i++) {
+        if (i >= 0 && i < images.length) visibleIndices.push(i);
+    }
 
     if (!visible) return null;
 
     return (
-        <Modal
-            visible={visible}
-            transparent={true}
-            animationType="fade"
-            onRequestClose={onClose}
-            statusBarTranslucent={true}
-        >
-            <View style={styles.modalBackdrop}>
-                <Pressable style={styles.backdropPressable} onPress={onClose} />
-                <Animated.View style={[styles.modalContent, animatedContainerStyle]}>
-                    <GestureHandlerRootView style={styles.container}>
-                        {/* Drag Handle */}
-                        <View style={styles.dragHandle}>
-                            <View style={styles.dragIndicator} />
-                        </View>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+            <Animated.View style={[styles.fullScreenContainer, containerAnimatedStyle]}>
+                <GestureDetector gesture={combined}>
+                    <View style={styles.imageContainer}>
+                        {visibleIndices.map(i => (
+                            <GallerySlide
+                                key={i}
+                                image={images[i]}
+                                index={i}
+                                totalOffset={totalOffset}
+                                screenWidthSV={screenWidthSV}
+                                zoomScale={scale}
+                                zoomTranslateX={translateX}
+                                zoomTranslateY={translateY}
+                                isActive={i === activeIndex}
+                            />
+                        ))}
+                    </View>
+                </GestureDetector>
 
-                        {/* Main Image View with Gestures */}
-                        <GestureDetector gesture={Gesture.Race(tapsGesture, composedGesture)}>
-                            <View style={styles.imageContainer}>
-                                {currentImage ? (
-                                    <Animated.View style={[styles.imageWrapper, animatedImageStyle]}>
-                                        <Image
-                                            source={{ uri: currentImage.src }}
-                                            style={styles.image}
-                                            contentFit="contain"
-                                            cachePolicy="memory-disk"
-                                        />
-                                    </Animated.View>
-                                ) : (
-                                    <Text style={styles.errorText}>Image not found</Text>
-                                )}
-                            </View>
-                        </GestureDetector>
-
-                        {/* Overlays / Controls */}
-                        {controlsVisible && (
-                            <>
-                                {/* Header with Close Button */}
-                                <View style={styles.header}>
-                                    <View style={styles.counterContainer}>
-                                        <Text style={styles.counterText}>
-                                            {activeIndex + 1} / {images.length}
-                                        </Text>
-                                    </View>
-
-                                    <Pressable
-                                        style={({ pressed }) => [styles.closeButton, pressed && styles.buttonPressed]}
-                                        onPress={onClose}
-                                    >
-                                        <MaterialCommunityIcons name="close" size={28} color="#FFFFFF" />
-                                    </Pressable>
-                                </View>
-
-                                {/* Navigation Arrows */}
-                                {images.length > 1 && (
-                                    <>
-                                        <Pressable
-                                            style={[
-                                                styles.navButton,
-                                                styles.navButtonLeft,
-                                                !canGoPrev && styles.navButtonDisabled
-                                            ]}
-                                            onPress={handlePrev}
-                                            disabled={!canGoPrev}
-                                        >
-                                            <MaterialCommunityIcons
-                                                name="chevron-left"
-                                                size={32}
-                                                color={canGoPrev ? '#FFFFFF' : 'rgba(255,255,255,0.3)'}
-                                            />
-                                        </Pressable>
-
-                                        <Pressable
-                                            style={[
-                                                styles.navButton,
-                                                styles.navButtonRight,
-                                                !canGoNext && styles.navButtonDisabled
-                                            ]}
-                                            onPress={handleNext}
-                                            disabled={!canGoNext}
-                                        >
-                                            <MaterialCommunityIcons
-                                                name="chevron-right"
-                                                size={32}
-                                                color={canGoNext ? '#FFFFFF' : 'rgba(255,255,255,0.3)'}
-                                            />
-                                        </Pressable>
-                                    </>
-                                )}
-
-                                {/* Bottom Actions Bar - Transparent Background */}
-                                <View style={styles.bottomBar}>
-                                    {/* Resize Options */}
-                                    <View style={styles.resizeGroup}>
-                                        {resizeOptions.map((opt) => (
-                                            <Pressable
-                                                key={opt.value}
-                                                style={({ pressed }) => [
-                                                    styles.resizeBtn,
-                                                    { backgroundColor: dark ? 'rgba(58, 58, 60, 0.8)' : 'rgba(229, 229, 234, 0.8)' },
-                                                    pressed && { opacity: 0.7 }
-                                                ]}
-                                                onPress={() => {
-                                                    onResize(opt.value);
-                                                    onClose();
-                                                }}
-                                            >
-                                                <Text style={[styles.resizeText, { color: colors.text }]}>{opt.label}</Text>
-                                            </Pressable>
-                                        ))}
-                                    </View>
-
-                                    {/* Action Icons */}
-                                    <View style={styles.iconGroup}>
-                                        <Pressable
-                                            style={({ pressed }) => [
-                                                styles.iconBtn,
-                                                { backgroundColor: dark ? 'rgba(58, 58, 60, 0.8)' : 'rgba(229, 229, 234, 0.8)' },
-                                                pressed && { opacity: 0.7 }
-                                            ]}
-                                            onPress={() => {
-                                                onDownload();
-                                                onClose();
-                                            }}
-                                        >
-                                            <MaterialCommunityIcons name="download" size={24} color={colors.text} />
-                                        </Pressable>
-
-                                        <Pressable
-                                            style={({ pressed }) => [
-                                                styles.iconBtn,
-                                                { backgroundColor: dark ? 'rgba(58, 58, 60, 0.8)' : 'rgba(229, 229, 234, 0.8)' },
-                                                pressed && { opacity: 0.7 }
-                                            ]}
-                                            onPress={() => {
-                                                onCut();
-                                                onClose();
-                                            }}
-                                        >
-                                            <MaterialCommunityIcons name="content-cut" size={24} color={colors.text} />
-                                        </Pressable>
-
-                                        <Pressable
-                                            style={({ pressed }) => [
-                                                styles.iconBtn,
-                                                { backgroundColor: dark ? 'rgba(255, 69, 58, 0.3)' : 'rgba(255, 59, 48, 0.25)' },
-                                                pressed && { opacity: 0.7 }
-                                            ]}
-                                            onPress={() => {
-                                                onDelete();
-                                                onClose();
-                                            }}
-                                        >
-                                            <MaterialCommunityIcons name="delete" size={24} color="#FF453A" />
-                                        </Pressable>
-                                    </View>
-                                </View>
-                            </>
-                        )}
-                    </GestureHandlerRootView>
-                </Animated.View>
-            </View>
-        </Modal>
+                {/* Header overlay */}
+                <View style={[styles.header, { paddingTop: insets.top + 8 }]} pointerEvents="box-none">
+                    <View style={styles.counterContainer}>
+                        <Text style={styles.counterText}>
+                            {activeIndex + 1} / {images.length}
+                        </Text>
+                    </View>
+                    <Pressable
+                        style={({ pressed }) => [styles.closeButton, pressed && styles.buttonPressed]}
+                        onPress={handleClose}
+                    >
+                        <MaterialCommunityIcons name="close" size={24} color="#FFFFFF" />
+                    </Pressable>
+                </View>
+            </Animated.View>
+        </GestureHandlerRootView>
     );
 }
 
 const styles = StyleSheet.create({
-    modalBackdrop: {
+    fullScreenContainer: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.6)',
-        justifyContent: 'flex-end',
-    },
-    backdropPressable: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-    },
-    modalContent: {
-        height: MODAL_HEIGHT,
         backgroundColor: '#000000',
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
-        overflow: 'hidden',
-    },
-    container: {
-        flex: 1,
-    },
-    dragHandle: {
-        alignItems: 'center',
-        paddingVertical: 12,
-    },
-    dragIndicator: {
-        width: 40,
-        height: 4,
-        backgroundColor: 'rgba(255, 255, 255, 0.4)',
-        borderRadius: 2,
     },
     imageContainer: {
         flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
         overflow: 'hidden',
     },
-    imageWrapper: {
-        width: '100%',
-        height: '100%',
+    slideContainer: {
+        ...StyleSheet.absoluteFillObject,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -456,15 +389,11 @@ const styles = StyleSheet.create({
         width: '100%',
         height: '100%',
     },
-    errorText: {
-        color: '#FFFFFF',
-        fontSize: 16,
-    },
     header: {
         position: 'absolute',
-        top: 20, // Below drag handle
-        left: 20,
-        right: 20,
+        top: 0,
+        left: 16,
+        right: 16,
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
@@ -483,75 +412,13 @@ const styles = StyleSheet.create({
     },
     counterContainer: {
         backgroundColor: 'rgba(0,0,0,0.5)',
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 20,
+        paddingHorizontal: 14,
+        paddingVertical: 6,
+        borderRadius: 16,
     },
     counterText: {
         color: '#FFFFFF',
-        fontSize: 15,
+        fontSize: 14,
         fontWeight: '600',
-    },
-    navButton: {
-        position: 'absolute',
-        top: '50%',
-        marginTop: -25,
-        width: 50,
-        height: 50,
-        borderRadius: 25,
-        backgroundColor: 'rgba(0,0,0,0.3)',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 5,
-    },
-    navButtonLeft: {
-        left: 5,
-    },
-    navButtonRight: {
-        right: 5,
-    },
-    navButtonDisabled: {
-        opacity: 0,
-    },
-    bottomBar: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        paddingBottom: 40, // Safe area
-        paddingTop: 20,
-        paddingHorizontal: 12,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        // Transparent gradient handled byrgba backgrounds on buttons or just mostly clear
-        // We removed the solid bg
-    },
-    resizeGroup: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-    },
-    resizeBtn: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    resizeText: {
-        fontSize: 12,
-        fontWeight: '700',
-    },
-    iconGroup: {
-        flexDirection: 'row',
-        gap: 6,
-    },
-    iconBtn: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        alignItems: 'center',
-        justifyContent: 'center',
     },
 });

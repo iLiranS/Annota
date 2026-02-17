@@ -25,53 +25,98 @@ export const CustomImage = Image.extend({
     },
     addNodeView() {
         return ({ node, getPos, editor }) => {
+            // Wrapper container
+            const wrapper = document.createElement('div');
+            wrapper.className = `image-node-wrapper img-${node.attrs.align || 'center'}`;
+
+            // Image element
             const img = document.createElement('img');
             img.src = node.attrs.src;
             img.style.width = node.attrs.width || '100%';
-            img.className = `img-${node.attrs.align || 'center'}`;
+            img.draggable = false;
+
+            // Three-dot menu button
+            const menuBtn = document.createElement('button');
+            menuBtn.className = 'image-menu-btn';
+            menuBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>`;
+            menuBtn.contentEditable = 'false';
+
+            // Helper: collect all images in the document
+            const collectImages = (currentPos: number) => {
+                const images: { src: string; width: string; position: number }[] = [];
+                let currentIndex = 0;
+                editor.state.doc.descendants((n, pos) => {
+                    if (n.type.name === 'image') {
+                        if (pos === currentPos) {
+                            currentIndex = images.length;
+                        }
+                        images.push({
+                            src: n.attrs.src,
+                            width: n.attrs.width || '100%',
+                            position: pos,
+                        });
+                    }
+                });
+                return { images, currentIndex };
+            };
+
+            // Helper: select this image node without scrolling
+            const selectNode = (currentPos: number) => {
+                const nodeSelection = NodeSelection.create(editor.state.doc, currentPos);
+                editor.view.dispatch(
+                    editor.state.tr
+                        .setSelection(nodeSelection)
+                        .setMeta('scrollIntoView', false)
+                );
+            };
+
+            // Image click → open gallery
             img.onclick = (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 if (typeof getPos === 'function') {
                     const currentPos = getPos();
-                    // Use raw transaction with scrollIntoView: false to avoid jumping to top
-                    const nodeSelection = NodeSelection.create(editor.state.doc, currentPos);
-                    editor.view.dispatch(
-                        editor.state.tr
-                            .setSelection(nodeSelection)
-                            .setMeta('scrollIntoView', false)
-                    );
-
-                    // Collect all images in the document
-                    const images: { src: string; width: string; position: number }[] = [];
-                    let currentIndex = 0;
-
-                    editor.state.doc.descendants((n, pos) => {
-                        if (n.type.name === 'image') {
-                            if (pos === currentPos) {
-                                currentIndex = images.length;
-                            }
-                            images.push({
-                                src: n.attrs.src,
-                                width: n.attrs.width || '100%',
-                                position: pos
-                            });
-                        }
-                    });
-
+                    selectNode(currentPos);
+                    const { images, currentIndex } = collectImages(currentPos);
                     sendMessage({
                         type: 'imageSelected',
                         images,
                         currentIndex,
-                        // Keep individual attrs for backwards compatibility
-                        ...node.attrs,
-                        originalWidth: img.naturalWidth,
-                        currentWidth: img.width
                     });
                 }
             };
+
+            // Menu button click → open image options popup
+            menuBtn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (typeof getPos === 'function') {
+                    const currentPos = getPos();
+                    selectNode(currentPos);
+                    sendMessage({
+                        type: 'openImageMenu',
+                        src: node.attrs.src,
+                        width: node.attrs.width || '100%',
+                        position: currentPos,
+                    });
+                }
+            };
+
+            wrapper.appendChild(img);
+            wrapper.appendChild(menuBtn);
+
             return {
-                dom: img,
+                dom: wrapper,
+                ignoreMutation: (mutation: MutationRecord) => {
+                    return mutation.target === menuBtn || menuBtn.contains(mutation.target as Node);
+                },
+                update: (updatedNode) => {
+                    if (updatedNode.type.name !== 'image') return false;
+                    img.src = updatedNode.attrs.src;
+                    img.style.width = updatedNode.attrs.width || '100%';
+                    wrapper.className = `image-node-wrapper img-${updatedNode.attrs.align || 'center'}`;
+                    return true;
+                },
             };
         };
     },
@@ -90,7 +135,11 @@ export function setupImageUpdater() {
                 // Convert percent to pixels relative to available space (editor width)
                 // This prevents images from breaking tables or exceeding editor bounds
                 const editorWidth = window.editor.view.dom.clientWidth || window.innerWidth;
-                const selectedImg = document.querySelector('.ProseMirror-selectednode') as HTMLImageElement;
+                // The selected node is now the wrapper div — find the img inside it
+                const selectedWrapper = document.querySelector('.ProseMirror-selectednode');
+                const selectedImg = (selectedWrapper?.tagName === 'IMG'
+                    ? selectedWrapper
+                    : selectedWrapper?.querySelector('img')) as HTMLImageElement | null;
 
                 let baseWidth = editorWidth;
 

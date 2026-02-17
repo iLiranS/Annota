@@ -10,11 +10,7 @@ declare module '@tiptap/core' {
             setDetailsBackground: (color: string) => ReturnType;
             unsetDetailsBackground: () => ReturnType;
         };
-        details: {
-            setDetails: () => ReturnType;
-            unsetDetails: () => ReturnType;
-            toggleDetails: () => ReturnType;
-        };
+
     }
 }
 

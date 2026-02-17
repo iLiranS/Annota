@@ -4,8 +4,11 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import React, { useState } from 'react';
 import {
     Modal,
+    Platform,
+    ScrollView,
     StyleSheet,
     Text,
+    useWindowDimensions,
     View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -41,8 +44,12 @@ export default function OptionsMenu({
 }: OptionsMenuProps) {
     const { colors, dark } = useAppTheme();
     const insets = useSafeAreaInsets();
+    const { width, height } = useWindowDimensions();
     const [isVisible, setIsVisible] = useState(false);
     const [showSortSubmenu, setShowSortSubmenu] = useState(false);
+
+    // Detect iPhone landscape mode (not tablet, width > height)
+    const isIPhoneLandscape = Platform.OS === 'ios' && Platform.isPad === false && width > height;
 
     const handleClose = () => {
         setIsVisible(false);
@@ -78,13 +85,17 @@ export default function OptionsMenu({
                         onPress={() => setIsVisible(true)}
                         style={({ pressed }) => [
                             styles.optionsButton,
+                            {
+                                backgroundColor: colors.primary,
+                                shadowColor: colors.primary,
+                            },
                             pressed && styles.pressed,
                         ]}
                     >
                         <Ionicons
-                            name="ellipsis-horizontal-circle"
-                            size={36}
-                            color={colors.primary}
+                            name="ellipsis-horizontal"
+                            size={20}
+                            color="#FFFFFF"
                         />
                     </HapticPressable>
                 </View>
@@ -96,6 +107,7 @@ export default function OptionsMenu({
                 transparent
                 animationType="fade"
                 onRequestClose={handleClose}
+                supportedOrientations={['portrait', 'landscape', 'landscape-left', 'landscape-right']}
             >
                 <HapticPressable style={styles.overlay} onPress={handleClose}>
                     <View
@@ -104,104 +116,113 @@ export default function OptionsMenu({
                             {
                                 backgroundColor: colors.card,
                                 bottom: 75 + insets.bottom,
+                                right: Math.max(20, insets.right + 20),
+                                // Limit max height on landscape to make it scrollable
+                                maxHeight: isIPhoneLandscape ? height - insets.bottom - 100 : undefined,
                             },
                         ]}
                     >
-                        {/* Main Menu */}
-                        {!showSortSubmenu && (
-                            <>
-                                <HapticPressable
-                                    style={({ pressed }) => [
-                                        styles.menuItem,
-                                        pressed && { backgroundColor: colors.border + '30' },
-                                    ]}
-                                    onPress={handleNewFolder}
-                                >
-                                    <Ionicons name="folder-open-outline" size={20} color={colors.text} />
-                                    <Text style={[styles.menuItemText, { color: colors.text }]}>New Folder</Text>
-                                </HapticPressable>
-
-                                <HapticPressable
-                                    style={({ pressed }) => [
-                                        styles.menuItem,
-                                        pressed && { backgroundColor: colors.border + '30' },
-                                    ]}
-                                    onPress={() => setShowSortSubmenu(true)}
-                                >
-                                    <Ionicons name="swap-vertical-outline" size={20} color={colors.text} />
-                                    <Text style={[styles.menuItemText, { color: colors.text }]}>Sort By</Text>
-                                    <Ionicons name="chevron-forward" size={18} color={colors.text + '60'} style={styles.chevron} />
-                                </HapticPressable>
-
-                                <View style={[styles.divider, { backgroundColor: colors.border + '30' }]} />
-
-                                <HapticPressable
-                                    style={({ pressed }) => [
-                                        styles.menuItem,
-                                        pressed && { backgroundColor: colors.border + '30' },
-                                    ]}
-                                    onPress={handleTrash}
-                                >
-                                    <Ionicons name="trash-outline" size={20} color={colors.text} />
-                                    <Text style={[styles.menuItemText, { color: colors.text }]}>Trash</Text>
-                                </HapticPressable>
-
-                                <HapticPressable
-                                    style={({ pressed }) => [
-                                        styles.menuItem,
-                                        pressed && { backgroundColor: colors.border + '30' },
-                                    ]}
-                                    onPress={handleSettings}
-                                >
-                                    <Ionicons name="settings-outline" size={20} color={colors.text} />
-                                    <Text style={[styles.menuItemText, { color: colors.text }]}>Settings</Text>
-                                </HapticPressable>
-                            </>
-                        )}
-
-                        {/* Sort Submenu */}
-                        {showSortSubmenu && (
-                            <>
-                                <HapticPressable
-                                    style={({ pressed }) => [
-                                        styles.menuItem,
-                                        pressed && { backgroundColor: colors.border + '30' },
-                                    ]}
-                                    onPress={() => setShowSortSubmenu(false)}
-                                >
-                                    <Ionicons name="chevron-back" size={20} color={colors.text} />
-                                    <Text style={[styles.menuItemText, { color: colors.text, fontWeight: '600' }]}>Sort By</Text>
-                                </HapticPressable>
-
-                                <View style={[styles.divider, { backgroundColor: colors.border + '30' }]} />
-
-                                {SORT_OPTIONS.map((sortType) => (
+                        <ScrollView
+                            showsVerticalScrollIndicator={isIPhoneLandscape}
+                            bounces={false}
+                            contentContainerStyle={{ paddingVertical: 8 }}
+                        >
+                            {/* Main Menu */}
+                            {!showSortSubmenu && (
+                                <>
                                     <HapticPressable
-                                        key={sortType}
                                         style={({ pressed }) => [
                                             styles.menuItem,
                                             pressed && { backgroundColor: colors.border + '30' },
                                         ]}
-                                        onPress={() => handleSortSelect(sortType)}
+                                        onPress={handleNewFolder}
                                     >
-                                        <View style={styles.sortIconContainer}>
-                                            {currentSortType === sortType && (
-                                                <Ionicons name="checkmark" size={18} color={colors.primary} />
-                                            )}
-                                        </View>
-                                        <Text
-                                            style={[
-                                                styles.menuItemText,
-                                                { color: colors.text },
-                                                currentSortType === sortType && { color: colors.primary, fontWeight: '600' },
-                                            ]}
-                                        >
-                                            {getSortTypeLabel(sortType)}
-                                        </Text>
+                                        <Ionicons name="folder-open-outline" size={20} color={colors.text} />
+                                        <Text style={[styles.menuItemText, { color: colors.text }]}>New Folder</Text>
                                     </HapticPressable>
-                                ))}
-                            </>
-                        )}
+
+                                    <HapticPressable
+                                        style={({ pressed }) => [
+                                            styles.menuItem,
+                                            pressed && { backgroundColor: colors.border + '30' },
+                                        ]}
+                                        onPress={() => setShowSortSubmenu(true)}
+                                    >
+                                        <Ionicons name="swap-vertical-outline" size={20} color={colors.text} />
+                                        <Text style={[styles.menuItemText, { color: colors.text }]}>Sort By</Text>
+                                        <Ionicons name="chevron-forward" size={18} color={colors.text + '60'} style={styles.chevron} />
+                                    </HapticPressable>
+
+                                    <View style={[styles.divider, { backgroundColor: colors.border + '30' }]} />
+
+                                    <HapticPressable
+                                        style={({ pressed }) => [
+                                            styles.menuItem,
+                                            pressed && { backgroundColor: colors.border + '30' },
+                                        ]}
+                                        onPress={handleTrash}
+                                    >
+                                        <Ionicons name="trash-outline" size={20} color={colors.text} />
+                                        <Text style={[styles.menuItemText, { color: colors.text }]}>Trash</Text>
+                                    </HapticPressable>
+
+                                    <HapticPressable
+                                        style={({ pressed }) => [
+                                            styles.menuItem,
+                                            pressed && { backgroundColor: colors.border + '30' },
+                                        ]}
+                                        onPress={handleSettings}
+                                    >
+                                        <Ionicons name="settings-outline" size={20} color={colors.text} />
+                                        <Text style={[styles.menuItemText, { color: colors.text }]}>Settings</Text>
+                                    </HapticPressable>
+                                </>
+                            )}
+
+                            {/* Sort Submenu */}
+                            {showSortSubmenu && (
+                                <>
+                                    <HapticPressable
+                                        style={({ pressed }) => [
+                                            styles.menuItem,
+                                            pressed && { backgroundColor: colors.border + '30' },
+                                        ]}
+                                        onPress={() => setShowSortSubmenu(false)}
+                                    >
+                                        <Ionicons name="chevron-back" size={20} color={colors.text} />
+                                        <Text style={[styles.menuItemText, { color: colors.text, fontWeight: '600' }]}>Sort By</Text>
+                                    </HapticPressable>
+
+                                    <View style={[styles.divider, { backgroundColor: colors.border + '30' }]} />
+
+                                    {SORT_OPTIONS.map((sortType) => (
+                                        <HapticPressable
+                                            key={sortType}
+                                            style={({ pressed }) => [
+                                                styles.menuItem,
+                                                pressed && { backgroundColor: colors.border + '30' },
+                                            ]}
+                                            onPress={() => handleSortSelect(sortType)}
+                                        >
+                                            <View style={styles.sortIconContainer}>
+                                                {currentSortType === sortType && (
+                                                    <Ionicons name="checkmark" size={18} color={colors.primary} />
+                                                )}
+                                            </View>
+                                            <Text
+                                                style={[
+                                                    styles.menuItemText,
+                                                    { color: colors.text },
+                                                    currentSortType === sortType && { color: colors.primary, fontWeight: '600' },
+                                                ]}
+                                            >
+                                                {getSortTypeLabel(sortType)}
+                                            </Text>
+                                        </HapticPressable>
+                                    ))}
+                                </>
+                            )}
+                        </ScrollView>
                     </View>
                 </HapticPressable>
             </Modal>
@@ -214,11 +235,15 @@ const styles = StyleSheet.create({
         zIndex: 100,
     },
     optionsButton: {
-        width: 44,
-        height: 44,
-        borderRadius: 12,
+        width: 38,
+        height: 38,
+        borderRadius: 19,
         alignItems: 'center',
         justifyContent: 'center',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.4,
+        shadowRadius: 8,
+        elevation: 6,
     },
     pressed: {
         opacity: 0.7,
@@ -231,10 +256,9 @@ const styles = StyleSheet.create({
     },
     menuContainer: {
         position: 'absolute',
-        right: 20,
+        // right and bottom are set dynamically based on safe area insets
         width: 220,
         borderRadius: 14,
-        paddingVertical: 8,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.2,

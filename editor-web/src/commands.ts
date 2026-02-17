@@ -1,7 +1,7 @@
 import { sendMessage, showError } from './bridge';
 import {
-    getEditorState,
     applyFontFamily,
+    getEditorState,
     scrollCursorIntoView,
     setupEditor
 } from './editor-core';
@@ -110,15 +110,33 @@ export function setupCommands() {
                 window.updateImage?.(params);
                 break;
             case 'deleteImage':
-                if (e.isActive('image')) {
+                if (typeof params?.pos === 'number') {
+                    e.chain().setNodeSelection(params.pos).deleteSelection().run();
+                } else if (e.isActive('image')) {
                     c.deleteSelection().run();
                 }
                 break;
-            case 'cutImage':
-                if (e.isActive('image')) {
-                    document.execCommand('cut');
+            case 'cutImage': {
+                const cutPos = params?.pos as number | undefined;
+                if (typeof cutPos === 'number') {
+                    const node = editor.state.doc.nodeAt(cutPos);
+                    if (node?.type.name === 'image') {
+                        sendMessage({ type: 'copyToClipboard', content: node.attrs.src });
+                        e.chain().focus().setNodeSelection(cutPos).deleteSelection().run();
+                    }
                 }
                 break;
+            }
+            case 'copyImage': {
+                const copyPos = params?.pos as number | undefined;
+                if (typeof copyPos === 'number') {
+                    const node = editor.state.doc.nodeAt(copyPos);
+                    if (node?.type.name === 'image') {
+                        sendMessage({ type: 'copyToClipboard', content: node.attrs.src });
+                    }
+                }
+                break;
+            }
             case 'deleteSelection':
                 if (typeof params?.pos === 'number') {
                     e.chain().focus().setNodeSelection(params.pos).deleteSelection().run();
@@ -162,8 +180,10 @@ export function setupCommands() {
                 if (params?.language) c.updateAttributes('codeBlock', { language: params.language }).run();
                 break;
             case 'selectImageAtPosition':
+                // Don't use focus() here - we're just selecting for gallery navigation
+                // Focus would trigger the keyboard
                 if (typeof params?.position === 'number') {
-                    e.chain().focus().setNodeSelection(params.position).run();
+                    e.chain().setNodeSelection(params.position).run();
                 }
                 break;
             case 'setMath':
