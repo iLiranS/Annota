@@ -30,6 +30,15 @@ Annota is a mobile-first Note Taking application built with React Native and Exp
     - `(drawer)`: Main navigation structure (Drawer).
     - `Notes/[id]`: dynamic route for editing notes.
 
+### 5. Image Storage (Local-First)
+- **Location**: `lib/services/images/`, `lib/db/repositories/images.repository.ts`
+- **Purpose**: Local-first image storage with hash-based deduplication.
+- **Components**:
+    - `image.service.ts`: Low-level operations (resize, hash, file I/O, base64 conversion).
+    - `note-image.service.ts`: Orchestration (process pipeline, reference sync, cleanup).
+    - `images.repository.ts`: SQLite CRUD for `images` and `note_images` tables.
+- **Pattern**: Images stored in `documentDirectory/images/` as JPEG files. Metadata in SQLite. Referenced in editor HTML via `data-image-id` attribute. Resolved to base64 data URIs for WebView rendering.
+
 ## Data Flow
 
 1. **Initialization**:
@@ -45,10 +54,23 @@ Annota is a mobile-first Note Taking application built with React Native and Exp
    - Service writes to SQLite.
    - Action updates local Zustand state to reflect changes immediately.
 
+4. **Image Insertion**:
+   - User taps image button → selects from Library/Camera or pastes URL.
+   - Image is resized/compressed → SHA-256 hash computed → dedupe check.
+   - File saved to `documentDirectory/images/{uuid}.jpg` → metadata inserted in SQLite.
+   - `insertLocalImage` command sends `data-image-id` to WebView.
+   - `resolveImages` command injects base64 data URI for immediate rendering.
+
+5. **Image Loading (on note open)**:
+   - Editor HTML parsed for `data-image-id` values.
+   - Image files read as base64 data URIs from local storage.
+   - `resolveImages` command injects them into WebView for display.
+
 ## Tech Stack
 - **Framework**: Expo / React Native
 - **Router**: Expo Router
 - **State**: Zustand
 - **Database**: Expo SQLite + Drizzle ORM
 - **Editor**: TipTap (WebView)
+- **Image Processing**: expo-image-manipulator, expo-file-system, expo-image-picker
 - **UI**: React Native Styled Components / StyleSheet

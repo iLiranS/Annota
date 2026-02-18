@@ -268,6 +268,8 @@ export function ToolbarPopup(props: ToolbarPopupProps) {
                 return (
                     <ImageInput
                         onSubmit={(props as ImagePopupProps).onSubmit}
+                        onPickFromLibrary={(props as ImagePopupProps).onPickFromLibrary}
+                        onTakePhoto={(props as ImagePopupProps).onTakePhoto}
                         onClose={onClose}
                     />
                 );

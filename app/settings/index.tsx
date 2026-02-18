@@ -61,6 +61,20 @@ export default function SettingsIndex() {
                 </View>
             </View>
 
+            <View style={styles.section}>
+                <Text style={[styles.sectionHeader, { color: colors.text + '80' }]}>SYSTEM</Text>
+                <View style={[styles.card, { backgroundColor: colors.card }]}>
+                    <SettingItem
+                        label="Storage & Debug"
+                        icon="server-outline"
+                        onPress={() => router.push('/settings/storage')}
+                        description="Manage images and cache"
+                        iconColor="#FFFFFF"
+                        iconBackgroundColor="#FF9500"
+                    />
+                </View>
+            </View>
+
             <View style={styles.footer}>
                 <Text style={[styles.versionText, { color: colors.text + '40' }]}>Version 1.0.0 (Build 100)</Text>
             </View>

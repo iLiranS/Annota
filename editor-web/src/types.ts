@@ -10,6 +10,7 @@ declare global {
         hljs?: typeof hljs;
         renderMathInElement?: any; // katex auto-render
         updateImage?: (attrs: any) => void;
+        resolveImages?: (imageMap: Record<string, string>) => void;
         handleCommand?: (command: string, params?: any) => void;
         setupEditor?: (options: any) => void;
         _lastBlockMenuPos?: number;

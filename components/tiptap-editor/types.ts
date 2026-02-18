@@ -13,6 +13,8 @@ export interface TipTapEditorRef {
 }
 
 export interface TipTapEditorProps {
+    /** Note ID — required for local image storage association */
+    noteId?: string;
     initialContent?: string;
     onContentChange?: (html: string) => void;
     placeholder?: string;
@@ -224,6 +226,8 @@ export interface LinkPopupProps extends BasePopupProps {
 export interface ImagePopupProps extends BasePopupProps {
     type: 'image';
     onSubmit: (url: string) => void;
+    onPickFromLibrary?: () => void;
+    onTakePhoto?: () => void;
 }
 
 export interface TablePopupProps extends BasePopupProps {

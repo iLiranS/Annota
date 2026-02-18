@@ -1,51 +1,101 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useTheme } from '@react-navigation/native';
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
+import { Controller, useForm } from 'react-hook-form';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { imageInputSchema, type ImageInputData } from '../../../lib/db/validators/image';
 
 interface ImageInputProps {
     onSubmit: (url: string) => void;
+    onPickFromLibrary?: () => void;
+    onTakePhoto?: () => void;
     onClose: () => void;
 }
 
-export function ImageInput({ onSubmit, onClose }: ImageInputProps) {
+export function ImageInput({ onSubmit, onPickFromLibrary, onTakePhoto, onClose }: ImageInputProps) {
     const { colors, dark } = useTheme();
-    const [url, setUrl] = React.useState('');
-    const inputRef = useRef<TextInput>(null);
 
-    useEffect(() => {
-        // Focus input when opened
-        setTimeout(() => inputRef.current?.focus(), 100);
-    }, []);
+    const {
+        control,
+        handleSubmit,
+        formState: { errors, isValid },
+        reset
+    } = useForm<ImageInputData>({
+        resolver: zodResolver(imageInputSchema),
+        defaultValues: {
+            url: ''
+        },
+        mode: 'onChange'
+    });
 
-    const handleSubmit = () => {
-        if (url.trim()) {
-            onSubmit(url.trim());
-            setUrl('');
-        }
+    const onValidSubmit = (data: ImageInputData) => {
+        onSubmit(data.url);
+        reset();
     };
 
     return (
-        <View style={styles.popupContent}>
-            <Text style={[styles.popupTitle, { color: colors.text }]}>Insert Image</Text>
-            <TextInput
-                ref={inputRef}
-                style={[
-                    styles.urlInput,
-                    {
-                        backgroundColor: dark ? '#1C1C1E' : '#F2F2F7',
-                        color: colors.text,
-                        borderColor: dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)',
-                    },
-                ]}
-                placeholder="Paste image URL..."
-                placeholderTextColor={dark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)'}
-                value={url}
-                onChangeText={setUrl}
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="url"
-                onSubmitEditing={handleSubmit}
-            />
+        <View style={styles.container}>
+            {/* Source buttons */}
+            <View style={styles.sourceRow}>
+                {onPickFromLibrary && (
+                    <Pressable
+                        style={[styles.sourceButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+                        onPress={onPickFromLibrary}
+                    >
+                        <Ionicons name="images-outline" size={22} color={colors.primary} />
+                        <Text style={[styles.sourceLabel, { color: colors.text }]}>Library</Text>
+                    </Pressable>
+                )}
+                {onTakePhoto && (
+                    <Pressable
+                        style={[styles.sourceButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+                        onPress={onTakePhoto}
+                    >
+                        <Ionicons name="camera-outline" size={22} color={colors.primary} />
+                        <Text style={[styles.sourceLabel, { color: colors.text }]}>Camera</Text>
+                    </Pressable>
+                )}
+            </View>
+
+            {/* Divider */}
+            <View style={styles.dividerRow}>
+                <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+                <Text style={[styles.dividerText, { color: colors.border }]}>or paste URL</Text>
+                <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+            </View>
+
+            {/* URL input */}
+            <View>
+                <Controller
+                    control={control}
+                    name="url"
+                    render={({ field: { onChange, value, onBlur } }) => (
+                        <TextInput
+                            style={[styles.input, {
+                                color: colors.text,
+                                backgroundColor: dark ? '#1C1C1E' : '#F2F2F7',
+                                borderColor: errors.url ? '#FF453A' : (dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)'),
+                            }]}
+                            value={value}
+                            onChangeText={onChange}
+                            onBlur={onBlur}
+                            placeholder="https://example.com/image.jpg"
+                            placeholderTextColor={dark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)'}
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                            keyboardType="url"
+                            returnKeyType="done"
+                            onSubmitEditing={handleSubmit(onValidSubmit)}
+                        />
+                    )}
+                />
+                {errors.url && (
+                    <Text style={styles.errorText}>{errors.url.message}</Text>
+                )}
+            </View>
+
+            {/* Action buttons */}
             <View style={styles.buttonRow}>
                 <Pressable
                     style={[styles.button, { backgroundColor: dark ? '#3A3A3C' : '#E5E5EA' }]}
@@ -54,10 +104,13 @@ export function ImageInput({ onSubmit, onClose }: ImageInputProps) {
                     <Text style={[styles.buttonText, { color: colors.text }]}>Cancel</Text>
                 </Pressable>
                 <Pressable
-                    style={[styles.button, { backgroundColor: colors.primary }]}
-                    onPress={handleSubmit}
+                    style={[styles.button, {
+                        backgroundColor: isValid ? colors.primary : (dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'),
+                    }]}
+                    onPress={handleSubmit(onValidSubmit)}
+                    disabled={!isValid}
                 >
-                    <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>Insert</Text>
+                    <Text style={[styles.buttonText, { color: isValid ? '#FFFFFF' : (dark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)') }]}>Insert</Text>
                 </Pressable>
             </View>
         </View>
@@ -65,20 +118,51 @@ export function ImageInput({ onSubmit, onClose }: ImageInputProps) {
 }
 
 const styles = StyleSheet.create({
-    popupContent: {
+    container: {
         gap: 12,
     },
-    popupTitle: {
-        fontSize: 17,
-        fontWeight: '600',
-        textAlign: 'center',
-        marginBottom: 4,
+    sourceRow: {
+        flexDirection: 'row',
+        gap: 10,
     },
-    urlInput: {
-        padding: 12,
+    sourceButton: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        paddingVertical: 12,
         borderRadius: 10,
         borderWidth: 1,
+    },
+    sourceLabel: {
+        fontSize: 14,
+        fontWeight: '500',
+    },
+    dividerRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    dividerLine: {
+        flex: 1,
+        height: StyleSheet.hairlineWidth,
+    },
+    dividerText: {
+        fontSize: 12,
+    },
+    input: {
+        borderWidth: 1,
+        borderRadius: 10,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
         fontSize: 16,
+    },
+    errorText: {
+        color: '#FF453A',
+        fontSize: 12,
+        marginTop: 4,
+        marginLeft: 4,
     },
     buttonRow: {
         flexDirection: 'row',
@@ -96,3 +180,4 @@ const styles = StyleSheet.create({
         fontWeight: '500',
     },
 });
+

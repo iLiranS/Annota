@@ -15,6 +15,8 @@ interface EditorToolbarProps {
     onActivePopupChange: (type: PopupType) => void;
     /** Callback to notify parent when popup opens/closes - helps keep toolbar visible */
     onPopupStateChange?: (isOpen: boolean) => void;
+    /** Callback to handle image insertion (URL or device picker) */
+    onInsertImage?: (source: 'url' | 'library' | 'camera', value?: string) => Promise<void>;
 
     currentLatex?: string | null;
     blockData?: any;
@@ -35,7 +37,8 @@ export function EditorToolbar({
 
     currentLatex,
     blockData,
-    onInsertMath
+    onInsertMath,
+    onInsertImage,
 }: EditorToolbarProps) {
     const { dark, colors } = useTheme();
 
@@ -336,7 +339,15 @@ export function EditorToolbar({
                     visible={true}
                     type="image"
                     onSubmit={(url: string) => {
-                        onCommand('setImage', { src: url });
+                        onInsertImage?.('url', url);
+                        closePopup();
+                    }}
+                    onPickFromLibrary={async () => {
+                        await onInsertImage?.('library');
+                        closePopup();
+                    }}
+                    onTakePhoto={async () => {
+                        await onInsertImage?.('camera');
                         closePopup();
                     }}
                     onClose={closePopup}

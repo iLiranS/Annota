@@ -1,7 +1,9 @@
 import { useAppTheme } from '@/hooks/use-app-theme';
+import { NoteImageService } from '@/lib/services/images';
 import { useSettingsStore } from '@/stores/settings-store';
 import { useKeyboard } from '@react-native-community/hooks';
 import * as ExpoClipboard from 'expo-clipboard';
+import * as ImagePicker from 'expo-image-picker';
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { Keyboard, Modal, Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,8 +12,19 @@ import { ImageGallery } from './image-gallery';
 import { EditorToolbar } from './toolbar';
 import { EditorState, initialEditorState, PopupType, TipTapEditorProps, TipTapEditorRef } from './types';
 
+/** Extract data-image-id values from HTML string */
+function extractImageIds(html: string): string[] {
+    const regex = /data-image-id="([^"]+)"/g;
+    const ids: string[] = [];
+    let match;
+    while ((match = regex.exec(html)) !== null) {
+        ids.push(match[1]);
+    }
+    return ids;
+}
+
 const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
-    ({ initialContent = '', onContentChange, placeholder = 'Start typing...', autofocus = false, onSearchResults, contentPaddingTop = 0, onGalleryVisibilityChange, editable = true }, ref) => {
+    ({ initialContent = '', onContentChange, placeholder = 'Start typing...', autofocus = false, onSearchResults, contentPaddingTop = 0, onGalleryVisibilityChange, editable = true, noteId }, ref) => {
         const { colors, dark } = useAppTheme();
         const { editor: editorSettings } = useSettingsStore();
         const webViewRef = useRef<WebView>(null);
@@ -109,10 +122,22 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
                                 fontFamily: editorSettings.fontFamily,
                                 editable,
                             });
+                            // Resolve any local images in the initial content
+                            const imageIds = extractImageIds(initialContent);
+                            if (imageIds.length > 0) {
+                                NoteImageService.resolveImageSources(imageIds).then(imageMap => {
+                                    if (Object.keys(imageMap).length > 0) {
+                                        sendCommand('resolveImages', { imageMap });
+                                    }
+                                });
+                            }
                             break;
-                        case 'content':
+                        case 'content': {
+                            // Content updated
                             onContentChange?.(data.html);
                             break;
+
+                        }
                         case 'contentResponse':
                             if (contentResolverRef.current) {
                                 contentResolverRef.current(data.html);
@@ -259,8 +284,63 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
         // Hide toolbar when gallery is open
         const showToolbar = (isKeyboardVisible || isPopupOpen) && !isGalleryVisible;
 
+        // ============ IMAGE INSERTION HANDLER ============
+        const handleInsertImage = useCallback(async (source: 'url' | 'library' | 'camera', value?: string) => {
+            if (!noteId) {
+                console.warn('Cannot insert image: noteId is required');
+                return;
+            }
+
+            try {
+                let imageUri: string | undefined;
+
+                if (source === 'library') {
+                    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                    if (status !== 'granted') {
+                        console.warn('Media library permission denied');
+                        return;
+                    }
+                    const result = await ImagePicker.launchImageLibraryAsync({
+                        mediaTypes: ['images'],
+                        quality: 1,
+                    });
+                    if (result.canceled || !result.assets[0]) return;
+                    imageUri = result.assets[0].uri;
+                } else if (source === 'camera') {
+                    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+                    if (status !== 'granted') {
+                        console.warn('Camera permission denied');
+                        return;
+                    }
+                    const result = await ImagePicker.launchCameraAsync({
+                        mediaTypes: ['images'],
+                        quality: 1,
+                    });
+                    if (result.canceled || !result.assets[0]) return;
+                    imageUri = result.assets[0].uri;
+                } else if (source === 'url' && value) {
+                    // Download and process remote URL
+                    const processed = await NoteImageService.processRemoteImage(noteId, value);
+                    // Insert into editor and resolve
+                    sendCommand('insertLocalImage', { imageId: processed.imageId });
+                    const imageMap = await NoteImageService.resolveImageSources([processed.imageId]);
+                    sendCommand('resolveImages', { imageMap });
+                    return;
+                }
+
+                if (imageUri) {
+                    const processed = await NoteImageService.processAndInsertImage(noteId, imageUri);
+                    sendCommand('insertLocalImage', { imageId: processed.imageId });
+                    const imageMap = await NoteImageService.resolveImageSources([processed.imageId]);
+                    sendCommand('resolveImages', { imageMap });
+                }
+            } catch (err) {
+                console.error('Failed to insert image:', err);
+            }
+        }, [noteId, sendCommand]);
+
         const source = __DEV__
-            ? { uri: 'http://192.168.7.12:5173' }
+            ? { uri: 'http://192.168.7.14:5173' }
             : Platform.OS === 'android'
                 ? { uri: 'file:///android_asset/editor.html' }
                 : require('./assets/editor.html');
@@ -335,6 +415,7 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
                                 setActivePopup('math');
                                 setIsPopupOpen(true);
                             }}
+                            onInsertImage={handleInsertImage}
                         />
                     </View>
                 )}

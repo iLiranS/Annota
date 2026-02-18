@@ -1,7 +1,9 @@
+import { deleteImageFile } from '@/lib/services/images/image.service';
 import { and, desc, eq, gte, inArray, isNull, sql } from 'drizzle-orm';
 import * as Crypto from 'expo-crypto';
 import { db, DbOrTx, schema } from '../client';
 import type { NoteMetadata, NoteMetadataInsert } from '../schema';
+import * as ImagesRepo from './images.repository';
 
 // Re-export types for convenience
 export type { NoteMetadata, NoteVersion } from '../schema';
@@ -149,12 +151,16 @@ export function restoreNote(noteId: string, targetFolderId?: string | null): voi
 }
 
 export function permanentlyDeleteNote(noteId: string): void {
-    // Delete content first (foreign key)
-    db.delete(schema.noteContent).where(eq(schema.noteContent.id, noteId)).run();
-    // Delete versions
-    db.delete(schema.noteVersions).where(eq(schema.noteVersions.noteId, noteId)).run();
-    // Delete metadata
-    db.delete(schema.noteMetadata).where(eq(schema.noteMetadata.id, noteId)).run();
+    db.transaction((tx) => {
+        // However, to be safe and atomic, we should delete note versions here.
+        tx.delete(schema.noteVersions).where(eq(schema.noteVersions.noteId, noteId)).run();
+
+        // 2. Delete content
+        db.delete(schema.noteContent).where(eq(schema.noteContent.id, noteId)).run();
+
+        // 3. Delete metadata
+        db.delete(schema.noteMetadata).where(eq(schema.noteMetadata.id, noteId)).run();
+    });
 }
 
 export function getQuickAccessNotes(): NoteMetadata[] {
@@ -209,6 +215,9 @@ export function updateNoteContent(noteId: string, content: string, preview: stri
     const VERSION_THRESHOLD_MS = 10000; // 10 seconds
     const MAX_VERSIONS = 50;
 
+    // Extract image IDs from content
+    const imageIds = Array.from(content.matchAll(/data-image-id="([^"]+)"/g), m => m[1]);
+
     // 1. Update current content (Always)
     db.transaction((tx) => {
         tx.update(schema.noteContent)
@@ -231,47 +240,53 @@ export function updateNoteContent(noteId: string, content: string, preview: stri
             .limit(1)
             .get();
 
+        let activeVersionId: string;
 
         if (!latestVersion || (now.getTime() - latestVersion.createdAt.getTime() > VERSION_THRESHOLD_MS)) {
             // Case A: Create NEW version
+            activeVersionId = Crypto.randomUUID();
             tx.insert(schema.noteVersions).values({
-                id: Crypto.randomUUID(), // SQLite doesn't auto-gen UUIDs usually unless configured
+                id: activeVersionId,
                 noteId,
                 content,
                 createdAt: now,
             }).run();
 
             // Enforce Limit (cleanup old versions)
-            // We can do a count check or just delete subquery
-            // For SQLite + Drizzle, let's just fetch IDs to delete if count is high
-            // Optimization: Only check every N updates or just do it.
-            // Let's use a subquery delete for robustness if possible, or filtered delete.
             const versions = tx.select({ id: schema.noteVersions.id }).from(schema.noteVersions)
                 .where(eq(schema.noteVersions.noteId, noteId))
                 .orderBy(desc(schema.noteVersions.createdAt))
                 .all();
 
             if (versions.length > MAX_VERSIONS) {
-                const idsToDelete = versions.slice(MAX_VERSIONS).map(v => v.id);
-                if (idsToDelete.length > 0) {
+                const versionsToDelete = versions.slice(MAX_VERSIONS).map(v => v.id);
+                if (versionsToDelete.length > 0) {
+                    // Detach images from deleted versions
+                    ImagesRepo.deleteImagesForVersions(versionsToDelete, tx);
+
                     tx.delete(schema.noteVersions)
-                        .where(inArray(schema.noteVersions.id, idsToDelete))
+                        .where(inArray(schema.noteVersions.id, versionsToDelete))
                         .run();
                 }
             }
-
         } else {
             // Case B: Update EXISTING latest version (debounce)
-            // This keeps the "latest work session" updated without spamming versions
+            activeVersionId = latestVersion.id;
             tx.update(schema.noteVersions)
-                .set({ content, createdAt: now }) // Optionally update createdAt to bump it? Or keep start time of session?
-                // User requirement: "not updated on every little change - only if the timestamp from previous update is like at least 10-20 seconds"
-                // If we update createdAt, we theoretically extend the session indefinitely if they keep typing.
-                // If we DON'T update createdAt, the gap will eventually exceed 10s and force a new version.
-                // "Session" extending seems more natural for "Version History" (grouping edits).
-                // Let's update createdAt so as long as they type, it's one version.
+                .set({ content, createdAt: now })
                 .where(eq(schema.noteVersions.id, latestVersion.id))
                 .run();
+        }
+
+        // 4. Sync images to active version
+        ImagesRepo.setImagesForVersion(activeVersionId, imageIds, tx);
+
+        // 5. Garbage Collection: Delete images not referenced by ANY version
+        const deletedFilePaths = ImagesRepo.deleteUnreferencedImages(tx);
+
+        // Clean up files (best effort)
+        for (const path of deletedFilePaths) {
+            deleteImageFile(path);
         }
     });
 }
@@ -401,5 +416,13 @@ export function getNoteIdsByOriginalFolderIds(folderIds: string[], folderDeleted
         ))
         .all();
 
+    return results.map(r => r.id);
+}
+
+export function getDeletedNoteIds(tx: DbOrTx = db): string[] {
+    const results = tx.select({ id: schema.noteMetadata.id })
+        .from(schema.noteMetadata)
+        .where(eq(schema.noteMetadata.isDeleted, true))
+        .all();
     return results.map(r => r.id);
 }

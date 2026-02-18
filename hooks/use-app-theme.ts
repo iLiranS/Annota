@@ -4,7 +4,15 @@ import { DarkTheme, DefaultTheme, Theme } from '@react-navigation/native';
 import { useMemo } from 'react';
 import { useColorScheme as useNativeColorScheme } from 'react-native';
 
-export function useAppTheme(): Theme {
+
+export type AppTheme = Theme & {
+    colors: Theme['colors'] & {
+        error: string;
+        errorBackground: string;
+    };
+};
+
+export function useAppTheme(): AppTheme {
     const systemScheme = useNativeColorScheme();
     const { themeMode, accentColor } = useSettingsStore();
 
@@ -24,6 +32,8 @@ export function useAppTheme(): Theme {
                 text: customColors.text,
                 card: customColors.card,
                 border: customColors.border,
+                error: customColors.error,
+                errorBackground: customColors.errorBackground,
             },
         };
     }, [isDark, accentColor, BaseTheme]);

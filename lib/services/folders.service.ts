@@ -4,6 +4,7 @@ import * as notesRepo from '@/lib/db/repositories/notes.repository';
 import type { Folder, FolderInsert } from '@/lib/db/schema';
 import { eq, inArray, sql } from 'drizzle-orm';
 import { generateFolder } from '../utils/folders';
+import { NoteImageService } from './images';
 
 // Re-export constants
 export { DAILY_NOTES_FOLDER_ID, TRASH_FOLDER_ID } from '@/lib/db/repositories/folders.repository';
@@ -153,7 +154,13 @@ export const FolderService = {
     // 6. Empty Trash
     emptyTrash: async () => {
         try {
+            // 1. Clean up images for all deleted notes
+            const deletedNoteIds = notesRepo.getDeletedNoteIds();
+            for (const noteId of deletedNoteIds) {
+                NoteImageService.cleanupImagesForNote(noteId);
+            }
 
+            // 2. Delete notes and folders
             await db.transaction(async (tx) => {
                 notesRepo.permanentlyDeleteDeletedNotes(tx);
                 foldersRepo.deleteDeletedFolders(tx);

@@ -287,6 +287,7 @@ export default function NoteEditor() {
 
                     <TipTapEditor
                         ref={editorRef}
+                        noteId={id}
                         initialContent={content ?? ''}
                         onContentChange={handleContentChange}
                         onSearchResults={handleSearchResults}

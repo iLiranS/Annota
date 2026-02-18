@@ -85,11 +85,32 @@ const CREATE_TABLES_SQL = `
     value TEXT NOT NULL
   );
 
+  CREATE TABLE IF NOT EXISTS images (
+    id TEXT PRIMARY KEY,
+    hash TEXT,
+    local_path TEXT NOT NULL,
+    mime_type TEXT,
+    size INTEGER,
+    width INTEGER,
+    height INTEGER,
+    sync_status TEXT NOT NULL DEFAULT 'pending',
+    created_at INTEGER NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS version_images (
+    version_id TEXT NOT NULL,
+    image_id TEXT NOT NULL,
+    PRIMARY KEY (version_id, image_id)
+  );
+
   -- Indices for better performance
   CREATE INDEX IF NOT EXISTS idx_tasks_deadline ON tasks(deadline);
   CREATE INDEX IF NOT EXISTS idx_tasks_completed ON tasks(completed);
   CREATE INDEX IF NOT EXISTS idx_note_metadata_updated_at ON note_metadata(updated_at);
   CREATE INDEX IF NOT EXISTS idx_note_metadata_folder_id ON note_metadata(folder_id);
+  CREATE INDEX IF NOT EXISTS idx_images_hash ON images(hash);
+  CREATE INDEX IF NOT EXISTS idx_version_images_version_id ON version_images(version_id);
+  CREATE INDEX IF NOT EXISTS idx_version_images_image_id ON version_images(image_id);
 `;
 
 // Initialize database (create tables and seed system data)
@@ -143,6 +164,8 @@ export function initDatabase(): void {
 export function resetDatabase(): void {
   try {
     const tables = [
+      'note_images',
+      'images',
       'note_metadata',
       'note_content',
       'note_versions',

@@ -22,7 +22,15 @@ export const CustomImage = Image.extend({
                     if (element.classList.contains('img-right')) return 'right';
                     return 'center';
                 },
-            }
+            },
+            imageId: {
+                default: null,
+                parseHTML: element => element.getAttribute('data-image-id'),
+                renderHTML: attributes => {
+                    if (!attributes.imageId) return {};
+                    return { 'data-image-id': attributes.imageId };
+                },
+            },
         }
     },
     addNodeView() {
@@ -33,7 +41,13 @@ export const CustomImage = Image.extend({
 
             // Image element
             const img = document.createElement('img');
-            img.src = node.attrs.src;
+            if (node.attrs.src) {
+                img.src = node.attrs.src;
+            } else {
+                // Placeholder for unresolved imageId images
+                img.style.backgroundColor = 'var(--border-color, #e0e0e0)';
+                img.style.minHeight = '100px';
+            }
             img.style.width = node.attrs.width || '100%';
             img.draggable = false;
 
@@ -113,7 +127,11 @@ export const CustomImage = Image.extend({
                 },
                 update: (updatedNode) => {
                     if (updatedNode.type.name !== 'image') return false;
-                    img.src = updatedNode.attrs.src;
+                    if (updatedNode.attrs.src) {
+                        img.src = updatedNode.attrs.src;
+                        img.style.backgroundColor = '';
+                        img.style.minHeight = '';
+                    }
                     img.style.width = updatedNode.attrs.width || '100%';
                     wrapper.className = `image-node-wrapper img-${updatedNode.attrs.align || 'center'}`;
                     return true;
@@ -179,6 +197,38 @@ export function setupImageUpdater() {
                     })
                     .run();
             }
+        }
+    };
+}
+
+/**
+ * Sets up window.resolveImages for RN to inject base64 data URIs
+ * into image nodes identified by imageId.
+ */
+export function setupImageResolver() {
+    window.resolveImages = function (imageMap: Record<string, string>) {
+        if (!window.editor) return;
+        const e = window.editor;
+        const { tr } = e.state;
+        let hasChanges = false;
+
+        e.state.doc.descendants((node, pos) => {
+            if (node.type.name === 'image' && node.attrs.imageId) {
+                const dataUri = imageMap[node.attrs.imageId];
+                if (dataUri && node.attrs.src !== dataUri) {
+                    tr.setNodeMarkup(pos, undefined, {
+                        ...node.attrs,
+                        src: dataUri,
+                    });
+                    hasChanges = true;
+                }
+            }
+        });
+
+        if (hasChanges) {
+            // Mark as non-content-changing to avoid triggering save
+            tr.setMeta('resolveImages', true);
+            e.view.dispatch(tr);
         }
     };
 }

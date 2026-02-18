@@ -2,6 +2,7 @@ import * as notesRepo from '@/lib/db/repositories/notes.repository';
 import type { NoteMetadata } from '@/lib/db/schema';
 import { insertNoteMetadataSchema } from '../db/validators/notes';
 import { generateNoteMetadata, generatePreview, generateTitle } from '../utils/notes';
+import * as NoteImageService from './images/note-image.service';
 
 export const NoteService = {
     // 0. Getters
@@ -64,6 +65,10 @@ export const NoteService = {
 
     // 6. Permanent Delete
     permanentlyDelete: async (noteId: string) => {
+        // 1. Clean up images (moved from repo)
+        NoteImageService.cleanupImagesForNote(noteId);
+
+        // 2. Delete Note
         notesRepo.permanentlyDeleteNote(noteId);
     },
 

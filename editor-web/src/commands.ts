@@ -106,6 +106,18 @@ export function setupCommands() {
             case 'setImage':
                 if (params?.src) c.setImage({ src: params.src }).run();
                 break;
+            case 'insertLocalImage':
+                // Insert image node with imageId (no src yet — will be resolved)
+                if (params?.imageId) {
+                    c.setImage({ src: '', imageId: params.imageId } as any).run();
+                }
+                break;
+            case 'resolveImages':
+                // Inject base64 data URIs for imageId-based images
+                if (params?.imageMap) {
+                    window.resolveImages?.(params.imageMap);
+                }
+                break;
             case 'updateImage':
                 window.updateImage?.(params);
                 break;

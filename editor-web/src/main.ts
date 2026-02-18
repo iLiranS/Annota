@@ -5,12 +5,13 @@ import './styles.css';
 import { loadingEl, sendMessage } from './bridge';
 import { setupCommands } from './commands';
 import { editorEl, setupEditor } from './editor-core';
-import { setupImageUpdater } from './extensions/image';
+import { setupImageResolver, setupImageUpdater } from './extensions/image';
 import './types';
 
 // Initialize Helpers
 setupCommands();
 setupImageUpdater();
+setupImageResolver();
 
 editorEl.addEventListener('click', function (e) {
     const target = e.target as HTMLElement;

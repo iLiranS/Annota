@@ -55,6 +55,13 @@
           }
         }
       ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "The app needs access to your photos to let you attach them to notes.",
+          "cameraPermission": "The app needs access to your camera to let you take photos for your notes."
+        }
+      ],
       "@react-native-community/datetimepicker"
     ],
     "experiments": {

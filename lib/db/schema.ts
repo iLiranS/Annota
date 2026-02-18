@@ -1,5 +1,5 @@
 import type { SortType } from '@/dev-data/data';
-import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
 // ============ NOTE METADATA (fast, for lists) ============
 export const noteMetadata = sqliteTable('note_metadata', {
@@ -79,6 +79,27 @@ export const settings = sqliteTable('settings', {
     value: text('value').notNull(), // JSON
 });
 
+// ============ IMAGES ============
+export const images = sqliteTable('images', {
+    id: text('id').primaryKey(),
+    hash: text('hash'),
+    localPath: text('local_path').notNull(),
+    mimeType: text('mime_type'),
+    size: integer('size'),
+    width: integer('width'),
+    height: integer('height'),
+    syncStatus: text('sync_status').notNull().default('pending'), // 'pending' | 'synced'
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+});
+
+// ============ VERSION IMAGES (many-to-many) ============
+export const versionImages = sqliteTable('version_images', {
+    versionId: text('version_id').notNull(), // Links to note_versions.id
+    imageId: text('image_id').notNull(),     // Links to images.id
+}, (t) => ({
+    pk: primaryKey({ columns: [t.versionId, t.imageId] }),
+}));
+
 // ============ TYPE EXPORTS ============
 export type NoteMetadata = typeof noteMetadata.$inferSelect;
 export type NoteMetadataInsert = typeof noteMetadata.$inferInsert;
@@ -90,3 +111,6 @@ export type Task = typeof tasks.$inferSelect;
 export type TaskInsert = typeof tasks.$inferInsert;
 export type Tag = typeof tags.$inferSelect;
 export type Settings = typeof settings.$inferSelect;
+export type ImageRecord = typeof images.$inferSelect;
+export type ImageInsert = typeof images.$inferInsert;
+
