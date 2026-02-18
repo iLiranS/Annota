@@ -198,7 +198,7 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
                     fontFamily: editorSettings.fontFamily,
                 });
             }
-        }, [dark, colors, isReady, sendCommand, contentPaddingTop, editorSettings.direction]);
+        }, [dark, colors, isReady, sendCommand, contentPaddingTop, editorSettings.direction, editorSettings.fontFamily]);
 
         useEffect(() => {
             if (isReady) {

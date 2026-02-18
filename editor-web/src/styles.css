@@ -196,6 +196,11 @@ body {
 .ProseMirror[dir="ltr"] h6,
 .ProseMirror[dir="ltr"] li,
 .ProseMirror[dir="ltr"] li p,
+.ProseMirror[dir="ltr"] blockquote,
+.ProseMirror[dir="ltr"] td,
+.ProseMirror[dir="ltr"] th,
+.ProseMirror[dir="ltr"] .details-content p,
+.ProseMirror[dir="ltr"] [data-type="detailsContent"] p,
 .ProseMirror[dir="rtl"] p,
 .ProseMirror[dir="rtl"] h1,
 .ProseMirror[dir="rtl"] h2,
@@ -204,7 +209,12 @@ body {
 .ProseMirror[dir="rtl"] h5,
 .ProseMirror[dir="rtl"] h6,
 .ProseMirror[dir="rtl"] li,
-.ProseMirror[dir="rtl"] li p {
+.ProseMirror[dir="rtl"] li p,
+.ProseMirror[dir="rtl"] blockquote,
+.ProseMirror[dir="rtl"] td,
+.ProseMirror[dir="rtl"] th,
+.ProseMirror[dir="rtl"] .details-content p,
+.ProseMirror[dir="rtl"] [data-type="detailsContent"] p {
     unicode-bidi: normal;
 }
 

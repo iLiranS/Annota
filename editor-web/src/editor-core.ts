@@ -216,7 +216,9 @@ export function setupEditor(options: any) {
     // If editor already exists, ONLY update what's necessary, DO NOT DESTROY
     if (window.editor) {
         // Just update theme variables (already done above)
-        // Update direction properly via setOptions so it persists across re-renders
+
+        // Update direction on the ProseMirror view DOM and editorProps so it
+        // persists across view updates. CSS handles the rest via unicode-bidi.
         const currentEditorProps = window.editor.options.editorProps || {};
         window.editor.setOptions({
             editorProps: {
@@ -227,9 +229,12 @@ export function setupEditor(options: any) {
                 },
             },
         });
+
+        // Also set dir directly on the DOM element for immediate visual update
         if (window.editor.view?.dom) {
             window.editor.view.dom.setAttribute('dir', direction);
         }
+
         if (currentFontFamily !== (fontFamily ?? 'system').toLowerCase()) {
             applyFontFamily(fontFamily);
         }
@@ -248,7 +253,10 @@ export function setupEditor(options: any) {
     try {
         window.editor = new Editor({
             editable: options.editable !== undefined ? options.editable : true,
-            textDirection: direction,
+            // Disable TipTap's built-in TextDirection extension entirely.
+            // It's configured once at creation and can't be updated dynamically.
+            // We handle direction ourselves via the DOM dir attribute + CSS.
+            enableCoreExtensions: { textDirection: false } as any,
             element: editorEl,
             editorProps: {
                 attributes: { dir: direction },

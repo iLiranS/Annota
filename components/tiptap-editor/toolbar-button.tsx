@@ -30,7 +30,9 @@ export function ToolbarButton({
     colorIndicator,
 }: ToolbarButtonProps) {
     const { colors, dark } = useTheme();
-    const buttonColor = isActive ? colors.primary : colors.text + '99';
+    const hasColor = !!colorIndicator;
+    const baseColor = colorIndicator || colors.primary;
+    const buttonColor = colorIndicator || (isActive ? colors.primary : colors.text + '99');
 
     return (
         <Pressable
@@ -38,11 +40,22 @@ export function ToolbarButton({
             disabled={disabled}
             style={({ pressed }) => [
                 styles.toolbarButton,
-                isActive && { backgroundColor: colors.primary + '25' },
                 pressed && { opacity: 0.6 },
                 disabled && { opacity: 0.3 },
             ]}
         >
+            {(isActive || hasColor) && (
+                <View
+                    style={[
+                        StyleSheet.absoluteFill,
+                        {
+                            backgroundColor: baseColor,
+                            opacity: 0.15,
+                            borderRadius: 8,
+                        },
+                    ]}
+                />
+            )}
             {label ? (
                 <Text
                     style={[
@@ -58,11 +71,6 @@ export function ToolbarButton({
             ) : icon ? (
                 <View style={styles.iconContainer}>
                     <MaterialIcons name={icon} size={22} color={buttonColor} />
-                    {colorIndicator && (
-                        <View
-                            style={[styles.colorIndicator, { backgroundColor: colorIndicator }]}
-                        />
-                    )}
                 </View>
             ) : null}
         </Pressable>
@@ -77,9 +85,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    toolbarButtonActive: {
-        backgroundColor: 'rgba(0, 122, 255, 0.15)',
-    },
     toolbarButtonText: {
         fontSize: 20,
         fontWeight: '500',
@@ -87,13 +92,5 @@ const styles = StyleSheet.create({
     iconContainer: {
         alignItems: 'center',
         justifyContent: 'center',
-    },
-    colorIndicator: {
-        position: 'absolute',
-        bottom: -4,
-        left: 2,
-        right: 2,
-        height: 3,
-        borderRadius: 1.5,
     },
 });

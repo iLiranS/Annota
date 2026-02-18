@@ -119,15 +119,15 @@ export function EditorToolbar({
                         {/* Text Color */}
                         <ToolbarButton
                             icon="format-color-text"
-                            isActive={!!editorState.textColor}
+                            isActive={false}
                             onPress={() => openPopup('textColor')}
                             colorIndicator={editorState.textColor || undefined}
                         />
 
                         {/* Highlight */}
                         <ToolbarButton
-                            icon="highlight"
-                            isActive={!!editorState.highlightColor}
+                            icon="border-color"
+                            isActive={false}
                             onPress={() => openPopup('highlight')}
                             colorIndicator={editorState.highlightColor || undefined}
                         />
@@ -172,7 +172,7 @@ export function EditorToolbar({
                             onPress={() => onCommand('toggleCode')}
                         />
                         <ToolbarButton
-                            icon="data-object"
+                            icon='terminal'
                             isActive={editorState.isCodeBlock}
                             onPress={() => onCommand('toggleCodeBlock')}
                         />
@@ -482,7 +482,6 @@ const styles = StyleSheet.create({
     toolbar: {
         paddingHorizontal: 8,
         paddingVertical: 6,
-        backgroundColor: 'red',
     },
     toolbarContainer: {
         flexDirection: 'row',

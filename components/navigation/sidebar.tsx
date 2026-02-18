@@ -491,6 +491,7 @@ const styles = StyleSheet.create({
     },
     quickAccessText: {
         fontSize: 15,
+        fontWeight: '500',
         flex: 1,
     },
     emptyText: {
