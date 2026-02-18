@@ -25,19 +25,24 @@ export const NoteService = {
 
     // 2. Update Metadata
     updateMetadata: async (noteId: string, updates: Partial<Omit<NoteMetadata, 'id' | 'createdAt'>>): Promise<NoteMetadata | null> => {
-        let title = updates.title;
-        if (updates.title) {
-            title = generateTitle(updates.title);
-        }
         try {
-            insertNoteMetadataSchema.pick({ title: true }).parse({ title });
-            let noteMetadata: NoteMetadata;
-            if (title) noteMetadata = notesRepo.updateNoteMetadata(noteId, { ...updates, title, isDirty: true });
-            else noteMetadata = notesRepo.updateNoteMetadata(noteId, { ...updates, isDirty: true });
-            return noteMetadata
+            // Validate updates using the partial schema (allows updating single fields)
+            const validatedUpdates = insertNoteMetadataSchema.partial().parse(updates);
+
+            // If title is being updated, regenerate it to ensure it's valid (e.g. trimming)
+            // validating schema touches title but we might want to ensure consistent generation logic if needed,
+            // though schema validation handles min/max length.
+            // The previous logic called generateTitle, let's keep it if it does specific formatting.
+            if (validatedUpdates.title) {
+                validatedUpdates.title = generateTitle(validatedUpdates.title);
+            }
+
+            console.log(`[NoteService] Updating note ${noteId} with:`, validatedUpdates);
+
+            return notesRepo.updateNoteMetadata(noteId, { ...validatedUpdates, isDirty: true });
         } catch (err) {
-            console.error(err)
-            return null
+            console.error('[NoteService] Update validation failed:', err);
+            return null;
         }
     },
 
@@ -60,5 +65,14 @@ export const NoteService = {
     // 6. Permanent Delete
     permanentlyDelete: async (noteId: string) => {
         notesRepo.permanentlyDeleteNote(noteId);
+    },
+
+    // 7. Versions
+    getVersions: async (noteId: string) => {
+        return notesRepo.getNoteVersions(noteId);
+    },
+
+    getVersion: async (versionId: string) => {
+        return notesRepo.getNoteVersion(versionId);
     }
 };

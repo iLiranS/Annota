@@ -32,8 +32,12 @@ interface NotesState {
     getNoteById: (noteId: string) => NoteMetadata | undefined;
 
     // Content operations (lazy loaded)
+    // Content operations (lazy loaded)
     getNoteContent: (noteId: string) => string;
     updateNoteContent: (noteId: string, content: string) => Promise<void>;
+    getNoteVersions: (noteId: string) => Promise<{ id: string; createdAt: Date }[]>;
+    getNoteVersion: (versionId: string) => Promise<{ id: string; content: string; createdAt: Date } | undefined>;
+    revertNote: (noteId: string, versionId: string) => Promise<void>;
 
     // Folder operations
     createFolder: (data: Partial<FolderInsert>) => Promise<Folder>;
@@ -185,6 +189,22 @@ export const useNotesStore = create<NotesState>((set, get) => ({
             set(state => ({
                 notes: state.notes.map(n => n.id === noteId ? updatedNote : n)
             }));
+        }
+    },
+
+    getNoteVersions: async (noteId) => {
+        return NoteService.getVersions(noteId);
+    },
+
+    getNoteVersion: async (versionId) => {
+        return NoteService.getVersion(versionId);
+    },
+
+    revertNote: async (noteId, versionId) => {
+        const version = await NoteService.getVersion(versionId);
+        if (version) {
+            // Treating revert as a new update ("forward roll")
+            await get().updateNoteContent(noteId, version.content);
         }
     },
 

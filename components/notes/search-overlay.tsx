@@ -72,6 +72,21 @@ export function SearchOverlay({
         }
     }, [visible, translateY, opacity, topOffset]);
 
+    // Force focus back to input when results update
+    // This handles scenarios where the WebView might steal focus (e.g. during scroll to match)
+    useEffect(() => {
+        if (visible && searchTerm.length > 0) {
+            // Small timeout to allow any contending focus events to settle
+            const timer = setTimeout(() => {
+                const isFocused = inputRef.current?.isFocused();
+                if (!isFocused) {
+                    inputRef.current?.focus();
+                }
+            }, 100);
+            return () => clearTimeout(timer);
+        }
+    }, [resultCount, currentResultIndex, visible, searchTerm]);
+
     if (!visible) return null;
 
     const hasResults = resultCount > 0;

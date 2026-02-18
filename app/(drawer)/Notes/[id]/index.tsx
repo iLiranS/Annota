@@ -38,7 +38,7 @@ export default function NoteEditor() {
 
 
 
-    const { getNoteById, updateNoteMetadata, getNoteContent, updateNoteContent } = useNotesStore();
+    const { getNoteById, updateNoteMetadata, getNoteContent, updateNoteContent, deleteNote } = useNotesStore();
     const currentNote = id ? getNoteById(id) : undefined;
 
     // Lazy-loaded content state
@@ -144,6 +144,32 @@ export default function NoteEditor() {
         editorRef.current?.searchPrev();
     }, []);
 
+    const handleVersionHistory = useCallback(() => {
+        if (!id) return;
+        router.push({ pathname: '/Notes/[id]/history', params: { id } });
+    }, [id, router]);
+
+    // Menu handlers
+    const handleDelete = useCallback(async () => {
+        if (!id) return;
+        await deleteNote(id);
+        if (source === 'home') {
+            router.replace('/');
+        } else {
+            router.back();
+        }
+    }, [id, deleteNote, router, source]);
+
+    const handleToggleQuickAccess = useCallback((value: boolean) => {
+        if (!id) return;
+        updateNoteMetadata(id, { isQuickAccess: value });
+    }, [id, updateNoteMetadata]);
+
+    const handleTogglePin = useCallback((value: boolean) => {
+        if (!id) return;
+        updateNoteMetadata(id, { isPinned: value });
+    }, [id, updateNoteMetadata]);
+
     // Handle case where note doesn't exist
     if (!currentNote) {
         return (
@@ -226,7 +252,16 @@ export default function NoteEditor() {
                     ),
                     headerBackVisible: false,
                     headerRight: () => (
-                        <NoteHeaderMenu noteId={id} onSearch={handleOpenSearch} />
+                        <NoteHeaderMenu
+                            noteId={id}
+                            isPinned={currentNote?.isPinned}
+                            isQuickAccess={currentNote?.isQuickAccess}
+                            onSearch={handleOpenSearch}
+                            onDelete={handleDelete}
+                            onTogglePin={handleTogglePin}
+                            onToggleQuickAccess={handleToggleQuickAccess}
+                            onVersionHistory={handleVersionHistory}
+                        />
                     ),
                 }}
             />

@@ -2,7 +2,6 @@ import { useAppTheme } from '@/hooks/use-app-theme';
 import { DAILY_NOTES_FOLDER_ID, useNotesStore, type Folder } from '@/stores/notes-store';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { DrawerContentComponentProps, DrawerContentScrollView } from '@react-navigation/drawer';
-import { useTheme } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import {
@@ -71,7 +70,7 @@ function FolderTreeItem({
     onNavigate,
     renderChildren,
 }: FolderTreeItemProps) {
-    const { colors } = useTheme();
+    const { colors } = useAppTheme();
 
     return (
         <View>
@@ -121,24 +120,30 @@ function FolderTreeItem({
 }
 
 function Separator() {
-    const { colors } = useTheme();
+    const { colors } = useAppTheme();
     return (
         <View style={[styles.separator, { backgroundColor: colors.border }]} />
     );
 }
 
 export default function Sidebar(props: DrawerContentComponentProps) {
-    const { colors } = useTheme();
+    const { colors } = useAppTheme();
     const insets = useSafeAreaInsets();
     const router = useRouter();
 
-    const { folders, getFoldersInFolder } = useNotesStore();
+    const { folders, notes, getFoldersInFolder } = useNotesStore();
     const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+    const [isQuickAccessExpanded, setIsQuickAccessExpanded] = useState(false);
 
     // Get non-system top-level folders
     const topLevelFolders = useMemo(() => {
         return folders.filter(f => f.parentId === null && !f.isSystem);
     }, [folders]);
+
+    // Get Filtered Quick Access Notes
+    const quickAccessNotes = useMemo(() => {
+        return notes.filter(n => n.isQuickAccess && !n.isDeleted);
+    }, [notes]);
 
     const closeDrawer = () => {
         props.navigation.closeDrawer();
@@ -257,12 +262,63 @@ export default function Sidebar(props: DrawerContentComponentProps) {
                         iconColor='#ef7b6cff'
                     />
 
-                    <SidebarItem
-                        icon="star"
-                        label="Quick Access"
-                        onPress={() => navigateToNotes()} // TODO: Implement Quick Access filter
-                        iconColor="#FBBF24"
-                    />
+                    <Pressable
+                        onPress={() => setIsQuickAccessExpanded(!isQuickAccessExpanded)}
+                        style={({ pressed }) => [
+                            styles.sidebarItem,
+                            pressed && { opacity: 0.7 },
+                        ]}
+                    >
+                        <Ionicons
+                            name={'star'}
+                            size={22}
+                            color={"#FBBF24"}
+                        />
+                        <Text style={[
+                            styles.sidebarItemText,
+                            { color: colors.text, flex: 1 }
+                        ]}>
+                            Quick Access
+                        </Text>
+                        <Ionicons
+                            name={isQuickAccessExpanded ? 'chevron-down' : 'chevron-forward'} // Or chevron-forward if collapsed
+                            size={16}
+                            color={colors.text}
+                        />
+                    </Pressable>
+
+                    {/* Quick Access List */}
+                    {isQuickAccessExpanded && (
+                        <View style={styles.quickAccessList}>
+                            {quickAccessNotes.length === 0 ? (
+                                <Text style={[styles.emptyText, { color: colors.text + '80' }]}>
+                                    No starred notes
+                                </Text>
+                            ) : (
+                                quickAccessNotes.map(note => (
+                                    <HapticPressable
+                                        key={note.id}
+                                        onPress={() => {
+                                            closeDrawer();
+                                            router.push({ pathname: '/Notes/[id]', params: { id: note.id } });
+                                        }}
+                                        style={({ pressed }) => [
+                                            styles.quickAccessItem,
+                                            pressed && {
+                                                backgroundColor: colors.primary + '15',
+                                                opacity: 0.7
+                                            }
+                                        ]}
+                                    >
+                                        <Ionicons name="document-text-outline" size={16} color={colors.primary} />
+                                        <Text style={[styles.quickAccessText, { color: colors.text }]} numberOfLines={1}>
+                                            {note.title || 'Untitled Note'}
+                                        </Text>
+                                    </HapticPressable>
+                                ))
+                            )}
+                        </View>
+                    )}
 
 
                 </View>
@@ -420,6 +476,28 @@ const styles = StyleSheet.create({
     footerText: {
         fontSize: 16,
         fontWeight: '500',
+    },
+    quickAccessList: {
+        paddingLeft: 12,
+        marginBottom: 8,
+    },
+    quickAccessItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        borderRadius: 8,
+        gap: 8,
+    },
+    quickAccessText: {
+        fontSize: 15,
+        flex: 1,
+    },
+    emptyText: {
+        fontSize: 14,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        fontStyle: 'italic',
     },
     iconButton: {
         padding: 4,

@@ -233,6 +233,12 @@ export function setupEditor(options: any) {
         if (currentFontFamily !== (fontFamily ?? 'system').toLowerCase()) {
             applyFontFamily(fontFamily);
         }
+
+        // Update editable state
+        if (options.editable !== undefined) {
+            window.editor.setEditable(options.editable);
+        }
+
         return;
     }
 
@@ -241,6 +247,7 @@ export function setupEditor(options: any) {
 
     try {
         window.editor = new Editor({
+            editable: options.editable !== undefined ? options.editable : true,
             textDirection: direction,
             element: editorEl,
             editorProps: {

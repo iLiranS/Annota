@@ -23,6 +23,8 @@ export interface TipTapEditorProps {
     contentPaddingTop?: number;
     /** Called when the full-screen image gallery opens or closes */
     onGalleryVisibilityChange?: (visible: boolean) => void;
+    /** Whether the editor is editable. Defaults to true. */
+    editable?: boolean;
 }
 
 export interface EditorState {

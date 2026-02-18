@@ -85,18 +85,36 @@ export default function NotesList() {
         return sortNotes(noteList, currentSortType);
     }, [notes, currentFolderId, currentSortType]);
 
+    // Split notes into pinned and unpinned
+    const { pinnedNotes, unpinnedNotes } = useMemo(() => {
+        const pinned = browseNotes.filter(n => n.isPinned);
+        const unpinned = browseNotes.filter(n => !n.isPinned);
+        return { pinnedNotes: pinned, unpinnedNotes: unpinned };
+    }, [browseNotes]);
+
     const browseData = useMemo((): ListItem[] => {
         const items: ListItem[] = [];
+
+        // 1. Pinned Notes
+        if (pinnedNotes.length > 0) {
+            items.push({ type: 'section-header', title: 'Pinned' });
+            pinnedNotes.forEach((n) => items.push({ type: 'note', data: n }));
+        }
+
+        // 2. Folders
         if (browseFolders.length > 0) {
             items.push({ type: 'section-header', title: 'Folders' });
             browseFolders.forEach((f) => items.push({ type: 'folder', data: f }));
         }
-        if (browseNotes.length > 0) {
+
+        // 3. Remaining Notes
+        if (unpinnedNotes.length > 0) {
             items.push({ type: 'section-header', title: 'Notes' });
-            browseNotes.forEach((n) => items.push({ type: 'note', data: n }));
+            unpinnedNotes.forEach((n) => items.push({ type: 'note', data: n }));
         }
+
         return items;
-    }, [browseFolders, browseNotes]);
+    }, [browseFolders, pinnedNotes, unpinnedNotes]);
 
     const handleFolderPress = useCallback(
         (folderId: string) => {

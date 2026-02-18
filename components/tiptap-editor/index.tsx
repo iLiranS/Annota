@@ -9,11 +9,9 @@ import { WebView, WebViewMessageEvent } from 'react-native-webview';
 import { ImageGallery } from './image-gallery';
 import { EditorToolbar } from './toolbar';
 import { EditorState, initialEditorState, PopupType, TipTapEditorProps, TipTapEditorRef } from './types';
-/**
- * TipTap-based rich text editor component for React Native.
- */
-const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
-    ({ initialContent = '', onContentChange, placeholder = 'Start typing...', autofocus = false, onSearchResults, contentPaddingTop = 0, onGalleryVisibilityChange }, ref) => {
+
+const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
+    ({ initialContent = '', onContentChange, placeholder = 'Start typing...', autofocus = false, onSearchResults, contentPaddingTop = 0, onGalleryVisibilityChange, editable = true }, ref) => {
         const { colors, dark } = useAppTheme();
         const { editor: editorSettings } = useSettingsStore();
         const webViewRef = useRef<WebView>(null);
@@ -109,6 +107,7 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
                                 paddingTop: contentPaddingTop,
                                 direction: editorSettings.direction,
                                 fontFamily: editorSettings.fontFamily,
+                                editable,
                             });
                             break;
                         case 'content':
@@ -371,7 +370,7 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
             </View >
         );
     }
-);
+));
 
 TipTapEditor.displayName = 'TipTapEditor';
 

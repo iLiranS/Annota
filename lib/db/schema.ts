@@ -83,6 +83,7 @@ export const settings = sqliteTable('settings', {
 export type NoteMetadata = typeof noteMetadata.$inferSelect;
 export type NoteMetadataInsert = typeof noteMetadata.$inferInsert;
 export type NoteContent = typeof noteContent.$inferSelect;
+export type NoteVersion = typeof noteVersions.$inferSelect;
 export type Folder = typeof folders.$inferSelect;
 export type FolderInsert = typeof folders.$inferInsert;
 export type Task = typeof tasks.$inferSelect;
