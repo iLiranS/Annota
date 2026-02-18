@@ -37,6 +37,7 @@ interface NotesState {
     updateNoteContent: (noteId: string, content: string) => Promise<void>;
     getNoteVersions: (noteId: string) => Promise<{ id: string; createdAt: Date }[]>;
     getNoteVersion: (versionId: string) => Promise<{ id: string; content: string; createdAt: Date } | undefined>;
+    deleteNoteVersion: (noteId: string, versionId: string) => Promise<void>;
     revertNote: (noteId: string, versionId: string) => Promise<void>;
 
     // Folder operations
@@ -206,6 +207,10 @@ export const useNotesStore = create<NotesState>((set, get) => ({
             // Treating revert as a new update ("forward roll")
             await get().updateNoteContent(noteId, version.content);
         }
+    },
+
+    deleteNoteVersion: async (noteId, versionId) => {
+        await NoteService.deleteVersion(noteId, versionId);
     },
 
     // ============ FOLDER OPERATIONS ============

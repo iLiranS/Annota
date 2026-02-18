@@ -313,6 +313,12 @@ export function getNoteVersion(versionId: string) {
         .get();
 }
 
+export function deleteNoteVersion(versionId: string): void {
+    db.delete(schema.noteVersions)
+        .where(eq(schema.noteVersions.id, versionId))
+        .run();
+}
+
 export function getRecentNotes(limitCount: number = 5): NoteMetadata[] {
     return db
         .select()

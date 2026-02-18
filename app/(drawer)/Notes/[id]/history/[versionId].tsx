@@ -12,21 +12,57 @@ export default function VersionDetail() {
     const { id, versionId } = useLocalSearchParams<{ id: string; versionId: string }>();
     const router = useRouter();
     const { colors } = useTheme();
-    const { getNoteVersion, revertNote } = useNotesStore();
+    const { getNoteVersion, revertNote, deleteNoteVersion, getNoteVersions } = useNotesStore();
 
     const [version, setVersion] = useState<{ id: string; content: string; createdAt: Date } | undefined>();
     const [isLoading, setIsLoading] = useState(true);
 
+    const [isLatest, setIsLatest] = useState(false);
+
     useEffect(() => {
         async function loadVersion() {
-            if (versionId) {
-                const data = await getNoteVersion(versionId);
-                setVersion(data);
+            if (versionId && id) {
+                const [verData, allVersions] = await Promise.all([
+                    getNoteVersion(versionId),
+                    getNoteVersions(id)
+                ]);
+
+                setVersion(verData);
+
+                // Check if this is the latest version
+                // Assuming allVersions is sorted by date desc as per repo default
+                if (allVersions.length > 0 && allVersions[0].id === versionId) {
+                    setIsLatest(true);
+                } else {
+                    setIsLatest(false);
+                }
+
                 setIsLoading(false);
             }
         }
         loadVersion();
-    }, [versionId, getNoteVersion]);
+    }, [versionId, id, getNoteVersion, getNoteVersions]);
+
+    const handleDelete = () => {
+        Alert.alert(
+            "Delete Version",
+            "Are you sure you want to permanently delete this version?",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Delete",
+                    style: "destructive",
+                    onPress: async () => {
+                        if (id && versionId) {
+                            setIsLoading(true);
+                            await deleteNoteVersion(id, versionId);
+                            router.back();
+                        }
+                    }
+                }
+            ]
+        );
+    };
 
     const handleRevert = () => {
         Alert.alert(
@@ -102,6 +138,21 @@ export default function VersionDetail() {
                     <Text style={{ color: colors.text }}>Version not found</Text>
                 </View>
             )}
+
+            {/* Delete Button (Bottom Center) - Only if NOT latest */}
+            {version && !isLoading && (
+                <View style={[styles.bottomContainer, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                    <HapticPressable
+                        onPress={handleDelete}
+                        style={[styles.deleteButton, isLatest && styles.disabledButton]}
+                        disabled={isLatest}
+                    >
+                        <Text style={styles.deleteButtonText}>
+                            {isLatest ? "Current Version" : "Delete Version"}
+                        </Text>
+                    </HapticPressable>
+                </View>
+            )}
         </View>
     );
 }
@@ -132,5 +183,26 @@ const styles = StyleSheet.create({
     headerButtonText: {
         fontSize: 17,
         fontWeight: '600',
+    },
+    bottomContainer: {
+        padding: 16,
+        paddingBottom: 32,
+        borderTopWidth: StyleSheet.hairlineWidth,
+        alignItems: 'center',
+    },
+    deleteButton: {
+        backgroundColor: '#FF3B30', // System Red
+        paddingHorizontal: 24,
+        paddingVertical: 12,
+        borderRadius: 24,
+    },
+    deleteButtonText: {
+        color: 'white',
+        fontSize: 16,
+        fontWeight: '600',
+    },
+    disabledButton: {
+        backgroundColor: '#CCC', // Disabled gray
+        opacity: 0.8
     }
 });

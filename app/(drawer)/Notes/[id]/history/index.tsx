@@ -1,10 +1,10 @@
 import { HapticPressable } from '@/components/ui/haptic-pressable';
 import { useNotesStore } from '@/stores/notes-store';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useTheme } from '@react-navigation/native';
+import { useFocusEffect, useTheme } from '@react-navigation/native';
 import { format } from 'date-fns';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { ActivityIndicator, FlatList, Platform, StyleSheet, Text, View } from 'react-native';
 
 export default function NoteHistory() {
@@ -16,16 +16,30 @@ export default function NoteHistory() {
     const [versions, setVersions] = useState<{ id: string; createdAt: Date }[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    useEffect(() => {
-        async function loadVersions() {
-            if (id) {
-                const data = await getNoteVersions(id);
-                setVersions(data);
-                setIsLoading(false);
-            }
-        }
-        loadVersions();
-    }, [id, getNoteVersions]);
+    useFocusEffect(
+        React.useCallback(() => {
+            let isActive = true;
+
+            const loadVersions = async () => {
+                if (id) {
+                    const data = await getNoteVersions(id);
+                    if (isActive) {
+                        setVersions(data);
+                        setIsLoading(false);
+                    }
+                }
+            };
+
+            // Set loading state if needed, or just let it update
+            // setIsLoading(true); // Optional: show spinner on every focus? Maybe strictly not needed if fast.
+            loadVersions();
+
+            return () => {
+                isActive = false;
+            };
+        }, [id, getNoteVersions])
+    );
+
 
     const handleVersionPress = (versionId: string) => {
         router.push({

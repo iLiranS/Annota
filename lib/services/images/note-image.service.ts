@@ -141,3 +141,20 @@ export function cleanupImagesForNote(noteId: string): void {
         deleteImageFile(path);
     }
 }
+
+export function getImageIdsForVersion(versionId: string): string[] {
+    return ImagesRepo.getImageIdsForVersions([versionId]);
+}
+
+export function cleanupOrphans(imageIds: string[]): void {
+    if (imageIds.length === 0) return;
+
+    const distinctIds = [...new Set(imageIds)];
+    // Check if these images are still referenced by ANY version
+    const deletedPaths = ImagesRepo.deleteImagesIfUnreferenced(distinctIds);
+
+    // Delete files
+    for (const path of deletedPaths) {
+        deleteImageFile(path);
+    }
+}

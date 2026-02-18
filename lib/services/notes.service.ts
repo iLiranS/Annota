@@ -1,3 +1,4 @@
+import * as ImagesRepo from '@/lib/db/repositories/images.repository';
 import * as notesRepo from '@/lib/db/repositories/notes.repository';
 import type { NoteMetadata } from '@/lib/db/schema';
 import { insertNoteMetadataSchema } from '../db/validators/notes';
@@ -79,5 +80,20 @@ export const NoteService = {
 
     getVersion: async (versionId: string) => {
         return notesRepo.getNoteVersion(versionId);
+    },
+
+    deleteVersion: async (noteId: string, versionId: string) => {
+        // 1. Get images used in this version (before they are unlinked by deletion)
+        const imageIds = NoteImageService.getImageIdsForVersion(versionId);
+
+        // 2. Delete the links in version_images table (Critical Step for Orphans check)
+        // We must remove the links SO THAT cleanupOrphans sees the count decrease.
+        ImagesRepo.deleteImagesForVersions([versionId]);
+
+        // 3. Delete the version record
+        notesRepo.deleteNoteVersion(versionId);
+
+        // 4. Cleanup images that might have become orphans
+        NoteImageService.cleanupOrphans(imageIds);
     }
 };
