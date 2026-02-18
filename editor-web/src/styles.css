@@ -158,7 +158,7 @@ body {
 
 .ProseMirror ul,
 .ProseMirror ol {
-    padding-left: 24px;
+    padding-inline-start: 24px;
     margin: 8px 0;
 }
 
@@ -177,8 +177,35 @@ body {
 /* Task List */
 .ProseMirror ul[data-type="taskList"] {
     list-style: none;
-    padding-left: 0;
+    padding-inline-start: 0;
     margin: 8px 0;
+}
+
+/*
+ * When direction is explicitly set (not auto), switch unicode-bidi from
+ * "plaintext" (auto-detect per paragraph) to "normal" (respect dir attribute).
+ * This ensures cursor position, text alignment, and heading layout follow
+ * the user's explicit LTR/RTL setting.
+ */
+.ProseMirror[dir="ltr"] p,
+.ProseMirror[dir="ltr"] h1,
+.ProseMirror[dir="ltr"] h2,
+.ProseMirror[dir="ltr"] h3,
+.ProseMirror[dir="ltr"] h4,
+.ProseMirror[dir="ltr"] h5,
+.ProseMirror[dir="ltr"] h6,
+.ProseMirror[dir="ltr"] li,
+.ProseMirror[dir="ltr"] li p,
+.ProseMirror[dir="rtl"] p,
+.ProseMirror[dir="rtl"] h1,
+.ProseMirror[dir="rtl"] h2,
+.ProseMirror[dir="rtl"] h3,
+.ProseMirror[dir="rtl"] h4,
+.ProseMirror[dir="rtl"] h5,
+.ProseMirror[dir="rtl"] h6,
+.ProseMirror[dir="rtl"] li,
+.ProseMirror[dir="rtl"] li p {
+    unicode-bidi: normal;
 }
 
 .ProseMirror ul[data-type="taskList"] li {
@@ -233,14 +260,14 @@ body {
 }
 
 .ProseMirror blockquote {
-    border-left: 3px solid var(--accent-color);
+    border-inline-start: 3px solid var(--accent-color);
     margin: 12px 0;
-    padding-left: 16px;
+    padding-inline-start: 16px;
     font-style: italic;
     opacity: 0.9;
     background-color: var(--quote-bg);
-    border-top-right-radius: 4px;
-    border-bottom-right-radius: 4px;
+    border-start-end-radius: 4px;
+    border-end-end-radius: 4px;
 }
 
 .ProseMirror code {
@@ -385,7 +412,7 @@ body {
     content: attr(data-placeholder);
     color: var(--placeholder-color);
     pointer-events: none;
-    float: left;
+    float: inline-start;
     height: 0;
 }
 
@@ -519,7 +546,7 @@ body {
     min-width: 80px;
     padding: 8px 12px;
     border: 1px solid var(--border-color);
-    text-align: left;
+    text-align: start;
     vertical-align: top;
     position: relative;
     word-wrap: break-word;
@@ -578,7 +605,7 @@ body {
     display: flex;
     align-items: center;
     padding: 12px;
-    padding-left: 0;
+    padding-inline-start: 0;
     font-weight: 600;
     gap: 0;
     transition: background-color 0.15s ease;
@@ -597,7 +624,7 @@ body {
     cursor: pointer;
     opacity: 0.5;
     transition: all 0.2s ease;
-    margin-right: 8px;
+    margin-inline-end: 8px;
 }
 
 .details-menu-btn:hover {

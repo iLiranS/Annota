@@ -216,7 +216,17 @@ export function setupEditor(options: any) {
     // If editor already exists, ONLY update what's necessary, DO NOT DESTROY
     if (window.editor) {
         // Just update theme variables (already done above)
-        // Update direction attribute on the editor's DOM element
+        // Update direction properly via setOptions so it persists across re-renders
+        const currentEditorProps = window.editor.options.editorProps || {};
+        window.editor.setOptions({
+            editorProps: {
+                ...currentEditorProps,
+                attributes: {
+                    ...((currentEditorProps as any).attributes || {}),
+                    dir: direction,
+                },
+            },
+        });
         if (window.editor.view?.dom) {
             window.editor.view.dom.setAttribute('dir', direction);
         }

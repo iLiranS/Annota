@@ -119,7 +119,7 @@ export function setupCommands() {
             case 'cutImage': {
                 const cutPos = params?.pos as number | undefined;
                 if (typeof cutPos === 'number') {
-                    const node = editor.state.doc.nodeAt(cutPos);
+                    const node = e.state.doc.nodeAt(cutPos);
                     if (node?.type.name === 'image') {
                         sendMessage({ type: 'copyToClipboard', content: node.attrs.src });
                         e.chain().focus().setNodeSelection(cutPos).deleteSelection().run();
@@ -130,7 +130,7 @@ export function setupCommands() {
             case 'copyImage': {
                 const copyPos = params?.pos as number | undefined;
                 if (typeof copyPos === 'number') {
-                    const node = editor.state.doc.nodeAt(copyPos);
+                    const node = e.state.doc.nodeAt(copyPos);
                     if (node?.type.name === 'image') {
                         sendMessage({ type: 'copyToClipboard', content: node.attrs.src });
                     }
@@ -213,26 +213,47 @@ export function setupCommands() {
                     e.chain().focus().setDetails().run();
                 }
                 break;
-            case 'setDetailsBackground':
+            case 'setDetailsBackground': {
                 if (params?.color) {
                     let bgColor = params.color;
                     // Use hexToRgba for 15% opacity (approx 0.15)
                     if (bgColor.startsWith('#')) {
                         bgColor = hexToRgba(bgColor, 0.3);
                     }
-                    e.chain().focus().setDetailsBackground(bgColor).run();
+
+                    // Try to use the stored block position from the menu to find the details node
+                    const detailsPos = window._lastBlockMenuPos;
+                    if (typeof detailsPos === 'number') {
+                        const detailsNode = e.state.doc.nodeAt(detailsPos);
+                        if (detailsNode?.type.name === 'details') {
+                            // Directly set the attribute on the node using its position
+                            e.chain()
+                                .command(({ tr }: any) => {
+                                    tr.setNodeMarkup(detailsPos, undefined, {
+                                        ...detailsNode.attrs,
+                                        backgroundColor: bgColor,
+                                    });
+                                    return true;
+                                })
+                                .run();
+                        } else {
+                            // Fallback: focus and use updateAttributes
+                            e.chain().focus().setDetailsBackground(bgColor).run();
+                        }
+                    } else {
+                        // Fallback: focus and use updateAttributes
+                        e.chain().focus().setDetailsBackground(bgColor).run();
+                    }
 
                     // Force immediate DOM update to prevent lag if NodeView doesn't re-render immediately
                     setTimeout(() => {
                         try {
-                            const { from } = e.state.selection;
-                            const domInfo = e.view.domAtPos(from);
-                            const target = domInfo.node instanceof HTMLElement
-                                ? domInfo.node
-                                : domInfo.node.parentElement;
-
-                            const detailsEl = target?.closest('[data-type="details"]') as HTMLElement;
-                            if (detailsEl) {
+                            const domNode = typeof detailsPos === 'number'
+                                ? e.view.nodeDOM(detailsPos) as HTMLElement | null
+                                : null;
+                            const detailsEl = domNode?.closest?.('[data-type="details"]') as HTMLElement
+                                ?? domNode;
+                            if (detailsEl && detailsEl.getAttribute('data-type') === 'details') {
                                 detailsEl.style.backgroundColor = bgColor;
                             }
                         } catch (err) {
@@ -241,9 +262,29 @@ export function setupCommands() {
                     }, 0);
                 }
                 break;
-            case 'unsetDetailsBackground':
-                e.chain().focus().unsetDetailsBackground().run();
+            }
+            case 'unsetDetailsBackground': {
+                const unsetPos = window._lastBlockMenuPos;
+                if (typeof unsetPos === 'number') {
+                    const detailsNode = e.state.doc.nodeAt(unsetPos);
+                    if (detailsNode?.type.name === 'details') {
+                        e.chain()
+                            .command(({ tr }: any) => {
+                                tr.setNodeMarkup(unsetPos, undefined, {
+                                    ...detailsNode.attrs,
+                                    backgroundColor: null,
+                                });
+                                return true;
+                            })
+                            .run();
+                    } else {
+                        e.chain().focus().unsetDetailsBackground().run();
+                    }
+                } else {
+                    e.chain().focus().unsetDetailsBackground().run();
+                }
                 break;
+            }
             // Search commands
             case 'search':
                 e.commands.search(params?.term || '');

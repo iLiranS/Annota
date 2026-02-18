@@ -97,9 +97,16 @@ function toggleDetailsSection(detailsEl: Element) {
     }
 }
 
-// Check if click is in the arrow zone (left side of summary)
+// Check if click is in the arrow zone (left side in LTR, right side in RTL)
 function isClickInArrowZone(e: MouseEvent, summary: Element): boolean {
     const rect = summary.getBoundingClientRect();
+    // Check if the document or the summary's parent is in RTL direction
+    const direction = window.getComputedStyle(summary).direction;
+    if (direction === 'rtl') {
+        // In RTL, the arrow ::before is on the right side
+        const clickFromRight = rect.right - e.clientX;
+        return clickFromRight <= ARROW_CLICK_ZONE_WIDTH;
+    }
     const clickX = e.clientX - rect.left;
     return clickX <= ARROW_CLICK_ZONE_WIDTH;
 }
@@ -109,10 +116,13 @@ function handleSummaryClick(e: MouseEvent) {
     const target = e.target as HTMLElement;
     if (!target) return;
 
+    // Skip if clicking on the menu button or its children
+    if (target.closest('.details-menu-btn')) return;
+
     const summary = target.closest('[data-type="detailsSummary"]') || target.closest('.details-summary');
     if (!summary) return;
 
-    // Only toggle if clicking in the arrow zone (left side)
+    // Only toggle if clicking in the arrow zone (left side in LTR, right side in RTL)
     if (!isClickInArrowZone(e, summary)) return;
 
     const details = summary.closest('[data-type="details"]') || summary.closest('.details-wrapper');
@@ -131,6 +141,9 @@ function handleSummaryClick(e: MouseEvent) {
 function handleSummaryMousedown(e: MouseEvent) {
     const target = e.target as HTMLElement;
     if (!target) return;
+
+    // Skip if clicking on the menu button or its children
+    if (target.closest('.details-menu-btn')) return;
 
     const summary = target.closest('[data-type="detailsSummary"]') || target.closest('.details-summary');
     if (!summary) return;

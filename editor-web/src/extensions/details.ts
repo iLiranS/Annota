@@ -2,7 +2,13 @@ import { mergeAttributes } from '@tiptap/core';
 import { Details as TiptapDetails, DetailsContent as TiptapDetailsContent, DetailsSummary as TiptapDetailsSummary } from '@tiptap/extension-details';
 import { Slice } from '@tiptap/pm/model';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
-import { sendMessage } from '../bridge';
+import { createBlockMenuButton } from './block-menu-button';
+
+/** Strip the `dir` attribute so details nodes inherit direction from the editor root */
+function stripDir(attrs: Record<string, any>): Record<string, any> {
+    const { dir, ...rest } = attrs;
+    return rest;
+}
 
 declare module '@tiptap/core' {
     interface Commands<ReturnType> {
@@ -31,7 +37,7 @@ export const Details = TiptapDetails.extend({
     },
 
     renderHTML({ HTMLAttributes }) {
-        return ['div', mergeAttributes(HTMLAttributes, { 'data-type': 'details', class: 'details-wrapper' }), 0];
+        return ['div', mergeAttributes(stripDir(HTMLAttributes), { 'data-type': 'details', class: 'details-wrapper' }), 0];
     },
 
     addAttributes() {
@@ -170,7 +176,7 @@ export const DetailsSummary = TiptapDetailsSummary.extend({
     addNodeView() {
         return ({ HTMLAttributes, getPos, editor }: { node: any, HTMLAttributes: Record<string, any>, getPos: any, editor: any }) => {
             const dom = document.createElement('div');
-            Object.entries(HTMLAttributes).forEach(([key, value]) => {
+            Object.entries(stripDir(HTMLAttributes)).forEach(([key, value]) => {
                 dom.setAttribute(key as string, value as string);
             });
             dom.setAttribute('data-type', 'detailsSummary');
@@ -180,37 +186,32 @@ export const DetailsSummary = TiptapDetailsSummary.extend({
             content.className = 'details-summary-content';
             content.style.flex = '1';
 
-            // Menu button
-            const menuBtn = document.createElement('button');
-            menuBtn.className = 'details-menu-btn';
-            menuBtn.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>`;
-            menuBtn.contentEditable = 'false';
-
-            menuBtn.onclick = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-
-                if (typeof getPos === 'function') {
+            // Menu button — shared three-dot utility
+            const menuBtn = createBlockMenuButton({
+                className: 'details-menu-btn',
+                onResolve: () => {
+                    if (typeof getPos !== 'function') return null;
                     const pos = getPos();
                     let targetPos = pos;
                     const $pos = editor.state.doc.resolve(pos);
                     const parentDetails = $pos.parent;
 
-                    // Check if the parent is indeed a 'details' node to be safe
+                    // Resolve up to the parent 'details' node
                     if (parentDetails.type.name === 'details') {
-                        // Use parent position
                         targetPos = $pos.before($pos.depth);
                     }
-                    // Else targetPos remains pos (summary)
 
-                    sendMessage({
-                        type: 'openBlockMenu',
-                        blockType: 'details',
-                        currentColor: parentDetails?.attrs.backgroundColor,
-                        pos: targetPos
-                    });
-                }
-            };
+                    return {
+                        pos: targetPos,
+                        message: {
+                            type: 'openBlockMenu',
+                            blockType: 'details',
+                            currentColor: parentDetails?.attrs.backgroundColor,
+                            pos: targetPos,
+                        },
+                    };
+                },
+            });
 
             dom.appendChild(content);
             dom.appendChild(menuBtn);
@@ -234,7 +235,7 @@ export const DetailsSummary = TiptapDetailsSummary.extend({
     },
 
     renderHTML({ HTMLAttributes }) {
-        return ['div', mergeAttributes(HTMLAttributes, { 'data-type': 'detailsSummary', class: 'details-summary' }), 0];
+        return ['div', mergeAttributes(stripDir(HTMLAttributes), { 'data-type': 'detailsSummary', class: 'details-summary' }), 0];
     },
 });
 
@@ -251,6 +252,6 @@ export const DetailsContent = TiptapDetailsContent.extend({
     },
 
     renderHTML({ HTMLAttributes }) {
-        return ['div', mergeAttributes(HTMLAttributes, { 'data-type': 'detailsContent', class: 'details-content' }), 0];
+        return ['div', mergeAttributes(stripDir(HTMLAttributes), { 'data-type': 'detailsContent', class: 'details-content' }), 0];
     },
 });

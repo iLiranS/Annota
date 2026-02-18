@@ -12,5 +12,6 @@ declare global {
         updateImage?: (attrs: any) => void;
         handleCommand?: (command: string, params?: any) => void;
         setupEditor?: (options: any) => void;
+        _lastBlockMenuPos?: number;
     }
 }

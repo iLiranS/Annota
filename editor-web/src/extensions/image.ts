@@ -1,7 +1,9 @@
+import type { NodeViewRenderer } from '@tiptap/core';
 import { Image } from '@tiptap/extension-image';
 import { NodeSelection } from '@tiptap/pm/state';
 import { sendMessage } from '../bridge';
 import '../types'; // Import global window types
+import { createBlockMenuButton } from './block-menu-button';
 
 export const CustomImage = Image.extend({
     addAttributes() {
@@ -24,7 +26,7 @@ export const CustomImage = Image.extend({
         }
     },
     addNodeView() {
-        return ({ node, getPos, editor }) => {
+        return (({ node, getPos, editor }) => {
             // Wrapper container
             const wrapper = document.createElement('div');
             wrapper.className = `image-node-wrapper img-${node.attrs.align || 'center'}`;
@@ -34,12 +36,6 @@ export const CustomImage = Image.extend({
             img.src = node.attrs.src;
             img.style.width = node.attrs.width || '100%';
             img.draggable = false;
-
-            // Three-dot menu button
-            const menuBtn = document.createElement('button');
-            menuBtn.className = 'image-menu-btn';
-            menuBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>`;
-            menuBtn.contentEditable = 'false';
 
             // Helper: collect all images in the document
             const collectImages = (currentPos: number) => {
@@ -74,33 +70,38 @@ export const CustomImage = Image.extend({
             img.onclick = (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                if (typeof getPos === 'function') {
-                    const currentPos = getPos();
-                    selectNode(currentPos);
-                    const { images, currentIndex } = collectImages(currentPos);
-                    sendMessage({
-                        type: 'imageSelected',
-                        images,
-                        currentIndex,
-                    });
-                }
+                if (typeof getPos !== 'function') return;
+                const currentPos = getPos();
+                if (typeof currentPos !== 'number') return;
+                selectNode(currentPos);
+                const { images, currentIndex } = collectImages(currentPos);
+                sendMessage({
+                    type: 'imageSelected',
+                    images,
+                    currentIndex,
+                });
             };
 
-            // Menu button click → open image options popup
-            menuBtn.onclick = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                if (typeof getPos === 'function') {
+            // Three-dot menu button — shared utility
+            const menuBtn = createBlockMenuButton({
+                className: 'image-menu-btn',
+                iconSize: 'small',
+                onResolve: () => {
+                    if (typeof getPos !== 'function') return null;
                     const currentPos = getPos();
+                    if (typeof currentPos !== 'number') return null;
                     selectNode(currentPos);
-                    sendMessage({
-                        type: 'openImageMenu',
-                        src: node.attrs.src,
-                        width: node.attrs.width || '100%',
-                        position: currentPos,
-                    });
-                }
-            };
+                    return {
+                        pos: currentPos,
+                        message: {
+                            type: 'openImageMenu',
+                            src: node.attrs.src,
+                            width: node.attrs.width || '100%',
+                            position: currentPos,
+                        },
+                    };
+                },
+            });
 
             wrapper.appendChild(img);
             wrapper.appendChild(menuBtn);
@@ -118,45 +119,66 @@ export const CustomImage = Image.extend({
                     return true;
                 },
             };
-        };
+        }) as NodeViewRenderer;
     },
 });
 
 export function setupImageUpdater() {
     window.updateImage = function (attrs) {
-        if (window.editor && window.editor.isActive('image')) {
-            let newAttrs = { ...attrs };
+        if (!window.editor) return;
+        const e = window.editor;
+        let newAttrs = { ...attrs };
 
-            // Handle Percentage Resizing to Pixels to support table cell shrinking
-            // If we set width: 50%, the table cell might remain wide. We need explicit pixels.
-            if (newAttrs.width && typeof newAttrs.width === 'string' && newAttrs.width.endsWith('%')) {
-                const percent = parseInt(newAttrs.width, 10);
+        // Handle Percentage Resizing to Pixels to support table cell shrinking
+        // If we set width: 50%, the table cell might remain wide. We need explicit pixels.
+        if (newAttrs.width && typeof newAttrs.width === 'string' && newAttrs.width.endsWith('%')) {
+            const percent = parseInt(newAttrs.width, 10);
 
-                // Convert percent to pixels relative to available space (editor width)
-                // This prevents images from breaking tables or exceeding editor bounds
-                const editorWidth = window.editor.view.dom.clientWidth || window.innerWidth;
-                // The selected node is now the wrapper div — find the img inside it
-                const selectedWrapper = document.querySelector('.ProseMirror-selectednode');
-                const selectedImg = (selectedWrapper?.tagName === 'IMG'
-                    ? selectedWrapper
-                    : selectedWrapper?.querySelector('img')) as HTMLImageElement | null;
+            // Convert percent to pixels relative to available space (editor width)
+            // This prevents images from breaking tables or exceeding editor bounds
+            const editorWidth = e.view.dom.clientWidth || window.innerWidth;
+            // The selected node is now the wrapper div — find the img inside it
+            const selectedWrapper = document.querySelector('.ProseMirror-selectednode');
+            const selectedImg = (selectedWrapper?.tagName === 'IMG'
+                ? selectedWrapper
+                : selectedWrapper?.querySelector('img')) as HTMLImageElement | null;
 
-                let baseWidth = editorWidth;
+            let baseWidth = editorWidth;
 
-                // Trust natural width if it's smaller than editor width to avoid upscaling
-                if (selectedImg && selectedImg.tagName === 'IMG' && selectedImg.naturalWidth) {
-                    baseWidth = Math.min(editorWidth, selectedImg.naturalWidth);
-                } else if (selectedImg && selectedImg.tagName === 'IMG' && selectedImg.width) {
-                    // Fallback to current render width if natural not available (rare)
-                    baseWidth = Math.min(editorWidth, selectedImg.width);
-                }
-
-                // Calculate final pixel width
-                const pxWidth = Math.floor((baseWidth * percent) / 100);
-                newAttrs.width = `${pxWidth}px`;
+            // Trust natural width if it's smaller than editor width to avoid upscaling
+            if (selectedImg && selectedImg.tagName === 'IMG' && selectedImg.naturalWidth) {
+                baseWidth = Math.min(editorWidth, selectedImg.naturalWidth);
+            } else if (selectedImg && selectedImg.tagName === 'IMG' && selectedImg.width) {
+                // Fallback to current render width if natural not available (rare)
+                baseWidth = Math.min(editorWidth, selectedImg.width);
             }
 
-            window.editor.chain().focus().updateAttributes('image', newAttrs).run();
+            // Calculate final pixel width
+            const pxWidth = Math.floor((baseWidth * percent) / 100);
+            newAttrs.width = `${pxWidth}px`;
+        }
+
+        // Try cursor-based path first
+        if (e.isActive('image')) {
+            e.chain().focus().updateAttributes('image', newAttrs).run();
+            return;
+        }
+
+        // Fallback: use stored position from the menu
+        const pos = window._lastBlockMenuPos;
+        if (typeof pos === 'number') {
+            const node = e.state.doc.nodeAt(pos);
+            if (node?.type.name === 'image') {
+                e.chain()
+                    .command(({ tr }: any) => {
+                        tr.setNodeMarkup(pos, undefined, {
+                            ...node.attrs,
+                            ...newAttrs,
+                        });
+                        return true;
+                    })
+                    .run();
+            }
         }
     };
 }

@@ -261,7 +261,7 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
         const showToolbar = (isKeyboardVisible || isPopupOpen) && !isGalleryVisible;
 
         const source = __DEV__
-            ? { uri: 'http://192.168.7.11:5173' }
+            ? { uri: 'http://192.168.7.12:5173' }
             : Platform.OS === 'android'
                 ? { uri: 'file:///android_asset/editor.html' }
                 : require('./assets/editor.html');
@@ -310,7 +310,7 @@ const TipTapEditor = forwardRef<TipTapEditorRef, TipTapEditorProps>(
                         style={[
                             styles.toolbarContainer,
                             {
-                                bottom: keyboardHeight,
+                                bottom: keyboardHeight - 2,
                                 backgroundColor: colors.background,
                                 borderTopColor: colors.border,
                                 // On iPhone landscape, add horizontal padding for notch/home indicator
