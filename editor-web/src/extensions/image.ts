@@ -1,6 +1,6 @@
 import type { NodeViewRenderer } from '@tiptap/core';
 import { Image } from '@tiptap/extension-image';
-import { NodeSelection } from '@tiptap/pm/state';
+import { NodeSelection, Plugin } from '@tiptap/pm/state';
 import { sendMessage } from '../bridge';
 import '../types'; // Import global window types
 import { createBlockMenuButton } from './block-menu-button';
@@ -138,6 +138,51 @@ export const CustomImage = Image.extend({
                 },
             };
         }) as NodeViewRenderer;
+    },
+    addProseMirrorPlugins() {
+        return [
+            new Plugin({
+                props: {
+                    handlePaste(view, event) {
+                        const items = Array.from(event.clipboardData?.items || []);
+                        const { schema } = view.state;
+
+                        // 1. Handle Image Files
+                        for (const item of items) {
+                            if (item.type.indexOf('image') === 0) {
+                                const file = item.getAsFile();
+                                if (!file) continue;
+
+                                const reader = new FileReader();
+                                reader.onload = (readerEvent) => {
+                                    const base64 = readerEvent.target?.result;
+                                    if (typeof base64 === 'string') {
+                                        const node = schema.nodes.image.create({
+                                            src: base64,
+                                        });
+                                        const transaction = view.state.tr.replaceSelectionWith(node);
+                                        view.dispatch(transaction);
+                                    }
+                                };
+                                reader.readAsDataURL(file);
+                                return true;
+                            }
+                        }
+
+                        // 2. Handle Base64 Text
+                        const text = event.clipboardData?.getData('text/plain');
+                        if (text && text.trim().startsWith('data:image/')) {
+                            const node = schema.nodes.image.create({ src: text.trim() });
+                            const transaction = view.state.tr.replaceSelectionWith(node);
+                            view.dispatch(transaction);
+                            return true;
+                        }
+
+                        return false;
+                    },
+                },
+            }),
+        ];
     },
 });
 
