@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && mkdir -p ../components/tiptap-editor/assets && cp dist/index.html ../components/tiptap-editor/assets/editor.html",
+    "build": "vite build && node scripts/emit-editor-html.cjs && mkdir -p ../components/tiptap-editor/assets && cp dist/index.html ../components/tiptap-editor/assets/editor.html",
     "preview": "vite preview",
     "android": "expo run:android",
     "ios": "expo run:ios"

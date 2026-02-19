@@ -41,6 +41,16 @@ const WEB_FONT_FAMILIES: Record<string, string> = {
     'system (default)': "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
 };
 
+const editorOrigin = (() => {
+    try {
+        if (typeof window === 'undefined') return '';
+        const origin = window.location?.origin;
+        return origin && origin !== 'null' ? origin : '';
+    } catch {
+        return '';
+    }
+})();
+
 function resolveFontFamily(value?: string) {
     if (!value) return WEB_FONT_FAMILIES.system;
     const key = value.toLowerCase();
@@ -284,8 +294,9 @@ export function setupEditor(options: any) {
                     width: 320,
                     height: 180,
                     nocookie: true,
+                    origin: editorOrigin || undefined,
                     HTMLAttributes: {
-                        referrerPolicy: 'no-referrer-when-downgrade' as any,
+                        referrerPolicy: 'strict-origin-when-cross-origin' as any,
                         playsinline: 'true',
                         allow: 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share',
                     },

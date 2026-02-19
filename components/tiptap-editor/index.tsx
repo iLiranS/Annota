@@ -8,6 +8,7 @@ import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef,
 import { Keyboard, Modal, Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
+import editorHtml from './assets/editor-html';
 import { ImageGallery } from './image-gallery';
 import { EditorToolbar } from './toolbar';
 import { EditorState, initialEditorState, PopupType, TipTapEditorProps, TipTapEditorRef } from './types';
@@ -339,11 +340,15 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
             }
         }, [noteId, sendCommand]);
 
-        const source = __DEV__
-            ? { uri: 'http://192.168.7.14:5173' }
-            : Platform.OS === 'android'
-                ? { uri: 'file:///android_asset/editor.html' }
-                : require('./assets/editor.html');
+        const devEditorUrl = process.env.EXPO_PUBLIC_EDITOR_DEV_URL ?? 'http://192.168.7.14:5173';
+        const useDevEditor = __DEV__ && process.env.EXPO_PUBLIC_EDITOR_DEV_SERVER === 'true';
+
+        const source = useDevEditor
+            ? { uri: devEditorUrl }
+            : {
+                html: editorHtml,
+                baseUrl: 'https://app.local',
+            };
 
 
         const themeInjectionScript = `
