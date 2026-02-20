@@ -8,6 +8,28 @@ import * as ImagesRepo from './images.repository';
 // Re-export types for convenience
 export type { NoteMetadata, NoteVersion } from '../schema';
 
+function normalizeStoredContent(content: string): string {
+    // Keep image references by data-image-id, but strip heavy src payloads
+    // (typically base64 data URIs injected only for rendering in WebView).
+    return content.replace(/<img\b[^>]*>/gi, (imgTag) => {
+        if (!/data-image-id\s*=\s*["'][^"']+["']/i.test(imgTag)) {
+            return imgTag;
+        }
+
+        // TipTap Image.parseHTML expects img[src] to exist.
+        // Canonical form for local images is src="" + data-image-id.
+        let normalized = imgTag
+            .replace(/\s+src\s*=\s*(["']).*?\1/gi, ' src=""')
+            .replace(/\s+src\s*=\s*[^\s>]+/gi, ' src=""');
+
+        if (!/\s+src\s*=/i.test(normalized)) {
+            normalized = normalized.replace(/\s*\/?>$/, (end) => ` src=""${end}`);
+        }
+
+        return normalized;
+    });
+}
+
 
 
 
@@ -207,21 +229,33 @@ export function getNoteContent(noteId: string): string {
         .where(eq(schema.noteContent.id, noteId))
         .get();
 
-    return result?.content ?? '';
+    const rawContent = result?.content ?? '';
+    const normalized = normalizeStoredContent(rawContent);
+
+    // Self-heal previously stored rows that lost src attribute.
+    if (result && normalized !== rawContent) {
+        db.update(schema.noteContent)
+            .set({ content: normalized })
+            .where(eq(schema.noteContent.id, noteId))
+            .run();
+    }
+
+    return normalized;
 }
 
 export function updateNoteContent(noteId: string, content: string, preview: string): void {
     const now = new Date();
     const VERSION_THRESHOLD_MS = 10000; // 10 seconds
     const MAX_VERSIONS = 50;
+    const normalizedContent = normalizeStoredContent(content);
 
-    // Extract image IDs from content
-    const imageIds = Array.from(content.matchAll(/data-image-id="([^"]+)"/g), m => m[1]);
+    // Extract image IDs from canonical content
+    const imageIds = Array.from(normalizedContent.matchAll(/data-image-id="([^"]+)"/g), m => m[1]);
 
     // 1. Update current content (Always)
     db.transaction((tx) => {
         tx.update(schema.noteContent)
-            .set({ content })
+            .set({ content: normalizedContent })
             .where(eq(schema.noteContent.id, noteId))
             .run();
 
@@ -248,7 +282,7 @@ export function updateNoteContent(noteId: string, content: string, preview: stri
             tx.insert(schema.noteVersions).values({
                 id: activeVersionId,
                 noteId,
-                content,
+                content: normalizedContent,
                 createdAt: now,
             }).run();
 
@@ -273,7 +307,7 @@ export function updateNoteContent(noteId: string, content: string, preview: stri
             // Case B: Update EXISTING latest version (debounce)
             activeVersionId = latestVersion.id;
             tx.update(schema.noteVersions)
-                .set({ content, createdAt: now })
+                .set({ content: normalizedContent, createdAt: now })
                 .where(eq(schema.noteVersions.id, latestVersion.id))
                 .run();
         }
@@ -291,6 +325,51 @@ export function updateNoteContent(noteId: string, content: string, preview: stri
     });
 }
 
+/**
+ * Normalizes all stored note/version content so image nodes with `data-image-id`
+ * don't carry inline `src` payloads in SQLite.
+ * Returns number of rows updated across both tables.
+ */
+export function normalizeAllStoredContent(): number {
+    let updatedRows = 0;
+
+    db.transaction((tx) => {
+        const notes = tx
+            .select({ id: schema.noteContent.id, content: schema.noteContent.content })
+            .from(schema.noteContent)
+            .all();
+
+        for (const note of notes) {
+            const normalized = normalizeStoredContent(note.content);
+            if (normalized === note.content) continue;
+
+            tx.update(schema.noteContent)
+                .set({ content: normalized })
+                .where(eq(schema.noteContent.id, note.id))
+                .run();
+            updatedRows++;
+        }
+
+        const versions = tx
+            .select({ id: schema.noteVersions.id, content: schema.noteVersions.content })
+            .from(schema.noteVersions)
+            .all();
+
+        for (const version of versions) {
+            const normalized = normalizeStoredContent(version.content);
+            if (normalized === version.content) continue;
+
+            tx.update(schema.noteVersions)
+                .set({ content: normalized })
+                .where(eq(schema.noteVersions.id, version.id))
+                .run();
+            updatedRows++;
+        }
+    });
+
+    return updatedRows;
+}
+
 // ============ VERSION OPERATIONS ============
 
 export function getNoteVersions(noteId: string): { id: string; createdAt: Date }[] {
@@ -306,11 +385,24 @@ export function getNoteVersions(noteId: string): { id: string; createdAt: Date }
 }
 
 export function getNoteVersion(versionId: string) {
-    return db
+    const version = db
         .select()
         .from(schema.noteVersions)
         .where(eq(schema.noteVersions.id, versionId))
         .get();
+
+    if (!version) return version;
+
+    const normalized = normalizeStoredContent(version.content);
+    if (normalized !== version.content) {
+        db.update(schema.noteVersions)
+            .set({ content: normalized })
+            .where(eq(schema.noteVersions.id, versionId))
+            .run();
+        return { ...version, content: normalized };
+    }
+
+    return version;
 }
 
 export function deleteNoteVersion(versionId: string): void {

@@ -113,11 +113,11 @@ export default function StorageSettings() {
                 </HapticPressable>
 
                 <HapticPressable
-                    style={[styles.button, { backgroundColor: colors.errorBackground || '#fee2e2', borderColor: colors.error }]}
+                    style={[styles.button, { backgroundColor: colors.primary + '20', borderColor: colors.border }]}
                     onPress={handleGC}
                 >
-                    <Ionicons name="trash-bin-outline" size={20} color={colors.error} />
-                    <Text style={[styles.buttonText, { color: colors.error }]}>Shrink Database</Text>
+                    <Ionicons name="trash-bin-outline" size={20} color={colors.primary} />
+                    <Text style={[styles.buttonText, { color: colors.primary }]}>Shrink Database</Text>
                 </HapticPressable>
             </View>
 

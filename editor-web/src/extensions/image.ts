@@ -5,6 +5,82 @@ import { sendMessage } from '../bridge';
 import '../types'; // Import global window types
 import { createBlockMenuButton } from './block-menu-button';
 
+const INTERNAL_IMAGE_ID_MIME = 'application/x-note-image-id';
+
+function escapeHtmlAttr(value: string): string {
+    return value
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
+function dataUriToFile(dataUri: string): File | null {
+    const match = dataUri.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,([\s\S]+)$/i);
+    if (!match) return null;
+
+    const mimeType = match[1].toLowerCase();
+    const base64 = match[2];
+
+    try {
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i);
+        }
+
+        const extension = mimeType.split('/')[1] || 'png';
+        return new File([bytes], `image.${extension}`, { type: mimeType });
+    } catch {
+        return null;
+    }
+}
+
+function setImageClipboardPayload(event: ClipboardEvent, imageId: string | null, src: string | null) {
+    if (!event.clipboardData) return false;
+
+    const normalizedId = imageId ? String(imageId) : '';
+    const normalizedSrc = src ? String(src) : '';
+
+    if (normalizedId) {
+        event.clipboardData.setData(INTERNAL_IMAGE_ID_MIME, normalizedId);
+    }
+
+    if (normalizedSrc) {
+        const safeSrc = escapeHtmlAttr(normalizedSrc);
+        const safeId = normalizedId ? ` data-note-image-id="${escapeHtmlAttr(normalizedId)}"` : '';
+        event.clipboardData.setData('text/html', `<img src="${safeSrc}" alt="[Image]"${safeId} />`);
+
+        // Best-effort: also attach a real image item for external paste targets
+        // that ignore HTML but accept image clipboard data.
+        const imageFile = dataUriToFile(normalizedSrc);
+        if (imageFile && event.clipboardData.items?.add) {
+            try {
+                event.clipboardData.items.add(imageFile);
+            } catch {
+                // Ignore if this WebView/runtime doesn't allow adding file items.
+            }
+        }
+    }
+
+    event.clipboardData.setData('text/plain', '[Image]');
+    event.preventDefault();
+    return true;
+}
+
+function getCopiedImageId(clipboardData: DataTransfer | null | undefined): string | null {
+    if (!clipboardData) return null;
+
+    const direct = clipboardData.getData(INTERNAL_IMAGE_ID_MIME).trim();
+    if (direct) return direct;
+
+    // Fallback when custom MIME types are stripped but HTML remains.
+    const html = clipboardData.getData('text/html');
+    if (!html) return null;
+    const match = html.match(/data-note-image-id=["']([^"']+)["']/i);
+    return match?.[1]?.trim() || null;
+}
+
 export const CustomImage = Image.extend({
     addAttributes() {
         return {
@@ -35,20 +111,22 @@ export const CustomImage = Image.extend({
     },
     addNodeView() {
         return (({ node, getPos, editor }) => {
+            let currentNode = node;
+
             // Wrapper container
             const wrapper = document.createElement('div');
-            wrapper.className = `image-node-wrapper img-${node.attrs.align || 'center'}`;
+            wrapper.className = `image-node-wrapper img-${currentNode.attrs.align || 'center'}`;
 
             // Image element
             const img = document.createElement('img');
-            if (node.attrs.src) {
-                img.src = node.attrs.src;
+            if (currentNode.attrs.src) {
+                img.src = currentNode.attrs.src;
             } else {
                 // Placeholder for unresolved imageId images
                 img.style.backgroundColor = 'var(--border-color, #e0e0e0)';
                 img.style.minHeight = '100px';
             }
-            img.style.width = node.attrs.width || '100%';
+            img.style.width = currentNode.attrs.width || '100%';
             img.draggable = false;
 
             // Helper: collect all images in the document
@@ -109,8 +187,8 @@ export const CustomImage = Image.extend({
                         pos: currentPos,
                         message: {
                             type: 'openImageMenu',
-                            src: node.attrs.src,
-                            width: node.attrs.width || '100%',
+                            src: currentNode.attrs.src,
+                            width: currentNode.attrs.width || '100%',
                             position: currentPos,
                         },
                     };
@@ -127,6 +205,8 @@ export const CustomImage = Image.extend({
                 },
                 update: (updatedNode) => {
                     if (updatedNode.type.name !== 'image') return false;
+                    currentNode = updatedNode;
+
                     if (updatedNode.attrs.src) {
                         img.src = updatedNode.attrs.src;
                         img.style.backgroundColor = '';
@@ -143,11 +223,49 @@ export const CustomImage = Image.extend({
         return [
             new Plugin({
                 props: {
+                    handleDOMEvents: {
+                        copy(view, event) {
+                            const clipboardEvent = event as ClipboardEvent;
+                            const selection = view.state.selection;
+                            if (!(selection instanceof NodeSelection) || selection.node.type.name !== 'image') {
+                                return false;
+                            }
+
+                            const imageId = selection.node.attrs.imageId ?? null;
+                            const src = selection.node.attrs.src ?? null;
+                            return setImageClipboardPayload(clipboardEvent, imageId, src);
+                        },
+                        cut(view, event) {
+                            const clipboardEvent = event as ClipboardEvent;
+                            const selection = view.state.selection;
+                            if (!(selection instanceof NodeSelection) || selection.node.type.name !== 'image') {
+                                return false;
+                            }
+
+                            const imageId = selection.node.attrs.imageId ?? null;
+                            const src = selection.node.attrs.src ?? null;
+                            const copied = setImageClipboardPayload(clipboardEvent, imageId, src);
+                            if (!copied) return false;
+
+                            view.dispatch(view.state.tr.deleteSelection());
+                            return true;
+                        },
+                    },
                     handlePaste(view, event) {
                         const items = Array.from(event.clipboardData?.items || []);
                         const { schema } = view.state;
 
-                        // 1. Handle Image Files
+                        // 1. Internal copy/paste path: reuse existing imageId (no re-upload).
+                        const internalImageId = getCopiedImageId(event.clipboardData);
+                        if (internalImageId) {
+                            const node = schema.nodes.image.create({ src: '', imageId: internalImageId });
+                            const transaction = view.state.tr.replaceSelectionWith(node);
+                            view.dispatch(transaction);
+                            sendMessage({ type: 'resolveImageIds', imageIds: [internalImageId] });
+                            return true;
+                        }
+
+                        // 2. Handle Image Files (external paste).
                         for (const item of items) {
                             if (item.type.indexOf('image') === 0) {
                                 const file = item.getAsFile();
@@ -157,11 +275,14 @@ export const CustomImage = Image.extend({
                                 reader.onload = (readerEvent) => {
                                     const base64 = readerEvent.target?.result;
                                     if (typeof base64 === 'string') {
+                                        const tempId = `temp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
                                         const node = schema.nodes.image.create({
                                             src: base64,
+                                            imageId: tempId
                                         });
                                         const transaction = view.state.tr.replaceSelectionWith(node);
                                         view.dispatch(transaction);
+                                        sendMessage({ type: 'imagePasted', base64, imageId: tempId });
                                     }
                                 };
                                 reader.readAsDataURL(file);
@@ -169,12 +290,15 @@ export const CustomImage = Image.extend({
                             }
                         }
 
-                        // 2. Handle Base64 Text
+                        // 3. Handle Base64 Text
                         const text = event.clipboardData?.getData('text/plain');
                         if (text && text.trim().startsWith('data:image/')) {
-                            const node = schema.nodes.image.create({ src: text.trim() });
+                            const trimmed = text.trim();
+                            const tempId = `temp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+                            const node = schema.nodes.image.create({ src: trimmed, imageId: tempId });
                             const transaction = view.state.tr.replaceSelectionWith(node);
                             view.dispatch(transaction);
+                            sendMessage({ type: 'imagePasted', base64: trimmed, imageId: tempId });
                             return true;
                         }
 

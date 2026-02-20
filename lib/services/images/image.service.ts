@@ -1,6 +1,8 @@
 import * as Crypto from 'expo-crypto';
 import { Directory, File as ExpoFile, Paths } from 'expo-file-system';
+import * as LegacyFileSystem from 'expo-file-system/legacy';
 import { ImageManipulator, SaveFormat, type ImageResult } from 'expo-image-manipulator';
+import * as MediaLibrary from 'expo-media-library';
 
 // ============ CONSTANTS ============
 
@@ -96,3 +98,44 @@ export function getFileSize(localPath: string): number {
     const file = new ExpoFile(localPath);
     return file.size;
 }
+
+// ============ DEVICE INTEGRATION ============
+
+/**
+ * Saves a given base64 data URI to the device's native gallery.
+ */
+export async function saveBase64ToGallery(base64Uri: string): Promise<boolean> {
+    try {
+        const { status } = await MediaLibrary.requestPermissionsAsync();
+        if (status !== 'granted') {
+            console.log('No permission to save images to gallery');
+            return false;
+        }
+
+        let localUri = base64Uri;
+
+        if (base64Uri.startsWith('data:image/')) {
+            const base64Data = base64Uri.replace(/^data:image\/\w+;base64,/, "");
+            const tempDir = new Directory(Paths.cache, 'download');
+            tempDir.create({ idempotent: true, intermediates: true });
+            const tempFile = new ExpoFile(tempDir, `download-${Date.now()}.jpg`);
+            try {
+                tempFile.create({ overwrite: true, intermediates: true });
+                tempFile.write(base64Data, { encoding: 'base64' });
+            } catch {
+                await LegacyFileSystem.writeAsStringAsync(tempFile.uri, base64Data, {
+                    encoding: LegacyFileSystem.EncodingType.Base64,
+                });
+            }
+            localUri = tempFile.uri;
+        }
+
+        await MediaLibrary.saveToLibraryAsync(localUri);
+        console.log('Image successfully saved to gallery!');
+        return true;
+    } catch (e) {
+        console.error('Failed to save image to gallery', e);
+        return false;
+    }
+}
+

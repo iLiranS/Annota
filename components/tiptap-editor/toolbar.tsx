@@ -3,6 +3,7 @@ import React from 'react';
 import { Keyboard, ScrollView, StyleSheet, View } from 'react-native';
 
 import { HeadingLevel } from '@/constants/editor';
+import { ImageService } from '@/lib/services/images';
 import { ToolbarButton } from './toolbar-button';
 import { ToolbarPopup } from './toolbar-popup';
 import type { EditorState, PopupType } from './types';
@@ -461,9 +462,14 @@ export function EditorToolbar({
                     onAction={(action: string, data?: any) => {
                         switch (action) {
                             case 'download':
-                                // TODO: implement actual download
-                                console.log('Download image:', blockData.src);
-                                closePopup();
+                                (async () => {
+                                    if (blockData.src) {
+                                        await ImageService.saveBase64ToGallery(blockData.src);
+                                    } else {
+                                        console.error('No source found for the image.');
+                                    }
+                                    closePopup();
+                                })();
                                 break;
                             case 'copy':
                                 onCommand('copyImage', { pos: blockData.position });

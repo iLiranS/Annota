@@ -7,6 +7,16 @@ import {
 } from './editor-core';
 import { hexToRgba } from './utils';
 
+function copyImageAtPosition(pos: number): boolean {
+    if (!window.editor) return false;
+    const e = window.editor;
+    const node = e.state.doc.nodeAt(pos);
+    if (node?.type.name !== 'image') return false;
+
+    e.chain().focus().setNodeSelection(pos).run();
+    return document.execCommand('copy');
+}
+
 export function setupCommands() {
     window.handleCommand = function (command, params) {
         // Handle 'setOptions' command first, as it might initialize the editor
@@ -131,6 +141,24 @@ export function setupCommands() {
             case 'updateImage':
                 window.updateImage?.(params);
                 break;
+            case 'replaceImageId':
+                if (params?.oldId && params?.newId) {
+                    let hasChanges = false;
+                    const tr = e.state.tr;
+                    e.state.doc.descendants((node, pos) => {
+                        if (node.type.name === 'image' && node.attrs.imageId === params.oldId) {
+                            tr.setNodeMarkup(pos, undefined, {
+                                ...node.attrs,
+                                imageId: params.newId
+                            });
+                            hasChanges = true;
+                        }
+                    });
+                    if (hasChanges) {
+                        e.view.dispatch(tr);
+                    }
+                }
+                break;
             case 'deleteImage':
                 if (typeof params?.pos === 'number') {
                     e.chain().setNodeSelection(params.pos).deleteSelection().run();
@@ -141,9 +169,7 @@ export function setupCommands() {
             case 'cutImage': {
                 const cutPos = params?.pos as number | undefined;
                 if (typeof cutPos === 'number') {
-                    const node = e.state.doc.nodeAt(cutPos);
-                    if (node?.type.name === 'image') {
-                        sendMessage({ type: 'copyToClipboard', content: node.attrs.src });
+                    if (copyImageAtPosition(cutPos)) {
                         e.chain().focus().setNodeSelection(cutPos).deleteSelection().run();
                     }
                 }
@@ -152,10 +178,7 @@ export function setupCommands() {
             case 'copyImage': {
                 const copyPos = params?.pos as number | undefined;
                 if (typeof copyPos === 'number') {
-                    const node = e.state.doc.nodeAt(copyPos);
-                    if (node?.type.name === 'image') {
-                        sendMessage({ type: 'copyToClipboard', content: node.attrs.src });
-                    }
+                    copyImageAtPosition(copyPos);
                 }
                 break;
             }

@@ -1,5 +1,6 @@
 import { vacuumDatabase } from '@/lib/db/client';
 import * as ImagesRepo from '@/lib/db/repositories/images.repository';
+import * as NotesRepo from '@/lib/db/repositories/notes.repository';
 import { Directory, File as ExpoFile, Paths } from 'expo-file-system';
 import { deleteImageFile } from './images/image.service';
 
@@ -34,6 +35,9 @@ export const StorageService = {
         // Clean up invalid links first (so their referenced images might become orphans)
         ImagesRepo.deleteOrphanLinks();
 
+        // Normalize old note/version rows that still embed heavy image src payloads.
+        const normalizedRows = NotesRepo.normalizeAllStoredContent();
+
         const deletedPaths = ImagesRepo.deleteUnreferencedImages(undefined, force);
         let deletedCount = 0;
         for (const path of deletedPaths) {
@@ -43,6 +47,10 @@ export const StorageService = {
 
         // Reclaim raw DB space and shrink WAL file now that images/data are deleted
         vacuumDatabase();
+
+        if (normalizedRows > 0) {
+            console.log(`[StorageService] Normalized ${normalizedRows} note/version rows`);
+        }
 
         return deletedCount;
     }

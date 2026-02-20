@@ -360,7 +360,13 @@ export function setupEditor(options: any) {
                     editor.commands.focus('end');
                 }
             },
-            onUpdate: function ({ editor }) {
+            onUpdate: function ({ editor, transaction }) {
+                // `resolveImages` only injects display src values for rendering.
+                // Do not persist these view-only changes back into note content.
+                if (transaction?.getMeta('resolveImages')) {
+                    return;
+                }
+
                 const { doc } = editor.state;
                 const lastNode = doc.lastChild;
 

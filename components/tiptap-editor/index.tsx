@@ -3,6 +3,8 @@ import { NoteImageService } from '@/lib/services/images';
 import { useSettingsStore } from '@/stores/settings-store';
 import { useKeyboard } from '@react-native-community/hooks';
 import * as ExpoClipboard from 'expo-clipboard';
+import { Directory, File as ExpoFile, Paths } from 'expo-file-system';
+import * as LegacyFileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { Keyboard, Modal, Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
@@ -22,6 +24,30 @@ function extractImageIds(html: string): string[] {
         ids.push(match[1]);
     }
     return ids;
+}
+
+const IMAGE_MIME_TO_EXT: Record<string, string> = {
+    'image/jpeg': 'jpg',
+    'image/jpg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp',
+    'image/gif': 'gif',
+    'image/heic': 'heic',
+    'image/heif': 'heif',
+};
+
+function parsePastedImageData(payload: string): { base64: string; extension: string } | null {
+    const trimmed = payload.trim();
+    const dataUriMatch = trimmed.match(/^data:(image\/[a-z0-9.+-]+);base64,([\s\S]+)$/i);
+    if (dataUriMatch) {
+        const mimeType = dataUriMatch[1].toLowerCase();
+        const extension = IMAGE_MIME_TO_EXT[mimeType] ?? 'jpg';
+        const base64 = dataUriMatch[2];
+        return base64 ? { base64, extension } : null;
+    }
+
+    // Fallback: if payload is already raw base64, default to jpg temp extension.
+    return trimmed ? { base64: trimmed, extension: 'jpg' } : null;
 }
 
 const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
@@ -161,6 +187,57 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
                             break;
                         case 'blur':
                             // Blur handled via keyboard listeners
+                            break;
+                        case 'imagePasted':
+                            if (noteId && data.base64 && data.imageId) {
+                                (async () => {
+                                    let stage = 'parse';
+                                    try {
+                                        const parsed = parsePastedImageData(data.base64);
+                                        if (!parsed) return;
+
+                                        stage = 'createTempDir';
+                                        const tempDir = new Directory(Paths.cache, 'pasted');
+                                        tempDir.create({ idempotent: true, intermediates: true });
+
+                                        stage = 'writeTempFile';
+                                        const tempFile = new ExpoFile(tempDir, `pasted-${Date.now()}.${parsed.extension}`);
+                                        try {
+                                            tempFile.create({ overwrite: true, intermediates: true });
+                                            tempFile.write(parsed.base64, { encoding: 'base64' });
+                                        } catch {
+                                            await LegacyFileSystem.writeAsStringAsync(tempFile.uri, parsed.base64, {
+                                                encoding: LegacyFileSystem.EncodingType.Base64,
+                                            });
+                                        }
+
+                                        stage = 'processImage';
+                                        const processed = await NoteImageService.processAndInsertImage(noteId, tempFile.uri);
+                                        stage = 'replaceImageId';
+                                        sendCommand('replaceImageId', { oldId: data.imageId, newId: processed.imageId });
+
+                                        stage = 'resolveImages';
+                                        const imageMap = await NoteImageService.resolveImageSources([processed.imageId]);
+                                        sendCommand('resolveImages', { imageMap });
+                                    } catch (err) {
+                                        console.error(`Failed to process pasted image at stage: ${stage}`, err);
+                                    }
+                                })();
+                            }
+                            break;
+                        case 'resolveImageIds':
+                            if (Array.isArray(data.imageIds) && data.imageIds.length > 0) {
+                                (async () => {
+                                    try {
+                                        const imageMap = await NoteImageService.resolveImageSources(data.imageIds);
+                                        if (Object.keys(imageMap).length > 0) {
+                                            sendCommand('resolveImages', { imageMap });
+                                        }
+                                    } catch (err) {
+                                        console.error('Failed to resolve pasted image IDs', err);
+                                    }
+                                })();
+                            }
                             break;
                         case 'imageSelected':
                             // Always dismiss keyboard and blur - prevents keyboard from opening
@@ -481,4 +558,3 @@ const styles = StyleSheet.create({
 export default TipTapEditor;
 export type { TipTapEditorProps, TipTapEditorRef } from './types';
 export { TipTapEditor };
-
