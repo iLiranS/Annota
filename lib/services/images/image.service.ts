@@ -102,9 +102,11 @@ export function getFileSize(localPath: string): number {
 // ============ DEVICE INTEGRATION ============
 
 /**
- * Saves a given base64 data URI to the device's native gallery.
+ * Saves a given image to the device's native gallery.
+ * Prefers using the existing local file via imageId if available.
+ * Falls back to extracting logic from the base64 URI if needed.
  */
-export async function saveBase64ToGallery(base64Uri: string): Promise<boolean> {
+export async function saveImageToGallery(imageId?: string, base64Uri?: string): Promise<boolean> {
     try {
         const { status } = await MediaLibrary.requestPermissionsAsync();
         if (status !== 'granted') {
@@ -112,22 +114,35 @@ export async function saveBase64ToGallery(base64Uri: string): Promise<boolean> {
             return false;
         }
 
-        let localUri = base64Uri;
+        let localUri = '';
 
-        if (base64Uri.startsWith('data:image/')) {
-            const base64Data = base64Uri.replace(/^data:image\/\w+;base64,/, "");
-            const tempDir = new Directory(Paths.cache, 'download');
-            tempDir.create({ idempotent: true, intermediates: true });
-            const tempFile = new ExpoFile(tempDir, `download-${Date.now()}.jpg`);
-            try {
-                tempFile.create({ overwrite: true, intermediates: true });
-                tempFile.write(base64Data, { encoding: 'base64' });
-            } catch {
-                await LegacyFileSystem.writeAsStringAsync(tempFile.uri, base64Data, {
-                    encoding: LegacyFileSystem.EncodingType.Base64,
+        if (imageId) {
+            const dir = getImagesDirectory();
+            const file = new ExpoFile(dir, `${imageId}.jpg`);
+            if (file.exists) {
+                // To avoid iOS sandbox limitations when saving from the document directory,
+                // we copy the file to the strictly accessible cache directory first.
+                const tempFileUri = LegacyFileSystem.cacheDirectory + `download-${Date.now()}.jpg`;
+                await LegacyFileSystem.copyAsync({
+                    from: file.uri,
+                    to: tempFileUri
                 });
+                localUri = tempFileUri;
             }
-            localUri = tempFile.uri;
+        }
+
+        if (!localUri && base64Uri && base64Uri.startsWith('data:image/')) {
+            const base64Data = base64Uri.replace(/^data:image\/\w+;base64,/, "");
+            const tempFileUri = LegacyFileSystem.cacheDirectory + `download-${Date.now()}.jpg`;
+            await LegacyFileSystem.writeAsStringAsync(tempFileUri, base64Data, {
+                encoding: LegacyFileSystem.EncodingType.Base64,
+            });
+            localUri = tempFileUri;
+        }
+
+        if (!localUri) {
+            console.error('No valid image source found to save.');
+            return false;
         }
 
         await MediaLibrary.saveToLibraryAsync(localUri);

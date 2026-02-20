@@ -1,4 +1,5 @@
 import { useTheme } from '@react-navigation/native';
+import * as ExpoClipboard from 'expo-clipboard';
 import React from 'react';
 import { Keyboard, ScrollView, StyleSheet, View } from 'react-native';
 
@@ -463,8 +464,8 @@ export function EditorToolbar({
                         switch (action) {
                             case 'download':
                                 (async () => {
-                                    if (blockData.src) {
-                                        await ImageService.saveBase64ToGallery(blockData.src);
+                                    if (blockData.imageId || blockData.src) {
+                                        await ImageService.saveImageToGallery(blockData.imageId, blockData.src);
                                     } else {
                                         console.error('No source found for the image.');
                                     }
@@ -472,11 +473,19 @@ export function EditorToolbar({
                                 })();
                                 break;
                             case 'copy':
+                                if (blockData.imageId) {
+                                    ExpoClipboard.setStringAsync(`[[ImageID:${blockData.imageId}]]`);
+                                }
                                 onCommand('copyImage', { pos: blockData.position });
                                 closePopup();
                                 break;
                             case 'cut':
-                                onCommand('cutImage', { pos: blockData.position });
+                                if (blockData.imageId) {
+                                    ExpoClipboard.setStringAsync(`[[ImageID:${blockData.imageId}]]`);
+                                    onCommand('deleteImage', { pos: blockData.position });
+                                } else {
+                                    onCommand('cutImage', { pos: blockData.position });
+                                }
                                 closePopup();
                                 break;
                             case 'delete':

@@ -58,8 +58,16 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "The app needs access to your photos to let you attach them to notes.",
-          "cameraPermission": "The app needs access to your camera to let you take photos for your notes."
+          "photosPermission": "Annota needs access to your photos to let you attach them to notes.",
+          "cameraPermission": "Annota needs access to your camera to let you take photos for your notes."
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow Annota to access your photos.",
+          "savePhotosPermission": "Allow Annota to save photos.",
+          "isAccessMediaLocationEnabled": true
         }
       ],
       "@react-native-community/datetimepicker"

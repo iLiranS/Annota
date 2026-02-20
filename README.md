@@ -1,47 +1,23 @@
-# 🚀 Productivity Hub: Integrated Notes & Todos
+# Annota 📝
 
-A seamless workspace designed for deep work, combining structured note-taking with actionable task management.
+A private, local-first mobile note-taking application designed for speed, privacy, and rich text organization.
 
 ## ✨ Core Features
 
-### 📂 Nested Folders & Hierarchical Organization
-Organize your workspace with infinite nesting. Move beyond flat lists and create a structure that mirrors your mental model.
-- 📁 **Engineering**
-  - 📁 **Architecture**
-    - 📝 System Design Docs
-    - 📝 Database Schema
-  - 📁 **Sprints**
-    - 📝 Sprint 42 Retrospective
-- 📁 **Personal**
-  - 📝 Travel Itinerary
+-   🏠 **Local-First & Offline**: Everything is stored directly on the device using SQLite. No external cloud dependencies, ensuring maximum privacy and instant access.
+-   ✍️ **Desktop-Class Rich Text**: Full TipTap integration providing advanced formatting, tables, and media support within a mobile-optimized interface.
+-   📁 **Hierarchical Organization**: A flexible folder system allowing for deep nesting and structured note management.
+-   🖼 **Smart Image Handling**: Automatic image hashing and deduplication. Images are stored locally, resized for performance, and referenced via persistent IDs.
+-   ⚡ **Aggressive Caching**: Uses Zustand for a dual-layer state management system—fetching from the database while keeping everything in-memory for zero-latency interactions.
 
-### 🔗 Contextual Todos (Note Integration)
-Never lose context again. Embed todos directly within your notes. Tasks are automatically synced to your global task manager while remaining anchored to their relevant documentation.
+## 🛠 Tech Stack
 
-> **Meeting Note: Project Phoenix Kickoff**
-> 
-> We discussed the primary objectives for the upcoming quarter. Key stakeholders have approved the initial roadmap.
-> 
-> **Action Items:**
-> - [x] Define MVP scope with the product team
-> - [ ] Draft technical specification document `priority:high`
-> - [ ] Schedule recurring sync meetings
-> 
-> *Note: The technical spec should focus on the new microservices architecture.*
+-   **Frontend**: React Native + Expo (Router, File-system, Image Manipulator).
+-   **Editor**: TipTap (WebView-based).
+-   **State**: Zustand (Store + Persistence).
+-   **Database**: SQLite via Drizzle ORM.
+-   **Storage**: Local file system for media.
 
-### 📊 Centralized Dashboard
-Your productivity command center. The dashboard aggregates data from across all your folders and notes to give you a clear picture of your day.
+## 🏗 System Logic
 
-| Widget | Description |
-| :--- | :--- |
-| **Quick Access** | Your most recently edited notes and frequently visited folders. |
-| **Task Pipeline** | A unified view of all todos extracted from notes, filtered by due date. |
-| **Project Health** | Visual progress bars showing completion rates for nested projects. |
-| **Daily Focus** | A curated "Top 3" list to keep you aligned with your primary goals. |
-
-## 🛠 Technical Architecture
-
-- **Frontend**: TypeScript, React, Tailwind CSS for a polished, accessible UI.
-- **State Management**: Optimized for nested structures and real-time task syncing.
-- **Backend**: CSR Architecture with Node.js, Express, and Prisma.
-- **Data Integrity**: Strict Zod validation for all folder and note operations.
+The app operates on a "Sync-on-Write" principle. The Zustand store acts as the primary source of truth for the UI, while background services ensure that every change is immediately mirrored to the SQLite database. Images are processed through a dedicated pipeline (Resize -> Hash -> Store) before being injected into the editor as base64 data URIs.

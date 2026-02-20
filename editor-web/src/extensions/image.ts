@@ -187,6 +187,7 @@ export const CustomImage = Image.extend({
                         pos: currentPos,
                         message: {
                             type: 'openImageMenu',
+                            imageId: currentNode.attrs.imageId,
                             src: currentNode.attrs.src,
                             width: currentNode.attrs.width || '100%',
                             position: currentPos,
@@ -290,8 +291,20 @@ export const CustomImage = Image.extend({
                             }
                         }
 
-                        // 3. Handle Base64 Text
+                        // 3. Handle Base64 Text and Native Text Fallback
                         const text = event.clipboardData?.getData('text/plain');
+
+                        // Handle native image copying fallback
+                        const nativeIdMatch = text?.match(/^\[\[ImageID:(.+)\]\]$/);
+                        if (nativeIdMatch) {
+                            const internalImageId = nativeIdMatch[1].trim();
+                            const node = schema.nodes.image.create({ src: '', imageId: internalImageId });
+                            const transaction = view.state.tr.replaceSelectionWith(node);
+                            view.dispatch(transaction);
+                            sendMessage({ type: 'resolveImageIds', imageIds: [internalImageId] });
+                            return true;
+                        }
+
                         if (text && text.trim().startsWith('data:image/')) {
                             const trimmed = text.trim();
                             const tempId = `temp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
