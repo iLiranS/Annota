@@ -1,5 +1,6 @@
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { supabase } from '@/lib/supabase';
+import { getMasterKey } from '@/lib/utils/crypto';
 import { useAuthStore } from '@/stores/auth-store';
 import { Ionicons } from '@expo/vector-icons';
 import { makeRedirectUri } from 'expo-auth-session';
@@ -18,7 +19,9 @@ export default function LoginScreen() {
     const theme = useAppTheme();
 
     // Use expo-auth-session to create a redirect URI back to the app
-    const redirectUrl = makeRedirectUri();
+    const redirectUrl = makeRedirectUri({
+        native: 'annota://login-callback', // Explicit scheme for production builds
+    });
 
     async function signInWithOAuth(provider: 'google' | 'apple' | 'github') {
         setLoadingProvider(provider);

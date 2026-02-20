@@ -1,17 +1,33 @@
-import { generateMnemonic, mnemonicToSeedSync } from 'bip39';
+import aesjs from 'aes-js';
+import { generateMnemonic, mnemonicToSeedSync, validateMnemonic } from 'bip39';
 import { Buffer } from 'buffer';
+import * as Crypto from 'expo-crypto';
 import * as SecureStore from 'expo-secure-store';
-import QuickCrypto from 'react-native-quick-crypto';
+import './polyfill';
 
 const MASTER_KEY_ALIAS = 'annota_master_key';
+
+/**
+ * Custom RNG utilizing expo-crypto for secure entropy.
+ */
+const customRng = (size: number) => {
+    return Buffer.from(Crypto.getRandomBytes(size));
+};
 
 /**
  * Generate a new 12-word mnemonic phrase.
  */
 export async function generateMasterKey(): Promise<string> {
     // Generate a 128-bit entropy mnemonic (12 words)
-    const mnemonic = generateMnemonic(128);
+    const mnemonic = generateMnemonic(128, customRng);
     return mnemonic;
+}
+
+/**
+ * Validate an existing 12-word mnemonic phrase.
+ */
+export function validateMasterKey(mnemonic: string): boolean {
+    return validateMnemonic(mnemonic);
 }
 
 /**
@@ -52,50 +68,51 @@ export interface EncryptedPayload {
 }
 
 /**
- * Encrypts a JSON payload using AES-256-GCM.
- * Returns the encrypted data (with auth tag appended) and the random nonce.
+ * Encrypts a JSON payload using AES-256-CTR (Pure JS for Expo Go compatibility).
+ * Returns the encrypted data and the random nonce.
  */
 export function encryptPayload(jsonPayload: string, mnemonic: string): EncryptedPayload {
-    const key = getAesKeyFromMnemonic(mnemonic);
-    // Generate a 12-byte (96-bit) nonce for GCM
-    const nonce = QuickCrypto.randomBytes(12);
+    const key = getAesKeyFromMnemonic(mnemonic); // length 32
 
-    // Create Cipher
-    const cipher = QuickCrypto.createCipheriv('aes-256-gcm', key as any, nonce as any);
+    // Generate a 16-byte nonce for CTR mode using Expo Crypto
+    const nonceBytes = Crypto.getRandomBytes(16);
+    // aes-js CTR mode needs an initial counter (an integer or a 16 byte array)
+    // We treat the nonce as our initial counter vector.
+
+    const aesCtr = new aesjs.ModeOfOperation.ctr(key as any, new aesjs.Counter(nonceBytes));
+
+    // Convert text to bytes
+    const textBytes = aesjs.utils.utf8.toBytes(jsonPayload);
 
     // Encrypt
-    let encrypted = cipher.update(jsonPayload, 'utf8', 'base64');
-    encrypted += cipher.final('base64');
+    const encryptedBytes = aesCtr.encrypt(textBytes);
 
-    // Get Auth Tag (16 bytes)
-    const authTag = cipher.getAuthTag();
+    // Convert to hex
+    const encryptedHex = aesjs.utils.hex.fromBytes(encryptedBytes);
+    const nonceHex = aesjs.utils.hex.fromBytes(nonceBytes);
 
     return {
-        encryptedData: encrypted + ":" + authTag.toString('base64'),
-        nonce: nonce.toString('base64')
+        encryptedData: encryptedHex,
+        nonce: nonceHex
     };
 }
 
 /**
- * Decrypts an encrypted payload using AES-256-GCM.
+ * Decrypts an encrypted payload using AES-256-CTR.
  */
-export function decryptPayload(encryptedDataWithTag: string, nonceBase64: string, mnemonic: string): string {
+export function decryptPayload(encryptedHex: string, nonceHex: string, mnemonic: string): string {
     const key = getAesKeyFromMnemonic(mnemonic);
-    const nonce = Buffer.from(nonceBase64, 'base64');
 
-    const parts = encryptedDataWithTag.split(':');
-    if (parts.length !== 2) {
-        throw new Error("Invalid encrypted payload format");
-    }
+    const encryptedBytes = aesjs.utils.hex.toBytes(encryptedHex);
+    const nonceBytes = aesjs.utils.hex.toBytes(nonceHex);
 
-    const ciphertext = parts[0];
-    const authTag = Buffer.from(parts[1], 'base64');
+    // aes-js requires 16 bytes exactly for the counter
+    const aesCtr = new aesjs.ModeOfOperation.ctr(key as any, new aesjs.Counter(nonceBytes));
 
-    const decipher = QuickCrypto.createDecipheriv('aes-256-gcm', key as any, nonce as any);
-    decipher.setAuthTag(authTag as any);
+    const decryptedBytes = aesCtr.decrypt(encryptedBytes);
 
-    let decrypted = decipher.update(ciphertext, 'base64', 'utf8');
-    decrypted += decipher.final('utf8');
+    // Convert back to text
+    const decryptedText = aesjs.utils.utf8.fromBytes(decryptedBytes);
 
-    return decrypted;
+    return decryptedText;
 }

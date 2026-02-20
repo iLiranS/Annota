@@ -35,6 +35,38 @@ function normalizeStoredContent(content: string): string {
 
 
 
+// ============ SYNC OPERATIONS ============
+
+export function getDirtyNotes(): NoteMetadata[] {
+    return db.select().from(schema.noteMetadata).where(eq(schema.noteMetadata.isDirty, true)).all();
+}
+
+export function clearDirtyNotes(noteIds: string[], syncedAt: Date): void {
+    if (noteIds.length === 0) return;
+    db.update(schema.noteMetadata)
+        .set({ isDirty: false, lastSyncedAt: syncedAt })
+        .where(inArray(schema.noteMetadata.id, noteIds))
+        .run();
+}
+
+export function upsertSyncedNote(noteFullData: any, tx: DbOrTx = db): void {
+    const content = noteFullData.content;
+    const metadataDetails = { ...noteFullData };
+    delete metadataDetails.content; // The rest is metadata
+
+    // Insert or Update Metadata
+    tx.insert(schema.noteMetadata)
+        .values(metadataDetails)
+        .onConflictDoUpdate({ target: schema.noteMetadata.id, set: metadataDetails })
+        .run();
+
+    // Insert or Update Content (Heavy Data)
+    tx.insert(schema.noteContent)
+        .values({ id: metadataDetails.id, content: content || '' })
+        .onConflictDoUpdate({ target: schema.noteContent.id, set: { content: content || '' } })
+        .run();
+}
+
 // ============ METADATA OPERATIONS (fast, for lists) ============
 
 export function getNotesInFolder(folderId: string | null, includeDeleted = false): NoteMetadata[] {
@@ -52,7 +84,8 @@ export function getNotesInFolder(folderId: string | null, includeDeleted = false
             .where(
                 and(
                     isNull(schema.noteMetadata.folderId),
-                    eq(schema.noteMetadata.isDeleted, false)
+                    eq(schema.noteMetadata.isDeleted, false),
+                    eq(schema.noteMetadata.isPermDeleted, false)
                 )
             )
             .all();
@@ -72,7 +105,8 @@ export function getNotesInFolder(folderId: string | null, includeDeleted = false
         .where(
             and(
                 eq(schema.noteMetadata.folderId, folderId),
-                eq(schema.noteMetadata.isDeleted, false)
+                eq(schema.noteMetadata.isDeleted, false),
+                eq(schema.noteMetadata.isPermDeleted, false)
             )
         )
         .all();
@@ -174,14 +208,11 @@ export function restoreNote(noteId: string, targetFolderId?: string | null): voi
 
 export function permanentlyDeleteNote(noteId: string): void {
     db.transaction((tx) => {
-        // However, to be safe and atomic, we should delete note versions here.
-        tx.delete(schema.noteVersions).where(eq(schema.noteVersions.noteId, noteId)).run();
-
-        // 2. Delete content
-        db.delete(schema.noteContent).where(eq(schema.noteContent.id, noteId)).run();
-
-        // 3. Delete metadata
-        db.delete(schema.noteMetadata).where(eq(schema.noteMetadata.id, noteId)).run();
+        // We defer all deletions to allow the full object to sync as a tombstone
+        tx.update(schema.noteMetadata)
+            .set({ isPermDeleted: true, isDirty: true, updatedAt: new Date() })
+            .where(eq(schema.noteMetadata.id, noteId))
+            .run();
     });
 }
 
@@ -192,7 +223,8 @@ export function getQuickAccessNotes(): NoteMetadata[] {
         .where(
             and(
                 eq(schema.noteMetadata.isQuickAccess, true),
-                eq(schema.noteMetadata.isDeleted, false)
+                eq(schema.noteMetadata.isDeleted, false),
+                eq(schema.noteMetadata.isPermDeleted, false)
             )
         )
         .all();
@@ -206,7 +238,8 @@ export function getPinnedNotesInFolder(folderId: string): NoteMetadata[] {
             and(
                 eq(schema.noteMetadata.folderId, folderId),
                 eq(schema.noteMetadata.isPinned, true),
-                eq(schema.noteMetadata.isDeleted, false)
+                eq(schema.noteMetadata.isDeleted, false),
+                eq(schema.noteMetadata.isPermDeleted, false)
             )
         )
         .all();
@@ -216,7 +249,12 @@ export function getDeletedNotes(): NoteMetadata[] {
     return db
         .select()
         .from(schema.noteMetadata)
-        .where(eq(schema.noteMetadata.isDeleted, true))
+        .where(
+            and(
+                eq(schema.noteMetadata.isDeleted, true),
+                eq(schema.noteMetadata.isPermDeleted, false)
+            )
+        )
         .all();
 }
 
@@ -415,7 +453,12 @@ export function getRecentNotes(limitCount: number = 5): NoteMetadata[] {
     return db
         .select()
         .from(schema.noteMetadata)
-        .where(eq(schema.noteMetadata.isDeleted, false))
+        .where(
+            and(
+                eq(schema.noteMetadata.isDeleted, false),
+                eq(schema.noteMetadata.isPermDeleted, false)
+            )
+        )
         .orderBy(desc(schema.noteMetadata.updatedAt))
         .limit(limitCount)
         .all();
@@ -426,27 +469,9 @@ export function getRecentNotes(limitCount: number = 5): NoteMetadata[] {
 export function permanentlyDeleteNotesInFolders(folderIds: string[], tx: DbOrTx = db): void {
     if (folderIds.length === 0) return;
 
-    // 1. Get note IDs to delete content/versions (we need subqueries or separate fetch)
-    // SQLite doesn't support DELETE ... WHERE .. IN (SELECT ..) with strict ordering easily in Drizzle without raw SQL sometimes,
-    // but Drizzle's delete(..).where(inArray(..)) is standard.
-
-    // Using subquery for deletion in SQLite with Drizzle:
-    const notesInFolders = tx.select({ id: schema.noteMetadata.id })
-        .from(schema.noteMetadata)
-        .where(inArray(schema.noteMetadata.folderId, folderIds));
-
-    // 1. Delete content
-    tx.delete(schema.noteContent)
-        .where(inArray(schema.noteContent.id, notesInFolders))
-        .run();
-
-    // 2. Delete versions
-    tx.delete(schema.noteVersions)
-        .where(inArray(schema.noteVersions.noteId, notesInFolders))
-        .run();
-
-    // 3. Delete metadata
-    tx.delete(schema.noteMetadata)
+    // We defer all deletions to allow the full object to sync as a tombstone
+    tx.update(schema.noteMetadata)
+        .set({ isPermDeleted: true, isDirty: true, updatedAt: new Date() })
         .where(inArray(schema.noteMetadata.folderId, folderIds))
         .run();
 }
@@ -483,22 +508,9 @@ export function restoreNotesInFolders(folderIds: string[], folderDeletedAt: Date
 }
 
 export function permanentlyDeleteDeletedNotes(tx: DbOrTx = db): void {
-    const deletedNotes = tx.select({ id: schema.noteMetadata.id })
-        .from(schema.noteMetadata)
-        .where(eq(schema.noteMetadata.isDeleted, true));
-
-    // 1. Delete content
-    tx.delete(schema.noteContent)
-        .where(inArray(schema.noteContent.id, deletedNotes))
-        .run();
-
-    // 2. Delete versions
-    tx.delete(schema.noteVersions)
-        .where(inArray(schema.noteVersions.noteId, deletedNotes))
-        .run();
-
-    // 3. Delete metadata
-    tx.delete(schema.noteMetadata)
+    // We defer all deletions to allow the full object to sync as a tombstone
+    tx.update(schema.noteMetadata)
+        .set({ isPermDeleted: true, isDirty: true, updatedAt: new Date() })
         .where(eq(schema.noteMetadata.isDeleted, true))
         .run();
 }

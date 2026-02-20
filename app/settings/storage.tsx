@@ -1,6 +1,8 @@
 import { HapticPressable } from '@/components/ui/haptic-pressable';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { StorageService } from '@/lib/services/storage.service';
+import { syncPull, syncPush } from '@/lib/sync/sync-service';
+import { getMasterKey } from '@/lib/utils/crypto';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -72,6 +74,33 @@ export default function StorageSettings() {
         );
     };
 
+    const handleManualSync = async () => {
+        setIsLoading(true);
+        try {
+            const key = await getMasterKey();
+            if (!key) {
+                Alert.alert("Error", "Master Key not found. Please set your Master Key.");
+                return;
+            }
+
+            await syncPull(key);
+            await syncPush(key);
+
+            // Reload local stores to reflect pulled changes
+            const { useNotesStore } = require('@/stores/notes-store');
+            const { useTasksStore } = require('@/stores/tasks-store');
+            useNotesStore.getState().initApp();
+            useTasksStore.getState().loadTasks();
+
+            Alert.alert("Sync Complete", "Successfully synchronized your data with the cloud.");
+        } catch (error: any) {
+            console.error("Manual Sync Error:", error);
+            Alert.alert("Sync Failed", error?.message || "An unknown error occurred during sync.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     return (
         <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
             <Stack.Screen options={{ title: 'Storage & Debug' }} />
@@ -110,6 +139,14 @@ export default function StorageSettings() {
                 >
                     <Ionicons name="refresh" size={20} color={colors.primary} />
                     <Text style={[styles.buttonText, { color: colors.primary }]}>Refresh Stats</Text>
+                </HapticPressable>
+
+                <HapticPressable
+                    style={[styles.button, { backgroundColor: colors.card, borderColor: colors.border }]}
+                    onPress={handleManualSync}
+                >
+                    <Ionicons name="cloud-upload-outline" size={20} color={colors.primary} />
+                    <Text style={[styles.buttonText, { color: colors.primary }]}>Sync with Cloud DB</Text>
                 </HapticPressable>
 
                 <HapticPressable

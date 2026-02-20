@@ -1,5 +1,5 @@
-import { and, asc, eq, gte, lt } from 'drizzle-orm';
-import { db, schema } from '../client';
+import { and, asc, eq, gte, inArray, lt } from 'drizzle-orm';
+import { db, DbOrTx, schema } from '../client';
 import type { Task, TaskInsert } from '../schema';
 
 // Re-export types
@@ -15,12 +15,34 @@ export interface CreateTaskInput {
     isWholeDay?: boolean;
 }
 
+// ============ SYNC OPERATIONS ============
+
+export function getDirtyTasks(): Task[] {
+    return db.select().from(schema.tasks).where(eq(schema.tasks.isDirty, true)).all();
+}
+
+export function clearDirtyTasks(taskIds: string[], syncedAt: Date): void {
+    if (taskIds.length === 0) return;
+    db.update(schema.tasks)
+        .set({ isDirty: false, lastSyncedAt: syncedAt })
+        .where(inArray(schema.tasks.id, taskIds))
+        .run();
+}
+
+export function upsertSyncedTask(taskData: Task, tx: DbOrTx = db): void {
+    tx.insert(schema.tasks)
+        .values(taskData)
+        .onConflictDoUpdate({ target: schema.tasks.id, set: taskData })
+        .run();
+}
+
 // ============ TASK OPERATIONS ============
 
 export function getAllTasks(): Task[] {
     return db
         .select()
         .from(schema.tasks)
+        .where(eq(schema.tasks.isPermDeleted, false))
         .all();
 }
 
@@ -48,7 +70,8 @@ export function getTasksByDate(date: Date): Task[] {
         .where(
             and(
                 gte(schema.tasks.deadline, startOfDay),
-                lt(schema.tasks.deadline, new Date(endOfDay.getTime() + 1))
+                lt(schema.tasks.deadline, new Date(endOfDay.getTime() + 1)),
+                eq(schema.tasks.isPermDeleted, false)
             )
         )
         .all();
@@ -58,6 +81,7 @@ export function getTasksSortedByDeadline(): Task[] {
     return db
         .select()
         .from(schema.tasks)
+        .where(eq(schema.tasks.isPermDeleted, false))
         .orderBy(asc(schema.tasks.deadline))
         .all();
 }
@@ -66,7 +90,12 @@ export function getPendingTasks(): Task[] {
     return db
         .select()
         .from(schema.tasks)
-        .where(eq(schema.tasks.completed, false))
+        .where(
+            and(
+                eq(schema.tasks.completed, false),
+                eq(schema.tasks.isPermDeleted, false)
+            )
+        )
         .orderBy(asc(schema.tasks.deadline))
         .all();
 }
@@ -75,7 +104,12 @@ export function getCompletedTasks(): Task[] {
     return db
         .select()
         .from(schema.tasks)
-        .where(eq(schema.tasks.completed, true))
+        .where(
+            and(
+                eq(schema.tasks.completed, true),
+                eq(schema.tasks.isPermDeleted, false)
+            )
+        )
         .orderBy(asc(schema.tasks.deadline))
         .all();
 }
@@ -102,7 +136,10 @@ export function updateTask(
 }
 
 export function deleteTask(taskId: string): void {
-    db.delete(schema.tasks).where(eq(schema.tasks.id, taskId)).run();
+    db.update(schema.tasks)
+        .set({ isPermDeleted: true, isDirty: true, updatedAt: new Date() })
+        .where(eq(schema.tasks.id, taskId))
+        .run();
 }
 
 export function toggleTaskComplete(taskId: string): void {
@@ -117,7 +154,10 @@ export function toggleTaskComplete(taskId: string): void {
 }
 
 export function deleteCompletedTasks(): void {
-    db.delete(schema.tasks).where(eq(schema.tasks.completed, true)).run();
+    db.update(schema.tasks)
+        .set({ isPermDeleted: true, isDirty: true, updatedAt: new Date() })
+        .where(eq(schema.tasks.completed, true))
+        .run();
 }
 
 // ============ CALENDAR HELPERS ============
@@ -132,7 +172,8 @@ export function getTaskDatesInMonth(year: number, month: number): Set<number> {
         .where(
             and(
                 gte(schema.tasks.deadline, startOfMonth),
-                lt(schema.tasks.deadline, new Date(endOfMonth.getTime() + 1))
+                lt(schema.tasks.deadline, new Date(endOfMonth.getTime() + 1)),
+                eq(schema.tasks.isPermDeleted, false)
             )
         )
         .all();

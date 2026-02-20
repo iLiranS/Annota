@@ -1,4 +1,7 @@
+import { removeMasterKey } from '@/lib/utils/crypto';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { drizzle } from 'drizzle-orm/expo-sqlite';
+import * as LegacyFileSystem from 'expo-file-system/legacy';
 import { openDatabaseSync } from 'expo-sqlite';
 import * as schema from './schema';
 import { seedSystemData } from './seed';
@@ -28,7 +31,8 @@ const CREATE_TABLES_SQL = `
     tags TEXT NOT NULL DEFAULT '[]',
     original_folder_id TEXT,
     is_dirty INTEGER NOT NULL DEFAULT 0,
-    last_synced_at INTEGER
+    last_synced_at INTEGER,
+    is_perm_deleted INTEGER NOT NULL DEFAULT 0
   );
 
   CREATE TABLE IF NOT EXISTS note_content (
@@ -57,7 +61,8 @@ const CREATE_TABLES_SQL = `
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL,
     is_dirty INTEGER NOT NULL DEFAULT 0,
-    last_synced_at INTEGER
+    last_synced_at INTEGER,
+    is_perm_deleted INTEGER NOT NULL DEFAULT 0
   );
 
   CREATE TABLE IF NOT EXISTS tasks (
@@ -71,7 +76,8 @@ const CREATE_TABLES_SQL = `
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL,
     is_dirty INTEGER NOT NULL DEFAULT 0,
-    last_synced_at INTEGER
+    last_synced_at INTEGER,
+    is_perm_deleted INTEGER NOT NULL DEFAULT 0
   );
 
   CREATE TABLE IF NOT EXISTS tags (
@@ -146,6 +152,17 @@ export function initDatabase(): void {
         expoDb.execSync('ALTER TABLE tasks ADD COLUMN is_whole_day INTEGER NOT NULL DEFAULT 0');
         console.log('Migration complete: is_whole_day column added');
       }
+
+      // Migration: Add is_perm_deleted column to note_metadata, folders, and tasks
+      const noteColumns = expoDb.getAllSync('PRAGMA table_info(note_metadata)') as any[];
+      const hasNotePermDeleted = noteColumns.some((col: any) => col.name === 'is_perm_deleted');
+      if (!hasNotePermDeleted) {
+        console.log('Running migration: Adding is_perm_deleted columns');
+        expoDb.execSync('ALTER TABLE note_metadata ADD COLUMN is_perm_deleted INTEGER NOT NULL DEFAULT 0');
+        expoDb.execSync('ALTER TABLE folders ADD COLUMN is_perm_deleted INTEGER NOT NULL DEFAULT 0');
+        expoDb.execSync('ALTER TABLE tasks ADD COLUMN is_perm_deleted INTEGER NOT NULL DEFAULT 0');
+        console.log('Migration complete: is_perm_deleted columns added');
+      }
     } catch (migrationError) {
       console.log('Migration check/run completed or not needed:', migrationError);
     }
@@ -160,8 +177,8 @@ export function initDatabase(): void {
   }
 }
 
-// Reset database (drop all tables and re-initialize) - USE WITH CAUTION
-export function resetDatabase(): void {
+// Reset everything (DB, Storage, Files) - USE WITH CAUTION
+export async function resetAll(): Promise<void> {
   try {
     const tables = [
       'note_images',
@@ -180,9 +197,31 @@ export function resetDatabase(): void {
     });
 
     console.log('All tables dropped successfully');
+
+    // Clear async storage
+    await AsyncStorage.clear();
+    console.log('AsyncStorage cleared');
+
+    // Clear Secure Storage (Master Key)
+    try {
+      await removeMasterKey();
+      console.log('SecureStore cleared');
+    } catch (e) { /* ignore if not present */ }
+
+    // Clear FileSystem (except SQLite)
+    if (LegacyFileSystem.documentDirectory) {
+      const dir = await LegacyFileSystem.readDirectoryAsync(LegacyFileSystem.documentDirectory);
+      for (const file of dir) {
+        if (file !== 'SQLite') {
+          await LegacyFileSystem.deleteAsync(LegacyFileSystem.documentDirectory + file, { idempotent: true });
+        }
+      }
+      console.log('FileSystem cleared');
+    }
+
     initDatabase();
   } catch (error) {
-    console.error('Database reset failed:', error);
+    console.error('App reset failed:', error);
     throw error;
   }
 }

@@ -11,6 +11,27 @@ export type { Folder } from '../schema';
 export const TRASH_FOLDER_ID = 'system-trash';
 export const DAILY_NOTES_FOLDER_ID = 'system-daily-notes';
 
+// ============ SYNC OPERATIONS ============
+
+export function getDirtyFolders(): Folder[] {
+    return db.select().from(schema.folders).where(eq(schema.folders.isDirty, true)).all();
+}
+
+export function clearDirtyFolders(folderIds: string[], syncedAt: Date): void {
+    if (folderIds.length === 0) return;
+    db.update(schema.folders)
+        .set({ isDirty: false, lastSyncedAt: syncedAt })
+        .where(inArray(schema.folders.id, folderIds))
+        .run();
+}
+
+export function upsertSyncedFolder(folderData: Folder, tx: DbOrTx = db): void {
+    tx.insert(schema.folders)
+        .values(folderData)
+        .onConflictDoUpdate({ target: schema.folders.id, set: folderData })
+        .run();
+}
+
 
 
 // ============ FOLDER OPERATIONS ============
@@ -30,7 +51,8 @@ export function getFoldersInFolder(parentId: string | null, includeDeleted = fal
             .where(
                 and(
                     isNull(schema.folders.parentId),
-                    eq(schema.folders.isDeleted, false)
+                    eq(schema.folders.isDeleted, false),
+                    eq(schema.folders.isPermDeleted, false)
                 )
             )
             .all();
@@ -50,7 +72,8 @@ export function getFoldersInFolder(parentId: string | null, includeDeleted = fal
         .where(
             and(
                 eq(schema.folders.parentId, parentId),
-                eq(schema.folders.isDeleted, false)
+                eq(schema.folders.isDeleted, false),
+                eq(schema.folders.isPermDeleted, false)
             )
         )
         .all();
@@ -105,13 +128,15 @@ export function updateFolder(
 
 export function deleteFolders(folderIds: string[], tx: DbOrTx = db): void {
     if (folderIds.length === 0) return;
-    tx.delete(schema.folders)
+    tx.update(schema.folders)
+        .set({ isPermDeleted: true, isDirty: true, updatedAt: new Date() })
         .where(inArray(schema.folders.id, folderIds))
         .run();
 }
 
 export function deleteDeletedFolders(tx: DbOrTx = db): void {
-    tx.delete(schema.folders)
+    tx.update(schema.folders)
+        .set({ isPermDeleted: true, isDirty: true, updatedAt: new Date() })
         .where(
             and(
                 eq(schema.folders.isDeleted, true),
@@ -125,10 +150,11 @@ export function deleteDeletedFolders(tx: DbOrTx = db): void {
 // Get all descendant folder IDs (recursive)
 export function getAllDescendantFolderIds(folderId: string, includeDeleted = false): string[] {
     const whereClause = includeDeleted
-        ? eq(schema.folders.parentId, folderId)
+        ? and(eq(schema.folders.parentId, folderId), eq(schema.folders.isPermDeleted, false))
         : and(
             eq(schema.folders.parentId, folderId),
-            eq(schema.folders.isDeleted, false)
+            eq(schema.folders.isDeleted, false),
+            eq(schema.folders.isPermDeleted, false)
         );
 
     const children = db

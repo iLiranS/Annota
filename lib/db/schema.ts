@@ -17,6 +17,7 @@ export const noteMetadata = sqliteTable('note_metadata', {
     originalFolderId: text('original_folder_id'),
     isDirty: integer('is_dirty', { mode: 'boolean' }).notNull().default(false),
     lastSyncedAt: integer('last_synced_at', { mode: 'timestamp' }),
+    isPermDeleted: integer('is_perm_deleted', { mode: 'boolean' }).notNull().default(false),
 });
 
 // ============ NOTE CONTENT (heavy, lazy loaded) ============
@@ -49,6 +50,7 @@ export const folders = sqliteTable('folders', {
     updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
     isDirty: integer('is_dirty', { mode: 'boolean' }).notNull().default(false),
     lastSyncedAt: integer('last_synced_at', { mode: 'timestamp' }),
+    isPermDeleted: integer('is_perm_deleted', { mode: 'boolean' }).notNull().default(false),
 });
 
 // ============ TASKS ============
@@ -64,6 +66,7 @@ export const tasks = sqliteTable('tasks', {
     updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
     isDirty: integer('is_dirty', { mode: 'boolean' }).notNull().default(false),
     lastSyncedAt: integer('last_synced_at', { mode: 'timestamp' }),
+    isPermDeleted: integer('is_perm_deleted', { mode: 'boolean' }).notNull().default(false),
 });
 
 // ============ TAGS ============
