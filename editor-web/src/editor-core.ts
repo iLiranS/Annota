@@ -100,6 +100,9 @@ export function getEditorState() {
     const isCodeBlock = e.isActive('codeBlock');
     const codeBlockAttrs = e.getAttributes('codeBlock');
 
+    const { from, to } = e.state.selection;
+    const selectedText = from !== to ? e.state.doc.textBetween(from, to, ' ') : '';
+
     return {
         isBold: e.isActive('bold'),
         isItalic: e.isActive('italic'),
@@ -122,6 +125,7 @@ export function getEditorState() {
         isHeading6: e.isActive('heading', { level: 6 }),
         isLink: e.isActive('link'),
         linkHref: linkAttrs.href || null,
+        selectedText,
         highlightColor: highlightAttrs.color || null,
         textColor: textStyleAttrs.color || null,
         canUndo: e.can().undo(),

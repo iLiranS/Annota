@@ -259,6 +259,7 @@ export function ToolbarPopup(props: ToolbarPopupProps) {
                 return (
                     <LinkInput
                         currentUrl={(props as LinkPopupProps).currentUrl}
+                        selectedText={(props as LinkPopupProps).selectedText}
                         onSubmit={(props as LinkPopupProps).onSubmit}
                         onRemove={(props as LinkPopupProps).onRemove}
                         onClose={onClose}

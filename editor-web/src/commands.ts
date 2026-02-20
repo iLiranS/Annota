@@ -89,7 +89,17 @@ export function setupCommands() {
             case 'undo': c.undo().run(); break;
             case 'redo': c.redo().run(); break;
             case 'setLink':
-                if (params?.href) c.setLink({ href: params.href }).run();
+                if (params?.href) {
+                    if (params.title && e.state.selection.empty) {
+                        c.insertContent({
+                            type: 'text',
+                            text: params.title,
+                            marks: [{ type: 'link', attrs: { href: params.href } }]
+                        }).run();
+                    } else {
+                        c.setLink({ href: params.href }).run();
+                    }
+                }
                 break;
             case 'unsetLink': c.unsetLink().run(); break;
             case 'setHighlight':

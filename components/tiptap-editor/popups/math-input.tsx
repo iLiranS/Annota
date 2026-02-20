@@ -25,6 +25,8 @@ export function MathInput({ currentLatex, onSubmit, onClose }: MathInputProps) {
         }
     };
 
+    const isValid = latex.trim().length > 0;
+
     return (
         <View style={styles.popupContent}>
             <Text style={[styles.popupTitle, { color: colors.text }]}>
@@ -57,10 +59,15 @@ export function MathInput({ currentLatex, onSubmit, onClose }: MathInputProps) {
                     <Text style={[styles.buttonText, { color: colors.text }]}>Cancel</Text>
                 </Pressable>
                 <Pressable
-                    style={[styles.button, { backgroundColor: colors.primary }]}
+                    style={[styles.button, {
+                        backgroundColor: isValid ? colors.primary : (dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)')
+                    }]}
                     onPress={handleSubmit}
+                    disabled={!isValid}
                 >
-                    <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>
+                    <Text style={[styles.buttonText, {
+                        color: isValid ? '#FFFFFF' : (dark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)')
+                    }]}>
                         {currentLatex ? 'Update' : 'Insert'}
                     </Text>
                 </Pressable>

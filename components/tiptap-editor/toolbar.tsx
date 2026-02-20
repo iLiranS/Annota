@@ -322,8 +322,9 @@ export function EditorToolbar({
                     visible={true}
                     type="link"
                     currentUrl={editorState.linkHref}
-                    onSubmit={(url: string) => {
-                        onCommand('setLink', { href: url });
+                    selectedText={editorState.selectedText}
+                    onSubmit={(url: string, title?: string) => {
+                        onCommand('setLink', { href: url, title });
                         closePopup();
                     }}
                     onRemove={() => {

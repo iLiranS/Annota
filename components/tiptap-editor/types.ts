@@ -61,6 +61,7 @@ export interface EditorState {
     // Links
     isLink: boolean;
     linkHref: string | null;
+    selectedText: string;
 
     // Colors
     highlightColor: string | null;
@@ -109,6 +110,7 @@ export const initialEditorState: EditorState = {
     currentHeadingLevel: null,
     isLink: false,
     linkHref: null,
+    selectedText: '',
     highlightColor: null,
     textColor: null,
     canUndo: false,
@@ -219,7 +221,8 @@ export interface YouTubePopupProps extends BasePopupProps {
 export interface LinkPopupProps extends BasePopupProps {
     type: 'link';
     currentUrl: string | null;
-    onSubmit: (url: string) => void;
+    selectedText: string;
+    onSubmit: (url: string, title?: string) => void;
     onRemove: () => void;
 }
 
