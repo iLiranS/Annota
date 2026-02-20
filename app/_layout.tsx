@@ -10,6 +10,8 @@ import 'react-native-reanimated';
 
 import { useAppTheme } from '@/hooks/use-app-theme'; // USe our new hook
 import { initDatabase } from '@/lib/db/client';
+import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/stores/auth-store';
 
 export const unstable_settings = {
   anchor: '(drawer)',
@@ -40,10 +42,24 @@ export default function RootLayout() {
     }
   }, []);
 
-  // Show loading state while database initializes
+  const { initialized, session, isGuest, setSession } = useAuthStore();
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Show loading state while database or auth initializes
   const errorMessage = dbError;
 
-  if (!dbReady) {
+  if (!dbReady || !initialized) {
     return (
       <View style={styles.loadingContainer}>
         {errorMessage ? (
@@ -60,7 +76,11 @@ export default function RootLayout() {
       <ThemeProvider value={theme}>
 
         <Stack>
-          <Stack.Screen name="(drawer)" options={{ headerShown: false }} />
+          {(!session && !isGuest) ? (
+            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+          ) : (
+            <Stack.Screen name="(drawer)" options={{ headerShown: false }} />
+          )}
           <Stack.Screen name="modal" options={{ headerShown: false, presentation: 'modal', title: 'Modal' }} />
           <Stack.Screen name="settings" options={{ headerShown: false, presentation: 'modal', title: 'Settings' }} />
           <Stack.Screen name="Tasks/[id]/index" options={{ headerShown: true, presentation: 'modal', title: 'Edit Task' }} />

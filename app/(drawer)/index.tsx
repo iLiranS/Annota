@@ -5,6 +5,7 @@ import ThemedText from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { HapticPressable } from '@/components/ui/haptic-pressable';
 import { useAppTheme } from '@/hooks/use-app-theme';
+import { useAuthStore } from '@/stores/auth-store';
 import { useSettingsStore } from '@/stores/settings-store';
 import { useTasksStore, type Task } from '@/stores/tasks-store';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,6 +18,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 export default function HomeScreen() {
   const router = useRouter();
   const navigation = useNavigation<DrawerNavigationProp<any>>();
+  const { session } = useAuthStore();
+  const displayName = session?.user.user_metadata.full_name || session?.user.user_metadata.name || session?.user.user_metadata.preferred_username || 'Guest';
   const { editor } = useSettingsStore();
 
 
@@ -147,7 +150,7 @@ export default function HomeScreen() {
           </HapticPressable>
           <View style={styles.greetingContainer}>
             <ThemedText style={[styles.greetingText, { fontFamily: editor.fontFamily }]}>
-              {greeting}, <ThemedText style={[styles.userName, { color: colors.primary }]}>User</ThemedText>
+              {greeting}, <ThemedText style={[styles.userName, { color: colors.primary }]}>{displayName}</ThemedText>
             </ThemedText>
           </View>
         </View>

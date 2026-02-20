@@ -55,6 +55,13 @@ export default function SettingsLayout() {
                 }}
             />
             <Stack.Screen
+                name="account"
+                options={{
+                    title: 'Account',
+                    presentation: 'card',
+                }}
+            />
+            <Stack.Screen
                 name="editor"
                 options={{
                     title: 'Editor',
