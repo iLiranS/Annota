@@ -187,6 +187,19 @@ export function resetDatabase(): void {
   }
 }
 
+// Reclaim unused space and optimize database performance
+export function vacuumDatabase(): void {
+  try {
+    // Force WAL checkpoint to shrink WAL file
+    expoDb.execSync('PRAGMA wal_checkpoint(TRUNCATE);');
+    // Vacuum to reclaim deleted space in the main database
+    expoDb.execSync('VACUUM;');
+    console.log('Database vacuumed successfully');
+  } catch (error) {
+    console.error('Database vacuum failed:', error);
+  }
+}
+
 // Re-export schema for convenience
 export { schema };
 

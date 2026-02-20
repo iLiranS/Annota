@@ -143,6 +143,7 @@ export function deleteImagesIfUnreferenced(imageIds: string[], tx: DbOrTx = db):
 export function getStorageStats(tx: DbOrTx = db) {
     const totalImages = tx.select({ count: sql<number>`count(*)` }).from(images).get()?.count ?? 0;
     const totalLinks = tx.select({ count: sql<number>`count(*)` }).from(versionImages).get()?.count ?? 0;
+    const totalImagesSize = tx.select({ sum: sql<number>`sum(${images.size})` }).from(images).get()?.sum ?? 0;
 
     // Orphans (ignoring time buffer)
     const orphans = tx.select({ count: sql<number>`count(*)` })
@@ -150,7 +151,7 @@ export function getStorageStats(tx: DbOrTx = db) {
         .where(sql`${images.id} NOT IN (SELECT ${versionImages.imageId} FROM ${versionImages})`)
         .get()?.count ?? 0;
 
-    return { totalImages, totalLinks, orphans };
+    return { totalImages, totalLinks, orphans, totalImagesSize };
 }
 
 export function deleteOrphanLinks(tx: DbOrTx = db): void {

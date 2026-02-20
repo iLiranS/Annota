@@ -6,15 +6,31 @@ import { Stack } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+function formatBytes(bytes: number, decimals = 2) {
+    if (!+bytes) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+}
+
 export default function StorageSettings() {
     const { colors } = useAppTheme();
-    const [stats, setStats] = useState<{ totalImages: number; totalLinks: number; orphans: number } | null>(null);
+    const [stats, setStats] = useState<{
+        totalImages: number;
+        totalLinks: number;
+        orphans: number;
+        totalImagesSize: number;
+        notesSize: number;
+        totalSize: number;
+    } | null>(null);
     const [isLoading, setIsLoading] = useState(false);
 
-    const loadStats = () => {
+    const loadStats = async () => {
         setIsLoading(true);
         try {
-            const s = StorageService.getStats();
+            const s = await StorageService.getStats();
             setStats(s);
         } catch (e) {
             console.error(e);
@@ -38,11 +54,11 @@ export default function StorageSettings() {
                     style: "destructive",
                     onPress: () => {
                         setIsLoading(true);
-                        setTimeout(() => {
+                        setTimeout(async () => {
                             try {
                                 const count = StorageService.runGarbageCollection(true); // Force clean
                                 Alert.alert("Cleanup Complete", `Deleted ${count} unused images.`);
-                                loadStats();
+                                await loadStats();
                             } catch (e) {
                                 Alert.alert("Error", "Failed to clean storage.");
                                 console.error(e);
@@ -64,9 +80,26 @@ export default function StorageSettings() {
                 <Text style={[styles.sectionTitle, { color: colors.text }]}>Image Storage Stats</Text>
 
                 <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                    <StatRow label="Images Size" value={stats ? formatBytes(stats.totalImagesSize) : '-'} color={colors.text} />
                     <StatRow label="Total Images" value={stats?.totalImages ?? '-'} color={colors.text} />
                     <StatRow label="Version Links" value={stats?.totalLinks ?? '-'} color={colors.text} />
                     <StatRow label="Orphaned Images" value={stats?.orphans ?? '-'} color={colors.error} highlight />
+                </View>
+            </View>
+
+            <View style={styles.section}>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>Database Stats</Text>
+
+                <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                    <StatRow label="Notes & Data Size" value={stats ? formatBytes(stats.notesSize) : '-'} color={colors.text} />
+                </View>
+            </View>
+
+            <View style={styles.section}>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>Total App Size</Text>
+
+                <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                    <StatRow label="Total Size" value={stats ? formatBytes(stats.totalSize) : '-'} color={colors.primary} highlight />
                 </View>
             </View>
 
@@ -84,7 +117,7 @@ export default function StorageSettings() {
                     onPress={handleGC}
                 >
                     <Ionicons name="trash-bin-outline" size={20} color={colors.error} />
-                    <Text style={[styles.buttonText, { color: colors.error }]}>Clean Up Orphans</Text>
+                    <Text style={[styles.buttonText, { color: colors.error }]}>Shrink Database</Text>
                 </HapticPressable>
             </View>
 

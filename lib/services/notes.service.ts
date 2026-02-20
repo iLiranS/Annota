@@ -39,7 +39,7 @@ export const NoteService = {
                 validatedUpdates.title = generateTitle(validatedUpdates.title);
             }
 
-            console.log(`[NoteService] Updating note ${noteId} with:`, validatedUpdates);
+            // console.log(`[NoteService] Updating note ${noteId} with:`, validatedUpdates);
 
             return notesRepo.updateNoteMetadata(noteId, { ...validatedUpdates, isDirty: true });
         } catch (err) {
