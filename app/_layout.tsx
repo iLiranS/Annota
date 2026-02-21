@@ -79,7 +79,11 @@ export default function RootLayout() {
     if (!session && !isGuest) {
       // User is not authenticated nor a guest
       if (!inAuthGroup) {
-        router.replace('/(auth)');
+        if (router.canDismiss()) {
+          router.dismissAll();
+        } else {
+          router.replace('/(auth)');
+        }
       }
     } else if (session) {
       // User is authenticated

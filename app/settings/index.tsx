@@ -14,8 +14,6 @@ export default function SettingsIndex() {
 
     const handleSignIn = () => {
         setGuest(false);
-        router.dismissAll();
-        router.replace('/(auth)');
     };
 
     return (

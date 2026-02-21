@@ -158,9 +158,10 @@ export default function Sidebar(props: DrawerContentComponentProps) {
         }
     };
 
-    const navigateToDailyNote = () => {
+    const navigateToDailyNote = async () => {
+        const noteId = await useNotesStore.getState().getOrCreateDailyNote();
         closeDrawer();
-        router.push({ pathname: '/Notes', params: { folderId: DAILY_NOTES_FOLDER_ID } });
+        router.push({ pathname: '/Notes/[id]', params: { id: noteId } });
     };
 
     const navigateToTasks = () => {
@@ -256,10 +257,10 @@ export default function Sidebar(props: DrawerContentComponentProps) {
                     />
 
                     <SidebarItem
-                        icon="today"
-                        label="Daily Note"
+                        icon={(folders.find(f => f.id === DAILY_NOTES_FOLDER_ID)?.icon as keyof typeof Ionicons.glyphMap) || "calendar"}
+                        label={"Daily Note"}
                         onPress={navigateToDailyNote}
-                        iconColor='#ef7b6cff'
+                        iconColor={folders.find(f => f.id === DAILY_NOTES_FOLDER_ID)?.color || '#F59E0B'}
                     />
 
                     <Pressable

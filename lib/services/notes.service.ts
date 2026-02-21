@@ -36,7 +36,17 @@ export const NoteService = {
             // though schema validation handles min/max length.
             // The previous logic called generateTitle, let's keep it if it does specific formatting.
             if (validatedUpdates.title) {
-                validatedUpdates.title = generateTitle(validatedUpdates.title);
+                const existing = notesRepo.getNoteMetadataById(noteId);
+                if (existing?.folderId === 'system-daily-notes') {
+                    delete validatedUpdates.title;
+                } else {
+                    validatedUpdates.title = generateTitle(validatedUpdates.title);
+                }
+            }
+
+            // If only title was provided and it was a daily note, we might have no updates left
+            if (Object.keys(validatedUpdates).length === 0) {
+                return notesRepo.getNoteMetadataById(noteId);
             }
 
             // console.log(`[NoteService] Updating note ${noteId} with:`, validatedUpdates);

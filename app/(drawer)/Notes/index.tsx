@@ -12,7 +12,7 @@ import {
     sortNotes,
     SortType,
 } from '@/dev-data/data';
-import { NoteMetadata, TRASH_FOLDER_ID, useNotesStore, type Folder } from '@/stores/notes-store';
+import { DAILY_NOTES_FOLDER_ID, NoteMetadata, TRASH_FOLDER_ID, useNotesStore, type Folder } from '@/stores/notes-store';
 import { useSettingsStore } from '@/stores/settings-store';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { DrawerActions, useTheme } from '@react-navigation/native';
@@ -147,6 +147,13 @@ export default function NotesList() {
 
     // Create new note and navigate to it
     const handleCreateNote = useCallback(async () => {
+        if (currentFolderId === DAILY_NOTES_FOLDER_ID) {
+            const { getOrCreateDailyNote } = useNotesStore.getState();
+            const noteId = await getOrCreateDailyNote();
+            router.push({ pathname: '/Notes/[id]', params: { id: noteId } });
+            return;
+        }
+
         const newNote = await createNote({ folderId: currentFolderId ?? '' });
         router.push({ pathname: '/Notes/[id]', params: { id: newNote.id } });
     }, [createNote, currentFolderId, router]);

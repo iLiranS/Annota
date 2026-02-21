@@ -58,6 +58,9 @@ interface NotesState {
     // Getters (operate on cached state)
     getNotesInFolder: (folderId: string | null, includeDeleted?: boolean) => NoteMetadata[];
     getFoldersInFolder: (parentId: string | null, includeDeleted?: boolean) => Folder[];
+
+    // Daily Notes
+    getOrCreateDailyNote: () => Promise<string>;
 }
 
 export const useNotesStore = create<NotesState>((set, get) => ({
@@ -356,6 +359,37 @@ export const useNotesStore = create<NotesState>((set, get) => ({
                 notes: state.notes.filter(n => !n.isDeleted)
             }));
         }
+    },
+
+    // ============ DAILY NOTES ============
+
+    getOrCreateDailyNote: async () => {
+        const now = new Date();
+        const dd = String(now.getDate()).padStart(2, '0');
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const yyyy = now.getFullYear();
+        const todayTitle = `${dd}-${mm}-${yyyy}`;
+
+        const { notes, createNote } = get();
+
+        // Find existing note for today
+        const existingNote = notes.find(n =>
+            n.folderId === DAILY_NOTES_FOLDER_ID &&
+            n.title === todayTitle &&
+            !n.isDeleted
+        );
+
+        if (existingNote) {
+            return existingNote.id;
+        }
+
+        // Create new daily note
+        const newNote = await createNote({
+            folderId: DAILY_NOTES_FOLDER_ID,
+            title: todayTitle
+        });
+
+        return newNote.id;
     },
 
     // ============ SORTING & GETTERS ============

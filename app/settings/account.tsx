@@ -23,9 +23,6 @@ export default function AccountSettingsScreen() {
                     style: 'destructive',
                     onPress: async () => {
                         await signOut();
-                        setGuest(false);
-                        router.dismissAll();
-                        router.replace('/(auth)');
                     }
                 }
             ]
