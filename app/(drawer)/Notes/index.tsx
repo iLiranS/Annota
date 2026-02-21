@@ -155,7 +155,7 @@ export default function NotesList() {
         }
 
         const newNote = await createNote({ folderId: currentFolderId ?? '' });
-        router.push({ pathname: '/Notes/[id]', params: { id: newNote.id } });
+        router.push({ pathname: '/Notes/[id]', params: { id: newNote.id, source: 'new' } });
     }, [createNote, currentFolderId, router]);
 
     // Change sort type

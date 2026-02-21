@@ -10,6 +10,7 @@ export interface TipTapEditorRef {
     searchNext: () => void;
     searchPrev: () => void;
     clearSearch: () => void;
+    scrollToElement: (id: string) => void;
 }
 
 export interface TipTapEditorProps {
@@ -27,6 +28,8 @@ export interface TipTapEditorProps {
     onGalleryVisibilityChange?: (visible: boolean) => void;
     /** Whether the editor is editable. Defaults to true. */
     editable?: boolean;
+    /** Callback for when a block link is copied */
+    onCopyBlockLink?: (blockId: string) => void;
 }
 
 export interface EditorState {
@@ -57,6 +60,7 @@ export interface EditorState {
     isHeading5: boolean;
     isHeading6: boolean;
     currentHeadingLevel: HeadingLevel | null;
+    currentHeadingId: string | null;
 
     // Links
     isLink: boolean;
@@ -108,6 +112,7 @@ export const initialEditorState: EditorState = {
     isHeading5: false,
     isHeading6: false,
     currentHeadingLevel: null,
+    currentHeadingId: null,
     isLink: false,
     linkHref: null,
     selectedText: '',
@@ -174,7 +179,8 @@ export type EditorCommand =
     // Details commands
     | 'toggleDetails'
     | 'setDetailsBackground'
-    | 'unsetDetailsBackground';
+    | 'unsetDetailsBackground'
+    | 'scrollToElement';
 
 // ============================================================================
 // Popup Types
@@ -204,6 +210,7 @@ export interface HeadingPopupProps extends BasePopupProps {
     type: 'headings';
     currentLevel: HeadingLevel | null;
     onSelect: (level: HeadingLevel) => void;
+    onCopyLink?: () => void;
 }
 
 export interface ColorPopupProps extends BasePopupProps {

@@ -56,8 +56,8 @@ const getBlockActions = (blockType: string): BlockAction[] => {
 
     switch (blockType) {
         case 'details':
-            // Add background option for details
             actions.splice(0, 0, { id: 'background', label: 'Background', icon: 'palette', action: 'background' });
+            actions.splice(0, 0, { id: 'copyLink', label: 'Copy Link', icon: 'link', action: 'copyLink' });
             break;
         case 'codeBlock':
             actions.splice(0, 0, { id: 'language', label: 'Language', icon: 'code', action: 'language' });
@@ -228,6 +228,7 @@ export function ToolbarPopup(props: ToolbarPopupProps) {
                     <HeadingSelector
                         currentLevel={(props as HeadingPopupProps).currentLevel}
                         onSelect={(props as HeadingPopupProps).onSelect}
+                        onCopyLink={(props as HeadingPopupProps).onCopyLink}
                     />
                 );
             case 'highlight':

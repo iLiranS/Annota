@@ -6,9 +6,10 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 interface HeadingSelectorProps {
     currentLevel: HeadingLevel | null;
     onSelect: (level: HeadingLevel) => void;
+    onCopyLink?: () => void;
 }
 
-export function HeadingSelector({ currentLevel, onSelect }: HeadingSelectorProps) {
+export function HeadingSelector({ currentLevel, onSelect, onCopyLink }: HeadingSelectorProps) {
     const { colors, dark } = useTheme();
 
     return (
@@ -37,6 +38,22 @@ export function HeadingSelector({ currentLevel, onSelect }: HeadingSelectorProps
                     </Pressable>
                 ))}
             </View>
+
+            {onCopyLink && (
+                <View style={{ marginTop: 8 }}>
+                    <Pressable
+                        style={[
+                            styles.copyLinkButton,
+                            { backgroundColor: dark ? '#3A3A3C' : '#E5E5EA' },
+                        ]}
+                        onPress={onCopyLink}
+                    >
+                        <Text style={[styles.copyLinkText, { color: colors.text }]}>
+                            Copy Heading Link
+                        </Text>
+                    </Pressable>
+                </View>
+            )}
         </View>
     );
 }
@@ -66,5 +83,15 @@ const styles = StyleSheet.create({
     },
     headingText: {
         fontWeight: '600',
+    },
+    copyLinkButton: {
+        padding: 12,
+        borderRadius: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    copyLinkText: {
+        fontSize: 16,
+        fontWeight: '500',
     },
 });

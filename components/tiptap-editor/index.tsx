@@ -6,11 +6,12 @@ import * as ExpoClipboard from 'expo-clipboard';
 import { Directory, File as ExpoFile, Paths } from 'expo-file-system';
 import * as LegacyFileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
+import { router } from 'expo-router';
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { Keyboard, Modal, Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Keyboard, Linking, Modal, Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
-import editorHtml from './assets/editor-html';
+import editorHtml from '../../editor-web/dist/editor-html';
 import { ImageGallery } from './image-gallery';
 import { EditorToolbar } from './toolbar';
 import { EditorState, initialEditorState, PopupType, TipTapEditorProps, TipTapEditorRef } from './types';
@@ -51,7 +52,7 @@ function parsePastedImageData(payload: string): { base64: string; extension: str
 }
 
 const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
-    ({ initialContent = '', onContentChange, placeholder = 'Start typing...', autofocus = false, onSearchResults, contentPaddingTop = 0, onGalleryVisibilityChange, editable = true, noteId }, ref) => {
+    ({ initialContent = '', onContentChange, placeholder = 'Start typing...', autofocus = false, onSearchResults, contentPaddingTop = 0, onGalleryVisibilityChange, editable = true, noteId, onCopyBlockLink }, ref) => {
         const { colors, dark } = useAppTheme();
         const { editor: editorSettings } = useSettingsStore();
         const webViewRef = useRef<WebView>(null);
@@ -68,6 +69,9 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
         const [tempBlockData, setTempBlockData] = useState<any>(null); // Data for valid block menu
         const [currentLatex, setCurrentLatex] = useState<string | null>(null);
         const contentResolverRef = useRef<((html: string) => void) | null>(null);
+        const isReadyRef = useRef(false);
+        const queuedCommandsRef = useRef<Array<{ command: string; params: Record<string, unknown> }>>([]);
+        const lastInternalLinkRef = useRef<{ href: string; ts: number } | null>(null);
         const { keyboardHeight } = useKeyboard();
         const insets = useSafeAreaInsets();
         const { width, height } = useWindowDimensions();
@@ -79,7 +83,7 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
 
 
 
-        const sendCommand = useCallback(
+        const injectCommand = useCallback(
             (command: string, params: Record<string, unknown> = {}) => {
                 if (!webViewRef.current) return;
                 const paramsStr = JSON.stringify(params).replace(/'/g, "\\'");
@@ -87,6 +91,29 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
                 webViewRef.current.injectJavaScript(js);
             },
             []
+        );
+
+        const flushQueuedCommands = useCallback(() => {
+            if (!isReadyRef.current || queuedCommandsRef.current.length === 0) return;
+            const pending = queuedCommandsRef.current;
+            queuedCommandsRef.current = [];
+            pending.forEach(({ command, params }) => {
+                injectCommand(command, params);
+            });
+        }, [injectCommand]);
+
+        const sendCommand = useCallback(
+            (command: string, params: Record<string, unknown> = {}) => {
+                if (!webViewRef.current) return;
+
+                if (!isReadyRef.current && command !== 'setOptions') {
+                    queuedCommandsRef.current.push({ command, params });
+                    return;
+                }
+
+                injectCommand(command, params);
+            },
+            [injectCommand]
         );
 
         useImperativeHandle(
@@ -126,6 +153,9 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
                 clearSearch: () => {
                     sendCommand('clearSearch');
                 },
+                scrollToElement: (id: string) => {
+                    sendCommand('scrollToElement', { id });
+                },
             }),
             [sendCommand]
         );
@@ -137,6 +167,7 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
 
                     switch (data.type) {
                         case 'ready':
+                            isReadyRef.current = true;
                             setIsReady(true);
                             sendCommand('setOptions', {
                                 isDark: dark,
@@ -158,6 +189,7 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
                                     }
                                 });
                             }
+                            flushQueuedCommands();
                             break;
                         case 'content': {
                             // Content updated
@@ -283,12 +315,84 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
                             // Forward search results to parent component
                             onSearchResults?.(data.count, data.currentIndex);
                             break;
+                        case 'copyBlockLink':
+                            if (data.id && onCopyBlockLink) {
+                                onCopyBlockLink(data.id);
+                            }
+                            break;
+                        case 'openLink':
+                            if (data.href) {
+                                // Link taps should never leave the editor focused / keyboard open.
+                                sendCommand('blur');
+                                Keyboard.dismiss();
+                                setIsKeyboardVisible(false);
+
+                                if (data.href.startsWith('annota://note/')) {
+                                    try {
+                                        const now = Date.now();
+                                        const lastLink = lastInternalLinkRef.current;
+                                        if (lastLink && lastLink.href === data.href && now - lastLink.ts < 350) {
+                                            break;
+                                        }
+                                        lastInternalLinkRef.current = { href: data.href, ts: now };
+
+                                        const parsedUrl = new URL(data.href);
+                                        const targetNoteId = decodeURIComponent(parsedUrl.pathname.replace(/^\//, ''));
+                                        const elementId = parsedUrl.searchParams.get('elementId');
+
+                                        if (noteId && targetNoteId === noteId) {
+                                            sendCommand('blur');
+                                            Keyboard.dismiss();
+                                            if (elementId) {
+                                                sendCommand('scrollToElement', { id: elementId });
+                                            }
+                                            break;
+                                        }
+
+                                        router.push({
+                                            pathname: '/Notes/[id]',
+                                            params: {
+                                                id: targetNoteId,
+                                                source: 'link',
+                                                ...(elementId ? { scrollToElementId: elementId } : {})
+                                            }
+                                        });
+                                    } catch (err) {
+                                        console.warn('Failed to parse internal deep link:', err);
+                                    }
+                                } else {
+                                    // Make sure it's a valid external URL
+                                    let url = data.href;
+                                    if (!url.startsWith('http')) {
+                                        url = 'https://' + url;
+                                    }
+                                    Linking.openURL(url);
+                                }
+                            }
+                            break;
                     }
                 } catch (e) {
                     console.warn('Failed to parse WebView message:', e);
                 }
             },
-            [onContentChange, onSearchResults, dark, colors, initialContent, placeholder, autofocus, sendCommand]
+            [
+                onContentChange,
+                onSearchResults,
+                dark,
+                colors,
+                initialContent,
+                placeholder,
+                autofocus,
+                contentPaddingTop,
+                editorSettings.direction,
+                editorSettings.fontFamily,
+                editable,
+                noteId,
+                onGalleryVisibilityChange,
+                onCopyBlockLink,
+                sendCommand,
+                flushQueuedCommands,
+            ]
         );
 
         useEffect(() => {
@@ -460,6 +564,31 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
                     allowsInlineMediaPlayback={true}
                     mixedContentMode="always"
                     contentInsetAdjustmentBehavior="never"
+                    onShouldStartLoadWithRequest={(request) => {
+                        const { url } = request;
+                        // Never allow WebView to handle app deep links or external links.
+                        // We route these through the React Native bridge.
+                        if (url.startsWith('annota://')) {
+                            return false;
+                        }
+
+                        if (url.startsWith('about:blank')) {
+                            return true;
+                        }
+
+                        try {
+                            const requestOrigin = new URL(url).origin;
+                            const appOrigin = 'https://app.local';
+                            const devOrigin = useDevEditor ? new URL(devEditorUrl).origin : null;
+                            if (requestOrigin === appOrigin || (devOrigin && requestOrigin === devOrigin)) {
+                                return true;
+                            }
+                        } catch {
+                            // Block malformed or unsupported URLs by default.
+                        }
+
+                        return false;
+                    }}
                     onError={(syntheticEvent) => {
                         const { nativeEvent } = syntheticEvent;
                         console.warn('WebView error: ', nativeEvent);
@@ -558,4 +687,3 @@ const styles = StyleSheet.create({
 export default TipTapEditor;
 export type { TipTapEditorProps, TipTapEditorRef } from './types';
 export { TipTapEditor };
-

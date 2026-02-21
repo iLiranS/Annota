@@ -7,10 +7,12 @@ import { useNotesStore } from '@/stores/notes-store';
 import { useSettingsStore } from '@/stores/settings-store';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
+import * as ExpoClipboard from 'expo-clipboard';
 import { Stack, useFocusEffect, useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
+    Alert,
     Platform,
     StyleSheet,
     Text,
@@ -26,7 +28,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 
 export default function NoteEditor() {
-    const { id, source } = useLocalSearchParams<{ id: string, source: string }>();
+    const { id, source, scrollToElementId } = useLocalSearchParams<{ id: string, source: string, scrollToElementId?: string }>();
     const { colors } = useTheme();
     const router = useRouter();
     const navigation = useNavigation();
@@ -42,8 +44,8 @@ export default function NoteEditor() {
     const currentNote = id ? getNoteById(id) : undefined;
 
     // Lazy-loaded content state
-    const [content, setContent] = useState<string | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+    const [content, setContent] = useState<string | null>(() => (id ? getNoteContent(id) : null));
+    const [isLoading, setIsLoading] = useState(() => !id);
 
     // Track the current title for the header (updates as user types)
     const [displayTitle, setDisplayTitle] = useState(currentNote?.title || 'Untitled Note');
@@ -56,6 +58,8 @@ export default function NoteEditor() {
 
     // Gallery visibility — hide header when gallery is open
     const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+    const pendingScrollElementIdRef = useRef<string | null>(null);
+    const shouldAutofocus = source === 'new' && (!content || content === '<p></p>');
 
     // Load content from database on mount
     useEffect(() => {
@@ -63,8 +67,45 @@ export default function NoteEditor() {
             const loadedContent = getNoteContent(id);
             setContent(loadedContent);
             setIsLoading(false);
+            pendingScrollElementIdRef.current = scrollToElementId ?? null;
+        } else {
+            setContent(null);
+            setIsLoading(false);
+            pendingScrollElementIdRef.current = null;
         }
-    }, [id, getNoteContent]);
+    }, [id, getNoteContent, scrollToElementId]);
+
+    useEffect(() => {
+        if (isLoading || !pendingScrollElementIdRef.current) return;
+
+        let cancelled = false;
+        let attempts = 0;
+        const maxAttempts = 60; // ~1s at 60fps
+
+        const tryScroll = () => {
+            if (cancelled || !pendingScrollElementIdRef.current) return;
+
+            const editor = editorRef.current;
+            if (editor) {
+                editor.scrollToElement(pendingScrollElementIdRef.current);
+                pendingScrollElementIdRef.current = null;
+                return;
+            }
+
+            attempts += 1;
+            if (attempts < maxAttempts) {
+                requestAnimationFrame(tryScroll);
+            } else {
+                // Element-specific scroll can't run without editor; drop back to note top behavior.
+                pendingScrollElementIdRef.current = null;
+            }
+        };
+
+        requestAnimationFrame(tryScroll);
+        return () => {
+            cancelled = true;
+        };
+    }, [isLoading]);
 
     // Disable drawer swipe gesture when editor is open
     useFocusEffect(
@@ -170,6 +211,24 @@ export default function NoteEditor() {
         updateNoteMetadata(id, { isPinned: value });
     }, [id, updateNoteMetadata]);
 
+    const handleCopyLink = useCallback(async () => {
+        if (!id) return;
+        const link = `annota://note/${id}`;
+        await ExpoClipboard.setStringAsync(link);
+        setTimeout(() => {
+            Alert.alert('Link Copied!', 'The link to this note has been copied to your clipboard.');
+        }, 500);
+    }, [id]);
+
+    const handleCopyBlockLink = useCallback(async (elementId: string) => {
+        if (!id) return;
+        const link = `annota://note/${id}?elementId=${elementId}`;
+        await ExpoClipboard.setStringAsync(link);
+        setTimeout(() => {
+            Alert.alert('Block Link Copied!', 'The link to this specific block has been copied to your clipboard.');
+        }, 500);
+    }, [id]);
+
     // Handle case where note doesn't exist
     if (!currentNote) {
         return (
@@ -261,6 +320,7 @@ export default function NoteEditor() {
                             onTogglePin={handleTogglePin}
                             onToggleQuickAccess={handleToggleQuickAccess}
                             onVersionHistory={handleVersionHistory}
+                            onCopyLink={handleCopyLink}
                         />
                     ),
                 }}
@@ -293,8 +353,9 @@ export default function NoteEditor() {
                         onSearchResults={handleSearchResults}
                         contentPaddingTop={general.floatingNoteHeader ? insets.top + 44 : 0}
                         placeholder="Start typing your note..."
-                        autofocus={!content || content === '<p></p>'}
+                        autofocus={shouldAutofocus}
                         onGalleryVisibilityChange={setIsGalleryOpen}
+                        onCopyBlockLink={handleCopyBlockLink}
                     />
                 </View>
             )}

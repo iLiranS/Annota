@@ -269,6 +269,10 @@ export function EditorToolbar({
                         onCommand('toggleHeading', { level });
                         closePopup();
                     }}
+                    onCopyLink={editorState.currentHeadingId ? () => {
+                        onCommand('copyBlockLink', { id: editorState.currentHeadingId });
+                        closePopup();
+                    } : undefined}
                     onClose={closePopup}
                 />
             )}
@@ -446,6 +450,10 @@ export function EditorToolbar({
                                 break;
                             case 'language':
                                 openPopup('codeLanguage');
+                                break;
+                            case 'copyLink':
+                                onCommand('copyBlockLink', { id: data.id });
+                                closePopup();
                                 break;
                         }
                     }}

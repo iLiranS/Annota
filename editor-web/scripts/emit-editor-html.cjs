@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const inputPath = path.resolve(__dirname, '../dist/index.html');
-const outputPath = path.resolve(__dirname, '../../components/tiptap-editor/assets/editor-html.ts');
+const outputPath = path.resolve(__dirname, '../dist/editor-html.ts');
 
 if (!fs.existsSync(inputPath)) {
   console.error(`Editor HTML not found at ${inputPath}. Run "npm run build" first.`);

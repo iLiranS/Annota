@@ -3,6 +3,7 @@ import { Details as TiptapDetails, DetailsContent as TiptapDetailsContent, Detai
 import { Slice } from '@tiptap/pm/model';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { createBlockMenuButton } from './block-menu-button';
+import { generateBlockId } from './id-generator';
 
 /** Strip the `dir` attribute so details nodes inherit direction from the editor root */
 function stripDir(attrs: Record<string, any>): Record<string, any> {
@@ -43,6 +44,16 @@ export const Details = TiptapDetails.extend({
     addAttributes() {
         return {
             ...this.parent?.(),
+            id: {
+                default: null,
+                parseHTML: element => element.getAttribute('data-id'),
+                renderHTML: attributes => {
+                    if (!attributes.id) {
+                        return {};
+                    }
+                    return { 'data-id': attributes.id };
+                },
+            },
             open: {
                 default: true,
                 parseHTML: element => {
@@ -151,7 +162,30 @@ export const Details = TiptapDetails.extend({
                         return true; // Handled
                     }
                 }
-            })
+            }),
+            new Plugin({
+                key: new PluginKey('detailsIdPlugin'),
+                appendTransaction: (transactions, oldState, newState) => {
+                    const docChanges = transactions.some(transaction => transaction.docChanged) && !oldState.doc.eq(newState.doc);
+                    if (!docChanges) {
+                        return;
+                    }
+
+                    const tr = newState.tr;
+                    let modified = false;
+
+                    newState.doc.descendants((node, pos) => {
+                        if (node.type.name === 'details' && !node.attrs.id) {
+                            tr.setNodeMarkup(pos, undefined, { ...node.attrs, id: generateBlockId() });
+                            modified = true;
+                        }
+                    });
+
+                    if (modified) {
+                        return tr;
+                    }
+                },
+            }),
         ];
     },
 
@@ -207,11 +241,14 @@ export const DetailsSummary = TiptapDetailsSummary.extend({
                             type: 'openBlockMenu',
                             blockType: 'details',
                             currentColor: parentDetails?.attrs.backgroundColor,
+                            id: parentDetails?.attrs.id || HTMLAttributes.id,
                             pos: targetPos,
                         },
                     };
                 },
             });
+
+            // ID is now generated via ProseMirror plugin!
 
             dom.appendChild(content);
             dom.appendChild(menuBtn);

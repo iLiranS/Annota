@@ -14,7 +14,7 @@ import { StarterKit } from '@tiptap/starter-kit';
 
 import { Mathematics, migrateMathStrings } from '@tiptap/extension-mathematics';
 import { loadingEl, sendMessage, showError } from './bridge';
-import { CustomCodeBlock, CustomImage, CustomTableCell, CustomTableHeader, Details, DetailsContent, DetailsSummary, SearchExtension } from './extensions';
+import { CustomCodeBlock, CustomHeading, CustomImage, CustomTableCell, CustomTableHeader, Details, DetailsContent, DetailsSummary, SearchExtension } from './extensions';
 import { hexToRgba } from './utils';
 
 import './types';
@@ -102,6 +102,7 @@ export function getEditorState() {
 
     const { from, to } = e.state.selection;
     const selectedText = from !== to ? e.state.doc.textBetween(from, to, ' ') : '';
+    const headingAttrs = e.isActive('heading') ? e.getAttributes('heading') : null;
 
     return {
         isBold: e.isActive('bold'),
@@ -123,6 +124,8 @@ export function getEditorState() {
         isHeading4: e.isActive('heading', { level: 4 }),
         isHeading5: e.isActive('heading', { level: 5 }),
         isHeading6: e.isActive('heading', { level: 6 }),
+        currentHeadingLevel: headingAttrs?.level ?? null,
+        currentHeadingId: headingAttrs?.id ?? null,
         isLink: e.isActive('link'),
         linkHref: linkAttrs.href || null,
         selectedText,
@@ -279,13 +282,15 @@ export function setupEditor(options: any) {
             },
             extensions: [
                 StarterKit.configure({
-                    heading: { levels: [1, 2, 3, 4, 5, 6] },
+                    heading: false,
                     codeBlock: false,
                 }),
+                CustomHeading.configure({ levels: [1, 2, 3, 4, 5, 6] }),
                 Underline,
                 Placeholder.configure({ placeholder }),
                 Link.configure({
                     openOnClick: false,
+                    protocols: ['http', 'https', 'mailto', 'tel', 'annota'],
                     HTMLAttributes: { rel: 'noopener noreferrer' },
                 }),
                 Highlight.configure({ multicolor: true }),
@@ -348,7 +353,7 @@ export function setupEditor(options: any) {
             onCreate: function ({ editor }) {
                 migrateMathStrings(editor);
                 if (editor.isEmpty) {
-                    if (typeof editor.chain === 'function') {
+                    if (autofocus && typeof editor.chain === 'function') {
                         editor.chain()
                             .focus()
                             .toggleHeading({ level: 2 })

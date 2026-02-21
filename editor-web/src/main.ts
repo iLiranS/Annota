@@ -13,15 +13,68 @@ setupCommands();
 setupImageUpdater();
 setupImageResolver();
 
+let lastLinkDispatch: { href: string; ts: number } | null = null;
+let suppressFocusUntil = 0;
+
+function dispatchOpenLink(href: string) {
+    const now = Date.now();
+    if (lastLinkDispatch && lastLinkDispatch.href === href && now - lastLinkDispatch.ts < 500) {
+        return;
+    }
+    lastLinkDispatch = { href, ts: now };
+    sendMessage({ type: 'openLink', href });
+}
+
+function blurEditorForLinkInteraction() {
+    const editor = (window as any).editor;
+    if (!editor) return;
+
+    try {
+        editor.commands.blur();
+        if (editor.view?.dom instanceof HTMLElement) {
+            editor.view.dom.blur();
+        }
+    } catch {
+        // Ignore transient blur failures.
+    }
+}
+
+function handleLinkInteractionStart(e: Event) {
+    const target = e.target as HTMLElement | null;
+    if (!target) return;
+
+    const link = target.closest('a') as HTMLAnchorElement | null;
+    if (!link?.href) return;
+
+    if ('button' in e && typeof (e as PointerEvent).button === 'number' && (e as PointerEvent).button !== 0) {
+        return;
+    }
+
+    // Prevent ProseMirror handlers from selecting/focusing while still allowing natural scrolling.
+    e.stopPropagation();
+    suppressFocusUntil = Date.now() + 800;
+    blurEditorForLinkInteraction();
+}
+
+editorEl.addEventListener('pointerdown', handleLinkInteractionStart, true);
+editorEl.addEventListener('touchstart', handleLinkInteractionStart, { capture: true, passive: false });
+editorEl.addEventListener('mousedown', handleLinkInteractionStart, true);
+editorEl.addEventListener('focusin', function (e) {
+    if (Date.now() <= suppressFocusUntil) {
+        e.stopPropagation();
+        blurEditorForLinkInteraction();
+    }
+}, true);
+
 editorEl.addEventListener('click', function (e) {
     const target = e.target as HTMLElement;
 
     // Handle link clicks
-    const link = target.closest('a');
-    if (link && (link as HTMLAnchorElement).href) {
+    const link = target.closest('a') as HTMLAnchorElement | null;
+    if (link?.href) {
         e.preventDefault();
         e.stopPropagation();
-        sendMessage({ type: 'openLink', href: (link as HTMLAnchorElement).href });
+        dispatchOpenLink(link.href);
         return;
     }
 });

@@ -133,7 +133,7 @@ export default function HomeScreen() {
 
   const handleCreateNote = useCallback(async () => {
     const newNote = await createNote({});
-    router.push({ pathname: '/Notes/[id]', params: { id: newNote.id } });
+    router.push({ pathname: '/Notes/[id]', params: { id: newNote.id, source: 'new' } });
   }, [createNote, router]);
 
   return (

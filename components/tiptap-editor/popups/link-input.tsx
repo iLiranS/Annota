@@ -5,8 +5,8 @@ import { Controller, useForm } from 'react-hook-form';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { z } from 'zod';
 
-// More strict URL regex requiring a proper TLD (e.g., .com, .net, .co.uk)
-const urlRegex = /^(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{2,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/;
+// Allow any valid HTTP/HTTPS URL, including annota.app with deep link paths
+const urlRegex = /^(https?:\/\/)?[-a-zA-Z0-9@:%._\+~#=]{1,256}(\.[a-zA-Z0-9()]{2,6})?\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/;
 
 const linkSchema = z.object({
     url: z.string().min(1, 'URL is required').refine(val => {
