@@ -48,6 +48,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (dbReady) {
+
       // Initialize store (load all data into memory)
       const { useNotesStore } = require('@/stores/notes-store');
       const { useTasksStore } = require('@/stores/tasks-store');
@@ -159,8 +160,8 @@ export default function RootLayout() {
       <ThemeProvider value={theme}>
 
         <Stack>
-          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-          <Stack.Screen name="(drawer)" options={{ headerShown: false }} />
+          <Stack.Screen name="(auth)" options={{ headerShown: false, gestureEnabled: false }} />
+          <Stack.Screen name="(drawer)" options={{ headerShown: false, gestureEnabled: false }} />
           <Stack.Screen name="modal" options={{ headerShown: false, presentation: 'modal', title: 'Modal' }} />
           <Stack.Screen name="settings" options={{ headerShown: false, presentation: 'modal', title: 'Settings' }} />
           <Stack.Screen name="Tasks/[id]/index" options={{ headerShown: true, presentation: 'modal', title: 'Edit Task' }} />

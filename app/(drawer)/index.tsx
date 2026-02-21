@@ -6,6 +6,7 @@ import { ThemedView } from '@/components/themed-view';
 import { HapticPressable } from '@/components/ui/haptic-pressable';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { useAuthStore } from '@/stores/auth-store';
+import { useNotesStore } from '@/stores/notes-store';
 import { useSettingsStore } from '@/stores/settings-store';
 import { useTasksStore, type Task } from '@/stores/tasks-store';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,8 +29,9 @@ export default function HomeScreen() {
 
   const [selectedDate, setSelectedDate] = useState(new Date());
 
-  // Use Zustand store for tasks
+  // Use Zustand stores
   const { tasks, loadTasks } = useTasksStore();
+  const { createNote } = useNotesStore();
 
 
   // Load tasks from database on mount
@@ -128,6 +130,11 @@ export default function HomeScreen() {
   const handleTaskPress = useCallback((task: Task) => {
     router.push(`/Tasks/${task.id}`);
   }, [router]);
+
+  const handleCreateNote = useCallback(async () => {
+    const newNote = await createNote({});
+    router.push({ pathname: '/Notes/[id]', params: { id: newNote.id } });
+  }, [createNote, router]);
 
   return (
     <ThemedView style={styles.container}>
@@ -313,7 +320,24 @@ export default function HomeScreen() {
                 )}
               </View>
             ) : (
-              <RecentNotes />
+              <View>
+                {/* Recent Notes Header */}
+                <View style={styles.tasksSectionHeader}>
+                  <ThemedText style={[styles.tasksSectionTitle, { color: colors.text + '80' }]}>Recent Notes</ThemedText>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginLeft: 'auto' }}>
+                    <Pressable
+                      onPress={handleCreateNote}
+                      style={({ pressed }) => [
+                        styles.addTaskButton,
+                        { backgroundColor: colors.primary + '90', opacity: pressed ? 0.8 : 1 }
+                      ]}
+                    >
+                      <Ionicons name="add" size={20} color="#FFFFFF" />
+                    </Pressable>
+                  </View>
+                </View>
+                <RecentNotes />
+              </View>
             )}
           </View>
         )}

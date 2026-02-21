@@ -46,7 +46,7 @@ export function seedSystemData(db: DbType): void {
             id: DAILY_NOTES_FOLDER_ID,
             name: 'Daily Notes',
             icon: 'calendar',
-            color: '#F59E0B', // Amber color for daily notes
+            color: '#8B5CF6', // Amber color for daily notes
             parentId: null,
             isSystem: true,
             isDeleted: false,

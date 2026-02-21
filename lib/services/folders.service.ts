@@ -1,7 +1,8 @@
-import { db, schema } from '@/lib/db/client';
+import { schema } from '@/lib/db/client';
 import * as foldersRepo from '@/lib/db/repositories/folders.repository';
 import * as notesRepo from '@/lib/db/repositories/notes.repository';
 import type { Folder, FolderInsert } from '@/lib/db/schema';
+import { getDb } from '@/stores/db-store';
 import { eq, inArray, sql } from 'drizzle-orm';
 import { generateFolder } from '../utils/folders';
 import { NoteImageService } from './images';
@@ -48,7 +49,7 @@ export const FolderService = {
         const allIdsToProcess = [folderId, ...allDescendantIds];
 
         // Use transaction with efficient bulk queries
-        await db.transaction(async (tx) => {
+        await getDb().transaction(async (tx) => {
             // 1. Update ROOT folder: Move to trash, mark deleted, save original parent
             tx.update(schema.folders)
                 .set({
@@ -103,7 +104,7 @@ export const FolderService = {
             }
         }
 
-        await db.transaction(async (tx) => {
+        await getDb().transaction(async (tx) => {
             // 1. Restore ROOT folder
             tx.update(schema.folders)
                 .set({
@@ -142,7 +143,7 @@ export const FolderService = {
         const allDescendantIds = foldersRepo.getAllDescendantFolderIds(folderId);
         const allFolderIds = [folderId, ...allDescendantIds];
 
-        await db.transaction(async (tx) => {
+        await getDb().transaction(async (tx) => {
             // 1. Delete Notes
             notesRepo.permanentlyDeleteNotesInFolders(allFolderIds, tx);
 
@@ -161,7 +162,7 @@ export const FolderService = {
             }
 
             // 2. Delete notes and folders
-            await db.transaction(async (tx) => {
+            await getDb().transaction(async (tx) => {
                 notesRepo.permanentlyDeleteDeletedNotes(tx);
                 foldersRepo.deleteDeletedFolders(tx);
             });

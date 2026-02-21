@@ -137,7 +137,7 @@ export function initDatabase(expoDb: SQLiteDatabase, drizzleDb: DbType): void {
 
         // Update system folders with their specific colors
         expoDb.execSync(`UPDATE folders SET color = '#EF4444' WHERE id = 'system-trash'`);
-        expoDb.execSync(`UPDATE folders SET color = '#F59E0B' WHERE id = 'system-daily-notes'`);
+        expoDb.execSync(`UPDATE folders SET color = '#8B5CF6' WHERE id = 'system-daily-notes'`);
 
         console.log('Migration complete: color column added');
       }

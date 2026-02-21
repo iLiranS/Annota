@@ -246,21 +246,21 @@ export default function Sidebar(props: DrawerContentComponentProps) {
                         icon="home"
                         label="Home"
                         onPress={navigateToHome}
-                        iconColor={'#4F7DF3'}
+                        iconColor={'#6366F1'}
                     />
 
                     <SidebarItem
                         icon="checkmark-circle"
                         label="Tasks"
                         onPress={navigateToTasks}
-                        iconColor={'#2ECC71'}
+                        iconColor={'#10B981'}
                     />
 
                     <SidebarItem
                         icon={(folders.find(f => f.id === DAILY_NOTES_FOLDER_ID)?.icon as keyof typeof Ionicons.glyphMap) || "calendar"}
                         label={"Daily Note"}
                         onPress={navigateToDailyNote}
-                        iconColor={folders.find(f => f.id === DAILY_NOTES_FOLDER_ID)?.color || '#F59E0B'}
+                        iconColor={folders.find(f => f.id === DAILY_NOTES_FOLDER_ID)?.color || '#8B5CF6'}
                     />
 
                     <Pressable
@@ -305,10 +305,7 @@ export default function Sidebar(props: DrawerContentComponentProps) {
                                         }}
                                         style={({ pressed }) => [
                                             styles.quickAccessItem,
-                                            pressed && {
-                                                backgroundColor: colors.primary + '15',
-                                                opacity: 0.7
-                                            }
+                                            pressed && { opacity: 0.7 }
                                         ]}
                                     >
                                         <Ionicons name="document-text-outline" size={16} color={colors.primary} />
@@ -331,7 +328,7 @@ export default function Sidebar(props: DrawerContentComponentProps) {
                     <SidebarItem
                         icon="documents"
                         label="All Notes"
-                        iconColor='#559bd8ff'
+                        iconColor={colors.primary}
                         onPress={() => navigateToNotes()}
                     />
 
@@ -360,12 +357,24 @@ export default function Sidebar(props: DrawerContentComponentProps) {
 
             {/* Footer Section */}
             <View style={[styles.footer, { paddingBottom: insets.bottom + 16, borderTopColor: colors.border }]}>
-                <HapticPressable onPress={navigateToTrash} style={styles.footerItem}>
+                <HapticPressable
+                    onPress={navigateToTrash}
+                    style={({ pressed }) => [
+                        styles.footerItem,
+                        pressed && { opacity: 0.7 }
+                    ]}
+                >
                     <Ionicons name="trash-outline" size={22} color={colors.text} />
                     <Text style={[styles.footerText, { color: colors.text }]}>Trash</Text>
                 </HapticPressable>
 
-                <HapticPressable onPress={navigateToSettings} style={styles.iconButton}>
+                <HapticPressable
+                    onPress={navigateToSettings}
+                    style={({ pressed }) => [
+                        styles.iconButton,
+                        pressed && { opacity: 0.7 }
+                    ]}
+                >
                     <Ionicons name="settings-outline" size={24} color={colors.text} />
                 </HapticPressable>
             </View>
