@@ -124,7 +124,11 @@ export default function NoteHeaderMenu({
 
     const handleExport = () => {
         handleClose();
-        onExport?.();
+        if (onExport) {
+            onExport();
+        } else {
+            router.push(`/Notes/${noteId}/export`);
+        }
     };
 
     const handleSettings = () => {
