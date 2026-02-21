@@ -9,11 +9,11 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
 import { useAppTheme } from '@/hooks/use-app-theme'; // USe our new hook
-import { initDatabase } from '@/lib/db/client';
 import { supabase } from '@/lib/supabase';
 import { syncPull, syncPush } from '@/lib/sync/sync-service';
 import { getMasterKey } from '@/lib/utils/crypto';
 import { useAuthStore } from '@/stores/auth-store';
+import { useDbStore } from '@/stores/db-store';
 
 export const unstable_settings = {
   anchor: '(drawer)',
@@ -21,7 +21,9 @@ export const unstable_settings = {
 
 export default function RootLayout() {
   const theme = useAppTheme(); // Get the calculated theme
-  const [dbReady, setDbReady] = useState(false);
+  const { initialized, session, user, isGuest, setSession } = useAuthStore();
+  const dbReady = useDbStore(state => state.isReady);
+  const initDB = useDbStore(state => state.initDB);
   const [dbError, setDbError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -29,25 +31,30 @@ export default function RootLayout() {
   }, [theme.colors.background]);
 
   useEffect(() => {
-    async function setupApp() {
-      try {
-        initDatabase();
-        // await resetAll(); // TODO: Comment this out after first run to stop resetting DB
+    if (!initialized) return;
 
-        // Initialize store (load all data into memory)
-        const { useNotesStore } = require('@/stores/notes-store');
-        useNotesStore.getState().initApp();
-
-        setDbReady(true);
-      } catch (error) {
-        console.error('Database initialization failed:', error);
-        setDbError(error instanceof Error ? error.message : 'Unknown error');
+    try {
+      if (user) {
+        initDB(user.id);
+      } else {
+        // Fallback to guest DB for unauthenticated users (so the app can render the Auth screen)
+        // Without this, dbReady stays false forever.
+        initDB(null);
       }
+    } catch (e) {
+      setDbError(e instanceof Error ? e.message : 'Unknown error');
     }
-    setupApp();
-  }, []);
+  }, [initialized, user?.id]);
 
-  const { initialized, session, isGuest, setSession } = useAuthStore();
+  useEffect(() => {
+    if (dbReady) {
+      // Initialize store (load all data into memory)
+      const { useNotesStore } = require('@/stores/notes-store');
+      const { useTasksStore } = require('@/stores/tasks-store');
+      useNotesStore.getState().initApp();
+      useTasksStore.getState().loadTasks();
+    }
+  }, [dbReady, user?.id, isGuest]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {

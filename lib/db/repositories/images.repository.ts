@@ -1,5 +1,6 @@
+import { getDb } from '@/stores/db-store';
 import { and, eq, inArray, sql } from 'drizzle-orm';
-import { db, DbOrTx } from '../client';
+import { DbOrTx } from '../client';
 import type { ImageInsert, ImageRecord } from '../schema';
 import { images, noteVersions, versionImages } from '../schema';
 
@@ -7,26 +8,26 @@ export type { ImageRecord } from '../schema';
 
 // ============ IMAGE OPERATIONS ============
 
-export function getImageById(imageId: string, tx: DbOrTx = db): ImageRecord | null {
+export function getImageById(imageId: string, tx: DbOrTx = getDb()): ImageRecord | null {
     const result = tx.select().from(images).where(eq(images.id, imageId)).get();
     return result ?? null;
 }
 
-export function getImageByHash(hash: string, tx: DbOrTx = db): ImageRecord | null {
+export function getImageByHash(hash: string, tx: DbOrTx = getDb()): ImageRecord | null {
     const result = tx.select().from(images).where(eq(images.hash, hash)).get();
     return result ?? null;
 }
 
-export function getImagesByIds(ids: string[], tx: DbOrTx = db): ImageRecord[] {
+export function getImagesByIds(ids: string[], tx: DbOrTx = getDb()): ImageRecord[] {
     if (ids.length === 0) return [];
     return tx.select().from(images).where(inArray(images.id, ids)).all();
 }
 
-export function insertImage(data: ImageInsert, tx: DbOrTx = db): ImageRecord {
+export function insertImage(data: ImageInsert, tx: DbOrTx = getDb()): ImageRecord {
     return tx.insert(images).values(data).returning().get();
 }
 
-export function deleteImage(imageId: string, tx: DbOrTx = db): void {
+export function deleteImage(imageId: string, tx: DbOrTx = getDb()): void {
     tx.delete(images).where(eq(images.id, imageId)).run();
 }
 
@@ -35,7 +36,7 @@ export function deleteImage(imageId: string, tx: DbOrTx = db): void {
 /**
  * atomic update of images for a version
  */
-export function setImagesForVersion(versionId: string, imageIds: string[], tx: DbOrTx = db): void {
+export function setImagesForVersion(versionId: string, imageIds: string[], tx: DbOrTx = getDb()): void {
     // 1. Delete existing associations for this version
     tx.delete(versionImages).where(eq(versionImages.versionId, versionId)).run();
 
@@ -48,12 +49,12 @@ export function setImagesForVersion(versionId: string, imageIds: string[], tx: D
     }
 }
 
-export function deleteImagesForVersions(versionIds: string[], tx: DbOrTx = db): void {
+export function deleteImagesForVersions(versionIds: string[], tx: DbOrTx = getDb()): void {
     if (versionIds.length === 0) return;
     tx.delete(versionImages).where(inArray(versionImages.versionId, versionIds)).run();
 }
 
-export function countImageReferences(imageId: string, tx: DbOrTx = db): number {
+export function countImageReferences(imageId: string, tx: DbOrTx = getDb()): number {
     const result = tx
         .select({ count: sql<number>`count(*)` })
         .from(versionImages)
@@ -63,7 +64,7 @@ export function countImageReferences(imageId: string, tx: DbOrTx = db): number {
 }
 
 // ============ GC OPERATIONS ============
-export function getImageIdsForVersions(versionIds: string[], tx: DbOrTx = db): string[] {
+export function getImageIdsForVersions(versionIds: string[], tx: DbOrTx = getDb()): string[] {
     if (versionIds.length === 0) return [];
     return tx.select({ imageId: versionImages.imageId })
         .from(versionImages)
@@ -76,7 +77,7 @@ export function getImageIdsForVersions(versionIds: string[], tx: DbOrTx = db): s
  * Garbage Collection: Delete images that are not referenced by ANY version
  * and are older than 5 minutes (to avoid race conditions with new uploads).
  */
-export function deleteUnreferencedImages(tx: DbOrTx = db, ignoreTimeBuffer = false): string[] {
+export function deleteUnreferencedImages(tx: DbOrTx = getDb(), ignoreTimeBuffer = false): string[] {
     const now = new Date();
     const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
 
@@ -112,7 +113,7 @@ export function deleteUnreferencedImages(tx: DbOrTx = db, ignoreTimeBuffer = fal
  * delete specific images permissions if they are no longer referenced by any version.
  * Used when permanently deleting notes/versions to clean up immediately (ignoring time buffer).
  */
-export function deleteImagesIfUnreferenced(imageIds: string[], tx: DbOrTx = db): string[] {
+export function deleteImagesIfUnreferenced(imageIds: string[], tx: DbOrTx = getDb()): string[] {
     if (imageIds.length === 0) return [];
 
     // Filter to find which of these are TRULY unreferenced now
@@ -140,7 +141,7 @@ export function deleteImagesIfUnreferenced(imageIds: string[], tx: DbOrTx = db):
     return filesToDelete.map(f => f.localPath);
 }
 
-export function getStorageStats(tx: DbOrTx = db) {
+export function getStorageStats(tx: DbOrTx = getDb()) {
     const totalImages = tx.select({ count: sql<number>`count(*)` }).from(images).get()?.count ?? 0;
     const totalLinks = tx.select({ count: sql<number>`count(*)` }).from(versionImages).get()?.count ?? 0;
     const totalImagesSize = tx.select({ sum: sql<number>`sum(${images.size})` }).from(images).get()?.sum ?? 0;
@@ -154,7 +155,7 @@ export function getStorageStats(tx: DbOrTx = db) {
     return { totalImages, totalLinks, orphans, totalImagesSize };
 }
 
-export function deleteOrphanLinks(tx: DbOrTx = db): void {
+export function deleteOrphanLinks(tx: DbOrTx = getDb()): void {
     // Delete links pointing to non-existent versions
     tx.delete(versionImages)
         .where(

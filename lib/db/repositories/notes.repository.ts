@@ -1,7 +1,8 @@
+import { getDb } from '@/stores/db-store';
 import { deleteImageFile } from '@/lib/services/images/image.service';
 import { and, desc, eq, gte, inArray, isNull, sql } from 'drizzle-orm';
 import * as Crypto from 'expo-crypto';
-import { db, DbOrTx, schema } from '../client';
+import { DbOrTx, schema } from '../client';
 import type { NoteMetadata, NoteMetadataInsert } from '../schema';
 import * as ImagesRepo from './images.repository';
 
@@ -38,18 +39,18 @@ function normalizeStoredContent(content: string): string {
 // ============ SYNC OPERATIONS ============
 
 export function getDirtyNotes(): NoteMetadata[] {
-    return db.select().from(schema.noteMetadata).where(eq(schema.noteMetadata.isDirty, true)).all();
+    return getDb().select().from(schema.noteMetadata).where(eq(schema.noteMetadata.isDirty, true)).all();
 }
 
 export function clearDirtyNotes(noteIds: string[], syncedAt: Date): void {
     if (noteIds.length === 0) return;
-    db.update(schema.noteMetadata)
+    getDb().update(schema.noteMetadata)
         .set({ isDirty: false, lastSyncedAt: syncedAt })
         .where(inArray(schema.noteMetadata.id, noteIds))
         .run();
 }
 
-export function upsertSyncedNote(noteFullData: any, tx: DbOrTx = db): void {
+export function upsertSyncedNote(noteFullData: any, tx: DbOrTx = getDb()): void {
     const content = noteFullData.content;
     const metadataDetails = { ...noteFullData };
     delete metadataDetails.content; // The rest is metadata
@@ -72,13 +73,13 @@ export function upsertSyncedNote(noteFullData: any, tx: DbOrTx = db): void {
 export function getNotesInFolder(folderId: string | null, includeDeleted = false): NoteMetadata[] {
     if (folderId === null) {
         if (includeDeleted) {
-            return db
+            return getDb()
                 .select()
                 .from(schema.noteMetadata)
                 .where(isNull(schema.noteMetadata.folderId))
                 .all();
         }
-        return db
+        return getDb()
             .select()
             .from(schema.noteMetadata)
             .where(
@@ -92,14 +93,14 @@ export function getNotesInFolder(folderId: string | null, includeDeleted = false
     }
 
     if (includeDeleted) {
-        return db
+        return getDb()
             .select()
             .from(schema.noteMetadata)
             .where(eq(schema.noteMetadata.folderId, folderId))
             .all();
     }
 
-    return db
+    return getDb()
         .select()
         .from(schema.noteMetadata)
         .where(
@@ -113,7 +114,7 @@ export function getNotesInFolder(folderId: string | null, includeDeleted = false
 }
 
 export function getNoteMetadataById(noteId: string): NoteMetadata | null {
-    const result = db
+    const result = getDb()
         .select()
         .from(schema.noteMetadata)
         .where(eq(schema.noteMetadata.id, noteId))
@@ -124,7 +125,7 @@ export function getNoteMetadataById(noteId: string): NoteMetadata | null {
 
 export function createNoteMetadata(metadata: NoteMetadataInsert): NoteMetadata {
     // 2. Run as a TRANSACTION (All or Nothing)
-    return db.transaction((tx) => {
+    return getDb().transaction((tx) => {
         // A. Insert Metadata
         const insertedNote = tx.insert(schema.noteMetadata)
             .values(metadata)
@@ -141,7 +142,7 @@ export function createNoteMetadata(metadata: NoteMetadataInsert): NoteMetadata {
     });
 }
 export function updateNoteMetadata(noteId: string, updates: Partial<Omit<NoteMetadata, 'id' | 'createdAt'>>): NoteMetadata {
-    const noteMetadata = db
+    const noteMetadata = getDb()
         .update(schema.noteMetadata)
         .set({ ...updates, updatedAt: new Date() })
         .where(eq(schema.noteMetadata.id, noteId))
@@ -156,7 +157,7 @@ export function softDeleteNote(noteId: string): void {
     if (!note) return;
 
     const now = new Date();
-    db
+    getDb()
         .update(schema.noteMetadata)
         .set({
             isDeleted: true,
@@ -181,7 +182,7 @@ export function restoreNote(noteId: string, targetFolderId?: string | null): voi
         restoredFolderId = targetFolderId;
     } else if (note.originalFolderId) {
         // Check if original folder exists and is not deleted
-        const originalFolder = db
+        const originalFolder = getDb()
             .select()
             .from(schema.folders)
             .where(eq(schema.folders.id, note.originalFolderId))
@@ -193,7 +194,7 @@ export function restoreNote(noteId: string, targetFolderId?: string | null): voi
         // If original folder is deleted or doesn't exist, restore to root (null)
     }
 
-    db
+    getDb()
         .update(schema.noteMetadata)
         .set({
             isDeleted: false,
@@ -207,7 +208,7 @@ export function restoreNote(noteId: string, targetFolderId?: string | null): voi
 }
 
 export function permanentlyDeleteNote(noteId: string): void {
-    db.transaction((tx) => {
+    getDb().transaction((tx) => {
         // We defer all deletions to allow the full object to sync as a tombstone
         tx.update(schema.noteMetadata)
             .set({ isPermDeleted: true, isDirty: true, updatedAt: new Date() })
@@ -217,7 +218,7 @@ export function permanentlyDeleteNote(noteId: string): void {
 }
 
 export function getQuickAccessNotes(): NoteMetadata[] {
-    return db
+    return getDb()
         .select()
         .from(schema.noteMetadata)
         .where(
@@ -231,7 +232,7 @@ export function getQuickAccessNotes(): NoteMetadata[] {
 }
 
 export function getPinnedNotesInFolder(folderId: string): NoteMetadata[] {
-    return db
+    return getDb()
         .select()
         .from(schema.noteMetadata)
         .where(
@@ -246,7 +247,7 @@ export function getPinnedNotesInFolder(folderId: string): NoteMetadata[] {
 }
 
 export function getDeletedNotes(): NoteMetadata[] {
-    return db
+    return getDb()
         .select()
         .from(schema.noteMetadata)
         .where(
@@ -261,7 +262,7 @@ export function getDeletedNotes(): NoteMetadata[] {
 // ============ CONTENT OPERATIONS (lazy loaded) ============
 
 export function getNoteContent(noteId: string): string {
-    const result = db
+    const result = getDb()
         .select()
         .from(schema.noteContent)
         .where(eq(schema.noteContent.id, noteId))
@@ -272,7 +273,7 @@ export function getNoteContent(noteId: string): string {
 
     // Self-heal previously stored rows that lost src attribute.
     if (result && normalized !== rawContent) {
-        db.update(schema.noteContent)
+        getDb().update(schema.noteContent)
             .set({ content: normalized })
             .where(eq(schema.noteContent.id, noteId))
             .run();
@@ -291,7 +292,7 @@ export function updateNoteContent(noteId: string, content: string, preview: stri
     const imageIds = Array.from(normalizedContent.matchAll(/data-image-id="([^"]+)"/g), m => m[1]);
 
     // 1. Update current content (Always)
-    db.transaction((tx) => {
+    getDb().transaction((tx) => {
         tx.update(schema.noteContent)
             .set({ content: normalizedContent })
             .where(eq(schema.noteContent.id, noteId))
@@ -371,7 +372,7 @@ export function updateNoteContent(noteId: string, content: string, preview: stri
 export function normalizeAllStoredContent(): number {
     let updatedRows = 0;
 
-    db.transaction((tx) => {
+    getDb().transaction((tx) => {
         const notes = tx
             .select({ id: schema.noteContent.id, content: schema.noteContent.content })
             .from(schema.noteContent)
@@ -411,7 +412,7 @@ export function normalizeAllStoredContent(): number {
 // ============ VERSION OPERATIONS ============
 
 export function getNoteVersions(noteId: string): { id: string; createdAt: Date }[] {
-    return db
+    return getDb()
         .select({
             id: schema.noteVersions.id,
             createdAt: schema.noteVersions.createdAt
@@ -423,7 +424,7 @@ export function getNoteVersions(noteId: string): { id: string; createdAt: Date }
 }
 
 export function getNoteVersion(versionId: string) {
-    const version = db
+    const version = getDb()
         .select()
         .from(schema.noteVersions)
         .where(eq(schema.noteVersions.id, versionId))
@@ -433,7 +434,7 @@ export function getNoteVersion(versionId: string) {
 
     const normalized = normalizeStoredContent(version.content);
     if (normalized !== version.content) {
-        db.update(schema.noteVersions)
+        getDb().update(schema.noteVersions)
             .set({ content: normalized })
             .where(eq(schema.noteVersions.id, versionId))
             .run();
@@ -444,13 +445,13 @@ export function getNoteVersion(versionId: string) {
 }
 
 export function deleteNoteVersion(versionId: string): void {
-    db.delete(schema.noteVersions)
+    getDb().delete(schema.noteVersions)
         .where(eq(schema.noteVersions.id, versionId))
         .run();
 }
 
 export function getRecentNotes(limitCount: number = 5): NoteMetadata[] {
-    return db
+    return getDb()
         .select()
         .from(schema.noteMetadata)
         .where(
@@ -466,7 +467,7 @@ export function getRecentNotes(limitCount: number = 5): NoteMetadata[] {
 
 // ============ BULK OPERATIONS (for Folder Service Cascading) ============
 
-export function permanentlyDeleteNotesInFolders(folderIds: string[], tx: DbOrTx = db): void {
+export function permanentlyDeleteNotesInFolders(folderIds: string[], tx: DbOrTx = getDb()): void {
     if (folderIds.length === 0) return;
 
     // We defer all deletions to allow the full object to sync as a tombstone
@@ -476,7 +477,7 @@ export function permanentlyDeleteNotesInFolders(folderIds: string[], tx: DbOrTx 
         .run();
 }
 
-export function softDeleteNotesInFolders(folderIds: string[], now: Date, tx: DbOrTx = db): void {
+export function softDeleteNotesInFolders(folderIds: string[], now: Date, tx: DbOrTx = getDb()): void {
     if (folderIds.length === 0) return;
 
     tx.update(schema.noteMetadata)
@@ -492,7 +493,7 @@ export function softDeleteNotesInFolders(folderIds: string[], now: Date, tx: DbO
 }
 // restore notes in folders - called from folders.service.ts when restoring a folder
 // only restore notes that were not deleted before the folder was deleted
-export function restoreNotesInFolders(folderIds: string[], folderDeletedAt: Date, tx: DbOrTx = db): void {
+export function restoreNotesInFolders(folderIds: string[], folderDeletedAt: Date, tx: DbOrTx = getDb()): void {
     if (folderIds.length === 0) return;
 
     tx.update(schema.noteMetadata)
@@ -507,7 +508,7 @@ export function restoreNotesInFolders(folderIds: string[], folderDeletedAt: Date
         .run();
 }
 
-export function permanentlyDeleteDeletedNotes(tx: DbOrTx = db): void {
+export function permanentlyDeleteDeletedNotes(tx: DbOrTx = getDb()): void {
     // We defer all deletions to allow the full object to sync as a tombstone
     tx.update(schema.noteMetadata)
         .set({ isPermDeleted: true, isDirty: true, updatedAt: new Date() })
@@ -518,7 +519,7 @@ export function permanentlyDeleteDeletedNotes(tx: DbOrTx = db): void {
 export function getNoteIdsByOriginalFolderIds(folderIds: string[], folderDeletedAt: Date): string[] {
     if (folderIds.length === 0) return [];
 
-    const results = db.select({ id: schema.noteMetadata.id })
+    const results = getDb().select({ id: schema.noteMetadata.id })
         .from(schema.noteMetadata)
         .where(and(
             gte(schema.noteMetadata.deletedAt, folderDeletedAt),
@@ -529,7 +530,7 @@ export function getNoteIdsByOriginalFolderIds(folderIds: string[], folderDeleted
     return results.map(r => r.id);
 }
 
-export function getDeletedNoteIds(tx: DbOrTx = db): string[] {
+export function getDeletedNoteIds(tx: DbOrTx = getDb()): string[] {
     const results = tx.select({ id: schema.noteMetadata.id })
         .from(schema.noteMetadata)
         .where(eq(schema.noteMetadata.isDeleted, true))

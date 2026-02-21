@@ -1,5 +1,6 @@
+import { getDb } from '@/stores/db-store';
 import { and, asc, eq, gte, inArray, lt } from 'drizzle-orm';
-import { db, DbOrTx, schema } from '../client';
+import { DbOrTx, schema } from '../client';
 import type { Task, TaskInsert } from '../schema';
 
 // Re-export types
@@ -18,18 +19,18 @@ export interface CreateTaskInput {
 // ============ SYNC OPERATIONS ============
 
 export function getDirtyTasks(): Task[] {
-    return db.select().from(schema.tasks).where(eq(schema.tasks.isDirty, true)).all();
+    return getDb().select().from(schema.tasks).where(eq(schema.tasks.isDirty, true)).all();
 }
 
 export function clearDirtyTasks(taskIds: string[], syncedAt: Date): void {
     if (taskIds.length === 0) return;
-    db.update(schema.tasks)
+    getDb().update(schema.tasks)
         .set({ isDirty: false, lastSyncedAt: syncedAt })
         .where(inArray(schema.tasks.id, taskIds))
         .run();
 }
 
-export function upsertSyncedTask(taskData: Task, tx: DbOrTx = db): void {
+export function upsertSyncedTask(taskData: Task, tx: DbOrTx = getDb()): void {
     tx.insert(schema.tasks)
         .values(taskData)
         .onConflictDoUpdate({ target: schema.tasks.id, set: taskData })
@@ -39,7 +40,7 @@ export function upsertSyncedTask(taskData: Task, tx: DbOrTx = db): void {
 // ============ TASK OPERATIONS ============
 
 export function getAllTasks(): Task[] {
-    return db
+    return getDb()
         .select()
         .from(schema.tasks)
         .where(eq(schema.tasks.isPermDeleted, false))
@@ -47,7 +48,7 @@ export function getAllTasks(): Task[] {
 }
 
 export function getTaskById(taskId: string): Task | null {
-    const result = db
+    const result = getDb()
         .select()
         .from(schema.tasks)
         .where(eq(schema.tasks.id, taskId))
@@ -64,7 +65,7 @@ export function getTasksByDate(date: Date): Task[] {
     const endOfDay = new Date(date);
     endOfDay.setHours(23, 59, 59, 999);
 
-    return db
+    return getDb()
         .select()
         .from(schema.tasks)
         .where(
@@ -78,7 +79,7 @@ export function getTasksByDate(date: Date): Task[] {
 }
 
 export function getTasksSortedByDeadline(): Task[] {
-    return db
+    return getDb()
         .select()
         .from(schema.tasks)
         .where(eq(schema.tasks.isPermDeleted, false))
@@ -87,7 +88,7 @@ export function getTasksSortedByDeadline(): Task[] {
 }
 
 export function getPendingTasks(): Task[] {
-    return db
+    return getDb()
         .select()
         .from(schema.tasks)
         .where(
@@ -101,7 +102,7 @@ export function getPendingTasks(): Task[] {
 }
 
 export function getCompletedTasks(): Task[] {
-    return db
+    return getDb()
         .select()
         .from(schema.tasks)
         .where(
@@ -115,9 +116,9 @@ export function getCompletedTasks(): Task[] {
 }
 
 export function createTask(data: TaskInsert): Task {
-    db.insert(schema.tasks).values(data).run();
+    getDb().insert(schema.tasks).values(data).run();
 
-    return db
+    return getDb()
         .select()
         .from(schema.tasks)
         .where(eq(schema.tasks.id, data.id))
@@ -128,7 +129,7 @@ export function updateTask(
     taskId: string,
     updates: Partial<Omit<Task, 'id' | 'createdAt'>>
 ): void {
-    db
+    getDb()
         .update(schema.tasks)
         .set(updates)
         .where(eq(schema.tasks.id, taskId))
@@ -136,7 +137,7 @@ export function updateTask(
 }
 
 export function deleteTask(taskId: string): void {
-    db.update(schema.tasks)
+    getDb().update(schema.tasks)
         .set({ isPermDeleted: true, isDirty: true, updatedAt: new Date() })
         .where(eq(schema.tasks.id, taskId))
         .run();
@@ -146,7 +147,7 @@ export function toggleTaskComplete(taskId: string): void {
     const task = getTaskById(taskId);
     if (!task) return;
 
-    db
+    getDb()
         .update(schema.tasks)
         .set({ completed: !task.completed })
         .where(eq(schema.tasks.id, taskId))
@@ -154,7 +155,7 @@ export function toggleTaskComplete(taskId: string): void {
 }
 
 export function deleteCompletedTasks(): void {
-    db.update(schema.tasks)
+    getDb().update(schema.tasks)
         .set({ isPermDeleted: true, isDirty: true, updatedAt: new Date() })
         .where(eq(schema.tasks.completed, true))
         .run();
@@ -166,7 +167,7 @@ export function getTaskDatesInMonth(year: number, month: number): Set<number> {
     const startOfMonth = new Date(year, month, 1);
     const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59, 999);
 
-    const tasks = db
+    const tasks = getDb()
         .select()
         .from(schema.tasks)
         .where(

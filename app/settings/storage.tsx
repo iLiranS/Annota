@@ -3,6 +3,7 @@ import { useAppTheme } from '@/hooks/use-app-theme';
 import { StorageService } from '@/lib/services/storage.service';
 import { syncPull, syncPush } from '@/lib/sync/sync-service';
 import { getMasterKey } from '@/lib/utils/crypto';
+import { useAuthStore } from '@/stores/auth-store';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -18,6 +19,7 @@ function formatBytes(bytes: number, decimals = 2) {
 }
 
 export default function StorageSettings() {
+    const { user } = useAuthStore();
     const { colors } = useAppTheme();
     const [stats, setStats] = useState<{
         totalImages: number;
@@ -142,11 +144,11 @@ export default function StorageSettings() {
                 </HapticPressable>
 
                 <HapticPressable
-                    style={[styles.button, { backgroundColor: colors.card, borderColor: colors.border }]}
-                    onPress={handleManualSync}
+                    style={[styles.button, { backgroundColor: user ? colors.card : "#00000030", borderColor: colors.border }]}
+                    onPress={user ? handleManualSync : () => { }}
                 >
-                    <Ionicons name="cloud-upload-outline" size={20} color={colors.primary} />
-                    <Text style={[styles.buttonText, { color: colors.primary }]}>Sync with Cloud DB</Text>
+                    <Ionicons name="cloud-upload-outline" size={20} color={user ? colors.primary : "#00000030"} />
+                    <Text style={[styles.buttonText, { color: user ? colors.primary : "#00000030" }]}>Sync with Cloud DB</Text>
                 </HapticPressable>
 
                 <HapticPressable

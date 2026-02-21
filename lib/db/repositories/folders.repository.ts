@@ -1,5 +1,6 @@
+import { getDb } from '@/stores/db-store';
 import { and, eq, inArray, isNull } from 'drizzle-orm';
-import { db, DbOrTx, schema } from '../client';
+import { DbOrTx, schema } from '../client';
 import type { Folder, FolderInsert, NoteMetadata } from '../schema';
 import { getDeletedNotes } from './notes.repository';
 
@@ -14,18 +15,18 @@ export const DAILY_NOTES_FOLDER_ID = 'system-daily-notes';
 // ============ SYNC OPERATIONS ============
 
 export function getDirtyFolders(): Folder[] {
-    return db.select().from(schema.folders).where(eq(schema.folders.isDirty, true)).all();
+    return getDb().select().from(schema.folders).where(eq(schema.folders.isDirty, true)).all();
 }
 
 export function clearDirtyFolders(folderIds: string[], syncedAt: Date): void {
     if (folderIds.length === 0) return;
-    db.update(schema.folders)
+    getDb().update(schema.folders)
         .set({ isDirty: false, lastSyncedAt: syncedAt })
         .where(inArray(schema.folders.id, folderIds))
         .run();
 }
 
-export function upsertSyncedFolder(folderData: Folder, tx: DbOrTx = db): void {
+export function upsertSyncedFolder(folderData: Folder, tx: DbOrTx = getDb()): void {
     tx.insert(schema.folders)
         .values(folderData)
         .onConflictDoUpdate({ target: schema.folders.id, set: folderData })
@@ -39,13 +40,13 @@ export function upsertSyncedFolder(folderData: Folder, tx: DbOrTx = db): void {
 export function getFoldersInFolder(parentId: string | null, includeDeleted = false): Folder[] {
     if (parentId === null) {
         if (includeDeleted) {
-            return db
+            return getDb()
                 .select()
                 .from(schema.folders)
                 .where(isNull(schema.folders.parentId))
                 .all();
         }
-        return db
+        return getDb()
             .select()
             .from(schema.folders)
             .where(
@@ -59,14 +60,14 @@ export function getFoldersInFolder(parentId: string | null, includeDeleted = fal
     }
 
     if (includeDeleted) {
-        return db
+        return getDb()
             .select()
             .from(schema.folders)
             .where(eq(schema.folders.parentId, parentId))
             .all();
     }
 
-    return db
+    return getDb()
         .select()
         .from(schema.folders)
         .where(
@@ -80,7 +81,7 @@ export function getFoldersInFolder(parentId: string | null, includeDeleted = fal
 }
 
 export function getFolderById(folderId: string): Folder | null {
-    const result = db
+    const result = getDb()
         .select()
         .from(schema.folders)
         .where(eq(schema.folders.id, folderId))
@@ -90,7 +91,7 @@ export function getFolderById(folderId: string): Folder | null {
 }
 
 export function createFolder(folderData: FolderInsert): Folder {
-    const folder = db.insert(schema.folders).values(folderData).returning().get();
+    const folder = getDb().insert(schema.folders).values(folderData).returning().get();
     if (!folder) {
         throw new Error('Failed to create folder');
     }
@@ -109,7 +110,7 @@ export function updateFolder(
         delete safeUpdates.name;
         delete safeUpdates.isSystem;
 
-        db
+        getDb()
             .update(schema.folders)
             .set({ ...safeUpdates, updatedAt: new Date() })
             .where(eq(schema.folders.id, folderId))
@@ -117,7 +118,7 @@ export function updateFolder(
         return;
     }
 
-    db
+    getDb()
         .update(schema.folders)
         .set({ ...updates, updatedAt: new Date() })
         .where(eq(schema.folders.id, folderId))
@@ -126,7 +127,7 @@ export function updateFolder(
 
 // ============ BULK OPERATIONS ============
 
-export function deleteFolders(folderIds: string[], tx: DbOrTx = db): void {
+export function deleteFolders(folderIds: string[], tx: DbOrTx = getDb()): void {
     if (folderIds.length === 0) return;
     tx.update(schema.folders)
         .set({ isPermDeleted: true, isDirty: true, updatedAt: new Date() })
@@ -134,7 +135,7 @@ export function deleteFolders(folderIds: string[], tx: DbOrTx = db): void {
         .run();
 }
 
-export function deleteDeletedFolders(tx: DbOrTx = db): void {
+export function deleteDeletedFolders(tx: DbOrTx = getDb()): void {
     tx.update(schema.folders)
         .set({ isPermDeleted: true, isDirty: true, updatedAt: new Date() })
         .where(
@@ -157,7 +158,7 @@ export function getAllDescendantFolderIds(folderId: string, includeDeleted = fal
             eq(schema.folders.isPermDeleted, false)
         );
 
-    const children = db
+    const children = getDb()
         .select()
         .from(schema.folders)
         .where(whereClause)
@@ -170,7 +171,7 @@ export function getAllDescendantFolderIds(folderId: string, includeDeleted = fal
 }
 
 export function getTrashContents(): { folders: Folder[], notes: NoteMetadata[] } {
-    const folders = db
+    const folders = getDb()
         .select()
         .from(schema.folders)
         .where(
@@ -187,7 +188,7 @@ export function getTrashContents(): { folders: Folder[], notes: NoteMetadata[] }
 }
 
 export function getDeletedFolders(): Folder[] {
-    return db
+    return getDb()
         .select()
         .from(schema.folders)
         .where(

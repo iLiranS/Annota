@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import { db, schema } from './client';
+import { schema, type DbType } from './client';
 
 export const TRASH_FOLDER_ID = 'system-trash';
 export const DAILY_NOTES_FOLDER_ID = 'system-daily-notes';
@@ -8,7 +8,7 @@ export const DAILY_NOTES_FOLDER_ID = 'system-daily-notes';
  * Seeds system data (folders, settings) on first app launch.
  * This function is idempotent — it only creates data that doesn't exist.
  */
-export function seedSystemData(): void {
+export function seedSystemData(db: DbType): void {
     const now = new Date();
 
     // Create Trash folder if not exists

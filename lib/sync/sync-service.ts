@@ -1,10 +1,11 @@
-import { db, schema } from '@/lib/db/client';
+import { schema } from '@/lib/db/client';
 import { clearDirtyFolders, getDirtyFolders, upsertSyncedFolder } from '@/lib/db/repositories/folders.repository';
 import { clearDirtyNotes, getDirtyNotes, getNoteContent, upsertSyncedNote } from '@/lib/db/repositories/notes.repository';
 import { clearDirtyTasks, getDirtyTasks, upsertSyncedTask } from '@/lib/db/repositories/tasks.repository';
 import { StorageService } from '@/lib/services/storage.service';
 import { supabase } from '@/lib/supabase';
 import { decryptPayload, encryptPayload } from '@/lib/utils/crypto';
+import { getDb } from '@/stores/db-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { eq, inArray } from 'drizzle-orm';
 
@@ -39,7 +40,7 @@ export async function syncPush(masterKey: string) {
 
         const tombstones = dirtyFolders.filter(f => f.isPermDeleted);
         if (tombstones.length > 0) {
-            db.delete(schema.folders).where(inArray(schema.folders.id, tombstones.map(f => f.id))).run();
+            getDb().delete(schema.folders).where(inArray(schema.folders.id, tombstones.map(f => f.id))).run();
             didDeleteTombstones = true;
         }
 
@@ -70,7 +71,7 @@ export async function syncPush(masterKey: string) {
 
         const tombstones = dirtyTasks.filter(t => t.isPermDeleted);
         if (tombstones.length > 0) {
-            db.delete(schema.tasks).where(inArray(schema.tasks.id, tombstones.map(t => t.id))).run();
+            getDb().delete(schema.tasks).where(inArray(schema.tasks.id, tombstones.map(t => t.id))).run();
             didDeleteTombstones = true;
         }
 
@@ -108,9 +109,9 @@ export async function syncPush(masterKey: string) {
         const tombstones = dirtyNotes.filter(n => n.isPermDeleted);
         if (tombstones.length > 0) {
             const tombstoneIds = tombstones.map(n => n.id);
-            db.delete(schema.noteContent).where(inArray(schema.noteContent.id, tombstoneIds)).run();
-            db.delete(schema.noteVersions).where(inArray(schema.noteVersions.noteId, tombstoneIds)).run();
-            db.delete(schema.noteMetadata).where(inArray(schema.noteMetadata.id, tombstoneIds)).run();
+            getDb().delete(schema.noteContent).where(inArray(schema.noteContent.id, tombstoneIds)).run();
+            getDb().delete(schema.noteVersions).where(inArray(schema.noteVersions.noteId, tombstoneIds)).run();
+            getDb().delete(schema.noteMetadata).where(inArray(schema.noteMetadata.id, tombstoneIds)).run();
             didDeleteTombstones = true;
         }
 
@@ -151,7 +152,7 @@ export async function syncPull(masterKey: string) {
 
     if (cloudFolders && cloudFolders.length > 0) {
         console.log(`[Sync] Received ${cloudFolders.length} updated folders from cloud.`);
-        db.transaction((tx) => {
+        getDb().transaction((tx) => {
             for (const row of cloudFolders) {
                 try {
                     if (row.is_deleted) {
@@ -189,7 +190,7 @@ export async function syncPull(masterKey: string) {
 
     if (cloudTasks && cloudTasks.length > 0) {
         console.log(`[Sync] Received ${cloudTasks.length} updated tasks from cloud.`);
-        db.transaction((tx) => {
+        getDb().transaction((tx) => {
             for (const row of cloudTasks) {
                 try {
                     if (row.is_deleted) {
@@ -227,7 +228,7 @@ export async function syncPull(masterKey: string) {
 
     if (cloudNotes && cloudNotes.length > 0) {
         console.log(`[Sync] Received ${cloudNotes.length} updated notes from cloud.`);
-        db.transaction((tx) => {
+        getDb().transaction((tx) => {
             for (const row of cloudNotes) {
                 try {
                     if (row.is_deleted) {

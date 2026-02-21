@@ -2,17 +2,16 @@ import { removeMasterKey } from '@/lib/utils/crypto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { drizzle } from 'drizzle-orm/expo-sqlite';
 import * as LegacyFileSystem from 'expo-file-system/legacy';
-import { openDatabaseSync } from 'expo-sqlite';
+import { type SQLiteDatabase } from 'expo-sqlite';
 import * as schema from './schema';
 import { seedSystemData } from './seed';
 
-// Open SQLite database
-const expoDb = openDatabaseSync('notes.db');
+// Dummy instance for types
+const _dummyDb = drizzle({} as any as SQLiteDatabase, { schema });
 
 // Create Drizzle client with schema
-export const db = drizzle(expoDb, { schema });
-export type DbType = typeof db;
-export type TxType = Parameters<Parameters<typeof db.transaction>[0]>[0];
+export type DbType = typeof _dummyDb;
+export type TxType = Parameters<Parameters<typeof _dummyDb.transaction>[0]>[0];
 export type DbOrTx = DbType | TxType;
 
 // SQL for creating tables (CREATE TABLE IF NOT EXISTS)
@@ -120,7 +119,7 @@ const CREATE_TABLES_SQL = `
 `;
 
 // Initialize database (create tables and seed system data)
-export function initDatabase(): void {
+export function initDatabase(expoDb: SQLiteDatabase, drizzleDb: DbType): void {
   try {
     // Create all tables
     expoDb.execSync(CREATE_TABLES_SQL);
@@ -168,7 +167,7 @@ export function initDatabase(): void {
     }
 
     // Seed system data (Trash folder, Daily Notes folder, default settings)
-    seedSystemData();
+    seedSystemData(drizzleDb);
 
     console.log('Database initialized successfully');
   } catch (error) {
@@ -179,6 +178,9 @@ export function initDatabase(): void {
 
 // Reset everything (DB, Storage, Files) - USE WITH CAUTION
 export async function resetAll(): Promise<void> {
+  const { getExpoDb, getDb } = require('@/stores/db-store');
+  const expoDb = getExpoDb();
+  const drizzleDb = getDb();
   try {
     const tables = [
       'note_images',
@@ -219,7 +221,7 @@ export async function resetAll(): Promise<void> {
       console.log('FileSystem cleared');
     }
 
-    initDatabase();
+    initDatabase(expoDb, drizzleDb);
   } catch (error) {
     console.error('App reset failed:', error);
     throw error;
@@ -229,6 +231,8 @@ export async function resetAll(): Promise<void> {
 // Reclaim unused space and optimize database performance
 export function vacuumDatabase(): void {
   try {
+    const { getExpoDb } = require('@/stores/db-store');
+    const expoDb = getExpoDb();
     // Force WAL checkpoint to shrink WAL file
     expoDb.execSync('PRAGMA wal_checkpoint(TRUNCATE);');
     // Vacuum to reclaim deleted space in the main database
