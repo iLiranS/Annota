@@ -1,4 +1,3 @@
-import { removeMasterKey } from '@/lib/utils/crypto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { drizzle } from 'drizzle-orm/expo-sqlite';
 import * as LegacyFileSystem from 'expo-file-system/legacy';
@@ -205,10 +204,15 @@ export async function resetAll(): Promise<void> {
     console.log('AsyncStorage cleared');
 
     // Clear Secure Storage (Master Key)
-    try {
-      await removeMasterKey();
-      console.log('SecureStore cleared');
-    } catch (e) { /* ignore if not present */ }
+    // try {
+    //   const { supabase } = require('@/lib/supabase');
+    //   const { data: { session } } = await supabase.auth.getSession();
+    //   if (session?.user?.id) {
+    //     await removeMasterKey(session.user.id);
+    //   }
+    //   await removeLegacyMasterKey();
+    //   console.log('SecureStore cleared');
+    // } catch (e) { /* ignore if not present */ }
 
     // Clear FileSystem (except SQLite)
     if (LegacyFileSystem.documentDirectory) {
@@ -245,4 +249,3 @@ export function vacuumDatabase(): void {
 
 // Re-export schema for convenience
 export { schema };
-

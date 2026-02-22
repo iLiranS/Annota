@@ -13,6 +13,10 @@ export default function MasterKeyScreen() {
     const [mnemonic, setMnemonic] = useState('');
     const [importWords, setImportWords] = useState<string[]>(Array(12).fill(''));
     const theme = useAppTheme();
+    const getCurrentUserId = async (): Promise<string | null> => {
+        const { data: { session } } = await supabase.auth.getSession();
+        return session?.user?.id ?? null;
+    };
 
     const generateNewKey = async () => {
         const key = await generateMasterKey();
@@ -23,12 +27,18 @@ export default function MasterKeyScreen() {
         const checkExistingData = async () => {
             try {
                 setCheckingUser(true);
-                // Check if they have any encrypted notes in the cloud
-                const { count } = await supabase
+                const userId = await getCurrentUserId();
+                if (!userId) {
+                    router.replace('/(auth)');
+                    return;
+                }
+                // Check if this user already has encrypted notes in the cloud.
+                const { count: userCount } = await supabase
                     .from('encrypted_notes')
-                    .select('*', { count: 'exact', head: true });
+                    .select('*', { count: 'exact', head: true })
+                    .eq('user_id', userId);
 
-                if (count && count > 0) {
+                if (userCount && userCount > 0) {
                     setHasCloudData(true);
                     setMode('import');
                 } else {
@@ -51,6 +61,13 @@ export default function MasterKeyScreen() {
     };
 
     const handleConfirm = async () => {
+        const userId = await getCurrentUserId();
+        if (!userId) {
+            Alert.alert('Session Error', 'Please sign in again.');
+            router.replace('/(auth)');
+            return;
+        }
+
         if (mode === 'import') {
             const joinedWords = importWords.join(' ').trim().toLowerCase();
             const isValid = validateMasterKey(joinedWords);
@@ -59,7 +76,7 @@ export default function MasterKeyScreen() {
                 return;
             }
 
-            await storeMasterKey(joinedWords);
+            await storeMasterKey(userId, joinedWords);
             router.replace('/(drawer)');
             return;
         }
@@ -76,15 +93,12 @@ export default function MasterKeyScreen() {
                     style: 'destructive',
                     onPress: async () => {
                         if (hasCloudData) {
-                            const { data: { session } } = await supabase.auth.getSession();
-                            if (session?.user) {
-                                // Wipe cloud data to prevent un-decryptable garbage
-                                await supabase.from('encrypted_notes').delete().eq('user_id', session.user.id);
-                                await supabase.from('encrypted_tasks').delete().eq('user_id', session.user.id);
-                                await supabase.from('encrypted_folders').delete().eq('user_id', session.user.id);
-                            }
+                            // Wipe cloud data to prevent un-decryptable garbage
+                            await supabase.from('encrypted_notes').delete().eq('user_id', userId);
+                            await supabase.from('encrypted_tasks').delete().eq('user_id', userId);
+                            await supabase.from('encrypted_folders').delete().eq('user_id', userId);
                         }
-                        await storeMasterKey(mnemonic);
+                        await storeMasterKey(userId, mnemonic);
                         router.replace('/(drawer)'); // Navigate back to main app
                     },
                 },
@@ -351,4 +365,3 @@ const styles = StyleSheet.create({
         fontSize: 16,
     },
 });
-

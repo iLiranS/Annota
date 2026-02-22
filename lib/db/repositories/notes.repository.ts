@@ -31,6 +31,10 @@ function normalizeStoredContent(content: string): string {
     });
 }
 
+function extractImageIdsFromContent(content: string): string[] {
+    return Array.from(content.matchAll(/data-image-id=['"]([^'"]+)['"]/g), (match) => match[1]);
+}
+
 
 
 
@@ -51,7 +55,7 @@ export function clearDirtyNotes(noteIds: string[], syncedAt: Date): void {
 }
 
 export function upsertSyncedNote(noteFullData: any, tx: DbOrTx = getDb()): void {
-    const content = noteFullData.content;
+    const content = normalizeStoredContent(noteFullData.content || '');
     const metadataDetails = { ...noteFullData };
     delete metadataDetails.content; // The rest is metadata
 
@@ -63,9 +67,74 @@ export function upsertSyncedNote(noteFullData: any, tx: DbOrTx = getDb()): void 
 
     // Insert or Update Content (Heavy Data)
     tx.insert(schema.noteContent)
-        .values({ id: metadataDetails.id, content: content || '' })
-        .onConflictDoUpdate({ target: schema.noteContent.id, set: { content: content || '' } })
+        .values({ id: metadataDetails.id, content })
+        .onConflictDoUpdate({ target: schema.noteContent.id, set: { content } })
         .run();
+
+    const noteUpdatedAt = metadataDetails.updatedAt instanceof Date ? metadataDetails.updatedAt : new Date();
+    const imageIds = extractImageIdsFromContent(content);
+    const MAX_VERSIONS = 50;
+
+    // Keep the synced note represented by a local version so image links are not orphaned.
+    const latestVersion = tx.select({
+        id: schema.noteVersions.id,
+        content: schema.noteVersions.content,
+    })
+        .from(schema.noteVersions)
+        .where(eq(schema.noteVersions.noteId, metadataDetails.id))
+        .orderBy(desc(schema.noteVersions.createdAt))
+        .limit(1)
+        .get();
+
+    let activeVersionId: string;
+
+    if (!latestVersion) {
+        activeVersionId = Crypto.randomUUID();
+        tx.insert(schema.noteVersions).values({
+            id: activeVersionId,
+            noteId: metadataDetails.id,
+            content,
+            createdAt: noteUpdatedAt,
+        }).run();
+    } else {
+        const latestNormalizedContent = normalizeStoredContent(latestVersion.content);
+        if (latestNormalizedContent !== latestVersion.content) {
+            tx.update(schema.noteVersions)
+                .set({ content: latestNormalizedContent })
+                .where(eq(schema.noteVersions.id, latestVersion.id))
+                .run();
+        }
+
+        if (latestNormalizedContent === content) {
+            activeVersionId = latestVersion.id;
+        } else {
+            activeVersionId = Crypto.randomUUID();
+            tx.insert(schema.noteVersions).values({
+                id: activeVersionId,
+                noteId: metadataDetails.id,
+                content,
+                createdAt: noteUpdatedAt,
+            }).run();
+
+            const versions = tx.select({ id: schema.noteVersions.id })
+                .from(schema.noteVersions)
+                .where(eq(schema.noteVersions.noteId, metadataDetails.id))
+                .orderBy(desc(schema.noteVersions.createdAt))
+                .all();
+
+            if (versions.length > MAX_VERSIONS) {
+                const versionsToDelete = versions.slice(MAX_VERSIONS).map(v => v.id);
+                if (versionsToDelete.length > 0) {
+                    ImagesRepo.deleteImagesForVersions(versionsToDelete, tx);
+                    tx.delete(schema.noteVersions)
+                        .where(inArray(schema.noteVersions.id, versionsToDelete))
+                        .run();
+                }
+            }
+        }
+    }
+
+    ImagesRepo.setImagesForVersion(activeVersionId, imageIds, tx);
 }
 
 // ============ METADATA OPERATIONS (fast, for lists) ============
@@ -289,7 +358,7 @@ export function updateNoteContent(noteId: string, content: string, preview: stri
     const normalizedContent = normalizeStoredContent(content);
 
     // Extract image IDs from canonical content
-    const imageIds = Array.from(normalizedContent.matchAll(/data-image-id="([^"]+)"/g), m => m[1]);
+    const imageIds = extractImageIdsFromContent(normalizedContent);
 
     // 1. Update current content (Always)
     getDb().transaction((tx) => {

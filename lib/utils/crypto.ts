@@ -5,7 +5,12 @@ import * as Crypto from 'expo-crypto';
 import * as SecureStore from 'expo-secure-store';
 import './polyfill';
 
-const MASTER_KEY_ALIAS = 'annota_master_key';
+const MASTER_KEY_PREFIX = 'annota_master_key_';
+const LEGACY_MASTER_KEY_ALIAS = 'annota_master_key';
+
+function getMasterKeyAlias(userId: string): string {
+    return `${MASTER_KEY_PREFIX}${userId}`;
+}
 
 /**
  * Custom RNG utilizing expo-crypto for secure entropy.
@@ -33,8 +38,8 @@ export function validateMasterKey(mnemonic: string): boolean {
 /**
  * Store the master key securely in the device's keychain.
  */
-export async function storeMasterKey(mnemonic: string) {
-    await SecureStore.setItemAsync(MASTER_KEY_ALIAS, mnemonic, {
+export async function storeMasterKey(userId: string, mnemonic: string) {
+    await SecureStore.setItemAsync(getMasterKeyAlias(userId), mnemonic, {
         keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
     });
 }
@@ -42,15 +47,22 @@ export async function storeMasterKey(mnemonic: string) {
 /**
  * Retrieve the master key from the device's keychain.
  */
-export async function getMasterKey(): Promise<string | null> {
-    return await SecureStore.getItemAsync(MASTER_KEY_ALIAS);
+export async function getMasterKey(userId: string): Promise<string | null> {
+    return await SecureStore.getItemAsync(getMasterKeyAlias(userId));
 }
 
 /**
  * Remove the master key from the device's keychain.
  */
-export async function removeMasterKey() {
-    await SecureStore.deleteItemAsync(MASTER_KEY_ALIAS);
+export async function removeMasterKey(userId: string) {
+    await SecureStore.deleteItemAsync(getMasterKeyAlias(userId));
+}
+
+/**
+ * Removes the old global alias used before per-user key storage.
+ */
+export async function removeLegacyMasterKey() {
+    await SecureStore.deleteItemAsync(LEGACY_MASTER_KEY_ALIAS);
 }
 
 /**

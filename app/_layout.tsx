@@ -21,7 +21,7 @@ TaskManager.defineTask(BACKGROUND_SYNC_TASK, async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return BackgroundFetch.BackgroundFetchResult.NoData;
 
-    const key = await getMasterKey();
+    const key = await getMasterKey(session.user.id);
     if (!key) return BackgroundFetch.BackgroundFetchResult.NoData;
 
     // Note: For background fetch, doing heavy operations must be well bounded
@@ -134,7 +134,7 @@ export default function RootLayout() {
 
     async function doSync() {
       if (!session) return;
-      const key = await getMasterKey();
+      const key = await getMasterKey(session.user.id);
       if (!key) return; // Wait for them to onboard
 
       try {

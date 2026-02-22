@@ -29,6 +29,22 @@ export default function LoginScreen() {
     });
 
     async function signInWithOAuth(provider: 'google' | 'apple' | 'github') {
+        const routeAfterSignIn = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            const userId = session?.user?.id;
+            if (!userId) {
+                Alert.alert("Session Error", "No user session was found after login.");
+                return;
+            }
+
+            const key = await getMasterKey(userId);
+            if (!key) {
+                router.replace('/(auth)/master-key');
+            } else {
+                router.replace('/(drawer)');
+            }
+        };
+
         setLoadingProvider(provider);
         try {
             const { data, error } = await supabase.auth.signInWithOAuth({
@@ -60,24 +76,14 @@ export default function LoginScreen() {
                         if (error) {
                             Alert.alert("Session Error", error.message);
                         } else {
-                            const key = await getMasterKey();
-                            if (!key) {
-                                router.replace('/(auth)/master-key');
-                            } else {
-                                router.replace('/(drawer)');
-                            }
+                            await routeAfterSignIn();
                         }
                     } else if (access_token && refresh_token) {
                         const { data, error } = await supabase.auth.setSession({ access_token, refresh_token });
                         if (error) {
                             Alert.alert("Session Error", error.message);
                         } else {
-                            const key = await getMasterKey();
-                            if (!key) {
-                                router.replace('/(auth)/master-key');
-                            } else {
-                                router.replace('/(drawer)');
-                            }
+                            await routeAfterSignIn();
                         }
                     } else {
                         Alert.alert("Login Failed", "No access token or code was returned from the authentication provider.");

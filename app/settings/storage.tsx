@@ -97,9 +97,13 @@ export default function StorageSettings() {
             Alert.alert("Action Not Supported", "Sync can only be run on the active database.");
             return;
         }
+        if (!user?.id) {
+            Alert.alert("Error", "You need to be signed in to sync with cloud.");
+            return;
+        }
         setIsLoading(true);
         try {
-            const key = await getMasterKey();
+            const key = await getMasterKey(user.id);
             if (!key) {
                 Alert.alert("Error", "Master Key not found. Please set your Master Key.");
                 return;
