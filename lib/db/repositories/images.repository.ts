@@ -163,3 +163,66 @@ export function deleteOrphanLinks(tx: DbOrTx = getDb()): void {
         )
         .run();
 }
+
+// ============ SYNC OPERATIONS ============
+
+/**
+ * Returns a list of image records that are pending sync AND are linked to the 
+ * latest version of any note. We skip images that are only in older history.
+ */
+export function getPendingImagesLinkedToLatestVersions(tx: DbOrTx = getDb()): {
+    image: ImageRecord;
+    noteId: string;
+}[] {
+    // 1. Get the latest version ID for each note
+    // Note: SQLite doesn't have a clean DISTINCT ON, so we do it with a subquery or group by hack.
+    // We'll use a subquery to find max created_at per note.
+    const latestVersionsSubquery = tx
+        .select({
+            id: noteVersions.id,
+            noteId: noteVersions.noteId
+        })
+        .from(noteVersions)
+        .where(
+            sql`${noteVersions.createdAt} = (SELECT MAX(v2.created_at) FROM ${noteVersions} v2 WHERE v2.note_id = ${noteVersions.noteId})`
+        )
+        .all();
+
+    if (latestVersionsSubquery.length === 0) return [];
+
+    const latestVersionIds = latestVersionsSubquery.map(v => v.id);
+
+    // 2. Find images linked to those versions that are pending
+    const results = tx
+        .select({
+            image: images,
+            versionId: versionImages.versionId,
+        })
+        .from(images)
+        .innerJoin(versionImages, eq(images.id, versionImages.imageId))
+        .where(
+            and(
+                eq(images.syncStatus, 'pending'),
+                inArray(versionImages.versionId, latestVersionIds)
+            )
+        )
+        .all();
+
+    // 3. Map back to include the noteId for easier insertion into note_images later
+    const versionNoteMap = new Map(latestVersionsSubquery.map(v => [v.id, v.noteId]));
+
+    // We might have duplicates if an image is in multiple head versions of DIFFERENT notes.
+    // We return all occurrences because we need to link each note to the image in the cloud.
+    return results.map(row => ({
+        image: row.image,
+        noteId: versionNoteMap.get(row.versionId) as string,
+    }));
+}
+
+export function markImagesAsSynced(imageIds: string[], tx: DbOrTx = getDb()): void {
+    if (imageIds.length === 0) return;
+    tx.update(images)
+        .set({ syncStatus: 'synced' })
+        .where(inArray(images.id, imageIds))
+        .run();
+}

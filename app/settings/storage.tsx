@@ -158,6 +158,32 @@ export default function StorageSettings() {
                     <Ionicons name="trash-bin-outline" size={20} color={colors.primary} />
                     <Text style={[styles.buttonText, { color: colors.primary }]}>Shrink Database</Text>
                 </HapticPressable>
+
+                <HapticPressable
+                    style={[styles.button, { backgroundColor: colors.error + '20', borderColor: colors.error }]}
+                    onPress={() => {
+                        Alert.alert(
+                            "Reset Local Database?",
+                            "This will completely erase all local notes, tasks, and images from your device. If you haven't synced, they will be lost forever.",
+                            [
+                                { text: "Cancel", style: "cancel" },
+                                {
+                                    text: "Reset All",
+                                    style: "destructive",
+                                    onPress: () => {
+                                        const { resetAll } = require('@/lib/db/client');
+                                        resetAll();
+                                        Alert.alert("Reset Complete", "The local database has been wiped.");
+                                        loadStats();
+                                    }
+                                }
+                            ]
+                        )
+                    }}
+                >
+                    <Ionicons name="warning-outline" size={20} color={colors.error} />
+                    <Text style={[styles.buttonText, { color: colors.error }]}>Reset Local Database</Text>
+                </HapticPressable>
             </View>
 
             {isLoading && (
@@ -213,6 +239,7 @@ const styles = StyleSheet.create({
     },
     actions: {
         gap: 12,
+        paddingBottom: 100,
     },
     button: {
         flexDirection: 'row',

@@ -116,3 +116,47 @@ export function decryptPayload(encryptedHex: string, nonceHex: string, mnemonic:
 
     return decryptedText;
 }
+
+/**
+ * Encrypts an image (base64 string) using AES-256-CTR.
+ * Returns the encrypted data as a Base64 string for efficient binary upload.
+ */
+export function encryptImagePayload(base64Image: string, mnemonic: string): EncryptedPayload {
+    const key = getAesKeyFromMnemonic(mnemonic);
+
+    const nonceBytes = Crypto.getRandomBytes(16);
+    const aesCtr = new aesjs.ModeOfOperation.ctr(key as any, new aesjs.Counter(nonceBytes));
+
+    // Convert base64 string to bytes
+    const textBytes = aesjs.utils.utf8.toBytes(base64Image);
+
+    // Encrypt
+    const encryptedBytes = aesCtr.encrypt(textBytes);
+
+    // Convert encrypted bytes to base64 string
+    const encryptedBase64 = Buffer.from(encryptedBytes).toString('base64');
+    const nonceHex = aesjs.utils.hex.fromBytes(nonceBytes);
+
+    return {
+        encryptedData: encryptedBase64,
+        nonce: nonceHex
+    };
+}
+
+/**
+ * Decrypts an image payload using AES-256-CTR.
+ * Expects the encrypted data as an ArrayBuffer or Uint8Array, returns the original base64 string.
+ */
+export function decryptImagePayload(encryptedBytes: Uint8Array, nonceHex: string, mnemonic: string): string {
+    const key = getAesKeyFromMnemonic(mnemonic);
+
+    const nonceBytes = aesjs.utils.hex.toBytes(nonceHex);
+    const aesCtr = new aesjs.ModeOfOperation.ctr(key as any, new aesjs.Counter(nonceBytes));
+
+    const decryptedBytes = aesCtr.decrypt(encryptedBytes);
+
+    // Convert back to base64 string
+    const decryptedText = aesjs.utils.utf8.fromBytes(decryptedBytes);
+
+    return decryptedText;
+}

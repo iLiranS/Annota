@@ -4,7 +4,7 @@ import { generateMasterKey, storeMasterKey, validateMasterKey } from '@/lib/util
 import * as Clipboard from 'expo-clipboard';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function MasterKeyScreen() {
     const [mode, setMode] = useState<'generate' | 'import'>('generate');
@@ -115,104 +115,119 @@ export default function MasterKeyScreen() {
     }
 
     return (
-        <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-            <Text style={[styles.title, { color: theme.colors.text }]}>
-                {mode === 'generate' ? 'Your Master Key' : 'Recover Account'}
-            </Text>
+        <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={{ flex: 1, backgroundColor: theme.colors.background }}
+        >
+            <ScrollView
+                contentContainerStyle={[styles.scrollContainer, { backgroundColor: theme.colors.background }]}
+                keyboardShouldPersistTaps="handled"
+            >
+                <Text style={[styles.title, { color: theme.colors.text }]}>
+                    {mode === 'generate' ? 'Your Master Key' : 'Recover Account'}
+                </Text>
 
-            <View style={[styles.toggleContainer, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-                <TouchableOpacity
-                    style={[styles.toggleButton, mode === 'generate' && { backgroundColor: theme.colors.primary }]}
-                    onPress={() => setMode('generate')}
-                >
-                    <Text style={[styles.toggleText, mode === 'generate' && { color: '#fff', fontWeight: 'bold' }]}>Create New</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                    style={[styles.toggleButton, mode === 'import' && { backgroundColor: theme.colors.primary }]}
-                    onPress={() => setMode('import')}
-                >
-                    <Text style={[styles.toggleText, mode === 'import' && { color: '#fff', fontWeight: 'bold' }]}>Import Existing</Text>
-                </TouchableOpacity>
-            </View>
+                <View style={[styles.toggleContainer, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+                    <TouchableOpacity
+                        style={[styles.toggleButton, mode === 'generate' && { backgroundColor: theme.colors.primary }]}
+                        onPress={() => setMode('generate')}
+                    >
+                        <Text style={[
+                            styles.toggleText,
+                            { color: mode === 'generate' ? '#fff' : theme.colors.text },
+                            mode === 'generate' && { fontWeight: 'bold' }
+                        ]}>Create New</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[styles.toggleButton, mode === 'import' && { backgroundColor: theme.colors.primary }]}
+                        onPress={() => setMode('import')}
+                    >
+                        <Text style={[
+                            styles.toggleText,
+                            { color: mode === 'import' ? '#fff' : theme.colors.text },
+                            mode === 'import' && { fontWeight: 'bold' }
+                        ]}>Import Existing</Text>
+                    </TouchableOpacity>
+                </View>
 
-            {mode === 'generate' ? (
-                <>
-                    {hasCloudData && (
-                        <View style={[styles.warningContainer, { backgroundColor: theme.colors.error + '20' }]}>
-                            <Text style={[styles.warningText, { color: theme.colors.error, fontWeight: 'bold' }]}>
-                                Warning: You have existing cloud data. If you generate a new key and proceed, your previous data will be permanently deleted!
+                {mode === 'generate' ? (
+                    <>
+                        {hasCloudData && (
+                            <View style={[styles.warningContainer, { backgroundColor: theme.colors.error + '20' }]}>
+                                <Text style={[styles.warningText, { color: theme.colors.error, fontWeight: 'bold' }]}>
+                                    Warning: You have existing cloud data. If you generate a new key and proceed, your previous data will be permanently deleted!
+                                </Text>
+                            </View>
+                        )}
+
+                        <View style={[styles.warningContainer, { backgroundColor: theme.colors.card }]}>
+                            <Text style={[styles.warningText, { color: theme.colors.text }]}>
+                                Write down these 12 words in order. This is the ONLY way to recover your data if you lose your device.
+                                We do not store this key, and we cannot recover it for you.
                             </Text>
                         </View>
-                    )}
 
-                    <View style={[styles.warningContainer, { backgroundColor: theme.colors.card }]}>
-                        <Text style={[styles.warningText, { color: theme.colors.text }]}>
-                            Write down these 12 words in order. This is the ONLY way to recover your data if you lose your device.
-                            We do not store this key, and we cannot recover it for you.
-                        </Text>
-                    </View>
+                        <View style={[styles.phraseContainer, { borderColor: theme.colors.border }]}>
+                            {mnemonic ? mnemonic.split(' ').map((word, index) => (
+                                <View key={index} style={[styles.wordBadge, { backgroundColor: theme.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}>
+                                    <Text style={[styles.wordIndex, { color: theme.colors.border }]}>{index + 1}</Text>
+                                    <Text style={[styles.wordText, { color: theme.colors.text }]}>{word}</Text>
+                                </View>
+                            )) : null}
+                        </View>
 
-                    <View style={[styles.phraseContainer, { borderColor: theme.colors.border }]}>
-                        {mnemonic ? mnemonic.split(' ').map((word, index) => (
-                            <View key={index} style={styles.wordBadge}>
-                                <Text style={[styles.wordIndex, { color: theme.colors.border }]}>{index + 1}</Text>
-                                <Text style={[styles.wordText, { color: theme.colors.text }]}>{word}</Text>
-                            </View>
-                        )) : null}
-                    </View>
+                        <View style={styles.actionButtons}>
+                            <TouchableOpacity style={[styles.secondaryButton, { borderColor: theme.colors.border }]} onPress={generateNewKey}>
+                                <Text style={[styles.secondaryButtonText, { color: theme.colors.text }]}>Randomize</Text>
+                            </TouchableOpacity>
 
-                    <View style={styles.actionButtons}>
-                        <TouchableOpacity style={[styles.secondaryButton, { borderColor: theme.colors.border }]} onPress={generateNewKey}>
-                            <Text style={[styles.secondaryButtonText, { color: theme.colors.text }]}>Randomize</Text>
+                            <TouchableOpacity style={[styles.secondaryButton, { borderColor: theme.colors.border }]} onPress={copyToClipboard}>
+                                <Text style={[styles.secondaryButtonText, { color: theme.colors.text }]}>Copy</Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        <TouchableOpacity
+                            style={[styles.button, { backgroundColor: theme.colors.primary }]}
+                            onPress={handleConfirm}
+                        >
+                            <Text style={styles.buttonText}>I Have Saved It</Text>
                         </TouchableOpacity>
+                    </>
+                ) : (
+                    <>
+                        <View style={[styles.warningContainer, { backgroundColor: theme.colors.card }]}>
+                            <Text style={[styles.warningText, { color: theme.colors.text }]}>
+                                Enter your existing 12-word master key to regain access to your synced data. You can also paste the entire phrase into the first box.
+                            </Text>
+                        </View>
 
-                        <TouchableOpacity style={[styles.secondaryButton, { borderColor: theme.colors.border }]} onPress={copyToClipboard}>
-                            <Text style={[styles.secondaryButtonText, { color: theme.colors.text }]}>Copy</Text>
+                        <View style={[styles.inputGrid]}>
+                            {importWords.map((word, index) => (
+                                <View key={index} style={[styles.inputWrapper, { borderColor: theme.colors.border, backgroundColor: theme.colors.card }]}>
+                                    <Text style={[styles.inputIndex, { color: theme.colors.border }]}>{index + 1}</Text>
+                                    <TextInput
+                                        style={[styles.inputField, { color: theme.colors.text }]}
+                                        value={word}
+                                        onChangeText={(text) => handleWordChange(text, index)}
+                                        autoCapitalize="none"
+                                        autoCorrect={false}
+                                        placeholder={`word`}
+                                        placeholderTextColor={theme.colors.border}
+                                    />
+                                </View>
+                            ))}
+                        </View>
+
+                        <TouchableOpacity
+                            style={[styles.button, { backgroundColor: theme.colors.primary, marginTop: 20, marginBottom: 40 }]}
+                            onPress={handleConfirm}
+                        >
+                            <Text style={styles.buttonText}>Recover Account</Text>
                         </TouchableOpacity>
-                    </View>
-
-                    <TouchableOpacity
-                        style={[styles.button, { backgroundColor: theme.colors.primary }]}
-                        onPress={handleConfirm}
-                    >
-                        <Text style={styles.buttonText}>I Have Saved It</Text>
-                    </TouchableOpacity>
-                </>
-            ) : (
-                <>
-                    <View style={[styles.warningContainer, { backgroundColor: theme.colors.card }]}>
-                        <Text style={[styles.warningText, { color: theme.colors.text }]}>
-                            Enter your existing 12-word master key to regain access to your synced data. You can also paste the entire phrase into the first box.
-                        </Text>
-                    </View>
-
-                    <View style={[styles.inputGrid]}>
-                        {importWords.map((word, index) => (
-                            <View key={index} style={[styles.inputWrapper, { borderColor: theme.colors.border, backgroundColor: theme.colors.card }]}>
-                                <Text style={[styles.inputIndex, { color: theme.colors.border }]}>{index + 1}</Text>
-                                <TextInput
-                                    style={[styles.inputField, { color: theme.colors.text }]}
-                                    value={word}
-                                    onChangeText={(text) => handleWordChange(text, index)}
-                                    autoCapitalize="none"
-                                    autoCorrect={false}
-                                    placeholder={`word`}
-                                    placeholderTextColor={theme.colors.border}
-                                />
-                            </View>
-                        ))}
-                    </View>
-
-                    <TouchableOpacity
-                        style={[styles.button, { backgroundColor: theme.colors.primary, marginTop: 20 }]}
-                        onPress={handleConfirm}
-                    >
-                        <Text style={styles.buttonText}>Recover Account</Text>
-                    </TouchableOpacity>
-                </>
-            )}
-
-        </View>
+                    </>
+                )}
+            </ScrollView>
+        </KeyboardAvoidingView>
     );
 }
 
@@ -220,6 +235,12 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         padding: 20,
+        justifyContent: 'center',
+    },
+    scrollContainer: {
+        padding: 20,
+        paddingTop: 60,
+        flexGrow: 1,
         justifyContent: 'center',
     },
     title: {
@@ -237,7 +258,7 @@ const styles = StyleSheet.create({
     },
     toggleButton: {
         flex: 1,
-        paddingVertical: 10,
+        paddingVertical: 12,
         alignItems: 'center',
     },
     toggleText: {
@@ -268,7 +289,6 @@ const styles = StyleSheet.create({
         margin: 5,
         paddingVertical: 5,
         paddingHorizontal: 10,
-        backgroundColor: 'rgba(0,0,0,0.05)',
         borderRadius: 5,
     },
     wordIndex: {
@@ -331,3 +351,4 @@ const styles = StyleSheet.create({
         fontSize: 16,
     },
 });
+

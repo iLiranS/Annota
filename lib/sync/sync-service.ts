@@ -8,6 +8,8 @@ import { decryptPayload, encryptPayload } from '@/lib/utils/crypto';
 import { getDb } from '@/stores/db-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { eq, inArray } from 'drizzle-orm';
+import { getImagesByIds } from '../db/repositories/images.repository';
+import { imageSyncService } from '../services/sync/image-sync.service';
 
 const SYNC_TIME_KEY = 'global_last_sync_time';
 
@@ -18,6 +20,7 @@ export async function syncPush(masterKey: string) {
     const userId = session.user.id;
     const now = new Date(); // To standardize the timestamp of this push
     let didDeleteTombstones = false;
+
 
     // === 1. FOLDERS ===
     const dirtyFolders = getDirtyFolders();
@@ -120,6 +123,10 @@ export async function syncPush(masterKey: string) {
             clearDirtyNotes(aliveNotes.map(n => n.id), now);
         }
     }
+
+    // === 4. IMAGES ===
+    // We push images AFTER notes to avoid foreign key constraints in `note_images` where `note_id` might not exist in `encrypted_notes` yet.
+    await imageSyncService.pushImages(masterKey, userId);
 
     // Note: We don't update SyncTime here because Push doesn't necessarily mean we want to skip Pulling things that happened *during* our offline state. 
 
@@ -263,5 +270,53 @@ export async function syncPull(masterKey: string) {
     if (didDeleteTombstones) {
         console.log('[SyncPull] Tombstones deleted locally. Running garbage collection to free space...');
         StorageService.runGarbageCollection(true);
+    }
+
+    // === 4. PULL IMAGES (Background) ===
+    // After pulling notes, let's figure out what images we are missing.
+    // 1. Get all image links for this user from Supabase
+    // (Optimization: we only get links for the notes we just updated or we get all links. 
+    // Getting all links is simple and reliable for fixing gaps).
+    const { data: cloudLinks, error: linkError } = await supabase
+        .from('note_images')
+        .select(`
+            image_id,
+            encrypted_notes!inner(user_id)
+        `)
+        .eq('encrypted_notes.user_id', userId);
+
+    if (linkError) {
+        console.error("[SyncPull] Failed to fetch image links", linkError);
+    } else if (cloudLinks && cloudLinks.length > 0) {
+        // Collect unique image IDs
+        const uniqueImageIds = Array.from(new Set(cloudLinks.map(l => l.image_id as string)));
+
+        // Which ones do we already have locally?
+        const localImages = getImagesByIds(uniqueImageIds);
+        const localImageIds = new Set(localImages.map(i => i.id));
+
+        const missingIds = uniqueImageIds.filter(id => !localImageIds.has(id));
+
+        if (missingIds.length > 0) {
+            console.log(`[SyncPull] Identified ${missingIds.length} missing images.`);
+            // Fetch metadata for nonces
+            const { data: cloudMeta, error: metaError } = await supabase
+                .from('encrypted_images')
+                .select('id, nonce')
+                .in('id', missingIds)
+                .eq('user_id', userId);
+
+            if (!metaError && cloudMeta) {
+                const downloadQueue = cloudMeta.map(meta => ({
+                    imageId: meta.id,
+                    noteId: '', // Note ID doesn't matter for downloading
+                    nonce: meta.nonce,
+                    masterKey,
+                    userId
+                }));
+
+                imageSyncService.queueImagesForDownload(downloadQueue);
+            }
+        }
     }
 }

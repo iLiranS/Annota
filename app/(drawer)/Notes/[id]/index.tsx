@@ -229,6 +229,7 @@ export default function NoteEditor() {
         }, 500);
     }, [id]);
 
+
     // Handle case where note doesn't exist
     if (!currentNote) {
         return (

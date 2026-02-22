@@ -1,12 +1,39 @@
 
 import { ThemeProvider } from '@react-navigation/native';
+import * as BackgroundFetch from 'expo-background-fetch';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
+import * as TaskManager from 'expo-task-manager';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
+
+const BACKGROUND_SYNC_TASK = 'BACKGROUND_SYNC_TASK';
+
+TaskManager.defineTask(BACKGROUND_SYNC_TASK, async () => {
+  try {
+    const { supabase } = require('@/lib/supabase');
+    const { syncPull, syncPush } = require('@/lib/sync/sync-service');
+    const { getMasterKey } = require('@/lib/utils/crypto');
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return BackgroundFetch.BackgroundFetchResult.NoData;
+
+    const key = await getMasterKey();
+    if (!key) return BackgroundFetch.BackgroundFetchResult.NoData;
+
+    // Note: For background fetch, doing heavy operations must be well bounded
+    await syncPull(key);
+    await syncPush(key);
+
+    return BackgroundFetch.BackgroundFetchResult.NewData;
+  } catch (error) {
+    console.error("[BackgroundSync] Failed:", error);
+    return BackgroundFetch.BackgroundFetchResult.Failed;
+  }
+});
 
 import { useAppTheme } from '@/hooks/use-app-theme'; // USe our new hook
 import { supabase } from '@/lib/supabase';
@@ -103,7 +130,7 @@ export default function RootLayout() {
 
   // Sync Loop
   useEffect(() => {
-    let intervalId: ReturnType<typeof setInterval>;
+
 
     async function doSync() {
       if (!session) return;
@@ -133,6 +160,32 @@ export default function RootLayout() {
       doSync();
       // Then every 60 seconds (Commented out for now as requested by user)
       // intervalId = setInterval(doSync, 60000);
+    }
+
+    // Register Background Fetch
+    const registerBackgroundFetch = async () => {
+      if (!session) return;
+      try {
+        const isRegistered = await TaskManager.isTaskRegisteredAsync(BACKGROUND_SYNC_TASK);
+        if (!isRegistered) {
+          await BackgroundFetch.registerTaskAsync(BACKGROUND_SYNC_TASK, {
+            minimumInterval: 15 * 60, // 15 minutes
+            stopOnTerminate: false,
+            startOnBoot: true,
+          });
+          console.log("[BackgroundSync] Task registered");
+        }
+      } catch (err) {
+        if (err instanceof Error && err.message.includes('Background Fetch has not been configured')) {
+          console.warn("[BackgroundSync] Skipped background fetch registration (Expected in Expo Go).");
+        } else {
+          console.error("[BackgroundSync] Failed to register task", err);
+        }
+      }
+    };
+
+    if (session && dbReady) {
+      registerBackgroundFetch();
     }
 
     return () => {
