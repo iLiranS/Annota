@@ -60,7 +60,10 @@ export const NoteService = {
 
     // 3. Update Content
     updateContent: async (noteId: string, content: string) => {
-        const preview = generatePreview(content);
+        const metadata = notesRepo.getNoteMetadataById(noteId);
+        const isDailyNote = metadata?.folderId === 'system-daily-notes';
+
+        const preview = isDailyNote ? generateTitle(content) : generatePreview(content);
         notesRepo.updateNoteContent(noteId, content, preview);
     },
 
