@@ -25,75 +25,91 @@ class ImageSyncService {
     /**
      * Push pending images linked to HEAD versions of notes up to Supabase.
      */
-    async pushImages(masterKey: string, userId: string): Promise<void> {
+    async pushImages(masterKey: string, userId: string, noteIdsToRefresh: string[] = []): Promise<void> {
         const candidates = ImagesRepo.getPendingImagesLinkedToLatestVersions();
-        if (candidates.length === 0) return;
 
-        console.log(`[ImageSync] Found ${candidates.length} candidate images for push.`);
+        const notesWithPendingImages = new Set(candidates.map(c => c.noteId));
+        const uniquePendingImages = new Map(candidates.map(c => [c.image.id, c.image]));
 
-        const pushedImageIds: string[] = [];
+        if (uniquePendingImages.size > 0) {
+            console.log(`[ImageSync] Found ${uniquePendingImages.size} unique pending images for push.`);
 
-        for (const { image, noteId } of candidates) {
-            try {
-                // 1. Read file from disk as Base64
-                const fileInfo = await FileSystem.getInfoAsync(image.localPath);
-                if (!fileInfo.exists) continue;
+            const pushedImageIds: string[] = [];
 
-                const base64Data = await FileSystem.readAsStringAsync(image.localPath, {
-                    encoding: FileSystem.EncodingType.Base64
-                });
+            for (const image of uniquePendingImages.values()) {
+                try {
+                    // 1. Read file from disk as Base64
+                    const fileInfo = await FileSystem.getInfoAsync(image.localPath);
+                    if (!fileInfo.exists) continue;
 
-                // 2. Encrypt to Base64 (not hex!)
-                const { encryptedData: encryptedBase64String, nonce } = encryptImagePayload(base64Data, masterKey);
-
-                // 3. Convert Base64 to ArrayBuffer to drop the 33% bloat
-                const binaryArrayBuffer = decode(encryptedBase64String);
-
-                // 4. Upload to Storage as raw binary
-                const storagePath = `${userId}/${image.id}`;
-                const { error: uploadError } = await supabase.storage
-                    .from(BUCKET_NAME)
-                    .upload(storagePath, binaryArrayBuffer, {
-                        contentType: 'application/octet-stream',
-                        upsert: true
+                    const base64Data = await FileSystem.readAsStringAsync(image.localPath, {
+                        encoding: FileSystem.EncodingType.Base64
                     });
 
-                if (uploadError) throw uploadError;
+                    // 2. Encrypt to Base64 (not hex!)
+                    const { encryptedData: encryptedBase64String, nonce } = encryptImagePayload(base64Data, masterKey);
 
-                // 4. Insert Metadata into DB
-                const { error: metaError } = await supabase
-                    .from('encrypted_images')
-                    .upsert({
-                        id: image.id,
-                        user_id: userId,
-                        nonce: nonce,
-                        created_at: new Date().toISOString()
-                    });
+                    // 3. Convert Base64 to ArrayBuffer to drop the 33% bloat
+                    const binaryArrayBuffer = decode(encryptedBase64String);
 
-                if (metaError) throw metaError;
+                    // 4. Upload to Storage as raw binary
+                    const storagePath = `${userId}/${image.id}`;
+                    const { error: uploadError } = await supabase.storage
+                        .from(BUCKET_NAME)
+                        .upload(storagePath, binaryArrayBuffer, {
+                            contentType: 'application/octet-stream',
+                            upsert: true
+                        });
 
-                // 5. Insert Link
-                const { error: linkError } = await supabase
-                    .from('note_images')
-                    .upsert({
-                        note_id: noteId,
-                        image_id: image.id,
-                        user_id: userId
-                    });
+                    if (uploadError) throw uploadError;
 
-                if (linkError) throw linkError;
+                    // 5. Insert Metadata into DB
+                    const { error: metaError } = await supabase
+                        .from('encrypted_images')
+                        .upsert({
+                            id: image.id,
+                            user_id: userId,
+                            nonce: nonce,
+                            created_at: new Date().toISOString()
+                        });
 
-                pushedImageIds.push(image.id);
+                    if (metaError) throw metaError;
 
-            } catch (err) {
-                console.error(`[ImageSync] Failed to push image ${image.id}`, err);
+                    pushedImageIds.push(image.id);
+                } catch (err) {
+                    console.error(`[ImageSync] Failed to push image ${image.id}`, err);
+                }
+            }
+
+            // 6. Update local DB
+            if (pushedImageIds.length > 0) {
+                ImagesRepo.markImagesAsSynced(pushedImageIds);
+                console.log(`[ImageSync] Successfully pushed ${pushedImageIds.length} images.`);
             }
         }
 
-        // 6. Update local DB
-        if (pushedImageIds.length > 0) {
-            ImagesRepo.markImagesAsSynced(pushedImageIds);
-            console.log(`[ImageSync] Successfully pushed ${pushedImageIds.length} images.`);
+        const noteIdsNeedingReplace = Array.from(new Set([
+            ...noteIdsToRefresh,
+            ...Array.from(notesWithPendingImages),
+        ]));
+
+        if (noteIdsNeedingReplace.length === 0) {
+            return;
+        }
+
+        const latestImageStateByNote = ImagesRepo.getLatestVersionImageIdsForNotes(noteIdsNeedingReplace);
+        for (const { noteId, imageIds } of latestImageStateByNote) {
+            try {
+                const { error } = await supabase.rpc('replace_note_images', {
+                    p_note_id: noteId,
+                    p_user_id: userId,
+                    p_image_ids: imageIds,
+                });
+
+                if (error) throw error;
+            } catch (err) {
+                console.error(`[ImageSync] Failed to replace note_images for note ${noteId}`, err);
+            }
         }
     }
 

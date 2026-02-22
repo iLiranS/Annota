@@ -219,6 +219,64 @@ export function getPendingImagesLinkedToLatestVersions(tx: DbOrTx = getDb()): {
     }));
 }
 
+/**
+ * Returns the latest-version image IDs for each provided note ID.
+ * Notes without a latest version (or without linked images) are returned with an empty imageIds array.
+ */
+export function getLatestVersionImageIdsForNotes(noteIds: string[], tx: DbOrTx = getDb()): {
+    noteId: string;
+    imageIds: string[];
+}[] {
+    const uniqueNoteIds = Array.from(new Set(noteIds));
+    if (uniqueNoteIds.length === 0) return [];
+
+    const latestVersions = tx
+        .select({
+            id: noteVersions.id,
+            noteId: noteVersions.noteId,
+        })
+        .from(noteVersions)
+        .where(
+            and(
+                inArray(noteVersions.noteId, uniqueNoteIds),
+                sql`${noteVersions.createdAt} = (SELECT MAX(v2.created_at) FROM ${noteVersions} v2 WHERE v2.note_id = ${noteVersions.noteId})`
+            )
+        )
+        .all();
+
+    const imageIdsByNote = new Map<string, Set<string>>();
+    for (const noteId of uniqueNoteIds) {
+        imageIdsByNote.set(noteId, new Set<string>());
+    }
+
+    if (latestVersions.length === 0) {
+        return uniqueNoteIds.map(noteId => ({ noteId, imageIds: [] }));
+    }
+
+    const latestVersionIds = latestVersions.map(v => v.id);
+    const versionToNote = new Map(latestVersions.map(v => [v.id, v.noteId]));
+
+    const links = tx
+        .select({
+            versionId: versionImages.versionId,
+            imageId: versionImages.imageId,
+        })
+        .from(versionImages)
+        .where(inArray(versionImages.versionId, latestVersionIds))
+        .all();
+
+    for (const link of links) {
+        const noteId = versionToNote.get(link.versionId);
+        if (!noteId) continue;
+        imageIdsByNote.get(noteId)?.add(link.imageId);
+    }
+
+    return uniqueNoteIds.map(noteId => ({
+        noteId,
+        imageIds: Array.from(imageIdsByNote.get(noteId) ?? []),
+    }));
+}
+
 export function markImagesAsSynced(imageIds: string[], tx: DbOrTx = getDb()): void {
     if (imageIds.length === 0) return;
     tx.update(images)

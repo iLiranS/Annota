@@ -126,7 +126,11 @@ export async function syncPush(masterKey: string) {
 
     // === 4. IMAGES ===
     // We push images AFTER notes to avoid foreign key constraints in `note_images` where `note_id` might not exist in `encrypted_notes` yet.
-    await imageSyncService.pushImages(masterKey, userId);
+    await imageSyncService.pushImages(
+        masterKey,
+        userId,
+        dirtyNotes.map(note => note.id)
+    );
 
     // Note: We don't update SyncTime here because Push doesn't necessarily mean we want to skip Pulling things that happened *during* our offline state. 
 
