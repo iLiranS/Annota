@@ -208,7 +208,9 @@ export function setupEditor(options: any) {
         autofocus = false,
         paddingTop = 0,
         direction = 'auto',
-        fontFamily = 'system'
+        fontFamily = 'system',
+        fontSize = 16,
+        lineSpacing = 1.5
     } = options;
 
     // Set CSS variables for theme
@@ -220,6 +222,8 @@ export function setupEditor(options: any) {
     document.documentElement.style.setProperty('--code-block-bg', isDark ? '#1E1E1E' : '#F5F5F5');
     document.documentElement.style.setProperty('--border-color', isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)');
     document.documentElement.style.setProperty('--quote-bg', hexToRgba(colors.primary, 0.2));
+    document.documentElement.style.setProperty('--editor-font-size', `${fontSize}px`);
+    document.documentElement.style.setProperty('--editor-line-height', `${lineSpacing}`);
     applyFontFamily(fontFamily);
 
     // Apply content padding to the body so it scrolls with the header

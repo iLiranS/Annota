@@ -28,14 +28,23 @@ export default function StorageSettings() {
         totalImagesSize: number;
         notesSize: number;
         totalSize: number;
+        dbName: string;
     } | null>(null);
+    const [availableDbs, setAvailableDbs] = useState<string[]>([]);
+    const [selectedDb, setSelectedDb] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
 
-    const loadStats = async () => {
+    const loadAvailableDbs = async () => {
+        const dbs = await StorageService.listDatabases();
+        setAvailableDbs(dbs);
+    };
+
+    const loadStats = async (dbOverride?: string) => {
         setIsLoading(true);
         try {
-            const s = await StorageService.getStats();
+            const s = await StorageService.getStats(dbOverride || selectedDb || undefined);
             setStats(s);
+            if (!selectedDb) setSelectedDb(s.dbName);
         } catch (e) {
             console.error(e);
         } finally {
@@ -44,10 +53,17 @@ export default function StorageSettings() {
     };
 
     useEffect(() => {
+        loadAvailableDbs();
         loadStats();
     }, []);
 
+    const isActiveDb = stats?.dbName === (user ? `user_${user.id}.db` : 'local_guest.db');
+
     const handleGC = () => {
+        if (!isActiveDb) {
+            Alert.alert("Action Not Supported", "Garbage collection can only be run on the active database.");
+            return;
+        }
         Alert.alert(
             "Run Garbage Collection?",
             "This will delete all images that are not referenced by any note version. This cannot be undone.",
@@ -77,6 +93,10 @@ export default function StorageSettings() {
     };
 
     const handleManualSync = async () => {
+        if (!isActiveDb) {
+            Alert.alert("Action Not Supported", "Sync can only be run on the active database.");
+            return;
+        }
         setIsLoading(true);
         try {
             const key = await getMasterKey();
@@ -106,6 +126,39 @@ export default function StorageSettings() {
     return (
         <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
             <Stack.Screen options={{ title: 'Storage & Debug' }} />
+
+            {availableDbs.length > 1 && (
+                <View style={styles.section}>
+                    <Text style={[styles.sectionTitle, { color: colors.text }]}>Selected Database</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dbSelector}>
+                        {availableDbs.map(db => (
+                            <HapticPressable
+                                key={db}
+                                style={[
+                                    styles.dbChip,
+                                    { backgroundColor: selectedDb === db ? colors.primary : colors.card, borderColor: colors.border }
+                                ]}
+                                onPress={() => {
+                                    setSelectedDb(db);
+                                    loadStats(db);
+                                }}
+                            >
+                                <Text numberOfLines={1} style={[styles.dbChipText, { color: selectedDb === db ? '#fff' : colors.text }]}>
+                                    {db === 'local_guest.db' ? 'Guest' : db.replace('user_', '').replace('.db', '')}
+                                </Text>
+                            </HapticPressable>
+                        ))}
+                    </ScrollView>
+                    {!isActiveDb && (
+                        <View style={[styles.warningBanner, { backgroundColor: colors.error + '10', borderColor: colors.error }]}>
+                            <Ionicons name="information-circle-outline" size={16} color={colors.error} />
+                            <Text style={[styles.warningText, { color: colors.error }]}>
+                                Viewing non-active database. Some actions are disabled.
+                            </Text>
+                        </View>
+                    )}
+                </View>
+            )}
 
             <View style={styles.section}>
                 <Text style={[styles.sectionTitle, { color: colors.text }]}>Image Storage Stats</Text>
@@ -137,19 +190,21 @@ export default function StorageSettings() {
             <View style={styles.actions}>
                 <HapticPressable
                     style={[styles.button, { backgroundColor: colors.card, borderColor: colors.border }]}
-                    onPress={loadStats}
+                    onPress={() => loadStats()}
                 >
                     <Ionicons name="refresh" size={20} color={colors.primary} />
                     <Text style={[styles.buttonText, { color: colors.primary }]}>Refresh Stats</Text>
                 </HapticPressable>
 
-                <HapticPressable
-                    style={[styles.button, { backgroundColor: user ? colors.card : "#00000030", borderColor: colors.border }]}
-                    onPress={user ? handleManualSync : () => { }}
-                >
-                    <Ionicons name="cloud-upload-outline" size={20} color={user ? colors.primary : "#00000030"} />
-                    <Text style={[styles.buttonText, { color: user ? colors.primary : "#00000030" }]}>Sync with Cloud DB</Text>
-                </HapticPressable>
+                {user && (
+                    <HapticPressable
+                        style={[styles.button, { backgroundColor: colors.card, borderColor: colors.border }]}
+                        onPress={handleManualSync}
+                    >
+                        <Ionicons name="cloud-upload-outline" size={20} color={colors.primary} />
+                        <Text style={[styles.buttonText, { color: colors.primary }]}>Sync with Cloud DB</Text>
+                    </HapticPressable>
+                )}
 
                 <HapticPressable
                     style={[styles.button, { backgroundColor: colors.primary + '20', borderColor: colors.border }]}
@@ -236,6 +291,37 @@ const styles = StyleSheet.create({
     statValue: {
         fontSize: 16,
         fontVariant: ['tabular-nums'],
+    },
+    dbSelector: {
+        paddingVertical: 8,
+        paddingHorizontal: 4,
+        gap: 8,
+    },
+    dbChip: {
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 20,
+        borderWidth: 1,
+    },
+    dbChipText: {
+        fontSize: 14,
+        fontWeight: '600',
+        maxWidth: 100,
+    },
+    warningBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 8,
+        borderRadius: 8,
+        borderWidth: 1,
+        marginTop: 8,
+        gap: 6,
+        marginHorizontal: 4,
+    },
+    warningText: {
+        fontSize: 12,
+        fontWeight: '500',
+        flex: 1,
     },
     actions: {
         gap: 12,

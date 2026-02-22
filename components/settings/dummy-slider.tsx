@@ -15,6 +15,7 @@ interface SettingsSliderProps {
     units?: string;
     maxLabel?: string;
     label?: string;
+    displayValue?: string | number;
 }
 
 export default function SettingsSlider({
@@ -26,10 +27,15 @@ export default function SettingsSlider({
     onValueChange,
     minLabel,
     maxLabel,
-    label
+    label,
+    displayValue
 }: SettingsSliderProps) {
     const { colors, dark } = useTheme();
     const { accentColor, general } = useSettingsStore();
+
+    const formattedValue = displayValue !== undefined
+        ? displayValue
+        : `${Math.round(((value - minValue) / (maxValue - minValue)) * 100)}${units}`;
 
     return (
         <View style={[styles.container, { backgroundColor: colors.card }]}>
@@ -37,7 +43,7 @@ export default function SettingsSlider({
                 <View style={styles.header}>
                     <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
                     <Text style={[styles.value, { color: colors.text + '80' }]}>
-                        {Math.round(((value - minValue) / (maxValue - minValue)) * 100)}{units}
+                        {formattedValue}
                     </Text>
                 </View>
             )}

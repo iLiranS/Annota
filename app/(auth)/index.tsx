@@ -98,7 +98,7 @@ export default function LoginScreen() {
 
     const renderProviderButton = (provider: 'google' | 'apple' | 'github', icon: keyof typeof Ionicons.glyphMap, label: string, index: number) => {
         const isLoading = loadingProvider === provider;
-        const isDisabled = loadingProvider !== null || provider === 'apple' || provider === 'google';
+        const isDisabled = loadingProvider !== null || provider === 'apple'
 
         return (
             <Animated.View entering={FadeInDown.delay(400 + index * 100).duration(600)}>
@@ -144,7 +144,7 @@ export default function LoginScreen() {
                 </Animated.View>
 
                 <View style={styles.providersContainer}>
-                    {renderProviderButton('apple', 'logo-apple', 'Apple', 0)}
+
                     {renderProviderButton('google', 'logo-google', 'Google', 1)}
                     {renderProviderButton('github', 'logo-github', 'GitHub', 2)}
                 </View>

@@ -23,6 +23,11 @@ export default function EditorSettings() {
         updateEditorSettings({ direction: next });
     };
 
+    const getDisplayValue = (value: number, defaultValue: number, step: number) => {
+        const level = Math.round((value - defaultValue) / step);
+        return (level > 0 ? '+' : '') + level;
+    };
+
     return (
         <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
             <View style={styles.section}>
@@ -30,35 +35,22 @@ export default function EditorSettings() {
 
                 <DummySlider
                     label="Font Size"
-                    value={editor.fontSize}
-                    minValue={10}
-                    maxValue={30}
+                    value={Math.max(-5, Math.min(5, Math.round((editor.fontSize - 16) / 1)))}
+                    minValue={-5}
+                    maxValue={5}
                     step={1}
-                    minLabel="Small"
-                    maxLabel="Large"
-                    onValueChange={(val) => updateEditorSettings({ fontSize: val })}
+                    displayValue={getDisplayValue(editor.fontSize, 16, 1)}
+                    onValueChange={(val) => updateEditorSettings({ fontSize: 16 + val })}
                 />
 
                 <DummySlider
                     label="Line Spacing"
-                    value={editor.lineSpacing}
-                    minValue={1.0}
-                    maxValue={2.5}
-                    step={0.1}
-                    minLabel="Condensed"
-                    maxLabel="Wide"
-                    onValueChange={(val) => updateEditorSettings({ lineSpacing: val })}
-                />
-
-                <DummySlider
-                    label="Paragraph Spacing"
-                    value={editor.paragraphSpacing}
-                    minValue={0}
-                    maxValue={40}
-                    step={4}
-                    minLabel="None"
-                    maxLabel="Large"
-                    onValueChange={(val) => updateEditorSettings({ paragraphSpacing: val })}
+                    value={Math.max(-5, Math.min(5, Math.round((editor.lineSpacing - 1.5) / 0.1)))}
+                    minValue={-5}
+                    maxValue={5}
+                    step={1}
+                    displayValue={getDisplayValue(editor.lineSpacing, 1.5, 0.1)}
+                    onValueChange={(val) => updateEditorSettings({ lineSpacing: 1.5 + (val * 0.1) })}
                 />
             </View>
 

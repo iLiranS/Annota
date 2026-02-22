@@ -178,6 +178,8 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
                                 paddingTop: contentPaddingTop,
                                 direction: editorSettings.direction,
                                 fontFamily: editorSettings.fontFamily,
+                                fontSize: editorSettings.fontSize,
+                                lineSpacing: editorSettings.lineSpacing,
                                 editable,
                             });
                             // Resolve any local images in the initial content
@@ -386,6 +388,8 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
                 contentPaddingTop,
                 editorSettings.direction,
                 editorSettings.fontFamily,
+                editorSettings.fontSize,
+                editorSettings.lineSpacing,
                 editable,
                 noteId,
                 onGalleryVisibilityChange,
@@ -403,9 +407,11 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
                     paddingTop: contentPaddingTop,
                     direction: editorSettings.direction,
                     fontFamily: editorSettings.fontFamily,
+                    fontSize: editorSettings.fontSize,
+                    lineSpacing: editorSettings.lineSpacing,
                 });
             }
-        }, [dark, colors, isReady, sendCommand, contentPaddingTop, editorSettings.direction, editorSettings.fontFamily]);
+        }, [dark, colors, isReady, sendCommand, contentPaddingTop, editorSettings.direction, editorSettings.fontFamily, editorSettings.fontSize, editorSettings.lineSpacing]);
 
         useEffect(() => {
             if (isReady) {
@@ -521,7 +527,7 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
             }
         }, [noteId, sendCommand]);
 
-        const devEditorUrl = process.env.EXPO_PUBLIC_EDITOR_DEV_URL ?? 'http://192.168.7.14:5173';
+        const devEditorUrl = process.env.EXPO_PUBLIC_EDITOR_DEV_URL ?? 'http://192.168.7.15:5173';
         const useDevEditor = __DEV__ && process.env.EXPO_PUBLIC_EDITOR_DEV_SERVER === 'true';
 
         const source = useDevEditor
@@ -687,3 +693,4 @@ const styles = StyleSheet.create({
 export default TipTapEditor;
 export type { TipTapEditorProps, TipTapEditorRef } from './types';
 export { TipTapEditor };
+
