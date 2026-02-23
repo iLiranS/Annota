@@ -122,9 +122,40 @@ export default function TaskItem({ task, onPress, showDate = false }: TaskItemPr
 
             <View style={styles.rightSection}>
                 {task.deadline && (
-                    <ThemedText style={[styles.taskItemTime, { color: colors.text + '60' }]}>
-                        {task.isWholeDay ? formatDate(task.deadline) : (showDate ? formatDate(task.deadline) : formatTime(task.deadline))}
-                    </ThemedText>
+                    <View style={styles.timeContainer}>
+                        {!task.isWholeDay && !task.completed && (
+                            <Ionicons
+                                name="timer-outline"
+                                size={12}
+                                color={(() => {
+                                    if (task.completed) return colors.text + '40';
+                                    if (task.isWholeDay) return colors.text + '60';
+                                    const now = new Date();
+                                    const diff = task.deadline.getTime() - now.getTime();
+                                    if (diff < 0) return '#EF4444'; // Red for passed
+                                    if (diff < 3600000) return '#F59E0B'; // Orange for < 1h
+                                    return colors.text + '60';
+                                })()}
+                                style={{ marginRight: 4 }}
+                            />
+                        )}
+                        <ThemedText style={[
+                            styles.taskItemTime,
+                            {
+                                color: (() => {
+                                    if (task.completed) return colors.text + '40';
+                                    if (task.isWholeDay) return colors.text + '60';
+                                    const now = new Date();
+                                    const diff = task.deadline.getTime() - now.getTime();
+                                    if (diff < 0) return '#EF4444';
+                                    if (diff < 3600000) return '#F59E0B';
+                                    return colors.text + '60';
+                                })()
+                            }
+                        ]}>
+                            {task.isWholeDay ? formatDate(task.deadline) : (showDate ? formatDate(task.deadline) : formatTime(task.deadline))}
+                        </ThemedText>
+                    </View>
                 )}
                 <Ionicons name="chevron-forward" size={16} color={colors.text + '40'} />
             </View>
@@ -139,10 +170,10 @@ const styles = StyleSheet.create({
         padding: 12,
         borderRadius: 16,
         borderWidth: 1,
-        marginBottom: 10,
-        shadowOffset: { width: 0, height: 2 },
+        marginBottom: 8,
+        shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.03,
-        shadowRadius: 6,
+        shadowRadius: 1,
         elevation: 2,
     },
     toggleCircle: {
@@ -168,6 +199,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: 8,
         marginLeft: 8,
+    },
+    timeContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
     },
     taskItemTime: {
         fontSize: 12,

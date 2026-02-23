@@ -1,8 +1,9 @@
 import ThemedText from '@/components/themed-text';
+import { useSettingsStore } from '@/stores/settings-store';
 import { useTasksStore } from '@/stores/tasks-store';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@react-navigation/native';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -17,97 +18,124 @@ interface CalendarProps {
     onDateSelect: (date: Date) => void;
 }
 
-const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const MONTHS = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-];
+const WEEKDAYS_SUN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const WEEKDAYS_MON = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-function getDaysInMonth(year: number, month: number): number {
-    return new Date(year, month + 1, 0).getDate();
+function getStartOfWeek(date: Date, startOfWeek: 'sunday' | 'monday'): Date {
+    const result = new Date(date);
+    const day = result.getDay();
+    const diff = startOfWeek === 'sunday'
+        ? day
+        : (day === 0 ? 6 : day - 1);
+
+    result.setDate(result.getDate() - diff);
+    result.setHours(0, 0, 0, 0);
+    return result;
 }
 
-function getFirstDayOfMonth(year: number, month: number): number {
-    return new Date(year, month, 1).getDay();
+function getWeekDays(startDate: Date): Date[] {
+    return Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(startDate);
+        d.setDate(d.getDate() + i);
+        return d;
+    });
+}
+
+function formatDateRange(startDate: Date, endDate: Date): string {
+    const startDay = startDate.getDate();
+    const startMonth = startDate.getMonth() + 1;
+    const endDay = endDate.getDate();
+    const endMonth = endDate.getMonth() + 1;
+
+    return `${startDay}.${startMonth} - ${endDay}.${endMonth}`;
 }
 
 export default function Calendar({ selectedDate, onDateSelect }: CalendarProps) {
     const { colors, dark } = useTheme();
     const today = useMemo(() => new Date(), []);
+    const { general } = useSettingsStore();
+    const startOfWeekSetting = general.startOfWeek;
 
-    const [viewYear, setViewYear] = useState(selectedDate.getFullYear());
-    const [viewMonth, setViewMonth] = useState(selectedDate.getMonth());
+    // Use a reference date to determine the current week view
+    const [viewDate, setViewDate] = useState(() => getStartOfWeek(selectedDate, startOfWeekSetting));
+
+    // Update viewDate if selectedDate changes significantly (outside current view)
+    useEffect(() => {
+        const selectedStart = getStartOfWeek(selectedDate, startOfWeekSetting);
+        setViewDate(selectedStart);
+    }, [selectedDate, startOfWeekSetting]);
 
     // Animation values for swipe
     const translateX = useSharedValue(0);
     const SWIPE_THRESHOLD = 50;
 
+    const weekDays = useMemo(() => getWeekDays(viewDate), [viewDate]);
+    const weekRange = useMemo(() => {
+        const start = weekDays[0];
+        const end = weekDays[6];
+        return formatDateRange(start, end);
+    }, [weekDays]);
+
+    const isViewingCurrentWeek = useMemo(() => {
+        const todayStart = getStartOfWeek(today, startOfWeekSetting);
+        return viewDate.getTime() === todayStart.getTime();
+    }, [viewDate, today, startOfWeekSetting]);
+
     // Get tasks from store
     const { tasks } = useTasksStore();
     const taskDates = useMemo(() => {
-        const dates = new Set<number>();
+        const dates = new Set<string>();
         if (!tasks) return dates;
 
         tasks.forEach((task) => {
-            // Defensive Date parsing
             const deadline = task.deadline;
             const taskDate = deadline instanceof Date ? deadline : new Date(deadline);
 
             if (isNaN(taskDate.getTime())) return;
+            if (task.completed) return;
 
-            const taskYear = taskDate.getFullYear();
-            const taskMonth = taskDate.getMonth();
-            const taskDay = taskDate.getDate();
-
-            if (
-                taskYear === viewYear &&
-                taskMonth === viewMonth &&
-                !task.completed // Only show for uncompleted tasks
-            ) {
-                dates.add(taskDay);
-            }
+            // Store as YYYY-MM-DD string for easy lookup
+            const dateStr = `${taskDate.getFullYear()}-${taskDate.getMonth()}-${taskDate.getDate()}`;
+            dates.add(dateStr);
         });
         return dates;
-    }, [viewYear, viewMonth, tasks]);
+    }, [tasks]);
 
-    const daysInMonth = getDaysInMonth(viewYear, viewMonth);
-    const firstDayOfMonth = getFirstDayOfMonth(viewYear, viewMonth);
+    const handlePrevWeek = useCallback(() => {
+        setViewDate(prev => {
+            const next = new Date(prev);
+            next.setDate(next.getDate() - 7);
+            return next;
+        });
+    }, []);
 
-    const handlePrevMonth = useCallback(() => {
-        if (viewMonth === 0) {
-            setViewMonth(11);
-            setViewYear((y) => y - 1);
-        } else {
-            setViewMonth((m) => m - 1);
-        }
-    }, [viewMonth]);
+    const handleNextWeek = useCallback(() => {
+        setViewDate(prev => {
+            const next = new Date(prev);
+            next.setDate(next.getDate() + 7);
+            return next;
+        });
+    }, []);
 
-    const handleNextMonth = useCallback(() => {
-        if (viewMonth === 11) {
-            setViewMonth(0);
-            setViewYear((y) => y + 1);
-        } else {
-            setViewMonth((m) => m + 1);
-        }
-    }, [viewMonth]);
+    const handleToday = useCallback(() => {
+        const todayStart = getStartOfWeek(new Date(), startOfWeekSetting);
+        setViewDate(todayStart);
+        onDateSelect(new Date());
+    }, [startOfWeekSetting, onDateSelect]);
 
-    // Pan gesture for swiping between months
+    // Pan gesture for swiping between weeks
     const panGesture = Gesture.Pan()
-        .activeOffsetX([-20, 20]) // Only activate after moving 20px horizontally
-        .failOffsetY([-10, 10]) // Fail if moving too much vertically (for scrolling)
+        .activeOffsetX([-20, 20])
+        .failOffsetY([-10, 10])
         .onUpdate((event) => {
-            // Clamp the translation for a rubberband-like effect
             translateX.value = event.translationX * 0.4;
         })
         .onEnd((event) => {
             if (event.translationX > SWIPE_THRESHOLD) {
-                // Swipe right -> go to previous month
-                runOnJS(handlePrevMonth)();
+                runOnJS(handlePrevWeek)();
             } else if (event.translationX < -SWIPE_THRESHOLD) {
-                // Swipe left -> go to next month
-                runOnJS(handleNextMonth)();
+                runOnJS(handleNextWeek)();
             }
-            // Animate back to center smoothly without jiggle
             translateX.value = withTiming(0, { duration: 300 });
         });
 
@@ -115,49 +143,23 @@ export default function Calendar({ selectedDate, onDateSelect }: CalendarProps) 
         transform: [{ translateX: translateX.value }],
     }));
 
-    const isToday = (day: number): boolean => {
+    const isToday = (date: Date): boolean => {
         return (
-            day === today.getDate() &&
-            viewMonth === today.getMonth() &&
-            viewYear === today.getFullYear()
+            date.getDate() === today.getDate() &&
+            date.getMonth() === today.getMonth() &&
+            date.getFullYear() === today.getFullYear()
         );
     };
 
-    const isSelected = (day: number): boolean => {
+    const isSelected = (date: Date): boolean => {
         return (
-            day === selectedDate.getDate() &&
-            viewMonth === selectedDate.getMonth() &&
-            viewYear === selectedDate.getFullYear()
+            date.getDate() === selectedDate.getDate() &&
+            date.getMonth() === selectedDate.getMonth() &&
+            date.getFullYear() === selectedDate.getFullYear()
         );
     };
 
-    const handleDayPress = (day: number) => {
-        const newDate = new Date(viewYear, viewMonth, day);
-        onDateSelect(newDate);
-    };
-
-    // Build calendar grid
-    const calendarDays: (number | null)[] = [];
-
-    // Empty cells before first day
-    for (let i = 0; i < firstDayOfMonth; i++) {
-        calendarDays.push(null);
-    }
-
-    // Days of the month
-    for (let day = 1; day <= daysInMonth; day++) {
-        calendarDays.push(day);
-    }
-
-    // Fill remaining cells to complete the grid (6 rows max)
-    while (calendarDays.length < 42 && calendarDays.length % 7 !== 0) {
-        calendarDays.push(null);
-    }
-
-    const weeks: (number | null)[][] = [];
-    for (let i = 0; i < calendarDays.length; i += 7) {
-        weeks.push(calendarDays.slice(i, i + 7));
-    }
+    const weekdays = startOfWeekSetting === 'sunday' ? WEEKDAYS_SUN : WEEKDAYS_MON;
 
     return (
         <GestureDetector gesture={panGesture}>
@@ -170,25 +172,23 @@ export default function Calendar({ selectedDate, onDateSelect }: CalendarProps) 
                     },
                 ]}
             >
-                {/* Header with Month Navigation */}
+                {/* Header with Week Navigation */}
                 <View style={styles.header}>
-                    <Pressable onPress={handlePrevMonth} style={styles.navButton} hitSlop={12}>
-                        <Ionicons name="chevron-back" size={22} color={colors.text} />
+                    <Pressable onPress={handlePrevWeek} style={styles.navButton} hitSlop={12}>
+                        <Ionicons name="chevron-back" size={20} color={colors.text + '80'} />
                     </Pressable>
 
-                    <Pressable onPress={() => {
-                        setViewMonth(today.getMonth());
-                        setViewYear(today.getFullYear());
-                        handleDayPress(today.getDate());
-                        onDateSelect(today);
-                    }}>
-                        <ThemedText style={[styles.monthTitle, !isToday(today.getDate()) && { borderBottomWidth: 1, borderBottomColor: colors.text + '60' }]}>
-                            {MONTHS[viewMonth]} {viewYear}
+                    <Pressable onPress={handleToday}>
+                        <ThemedText style={[
+                            styles.rangeTitle,
+                            !isViewingCurrentWeek && { borderBottomWidth: 1, borderBottomColor: colors.text + '30' }
+                        ]}>
+                            {weekRange}
                         </ThemedText>
                     </Pressable>
 
-                    <Pressable onPress={handleNextMonth} style={styles.navButton} hitSlop={12}>
-                        <Ionicons name="chevron-forward" size={22} color={colors.text} />
+                    <Pressable onPress={handleNextWeek} style={styles.navButton} hitSlop={12}>
+                        <Ionicons name="chevron-forward" size={20} color={colors.text + '80'} />
                     </Pressable>
                 </View>
 
@@ -196,67 +196,62 @@ export default function Calendar({ selectedDate, onDateSelect }: CalendarProps) 
                 <Animated.View style={[styles.calendarContent, animatedStyle]}>
                     {/* Weekday Headers */}
                     <View style={styles.weekdayRow}>
-                        {WEEKDAYS.map((day) => (
+                        {weekdays.map((day) => (
                             <View key={day} style={styles.weekdayCell}>
-                                <ThemedText style={[styles.weekdayText, { color: colors.text + '60' }]}>
+                                <ThemedText style={[styles.weekdayText, { color: colors.text + '40' }]}>
                                     {day}
                                 </ThemedText>
                             </View>
                         ))}
                     </View>
 
-                    {/* Calendar Grid */}
-                    {weeks.map((week, weekIndex) => (
-                        <View key={weekIndex} style={styles.weekRow}>
-                            {week.map((day, dayIndex) => {
-                                if (day === null) {
-                                    return <View key={`empty-${dayIndex}`} style={styles.dayCell} />;
-                                }
+                    {/* Week Grid (Only one row) */}
+                    <View style={styles.weekRow}>
+                        {weekDays.map((date, index) => {
+                            const selected = isSelected(date);
+                            const todayHighlight = isToday(date);
+                            const dateStr = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+                            const hasTask = taskDates.has(dateStr);
 
-                                const selected = isSelected(day);
-                                const todayHighlight = isToday(day);
-                                const hasTask = taskDates.has(day);
-
-                                return (
-                                    <Pressable
-                                        key={day}
-                                        style={styles.dayCell}
-                                        onPress={() => handleDayPress(day)}
+                            return (
+                                <Pressable
+                                    key={index}
+                                    style={styles.dayCell}
+                                    onPress={() => onDateSelect(date)}
+                                >
+                                    <View
+                                        style={[
+                                            styles.dayInner,
+                                            selected && styles.selectedDay,
+                                            selected && { backgroundColor: colors.primary + '90' },
+                                            todayHighlight && !selected && styles.todayDay,
+                                            todayHighlight && !selected && { borderColor: colors.primary },
+                                        ]}
                                     >
-                                        <View
+                                        <ThemedText
                                             style={[
-                                                styles.dayInner,
-                                                selected && styles.selectedDay,
-                                                selected && { backgroundColor: colors.primary + '90' },
-                                                todayHighlight && !selected && styles.todayDay,
-                                                todayHighlight && !selected && { borderColor: colors.primary },
+                                                styles.dayText,
+                                                selected && styles.selectedDayText,
+                                                todayHighlight && !selected && { color: colors.primary, fontWeight: '700' },
                                             ]}
                                         >
-                                            <ThemedText
-                                                style={[
-                                                    styles.dayText,
-                                                    selected && styles.selectedDayText,
-                                                    todayHighlight && !selected && { color: colors.primary, fontWeight: '700' },
-                                                ]}
-                                            >
-                                                {day}
-                                            </ThemedText>
-                                        </View>
+                                            {date.getDate()}
+                                        </ThemedText>
+                                    </View>
 
-                                        {/* Task Indicator Dot */}
-                                        {hasTask && (
-                                            <View
-                                                style={[
-                                                    styles.taskDot,
-                                                    { backgroundColor: colors.primary },
-                                                ]}
-                                            />
-                                        )}
-                                    </Pressable>
-                                );
-                            })}
-                        </View>
-                    ))}
+                                    {/* Task Indicator Dot */}
+                                    {hasTask && (
+                                        <View
+                                            style={[
+                                                styles.taskDot,
+                                                { backgroundColor: colors.primary },
+                                            ]}
+                                        />
+                                    )}
+                                </Pressable>
+                            );
+                        })}
+                    </View>
                 </Animated.View>
             </View>
         </GestureDetector>
@@ -265,9 +260,10 @@ export default function Calendar({ selectedDate, onDateSelect }: CalendarProps) 
 
 const styles = StyleSheet.create({
     container: {
-        borderRadius: 20,
+        borderRadius: 16,
         borderWidth: 1,
-        padding: 16,
+        padding: 12,
+        paddingBottom: 16,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.03,
         shadowRadius: 8,
@@ -278,33 +274,34 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginBottom: 16,
+        marginBottom: 8,
     },
     calendarContent: {
-        overflowX: 'hidden',
+        overflow: 'hidden',
     },
     navButton: {
-        padding: 8,
+        padding: 4,
     },
-    monthTitle: {
-        fontSize: 18,
+    rangeTitle: {
+        fontSize: 15,
         fontWeight: '700',
-        letterSpacing: -0.3,
+        letterSpacing: 0.5,
+        paddingHorizontal: 6,
     },
     weekdayRow: {
         flexDirection: 'row',
-        marginBottom: 8,
+        marginBottom: 4,
     },
     weekdayCell: {
         flex: 1,
         alignItems: 'center',
-        paddingVertical: 8,
+        paddingVertical: 4,
     },
     weekdayText: {
-        fontSize: 12,
+        fontSize: 9,
         fontWeight: '600',
         textTransform: 'uppercase',
-        letterSpacing: 0.5,
+        letterSpacing: 0.8,
     },
     weekRow: {
         flexDirection: 'row',
@@ -312,38 +309,38 @@ const styles = StyleSheet.create({
     dayCell: {
         flex: 1,
         alignItems: 'center',
-        paddingVertical: 4,
-        minHeight: 44,
+        paddingVertical: 2,
+        minHeight: 36,
     },
     dayInner: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
+        width: 32,
+        height: 32,
+        borderRadius: 16,
         alignItems: 'center',
         justifyContent: 'center',
     },
     dayText: {
-        fontSize: 15,
+        fontSize: 14,
         fontWeight: '500',
     },
     selectedDay: {
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-        elevation: 3,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 2,
     },
     selectedDayText: {
         color: '#FFFFFF',
         fontWeight: '700',
     },
     todayDay: {
-        borderWidth: 2,
+        borderWidth: 1.5,
     },
     taskDot: {
         position: 'absolute',
-        bottom: -4,
-        width: 5,
-        height: 5,
-        borderRadius: 2.5,
+        top: -3,
+        width: 3,
+        height: 3,
+        borderRadius: 1.5,
     },
 });

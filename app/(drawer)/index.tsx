@@ -1,6 +1,6 @@
 import Calendar from '@/components/calendar';
-import RecentNotes from '@/components/notes/recent-notes';
-import TaskItem from '@/components/task-item';
+import RecentNotesList from '@/components/notes/recent-notes-list';
+import TaskList from '@/components/tasks/task-list';
 import ThemedText from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { HapticPressable } from '@/components/ui/haptic-pressable';
@@ -13,8 +13,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { DrawerNavigationProp } from '@react-navigation/drawer';
 import { useNavigation, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, LayoutChangeEvent, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Animated, LayoutChangeEvent, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const AnimatedIonicons = Animated.createAnimatedComponent(Ionicons);
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -137,95 +139,38 @@ export default function HomeScreen() {
   }, [createNote, router]);
 
   return (
-    <ThemedView style={styles.container}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 10 }]}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <HapticPressable
-            onPress={() => navigation.openDrawer()}
-            style={({ pressed }) => ({
-              opacity: pressed ? 0.7 : 1,
-              padding: 4,
-              marginLeft: -4,
-            })}
-          >
-            <Ionicons name="menu-outline" size={28} color={colors.text} />
-          </HapticPressable>
-          <View style={styles.greetingContainer}>
-            <ThemedText style={[styles.greetingText, { fontFamily: editor.fontFamily }]}>
-              {greeting}, <ThemedText style={[styles.userName, { color: colors.primary }]}>{displayName}</ThemedText>
-            </ThemedText>
-          </View>
+    <ThemedView style={[styles.container, { paddingTop: insets.top + 10 }]}>
+      {/* Header */}
+      <View style={styles.header}>
+        <HapticPressable
+          onPress={() => navigation.openDrawer()}
+          style={({ pressed }) => ({
+            opacity: pressed ? 0.7 : 1,
+            padding: 4,
+            marginLeft: -4,
+          })}
+        >
+          <Ionicons name="menu-outline" size={28} color={colors.text} />
+        </HapticPressable>
+        <View style={styles.greetingContainer}>
+          <ThemedText style={[styles.greetingText, { fontFamily: editor.fontFamily }]}>
+            {greeting}, <ThemedText style={[styles.userName, { color: colors.primary }]}>{displayName}</ThemedText>
+          </ThemedText>
         </View>
+      </View>
 
-        {/* Calendar */}
-        <Calendar selectedDate={selectedDate} onDateSelect={handleDateSelect} />
+      {/* Calendar */}
+      <Calendar selectedDate={selectedDate} onDateSelect={handleDateSelect} />
 
-        {/* Content Section */}
-        {!isToday ? (
-          <View style={styles.tasksSection}>
-            <View style={styles.tasksSectionHeader}>
-              <ThemedText style={[styles.tasksSectionTitle, { color: colors.text + '80' }]}>
-                Tasks for {formattedSelectedDate}
-              </ThemedText>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginLeft: 'auto' }}>
-                {tasksForSelectedDate.length > 0 &&
-                  <View
-                    style={[
-                      styles.taskCountBadge,
-                      { backgroundColor: colors.primary + '20' },
-                    ]}
-                  >
-                    <ThemedText style={[styles.taskCountText, { color: colors.primary + '90' }]}>
-                      {tasksForSelectedDate.length}
-                    </ThemedText>
-                  </View>
-                }
-                <Pressable
-                  onPress={() => router.push({ pathname: '/Tasks/new', params: { date: selectedDate.toISOString() } })}
-                  style={({ pressed }) => [
-                    styles.addTaskButton,
-                    {
-                      backgroundColor: colors.primary + '90',
-                      opacity: pressed ? 0.8 : 1,
-                    }
-                  ]}
-                  hitSlop={8}
-                >
-                  <Ionicons name="add" size={20} color="#FFFFFF" />
-                </Pressable>
-              </View>
-            </View>
-
-            {tasksForSelectedDate.length > 0 ? (
-              tasksForSelectedDate.map((task) => (
-                <TaskItem
-                  key={task.id}
-                  task={task}
-                  onPress={() => handleTaskPress(task)}
-                />
-              ))
-            ) : (
-              <View style={[styles.emptyState, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <Ionicons name="calendar-outline" size={40} color={colors.text + '25'} />
-                <ThemedText style={[styles.emptyStateText, { color: colors.text + '50' }]}>
-                  No tasks scheduled
-                </ThemedText>
-              </View>
-            )}
-          </View>
-        ) : (
-          <View style={{ marginTop: 24 }}>
+      {/* Content Section */}
+      <View style={styles.contentSection}>
+        {isToday ? (
+          <>
             {/* Tab Switcher */}
             <View
-              style={[styles.tabContainer, { backgroundColor: colors.card, marginBottom: 18 }]}
+              style={[styles.tabContainer, { backgroundColor: colors.card }]}
               onLayout={onTabContainerLayout}
             >
-              {/* Animated sliding background */}
               <Animated.View
                 style={[
                   styles.tabIndicator,
@@ -237,7 +182,7 @@ export default function HomeScreen() {
                       {
                         translateX: slideAnim.interpolate({
                           inputRange: [0, 1],
-                          outputRange: [0, tabWidth + 4], // 4 is the gap
+                          outputRange: [0, tabWidth + 4],
                         }),
                       },
                     ],
@@ -248,7 +193,22 @@ export default function HomeScreen() {
                 onPress={() => setActiveTab('tasks')}
                 style={styles.tab}
               >
-                <ThemedText style={[styles.tabText, activeTab === 'tasks' && styles.activeTabText]}>
+                <Ionicons
+                  name="checkbox-outline"
+                  size={20}
+                  style={[
+                    styles.tabIcon,
+                    { left: 12 },
+                    { color: activeTab === 'tasks' ? '#FFFFFF' : colors.text },
+                    { opacity: activeTab === 'tasks' ? 1 : 0.5 }
+                  ]}
+                />
+                <ThemedText
+                  style={[
+                    styles.tabText,
+                    activeTab === 'tasks' && styles.activeTabText
+                  ]}
+                >
                   Tasks
                 </ThemedText>
               </Pressable>
@@ -256,95 +216,51 @@ export default function HomeScreen() {
                 onPress={() => setActiveTab('notes')}
                 style={styles.tab}
               >
-                <ThemedText style={[styles.tabText, activeTab === 'notes' && styles.activeTabText]}>
+                <ThemedText
+                  style={[
+                    styles.tabText,
+                    activeTab === 'notes' && styles.activeTabText
+                  ]}
+                >
                   Recent Notes
                 </ThemedText>
+                <Ionicons
+                  name="document-text-outline"
+                  size={20}
+                  style={[
+                    styles.tabIcon,
+                    { right: 12 },
+                    { color: activeTab === 'notes' ? '#FFFFFF' : colors.text },
+                    { opacity: activeTab === 'notes' ? 1 : 0.5 }
+                  ]}
+                />
               </Pressable>
             </View>
 
-            {/* Tab Content */}
             {activeTab === 'tasks' ? (
-              <View>
-                {/* Today's Tasks */}
-                <View style={styles.tasksSectionHeader}>
-                  <ThemedText style={[styles.tasksSectionTitle, { color: colors.text + '80' }]}>Today's Focus</ThemedText>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginLeft: 'auto' }}>
-                    {tasksForSelectedDate.length > 0 &&
-                      <View style={[styles.taskCountBadge, { backgroundColor: colors.primary + '20' }]}>
-                        <ThemedText style={[styles.taskCountText, { color: colors.primary + '90' }]}>
-                          {tasksForSelectedDate.length}
-                        </ThemedText>
-                      </View>
-                    }
-                    <Pressable
-                      onPress={() => router.push({ pathname: '/Tasks/new', params: { date: selectedDate.toISOString() } })}
-                      style={({ pressed }) => [
-                        styles.addTaskButton,
-                        { backgroundColor: colors.primary + '90', opacity: pressed ? 0.8 : 1 }
-                      ]}
-                    >
-                      <Ionicons name="add" size={20} color="#FFFFFF" />
-                    </Pressable>
-                  </View>
-                </View>
-
-                {tasksForSelectedDate.length > 0 ? (
-                  tasksForSelectedDate.map((task) => (
-                    <TaskItem key={task.id} task={task} onPress={() => handleTaskPress(task)} />
-                  ))
-                ) : (
-                  <View style={[styles.emptyState, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                    <Ionicons name="calendar-outline" size={40} color={colors.text + '25'} />
-                    <ThemedText style={[styles.emptyStateText, { color: colors.text + '50' }]}>
-                      No tasks scheduled
-                    </ThemedText>
-                  </View>
-                )}
-
-                {/* Upcoming Tasks Header */}
-                {upcomingTasks.length > 0 && (
-                  <>
-                    <View style={styles.upcomingHeader}>
-                      <Ionicons name="calendar-outline" size={14} color={colors.text + '40'} />
-                      <ThemedText style={[styles.upcomingHeaderText, { color: colors.text + '40' }]}>
-                        Coming Up
-                      </ThemedText>
-                    </View>
-
-                    <View style={{ gap: 10 }}>
-                      {upcomingTasks.map((task) => (
-                        <TaskItem key={task.id} task={task} onPress={() => handleTaskPress(task)} showDate />
-                      ))}
-                    </View>
-                  </>
-                )}
-              </View>
+              <TaskList
+                tasks={tasksForSelectedDate}
+                selectedDate={selectedDate}
+                onTaskPress={handleTaskPress}
+                showComingUp={true}
+                upcomingTasks={upcomingTasks}
+              />
             ) : (
-              <View>
-                {/* Recent Notes Header */}
-                <View style={styles.tasksSectionHeader}>
-                  <ThemedText style={[styles.tasksSectionTitle, { color: colors.text + '80' }]}>Recent Notes</ThemedText>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginLeft: 'auto' }}>
-                    <Pressable
-                      onPress={handleCreateNote}
-                      style={({ pressed }) => [
-                        styles.addTaskButton,
-                        { backgroundColor: colors.primary + '90', opacity: pressed ? 0.8 : 1 }
-                      ]}
-                    >
-                      <Ionicons name="add" size={20} color="#FFFFFF" />
-                    </Pressable>
-                  </View>
-                </View>
-                <RecentNotes />
-              </View>
+              <RecentNotesList onCreateNote={handleCreateNote} />
             )}
-          </View>
+          </>
+        ) : (
+          <TaskList
+            tasks={tasksForSelectedDate}
+            selectedDate={selectedDate}
+            onTaskPress={handleTaskPress}
+            showComingUp={false}
+          />
         )}
+      </View>
 
-        {/* Bottom Spacing */}
-        <View style={{ height: insets.bottom + 100 }} />
-      </ScrollView>
+      {/* Bottom Spacing */}
+      <View style={{ height: insets.bottom + 20 }} />
     </ThemedView>
 
   );
@@ -353,12 +269,11 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
     paddingHorizontal: 20,
+  },
+  contentSection: {
+    flex: 1,
+    marginTop: 20,
   },
   header: {
     flexDirection: 'row',
@@ -376,72 +291,19 @@ const styles = StyleSheet.create({
   },
   userName: {
     fontWeight: '700',
-
-  },
-  tasksSection: {
-    marginTop: 28,
-  },
-  tasksSectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 16,
-    minHeight: 28,
-  },
-  tasksSectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    letterSpacing: -0.3,
-
-  },
-  taskCountBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 10,
-  },
-  taskCountText: {
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  addTaskButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 40,
-    borderRadius: 16,
-    borderWidth: 1,
-
-  },
-  emptyStateText: {
-    fontSize: 15,
-    fontWeight: '600',
-    marginTop: 12,
-  },
-  emptyStateSubtext: {
-    fontSize: 13,
-    marginTop: 4,
   },
   tabContainer: {
     flexDirection: 'row',
-    marginBottom: 20,
     borderRadius: 14,
     padding: 4,
     gap: 4,
+    marginBottom: 16,
   },
   tabIndicator: {
     position: 'absolute',
     top: 4,
+    bottom: 4,
     left: 4,
-    height: 44, // matches paddingVertical: 12 * 2 + approximate text height
     borderRadius: 10,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
@@ -452,13 +314,9 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 12,
     alignItems: 'center',
+    justifyContent: 'center',
     borderRadius: 10,
-  },
-  activeTab: {
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    position: 'relative',
   },
   tabText: {
     fontSize: 14,
@@ -470,25 +328,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     opacity: 1,
   },
-  tabContent: {
+  tabIcon: {
+    position: 'absolute',
+  },
+  tabContentInner: {
     minHeight: 200,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    letterSpacing: -0.3,
-  },
-  upcomingHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 8,
-    marginTop: 8,
-  },
-  upcomingHeaderText: {
-    fontSize: 11,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
 });
