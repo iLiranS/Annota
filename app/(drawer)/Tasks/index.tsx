@@ -1,4 +1,5 @@
 import FloatingActionButton from '@/components/floating-action-button';
+import { CollapsibleGroup, CompactTaskCard, TaskCard } from '@/components/tasks';
 import ThemedText from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useNotesStore } from '@/stores/notes-store';
@@ -10,7 +11,6 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, LayoutAnimation, Platform, Pressable, ScrollView, StyleSheet, UIManager, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CollapsibleGroup, CompactTaskCard, TaskCard } from './components';
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {

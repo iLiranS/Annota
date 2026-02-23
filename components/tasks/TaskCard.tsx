@@ -95,8 +95,10 @@ export function TaskCard({ task, onToggle, onPress }: TaskCardProps) {
         const options: Intl.DateTimeFormatOptions = {
             month: 'short',
             day: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit',
+            ...(task.isWholeDay ? {} : {
+                hour: 'numeric',
+                minute: '2-digit',
+            }),
         };
         return date.toLocaleDateString('en-US', options);
     };

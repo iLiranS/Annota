@@ -43,11 +43,11 @@ function getWeekDays(startDate: Date): Date[] {
 
 function formatDateRange(startDate: Date, endDate: Date): string {
     const startDay = startDate.getDate();
-    const startMonth = startDate.getMonth() + 1;
+    const startMonth = startDate.toLocaleString('en-us', { month: 'short' });
     const endDay = endDate.getDate();
-    const endMonth = endDate.getMonth() + 1;
+    const endMonth = endDate.toLocaleString('en-us', { month: 'short' });
 
-    return `${startDay}.${startMonth} - ${endDay}.${endMonth}`;
+    return `${startMonth} ${startDay} - ${endMonth} ${endDay}`;
 }
 
 export default function Calendar({ selectedDate, onDateSelect }: CalendarProps) {
@@ -76,10 +76,14 @@ export default function Calendar({ selectedDate, onDateSelect }: CalendarProps) 
         return formatDateRange(start, end);
     }, [weekDays]);
 
+    const todayStart = useMemo(() => getStartOfWeek(today, startOfWeekSetting), [today, startOfWeekSetting]);
+
     const isViewingCurrentWeek = useMemo(() => {
-        const todayStart = getStartOfWeek(today, startOfWeekSetting);
         return viewDate.getTime() === todayStart.getTime();
-    }, [viewDate, today, startOfWeekSetting]);
+    }, [viewDate, todayStart]);
+
+    const isPast = useMemo(() => viewDate.getTime() < todayStart.getTime(), [viewDate, todayStart]);
+    const isFuture = useMemo(() => viewDate.getTime() > todayStart.getTime(), [viewDate, todayStart]);
 
     // Get tasks from store
     const { tasks } = useTasksStore();
@@ -178,14 +182,33 @@ export default function Calendar({ selectedDate, onDateSelect }: CalendarProps) 
                         <Ionicons name="chevron-back" size={20} color={colors.text + '80'} />
                     </Pressable>
 
-                    <Pressable onPress={handleToday}>
-                        <ThemedText style={[
-                            styles.rangeTitle,
-                            !isViewingCurrentWeek && { borderBottomWidth: 1, borderBottomColor: colors.text + '30' }
-                        ]}>
+                    <View style={styles.rangeContainer}>
+                        {isFuture && !isViewingCurrentWeek && (
+                            <Pressable onPress={handleToday} style={styles.todayFloatingBefore} hitSlop={8}>
+                                <View style={[styles.todayBadge, { borderColor: colors.primary + '30', backgroundColor: dark ? 'rgba(255,255,255,0.05)' : 'white' }]}>
+                                    <Ionicons name="arrow-back" size={10} color={colors.primary} />
+                                    <ThemedText style={[styles.todayText, { color: colors.primary }]}>
+                                        today
+                                    </ThemedText>
+                                </View>
+                            </Pressable>
+                        )}
+
+                        <ThemedText style={styles.rangeTitle}>
                             {weekRange}
                         </ThemedText>
-                    </Pressable>
+
+                        {isPast && !isViewingCurrentWeek && (
+                            <Pressable onPress={handleToday} style={styles.todayFloatingAfter} hitSlop={8}>
+                                <View style={[styles.todayBadge, { borderColor: colors.primary + '30', backgroundColor: dark ? 'rgba(255,255,255,0.05)' : 'white' }]}>
+                                    <ThemedText style={[styles.todayText, { color: colors.primary }]}>
+                                        today
+                                    </ThemedText>
+                                    <Ionicons name="arrow-forward" size={10} color={colors.primary} />
+                                </View>
+                            </Pressable>
+                        )}
+                    </View>
 
                     <Pressable onPress={handleNextWeek} style={styles.navButton} hitSlop={12}>
                         <Ionicons name="chevron-forward" size={20} color={colors.text + '80'} />
@@ -240,7 +263,7 @@ export default function Calendar({ selectedDate, onDateSelect }: CalendarProps) 
                                     </View>
 
                                     {/* Task Indicator Dot */}
-                                    {hasTask && (
+                                    {hasTask && !todayHighlight && !selected && (
                                         <View
                                             style={[
                                                 styles.taskDot,
@@ -287,6 +310,35 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         letterSpacing: 0.5,
         paddingHorizontal: 6,
+    },
+    rangeContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'relative',
+    },
+    todayFloatingBefore: {
+        position: 'absolute',
+        right: '100%',
+        marginRight: 4,
+    },
+    todayFloatingAfter: {
+        position: 'absolute',
+        left: '100%',
+        marginLeft: 4,
+    },
+    todayBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 12,
+        borderWidth: 1,
+        gap: 2,
+    },
+    todayText: {
+        fontSize: 10,
+        fontWeight: '700',
     },
     weekdayRow: {
         flexDirection: 'row',
@@ -338,7 +390,7 @@ const styles = StyleSheet.create({
     },
     taskDot: {
         position: 'absolute',
-        top: -3,
+        bottom: 3,
         width: 3,
         height: 3,
         borderRadius: 1.5,

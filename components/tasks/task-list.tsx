@@ -129,12 +129,25 @@ export default function TaskList({
                             />
                         ))
                     ) : (
-                        <View style={[styles.emptyState, { backgroundColor: dark ? 'rgba(255,255,255,0.02)' : colors.card, borderColor: colors.border }]}>
-                            <Ionicons name="calendar-outline" size={32} color={colors.text + '15'} />
+                        <Pressable
+                            onPress={handleAddTask}
+                            style={({ pressed }) => [
+                                styles.emptyState,
+                                {
+                                    backgroundColor: dark ? 'rgba(255,255,255,0.02)' : colors.card,
+                                    borderColor: pressed ? colors.primary + '40' : colors.border,
+                                    opacity: pressed ? 0.8 : 1,
+                                }
+                            ]}
+                        >
+                            <Ionicons name="calendar-outline" size={40} color={colors.primary + '30'} />
                             <ThemedText style={[styles.emptyText, { color: colors.text + '40' }]}>
                                 No tasks scheduled
                             </ThemedText>
-                        </View>
+                            <ThemedText style={[styles.tapToAddText, { color: colors.text + '40', fontWeight: '700' }]}>
+                                Tap to add task
+                            </ThemedText>
+                        </Pressable>
                     )}
                 </View>
 
@@ -216,6 +229,11 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '600',
         marginTop: 8,
+    },
+    tapToAddText: {
+        fontSize: 12,
+        fontWeight: '500',
+        marginTop: 2,
     },
     upcomingSection: {
         marginTop: 20,
