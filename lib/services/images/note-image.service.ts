@@ -54,7 +54,7 @@ export async function processAndInsertImage(
         id: imageId,
         hash,
         localPath,
-        mimeType: 'image/jpeg',
+        mimeType: 'image/webp',
         size: size ?? null,
         width: resized.width,
         height: resized.height,

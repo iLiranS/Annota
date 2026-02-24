@@ -79,6 +79,11 @@ export interface EncryptedPayload {
     nonce: string;
 }
 
+export interface EncryptedBinaryPayload {
+    encryptedBytes: Uint8Array;
+    nonce: string;
+}
+
 /**
  * Encrypts a JSON payload using AES-256-CTR (Pure JS for Expo Go compatibility).
  * Returns the encrypted data and the random nonce.
@@ -130,45 +135,34 @@ export function decryptPayload(encryptedHex: string, nonceHex: string, mnemonic:
 }
 
 /**
- * Encrypts an image (base64 string) using AES-256-CTR.
- * Returns the encrypted data as a Base64 string for efficient binary upload.
+ * Encrypts raw image bytes using AES-256-CTR.
+ * Operates directly on binary data — no base64 intermediate.
  */
-export function encryptImagePayload(base64Image: string, mnemonic: string): EncryptedPayload {
+export function encryptImageBytes(rawBytes: Uint8Array, mnemonic: string): EncryptedBinaryPayload {
     const key = getAesKeyFromMnemonic(mnemonic);
 
     const nonceBytes = Crypto.getRandomBytes(16);
     const aesCtr = new aesjs.ModeOfOperation.ctr(key as any, new aesjs.Counter(nonceBytes));
 
-    // Convert base64 string to bytes
-    const textBytes = aesjs.utils.utf8.toBytes(base64Image);
-
-    // Encrypt
-    const encryptedBytes = aesCtr.encrypt(textBytes);
-
-    // Convert encrypted bytes to base64 string
-    const encryptedBase64 = Buffer.from(encryptedBytes).toString('base64');
+    const encryptedBytes = aesCtr.encrypt(rawBytes);
     const nonceHex = aesjs.utils.hex.fromBytes(nonceBytes);
 
     return {
-        encryptedData: encryptedBase64,
-        nonce: nonceHex
+        encryptedBytes: new Uint8Array(encryptedBytes),
+        nonce: nonceHex,
     };
 }
 
 /**
- * Decrypts an image payload using AES-256-CTR.
- * Expects the encrypted data as an ArrayBuffer or Uint8Array, returns the original base64 string.
+ * Decrypts raw encrypted image bytes using AES-256-CTR.
+ * Returns the original raw binary data as Uint8Array.
  */
-export function decryptImagePayload(encryptedBytes: Uint8Array, nonceHex: string, mnemonic: string): string {
+export function decryptImageBytes(encryptedBytes: Uint8Array, nonceHex: string, mnemonic: string): Uint8Array {
     const key = getAesKeyFromMnemonic(mnemonic);
 
     const nonceBytes = aesjs.utils.hex.toBytes(nonceHex);
     const aesCtr = new aesjs.ModeOfOperation.ctr(key as any, new aesjs.Counter(nonceBytes));
 
     const decryptedBytes = aesCtr.decrypt(encryptedBytes);
-
-    // Convert back to base64 string
-    const decryptedText = aesjs.utils.utf8.fromBytes(decryptedBytes);
-
-    return decryptedText;
+    return new Uint8Array(decryptedBytes);
 }

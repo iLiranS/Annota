@@ -7,8 +7,8 @@ import * as MediaLibrary from 'expo-media-library';
 // ============ CONSTANTS ============
 
 const IMAGES_DIR_NAME = 'images';
-const MAX_IMAGE_WIDTH = 1920;
-const JPEG_QUALITY = 0.8;
+const MAX_DIMENSION = 1500;
+const WEBP_QUALITY = 0.8;
 
 // ============ DIRECTORY MANAGEMENT ============
 
@@ -24,17 +24,33 @@ export function getImagesDirectory(): Directory {
 // ============ IMAGE PROCESSING ============
 
 /**
- * Resize and compress an image to JPEG.
- * Uses the expo-image-manipulator v14 object-oriented API.
+ * Resize and compress an image to WEBP.
+ * Targets the long edge to MAX_DIMENSION (landscape → width, portrait → height).
+ * Skips resize if both dimensions are already within limits.
  */
 export async function resizeAndCompress(uri: string): Promise<ImageResult> {
     const context = ImageManipulator.manipulate(uri);
-    const imageRef = await context.resize({ width: MAX_IMAGE_WIDTH }).renderAsync();
-    const result = await imageRef.saveAsync({
-        format: SaveFormat.JPEG,
-        compress: JPEG_QUALITY,
+
+    // Render once to get original dimensions
+    const original = await context.renderAsync();
+    const { width: origW, height: origH } = await original.saveAsync({ format: SaveFormat.WEBP, compress: 1 });
+
+    let manipulated = ImageManipulator.manipulate(uri);
+
+    if (origW > MAX_DIMENSION || origH > MAX_DIMENSION) {
+        // Resize the long edge; expo-image-manipulator auto-computes the other
+        if (origW >= origH) {
+            manipulated = manipulated.resize({ width: MAX_DIMENSION });
+        } else {
+            manipulated = manipulated.resize({ height: MAX_DIMENSION });
+        }
+    }
+
+    const rendered = await manipulated.renderAsync();
+    return rendered.saveAsync({
+        format: SaveFormat.WEBP,
+        compress: WEBP_QUALITY,
     });
-    return result;
 }
 
 /**
@@ -53,7 +69,7 @@ export async function computeHash(fileUri: string): Promise<string> {
  */
 export function saveToLocalStorage(sourceUri: string, imageId: string): string {
     const dir = getImagesDirectory();
-    const destFile = new ExpoFile(dir, `${imageId}.jpg`);
+    const destFile = new ExpoFile(dir, `${imageId}.webp`);
     const sourceFile = new ExpoFile(sourceUri);
     sourceFile.copy(destFile);
     return destFile.uri;
@@ -66,7 +82,9 @@ export function saveToLocalStorage(sourceUri: string, imageId: string): string {
 export async function readAsBase64DataUri(localPath: string): Promise<string> {
     const file = new ExpoFile(localPath);
     const base64 = await file.base64();
-    return `data:image/jpeg;base64,${base64}`;
+    // Detect MIME from extension — legacy .jpg files still need to work
+    const mime = localPath.endsWith('.webp') ? 'image/webp' : 'image/jpeg';
+    return `data:${mime};base64,${base64}`;
 }
 
 /**
@@ -118,11 +136,14 @@ export async function saveImageToGallery(imageId?: string, base64Uri?: string): 
 
         if (imageId) {
             const dir = getImagesDirectory();
-            const file = new ExpoFile(dir, `${imageId}.jpg`);
+            // Try .webp first, fall back to legacy .jpg
+            let file = new ExpoFile(dir, `${imageId}.webp`);
+            if (!file.exists) {
+                file = new ExpoFile(dir, `${imageId}.jpg`);
+            }
             if (file.exists) {
-                // To avoid iOS sandbox limitations when saving from the document directory,
-                // we copy the file to the strictly accessible cache directory first.
-                const tempFileUri = LegacyFileSystem.cacheDirectory + `download-${Date.now()}.jpg`;
+                const ext = file.uri.endsWith('.webp') ? 'webp' : 'jpg';
+                const tempFileUri = LegacyFileSystem.cacheDirectory + `download-${Date.now()}.${ext}`;
                 await LegacyFileSystem.copyAsync({
                     from: file.uri,
                     to: tempFileUri

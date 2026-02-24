@@ -36,7 +36,6 @@ export default function NoteEditor() {
     const editorRef = useRef<TipTapEditorRef>(null);
     const { general } = useSettingsStore();
     const { width, height } = useWindowDimensions();
-    const isIPhoneLandscape = Platform.OS === 'ios' && width > height && height < 450;
 
 
 

@@ -1,10 +1,8 @@
 import * as ImagesRepo from '@/lib/db/repositories/images.repository';
 import { supabase } from '@/lib/supabase';
-import { decryptImagePayload, encryptImagePayload } from '@/lib/utils/crypto';
+import { decryptImageBytes, encryptImageBytes } from '@/lib/utils/crypto';
 import { getDb } from '@/stores/db-store';
-import { decode } from 'base64-arraybuffer';
-import * as Crypto from 'expo-crypto';
-import * as FileSystem from 'expo-file-system/legacy';
+import { Directory, File as ExpoFile, Paths } from 'expo-file-system';
 
 const BUCKET_NAME = 'e2e_images';
 const MAX_CONCURRENT_DOWNLOADS = 3;
@@ -38,39 +36,38 @@ class ImageSyncService {
 
             for (const image of uniquePendingImages.values()) {
                 try {
-                    // 1. Read file from disk as Base64
-                    const fileInfo = await FileSystem.getInfoAsync(image.localPath);
-                    if (!fileInfo.exists) continue;
+                    // 1. Read file from disk as raw bytes
+                    const file = new ExpoFile(image.localPath);
+                    if (!file.exists) continue;
 
-                    const base64Data = await FileSystem.readAsStringAsync(image.localPath, {
-                        encoding: FileSystem.EncodingType.Base64
-                    });
+                    const rawBytes = await file.bytes();
 
-                    // 2. Encrypt to Base64 (not hex!)
-                    const { encryptedData: encryptedBase64String, nonce } = encryptImagePayload(base64Data, masterKey);
+                    // 2. Encrypt raw bytes directly
+                    const { encryptedBytes, nonce } = encryptImageBytes(rawBytes, masterKey);
 
-                    // 3. Convert Base64 to ArrayBuffer to drop the 33% bloat
-                    const binaryArrayBuffer = decode(encryptedBase64String);
-
-                    // 4. Upload to Storage as raw binary
+                    // 3. Upload encrypted bytes to Storage
                     const storagePath = `${userId}/${image.id}`;
+                    const uploadBuffer = encryptedBytes.buffer.slice(
+                        encryptedBytes.byteOffset,
+                        encryptedBytes.byteOffset + encryptedBytes.byteLength,
+                    ) as ArrayBuffer;
                     const { error: uploadError } = await supabase.storage
                         .from(BUCKET_NAME)
-                        .upload(storagePath, binaryArrayBuffer, {
+                        .upload(storagePath, uploadBuffer, {
                             contentType: 'application/octet-stream',
-                            upsert: true
+                            upsert: true,
                         });
 
                     if (uploadError) throw uploadError;
 
-                    // 5. Insert Metadata into DB
+                    // 4. Insert Metadata into DB
                     const { error: metaError } = await supabase
                         .from('encrypted_images')
                         .upsert({
                             id: image.id,
                             user_id: userId,
-                            nonce: nonce,
-                            created_at: new Date().toISOString()
+                            nonce,
+                            created_at: new Date().toISOString(),
                         });
 
                     if (metaError) throw metaError;
@@ -81,7 +78,7 @@ class ImageSyncService {
                 }
             }
 
-            // 6. Update local DB
+            // 5. Update local DB
             if (pushedImageIds.length > 0) {
                 ImagesRepo.markImagesAsSynced(pushedImageIds);
                 console.log(`[ImageSync] Successfully pushed ${pushedImageIds.length} images.`);
@@ -100,10 +97,17 @@ class ImageSyncService {
         const latestImageStateByNote = ImagesRepo.getLatestVersionImageIdsForNotes(noteIdsNeedingReplace);
         for (const { noteId, imageIds } of latestImageStateByNote) {
             try {
+                // Only reference images that have been successfully pushed (exist in encrypted_images)
+                const syncedImageIds = imageIds.length > 0
+                    ? ImagesRepo.getImagesByIds(imageIds)
+                        .filter(img => img.syncStatus === 'synced')
+                        .map(img => img.id)
+                    : [];
+
                 const { error } = await supabase.rpc('replace_note_images', {
                     p_note_id: noteId,
                     p_user_id: userId,
-                    p_image_ids: imageIds,
+                    p_image_ids: syncedImageIds,
                 });
 
                 if (error) throw error;
@@ -152,57 +156,40 @@ class ImageSyncService {
         try {
             const storagePath = `${item.userId}/${item.imageId}`;
 
-            // Generate a temporary file path
-            const cacheDir = FileSystem.cacheDirectory || `${FileSystem.documentDirectory}cache/`;
-            const tempUri = `${cacheDir}${item.imageId}.enc`;
-
-            // Download encrypted blob directly to file system to save memory
+            // Download encrypted blob from Supabase
             const { data, error } = await supabase.storage
                 .from(BUCKET_NAME)
                 .download(storagePath);
 
-            if (error || !data) throw error || new Error("No data returned");
+            if (error || !data) throw error || new Error('No data returned');
 
-            // Convert blob to ArrayBuffer
-            const arrayBuffer: ArrayBuffer = await new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result as ArrayBuffer);
-                reader.onerror = reject;
-                reader.readAsArrayBuffer(data);
-            });
-            const uint8Array = new Uint8Array(arrayBuffer);
+            // Convert blob → Uint8Array
+            const arrayBuffer = await data.arrayBuffer();
+            const encryptedBytes = new Uint8Array(arrayBuffer);
 
-            // Decrypt
-            const base64Decrypted = decryptImagePayload(uint8Array, item.nonce, item.masterKey);
+            // Decrypt → raw image bytes
+            const decryptedBytes = decryptImageBytes(encryptedBytes, item.nonce, item.masterKey);
 
-            // Recreate image locally
-            const fileName = `${Crypto.randomUUID()}.jpg`; // Assuming jpg for now or deduce from base64 header
-            const docDir = FileSystem.documentDirectory || '';
-            const newLocalPath = `${docDir}images/${fileName}`;
-
-            // Ensure dir exists
-            const dirInfo = await FileSystem.getInfoAsync(`${docDir}images/`);
-            if (!dirInfo.exists) {
-                await FileSystem.makeDirectoryAsync(`${docDir}images/`, { intermediates: true });
+            // Ensure images directory exists
+            const imagesDir = new Directory(Paths.document, 'images');
+            if (!imagesDir.exists) {
+                imagesDir.create();
             }
 
-            await FileSystem.writeAsStringAsync(newLocalPath, base64Decrypted, {
-                encoding: FileSystem.EncodingType.Base64
-            });
+            // Write raw bytes to disk as .webp
+            const destFile = new ExpoFile(imagesDir, `${item.imageId}.webp`);
+            destFile.create({ overwrite: true });
+            destFile.write(decryptedBytes);
 
-            // Need image info
-            const fileInfo = await FileSystem.getInfoAsync(newLocalPath);
-            if (!fileInfo.exists) throw new Error("File creation failed");
+            const newLocalPath = destFile.uri;
 
             // Construct minimal image record
             const newImage: Parameters<typeof ImagesRepo.insertImage>[0] = {
                 id: item.imageId,
                 localPath: newLocalPath,
-                size: fileInfo.size,
+                size: destFile.size,
                 syncStatus: 'synced',
                 createdAt: new Date(),
-                // Height, width and hash can't easily be derived here without loading into UI. 
-                // We'll leave them null or default.
             };
 
             // Save to DB
