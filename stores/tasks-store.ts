@@ -1,5 +1,6 @@
 import type { Task, TaskInsert } from '@/lib/db/schema';
 import { TaskService } from '@/lib/services/tasks.service';
+import { SyncScheduler } from '@/lib/sync/sync-scheduler';
 import { create } from 'zustand';
 
 // Re-export types
@@ -45,6 +46,7 @@ export const useTasksStore = create<TasksState>((set, get) => ({
         set((state) => ({
             tasks: [...state.tasks, task],
         }));
+        SyncScheduler.instance?.notifyContentChange();
         return task;
     },
 
@@ -55,6 +57,7 @@ export const useTasksStore = create<TasksState>((set, get) => ({
                 task.id === taskId ? { ...task, ...updates } : task
             ),
         }));
+        SyncScheduler.instance?.notifyContentChange();
     },
 
     deleteTask: (taskId: string) => {
@@ -62,6 +65,7 @@ export const useTasksStore = create<TasksState>((set, get) => ({
         set((state) => ({
             tasks: state.tasks.filter((task) => task.id !== taskId),
         }));
+        SyncScheduler.instance?.notifyContentChange();
     },
 
     toggleComplete: (taskId: string) => {
@@ -71,6 +75,7 @@ export const useTasksStore = create<TasksState>((set, get) => ({
                 task.id === taskId ? { ...task, completed: !task.completed } : task
             ),
         }));
+        SyncScheduler.instance?.notifyContentChange();
     },
 
     clearCompletedTasks: () => {
@@ -78,6 +83,7 @@ export const useTasksStore = create<TasksState>((set, get) => ({
         set((state) => ({
             tasks: state.tasks.filter((task) => !task.completed),
         }));
+        SyncScheduler.instance?.notifyContentChange();
     },
 
     // Getters (operate on cached state - same as before)

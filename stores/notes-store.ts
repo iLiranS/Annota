@@ -2,6 +2,7 @@ import { SortType, sortFolders, sortNotes } from '@/dev-data/data';
 import type { Folder, FolderInsert, NoteMetadata } from '@/lib/db/schema';
 import { DAILY_NOTES_FOLDER_ID, FolderService, TRASH_FOLDER_ID } from '@/lib/services/folders.service';
 import { NoteService } from '@/lib/services/notes.service';
+import { SyncScheduler } from '@/lib/sync/sync-scheduler';
 import { create } from 'zustand';
 
 // Re-export types for convenience
@@ -122,6 +123,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
             notes: [...state.notes, newNote]
         }));
 
+        SyncScheduler.instance?.notifyContentChange();
         return newNote;
     },
 
@@ -136,6 +138,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
                 n.id === noteId ? res : n
             )
         }));
+        SyncScheduler.instance?.notifyContentChange();
     },
 
     deleteNote: async (noteId) => {
@@ -150,6 +153,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
                     : n
             )
         }));
+        SyncScheduler.instance?.notifyContentChange();
     },
 
     permanentlyDeleteNote: async (noteId) => {
@@ -158,6 +162,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         set(state => ({
             notes: state.notes.filter(n => n.id !== noteId)
         }));
+        SyncScheduler.instance?.notifyContentChange();
     },
 
     restoreNote: async (noteId, targetFolderId) => {
@@ -171,6 +176,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
                 notes: state.notes.map(n => n.id === noteId ? restoredNote : n)
             }));
         }
+        SyncScheduler.instance?.notifyContentChange();
     },
 
     getNoteById: (noteId) => {
@@ -194,6 +200,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
                 notes: state.notes.map(n => n.id === noteId ? updatedNote : n)
             }));
         }
+        SyncScheduler.instance?.notifyContentChange();
     },
 
     getNoteVersions: async (noteId) => {
@@ -225,6 +232,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
             folders: [...state.folders, newFolder]
         }));
 
+        SyncScheduler.instance?.notifyContentChange();
         return newFolder;
     },
 
@@ -236,6 +244,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
                 f.id === folderId ? { ...f, ...updates, updatedAt: new Date() } : f
             )
         }));
+        SyncScheduler.instance?.notifyContentChange();
     },
 
     deleteFolder: async (folderId) => {
@@ -276,6 +285,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
             return { folders: newFolders, notes: newNotes };
         });
+        SyncScheduler.instance?.notifyContentChange();
     },
 
     permanentlyDeleteFolder: async (folderId) => {
@@ -295,6 +305,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
             folders: state.folders.filter(f => !allIdsToRemove.includes(f.id)),
             notes: state.notes.filter(n => !n.folderId || !allIdsToRemove.includes(n.folderId))
         }));
+        SyncScheduler.instance?.notifyContentChange();
     },
 
     restoreFolder: async (folderId) => {
@@ -310,7 +321,6 @@ export const useNotesStore = create<NotesState>((set, get) => ({
                         deletedAt: null,
                         parentId: restoredParentId,
                         originalParentId: null,
-
                     };
                 }
                 if (folderIds.includes(f.id)) {
@@ -338,10 +348,9 @@ export const useNotesStore = create<NotesState>((set, get) => ({
                 return n;
             });
 
-
             return { folders: newFolders, notes: newNotes };
         });
-
+        SyncScheduler.instance?.notifyContentChange();
     },
 
     getFolderById: (folderId) => {
@@ -359,6 +368,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
                 notes: state.notes.filter(n => !n.isDeleted)
             }));
         }
+        SyncScheduler.instance?.notifyContentChange();
     },
 
     // ============ DAILY NOTES ============

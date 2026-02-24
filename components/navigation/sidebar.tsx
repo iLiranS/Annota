@@ -1,9 +1,12 @@
 import { useAppTheme } from '@/hooks/use-app-theme';
+import { SyncScheduler } from '@/lib/sync/sync-scheduler';
+import { useAuthStore } from '@/stores/auth-store';
 import { DAILY_NOTES_FOLDER_ID, useNotesStore, type Folder } from '@/stores/notes-store';
+import { useSyncStore } from '@/stores/sync-store';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { DrawerContentComponentProps, DrawerContentScrollView } from '@react-navigation/drawer';
 import { useRouter } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
     Image,
     Pressable,
@@ -134,6 +137,19 @@ export default function Sidebar(props: DrawerContentComponentProps) {
     const { folders, notes, getFoldersInFolder } = useNotesStore();
     const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
     const [isQuickAccessExpanded, setIsQuickAccessExpanded] = useState(false);
+
+    // Offline / sync state
+    const isOnline = useSyncStore(s => s.isOnline);
+    const isGuest = useAuthStore(s => s.isGuest);
+    const [retryCooldown, setRetryCooldown] = useState(false);
+    const showOfflineBanner = !isOnline && !isGuest;
+
+    const handleRetry = useCallback(() => {
+        if (retryCooldown) return;
+        setRetryCooldown(true);
+        SyncScheduler.instance?.requestImmediateSync();
+        setTimeout(() => setRetryCooldown(false), 10_000);
+    }, [retryCooldown]);
 
     // Get non-system top-level folders
     const topLevelFolders = useMemo(() => {
@@ -357,26 +373,42 @@ export default function Sidebar(props: DrawerContentComponentProps) {
 
             {/* Footer Section */}
             <View style={[styles.footer, { paddingBottom: insets.bottom + 16, borderTopColor: colors.border }]}>
-                <HapticPressable
-                    onPress={navigateToTrash}
-                    style={({ pressed }) => [
-                        styles.footerItem,
-                        pressed && { opacity: 0.7 }
-                    ]}
-                >
-                    <Ionicons name="trash-outline" size={22} color={colors.text} />
-                    <Text style={[styles.footerText, { color: colors.text }]}>Trash</Text>
-                </HapticPressable>
+                {showOfflineBanner && (
+                    <View style={styles.offlineBanner}>
+                        <Ionicons name="cloud-offline-outline" size={16} color="#F59E0B" />
+                        <Text style={[styles.offlineText, { color: colors.text }]}>Offline</Text>
+                        <Pressable
+                            onPress={handleRetry}
+                            disabled={retryCooldown}
+                            style={[styles.offlineRetryBtn, retryCooldown && { opacity: 0.4 }]}
+                        >
+                            <Text style={styles.offlineRetryText}>{retryCooldown ? 'Wait…' : 'Retry'}</Text>
+                        </Pressable>
+                    </View>
+                )}
 
-                <HapticPressable
-                    onPress={navigateToSettings}
-                    style={({ pressed }) => [
-                        styles.iconButton,
-                        pressed && { opacity: 0.7 }
-                    ]}
-                >
-                    <Ionicons name="settings-outline" size={24} color={colors.text} />
-                </HapticPressable>
+                <View style={styles.footerRow}>
+                    <HapticPressable
+                        onPress={navigateToTrash}
+                        style={({ pressed }) => [
+                            styles.footerItem,
+                            pressed && { opacity: 0.7 }
+                        ]}
+                    >
+                        <Ionicons name="trash-outline" size={22} color={colors.text} />
+                        <Text style={[styles.footerText, { color: colors.text }]}>Trash</Text>
+                    </HapticPressable>
+
+                    <HapticPressable
+                        onPress={navigateToSettings}
+                        style={({ pressed }) => [
+                            styles.iconButton,
+                            pressed && { opacity: 0.7 }
+                        ]}
+                    >
+                        <Ionicons name="settings-outline" size={24} color={colors.text} />
+                    </HapticPressable>
+                </View>
             </View>
         </View>
     );
@@ -471,12 +503,15 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     footer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
         paddingHorizontal: 20,
         paddingTop: 16,
         borderTopWidth: StyleSheet.hairlineWidth,
+        gap: 12,
+    },
+    footerRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
     },
     footerItem: {
         flexDirection: 'row',
@@ -512,5 +547,30 @@ const styles = StyleSheet.create({
     },
     iconButton: {
         padding: 4,
-    }
+    },
+    offlineBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        paddingVertical: 6,
+        paddingHorizontal: 10,
+        borderRadius: 8,
+        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    },
+    offlineText: {
+        fontSize: 13,
+        fontWeight: '500',
+        flex: 1,
+    },
+    offlineRetryBtn: {
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 6,
+        backgroundColor: 'rgba(99, 102, 241, 0.15)',
+    },
+    offlineRetryText: {
+        color: '#6366F1',
+        fontSize: 12,
+        fontWeight: '600',
+    },
 });

@@ -5,10 +5,11 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
 import * as TaskManager from 'expo-task-manager';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
+import Toast, { type ToastConfig, type ToastConfigParams } from 'react-native-toast-message';
 
 const BACKGROUND_SYNC_TASK = 'BACKGROUND_SYNC_TASK';
 
@@ -35,9 +36,9 @@ TaskManager.defineTask(BACKGROUND_SYNC_TASK, async () => {
   }
 });
 
-import { useAppTheme } from '@/hooks/use-app-theme'; // USe our new hook
+import { useAppTheme } from '@/hooks/use-app-theme';
 import { supabase } from '@/lib/supabase';
-import { syncPull, syncPush } from '@/lib/sync/sync-service';
+import { SyncScheduler } from '@/lib/sync/sync-scheduler';
 import { getMasterKey } from '@/lib/utils/crypto';
 import { useAuthStore } from '@/stores/auth-store';
 import { useDbStore } from '@/stores/db-store';
@@ -46,12 +47,50 @@ export const unstable_settings = {
   anchor: '(drawer)',
 };
 
+// ─── Custom Toast Config ────────────────────────────────────
+const RETRY_COOLDOWN_MS = 10_000;
+
+function OfflineToast({ text1, text2, hide }: ToastConfigParams<any>) {
+  const [cooldown, setCooldown] = useState(false);
+
+  const handleRetry = useCallback(() => {
+    if (cooldown) return;
+    setCooldown(true);
+    SyncScheduler.instance?.requestImmediateSync();
+    setTimeout(() => setCooldown(false), RETRY_COOLDOWN_MS);
+    hide();
+  }, [cooldown, hide]);
+
+  return (
+    <View style={toastStyles.container}>
+      <View style={toastStyles.textWrap}>
+        <Text style={toastStyles.title}>{text1}</Text>
+        {text2 ? <Text style={toastStyles.subtitle}>{text2}</Text> : null}
+      </View>
+      <Pressable
+        onPress={handleRetry}
+        disabled={cooldown}
+        style={[toastStyles.retryBtn, cooldown && toastStyles.retryBtnDisabled]}
+      >
+        <Text style={toastStyles.retryText}>{cooldown ? 'Wait…' : 'Retry'}</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+const toastConfig: ToastConfig = {
+  offlineToast: (props: any) => <OfflineToast {...props} />,
+};
+
+// ─── Root Layout ─────────────────────────────────────────────
+
 export default function RootLayout() {
-  const theme = useAppTheme(); // Get the calculated theme
+  const theme = useAppTheme();
   const { initialized, session, user, isGuest, setSession } = useAuthStore();
   const dbReady = useDbStore(state => state.isReady);
   const initDB = useDbStore(state => state.initDB);
   const [dbError, setDbError] = useState<string | null>(null);
+  const schedulerRef = useRef<SyncScheduler | null>(null);
 
   useEffect(() => {
     SystemUI.setBackgroundColorAsync(theme.colors.background);
@@ -128,43 +167,33 @@ export default function RootLayout() {
     }
   }, [session, isGuest, initialized, dbReady, segments]);
 
-  // Sync Loop
+  // ─── Sync Scheduler ──────────────────────────────────────
   useEffect(() => {
+    if (!session || !dbReady) return;
 
+    let cancelled = false;
 
-    async function doSync() {
-      if (!session) return;
+    (async () => {
       const key = await getMasterKey(session.user.id);
-      if (!key) return; // Wait for them to onboard
+      if (!key || cancelled) return;
 
-      try {
-        // Pull changes from cloud
-        await syncPull(key);
+      const scheduler = new SyncScheduler();
+      schedulerRef.current = scheduler;
+      scheduler.init(key);
+    })();
 
-        // Push local dirty changes to cloud
-        await syncPush(key);
+    return () => {
+      cancelled = true;
+      schedulerRef.current?.dispose();
+      schedulerRef.current = null;
+    };
+  }, [session, dbReady]);
 
-        // Force a heavy re-init of stores so the UI repaints with the newly pulled data
-        // In a production app, we'd emit an event or merge specifically, but this is okay for V1
-        const { useNotesStore } = require('@/stores/notes-store');
-        const { useTasksStore } = require('@/stores/tasks-store');
-        useNotesStore.getState().initApp();
-        useTasksStore.getState().loadTasks();
-      } catch (err) {
-        console.error("Sync Error:", err);
-      }
-    }
+  // ─── Background Fetch (OS-level, separate from foreground scheduler) ──
+  useEffect(() => {
+    if (!session || !dbReady) return;
 
-    if (session && dbReady) {
-      // Sync immediately on mount/auth
-      doSync();
-      // Then every 60 seconds (Commented out for now as requested by user)
-      // intervalId = setInterval(doSync, 60000);
-    }
-
-    // Register Background Fetch
     const registerBackgroundFetch = async () => {
-      if (!session) return;
       try {
         const isRegistered = await TaskManager.isTaskRegisteredAsync(BACKGROUND_SYNC_TASK);
         if (!isRegistered) {
@@ -173,24 +202,18 @@ export default function RootLayout() {
             stopOnTerminate: false,
             startOnBoot: true,
           });
-          console.log("[BackgroundSync] Task registered");
+          console.log('[BackgroundSync] Task registered');
         }
       } catch (err) {
         if (err instanceof Error && err.message.includes('Background Fetch has not been configured')) {
-          console.warn("[BackgroundSync] Skipped background fetch registration (Expected in Expo Go).");
+          console.warn('[BackgroundSync] Skipped (Expected in Expo Go).');
         } else {
-          console.error("[BackgroundSync] Failed to register task", err);
+          console.error('[BackgroundSync] Failed to register task', err);
         }
       }
     };
 
-    if (session && dbReady) {
-      registerBackgroundFetch();
-    }
-
-    return () => {
-      // if (intervalId) clearInterval(intervalId);
-    };
+    registerBackgroundFetch();
   }, [session, dbReady]);
 
   // Show loading state while database or auth initializes
@@ -223,6 +246,7 @@ export default function RootLayout() {
         </Stack>
         <StatusBar style={theme.dark ? 'light' : 'dark'} />
       </ThemeProvider>
+      <Toast config={toastConfig} />
     </GestureHandlerRootView>
   );
 }
@@ -239,5 +263,50 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     paddingHorizontal: 20,
+  },
+});
+
+const toastStyles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(30, 30, 30, 0.95)',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+    marginHorizontal: 16,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  textWrap: {
+    flex: 1,
+    gap: 2,
+  },
+  title: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  subtitle: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 13,
+  },
+  retryBtn: {
+    backgroundColor: 'rgba(99,102,241,0.9)',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  retryBtnDisabled: {
+    opacity: 0.4,
+  },
+  retryText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
