@@ -120,6 +120,12 @@ export default function RootLayout() {
       const { useTasksStore } = require('@/stores/tasks-store');
       useNotesStore.getState().initApp();
       useTasksStore.getState().loadTasks();
+
+      // TEMPORARY: Log hashed master key
+      if (user?.id) {
+        const { logHashedMasterKey } = require('@/lib/utils/crypto');
+        logHashedMasterKey(user.id);
+      }
     }
   }, [dbReady, user?.id, isGuest]);
 
@@ -154,9 +160,9 @@ export default function RootLayout() {
       }
     } else if (session) {
       // User is authenticated
-      if (inAuthGroup && segments[1] !== 'master-key') {
+      if (inAuthGroup && segments[1] !== 'master-key' && segments[1] !== 'lost-key') {
         // If they are on the login screen, redirect to drawer.
-        // We don't redirect if they are on master-key, as they might need to set it up.
+        // We don't redirect if they are on master-key or lost-key, as they might need those flows.
         router.replace('/(drawer)');
       }
     } else if (isGuest) {

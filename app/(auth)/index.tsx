@@ -186,6 +186,8 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+
+        alignSelf: 'center',
     },
     content: {
         flex: 1,
@@ -226,9 +228,9 @@ const styles = StyleSheet.create({
         borderRadius: 14,
         borderWidth: 1.5,
     },
+
     providerIcon: {
-        position: 'absolute',
-        left: 20,
+        marginRight: 10,
     },
     providerText: {
         fontSize: 16,

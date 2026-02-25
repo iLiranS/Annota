@@ -15,6 +15,18 @@ interface QueueItem {
     userId: string;
 }
 
+/** Check if the first bytes match known image format magic bytes */
+function detectImageMagicBytes(bytes: Uint8Array): boolean {
+    if (bytes.length < 4) return false;
+    // WEBP: starts with "RIFF"
+    if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46) return true;
+    // JPEG: starts with 0xFF 0xD8
+    if (bytes[0] === 0xFF && bytes[1] === 0xD8) return true;
+    // PNG: starts with 0x89 0x50 0x4E 0x47
+    if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) return true;
+    return false;
+}
+
 class ImageSyncService {
     private isDownloading: boolean = false;
     private downloadQueue: QueueItem[] = [];
@@ -163,11 +175,16 @@ class ImageSyncService {
 
             if (error || !data) throw error || new Error('No data returned');
 
-            // Convert blob → Uint8Array
-            const arrayBuffer = await data.arrayBuffer();
+            // Convert blob → ArrayBuffer via FileReader (RN Blob lacks .arrayBuffer())
+            const arrayBuffer: ArrayBuffer = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result as ArrayBuffer);
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(data);
+            });
             const encryptedBytes = new Uint8Array(arrayBuffer);
 
-            // Decrypt → raw image bytes
+            // Decrypt → raw bytes
             const decryptedBytes = decryptImageBytes(encryptedBytes, item.nonce, item.masterKey);
 
             // Ensure images directory exists
@@ -176,10 +193,33 @@ class ImageSyncService {
                 imagesDir.create();
             }
 
-            // Write raw bytes to disk as .webp
-            const destFile = new ExpoFile(imagesDir, `${item.imageId}.webp`);
+            // Detect if the decrypted data is raw binary (new format) or base64 text (legacy).
+            // Raw images start with known magic bytes; base64 text is pure ASCII.
+            const isRawBinary = detectImageMagicBytes(decryptedBytes);
+
+            let fileExt: string;
+            let fileBytes: Uint8Array;
+
+            if (isRawBinary) {
+                // New format: decrypted bytes ARE the image
+                fileExt = 'webp';
+                fileBytes = decryptedBytes;
+            } else {
+                // Legacy format: decrypted bytes are a base64-encoded string
+                const base64String = new TextDecoder().decode(decryptedBytes);
+                const binaryString = atob(base64String);
+                const rawBytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                    rawBytes[i] = binaryString.charCodeAt(i);
+                }
+                fileExt = 'jpg';
+                fileBytes = rawBytes;
+            }
+
+            // Write to disk
+            const destFile = new ExpoFile(imagesDir, `${item.imageId}.${fileExt}`);
             destFile.create({ overwrite: true });
-            destFile.write(decryptedBytes);
+            destFile.write(fileBytes);
 
             const newLocalPath = destFile.uri;
 
@@ -202,7 +242,7 @@ class ImageSyncService {
                 }
             });
 
-            console.log(`[ImageSync] Downloaded and synced image ${item.imageId}`);
+            console.log(`[ImageSync] Downloaded and synced image ${item.imageId} (${isRawBinary ? 'binary' : 'legacy'})`);
         } catch (error) {
             console.error(`[ImageSync] Error downloading image ${item.imageId}`, error);
         }

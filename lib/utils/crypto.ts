@@ -66,6 +66,19 @@ export async function removeLegacyMasterKey() {
 }
 
 /**
+ * Hash the derived encryption key from a mnemonic for server-side validation.
+ * Returns a hex-encoded SHA-256 digest of the 32-byte AES key.
+ */
+export async function hashMasterKey(mnemonic: string): Promise<string> {
+    const seed = mnemonicToSeedSync(mnemonic);
+    const keyBytes = seed.subarray(0, 32);
+    return await Crypto.digestStringAsync(
+        Crypto.CryptoDigestAlgorithm.SHA256,
+        Buffer.from(keyBytes).toString('hex')
+    );
+}
+
+/**
  * Derive a 256-bit AES key from the 12-word mnemonic.
  */
 function getAesKeyFromMnemonic(mnemonic: string): Buffer {
@@ -165,4 +178,19 @@ export function decryptImageBytes(encryptedBytes: Uint8Array, nonceHex: string, 
 
     const decryptedBytes = aesCtr.decrypt(encryptedBytes);
     return new Uint8Array(decryptedBytes);
+}
+
+/**
+ * Temporary function to log the hashed master key
+ */
+export async function logHashedMasterKey(userId: string) {
+    const mnemonic = await getMasterKey(userId);
+    if (mnemonic) {
+        const hashed = await hashMasterKey(mnemonic);
+        console.log("=== TEMPORARY HASHED MASTER KEY ===");
+        console.log(hashed);
+        console.log("===================================");
+    } else {
+        console.log("No master key found for user:", userId);
+    }
 }

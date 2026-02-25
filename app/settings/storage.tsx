@@ -92,6 +92,35 @@ export default function StorageSettings() {
         );
     };
 
+    const handleRemoveMasterKey = () => {
+        if (!user?.id) return;
+
+        Alert.alert(
+            "Remove Master Key?",
+            "This will remove the master key from your device. You will need to re-enter it to sync your data again. Your local data will remain intact.",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Remove Key",
+                    style: "destructive",
+                    onPress: async () => {
+                        try {
+                            const { resetMasterKey } = require('@/lib/db/client');
+                            await resetMasterKey(user.id);
+                            Alert.alert("Success", "Master Key has been removed from this device.");
+                            const { router } = require('expo-router');
+                            router.replace('/(auth)/master-key');
+                        } catch (e) {
+                            Alert.alert("Error", "Failed to remove Master Key.");
+                            console.error(e);
+
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
     const handleManualSync = async () => {
         if (!isActiveDb) {
             Alert.alert("Action Not Supported", "Sync can only be run on the active database.");
@@ -191,59 +220,71 @@ export default function StorageSettings() {
                 </View>
             </View>
 
-            <View style={styles.actions}>
-                <HapticPressable
-                    style={[styles.button, { backgroundColor: colors.card, borderColor: colors.border }]}
-                    onPress={() => loadStats()}
-                >
-                    <Ionicons name="refresh" size={20} color={colors.primary} />
-                    <Text style={[styles.buttonText, { color: colors.primary }]}>Refresh Stats</Text>
-                </HapticPressable>
-
-                {user && (
+            {isActiveDb && (
+                <View style={styles.actions}>
                     <HapticPressable
                         style={[styles.button, { backgroundColor: colors.card, borderColor: colors.border }]}
-                        onPress={handleManualSync}
+                        onPress={() => loadStats()}
                     >
-                        <Ionicons name="cloud-upload-outline" size={20} color={colors.primary} />
-                        <Text style={[styles.buttonText, { color: colors.primary }]}>Sync with Cloud DB</Text>
+                        <Ionicons name="refresh" size={20} color={colors.primary} />
+                        <Text style={[styles.buttonText, { color: colors.primary }]}>Refresh Stats</Text>
                     </HapticPressable>
-                )}
 
-                <HapticPressable
-                    style={[styles.button, { backgroundColor: colors.primary + '20', borderColor: colors.border }]}
-                    onPress={handleGC}
-                >
-                    <Ionicons name="trash-bin-outline" size={20} color={colors.primary} />
-                    <Text style={[styles.buttonText, { color: colors.primary }]}>Shrink Database</Text>
-                </HapticPressable>
+                    {user && (
+                        <>
+                            <HapticPressable
+                                style={[styles.button, { backgroundColor: colors.card, borderColor: colors.border }]}
+                                onPress={handleManualSync}
+                            >
+                                <Ionicons name="cloud-upload-outline" size={20} color={colors.primary} />
+                                <Text style={[styles.buttonText, { color: colors.primary }]}>Sync with Cloud DB</Text>
+                            </HapticPressable>
 
-                <HapticPressable
-                    style={[styles.button, { backgroundColor: colors.error + '20', borderColor: colors.error }]}
-                    onPress={() => {
-                        Alert.alert(
-                            "Reset Local Database?",
-                            "This will completely erase all local notes, tasks, and images from your device. If you haven't synced, they will be lost forever.",
-                            [
-                                { text: "Cancel", style: "cancel" },
-                                {
-                                    text: "Reset All",
-                                    style: "destructive",
-                                    onPress: () => {
-                                        const { resetAll } = require('@/lib/db/client');
-                                        resetAll();
-                                        Alert.alert("Reset Complete", "The local database has been wiped.");
-                                        loadStats();
+                            <HapticPressable
+                                style={[styles.button, { backgroundColor: colors.error + '20', borderColor: colors.error }]}
+                                onPress={handleRemoveMasterKey}
+                            >
+                                <Ionicons name="key-outline" size={20} color={colors.error} />
+                                <Text style={[styles.buttonText, { color: colors.error }]}>Remove Master Key</Text>
+                            </HapticPressable>
+                        </>
+                    )}
+
+                    <HapticPressable
+                        style={[styles.button, { backgroundColor: colors.primary + '20', borderColor: colors.border }]}
+                        onPress={handleGC}
+                    >
+                        <Ionicons name="trash-bin-outline" size={20} color={colors.primary} />
+                        <Text style={[styles.buttonText, { color: colors.primary }]}>Shrink Database</Text>
+                    </HapticPressable>
+
+                    <HapticPressable
+                        style={[styles.button, { backgroundColor: colors.error + '20', borderColor: colors.error }]}
+                        onPress={() => {
+                            Alert.alert(
+                                "Reset Local Database?",
+                                "This will completely erase all local notes, tasks, and images from your device. If you haven't synced, they will be lost forever.",
+                                [
+                                    { text: "Cancel", style: "cancel" },
+                                    {
+                                        text: "Reset All",
+                                        style: "destructive",
+                                        onPress: () => {
+                                            const { resetAll } = require('@/lib/db/client');
+                                            resetAll();
+                                            Alert.alert("Reset Complete", "The local database has been wiped.");
+                                            loadStats();
+                                        }
                                     }
-                                }
-                            ]
-                        )
-                    }}
-                >
-                    <Ionicons name="warning-outline" size={20} color={colors.error} />
-                    <Text style={[styles.buttonText, { color: colors.error }]}>Reset Local Database</Text>
-                </HapticPressable>
-            </View>
+                                ]
+                            )
+                        }}
+                    >
+                        <Ionicons name="warning-outline" size={20} color={colors.error} />
+                        <Text style={[styles.buttonText, { color: colors.error }]}>Reset Local Database</Text>
+                    </HapticPressable>
+                </View>
+            )}
 
             {isLoading && (
                 <View style={styles.loadingOverlay}>

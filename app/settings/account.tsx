@@ -1,6 +1,8 @@
 import SettingItem from '@/components/settings/setting-item';
 import { useAppTheme } from '@/hooks/use-app-theme';
+import { getMasterKey } from '@/lib/utils/crypto';
 import { useAuthStore } from '@/stores/auth-store';
+import * as LocalAuthentication from 'expo-local-authentication';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -10,7 +12,7 @@ export default function AccountSettingsScreen() {
     const router = useRouter();
     const { colors } = useAppTheme();
     const insets = useSafeAreaInsets();
-    const { session, signOut, setGuest } = useAuthStore();
+    const { session, signOut } = useAuthStore();
 
     const handleSignOut = () => {
         Alert.alert(
@@ -26,6 +28,45 @@ export default function AccountSettingsScreen() {
                     }
                 }
             ]
+        );
+    };
+
+    const handleRevealKey = async () => {
+        const userId = session?.user?.id;
+        if (!userId) {
+            Alert.alert('Error', 'No active session found.');
+            return;
+        }
+
+        const hasHardware = await LocalAuthentication.hasHardwareAsync();
+        const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+
+        if (!hasHardware || !isEnrolled) {
+            Alert.alert(
+                'Authentication Unavailable',
+                'Your device does not support biometric authentication. Please set up Face ID, Touch ID, or a passcode first.'
+            );
+            return;
+        }
+
+        const authResult = await LocalAuthentication.authenticateAsync({
+            promptMessage: 'Authenticate to reveal your master key',
+            cancelLabel: 'Cancel',
+            disableDeviceFallback: false,
+        });
+
+        if (!authResult.success) return;
+
+        const key = await getMasterKey(userId);
+        if (!key) {
+            Alert.alert('No Key Found', 'No master key is stored on this device.');
+            return;
+        }
+
+        Alert.alert(
+            'Your Master Key',
+            key,
+            [{ text: 'Done', style: 'default' }]
         );
     };
 
@@ -54,6 +95,22 @@ export default function AccountSettingsScreen() {
                     />
                 </View>
             </View>
+
+            {session && (
+                <View style={styles.section}>
+                    <Text style={[styles.sectionHeader, { color: colors.text + '80' }]}>SECURITY</Text>
+                    <View style={[styles.card, { backgroundColor: colors.card }]}>
+                        <SettingItem
+                            label="Reveal Master Key"
+                            icon="key-outline"
+                            onPress={handleRevealKey}
+                            description="Authenticate to view your 12-word phrase"
+                            iconColor="#FFFFFF"
+                            iconBackgroundColor="#5856D6"
+                        />
+                    </View>
+                </View>
+            )}
         </ScrollView>
     );
 }

@@ -9,18 +9,26 @@ type AuthState = {
     user: User | null;
     isGuest: boolean;
     initialized: boolean;
+    /** Cached key_validator hash from Supabase profiles (non-persisted). */
+    keyValidator: string | null;
+    /** Whether fetchKeyValidator has already run for this session. */
+    keyValidatorFetched: boolean;
     setSession: (session: Session | null) => void;
     setGuest: (guest: boolean) => void;
     signOut: () => Promise<void>;
+    /** Fetch key_validator from Supabase once, caching the result. */
+    fetchKeyValidator: (userId: string) => Promise<string | null>;
 };
 
 export const useAuthStore = create<AuthState>()(
     persist(
-        (set) => ({
-            session: null,
-            user: null,
+        (set, get) => ({
+            session: null as Session | null,
+            user: null as User | null,
             isGuest: false,
             initialized: false,
+            keyValidator: null,
+            keyValidatorFetched: false,
 
             setSession: (session) =>
                 set((state) => ({
@@ -42,7 +50,22 @@ export const useAuthStore = create<AuthState>()(
 
             signOut: async () => {
                 await supabase.auth.signOut();
-                set({ session: null, user: null, isGuest: false });
+                set({ session: null, user: null, isGuest: false, keyValidator: null, keyValidatorFetched: false });
+            },
+
+            fetchKeyValidator: async (userId: string): Promise<string | null> => {
+                const state = get();
+                if (state.keyValidatorFetched) return state.keyValidator;
+
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('key_validator')
+                    .eq('id', userId)
+                    .single();
+
+                const validator = (profile?.key_validator as string) || null;
+                set({ keyValidator: validator, keyValidatorFetched: true });
+                return validator;
             },
         }),
         {

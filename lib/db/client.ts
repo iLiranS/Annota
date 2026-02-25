@@ -203,16 +203,7 @@ export async function resetAll(): Promise<void> {
     await AsyncStorage.clear();
     console.log('AsyncStorage cleared');
 
-    // Clear Secure Storage (Master Key)
-    // try {
-    //   const { supabase } = require('@/lib/supabase');
-    //   const { data: { session } } = await supabase.auth.getSession();
-    //   if (session?.user?.id) {
-    //     await removeMasterKey(session.user.id);
-    //   }
-    //   await removeLegacyMasterKey();
-    //   console.log('SecureStore cleared');
-    // } catch (e) { /* ignore if not present */ }
+
 
     // Clear FileSystem (except SQLite)
     if (LegacyFileSystem.documentDirectory) {
@@ -249,3 +240,18 @@ export function vacuumDatabase(): void {
 
 // Re-export schema for convenience
 export { schema };
+
+// Remove master key from secure storage
+export async function resetMasterKey(userId: string): Promise<void> {
+  const { removeMasterKey, removeLegacyMasterKey } = require('@/lib/utils/crypto');
+  try {
+    if (userId) {
+      await removeMasterKey(userId);
+    }
+    await removeLegacyMasterKey();
+    console.log('SecureStore cleared for master key');
+  } catch (error) {
+    console.error('Failed to reset master key:', error);
+    throw error;
+  }
+}

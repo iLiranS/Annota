@@ -1,18 +1,22 @@
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { supabase } from '@/lib/supabase';
-import { generateMasterKey, storeMasterKey, validateMasterKey } from '@/lib/utils/crypto';
+import { generateMasterKey, hashMasterKey, storeMasterKey, validateMasterKey } from '@/lib/utils/crypto';
+import { useAuthStore } from '@/stores/auth-store';
 import * as Clipboard from 'expo-clipboard';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import Toast from 'react-native-toast-message';
 
 export default function MasterKeyScreen() {
-    const [mode, setMode] = useState<'generate' | 'import'>('generate');
+    const [mode, setMode] = useState<'generate' | 'import'>('import');
     const [checkingUser, setCheckingUser] = useState(true);
     const [hasCloudData, setHasCloudData] = useState(false);
     const [mnemonic, setMnemonic] = useState('');
     const [importWords, setImportWords] = useState<string[]>(Array(12).fill(''));
+    const [importing, setImporting] = useState(false);
     const theme = useAppTheme();
+
     const getCurrentUserId = async (): Promise<string | null> => {
         const { data: { session } } = await supabase.auth.getSession();
         return session?.user?.id ?? null;
@@ -42,10 +46,12 @@ export default function MasterKeyScreen() {
                     setHasCloudData(true);
                     setMode('import');
                 } else {
+                    setMode('generate');
                     await generateNewKey();
                 }
             } catch (err) {
                 console.error("Checking cloud data error:", err);
+                setMode('generate');
                 await generateNewKey();
             } finally {
                 setCheckingUser(false);
@@ -60,24 +66,20 @@ export default function MasterKeyScreen() {
         Alert.alert('Copied!', 'Your master key has been copied to the clipboard.');
     };
 
-    const handleConfirm = async () => {
+    /** Upsert key_validator hash into Supabase profiles */
+    const upsertKeyValidator = async (userId: string, mnemonicPhrase: string) => {
+        const hash = await hashMasterKey(mnemonicPhrase);
+        await supabase
+            .from('profiles')
+            .update({ key_validator: hash })
+            .eq('id', userId);
+    };
+
+    const handleConfirmGenerate = async () => {
         const userId = await getCurrentUserId();
         if (!userId) {
             Alert.alert('Session Error', 'Please sign in again.');
             router.replace('/(auth)');
-            return;
-        }
-
-        if (mode === 'import') {
-            const joinedWords = importWords.join(' ').trim().toLowerCase();
-            const isValid = validateMasterKey(joinedWords);
-            if (!isValid) {
-                Alert.alert('Invalid Key', 'The 12-word phrase you entered is invalid. Please check your spelling and try again.');
-                return;
-            }
-
-            await storeMasterKey(userId, joinedWords);
-            router.replace('/(drawer)');
             return;
         }
 
@@ -99,11 +101,58 @@ export default function MasterKeyScreen() {
                             await supabase.from('encrypted_folders').delete().eq('user_id', userId);
                         }
                         await storeMasterKey(userId, mnemonic);
-                        router.replace('/(drawer)'); // Navigate back to main app
+                        await upsertKeyValidator(userId, mnemonic);
+                        router.replace('/(drawer)');
                     },
                 },
             ]
         );
+    };
+
+    const handleConfirmImport = async () => {
+        const userId = await getCurrentUserId();
+        if (!userId) {
+            Alert.alert('Session Error', 'Please sign in again.');
+            router.replace('/(auth)');
+            return;
+        }
+
+        const joinedWords = importWords.join(' ').trim().toLowerCase();
+        const isValid = validateMasterKey(joinedWords);
+        if (!isValid) {
+            Alert.alert('Invalid Key', 'The 12-word phrase you entered is invalid. Please check your spelling and try again.');
+            return;
+        }
+
+        setImporting(true);
+        try {
+            // Use cached key_validator from auth store (fetched once from Supabase)
+            const storedValidator = await useAuthStore.getState().fetchKeyValidator(userId);
+
+            if (storedValidator) {
+                // Validate against stored hash
+                const importedHash = await hashMasterKey(joinedWords);
+                if (importedHash !== storedValidator) {
+                    Alert.alert('Key Mismatch', 'The 12-word phrase does not match your registered key. Please try again.');
+                    return;
+                }
+            } else {
+                // No key_validator yet — store the hash for future validation
+                await upsertKeyValidator(userId, joinedWords);
+            }
+
+            await storeMasterKey(userId, joinedWords);
+            router.replace('/(drawer)');
+        } catch (err) {
+            console.error('Import key validation error:', err);
+            Toast.show({
+                type: 'error',
+                text1: 'Validation failed',
+                text2: 'Could not verify your key. Please try again.',
+            });
+        } finally {
+            setImporting(false);
+        }
     };
 
     const handleWordChange = (text: string, index: number) => {
@@ -141,29 +190,6 @@ export default function MasterKeyScreen() {
                     {mode === 'generate' ? 'Your Master Key' : 'Recover Account'}
                 </Text>
 
-                <View style={[styles.toggleContainer, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-                    <TouchableOpacity
-                        style={[styles.toggleButton, mode === 'generate' && { backgroundColor: theme.colors.primary }]}
-                        onPress={() => setMode('generate')}
-                    >
-                        <Text style={[
-                            styles.toggleText,
-                            { color: mode === 'generate' ? '#fff' : theme.colors.text },
-                            mode === 'generate' && { fontWeight: 'bold' }
-                        ]}>Create New</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        style={[styles.toggleButton, mode === 'import' && { backgroundColor: theme.colors.primary }]}
-                        onPress={() => setMode('import')}
-                    >
-                        <Text style={[
-                            styles.toggleText,
-                            { color: mode === 'import' ? '#fff' : theme.colors.text },
-                            mode === 'import' && { fontWeight: 'bold' }
-                        ]}>Import Existing</Text>
-                    </TouchableOpacity>
-                </View>
-
                 {mode === 'generate' ? (
                     <>
                         {hasCloudData && (
@@ -184,7 +210,7 @@ export default function MasterKeyScreen() {
                         <View style={[styles.phraseContainer, { borderColor: theme.colors.border }]}>
                             {mnemonic ? mnemonic.split(' ').map((word, index) => (
                                 <View key={index} style={[styles.wordBadge, { backgroundColor: theme.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}>
-                                    <Text style={[styles.wordIndex, { color: theme.colors.border }]}>{index + 1}</Text>
+                                    <Text style={[styles.wordIndex, { color: theme.colors.primary }]}>{index + 1}</Text>
                                     <Text style={[styles.wordText, { color: theme.colors.text }]}>{word}</Text>
                                 </View>
                             )) : null}
@@ -202,7 +228,7 @@ export default function MasterKeyScreen() {
 
                         <TouchableOpacity
                             style={[styles.button, { backgroundColor: theme.colors.primary }]}
-                            onPress={handleConfirm}
+                            onPress={handleConfirmGenerate}
                         >
                             <Text style={styles.buttonText}>I Have Saved It</Text>
                         </TouchableOpacity>
@@ -233,10 +259,24 @@ export default function MasterKeyScreen() {
                         </View>
 
                         <TouchableOpacity
-                            style={[styles.button, { backgroundColor: theme.colors.primary, marginTop: 20, marginBottom: 40 }]}
-                            onPress={handleConfirm}
+                            style={[styles.button, { backgroundColor: theme.colors.primary, marginTop: 20 }]}
+                            onPress={handleConfirmImport}
+                            disabled={importing}
                         >
-                            <Text style={styles.buttonText}>Recover Account</Text>
+                            {importing ? (
+                                <ActivityIndicator color="#fff" />
+                            ) : (
+                                <Text style={styles.buttonText}>Recover Account</Text>
+                            )}
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={styles.lostKeyLink}
+                            onPress={() => router.push('/(auth)/lost-key')}
+                        >
+                            <Text style={[styles.lostKeyText, { color: theme.colors.text + '60' }]}>
+                                Lost your key? Create a new one
+                            </Text>
                         </TouchableOpacity>
                     </>
                 )}
@@ -262,21 +302,6 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         marginBottom: 15,
         textAlign: 'center',
-    },
-    toggleContainer: {
-        flexDirection: 'row',
-        borderRadius: 8,
-        borderWidth: 1,
-        marginBottom: 20,
-        overflow: 'hidden',
-    },
-    toggleButton: {
-        flex: 1,
-        paddingVertical: 12,
-        alignItems: 'center',
-    },
-    toggleText: {
-        fontSize: 16,
     },
     warningContainer: {
         padding: 15,
@@ -363,5 +388,15 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontWeight: 'bold',
         fontSize: 16,
+    },
+    lostKeyLink: {
+        alignItems: 'center',
+        marginTop: 24,
+        marginBottom: 40,
+        paddingVertical: 8,
+    },
+    lostKeyText: {
+        fontSize: 14,
+        textDecorationLine: 'underline',
     },
 });

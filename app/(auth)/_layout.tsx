@@ -5,6 +5,7 @@ export default function AuthLayout() {
         <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="index" options={{ headerShown: false }} />
             <Stack.Screen name="master-key" options={{ headerShown: false }} />
+            <Stack.Screen name="lost-key" options={{ headerShown: false }} />
         </Stack>
     );
 }
