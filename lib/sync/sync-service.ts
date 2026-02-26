@@ -11,7 +11,7 @@ import { eq, inArray } from 'drizzle-orm';
 import { getImagesByIds } from '../db/repositories/images.repository';
 import { imageSyncService } from '../services/sync/image-sync.service';
 
-const SYNC_TIME_KEY = 'global_last_sync_time';
+const getSyncTimeKey = (userId: string) => `${userId}_last_sync_time`;
 
 export async function syncPush(masterKey: string) {
     const { data: { session } } = await supabase.auth.getSession();
@@ -21,10 +21,11 @@ export async function syncPush(masterKey: string) {
     const now = new Date(); // To standardize the timestamp of this push
     let didDeleteTombstones = false;
 
+    // === 1. FOLDERS ISOLATED PUSH ===
+    const pushFolders = async () => {
+        const dirtyFolders = getDirtyFolders();
+        if (dirtyFolders.length === 0) return;
 
-    // === 1. FOLDERS ===
-    const dirtyFolders = getDirtyFolders();
-    if (dirtyFolders.length > 0) {
         const payloadFolders = dirtyFolders.map(folder => {
             const isTombstone = folder.isPermDeleted;
             const { encryptedData, nonce } = encryptPayload(JSON.stringify(folder), masterKey);
@@ -39,7 +40,10 @@ export async function syncPush(masterKey: string) {
         });
 
         const { error } = await supabase.from('encrypted_folders').upsert(payloadFolders);
-        if (error) throw new Error(`Push folders error: ${error.message}`);
+        if (error) {
+            console.error(`Push folders error: ${error.message}`);
+            return;
+        }
 
         const tombstones = dirtyFolders.filter(f => f.isPermDeleted);
         if (tombstones.length > 0) {
@@ -51,11 +55,13 @@ export async function syncPush(masterKey: string) {
         if (aliveFolders.length > 0) {
             clearDirtyFolders(aliveFolders.map(f => f.id), now);
         }
-    }
+    };
 
-    // === 2. TASKS ===
-    const dirtyTasks = getDirtyTasks();
-    if (dirtyTasks.length > 0) {
+    // === 2. TASKS ISOLATED PUSH ===
+    const pushTasks = async () => {
+        const dirtyTasks = getDirtyTasks();
+        if (dirtyTasks.length === 0) return;
+
         const payloadTasks = dirtyTasks.map(task => {
             const isTombstone = task.isPermDeleted;
             const { encryptedData, nonce } = encryptPayload(JSON.stringify(task), masterKey);
@@ -70,7 +76,10 @@ export async function syncPush(masterKey: string) {
         });
 
         const { error } = await supabase.from('encrypted_tasks').upsert(payloadTasks);
-        if (error) throw new Error(`Push tasks error: ${error.message}`);
+        if (error) {
+            console.error(`Push tasks error: ${error.message}`);
+            return;
+        }
 
         const tombstones = dirtyTasks.filter(t => t.isPermDeleted);
         if (tombstones.length > 0) {
@@ -82,11 +91,16 @@ export async function syncPush(masterKey: string) {
         if (aliveTasks.length > 0) {
             clearDirtyTasks(aliveTasks.map(t => t.id), now);
         }
-    }
+    };
 
-    // === 3. NOTES ===
-    const dirtyNotes = getDirtyNotes();
-    if (dirtyNotes.length > 0) {
+    // === 3. NOTES ISOLATED PUSH ===
+    let pushedNoteIds: string[] = []; // Used for pushing images later
+    const pushNotes = async () => {
+        const dirtyNotes = getDirtyNotes();
+        if (dirtyNotes.length === 0) return;
+
+        pushedNoteIds = dirtyNotes.map(n => n.id);
+
         const payloadNotes = dirtyNotes.map(metadata => {
             const isTombstone = metadata.isPermDeleted;
 
@@ -107,7 +121,10 @@ export async function syncPush(masterKey: string) {
         });
 
         const { error } = await supabase.from('encrypted_notes').upsert(payloadNotes);
-        if (error) throw new Error(`Push notes error: ${error.message}`);
+        if (error) {
+            console.error(`Push notes error: ${error.message}`);
+            return;
+        }
 
         const tombstones = dirtyNotes.filter(n => n.isPermDeleted);
         if (tombstones.length > 0) {
@@ -122,15 +139,24 @@ export async function syncPush(masterKey: string) {
         if (aliveNotes.length > 0) {
             clearDirtyNotes(aliveNotes.map(n => n.id), now);
         }
-    }
+    };
+
+    // === FIRE ALL CONCURRENTLY ===
+    await Promise.allSettled([
+        pushFolders(),
+        pushTasks(),
+        pushNotes()
+    ]);
 
     // === 4. IMAGES ===
     // We push images AFTER notes to avoid foreign key constraints in `note_images` where `note_id` might not exist in `encrypted_notes` yet.
-    await imageSyncService.pushImages(
-        masterKey,
-        userId,
-        dirtyNotes.map(note => note.id)
-    );
+    if (pushedNoteIds.length > 0) {
+        await imageSyncService.pushImages(
+            masterKey,
+            userId,
+            pushedNoteIds
+        );
+    }
 
     // Note: We don't update SyncTime here because Push doesn't necessarily mean we want to skip Pulling things that happened *during* our offline state. 
 
@@ -145,21 +171,27 @@ export async function syncPull(masterKey: string) {
     if (!session?.user) throw new Error("User not authenticated");
 
     const userId = session.user.id;
-    const lastSyncStr = await AsyncStorage.getItem(SYNC_TIME_KEY);
+    const lastSyncStr = await AsyncStorage.getItem(getSyncTimeKey(userId));
     const lastSyncTime = lastSyncStr ? new Date(lastSyncStr) : new Date(0); // 1970 if never synced
     const newSyncTime = new Date().toISOString(); // Time right before we fetch (prevents missing things being created right now)
     let didDeleteTombstones = false;
 
     console.log(`[Sync] Pulling changes modified after: ${lastSyncTime.toISOString()}`);
 
-    // === 1. PULL FOLDERS ===
-    const { data: cloudFolders, error: errorFolders } = await supabase
-        .from('encrypted_folders')
-        .select('*')
-        .eq('user_id', userId)
-        .gt('updated_at', lastSyncTime.toISOString());
+    const { data, error } = await supabase.rpc('pull_sync_data', {
+        p_last_sync: lastSyncTime.toISOString()
+    });
 
-    if (errorFolders) throw errorFolders;
+    if (error) {
+        console.error("Sync pull failed:", error);
+        throw error;
+    }
+
+    const cloudFolders = data.folders;
+    const cloudTasks = data.tasks;
+    const cloudNotes = data.notes;
+
+    // === 1. PULL FOLDERS ===
 
     if (cloudFolders && cloudFolders.length > 0) {
         console.log(`[Sync] Received ${cloudFolders.length} updated folders from cloud.`);
@@ -191,13 +223,6 @@ export async function syncPull(masterKey: string) {
     }
 
     // === 2. PULL TASKS ===
-    const { data: cloudTasks, error: errorTasks } = await supabase
-        .from('encrypted_tasks')
-        .select('*')
-        .eq('user_id', userId)
-        .gt('updated_at', lastSyncTime.toISOString());
-
-    if (errorTasks) throw errorTasks;
 
     if (cloudTasks && cloudTasks.length > 0) {
         console.log(`[Sync] Received ${cloudTasks.length} updated tasks from cloud.`);
@@ -229,13 +254,6 @@ export async function syncPull(masterKey: string) {
     }
 
     // === 3. PULL NOTES ===
-    const { data: cloudNotes, error: errorNotes } = await supabase
-        .from('encrypted_notes')
-        .select('*')
-        .eq('user_id', userId)
-        .gt('updated_at', lastSyncTime.toISOString());
-
-    if (errorNotes) throw errorNotes;
 
     if (cloudNotes && cloudNotes.length > 0) {
         console.log(`[Sync] Received ${cloudNotes.length} updated notes from cloud.`);
@@ -269,7 +287,7 @@ export async function syncPull(masterKey: string) {
     }
 
     // Update the pointer
-    await AsyncStorage.setItem(SYNC_TIME_KEY, newSyncTime);
+    await AsyncStorage.setItem(getSyncTimeKey(userId), newSyncTime);
 
     if (didDeleteTombstones) {
         console.log('[SyncPull] Tombstones deleted locally. Running garbage collection to free space...');
