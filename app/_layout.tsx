@@ -1,6 +1,6 @@
 
 import { ThemeProvider } from '@react-navigation/native';
-import * as BackgroundFetch from 'expo-background-fetch';
+import * as BackgroundTask from 'expo-background-task';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
@@ -20,19 +20,19 @@ TaskManager.defineTask(BACKGROUND_SYNC_TASK, async () => {
     const { getMasterKey } = require('@/lib/utils/crypto');
 
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return BackgroundFetch.BackgroundFetchResult.NoData;
+    if (!session) return BackgroundTask.BackgroundTaskResult.Success;
 
     const key = await getMasterKey(session.user.id);
-    if (!key) return BackgroundFetch.BackgroundFetchResult.NoData;
+    if (!key) return BackgroundTask.BackgroundTaskResult.Success;
 
     // Note: For background fetch, doing heavy operations must be well bounded
     await syncPull(key);
     await syncPush(key);
 
-    return BackgroundFetch.BackgroundFetchResult.NewData;
+    return BackgroundTask.BackgroundTaskResult.Success;
   } catch (error) {
     console.error("[BackgroundSync] Failed:", error);
-    return BackgroundFetch.BackgroundFetchResult.Failed;
+    return BackgroundTask.BackgroundTaskResult.Failed;
   }
 });
 
@@ -121,11 +121,6 @@ export default function RootLayout() {
       useNotesStore.getState().initApp();
       useTasksStore.getState().loadTasks();
 
-      // TEMPORARY: Log hashed master key
-      if (user?.id) {
-        const { logHashedMasterKey } = require('@/lib/utils/crypto');
-        logHashedMasterKey(user.id);
-      }
     }
   }, [dbReady, user?.id, isGuest]);
 
@@ -203,15 +198,13 @@ export default function RootLayout() {
       try {
         const isRegistered = await TaskManager.isTaskRegisteredAsync(BACKGROUND_SYNC_TASK);
         if (!isRegistered) {
-          await BackgroundFetch.registerTaskAsync(BACKGROUND_SYNC_TASK, {
-            minimumInterval: 15 * 60, // 15 minutes
-            stopOnTerminate: false,
-            startOnBoot: true,
+          await BackgroundTask.registerTaskAsync(BACKGROUND_SYNC_TASK, {
+            minimumInterval: 15, // 15 minutes
           });
           console.log('[BackgroundSync] Task registered');
         }
       } catch (err) {
-        if (err instanceof Error && err.message.includes('Background Fetch has not been configured')) {
+        if (err instanceof Error && err.message.toLowerCase().includes('background')) {
           console.warn('[BackgroundSync] Skipped (Expected in Expo Go).');
         } else {
           console.error('[BackgroundSync] Failed to register task', err);

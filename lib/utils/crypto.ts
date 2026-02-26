@@ -180,17 +180,4 @@ export function decryptImageBytes(encryptedBytes: Uint8Array, nonceHex: string, 
     return new Uint8Array(decryptedBytes);
 }
 
-/**
- * Temporary function to log the hashed master key
- */
-export async function logHashedMasterKey(userId: string) {
-    const mnemonic = await getMasterKey(userId);
-    if (mnemonic) {
-        const hashed = await hashMasterKey(mnemonic);
-        console.log("=== TEMPORARY HASHED MASTER KEY ===");
-        console.log(hashed);
-        console.log("===================================");
-    } else {
-        console.log("No master key found for user:", userId);
-    }
-}
+

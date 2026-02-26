@@ -107,8 +107,14 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         const folders = loadAllFolders();
         const notes = loadAllNotes();
 
+        const wasInitialized = get().isInitialized;
         set({ folders, notes, isInitialized: true });
-        console.log(`[Store] Initialized with ${folders.length} folders and ${notes.length} notes.`);
+
+        if (!wasInitialized) {
+            console.log(`[Store] Initialized with ${folders.length} folders and ${notes.length} notes.`);
+        } else {
+            console.log(`[Store] Reinitialized with ${folders.length} folders and ${notes.length} notes from local database.`);
+        }
 
     },
 

@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
-import { schema, type DbType } from './client';
-
+import type { DbType } from './client';
+import * as schema from './schema';
 export const TRASH_FOLDER_ID = 'system-trash';
 export const DAILY_NOTES_FOLDER_ID = 'system-daily-notes';
 

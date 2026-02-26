@@ -122,7 +122,6 @@ export function initDatabase(expoDb: SQLiteDatabase, drizzleDb: DbType): void {
   try {
     // Create all tables
     expoDb.execSync(CREATE_TABLES_SQL);
-    console.log('Database tables created successfully');
 
     // Run migrations for existing databases
     try {
