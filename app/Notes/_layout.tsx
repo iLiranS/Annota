@@ -35,6 +35,7 @@ export default function NotesLayout() {
                     ),
                 }}
             />
+
             <Stack.Screen
                 name="[id]/index"
                 options={{

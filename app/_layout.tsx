@@ -241,6 +241,7 @@ export default function RootLayout() {
           <Stack.Screen name="settings" options={{ headerShown: false, presentation: 'modal', title: 'Settings' }} />
           <Stack.Screen name="Tasks/[id]/index" options={{ headerShown: true, presentation: 'modal', title: 'Edit Task' }} />
           <Stack.Screen name="Tasks/new" options={{ headerShown: true, presentation: 'modal', title: 'Edit Task' }} />
+          <Stack.Screen name="Notes" options={{ headerShown: false }} />
 
         </Stack>
         <StatusBar style={theme.dark ? 'light' : 'dark'} />

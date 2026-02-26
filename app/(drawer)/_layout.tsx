@@ -28,14 +28,7 @@ export default function DrawerLayout() {
         }}
       />
 
-      <Drawer.Screen
-        name="Notes"
-        options={{
-          title: 'Notes',
-          drawerLabel: 'Notes',
-          headerShown: false,
-        }}
-      />
+
 
       <Drawer.Screen
         name="Tasks"

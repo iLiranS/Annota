@@ -139,14 +139,8 @@ export default function NoteEditor() {
     const handleBack = useCallback(() => {
         // Blur editor before navigating back
         editorRef.current?.blur();
-        if (source === 'home' && router.canGoBack()) {
-            router.back();
-        } else if (source === 'home') {
-            router.replace('/');
-        } else {
-            router.back();
-        }
-    }, [router, source]);
+        router.back()
+    }, [router]);
 
     // Search handlers
     const handleOpenSearch = useCallback(() => {
@@ -242,7 +236,7 @@ export default function NoteEditor() {
                         headerTitle: 'Note Not Found',
                         headerLeft: () => (
                             <HapticPressable
-                                onPress={() => router.back()}
+                                onPress={handleBack}
                                 style={[
                                     styles.headerButton,
                                     {

@@ -15,8 +15,8 @@ import {
 import { DAILY_NOTES_FOLDER_ID, NoteMetadata, TRASH_FOLDER_ID, useNotesStore, type Folder } from '@/stores/notes-store';
 import { useSettingsStore } from '@/stores/settings-store';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { DrawerActions, useTheme } from '@react-navigation/native';
-import { Stack, useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
+import { useTheme } from '@react-navigation/native';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import {
     FlatList,
@@ -33,14 +33,11 @@ type ListItem =
 
 export default function NotesList() {
     const router = useRouter();
-    const navigation = useNavigation();
     const { colors } = useTheme();
     const insets = useSafeAreaInsets();
     const params = useLocalSearchParams<{ folderId?: string, source?: string }>();
 
-    const openDrawer = useCallback(() => {
-        navigation.dispatch(DrawerActions.openDrawer());
-    }, [navigation]);
+
 
     // Zustand store
     const {
@@ -124,7 +121,7 @@ export default function NotesList() {
                 router.push('/Notes/trash');
                 return;
             }
-            router.setParams({ folderId });
+            router.push({ pathname: '/Notes', params: { folderId } });
         },
         [router, getFolderById]
     );
@@ -136,14 +133,6 @@ export default function NotesList() {
         [router]
     );
 
-    const handleBack = useCallback(() => {
-
-        if (currentFolder?.parentId) {
-            router.setParams({ folderId: currentFolder.parentId });
-        } else {
-            router.setParams({ folderId: undefined });
-        }
-    }, [currentFolder, router]);
 
     // Create new note and navigate to it
     const handleCreateNote = useCallback(async () => {
@@ -264,17 +253,11 @@ export default function NotesList() {
                     headerShown: true,
                     title: headerTitle,
                     gestureEnabled: false,
-                    headerLeft: () => currentFolderId
-                        ? (
-                            <HapticPressable onPress={handleBack} style={styles.headerButton} hitSlop={8}>
-                                <Ionicons name="chevron-back" size={26} color={colors.primary} />
-                            </HapticPressable>
-                        )
-                        : (
-                            <HapticPressable onPress={openDrawer} style={styles.headerButton} hitSlop={8}>
-                                <Ionicons name="menu" size={26} color={colors.primary} />
-                            </HapticPressable>
-                        ),
+                    headerLeft: () => (
+                        <HapticPressable onPress={() => router.back()} style={styles.headerButton} hitSlop={8}>
+                            <Ionicons name="chevron-back" size={26} color={colors.primary} />
+                        </HapticPressable>
+                    ),
                     headerRight: () => (
                         <HapticPressable
                             onPress={() => setIsSearchVisible(true)}
