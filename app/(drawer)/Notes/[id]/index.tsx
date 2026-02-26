@@ -139,8 +139,9 @@ export default function NoteEditor() {
     const handleBack = useCallback(() => {
         // Blur editor before navigating back
         editorRef.current?.blur();
-        if (source === 'home') {
-            // Use replace to go directly to home without stack issues
+        if (source === 'home' && router.canGoBack()) {
+            router.back();
+        } else if (source === 'home') {
             router.replace('/');
         } else {
             router.back();
@@ -193,7 +194,9 @@ export default function NoteEditor() {
     const handleDelete = useCallback(async () => {
         if (!id) return;
         await deleteNote(id);
-        if (source === 'home') {
+        if (source === 'home' && router.canGoBack()) {
+            router.back();
+        } else if (source === 'home') {
             router.replace('/');
         } else {
             router.back();
@@ -277,7 +280,7 @@ export default function NoteEditor() {
             <Stack.Screen
                 options={{
                     headerShown: !isGalleryOpen,
-                    gestureEnabled: source !== 'home', // Disable swipe when coming from home to force correct back navigation
+                    gestureEnabled: true, // Re-enable gesture for better UX, back() will handle it correct now
                     headerTransparent: general.floatingNoteHeader,
                     headerBackground: general.floatingNoteHeader ? () => <View style={{ flex: 1, backgroundColor: 'transparent' }} /> : undefined,
                     headerBlurEffect: undefined,

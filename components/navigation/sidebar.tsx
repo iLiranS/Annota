@@ -14,7 +14,9 @@ import {
     Text,
     View,
 } from 'react-native';
+import Animated, { FadeInDown, FadeOutUp, LinearTransition } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import FolderEditModal from '../folder-edit-modal';
 import { HapticPressable } from '../ui/haptic-pressable';
 
 
@@ -23,34 +25,38 @@ interface SidebarItemProps {
     icon: keyof typeof Ionicons.glyphMap;
     label: string;
     onPress: () => void;
+    onLongPress?: () => void;
     iconColor?: string;
     isActive?: boolean;
 }
 
-function SidebarItem({ icon, label, onPress, iconColor, isActive }: SidebarItemProps) {
+function SidebarItem({ icon, label, onPress, onLongPress, iconColor, isActive }: SidebarItemProps) {
     const { colors } = useAppTheme();
 
     return (
-        <HapticPressable
-            onPress={onPress}
-            style={({ pressed }) => [
-                styles.sidebarItem,
-                isActive && { backgroundColor: colors.primary + '15' },
-                pressed && { opacity: 0.7 },
-            ]}
-        >
-            <Ionicons
-                name={icon}
-                size={22}
-                color={iconColor || (isActive ? colors.primary : colors.text)}
-            />
-            <Text style={[
-                styles.sidebarItemText,
-                { color: isActive ? colors.primary : colors.text }
-            ]}>
-                {label}
-            </Text>
-        </HapticPressable>
+        <Animated.View layout={LinearTransition.duration(300)}>
+            <HapticPressable
+                onPress={onPress}
+                onLongPress={onLongPress}
+                style={({ pressed }) => [
+                    styles.sidebarItem,
+                    isActive && { backgroundColor: colors.primary + '15' },
+                    pressed && { opacity: 0.7 },
+                ]}
+            >
+                <Ionicons
+                    name={icon}
+                    size={22}
+                    color={iconColor || (isActive ? colors.primary : colors.text)}
+                />
+                <Text style={[
+                    styles.sidebarItemText,
+                    { color: isActive ? colors.primary : colors.text }
+                ]}>
+                    {label}
+                </Text>
+            </HapticPressable>
+        </Animated.View>
     );
 }
 
@@ -61,6 +67,7 @@ interface FolderTreeItemProps {
     hasChildren: boolean;
     onToggle: () => void;
     onNavigate: () => void;
+    onLongPress: () => void;
     renderChildren: () => React.ReactNode;
 }
 
@@ -71,23 +78,28 @@ function FolderTreeItem({
     hasChildren,
     onToggle,
     onNavigate,
+    onLongPress,
     renderChildren,
 }: FolderTreeItemProps) {
     const { colors } = useAppTheme();
 
     return (
-        <View>
+        <Animated.View
+            layout={LinearTransition.duration(300)}
+            style={{ overflow: 'hidden' }}
+        >
             <Pressable
                 onPress={hasChildren ? onToggle : undefined}
+                onLongPress={onLongPress}
                 style={({ pressed }) => [
                     styles.folderRow,
                     { paddingLeft: 12 + depth * 14 },
-                    pressed && hasChildren && { backgroundColor: colors.border + '20' },
-
+                    // Removed hover effect for toggle row per request
                 ]}
             >
                 <Pressable
                     onPress={onNavigate}
+                    onLongPress={onLongPress}
                     style={({ pressed }) => [
                         styles.folderItemButton,
                         pressed && { opacity: 0.7 },
@@ -116,16 +128,27 @@ function FolderTreeItem({
                 )}
             </Pressable>
 
-            {hasChildren && isExpanded ? renderChildren() : null}
+            {hasChildren && isExpanded ? (
+                <Animated.View
+                    entering={FadeInDown.duration(300)}
+                    exiting={FadeOutUp.duration(250)}
+                    layout={LinearTransition.duration(300)}
+                >
+                    {renderChildren()}
+                </Animated.View>
+            ) : null}
 
-        </View>
+        </Animated.View>
     );
 }
 
 function Separator() {
     const { colors } = useAppTheme();
     return (
-        <View style={[styles.separator, { backgroundColor: colors.border }]} />
+        <Animated.View
+            layout={LinearTransition.duration(300)}
+            style={[styles.separator, { backgroundColor: colors.border }]}
+        />
     );
 }
 
@@ -137,6 +160,7 @@ export default function Sidebar(props: DrawerContentComponentProps) {
     const { folders, notes, getFoldersInFolder } = useNotesStore();
     const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
     const [isQuickAccessExpanded, setIsQuickAccessExpanded] = useState(false);
+    const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
 
     // Offline / sync state
     const isOnline = useSyncStore(s => s.isOnline);
@@ -174,10 +198,8 @@ export default function Sidebar(props: DrawerContentComponentProps) {
         }
     };
 
-    const navigateToDailyNote = async () => {
-        const noteId = await useNotesStore.getState().getOrCreateDailyNote();
-        closeDrawer();
-        router.push({ pathname: '/Notes/[id]', params: { id: noteId } });
+    const navigateToDailyNotes = () => {
+        navigateToNotes(DAILY_NOTES_FOLDER_ID);
     };
 
     const navigateToTasks = () => {
@@ -232,6 +254,7 @@ export default function Sidebar(props: DrawerContentComponentProps) {
                             hasChildren={hasChildren}
                             onToggle={() => toggleFolder(folder.id)}
                             onNavigate={() => navigateToNotes(folder.id)}
+                            onLongPress={() => setEditingFolder(folder)}
                             renderChildren={() => renderFolderTree(folder.id, depth + 1)}
                         />
                     );
@@ -274,39 +297,50 @@ export default function Sidebar(props: DrawerContentComponentProps) {
 
                     <SidebarItem
                         icon={(folders.find(f => f.id === DAILY_NOTES_FOLDER_ID)?.icon as keyof typeof Ionicons.glyphMap) || "calendar"}
-                        label={"Daily Note"}
-                        onPress={navigateToDailyNote}
+                        label={"Daily Notes"}
+                        onPress={navigateToDailyNotes}
+                        onLongPress={() => {
+                            const dailyFolder = folders.find(f => f.id === DAILY_NOTES_FOLDER_ID);
+                            if (dailyFolder) setEditingFolder(dailyFolder);
+                        }}
                         iconColor={folders.find(f => f.id === DAILY_NOTES_FOLDER_ID)?.color || '#8B5CF6'}
                     />
 
-                    <Pressable
-                        onPress={() => setIsQuickAccessExpanded(!isQuickAccessExpanded)}
-                        style={({ pressed }) => [
-                            styles.sidebarItem,
-                            pressed && { opacity: 0.7 },
-                        ]}
-                    >
-                        <Ionicons
-                            name={'star'}
-                            size={22}
-                            color={"#FBBF24"}
-                        />
-                        <Text style={[
-                            styles.sidebarItemText,
-                            { color: colors.text, flex: 1 }
-                        ]}>
-                            Quick Access
-                        </Text>
-                        <Ionicons
-                            name={isQuickAccessExpanded ? 'chevron-down' : 'chevron-forward'} // Or chevron-forward if collapsed
-                            size={16}
-                            color={colors.text}
-                        />
-                    </Pressable>
+                    <Animated.View layout={LinearTransition.duration(300)}>
+                        <Pressable
+                            onPress={() => setIsQuickAccessExpanded(!isQuickAccessExpanded)}
+                            style={[
+                                styles.sidebarItem,
+                                // Removed hover effect for toggle row per request
+                            ]}
+                        >
+                            <Ionicons
+                                name={'star'}
+                                size={22}
+                                color={"#FBBF24"}
+                            />
+                            <Text style={[
+                                styles.sidebarItemText,
+                                { color: colors.text, flex: 1 }
+                            ]}>
+                                Quick Access
+                            </Text>
+                            <Ionicons
+                                name={isQuickAccessExpanded ? 'chevron-down' : 'chevron-forward'} // Or chevron-forward if collapsed
+                                size={16}
+                                color={colors.text}
+                            />
+                        </Pressable>
+                    </Animated.View>
 
                     {/* Quick Access List */}
                     {isQuickAccessExpanded && (
-                        <View style={styles.quickAccessList}>
+                        <Animated.View
+                            entering={FadeInDown.duration(300)}
+                            exiting={FadeOutUp.duration(250)}
+                            layout={LinearTransition.duration(300)}
+                            style={[styles.quickAccessList, { overflow: 'hidden' }]}
+                        >
                             {quickAccessNotes.length === 0 ? (
                                 <Text style={[styles.emptyText, { color: colors.text + '80' }]}>
                                     No starred notes
@@ -331,7 +365,7 @@ export default function Sidebar(props: DrawerContentComponentProps) {
                                     </HapticPressable>
                                 ))
                             )}
-                        </View>
+                        </Animated.View>
                     )}
 
 
@@ -363,6 +397,7 @@ export default function Sidebar(props: DrawerContentComponentProps) {
                                     hasChildren={hasChildren}
                                     onToggle={() => toggleFolder(folder.id)}
                                     onNavigate={() => navigateToNotes(folder.id)}
+                                    onLongPress={() => setEditingFolder(folder)}
                                     renderChildren={() => renderFolderTree(folder.id, 1)}
                                 />
                             );
@@ -410,6 +445,13 @@ export default function Sidebar(props: DrawerContentComponentProps) {
                     </HapticPressable>
                 </View>
             </View>
+
+            {/* Folder Edit Modal */}
+            <FolderEditModal
+                visible={editingFolder !== null}
+                folder={editingFolder}
+                onClose={() => setEditingFolder(null)}
+            />
         </View>
     );
 }
