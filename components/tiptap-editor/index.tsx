@@ -586,7 +586,16 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
                             const requestOrigin = new URL(url).origin;
                             const appOrigin = 'https://app.local';
                             const devOrigin = useDevEditor ? new URL(devEditorUrl).origin : null;
+
                             if (requestOrigin === appOrigin || (devOrigin && requestOrigin === devOrigin)) {
+                                return true;
+                            }
+
+                            // Allow YouTube iframe embeds
+                            if (
+                                requestOrigin === 'https://www.youtube.com' ||
+                                requestOrigin === 'https://www.youtube-nocookie.com'
+                            ) {
                                 return true;
                             }
                         } catch {
