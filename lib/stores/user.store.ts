@@ -19,6 +19,10 @@ type UserState = {
     role: string | null;
     /** Whether getUserRole has already run for this session. */
     roleFetched: boolean;
+    /** Cached display name from Supabase (non-persisted). */
+    displayName: string | null;
+    /** Whether getDisplayName has already run for this session. */
+    displayNameFetched: boolean;
     setSession: (session: Session | null) => void;
     setGuest: (guest: boolean) => void;
     signOut: () => Promise<void>;
@@ -40,6 +44,8 @@ export const useUserStore = create<UserState>()(
             keyValidatorFetched: false,
             role: null,
             roleFetched: false,
+            displayName: null,
+            displayNameFetched: false,
 
             setSession: (session) =>
                 set((state) => ({
@@ -49,6 +55,12 @@ export const useUserStore = create<UserState>()(
                     // If session is provided, user is authenticated so they are no longer a guest.
                     isGuest: session ? false : state.isGuest,
                     initialized: true,
+                    displayName: null,
+                    displayNameFetched: false,
+                    role: null,
+                    roleFetched: false,
+                    keyValidator: null,
+                    keyValidatorFetched: false,
                 })),
 
             setGuest: (isGuest) =>
@@ -57,11 +69,13 @@ export const useUserStore = create<UserState>()(
                     initialized: true,
                     session: null,
                     user: null,
+                    displayName: null,
+                    displayNameFetched: false,
                 }),
 
             signOut: async () => {
                 await authApi.signOut();
-                set({ session: null, user: null, isGuest: false, keyValidator: null, keyValidatorFetched: false, role: null, roleFetched: false });
+                set({ session: null, user: null, isGuest: false, keyValidator: null, keyValidatorFetched: false, role: null, roleFetched: false, displayName: null, displayNameFetched: false });
             },
 
             fetchKeyValidator: async (userId: string): Promise<string | null> => {
@@ -80,6 +94,8 @@ export const useUserStore = create<UserState>()(
                 await userService.updateDisplayName(user.id, displayName);
 
                 set((state) => ({
+                    displayName,
+                    displayNameFetched: true,
                     user: state.user ? {
                         ...state.user,
                         user_metadata: {
@@ -90,9 +106,13 @@ export const useUserStore = create<UserState>()(
                 }));
             },
             getDisplayName: async () => {
-                const { user } = get();
-                if (!user) return null;
-                return await userService.getDisplayName(user.id);
+                const state = get();
+                if (!state.user) return null;
+                if (state.displayNameFetched) return state.displayName;
+
+                const name = await userService.getDisplayName(state.user.id);
+                set({ displayName: name, displayNameFetched: true });
+                return name;
             },
             getUserRole: async () => {
                 const state = get();

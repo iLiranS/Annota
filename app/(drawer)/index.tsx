@@ -24,7 +24,30 @@ export default function HomeScreen() {
   const navigation = useNavigation<DrawerNavigationProp<any>>();
   const { session } = useAuthStore();
   const [guestDisplayName, setGuestDisplayName] = useState('');
-  const displayName = session?.user?.user_metadata?.display_name || session?.user?.user_metadata?.full_name || session?.user?.user_metadata?.name || session?.user?.user_metadata?.preferred_username || guestDisplayName;
+  const [storeDisplayName, setStoreDisplayName] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (session) {
+      const fetchName = async () => {
+        const name = await useAuthStore.getState().getDisplayName();
+        setStoreDisplayName(name);
+      };
+      fetchName();
+    } else {
+      setStoreDisplayName(null);
+    }
+  }, [session]);
+
+  const globalDisplayName = useAuthStore(state => state.displayName);
+  const displayNameFetched = useAuthStore(state => state.displayNameFetched);
+  useEffect(() => {
+    if (globalDisplayName !== undefined && globalDisplayName !== null) {
+      setStoreDisplayName(globalDisplayName);
+    }
+  }, [globalDisplayName]);
+
+  const fallbackName = session?.user?.user_metadata?.display_name || session?.user?.user_metadata?.full_name || session?.user?.user_metadata?.name || session?.user?.user_metadata?.preferred_username || guestDisplayName;
+  const displayName = session ? (storeDisplayName || (displayNameFetched ? fallbackName : '...')) : guestDisplayName;
   const { editor } = useSettingsStore();
 
 
@@ -39,6 +62,8 @@ export default function HomeScreen() {
 
   // Guest display name
   useEffect(() => {
+    if (session) return;
+
     const loadGuestDisplayName = async () => {
       const value = await AsyncStorage.getItem(GUEST_DISPLAY_NAME_KEY);
       if (value) {
@@ -46,7 +71,7 @@ export default function HomeScreen() {
       }
     };
     loadGuestDisplayName();
-  }, []);
+  }, [session]);
 
 
   // Load tasks from database on mount

@@ -20,18 +20,32 @@ export default function AccountSettingsScreen() {
     const [guestDisplayName, setGuestDisplayName] = React.useState('');
 
     const [userRole, setUserRole] = React.useState<string | null>(null);
+    const [storeDisplayName, setStoreDisplayName] = React.useState<string | null>(null);
 
     React.useEffect(() => {
         if (session) {
-            const fetchRole = async () => {
-                const role = await useAuthStore.getState().getUserRole();
+            const fetchData = async () => {
+                const [role, name] = await Promise.all([
+                    useAuthStore.getState().getUserRole(),
+                    useAuthStore.getState().getDisplayName()
+                ]);
                 setUserRole(role);
+                setStoreDisplayName(name);
             };
-            fetchRole();
+            fetchData();
         } else {
             setUserRole(null);
+            setStoreDisplayName(null);
         }
     }, [session]);
+
+    const globalDisplayName = useAuthStore(state => state.displayName);
+    const displayNameFetched = useAuthStore(state => state.displayNameFetched);
+    React.useEffect(() => {
+        if (globalDisplayName !== undefined && globalDisplayName !== null) {
+            setStoreDisplayName(globalDisplayName);
+        }
+    }, [globalDisplayName]);
 
     React.useEffect(() => {
         if (session) return;
@@ -56,7 +70,8 @@ export default function AccountSettingsScreen() {
         };
     }, [session]);
 
-    const displayName = session ? (session?.user?.user_metadata?.display_name || session?.user?.user_metadata?.full_name || session?.user?.user_metadata?.name || session?.user?.user_metadata?.preferred_username || 'Guest') : (guestDisplayName || 'Not set');
+    const fallbackName = session?.user?.user_metadata?.display_name || session?.user?.user_metadata?.full_name || session?.user?.user_metadata?.name || session?.user?.user_metadata?.preferred_username || 'Guest';
+    const displayName = session ? (storeDisplayName || (displayNameFetched ? fallbackName : '...')) : (guestDisplayName || 'Not set');
 
     const handleSignOut = () => {
         Alert.alert(
@@ -131,6 +146,7 @@ export default function AccountSettingsScreen() {
                             <SettingItem
                                 label="Connected Email"
                                 icon="mail-outline"
+                                type="value"
                                 onPress={() => { }}
                                 description={session.user?.email || 'Authenticated User'}
                                 iconColor="#FFFFFF"
@@ -146,12 +162,22 @@ export default function AccountSettingsScreen() {
                             />
                             <SettingItem
                                 label="Account Role"
-                                icon={userRole?.toLowerCase() === 'pro' ? 'star' : userRole?.toLowerCase() === 'beta' ? 'flask' : 'shield-checkmark-outline'}
+                                icon={
+                                    userRole?.toLowerCase() === 'pro' ? 'star' :
+                                        userRole?.toLowerCase() === 'beta' ? 'flask' :
+                                            userRole?.toLowerCase() === 'admin' ? 'hammer' :
+                                                'shield-checkmark-outline'
+                                }
                                 type="value"
                                 onPress={() => { }}
                                 value={<RoleBadge role={userRole || ''} colors={colors} />}
                                 iconColor="#FFFFFF"
-                                iconBackgroundColor={userRole?.toLowerCase() === 'pro' ? '#FFD700' : userRole?.toLowerCase() === 'beta' ? '#5856D6' : '#FF9500'}
+                                iconBackgroundColor={
+                                    userRole?.toLowerCase() === 'pro' ? '#DAA520' :
+                                        userRole?.toLowerCase() === 'beta' ? '#5856D6' :
+                                            userRole?.toLowerCase() === 'admin' ? '#FF3B30' :
+                                                '#FF9500'
+                                }
                             />
                             <SettingItem
                                 label="Sign Out"
@@ -218,12 +244,13 @@ function RoleBadge({ role, colors }: { role: string; colors: any }) {
     const lowerRole = role.toLowerCase();
     const isPro = lowerRole === 'pro';
     const isBeta = lowerRole === 'beta';
+    const isAdmin = lowerRole === 'admin';
 
     if (isPro) {
         return (
-            <View style={[styles.badge, { backgroundColor: '#FFD70020', borderColor: '#FFD70040' }]}>
-                <Ionicons name="sparkles" size={12} color="#FF9500" style={{ marginRight: 4 }} />
-                <Text style={[styles.badgeText, { color: '#FF9500', fontWeight: '700' }]}>PRO</Text>
+            <View style={[styles.badge, { backgroundColor: '#DAA52020', borderColor: '#DAA52040' }]}>
+                <Ionicons name="sparkles" size={12} color="#DAA520" style={{ marginRight: 4 }} />
+                <Text style={[styles.badgeText, { color: '#DAA520', fontWeight: '700' }]}>PRO</Text>
             </View>
         );
     }
@@ -233,6 +260,15 @@ function RoleBadge({ role, colors }: { role: string; colors: any }) {
             <View style={[styles.badge, { backgroundColor: '#5856D620', borderColor: '#5856D640' }]}>
                 <Ionicons name="flask" size={12} color="#5856D6" style={{ marginRight: 4 }} />
                 <Text style={[styles.badgeText, { color: '#5856D6', fontWeight: '700' }]}>BETA</Text>
+            </View>
+        );
+    }
+
+    if (isAdmin) {
+        return (
+            <View style={[styles.badge, { backgroundColor: '#FF3B3020', borderColor: '#FF3B3040' }]}>
+                <Ionicons name="hammer" size={12} color="#FF3B30" style={{ marginRight: 4 }} />
+                <Text style={[styles.badgeText, { color: '#FF3B30', fontWeight: '700' }]}>ADMIN</Text>
             </View>
         );
     }
