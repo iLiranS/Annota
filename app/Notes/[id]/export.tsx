@@ -1,5 +1,5 @@
 import { HapticPressable } from '@/components/ui/haptic-pressable';
-import { useNotesStore } from '@/stores/notes-store';
+import { useNotesStore } from '@/lib/stores/notes.store';
 import { exportToMarkdown } from '@/utils/export/markdown-export';
 import { exportToPDF } from '@/utils/export/pdf-export';
 import Ionicons from '@expo/vector-icons/Ionicons';

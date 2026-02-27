@@ -1,4 +1,4 @@
-import { getDb } from '@/stores/db-store';
+import { getDb } from '@/lib/stores/db.store';
 import { and, asc, eq, gte, inArray, lt } from 'drizzle-orm';
 import { DbOrTx, schema } from '../client';
 import type { Task, TaskInsert } from '../schema';

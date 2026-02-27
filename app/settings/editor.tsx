@@ -1,7 +1,7 @@
 import DummySlider from '@/components/settings/dummy-slider';
 import SettingItem from '@/components/settings/setting-item';
 import { getEditorFontLabel } from '@/constants/editor-fonts';
-import { useSettingsStore } from '@/stores/settings-store';
+import { useSettingsStore } from '@/lib/stores/settings.store';
 import { useTheme } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import React from 'react';

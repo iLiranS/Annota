@@ -1,8 +1,8 @@
 import { useAppTheme } from '@/hooks/use-app-theme';
+import { DAILY_NOTES_FOLDER_ID, useNotesStore, type Folder } from '@/lib/stores/notes.store';
+import { useSyncStore } from '@/lib/stores/sync.store';
+import { useUserStore as useAuthStore } from '@/lib/stores/user.store';
 import { SyncScheduler } from '@/lib/sync/sync-scheduler';
-import { useAuthStore } from '@/stores/auth-store';
-import { DAILY_NOTES_FOLDER_ID, useNotesStore, type Folder } from '@/stores/notes-store';
-import { useSyncStore } from '@/stores/sync-store';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { DrawerContentComponentProps, DrawerContentScrollView } from '@react-navigation/drawer';
 import { useRouter } from 'expo-router';

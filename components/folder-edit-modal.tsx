@@ -1,6 +1,6 @@
 import { COLOR_PALETTE } from '@/constants/colors';
 import { useAppTheme } from '@/hooks/use-app-theme';
-import { TRASH_FOLDER_ID, useNotesStore, type Folder } from '@/stores/notes-store';
+import { TRASH_FOLDER_ID, useNotesStore, type Folder } from '@/lib/stores/notes.store';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { PlatformPressable } from '@react-navigation/elements';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';

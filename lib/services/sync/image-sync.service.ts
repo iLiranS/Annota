@@ -1,7 +1,7 @@
+import { storageApi } from '@/lib/api/storage.api';
 import * as ImagesRepo from '@/lib/db/repositories/images.repository';
-import { supabase } from '@/lib/supabase';
+import { getDb } from '@/lib/stores/db.store';
 import { decryptImageBytes, encryptImageBytes } from '@/lib/utils/crypto';
-import { getDb } from '@/stores/db-store';
 import { Directory, File as ExpoFile, Paths } from 'expo-file-system';
 
 const BUCKET_NAME = 'e2e_images';
@@ -63,24 +63,16 @@ class ImageSyncService {
                         encryptedBytes.byteOffset,
                         encryptedBytes.byteOffset + encryptedBytes.byteLength,
                     ) as ArrayBuffer;
-                    const { error: uploadError } = await supabase.storage
-                        .from(BUCKET_NAME)
-                        .upload(storagePath, uploadBuffer, {
-                            contentType: 'application/octet-stream',
-                            upsert: true,
-                        });
+
+                    const { encode } = require('base64-arraybuffer');
+                    const base64Data = encode(uploadBuffer);
+
+                    const { error: uploadError } = await storageApi.uploadImage(storagePath, base64Data, 'application/octet-stream', BUCKET_NAME);
 
                     if (uploadError) throw uploadError;
 
                     // 4. Insert Metadata into DB
-                    const { error: metaError } = await supabase
-                        .from('encrypted_images')
-                        .upsert({
-                            id: image.id,
-                            user_id: userId,
-                            nonce,
-                            created_at: new Date().toISOString(),
-                        });
+                    const { error: metaError } = await storageApi.upsertEncryptedImage(image.id, userId, nonce);
 
                     if (metaError) throw metaError;
 
@@ -116,11 +108,7 @@ class ImageSyncService {
                         .map(img => img.id)
                     : [];
 
-                const { error } = await supabase.rpc('replace_note_images', {
-                    p_note_id: noteId,
-                    p_user_id: userId,
-                    p_image_ids: syncedImageIds,
-                });
+                const { error } = await storageApi.replaceE2ENoteImages(noteId, userId, syncedImageIds);
 
                 if (error) throw error;
             } catch (err) {
@@ -169,9 +157,7 @@ class ImageSyncService {
             const storagePath = `${item.userId}/${item.imageId}`;
 
             // Download encrypted blob from Supabase
-            const { data, error } = await supabase.storage
-                .from(BUCKET_NAME)
-                .download(storagePath);
+            const { data, error } = await storageApi.downloadImage(storagePath, BUCKET_NAME);
 
             if (error || !data) throw error || new Error('No data returned');
 

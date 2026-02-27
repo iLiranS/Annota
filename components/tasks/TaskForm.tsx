@@ -1,6 +1,6 @@
 import LocationPickerModal from '@/components/location-picker-modal';
 import ThemedText from '@/components/themed-text';
-import { useNotesStore } from '@/stores/notes-store';
+import { useNotesStore } from '@/lib/stores/notes.store';
 import { Ionicons } from '@expo/vector-icons';
 import { zodResolver } from '@hookform/resolvers/zod';
 import DateTimePicker from '@react-native-community/datetimepicker';

@@ -1,5 +1,5 @@
 import SettingItem from '@/components/settings/setting-item';
-import { useSettingsStore, type AutoClearTasksDays } from '@/stores/settings-store';
+import { useSettingsStore, type AutoClearTasksDays } from '@/lib/stores/settings.store';
 import { useTheme } from '@react-navigation/native';
 import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';

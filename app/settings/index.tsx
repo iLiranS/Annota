@@ -1,6 +1,5 @@
 import SettingItem from '@/components/settings/setting-item';
 import { useAppTheme } from '@/hooks/use-app-theme';
-import { useAuthStore } from '@/stores/auth-store';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -10,11 +9,6 @@ export default function SettingsIndex() {
     const router = useRouter();
     const { colors } = useAppTheme();
     const insets = useSafeAreaInsets();
-    const { session, signOut, setGuest } = useAuthStore();
-
-    const handleSignIn = () => {
-        setGuest(false);
-    };
 
     return (
         <ScrollView
@@ -55,25 +49,14 @@ export default function SettingsIndex() {
             <View style={styles.section}>
                 <Text style={[styles.sectionHeader, { color: colors.text + '80' }]}>ACCOUNT</Text>
                 <View style={[styles.card, { backgroundColor: colors.card }]}>
-                    {session ? (
-                        <SettingItem
-                            label="Account"
-                            icon="person-circle-outline"
-                            onPress={() => router.push('/settings/account')}
-                            description="Profile and sign out"
-                            iconColor="#FFFFFF"
-                            iconBackgroundColor="#34C759"
-                        />
-                    ) : (
-                        <SettingItem
-                            label="Sign In"
-                            icon="log-in-outline"
-                            onPress={handleSignIn}
-                            description="Enable cloud sync"
-                            iconColor="#FFFFFF"
-                            iconBackgroundColor="#007AFF"
-                        />
-                    )}
+                    <SettingItem
+                        label="Account"
+                        icon="person-circle-outline"
+                        onPress={() => router.push('/settings/account')}
+                        description="Profile and sign in options"
+                        iconColor="#FFFFFF"
+                        iconBackgroundColor="#34C759"
+                    />
                 </View>
             </View>
 

@@ -1,5 +1,5 @@
 import { EDITOR_FONTS, getEditorFontOption } from '@/constants/editor-fonts';
-import { useSettingsStore } from '@/stores/settings-store';
+import { useSettingsStore } from '@/lib/stores/settings.store';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
 import React from 'react';

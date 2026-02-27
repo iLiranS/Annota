@@ -1,7 +1,7 @@
 import TaskItem from '@/components/tasks/task-item';
 import ThemedText from '@/components/themed-text';
-import { useSettingsStore } from '@/stores/settings-store';
-import { Task } from '@/stores/tasks-store';
+import { useSettingsStore } from '@/lib/stores/settings.store';
+import { Task } from '@/lib/stores/tasks.store';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@react-navigation/native';
 import { useRouter } from 'expo-router';

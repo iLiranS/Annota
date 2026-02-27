@@ -1,8 +1,8 @@
 import FolderCard from '@/components/folders/folder-card';
 import NoteCard from '@/components/notes/note-card';
 import ThemedText from '@/components/themed-text';
-import { Folder, NoteMetadata, useNotesStore } from '@/stores/notes-store';
-import { useSettingsStore } from '@/stores/settings-store';
+import { Folder, NoteMetadata, useNotesStore } from '@/lib/stores/notes.store';
+import { useSettingsStore } from '@/lib/stores/settings.store';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
 import { useCallback, useMemo, useState } from 'react';

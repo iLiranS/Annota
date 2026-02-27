@@ -15,11 +15,11 @@ const BACKGROUND_SYNC_TASK = 'BACKGROUND_SYNC_TASK';
 
 TaskManager.defineTask(BACKGROUND_SYNC_TASK, async () => {
   try {
-    const { supabase } = require('@/lib/supabase');
+    const { authApi } = require('@/lib/api/auth.api');
     const { syncPull, syncPush } = require('@/lib/sync/sync-service');
     const { getMasterKey } = require('@/lib/utils/crypto');
 
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await authApi.getSession();
     if (!session) return BackgroundTask.BackgroundTaskResult.Success;
 
     const key = await getMasterKey(session.user.id);
@@ -38,11 +38,12 @@ TaskManager.defineTask(BACKGROUND_SYNC_TASK, async () => {
 
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { useDailyCleanup } from '@/hooks/use-daily-cleanup';
-import { supabase } from '@/lib/supabase';
+import { useDisplayNameSync } from '@/hooks/use-display-name-sync';
+import { authApi } from '@/lib/api/auth.api';
+import { useDbStore } from '@/lib/stores/db.store';
+import { useUserStore as useAuthStore } from '@/lib/stores/user.store';
 import { SyncScheduler } from '@/lib/sync/sync-scheduler';
 import { getMasterKey } from '@/lib/utils/crypto';
-import { useAuthStore } from '@/stores/auth-store';
-import { useDbStore } from '@/stores/db-store';
 
 export const unstable_settings = {
   anchor: '(drawer)',
@@ -96,9 +97,15 @@ export default function RootLayout() {
   // Run daily background cleanups (e.g. old completed tasks)
   useDailyCleanup();
 
+  // Sync display name for authenticated users once daily
+  useDisplayNameSync();
+
   useEffect(() => {
     SystemUI.setBackgroundColorAsync(theme.colors.background);
   }, [theme.colors.background]);
+
+
+
 
   useEffect(() => {
     if (!initialized) return;
@@ -118,22 +125,23 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (dbReady) {
-      console.log("here?")
       // Initialize store (load all data into memory)
-      const { useNotesStore } = require('@/stores/notes-store');
-      const { useTasksStore } = require('@/stores/tasks-store');
+      const { useNotesStore } = require('@/lib/stores/notes.store');
+      const { useTasksStore } = require('@/lib/stores/tasks.store');
       useNotesStore.getState().initApp();
       useTasksStore.getState().loadTasks();
+
+
 
     }
   }, [dbReady, user?.id, isGuest]);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    authApi.getSession().then(({ data: { session } }) => {
       setSession(session);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const subscription = authApi.onAuthStateChange((_event, session) => {
       setSession(session);
     });
 

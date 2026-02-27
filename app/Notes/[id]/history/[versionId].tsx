@@ -1,6 +1,6 @@
 import TipTapEditor from '@/components/tiptap-editor';
 import { HapticPressable } from '@/components/ui/haptic-pressable';
-import { useNotesStore } from '@/stores/notes-store';
+import { useNotesStore } from '@/lib/stores/notes.store';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
 import { format } from 'date-fns';

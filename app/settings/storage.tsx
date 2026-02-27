@@ -1,9 +1,9 @@
 import { HapticPressable } from '@/components/ui/haptic-pressable';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { StorageService } from '@/lib/services/storage.service';
+import { useUserStore as useAuthStore } from '@/lib/stores/user.store';
 import { syncPull, syncPush } from '@/lib/sync/sync-service';
 import { getMasterKey } from '@/lib/utils/crypto';
-import { useAuthStore } from '@/stores/auth-store';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -142,8 +142,8 @@ export default function StorageSettings() {
             await syncPush(key);
 
             // Reload local stores to reflect pulled changes
-            const { useNotesStore } = require('@/stores/notes-store');
-            const { useTasksStore } = require('@/stores/tasks-store');
+            const { useNotesStore } = require('@/lib/stores/notes.store');
+            const { useTasksStore } = require('@/lib/stores/tasks.store');
             useNotesStore.getState().initApp();
             useTasksStore.getState().loadTasks();
 

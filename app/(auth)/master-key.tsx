@@ -1,7 +1,8 @@
 import { useAppTheme } from '@/hooks/use-app-theme';
-import { supabase } from '@/lib/supabase';
-import { generateMasterKey, hashMasterKey, storeMasterKey, validateMasterKey } from '@/lib/utils/crypto';
-import { useAuthStore } from '@/stores/auth-store';
+import { authApi } from '@/lib/api/auth.api';
+import { userService } from '@/lib/services/user.service';
+import { useUserStore as useAuthStore } from '@/lib/stores/user.store';
+import { generateMasterKey } from '@/lib/utils/crypto';
 import * as Clipboard from 'expo-clipboard';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -18,7 +19,7 @@ export default function MasterKeyScreen() {
     const theme = useAppTheme();
 
     const getCurrentUserId = async (): Promise<string | null> => {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session } } = await authApi.getSession();
         return session?.user?.id ?? null;
     };
 
@@ -37,12 +38,9 @@ export default function MasterKeyScreen() {
                     return;
                 }
                 // Check if this user already has encrypted notes in the cloud.
-                const { count: userCount } = await supabase
-                    .from('encrypted_notes')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('user_id', userId);
+                const hasData = await userService.hasMasterKey(userId);
 
-                if (userCount && userCount > 0) {
+                if (hasData) {
                     setHasCloudData(true);
                     setMode('import');
                 } else {
@@ -66,14 +64,7 @@ export default function MasterKeyScreen() {
         Alert.alert('Copied!', 'Your master key has been copied to the clipboard.');
     };
 
-    /** Upsert key_validator hash into Supabase profiles */
-    const upsertKeyValidator = async (userId: string, mnemonicPhrase: string) => {
-        const hash = await hashMasterKey(mnemonicPhrase);
-        await supabase
-            .from('profiles')
-            .update({ key_validator: hash })
-            .eq('id', userId);
-    };
+
 
     const handleConfirmGenerate = async () => {
         const userId = await getCurrentUserId();
@@ -94,14 +85,7 @@ export default function MasterKeyScreen() {
                     text: hasCloudData ? 'Yes, Delete Cloud Data' : 'Yes, I saved it',
                     style: 'destructive',
                     onPress: async () => {
-                        if (hasCloudData) {
-                            // Wipe cloud data to prevent un-decryptable garbage
-                            await supabase.from('encrypted_notes').delete().eq('user_id', userId);
-                            await supabase.from('encrypted_tasks').delete().eq('user_id', userId);
-                            await supabase.from('encrypted_folders').delete().eq('user_id', userId);
-                        }
-                        await storeMasterKey(userId, mnemonic);
-                        await upsertKeyValidator(userId, mnemonic);
+                        await userService.setupMasterKey(userId, mnemonic, hasCloudData);
                         router.replace('/(drawer)');
                     },
                 },
@@ -118,38 +102,28 @@ export default function MasterKeyScreen() {
         }
 
         const joinedWords = importWords.join(' ').trim().toLowerCase();
-        const isValid = validateMasterKey(joinedWords);
-        if (!isValid) {
-            Alert.alert('Invalid Key', 'The 12-word phrase you entered is invalid. Please check your spelling and try again.');
-            return;
-        }
 
         setImporting(true);
         try {
             // Use cached key_validator from auth store (fetched once from Supabase)
             const storedValidator = await useAuthStore.getState().fetchKeyValidator(userId);
 
-            if (storedValidator) {
-                // Validate against stored hash
-                const importedHash = await hashMasterKey(joinedWords);
-                if (importedHash !== storedValidator) {
-                    Alert.alert('Key Mismatch', 'The 12-word phrase does not match your registered key. Please try again.');
-                    return;
-                }
-            } else {
-                // No key_validator yet — store the hash for future validation
-                await upsertKeyValidator(userId, joinedWords);
-            }
+            await userService.importMasterKey(userId, joinedWords, storedValidator);
 
-            await storeMasterKey(userId, joinedWords);
             router.replace('/(drawer)');
-        } catch (err) {
+        } catch (err: any) {
             console.error('Import key validation error:', err);
-            Toast.show({
-                type: 'error',
-                text1: 'Validation failed',
-                text2: 'Could not verify your key. Please try again.',
-            });
+            if (err.message === 'INVALID_FORMAT') {
+                Alert.alert('Invalid Key', 'The 12-word phrase you entered is invalid. Please check your spelling and try again.');
+            } else if (err.message === 'HASH_MISMATCH') {
+                Alert.alert('Key Mismatch', 'The 12-word phrase does not match your registered key. Please try again.');
+            } else {
+                Toast.show({
+                    type: 'error',
+                    text1: 'Validation failed',
+                    text2: 'Could not verify your key. Please try again.',
+                });
+            }
         } finally {
             setImporting(false);
         }

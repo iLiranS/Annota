@@ -1,10 +1,12 @@
-import { supabase } from '@/lib/supabase';
+import { authApi } from '@/lib/api/auth.api';
+import { userApi } from '@/lib/api/user.api';
+import { userService } from '@/lib/services/user.service';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Session, User } from '@supabase/supabase-js';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
-type AuthState = {
+type UserState = {
     session: Session | null;
     user: User | null;
     isGuest: boolean;
@@ -13,14 +15,21 @@ type AuthState = {
     keyValidator: string | null;
     /** Whether fetchKeyValidator has already run for this session. */
     keyValidatorFetched: boolean;
+    /** Cached user role from Supabase (non-persisted). */
+    role: string | null;
+    /** Whether getUserRole has already run for this session. */
+    roleFetched: boolean;
     setSession: (session: Session | null) => void;
     setGuest: (guest: boolean) => void;
     signOut: () => Promise<void>;
     /** Fetch key_validator from Supabase once, caching the result. */
     fetchKeyValidator: (userId: string) => Promise<string | null>;
+    updateDisplayName: (displayName: string) => Promise<void>;
+    getDisplayName: () => Promise<string | null>;
+    getUserRole: () => Promise<string | null>;
 };
 
-export const useAuthStore = create<AuthState>()(
+export const useUserStore = create<UserState>()(
     persist(
         (set, get) => ({
             session: null as Session | null,
@@ -29,6 +38,8 @@ export const useAuthStore = create<AuthState>()(
             initialized: false,
             keyValidator: null,
             keyValidatorFetched: false,
+            role: null,
+            roleFetched: false,
 
             setSession: (session) =>
                 set((state) => ({
@@ -49,27 +60,53 @@ export const useAuthStore = create<AuthState>()(
                 }),
 
             signOut: async () => {
-                await supabase.auth.signOut();
-                set({ session: null, user: null, isGuest: false, keyValidator: null, keyValidatorFetched: false });
+                await authApi.signOut();
+                set({ session: null, user: null, isGuest: false, keyValidator: null, keyValidatorFetched: false, role: null, roleFetched: false });
             },
 
             fetchKeyValidator: async (userId: string): Promise<string | null> => {
                 const state = get();
                 if (state.keyValidatorFetched) return state.keyValidator;
 
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('key_validator')
-                    .eq('id', userId)
-                    .single();
-
-                const validator = (profile?.key_validator as string) || null;
+                const validator = await userApi.getKeyValidator(userId);
                 set({ keyValidator: validator, keyValidatorFetched: true });
                 return validator;
             },
+
+            updateDisplayName: async (displayName: string) => {
+                const { user } = get();
+                if (!user) return;
+
+                await userService.updateDisplayName(user.id, displayName);
+
+                set((state) => ({
+                    user: state.user ? {
+                        ...state.user,
+                        user_metadata: {
+                            ...state.user.user_metadata,
+                            display_name: displayName,
+                        },
+                    } : null,
+                }));
+            },
+            getDisplayName: async () => {
+                const { user } = get();
+                if (!user) return null;
+                return await userService.getDisplayName(user.id);
+            },
+            getUserRole: async () => {
+                const state = get();
+                if (!state.user) return null;
+                if (state.roleFetched) return state.role;
+
+                const role = await userService.getUserRole(state.user.id);
+                set({ role, roleFetched: true });
+                return role;
+            },
+
         }),
         {
-            name: 'auth-storage',
+            name: 'auth-storage', // Kept for backwards compatibility with existing local installations
             storage: createJSONStorage(() => AsyncStorage),
             partialize: (state) => ({ isGuest: state.isGuest }),
         }

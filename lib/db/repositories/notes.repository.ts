@@ -1,5 +1,5 @@
-import { getDb } from '@/stores/db-store';
 import { deleteImageFile } from '@/lib/services/images/image.service';
+import { getDb } from '@/lib/stores/db.store';
 import { and, desc, eq, gte, inArray, isNull, sql } from 'drizzle-orm';
 import * as Crypto from 'expo-crypto';
 import { DbOrTx, schema } from '../client';

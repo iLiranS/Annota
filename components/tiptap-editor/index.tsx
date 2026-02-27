@@ -1,6 +1,6 @@
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { NoteImageService } from '@/lib/services/images';
-import { useSettingsStore } from '@/stores/settings-store';
+import { useSettingsStore } from '@/lib/stores/settings.store';
 import { useKeyboard } from '@react-native-community/hooks';
 import * as ExpoClipboard from 'expo-clipboard';
 import { Directory, File as ExpoFile, Paths } from 'expo-file-system';

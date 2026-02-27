@@ -10,7 +10,7 @@ const repoDir = path.join(process.cwd(), 'lib/db/repositories');
 
     content = content.replace(/\bdb\b/g, 'getDb()');
 
-    content = "import { getDb } from '@/stores/db-store';\n" + content;
+    content = "import { getDb } from '@/lib/stores/db.store';\n" + content;
 
     fs.writeFileSync(path.join(repoDir, file), content);
 });

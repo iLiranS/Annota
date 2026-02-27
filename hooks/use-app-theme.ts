@@ -1,5 +1,5 @@
 import { Colors } from '@/constants/theme';
-import { useSettingsStore } from '@/stores/settings-store';
+import { useSettingsStore } from '@/lib/stores/settings.store';
 import { DarkTheme, DefaultTheme, Theme } from '@react-navigation/native';
 import { useMemo } from 'react';
 import { useColorScheme as useNativeColorScheme } from 'react-native';

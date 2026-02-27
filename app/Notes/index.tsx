@@ -12,8 +12,8 @@ import {
     sortNotes,
     SortType,
 } from '@/dev-data/data';
-import { NoteMetadata, useNotesStore, type Folder } from '@/stores/notes-store';
-import { useSettingsStore } from '@/stores/settings-store';
+import { NoteMetadata, useNotesStore, type Folder } from '@/lib/stores/notes.store';
+import { useSettingsStore } from '@/lib/stores/settings.store';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';

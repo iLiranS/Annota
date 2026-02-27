@@ -1,6 +1,6 @@
 import ThemedText from '@/components/themed-text';
-import { useNotesStore } from '@/stores/notes-store';
-import { useTasksStore, type Task } from '@/stores/tasks-store';
+import { useNotesStore } from '@/lib/stores/notes.store';
+import { useTasksStore, type Task } from '@/lib/stores/tasks.store';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@react-navigation/native';
 import { Pressable, StyleSheet, View } from 'react-native';

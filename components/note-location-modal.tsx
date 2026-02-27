@@ -1,4 +1,4 @@
-import { useNotesStore, type NoteMetadata } from '@/stores/notes-store';
+import { useNotesStore, type NoteMetadata } from '@/lib/stores/notes.store';
 import React, { useEffect, useState } from 'react';
 import LocationPickerModal from './location-picker-modal';
 

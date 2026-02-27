@@ -1,16 +1,21 @@
-import { useSettingsStore } from '@/stores/settings-store';
-import { useTasksStore } from '@/stores/tasks-store';
+import { useDbStore } from '@/lib/stores/db.store';
+import { useSettingsStore } from '@/lib/stores/settings.store';
+import { useTasksStore } from '@/lib/stores/tasks.store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 
-const LAST_CLEANUP_KEY = 'last_task_cleanup_date';
-
 export function useDailyCleanup() {
     useEffect(() => {
         const checkAndRunCleanup = async () => {
+            const { currentUserId, isGuest, isReady } = useDbStore.getState();
+            if (!isReady) return;
+
             try {
-                const lastRunStr = await AsyncStorage.getItem(LAST_CLEANUP_KEY);
+                const prefix = isGuest ? 'guest' : `user_${currentUserId}`;
+                const storageKey = `${prefix}_last_task_cleanup_date`;
+
+                const lastRunStr = await AsyncStorage.getItem(storageKey);
                 const now = new Date();
 
                 let shouldRun = false;
@@ -38,7 +43,7 @@ export function useDailyCleanup() {
                     useTasksStore.getState().clearOldCompletedTasks(cutoffDate);
 
                     // 4. Update the last run time
-                    await AsyncStorage.setItem(LAST_CLEANUP_KEY, now.toISOString());
+                    await AsyncStorage.setItem(storageKey, now.toISOString());
                 }
             } catch (error) {
                 console.error("[DAILY_CLEANUP] Failed to run daily cleanup", error);

@@ -1,6 +1,6 @@
 import { useAppTheme } from '@/hooks/use-app-theme';
-import { supabase } from '@/lib/supabase';
-import { generateMasterKey, hashMasterKey, storeMasterKey } from '@/lib/utils/crypto';
+import { authApi } from '@/lib/api/auth.api';
+import { userService } from '@/lib/services/user.service';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import * as LocalAuthentication from 'expo-local-authentication';
@@ -28,7 +28,7 @@ export default function LostKeyScreen() {
     const isDeleteConfirmed = confirmText.trim().toUpperCase() === 'DELETE';
 
     const getCurrentUserId = async (): Promise<string | null> => {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session } } = await authApi.getSession();
         return session?.user?.id ?? null;
     };
 
@@ -64,22 +64,7 @@ export default function LostKeyScreen() {
 
         setProcessing(true);
         try {
-            // Generate new key
-            const newMnemonic = await generateMasterKey();
-
-            // Wipe cloud data
-            await supabase.from('encrypted_notes').delete().eq('user_id', userId);
-            await supabase.from('encrypted_tasks').delete().eq('user_id', userId);
-            await supabase.from('encrypted_folders').delete().eq('user_id', userId);
-
-            // Store new key and update validator
-            await storeMasterKey(userId, newMnemonic);
-            const hash = await hashMasterKey(newMnemonic);
-            await supabase
-                .from('profiles')
-                .update({ key_validator: hash })
-                .eq('id', userId);
-
+            const newMnemonic = await userService.handleLostKey(userId);
             setGeneratedKey(newMnemonic);
         } catch (err) {
             console.error('Lost key flow error:', err);

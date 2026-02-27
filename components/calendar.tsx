@@ -1,6 +1,6 @@
 import ThemedText from '@/components/themed-text';
-import { useSettingsStore } from '@/stores/settings-store';
-import { useTasksStore } from '@/stores/tasks-store';
+import { useSettingsStore } from '@/lib/stores/settings.store';
+import { useTasksStore } from '@/lib/stores/tasks.store';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@react-navigation/native';
 import { useCallback, useEffect, useMemo, useState } from 'react';

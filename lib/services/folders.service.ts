@@ -2,7 +2,7 @@ import { schema } from '@/lib/db/client';
 import * as foldersRepo from '@/lib/db/repositories/folders.repository';
 import * as notesRepo from '@/lib/db/repositories/notes.repository';
 import type { Folder, FolderInsert } from '@/lib/db/schema';
-import { getDb } from '@/stores/db-store';
+import { getDb } from '@/lib/stores/db.store';
 import { eq, inArray, sql } from 'drizzle-orm';
 import { generateFolder } from '../utils/folders';
 import { NoteImageService } from './images';

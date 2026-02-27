@@ -1,4 +1,4 @@
-import { useSyncStore } from '@/stores/sync-store';
+import { useSyncStore } from '@/lib/stores/sync.store';
 import NetInfo, { type NetInfoState } from '@react-native-community/netinfo';
 import { AppState, type AppStateStatus } from 'react-native';
 import Toast from 'react-native-toast-message';
@@ -199,8 +199,8 @@ export class SyncScheduler {
      */
     private reinitStores(): void {
         try {
-            const { useNotesStore } = require('@/stores/notes-store');
-            const { useTasksStore } = require('@/stores/tasks-store');
+            const { useNotesStore } = require('@/lib/stores/notes.store');
+            const { useTasksStore } = require('@/lib/stores/tasks.store');
             useNotesStore.getState().initApp();
             useTasksStore.getState().loadTasks();
         } catch (err) {

@@ -1,5 +1,5 @@
 import { TaskForm, type TaskFormValues } from '@/components/tasks';
-import { useTasksStore } from '@/stores/tasks-store';
+import { useTasksStore } from '@/lib/stores/tasks.store';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@react-navigation/native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';

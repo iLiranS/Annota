@@ -1,7 +1,7 @@
 import NoteLocationModal from '@/components/note-location-modal';
 import NoteCard from '@/components/notes/note-card';
 import ThemedText from '@/components/themed-text';
-import { useNotesStore, type NoteMetadata } from '@/stores/notes-store';
+import { useNotesStore, type NoteMetadata } from '@/lib/stores/notes.store';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@react-navigation/native';
 import { useRouter } from 'expo-router';

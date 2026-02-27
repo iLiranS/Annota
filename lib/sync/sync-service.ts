@@ -1,11 +1,13 @@
+import { authApi } from '@/lib/api/auth.api';
+import { storageApi } from '@/lib/api/storage.api';
+import { syncApi } from '@/lib/api/sync.api';
 import { schema } from '@/lib/db/client';
 import { clearDirtyFolders, getDirtyFolders, upsertSyncedFolder } from '@/lib/db/repositories/folders.repository';
 import { clearDirtyNotes, getDirtyNotes, getNoteContent, upsertSyncedNote } from '@/lib/db/repositories/notes.repository';
 import { clearDirtyTasks, getDirtyTasks, upsertSyncedTask } from '@/lib/db/repositories/tasks.repository';
 import { StorageService } from '@/lib/services/storage.service';
-import { supabase } from '@/lib/supabase';
+import { getDb } from '@/lib/stores/db.store';
 import { decryptPayload, encryptPayload } from '@/lib/utils/crypto';
-import { getDb } from '@/stores/db-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { eq, inArray } from 'drizzle-orm';
 import { getImagesByIds } from '../db/repositories/images.repository';
@@ -14,7 +16,7 @@ import { imageSyncService } from '../services/sync/image-sync.service';
 const getSyncTimeKey = (userId: string) => `${userId}_last_sync_time`;
 
 export async function syncPush(masterKey: string) {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await authApi.getSession();
     if (!session?.user) throw new Error("User not authenticated");
 
     const userId = session.user.id;
@@ -39,7 +41,7 @@ export async function syncPush(masterKey: string) {
             };
         });
 
-        const { error } = await supabase.from('encrypted_folders').upsert(payloadFolders);
+        const { error } = await syncApi.upsertFolders(payloadFolders);
         if (error) {
             console.error(`Push folders error: ${error.message}`);
             return;
@@ -75,7 +77,7 @@ export async function syncPush(masterKey: string) {
             };
         });
 
-        const { error } = await supabase.from('encrypted_tasks').upsert(payloadTasks);
+        const { error } = await syncApi.upsertTasks(payloadTasks);
         if (error) {
             console.error(`Push tasks error: ${error.message}`);
             return;
@@ -120,7 +122,7 @@ export async function syncPush(masterKey: string) {
             };
         });
 
-        const { error } = await supabase.from('encrypted_notes').upsert(payloadNotes);
+        const { error } = await syncApi.upsertNotes(payloadNotes);
         if (error) {
             console.error(`Push notes error: ${error.message}`);
             return;
@@ -167,7 +169,7 @@ export async function syncPush(masterKey: string) {
 }
 
 export async function syncPull(masterKey: string) {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await authApi.getSession();
     if (!session?.user) throw new Error("User not authenticated");
 
     const userId = session.user.id;
@@ -178,9 +180,7 @@ export async function syncPull(masterKey: string) {
 
     console.log(`[Sync] Pulling changes modified after: ${lastSyncTime.toISOString()}`);
 
-    const { data, error } = await supabase.rpc('pull_sync_data', {
-        p_last_sync: lastSyncTime.toISOString()
-    });
+    const { data, error } = await syncApi.pullSyncData(lastSyncTime.toISOString());
 
     if (error) {
         console.error("Sync pull failed:", error);
@@ -299,13 +299,7 @@ export async function syncPull(masterKey: string) {
     // 1. Get all image links for this user from Supabase
     // (Optimization: we only get links for the notes we just updated or we get all links. 
     // Getting all links is simple and reliable for fixing gaps).
-    const { data: cloudLinks, error: linkError } = await supabase
-        .from('note_images')
-        .select(`
-            image_id,
-            encrypted_notes!inner(user_id)
-        `)
-        .eq('encrypted_notes.user_id', userId);
+    const { data: cloudLinks, error: linkError } = await storageApi.getUserImageLinks(userId);
 
     if (linkError) {
         console.error("[SyncPull] Failed to fetch image links", linkError);
@@ -322,11 +316,7 @@ export async function syncPull(masterKey: string) {
         if (missingIds.length > 0) {
             console.log(`[SyncPull] Identified ${missingIds.length} missing images.`);
             // Fetch metadata for nonces
-            const { data: cloudMeta, error: metaError } = await supabase
-                .from('encrypted_images')
-                .select('id, nonce')
-                .in('id', missingIds)
-                .eq('user_id', userId);
+            const { data: cloudMeta, error: metaError } = await storageApi.getEncryptedImagesMetadata(userId, missingIds);
 
             if (!metaError && cloudMeta) {
                 const downloadQueue = cloudMeta.map(meta => ({

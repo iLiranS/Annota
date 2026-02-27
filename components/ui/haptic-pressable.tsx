@@ -1,4 +1,4 @@
-import { useSettingsStore } from '@/stores/settings-store';
+import { useSettingsStore } from '@/lib/stores/settings.store';
 import * as Haptics from 'expo-haptics';
 import React from 'react';
 import { Pressable, PressableProps } from 'react-native';

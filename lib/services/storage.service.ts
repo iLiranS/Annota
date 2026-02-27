@@ -1,7 +1,7 @@
 import { vacuumDatabase } from '@/lib/db/client';
 import * as ImagesRepo from '@/lib/db/repositories/images.repository';
 import * as NotesRepo from '@/lib/db/repositories/notes.repository';
-import { useDbStore } from '@/stores/db-store';
+import { useDbStore } from '@/lib/stores/db.store';
 import { Directory, File as ExpoFile, Paths } from 'expo-file-system';
 import * as LegacyFileSystem from 'expo-file-system/legacy';
 import { openDatabaseSync } from 'expo-sqlite';

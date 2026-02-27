@@ -1,5 +1,5 @@
 import { COLOR_PALETTE } from '@/constants/colors';
-import { ThemeMode, useSettingsStore } from '@/stores/settings-store';
+import { ThemeMode, useSettingsStore } from '@/lib/stores/settings.store';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
 import React from 'react';

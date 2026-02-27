@@ -1,4 +1,4 @@
-import { useSettingsStore } from '@/stores/settings-store';
+import { useSettingsStore } from '@/lib/stores/settings.store';
 import Slider from '@react-native-community/slider';
 import { useTheme } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';

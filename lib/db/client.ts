@@ -189,7 +189,7 @@ export function initDatabase(expoDb: SQLiteDatabase, drizzleDb: DbType): void {
 
 // Reset everything (DB, Storage, Files) - USE WITH CAUTION
 export async function resetAll(): Promise<void> {
-  const { getExpoDb, getDb } = require('@/stores/db-store');
+  const { getExpoDb, getDb } = require('@/lib/stores/db.store');
   const expoDb = getExpoDb();
   const drizzleDb = getDb();
   try {
@@ -238,7 +238,7 @@ export async function resetAll(): Promise<void> {
 // Reclaim unused space and optimize database performance
 export function vacuumDatabase(): void {
   try {
-    const { getExpoDb } = require('@/stores/db-store');
+    const { getExpoDb } = require('@/lib/stores/db.store');
     const expoDb = getExpoDb();
     // Force WAL checkpoint to shrink WAL file
     expoDb.execSync('PRAGMA wal_checkpoint(TRUNCATE);');

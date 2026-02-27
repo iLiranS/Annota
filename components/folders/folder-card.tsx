@@ -1,8 +1,8 @@
 import SwipeableItem from '@/components/swipeable-item';
 import ThemedText from '@/components/themed-text';
 import ThemedPressable from '@/components/ui/themed-pressable';
-import { Folder } from '@/stores/notes-store';
-import { useSettingsStore } from '@/stores/settings-store';
+import { Folder } from '@/lib/stores/notes.store';
+import { useSettingsStore } from '@/lib/stores/settings.store';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
 import { StyleSheet, View } from 'react-native';

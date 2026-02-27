@@ -1,5 +1,5 @@
 import ThemedText from '@/components/themed-text';
-import type { Task } from '@/stores/tasks-store';
+import type { Task } from '@/lib/stores/tasks.store';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@react-navigation/native';
 import { Pressable, StyleSheet, View } from 'react-native';

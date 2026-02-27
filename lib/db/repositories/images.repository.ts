@@ -1,4 +1,4 @@
-import { getDb } from '@/stores/db-store';
+import { getDb } from '@/lib/stores/db.store';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { DbOrTx } from '../client';
 import type { ImageInsert, ImageRecord } from '../schema';

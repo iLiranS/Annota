@@ -6,7 +6,7 @@ import {
     sortFolders,
     sortNotes,
 } from '@/dev-data/data';
-import { Folder, NoteMetadata, TRASH_FOLDER_ID, useNotesStore } from '@/stores/notes-store';
+import { Folder, NoteMetadata, TRASH_FOLDER_ID, useNotesStore } from '@/lib/stores/notes.store';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
 import { Stack, useRouter } from 'expo-router';

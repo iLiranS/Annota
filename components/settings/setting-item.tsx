@@ -8,7 +8,7 @@ interface SettingItemProps {
     label: string;
     icon?: keyof typeof Ionicons.glyphMap;
     type?: 'link' | 'toggle' | 'value';
-    value?: string | boolean;
+    value?: string | boolean | React.ReactNode;
     onPress?: () => void;
     onToggle?: (value: boolean) => void;
     description?: string;
@@ -33,7 +33,7 @@ export default function SettingItem({
 
     return (
         <HapticPressable
-            onPress={type === 'toggle' ? () => onToggle?.(!value) : onPress}
+            onPress={type === 'toggle' ? () => onToggle?.(!value as boolean) : onPress}
             style={({ pressed }) => [
                 styles.container,
                 { backgroundColor: colors.card },
@@ -63,9 +63,13 @@ export default function SettingItem({
                 {type === 'link' && (
                     <>
                         {value && (
-                            <Text style={[styles.valueText, { color: colors.text + '60' }]}>
-                                {value}
-                            </Text>
+                            typeof value === 'string' ? (
+                                <Text style={[styles.valueText, { color: colors.text + '60' }]}>
+                                    {value}
+                                </Text>
+                            ) : (
+                                value
+                            )
                         )}
                         <Ionicons name="chevron-forward" size={20} color={colors.text + '40'} />
                     </>
@@ -80,9 +84,13 @@ export default function SettingItem({
                 )}
 
                 {type === 'value' && (
-                    <Text style={[styles.valueText, { color: colors.text + '60' }]}>
-                        {value}
-                    </Text>
+                    typeof value === 'string' ? (
+                        <Text style={[styles.valueText, { color: colors.text + '60' }]}>
+                            {value}
+                        </Text>
+                    ) : (
+                        value
+                    )
                 )}
             </View>
         </HapticPressable>

@@ -1,8 +1,8 @@
 import { HapticPressable } from '@/components/ui/haptic-pressable';
 import { useAppTheme } from '@/hooks/use-app-theme';
-import { supabase } from '@/lib/supabase';
+import { authApi } from '@/lib/api/auth.api';
+import { useUserStore as useAuthStore } from '@/lib/stores/user.store';
 import { getMasterKey } from '@/lib/utils/crypto';
-import { useAuthStore } from '@/stores/auth-store';
 import { Ionicons } from '@expo/vector-icons';
 import { makeRedirectUri } from 'expo-auth-session';
 import * as QueryParams from 'expo-auth-session/build/QueryParams';
@@ -30,7 +30,7 @@ export default function LoginScreen() {
 
     async function signInWithOAuth(provider: 'google' | 'apple' | 'github') {
         const routeAfterSignIn = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
+            const { data: { session } } = await authApi.getSession();
             const userId = session?.user?.id;
             if (!userId) {
                 Alert.alert("Session Error", "No user session was found after login.");
@@ -47,13 +47,7 @@ export default function LoginScreen() {
 
         setLoadingProvider(provider);
         try {
-            const { data, error } = await supabase.auth.signInWithOAuth({
-                provider,
-                options: {
-                    redirectTo: redirectUrl,
-                    skipBrowserRedirect: true // IMPORTANT: We handle the browser ourselves
-                }
-            });
+            const { data, error } = await authApi.signInWithOAuth(provider, redirectUrl);
 
             if (error) {
                 Alert.alert('Error', error.message);
@@ -72,14 +66,14 @@ export default function LoginScreen() {
                     const { access_token, refresh_token, code } = params;
 
                     if (code) {
-                        const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+                        const { data, error } = await authApi.exchangeCodeForSession(code);
                         if (error) {
                             Alert.alert("Session Error", error.message);
                         } else {
                             await routeAfterSignIn();
                         }
                     } else if (access_token && refresh_token) {
-                        const { data, error } = await supabase.auth.setSession({ access_token, refresh_token });
+                        const { data, error } = await authApi.setSession(access_token, refresh_token);
                         if (error) {
                             Alert.alert("Session Error", error.message);
                         } else {

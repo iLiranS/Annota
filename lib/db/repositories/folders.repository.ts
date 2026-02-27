@@ -1,4 +1,4 @@
-import { getDb } from '@/stores/db-store';
+import { getDb } from '@/lib/stores/db.store';
 import { and, eq, inArray, isNull } from 'drizzle-orm';
 import { DbOrTx, schema } from '../client';
 import type { Folder, FolderInsert, NoteMetadata } from '../schema';

@@ -5,24 +5,26 @@ import ThemedText from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { HapticPressable } from '@/components/ui/haptic-pressable';
 import { useAppTheme } from '@/hooks/use-app-theme';
-import { useAuthStore } from '@/stores/auth-store';
-import { useNotesStore } from '@/stores/notes-store';
-import { useSettingsStore } from '@/stores/settings-store';
-import { useTasksStore, type Task } from '@/stores/tasks-store';
+import { useNotesStore } from '@/lib/stores/notes.store';
+import { useSettingsStore } from '@/lib/stores/settings.store';
+import { useTasksStore, type Task } from '@/lib/stores/tasks.store';
+import { useUserStore as useAuthStore } from '@/lib/stores/user.store';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DrawerNavigationProp } from '@react-navigation/drawer';
 import { useNavigation, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, LayoutChangeEvent, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { GUEST_DISPLAY_NAME_KEY } from '../settings/account';
 
-const AnimatedIonicons = Animated.createAnimatedComponent(Ionicons);
 
 export default function HomeScreen() {
   const router = useRouter();
   const navigation = useNavigation<DrawerNavigationProp<any>>();
   const { session } = useAuthStore();
-  const displayName = session?.user.user_metadata.full_name || session?.user.user_metadata.name || session?.user.user_metadata.preferred_username || 'Guest';
+  const [guestDisplayName, setGuestDisplayName] = useState('');
+  const displayName = session?.user?.user_metadata?.display_name || session?.user?.user_metadata?.full_name || session?.user?.user_metadata?.name || session?.user?.user_metadata?.preferred_username || guestDisplayName;
   const { editor } = useSettingsStore();
 
 
@@ -35,11 +37,23 @@ export default function HomeScreen() {
   const { tasks, loadTasks } = useTasksStore();
   const { createNote } = useNotesStore();
 
+  // Guest display name
+  useEffect(() => {
+    const loadGuestDisplayName = async () => {
+      const value = await AsyncStorage.getItem(GUEST_DISPLAY_NAME_KEY);
+      if (value) {
+        setGuestDisplayName(value);
+      }
+    };
+    loadGuestDisplayName();
+  }, []);
+
 
   // Load tasks from database on mount
   useEffect(() => {
     loadTasks();
   }, [loadTasks]);
+
 
   const tasksForSelectedDate = useMemo(() => {
     return tasks.filter((task) => {
