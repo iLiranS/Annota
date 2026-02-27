@@ -1,7 +1,7 @@
 import FolderCard from '@/components/folders/folder-card';
 import NoteCard from '@/components/notes/note-card';
 import ThemedText from '@/components/themed-text';
-import { Folder, NoteMetadata } from '@/stores/notes-store';
+import { Folder, NoteMetadata, useNotesStore } from '@/stores/notes-store';
 import { useSettingsStore } from '@/stores/settings-store';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
@@ -50,6 +50,7 @@ export default function NotesSearchModal({
 }: NotesSearchModalProps) {
     const { colors } = useTheme();
     const insets = useSafeAreaInsets();
+    const { updateNoteMetadata, deleteNote } = useNotesStore();
     const { general } = useSettingsStore();
     const isCompact = general.compactMode;
 
@@ -114,6 +115,27 @@ export default function NotesSearchModal({
         [handleClose, onNotePress]
     );
 
+    const handleTogglePin = useCallback(
+        async (note: NoteMetadata) => {
+            await updateNoteMetadata(note.id, { isPinned: !note.isPinned });
+        },
+        [updateNoteMetadata]
+    );
+
+    const handleToggleQuickAccess = useCallback(
+        async (note: NoteMetadata) => {
+            await updateNoteMetadata(note.id, { isQuickAccess: !note.isQuickAccess });
+        },
+        [updateNoteMetadata]
+    );
+
+    const handleDeleteNote = useCallback(
+        async (id: string) => {
+            await deleteNote(id);
+        },
+        [deleteNote]
+    );
+
     const renderItem = useCallback(
         ({ item }: { item: ListItem }) => {
             if (item.type === 'section-header') {
@@ -170,6 +192,9 @@ export default function NotesSearchModal({
                             note={note}
                             onPress={() => handleNotePress(note.id)}
                             onLongPress={onNoteLongPress ? () => onNoteLongPress(note) : undefined}
+                            onDelete={() => handleDeleteNote(note.id)}
+                            onTogglePin={() => handleTogglePin(note)}
+                            onToggleQuickAccess={() => handleToggleQuickAccess(note)}
                             description={footer}
                             showTimestamp={true}
                         />
@@ -179,7 +204,7 @@ export default function NotesSearchModal({
 
             return null;
         },
-        [colors, handleFolderPress, handleNotePress, onFolderLongPress, onNoteLongPress, allFolders]
+        [colors, handleFolderPress, handleNotePress, onFolderLongPress, onNoteLongPress, allFolders, handleDeleteNote, handleTogglePin, handleToggleQuickAccess]
     );
 
     const getItemKey = (item: ListItem, index: number): string => {

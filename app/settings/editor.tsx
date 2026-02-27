@@ -82,6 +82,19 @@ export default function EditorSettings() {
                     />
                 </View>
             </View>
+
+            <View style={styles.section}>
+                <Text style={[styles.sectionHeader, { color: colors.text + '80' }]}>LAYOUT</Text>
+                <View style={[styles.card, { backgroundColor: colors.card }]}>
+                    <SettingItem
+                        label="Floating Note Header"
+                        type="toggle"
+                        value={editor.floatingNoteHeader}
+                        onToggle={(val) => updateEditorSettings({ floatingNoteHeader: val })}
+                        icon="text-outline"
+                    />
+                </View>
+            </View>
         </ScrollView>
     );
 }

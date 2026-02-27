@@ -155,6 +155,12 @@ export default function Calendar({ selectedDate, onDateSelect }: CalendarProps) 
         );
     };
 
+    const isPastDate = (date: Date): boolean => {
+        const d = new Date(date).setHours(0, 0, 0, 0);
+        const t = new Date(today).setHours(0, 0, 0, 0);
+        return d < t;
+    };
+
     const isSelected = (date: Date): boolean => {
         return (
             date.getDate() === selectedDate.getDate() &&
@@ -233,6 +239,7 @@ export default function Calendar({ selectedDate, onDateSelect }: CalendarProps) 
                         {weekDays.map((date, index) => {
                             const selected = isSelected(date);
                             const todayHighlight = isToday(date);
+                            const isPast = isPastDate(date);
                             const dateStr = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
                             const hasTask = taskDates.has(dateStr);
 
@@ -256,6 +263,7 @@ export default function Calendar({ selectedDate, onDateSelect }: CalendarProps) 
                                                 styles.dayText,
                                                 selected && styles.selectedDayText,
                                                 todayHighlight && !selected && { color: colors.primary, fontWeight: '700' },
+                                                isPast && !selected && !todayHighlight && { color: colors.text + '40' },
                                             ]}
                                         >
                                             {date.getDate()}
@@ -267,7 +275,7 @@ export default function Calendar({ selectedDate, onDateSelect }: CalendarProps) 
                                         <View
                                             style={[
                                                 styles.taskDot,
-                                                { backgroundColor: colors.primary },
+                                                { backgroundColor: isPast ? colors.primary + '40' : colors.primary },
                                             ]}
                                         />
                                     )}

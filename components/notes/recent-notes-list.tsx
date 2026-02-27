@@ -1,10 +1,11 @@
-import NoteListItem from '@/components/notes/note-list-item';
+import NoteLocationModal from '@/components/note-location-modal';
+import NoteCard from '@/components/notes/note-card';
 import ThemedText from '@/components/themed-text';
-import { useNotesStore } from '@/stores/notes-store';
+import { useNotesStore, type NoteMetadata } from '@/stores/notes-store';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 interface RecentNotesListProps {
@@ -15,7 +16,8 @@ interface RecentNotesListProps {
 export default function RecentNotesList({ onCreateNote }: RecentNotesListProps) {
     const router = useRouter();
     const { colors, dark } = useTheme();
-    const notes = useNotesStore((state) => state.notes);
+    const { notes, deleteNote, updateNoteMetadata } = useNotesStore();
+    const [editingNote, setEditingNote] = useState<NoteMetadata | null>(null);
 
     const recentNotes = useMemo(() => {
         const activeNotes = notes.filter(n => !n.isDeleted);
@@ -23,6 +25,26 @@ export default function RecentNotesList({ onCreateNote }: RecentNotesListProps) 
             .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
             .slice(0, 5);
     }, [notes]);
+
+    const handleNotePress = useCallback((noteId: string) => {
+        router.push({ pathname: `/Notes/[id]`, params: { id: noteId, source: 'home' } });
+    }, [router]);
+
+    const handleNoteLongPress = useCallback((note: NoteMetadata) => {
+        setEditingNote(note);
+    }, []);
+
+    const handleDeleteNote = useCallback(async (noteId: string) => {
+        await deleteNote(noteId);
+    }, [deleteNote]);
+
+    const handleTogglePin = useCallback(async (note: NoteMetadata) => {
+        await updateNoteMetadata(note.id, { isPinned: !note.isPinned });
+    }, [updateNoteMetadata]);
+
+    const handleToggleQuickAccess = useCallback(async (note: NoteMetadata) => {
+        await updateNoteMetadata(note.id, { isQuickAccess: !note.isQuickAccess });
+    }, [updateNoteMetadata]);
 
     return (
         <View style={styles.container}>
@@ -58,10 +80,14 @@ export default function RecentNotesList({ onCreateNote }: RecentNotesListProps) 
                 {recentNotes.length > 0 ? (
                     <View style={styles.notesList}>
                         {recentNotes.map((note) => (
-                            <NoteListItem
+                            <NoteCard
                                 key={note.id}
                                 note={note}
-                                onPress={() => router.push({ pathname: `/Notes/[id]`, params: { id: note.id, source: 'home' } })}
+                                onPress={() => handleNotePress(note.id)}
+                                onLongPress={() => handleNoteLongPress(note)}
+                                onDelete={() => handleDeleteNote(note.id)}
+                                onTogglePin={() => handleTogglePin(note)}
+                                onToggleQuickAccess={() => handleToggleQuickAccess(note)}
                             />
                         ))}
                     </View>
@@ -74,6 +100,12 @@ export default function RecentNotesList({ onCreateNote }: RecentNotesListProps) 
                     </View>
                 )}
             </ScrollView>
+
+            <NoteLocationModal
+                visible={editingNote !== null}
+                note={editingNote}
+                onClose={() => setEditingNote(null)}
+            />
         </View>
     );
 }
@@ -130,3 +162,4 @@ const styles = StyleSheet.create({
         marginTop: 8,
     },
 });
+

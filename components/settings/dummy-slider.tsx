@@ -50,7 +50,7 @@ export default function SettingsSlider({
 
             <View style={styles.sliderContainer}>
                 <Slider
-                    style={{ flex: 1, height: 40 }}
+                    style={{ flex: 1, height: 32 }}
                     minimumValue={minValue}
                     maximumValue={maxValue}
                     step={step}
@@ -77,15 +77,15 @@ export default function SettingsSlider({
 
 const styles = StyleSheet.create({
     container: {
-        padding: 16,
+        padding: 12,
         borderRadius: 12,
-        marginBottom: 12,
+        marginBottom: 8,
     },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 8,
+        marginBottom: 4,
     },
     label: {
         fontSize: 16,

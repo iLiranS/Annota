@@ -14,7 +14,14 @@ import {
     Text,
     View,
 } from 'react-native';
-import Animated, { FadeInDown, FadeOutUp, LinearTransition } from 'react-native-reanimated';
+import Animated, {
+    Easing,
+    FadeIn,
+    FadeOut,
+    LinearTransition,
+    useAnimatedStyle,
+    withTiming
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FolderEditModal from '../folder-edit-modal';
 import { HapticPressable } from '../ui/haptic-pressable';
@@ -34,7 +41,7 @@ function SidebarItem({ icon, label, onPress, onLongPress, iconColor, isActive }:
     const { colors } = useAppTheme();
 
     return (
-        <Animated.View layout={LinearTransition.duration(300)}>
+        <Animated.View layout={LinearTransition.duration(350).easing(Easing.bezier(0.4, 0, 0.2, 1))}>
             <HapticPressable
                 onPress={onPress}
                 onLongPress={onLongPress}
@@ -83,9 +90,13 @@ function FolderTreeItem({
 }: FolderTreeItemProps) {
     const { colors } = useAppTheme();
 
+    const chevronStyle = useAnimatedStyle(() => ({
+        transform: [{ rotate: withTiming(isExpanded ? '90deg' : '0deg', { duration: 300, easing: Easing.bezier(0.4, 0, 0.2, 1) }) }]
+    }));
+
     return (
         <Animated.View
-            layout={LinearTransition.duration(300)}
+            layout={LinearTransition.duration(350).easing(Easing.bezier(0.4, 0, 0.2, 1))}
             style={{ overflow: 'hidden' }}
         >
             <Pressable
@@ -116,13 +127,13 @@ function FolderTreeItem({
                 </Pressable>
 
                 {hasChildren ? (
-                    <View style={styles.folderToggle}>
+                    <Animated.View style={[styles.folderToggle, chevronStyle]}>
                         <Ionicons
-                            name={isExpanded ? 'chevron-down' : 'chevron-forward'}
+                            name="chevron-forward"
                             size={16}
                             color={colors.text}
                         />
-                    </View>
+                    </Animated.View>
                 ) : (
                     <View style={styles.folderTogglePlaceholder} />
                 )}
@@ -130,9 +141,9 @@ function FolderTreeItem({
 
             {hasChildren && isExpanded ? (
                 <Animated.View
-                    entering={FadeInDown.duration(300)}
-                    exiting={FadeOutUp.duration(250)}
-                    layout={LinearTransition.duration(300)}
+                    entering={FadeIn.duration(250)}
+                    exiting={FadeOut.duration(200)}
+                    layout={LinearTransition.duration(350).easing(Easing.bezier(0.4, 0, 0.2, 1))}
                 >
                     {renderChildren()}
                 </Animated.View>
@@ -146,7 +157,7 @@ function Separator() {
     const { colors } = useAppTheme();
     return (
         <Animated.View
-            layout={LinearTransition.duration(300)}
+            layout={LinearTransition.duration(350).easing(Easing.bezier(0.4, 0, 0.2, 1))}
             style={[styles.separator, { backgroundColor: colors.border }]}
         />
     );
@@ -167,6 +178,10 @@ export default function Sidebar(props: DrawerContentComponentProps) {
     const isGuest = useAuthStore(s => s.isGuest);
     const [retryCooldown, setRetryCooldown] = useState(false);
     const showOfflineBanner = !isOnline && !isGuest;
+
+    const quickAccessChevronStyle = useAnimatedStyle(() => ({
+        transform: [{ rotate: withTiming(isQuickAccessExpanded ? '90deg' : '0deg', { duration: 300, easing: Easing.bezier(0.4, 0, 0.2, 1) }) }]
+    }));
 
     const handleRetry = useCallback(() => {
         if (retryCooldown) return;
@@ -306,7 +321,7 @@ export default function Sidebar(props: DrawerContentComponentProps) {
                         iconColor={folders.find(f => f.id === DAILY_NOTES_FOLDER_ID)?.color || '#8B5CF6'}
                     />
 
-                    <Animated.View layout={LinearTransition.duration(300)}>
+                    <Animated.View layout={LinearTransition.duration(350).easing(Easing.bezier(0.4, 0, 0.2, 1))}>
                         <Pressable
                             onPress={() => setIsQuickAccessExpanded(!isQuickAccessExpanded)}
                             style={[
@@ -325,20 +340,22 @@ export default function Sidebar(props: DrawerContentComponentProps) {
                             ]}>
                                 Quick Access
                             </Text>
-                            <Ionicons
-                                name={isQuickAccessExpanded ? 'chevron-down' : 'chevron-forward'} // Or chevron-forward if collapsed
-                                size={16}
-                                color={colors.text}
-                            />
+                            <Animated.View style={quickAccessChevronStyle}>
+                                <Ionicons
+                                    name="chevron-forward"
+                                    size={16}
+                                    color={colors.text}
+                                />
+                            </Animated.View>
                         </Pressable>
                     </Animated.View>
 
                     {/* Quick Access List */}
                     {isQuickAccessExpanded && (
                         <Animated.View
-                            entering={FadeInDown.duration(300)}
-                            exiting={FadeOutUp.duration(250)}
-                            layout={LinearTransition.duration(300)}
+                            entering={FadeIn.duration(250)}
+                            exiting={FadeOut.duration(200)}
+                            layout={LinearTransition.duration(350).easing(Easing.bezier(0.4, 0, 0.2, 1))}
                             style={[styles.quickAccessList, { overflow: 'hidden' }]}
                         >
                             {quickAccessNotes.length === 0 ? (

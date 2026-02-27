@@ -14,6 +14,7 @@ export const generateTask = (data: Partial<TaskInsert>): TaskInsert => {
         description: data.description ?? '',
         isWholeDay: data.isWholeDay ?? false,
         completed: data.completed ?? false,
+        completedAt: data.completedAt ?? (data.completed ? now : null),
         folderId: data.folderId ?? null,
         lastSyncedAt: data.lastSyncedAt ?? null,
     };

@@ -1,10 +1,11 @@
 import TaskItem from '@/components/tasks/task-item';
 import ThemedText from '@/components/themed-text';
+import { useSettingsStore } from '@/stores/settings-store';
 import { Task } from '@/stores/tasks-store';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { LayoutAnimation, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 interface TaskListProps {
@@ -24,7 +25,8 @@ export default function TaskList({
 }: TaskListProps) {
     const { colors, dark } = useTheme();
     const router = useRouter();
-    const [showCompleted, setShowCompleted] = useState(false);
+    const { general, updateGeneralSettings } = useSettingsStore();
+    const showCompleted = general.taskListShowDone;
 
     const isToday = useMemo(() => {
         const today = new Date();
@@ -72,7 +74,7 @@ export default function TaskList({
                     <Pressable
                         onPress={() => {
                             LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                            setShowCompleted(!showCompleted);
+                            updateGeneralSettings({ taskListShowDone: !showCompleted });
                         }}
                         style={[
                             styles.controlButton,

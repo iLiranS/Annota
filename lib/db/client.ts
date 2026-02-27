@@ -70,6 +70,7 @@ const CREATE_TABLES_SQL = `
     deadline INTEGER NOT NULL,
     is_whole_day INTEGER NOT NULL DEFAULT 0,
     completed INTEGER NOT NULL DEFAULT 0,
+    completed_at INTEGER,
     folder_id TEXT,
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL,
@@ -148,6 +149,18 @@ export function initDatabase(expoDb: SQLiteDatabase, drizzleDb: DbType): void {
         console.log('Running migration: Adding is_whole_day column to tasks table');
         expoDb.execSync('ALTER TABLE tasks ADD COLUMN is_whole_day INTEGER NOT NULL DEFAULT 0');
         console.log('Migration complete: is_whole_day column added');
+      }
+
+      // Migration: Add completed_at column to tasks table if it doesn't exist
+      const hasCompletedAtColumn = taskColumns.some((col: any) => col.name === 'completed_at');
+
+      if (!hasCompletedAtColumn) {
+        console.log('Running migration: Adding completed_at column to tasks table');
+        expoDb.execSync('ALTER TABLE tasks ADD COLUMN completed_at INTEGER');
+
+        // Backfill completed_at with updatedAt for currently completed tasks
+        expoDb.execSync('UPDATE tasks SET completed_at = updated_at WHERE completed = 1');
+        console.log('Migration complete: completed_at column added');
       }
 
       // Migration: Add is_perm_deleted column to note_metadata, folders, and tasks

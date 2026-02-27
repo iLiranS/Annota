@@ -1,4 +1,4 @@
-import SwipeableItem from '@/components/swipeable-item';
+import SwipeableItem, { SwipeAction } from '@/components/swipeable-item';
 import ThemedText from '@/components/themed-text';
 import ThemedPressable from '@/components/ui/themed-pressable';
 import { useAppTheme } from '@/hooks/use-app-theme';
@@ -13,6 +13,8 @@ interface NoteCardProps {
     onPress: () => void;
     onLongPress?: () => void;
     onDelete?: () => void;
+    onToggleQuickAccess?: () => void;
+    onTogglePin?: () => void;
     swipeable?: boolean;
     description?: React.ReactNode;
     showDescription?: boolean;
@@ -24,6 +26,8 @@ export default function NoteCard({
     onPress,
     onLongPress,
     onDelete,
+    onToggleQuickAccess,
+    onTogglePin,
     description,
     showDescription = true,
     showTimestamp,
@@ -76,12 +80,41 @@ export default function NoteCard({
         </ThemedPressable>
     );
 
-    if (swipeable && onDelete) {
-        return (
-            <SwipeableItem onDelete={onDelete}>
-                {CardContent}
-            </SwipeableItem>
-        );
+    if (swipeable) {
+        const rightActions: SwipeAction[] = [];
+        const leftActions: SwipeAction[] = [];
+
+        if (onToggleQuickAccess) {
+            leftActions.push({
+                icon: note.isQuickAccess ? 'star' : 'star-outline' as const,
+                backgroundColor: '#FBBF24',
+                onPress: onToggleQuickAccess,
+            });
+        }
+
+        if (onTogglePin) {
+            leftActions.push({
+                icon: note.isPinned ? 'pin' : 'pin-outline' as const,
+                backgroundColor: colors.primary,
+                onPress: onTogglePin,
+            });
+        }
+
+        if (onDelete) {
+            rightActions.push({
+                icon: 'trash-outline' as const,
+                backgroundColor: '#EF4444',
+                onPress: onDelete,
+            });
+        }
+
+        if (rightActions.length > 0 || leftActions.length > 0) {
+            return (
+                <SwipeableItem leftActions={leftActions} rightActions={rightActions}>
+                    {CardContent}
+                </SwipeableItem>
+            );
+        }
     }
 
     return CardContent;

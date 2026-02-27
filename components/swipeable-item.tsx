@@ -1,119 +1,146 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
 import React from 'react';
-import { Animated, StyleSheet, View } from 'react-native';
-import Swipeable from 'react-native-gesture-handler/Swipeable';
+import { Pressable, StyleSheet, View } from 'react-native';
+import ReanimatedSwipeable, {
+    SwipeableMethods,
+} from 'react-native-gesture-handler/ReanimatedSwipeable';
+import Reanimated, {
+    Extrapolation,
+    interpolate,
+    SharedValue,
+    useAnimatedStyle,
+} from 'react-native-reanimated';
+
+export interface SwipeAction {
+    icon: keyof typeof Ionicons.glyphMap;
+    backgroundColor: string;
+    onPress: () => void;
+}
 
 interface SwipeableItemProps {
     children: React.ReactNode;
+    leftActions?: SwipeAction[];
+    rightActions?: SwipeAction[];
+    /** @deprecated Use leftActions/rightActions instead */
     onDelete?: () => void;
+    /** @deprecated Use leftActions/rightActions instead */
     onRestore?: () => void;
-    isInTrash?: boolean; // If true, shows restore icon instead of delete
 }
 
 /**
  * Native iOS-like swipeable wrapper component for notes and folders
- * Uses react-native-gesture-handler's Swipeable for smooth, native behavior
+ * Uses react-native-gesture-handler's ReanimatedSwipeable for smooth, modern behavior
  */
 export default function SwipeableItem({
     children,
+    leftActions,
+    rightActions,
     onDelete,
     onRestore,
-    isInTrash = false,
 }: SwipeableItemProps) {
-    const swipeableRef = React.useRef<Swipeable>(null);
+    const swipeableRef = React.useRef<SwipeableMethods>(null);
 
-    const renderRightActions = (
-        progress: Animated.AnimatedInterpolation<number>,
-        dragX: Animated.AnimatedInterpolation<number>
+    const activeRightActions = React.useMemo(() => {
+        const actions = rightActions ? [...rightActions] : [];
+        if (onDelete) {
+            actions.push({
+                icon: 'trash-outline',
+                backgroundColor: '#EF4444',
+                onPress: onDelete,
+            });
+        }
+        return actions;
+    }, [rightActions, onDelete]);
+
+    const activeLeftActions = React.useMemo(() => {
+        const actions = leftActions ? [...leftActions] : [];
+        if (onRestore) {
+            actions.push({
+                icon: 'arrow-undo',
+                backgroundColor: '#10B981',
+                onPress: onRestore,
+            });
+        }
+        return actions;
+    }, [leftActions, onRestore]);
+
+    const renderActions = (
+        actions: SwipeAction[],
+        dragX: SharedValue<number>,
+        side: 'left' | 'right'
     ) => {
-        const translateX = dragX.interpolate({
-            inputRange: [-100, 0],
-            outputRange: [0, 100],
-            extrapolate: 'clamp',
+        if (actions.length === 0) return null;
+
+        const isLeft = side === 'left';
+        // 60 width per button + 8 gap between them + 12 margin from card
+        const buttonWidth = 60;
+        const gap = 8;
+        const margin = 12;
+        const totalWidth = (actions.length * buttonWidth) + ((actions.length - 1) * gap) + margin;
+
+        const animatedStyle = useAnimatedStyle(() => {
+            return {
+                transform: [{
+                    translateX: isLeft
+                        ? interpolate(dragX.value, [0, totalWidth], [-totalWidth, 0], Extrapolation.CLAMP)
+                        : interpolate(dragX.value, [-totalWidth, 0], [0, totalWidth], Extrapolation.CLAMP)
+                }],
+            };
         });
 
         return (
-            <Animated.View
+            <Reanimated.View
                 style={[
-                    styles.rightAction,
+                    styles.actionsContainer,
                     {
-                        transform: [{ translateX }],
+                        width: totalWidth,
+                        [isLeft ? 'paddingRight' : 'paddingLeft']: margin,
                     },
+                    animatedStyle,
                 ]}
             >
-                <View style={styles.actionContent}>
-                    <Ionicons name="trash" size={24} color="#FFFFFF" />
-                </View>
-            </Animated.View>
+                {actions.map((action, index) => (
+                    <View
+                        key={index}
+                        style={[
+                            styles.actionButton,
+                            { backgroundColor: action.backgroundColor },
+                        ]}
+                    >
+                        <Pressable
+                            onPress={() => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                action.onPress();
+                                swipeableRef.current?.close();
+                            }}
+                            style={({ pressed }) => [
+                                styles.actionPressable,
+                                pressed && styles.actionPressed,
+                            ]}
+                        >
+                            <Ionicons name={action.icon} size={22} color="#FFFFFF" />
+                        </Pressable>
+                    </View>
+                ))}
+            </Reanimated.View>
         );
     };
-
-    const renderLeftActions = (
-        progress: Animated.AnimatedInterpolation<number>,
-        dragX: Animated.AnimatedInterpolation<number>
-    ) => {
-        const translateX = dragX.interpolate({
-            inputRange: [0, 100],
-            outputRange: [-100, 0],
-            extrapolate: 'clamp',
-        });
-
-        return (
-            <Animated.View
-                style={[
-                    styles.leftAction,
-                    {
-                        transform: [{ translateX }],
-                    },
-                ]}
-            >
-                <View style={styles.actionContent}>
-                    <Ionicons name="arrow-undo" size={24} color="#FFFFFF" />
-                </View>
-            </Animated.View>
-        );
-    };
-
-    const handleSwipeOpen = (direction: 'left' | 'right') => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
-        // Small delay to allow the swipe animation to be perceived,
-        // preventing the action from feeling "too fast" / jarring.
-        setTimeout(() => {
-            if (direction === 'right' && onDelete) {
-                onDelete();
-            } else if (direction === 'left' && onRestore) {
-                onRestore();
-            }
-            swipeableRef.current?.close();
-        }, 200);
-    };
-
-    if (isInTrash) {
-        return (
-            <Swipeable
-                ref={swipeableRef}
-                renderLeftActions={renderLeftActions}
-                overshootLeft={false}
-                onSwipeableWillOpen={() => handleSwipeOpen('left')}
-                containerStyle={styles.container}
-            >
-                {children}
-            </Swipeable>
-        );
-    }
 
     return (
-        <Swipeable
+        <ReanimatedSwipeable
             ref={swipeableRef}
-            renderRightActions={renderRightActions}
-            overshootRight={false}
-            onSwipeableWillOpen={() => handleSwipeOpen('right')}
+            renderLeftActions={(progress, dragX) => renderActions(activeLeftActions, dragX, 'left')}
+            renderRightActions={(progress, dragX) => renderActions(activeRightActions, dragX, 'right')}
+            friction={2}
+            enableTrackpadTwoFingerGesture
+            rightThreshold={40}
+            leftThreshold={40}
+            onSwipeableWillOpen={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
             containerStyle={styles.container}
         >
             {children}
-        </Swipeable>
+        </ReanimatedSwipeable>
     );
 }
 
@@ -121,22 +148,25 @@ const styles = StyleSheet.create({
     container: {
         marginBottom: 8,
     },
-    rightAction: {
-        backgroundColor: '#EF4444',
-        justifyContent: 'center',
-        alignItems: 'flex-end',
-        borderRadius: 12,
+    actionsContainer: {
+        flexDirection: 'row',
+        height: '100%',
+        gap: 8,
     },
-    leftAction: {
-        backgroundColor: '#10B981',
-        justifyContent: 'center',
-        alignItems: 'flex-start',
-        borderRadius: 12,
+    actionButton: {
+        width: 60,
+        height: '100%',
+        borderRadius: 14,
+        overflow: 'hidden',
     },
-    actionContent: {
-        width: 80,
+    actionPressable: {
+        width: '100%',
         height: '100%',
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    actionPressed: {
+        opacity: 0.7,
+        transform: [{ scale: 0.92 }],
     },
 });

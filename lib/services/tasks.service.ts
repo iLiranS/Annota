@@ -59,4 +59,8 @@ export const TaskService = {
     clearCompleted: () => {
         tasksRepo.deleteCompletedTasks();
     },
+
+    clearCompletedSince: (date: Date) => {
+        tasksRepo.clearCompletedSince(date);
+    },
 };

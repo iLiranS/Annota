@@ -129,6 +129,10 @@ export function updateTask(
     taskId: string,
     updates: Partial<Omit<Task, 'id' | 'createdAt'>>
 ): void {
+    if ('completed' in updates && !('completedAt' in updates)) {
+        updates.completedAt = updates.completed ? new Date() : null;
+    }
+
     getDb()
         .update(schema.tasks)
         .set(updates)
@@ -147,9 +151,12 @@ export function toggleTaskComplete(taskId: string): void {
     const task = getTaskById(taskId);
     if (!task) return;
 
+    const newCompleted = !task.completed;
+    const newCompletedAt = newCompleted ? new Date() : null;
+
     getDb()
         .update(schema.tasks)
-        .set({ completed: !task.completed })
+        .set({ completed: newCompleted, completedAt: newCompletedAt })
         .where(eq(schema.tasks.id, taskId))
         .run();
 }
@@ -158,6 +165,18 @@ export function deleteCompletedTasks(): void {
     getDb().update(schema.tasks)
         .set({ isPermDeleted: true, isDirty: true, updatedAt: new Date() })
         .where(eq(schema.tasks.completed, true))
+        .run();
+}
+
+export function clearCompletedSince(date: Date): void {
+    getDb().update(schema.tasks)
+        .set({ isPermDeleted: true, isDirty: true, updatedAt: new Date() })
+        .where(
+            and(
+                eq(schema.tasks.completed, true),
+                lt(schema.tasks.completedAt, date)
+            )
+        )
         .run();
 }
 

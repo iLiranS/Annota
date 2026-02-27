@@ -37,6 +37,7 @@ TaskManager.defineTask(BACKGROUND_SYNC_TASK, async () => {
 });
 
 import { useAppTheme } from '@/hooks/use-app-theme';
+import { useDailyCleanup } from '@/hooks/use-daily-cleanup';
 import { supabase } from '@/lib/supabase';
 import { SyncScheduler } from '@/lib/sync/sync-scheduler';
 import { getMasterKey } from '@/lib/utils/crypto';
@@ -92,6 +93,9 @@ export default function RootLayout() {
   const [dbError, setDbError] = useState<string | null>(null);
   const schedulerRef = useRef<SyncScheduler | null>(null);
 
+  // Run daily background cleanups (e.g. old completed tasks)
+  useDailyCleanup();
+
   useEffect(() => {
     SystemUI.setBackgroundColorAsync(theme.colors.background);
   }, [theme.colors.background]);
@@ -114,7 +118,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (dbReady) {
-
+      console.log("here?")
       // Initialize store (load all data into memory)
       const { useNotesStore } = require('@/stores/notes-store');
       const { useTasksStore } = require('@/stores/tasks-store');

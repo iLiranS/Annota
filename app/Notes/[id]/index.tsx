@@ -34,7 +34,7 @@ export default function NoteEditor() {
     const navigation = useNavigation();
     const insets = useSafeAreaInsets();
     const editorRef = useRef<TipTapEditorRef>(null);
-    const { general } = useSettingsStore();
+    const { general, editor } = useSettingsStore();
     const { width, height } = useWindowDimensions();
 
 
@@ -275,11 +275,11 @@ export default function NoteEditor() {
                 options={{
                     headerShown: !isGalleryOpen,
                     gestureEnabled: true, // Re-enable gesture for better UX, back() will handle it correct now
-                    headerTransparent: general.floatingNoteHeader,
-                    headerBackground: general.floatingNoteHeader ? () => <View style={{ flex: 1, backgroundColor: 'transparent' }} /> : undefined,
+                    headerTransparent: editor.floatingNoteHeader,
+                    headerBackground: editor.floatingNoteHeader ? () => <View style={{ flex: 1, backgroundColor: 'transparent' }} /> : undefined,
                     headerBlurEffect: undefined,
-                    headerShadowVisible: !general.floatingNoteHeader,
-                    headerTitle: general.floatingNoteHeader ? '' : () => (
+                    headerShadowVisible: !editor.floatingNoteHeader,
+                    headerTitle: editor.floatingNoteHeader ? '' : () => (
                         <Text
                             style={[styles.headerTitle, { color: colors.text }]}
                             numberOfLines={1}
@@ -339,7 +339,7 @@ export default function NoteEditor() {
                         currentResultIndex={currentSearchIndex}
                         onNext={handleSearchNext}
                         onPrev={handleSearchPrev}
-                        topOffset={general.floatingNoteHeader ? insets.top + 50 : 0}
+                        topOffset={editor.floatingNoteHeader ? insets.top + 50 : 0}
                     />
 
                     <TipTapEditor
@@ -348,7 +348,7 @@ export default function NoteEditor() {
                         initialContent={content ?? ''}
                         onContentChange={handleContentChange}
                         onSearchResults={handleSearchResults}
-                        contentPaddingTop={general.floatingNoteHeader ? insets.top + 44 : 0}
+                        contentPaddingTop={editor.floatingNoteHeader ? insets.top + 44 : 0}
                         placeholder="Start typing your note..."
                         autofocus={shouldAutofocus}
                         onGalleryVisibilityChange={setIsGalleryOpen}

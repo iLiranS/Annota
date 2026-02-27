@@ -67,10 +67,9 @@ function FolderCard({ folder, onPress, onRestore, onPermanentDelete }: FolderIte
     };
 
     return (
-        <SwipeableItem onRestore={onRestore} isInTrash>
+        <SwipeableItem onRestore={onRestore} onDelete={onPermanentDelete}>
             <ThemedPressable
                 onPress={onPress}
-                onLongPress={onPermanentDelete}
                 style={({ pressed }) => [
                     styles.folderCard,
                     {
@@ -121,10 +120,9 @@ function NoteCard({ note, onPress, onRestore, onPermanentDelete }: NoteItemProps
     };
 
     return (
-        <SwipeableItem onRestore={onRestore} isInTrash>
+        <SwipeableItem onRestore={onRestore} onDelete={onPermanentDelete}>
             <ThemedPressable
                 onPress={onPress}
-                onLongPress={onPermanentDelete}
                 style={({ pressed }) => [
                     styles.noteCard,
                     {
@@ -383,7 +381,7 @@ export default function TrashScreen() {
             <View style={[styles.hint, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <Ionicons name="information-circle-outline" size={16} color={colors.text + '60'} />
                 <ThemedText style={[styles.hintText, { color: colors.text + '60' }]}>
-                    Swipe right to restore • Long press to permanently delete
+                    Swipe right to restore • Swipe left to permanently delete
                 </ThemedText>
             </View>
         </View>

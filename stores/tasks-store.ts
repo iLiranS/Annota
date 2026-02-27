@@ -19,6 +19,7 @@ interface TasksState {
     deleteTask: (taskId: string) => void;
     toggleComplete: (taskId: string) => void;
     clearCompletedTasks: () => void;
+    clearOldCompletedTasks: (date: Date) => void;
 
     // Getters (operate on cached state)
     getTaskById: (taskId: string) => Task | undefined;
@@ -53,9 +54,18 @@ export const useTasksStore = create<TasksState>((set, get) => ({
     updateTask: (taskId: string, updates) => {
         TaskService.update(taskId, updates);
         set((state) => ({
-            tasks: state.tasks.map((task) =>
-                task.id === taskId ? { ...task, ...updates } : task
-            ),
+            tasks: state.tasks.map((task) => {
+                if (task.id !== taskId) return task;
+
+                let completedAt = task.completedAt;
+                if ('completed' in updates && !('completedAt' in updates)) {
+                    completedAt = updates.completed ? new Date() : null;
+                } else if ('completedAt' in updates) {
+                    completedAt = updates.completedAt ?? null;
+                }
+
+                return { ...task, ...updates, completedAt };
+            }),
         }));
         SyncScheduler.instance?.notifyContentChange();
     },
@@ -71,9 +81,11 @@ export const useTasksStore = create<TasksState>((set, get) => ({
     toggleComplete: (taskId: string) => {
         TaskService.toggleComplete(taskId);
         set((state) => ({
-            tasks: state.tasks.map((task) =>
-                task.id === taskId ? { ...task, completed: !task.completed } : task
-            ),
+            tasks: state.tasks.map((task) => {
+                if (task.id !== taskId) return task;
+                const newCompleted = !task.completed;
+                return { ...task, completed: newCompleted, completedAt: newCompleted ? new Date() : null };
+            }),
         }));
         SyncScheduler.instance?.notifyContentChange();
     },
@@ -83,6 +95,28 @@ export const useTasksStore = create<TasksState>((set, get) => ({
         set((state) => ({
             tasks: state.tasks.filter((task) => !task.completed),
         }));
+        SyncScheduler.instance?.notifyContentChange();
+    },
+
+    clearOldCompletedTasks: (date: Date) => {
+        set((state) => {
+            let clearedCount = 0;
+            const newTasks = state.tasks.filter((task) => {
+                let keep = true;
+                if (task.completed && task.completedAt && task.completedAt < date) {
+                    keep = false;
+                    clearedCount++;
+                }
+                return keep;
+            });
+
+            if (clearedCount > 0) {
+                console.log(`[DAILY_CLEANUP] Cleared ${clearedCount} old completed tasks.`);
+                TaskService.clearCompletedSince(date);
+            }
+
+            return { tasks: newTasks };
+        });
         SyncScheduler.instance?.notifyContentChange();
     },
 

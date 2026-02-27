@@ -1,11 +1,12 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { EditorFontId } from '@/constants/editor-fonts';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 // Types
 export type ThemeMode = 'light' | 'dark' | 'system';
 export type StartOfWeek = 'sunday' | 'monday';
+export type AutoClearTasksDays = 7 | 30 | 90 | 180;
 
 export interface EditorSettings {
     direction: 'ltr' | 'rtl' | 'auto';
@@ -13,13 +14,16 @@ export interface EditorSettings {
     lineSpacing: number; // multiplier (e.g. 1.0, 1.5)
     paragraphSpacing: number; // pixels (e.g. 10, 20)
     fontFamily: EditorFontId | string;
+    floatingNoteHeader: boolean;
 }
 
 export interface GeneralSettings {
     startOfWeek: StartOfWeek;
     compactMode: boolean;
-    floatingNoteHeader: boolean;
     hapticFeedback: boolean;
+    tasksShowDone: boolean;
+    taskListShowDone: boolean;
+    autoClearTasksDays: AutoClearTasksDays;
 }
 
 export interface SettingsState {
@@ -49,13 +53,16 @@ const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
     lineSpacing: 1.5,
     paragraphSpacing: 16,
     fontFamily: 'system',
+    floatingNoteHeader: true,
 };
 
 const DEFAULT_GENERAL_SETTINGS: GeneralSettings = {
     startOfWeek: 'sunday',
-    compactMode: false,
-    floatingNoteHeader: true,
+    compactMode: true,
     hapticFeedback: true,
+    tasksShowDone: true,
+    taskListShowDone: true,
+    autoClearTasksDays: 30,
 };
 
 export const useSettingsStore = create<SettingsState>()(

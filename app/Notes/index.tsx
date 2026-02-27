@@ -51,6 +51,7 @@ export default function NotesList() {
         getFoldersInFolder,
         getSortType,
         setFolderSortType,
+        updateNoteMetadata,
     } = useNotesStore();
 
     const { general } = useSettingsStore();
@@ -166,6 +167,20 @@ export default function NotesList() {
         [deleteNote]
     );
 
+    const handleTogglePin = useCallback(
+        async (note: NoteMetadata) => {
+            await updateNoteMetadata(note.id, { isPinned: !note.isPinned });
+        },
+        [updateNoteMetadata]
+    );
+
+    const handleToggleQuickAccess = useCallback(
+        async (note: NoteMetadata) => {
+            await updateNoteMetadata(note.id, { isQuickAccess: !note.isQuickAccess });
+        },
+        [updateNoteMetadata]
+    );
+
     // Long press handlers for edit modals
     const handleFolderLongPress = useCallback(
         (folder: Folder) => {
@@ -217,6 +232,8 @@ export default function NotesList() {
                     onPress={() => handleNotePress(item.data.id)}
                     onLongPress={() => handleNoteLongPress(item.data)}
                     onDelete={() => handleDeleteNote(item.data.id)}
+                    onTogglePin={() => handleTogglePin(item.data)}
+                    onToggleQuickAccess={() => handleToggleQuickAccess(item.data)}
                 />
             </View>
         );

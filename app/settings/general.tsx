@@ -1,5 +1,5 @@
 import SettingItem from '@/components/settings/setting-item';
-import { useSettingsStore } from '@/stores/settings-store';
+import { useSettingsStore, type AutoClearTasksDays } from '@/stores/settings-store';
 import { useTheme } from '@react-navigation/native';
 import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -11,6 +11,15 @@ export default function GeneralSettings() {
     const toggleStartOfWeek = () => {
         updateGeneralSettings({
             startOfWeek: general.startOfWeek === 'sunday' ? 'monday' : 'sunday'
+        });
+    };
+
+    const toggleAutoClearTasks = () => {
+        const options: AutoClearTasksDays[] = [7, 30, 90, 180];
+        const currentIndex = options.indexOf(general.autoClearTasksDays || 30);
+        const nextIndex = (currentIndex + 1) % options.length;
+        updateGeneralSettings({
+            autoClearTasksDays: options[nextIndex]
         });
     };
 
@@ -30,6 +39,19 @@ export default function GeneralSettings() {
             </View>
 
             <View style={styles.section}>
+                <Text style={[styles.sectionHeader, { color: colors.text + '80' }]}>TASKS</Text>
+                <View style={[styles.card, { backgroundColor: colors.card }]}>
+                    <SettingItem
+                        label="Clear Completed Tasks"
+                        type="value"
+                        value={`${general.autoClearTasksDays || 30} days`}
+                        onPress={toggleAutoClearTasks}
+                        icon="trash-bin-outline"
+                    />
+                </View>
+            </View>
+
+            <View style={styles.section}>
                 <Text style={[styles.sectionHeader, { color: colors.text + '80' }]}>DISPLAY</Text>
                 <View style={[styles.card, { backgroundColor: colors.card }]}>
                     <SettingItem
@@ -39,13 +61,6 @@ export default function GeneralSettings() {
                         onToggle={(val) => updateGeneralSettings({ compactMode: val })}
                         icon="list-outline"
                         description="Show more items in lists"
-                    />
-                    <SettingItem
-                        label="Floating Note Header"
-                        type="toggle"
-                        value={general.floatingNoteHeader}
-                        onToggle={(val) => updateGeneralSettings({ floatingNoteHeader: val })}
-                        icon="text-outline"
                     />
                     <SettingItem
                         label="Haptic Feedback"

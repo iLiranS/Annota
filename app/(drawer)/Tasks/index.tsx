@@ -26,12 +26,12 @@ export default function TasksScreen() {
 
     // Stores
     const { tasks, toggleComplete, loadTasks, clearCompletedTasks } = useTasksStore();
-    const { general } = useSettingsStore();
+    const { general, updateGeneralSettings } = useSettingsStore();
     const { getFolderById } = useNotesStore();
     const compactMode = general.compactMode;
+    const showCompleted = general.tasksShowDone;
 
     // Local state
-    const [showCompleted, setShowCompleted] = useState(true);
     const [groupBy, setGroupBy] = useState<GroupByOption>('none');
     const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
@@ -221,7 +221,7 @@ export default function TasksScreen() {
                         <Pressable
                             onPress={() => {
                                 LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                                setShowCompleted(!showCompleted);
+                                updateGeneralSettings({ tasksShowDone: !showCompleted });
                             }}
                             style={[
                                 styles.controlButton,
