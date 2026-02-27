@@ -1,5 +1,6 @@
 import SwipeableItem from '@/components/swipeable-item';
 import ThemedText from '@/components/themed-text';
+import { HapticPressable } from '@/components/ui/haptic-pressable';
 import ThemedPressable from '@/components/ui/themed-pressable';
 import {
     sortFolders,
@@ -13,7 +14,6 @@ import React, { useCallback, useMemo, useState } from 'react';
 import {
     Alert,
     FlatList,
-    Pressable,
     StyleSheet,
     Text,
     View
@@ -216,13 +216,6 @@ export default function TrashScreen() {
         [router]
     );
 
-    const handleBack = useCallback(() => {
-        if (currentFolder?.parentId) {
-            setCurrentFolderId(currentFolder.parentId);
-        } else {
-            setCurrentFolderId(TRASH_FOLDER_ID);
-        }
-    }, [currentFolder]);
 
     const handleRestoreFolder = useCallback(
         async (folderId: string) => {
@@ -342,16 +335,14 @@ export default function TrashScreen() {
                 options={{
                     headerShown: true,
                     title: headerTitle,
-                    headerLeft: currentFolderId !== TRASH_FOLDER_ID
-                        ? () => (
-                            <Pressable onPress={handleBack} style={styles.headerButton} hitSlop={8}>
-                                <Ionicons name="chevron-back" size={26} color={colors.primary} />
-                            </Pressable>
-                        )
-                        : undefined,
+                    headerLeft: () => (
+                        <HapticPressable onPress={() => router.back()} style={styles.headerButton} hitSlop={8}>
+                            <Ionicons name="chevron-back" size={26} color={colors.primary} />
+                        </HapticPressable>
+                    ),
                     headerRight: !isEmpty
                         ? () => (
-                            <Pressable
+                            <HapticPressable
                                 onPress={handleEmptyTrash}
                                 style={styles.headerButton}
                                 hitSlop={8}
@@ -359,7 +350,7 @@ export default function TrashScreen() {
                                 <ThemedText style={[styles.emptyTrashButton, { color: colors.primary }]}>
                                     Empty
                                 </ThemedText>
-                            </Pressable>
+                            </HapticPressable>
                         )
                         : undefined,
                 }}
@@ -389,7 +380,7 @@ export default function TrashScreen() {
                 renderItem={renderItem}
             />
 
-            <View style={[styles.hint, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
+            <View style={[styles.hint, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <Ionicons name="information-circle-outline" size={16} color={colors.text + '60'} />
                 <ThemedText style={[styles.hintText, { color: colors.text + '60' }]}>
                     Swipe right to restore • Long press to permanently delete
@@ -522,9 +513,13 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         gap: 8,
         padding: 12,
-        borderTopWidth: 1,
+        marginVertical: 12,
+        width: '90%',
+        alignSelf: 'center',
+        borderRadius: 12,
+        borderWidth: 1,
     },
     hintText: {
-        fontSize: 12,
+        fontSize: 11,
     },
 });

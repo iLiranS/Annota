@@ -212,6 +212,39 @@ function handleSummaryMousedown(e: MouseEvent) {
 document.addEventListener('click', handleSummaryClick, true);
 document.addEventListener('mousedown', handleSummaryMousedown, true);
 
+// Height reporting for React Native ScrollView integration
+const resizeObserver = new ResizeObserver(() => {
+    // Measure actual DOM content without relying on scrollHeight
+    // because container has min-height: 100vh which creates an infinite loop
+    // when the WebView resizes
+    const pm = document.querySelector('.ProseMirror');
+    let contentBottom = 0;
+
+    if (pm) {
+        // Get the bottom-most point of the last child element
+        const lastChild = pm.lastElementChild;
+        if (lastChild) {
+            const rect = lastChild.getBoundingClientRect();
+            // rect.bottom is relative to viewport top (which is 0 since we overflow:hidden in body)
+            contentBottom = rect.bottom;
+        } else {
+            const rect = pm.getBoundingClientRect();
+            contentBottom = rect.bottom;
+        }
+    }
+
+    // Add padding-bottom matching editor-container (80px)
+    const totalHeight = contentBottom + 80;
+
+    sendMessage({ type: 'heightChange', height: totalHeight });
+});
+
+resizeObserver.observe(document.body);
+const container = document.getElementById('editor-container');
+if (container) resizeObserver.observe(container);
+const content = document.getElementById('editor-content');
+if (content) resizeObserver.observe(content);
+
 // Notify Ready
 sendMessage({ type: 'ready' });
 

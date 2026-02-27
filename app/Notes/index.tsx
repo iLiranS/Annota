@@ -12,7 +12,7 @@ import {
     sortNotes,
     SortType,
 } from '@/dev-data/data';
-import { DAILY_NOTES_FOLDER_ID, NoteMetadata, TRASH_FOLDER_ID, useNotesStore, type Folder } from '@/stores/notes-store';
+import { NoteMetadata, useNotesStore, type Folder } from '@/stores/notes-store';
 import { useSettingsStore } from '@/stores/settings-store';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
@@ -71,10 +71,8 @@ export default function NotesList() {
     const browseFolders = useMemo(() => {
         const folderList = getFoldersInFolder(currentFolderId);
         const sorted = sortFolders(folderList, currentSortType);
-        // Ensure Trash folder appears at the bottom
-        const systemFolders = sorted.filter(f => f.isSystem);
         const regularFolders = sorted.filter(f => !f.isSystem);
-        return [...regularFolders, ...systemFolders] as Folder[];
+        return regularFolders as Folder[];
     }, [folders, currentFolderId, currentSortType]);
 
     const browseNotes = useMemo(() => {
@@ -115,15 +113,9 @@ export default function NotesList() {
 
     const handleFolderPress = useCallback(
         (folderId: string) => {
-            const folder = getFolderById(folderId);
-            // Navigate to dedicated trash screen for system trash folder
-            if (folder?.isSystem && folder.id === TRASH_FOLDER_ID) {
-                router.push('/Notes/trash');
-                return;
-            }
             router.push({ pathname: '/Notes', params: { folderId } });
         },
-        [router, getFolderById]
+        [router]
     );
 
     const handleNotePress = useCallback(
@@ -136,13 +128,6 @@ export default function NotesList() {
 
     // Create new note and navigate to it
     const handleCreateNote = useCallback(async () => {
-        if (currentFolderId === DAILY_NOTES_FOLDER_ID) {
-            const { getOrCreateDailyNote } = useNotesStore.getState();
-            const noteId = await getOrCreateDailyNote();
-            router.push({ pathname: '/Notes/[id]', params: { id: noteId } });
-            return;
-        }
-
         const newNote = await createNote({ folderId: currentFolderId ?? '' });
         router.push({ pathname: '/Notes/[id]', params: { id: newNote.id, source: 'new' } });
     }, [createNote, currentFolderId, router]);
@@ -160,10 +145,6 @@ export default function NotesList() {
         router.push('/settings');
     }, [router]);
 
-    // Navigate to trash
-    const handleTrash = useCallback(() => {
-        router.push('/Notes/trash');
-    }, [router]);
 
     // Delete handlers
     const handleDeleteFolder = useCallback(
@@ -315,7 +296,7 @@ export default function NotesList() {
                             currentSortType={currentSortType}
                             onNewFolder={() => setIsCreatingFolder(true)}
                             onSortChange={handleSortChange}
-                            onTrash={handleTrash}
+                            onTrash={() => router.push('/Notes/trash')}
                             onSettings={handleSettings}
                         />
                     </View>

@@ -52,14 +52,15 @@ html,
 body {
     margin: 0;
     padding: 0;
-    height: 100%;
+    height: auto !important;
     background-color: var(--bg-color);
     color: var(--text-color);
     font-family: var(--editor-font-family);
     font-size: var(--editor-font-size);
     line-height: var(--editor-line-height);
     -webkit-text-size-adjust: 100%;
-    overflow-x: hidden;
+    overflow: hidden !important;
+    -webkit-overflow-scrolling: auto;
 }
 
 #editor-container {

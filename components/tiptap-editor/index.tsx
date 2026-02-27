@@ -8,7 +8,7 @@ import * as LegacyFileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { Keyboard, Linking, Modal, Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Keyboard, Linking, Modal, Platform, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
 import editorHtml from '../../editor-web/dist/editor-html';
@@ -56,8 +56,12 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
         const { colors, dark } = useAppTheme();
         const { editor: editorSettings } = useSettingsStore();
         const webViewRef = useRef<WebView>(null);
+        const scrollViewRef = useRef<ScrollView>(null);
+        const scrollOffsetY = useRef(0);
+        const scrollHeight = useRef(0);
         const [isReady, setIsReady] = useState(false);
         const [editorState, setEditorState] = useState<EditorState>(initialEditorState);
+        const [editorHeight, setEditorHeight] = useState<number>(100);
         const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
         const [isPopupOpen, setIsPopupOpen] = useState(false);
         const [activePopup, setActivePopup] = useState<PopupType>(null);
@@ -73,11 +77,39 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
         const queuedCommandsRef = useRef<Array<{ command: string; params: Record<string, unknown> }>>([]);
         const lastInternalLinkRef = useRef<{ href: string; ts: number } | null>(null);
         const { keyboardHeight } = useKeyboard();
+        const keyboardHeightRef = useRef(keyboardHeight);
+        keyboardHeightRef.current = keyboardHeight;
         const insets = useSafeAreaInsets();
         const { width, height } = useWindowDimensions();
 
         // Detect iPhone landscape mode (not tablet, width > height)
         const isIPhoneLandscape = Platform.OS === 'ios' && Platform.isPad === false && width > height;
+
+        // Stable scroll-to-cursor handler using refs so it always has fresh values
+        const scrollToCursor = useCallback((cursorTop: number, cursorBottom: number) => {
+            const y = scrollOffsetY.current;
+            const viewportHeight = scrollHeight.current;
+            // The keyboard + toolbar obscures the bottom portion
+            const obscuredBottom = keyboardHeightRef.current + toolbarHeight;
+            const visibleHeight = viewportHeight - obscuredBottom;
+            const padding = 40;
+
+            if (visibleHeight <= 0) return; // safety
+
+            // Cursor is below the visible area
+            if (cursorBottom > y + visibleHeight - padding) {
+                scrollViewRef.current?.scrollTo({
+                    y: Math.max(0, cursorBottom - visibleHeight + padding),
+                    animated: true,
+                });
+                // Cursor is above the visible area
+            } else if (cursorTop < y + padding) {
+                scrollViewRef.current?.scrollTo({
+                    y: Math.max(0, cursorTop - padding),
+                    animated: true,
+                });
+            }
+        }, [toolbarHeight]);
 
 
 
@@ -207,6 +239,16 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
                             break;
                         case 'state':
                             setEditorState(data.state);
+                            break;
+                        case 'heightChange':
+                            if (typeof data.height === 'number') {
+                                setEditorHeight(data.height);
+                            }
+                            break;
+                        case 'cursorPosition':
+                            if (typeof data.top === 'number' && typeof data.bottom === 'number') {
+                                scrollToCursor(data.top, data.bottom);
+                            }
                             break;
                         case 'error':
                             console.warn('TipTap Editor error:', data.message);
@@ -396,6 +438,7 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
                 onCopyBlockLink,
                 sendCommand,
                 flushQueuedCommands,
+                scrollToCursor,
             ]
         );
 
@@ -554,61 +597,75 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
 
         return (
             <View style={styles.container}>
-                <WebView
-                    allowFileAccess
-                    ref={webViewRef}
-                    source={source}
-                    onMessage={handleMessage}
-                    injectedJavaScriptBeforeContentLoaded={themeInjectionScript}
-                    scrollEnabled={true}
-                    keyboardDisplayRequiresUserAction={false}
-                    hideKeyboardAccessoryView={true}
-                    style={[styles.webView, { backgroundColor: colors.background }]}
-                    originWhitelist={['*']}
-                    javaScriptEnabled={true}
-                    domStorageEnabled={true}
-                    allowsInlineMediaPlayback={true}
-                    mixedContentMode="always"
-                    contentInsetAdjustmentBehavior="never"
-                    onShouldStartLoadWithRequest={(request) => {
-                        const { url } = request;
-                        // Never allow WebView to handle app deep links or external links.
-                        // We route these through the React Native bridge.
-                        if (url.startsWith('annota://')) {
+                <ScrollView
+                    ref={scrollViewRef}
+                    style={{ flex: 1 }}
+                    contentContainerStyle={{ flexGrow: 1, paddingBottom: 350 }}
+                    keyboardShouldPersistTaps="handled"
+                    onScroll={(e) => {
+                        scrollOffsetY.current = e.nativeEvent.contentOffset.y;
+                    }}
+                    scrollEventThrottle={16}
+                    onLayout={(e) => {
+                        scrollHeight.current = e.nativeEvent.layout.height;
+                    }}
+                >
+                    <WebView
+                        allowFileAccess
+                        ref={webViewRef}
+                        source={source}
+                        onMessage={handleMessage}
+                        injectedJavaScriptBeforeContentLoaded={themeInjectionScript}
+                        scrollEnabled={false}
+                        keyboardDisplayRequiresUserAction={false}
+                        hideKeyboardAccessoryView={true}
+                        style={[styles.webView, { backgroundColor: colors.background, height: Math.max(editorHeight, 100), flex: 0 }]}
+                        originWhitelist={['*']}
+                        javaScriptEnabled={true}
+                        domStorageEnabled={true}
+                        allowsInlineMediaPlayback={true}
+                        mixedContentMode="always"
+                        contentInsetAdjustmentBehavior="never"
+                        onShouldStartLoadWithRequest={(request) => {
+                            const { url } = request;
+                            // Never allow WebView to handle app deep links or external links.
+                            // We route these through the React Native bridge.
+                            if (url.startsWith('annota://')) {
+                                return false;
+                            }
+
+                            if (url.startsWith('about:blank')) {
+                                return true;
+                            }
+
+                            try {
+                                const requestOrigin = new URL(url).origin;
+                                const appOrigin = 'https://app.local';
+                                const devOrigin = useDevEditor ? new URL(devEditorUrl).origin : null;
+
+                                if (requestOrigin === appOrigin || (devOrigin && requestOrigin === devOrigin)) {
+                                    return true;
+                                }
+
+                                // Allow YouTube iframe embeds
+                                if (
+                                    requestOrigin === 'https://www.youtube.com' ||
+                                    requestOrigin === 'https://www.youtube-nocookie.com'
+                                ) {
+                                    return true;
+                                }
+                            } catch {
+                                // Block malformed or unsupported URLs by default.
+                            }
+
                             return false;
-                        }
-
-                        if (url.startsWith('about:blank')) {
-                            return true;
-                        }
-
-                        try {
-                            const requestOrigin = new URL(url).origin;
-                            const appOrigin = 'https://app.local';
-                            const devOrigin = useDevEditor ? new URL(devEditorUrl).origin : null;
-
-                            if (requestOrigin === appOrigin || (devOrigin && requestOrigin === devOrigin)) {
-                                return true;
-                            }
-
-                            // Allow YouTube iframe embeds
-                            if (
-                                requestOrigin === 'https://www.youtube.com' ||
-                                requestOrigin === 'https://www.youtube-nocookie.com'
-                            ) {
-                                return true;
-                            }
-                        } catch {
-                            // Block malformed or unsupported URLs by default.
-                        }
-
-                        return false;
-                    }}
-                    onError={(syntheticEvent) => {
-                        const { nativeEvent } = syntheticEvent;
-                        console.warn('WebView error: ', nativeEvent);
-                    }}
-                />
+                        }}
+                        onError={(syntheticEvent) => {
+                            const { nativeEvent } = syntheticEvent;
+                            console.warn('WebView error: ', nativeEvent);
+                        }}
+                    />
+                </ScrollView>
 
                 {showToolbar && (
                     <View

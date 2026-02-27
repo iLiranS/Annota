@@ -161,40 +161,17 @@ export function scrollCursorIntoView() {
         try {
             const { from } = window.editor.state.selection;
             const coords = window.editor.view.coordsAtPos(from);
-
             if (!coords) return;
 
-            // Get viewport dimensions
-            const viewportHeight = window.innerHeight;
-            const keyboardOffset = 100; // Extra padding for keyboard/toolbar area
-
-            // Check if cursor is outside visible area
-            const isAboveViewport = coords.top < 0;
-            const isBelowViewport = coords.bottom > (viewportHeight - keyboardOffset);
-
-            // Only scroll if cursor is actually outside visible area
-            if (!isAboveViewport && !isBelowViewport) return;
-
-            // Get the DOM element at cursor position
-            const domAtPos = window.editor.view.domAtPos(from);
-            if (!domAtPos || !domAtPos.node) return;
-
-            const element = domAtPos.node.nodeType === Node.TEXT_NODE
-                ? domAtPos.node.parentElement
-                : domAtPos.node as Element;
-
-            if (element && element instanceof HTMLElement) {
-                // Use 'nearest' to minimize scroll amount - it only scrolls enough to show the element
-                element.scrollIntoView({
-                    block: 'end',
-                    inline: 'center',
-                    behavior: 'instant'
-                });
-            }
+            sendMessage({
+                type: 'cursorPosition',
+                top: coords.top,
+                bottom: coords.bottom
+            });
         } catch (e) {
             // Silently fail - don't break the editor
         }
-    }, 100);
+    }, 50);
 }
 
 // Setup logic
@@ -265,6 +242,17 @@ export function setupEditor(options: any) {
             window.editor.setEditable(options.editable);
         }
 
+        // Make sure scroll prop is kept
+        window.editor.setOptions({
+            editorProps: {
+                ...window.editor.options.editorProps,
+                handleScrollToSelection: () => {
+                    scrollCursorIntoView();
+                    return true; // prevent default browser scroll
+                }
+            }
+        });
+
         return;
     }
 
@@ -281,8 +269,16 @@ export function setupEditor(options: any) {
             element: editorEl,
             editorProps: {
                 attributes: { dir: direction },
-                scrollThreshold: { top: 0, bottom: 80, left: 0, right: 0 },
-                scrollMargin: { top: 0, bottom: 80, left: 0, right: 0 }
+                handleScrollToSelection: () => {
+                    // We handle scroll in React Native Space
+                    scrollCursorIntoView();
+                    return true; // prevent default tiptap scrolling
+                },
+                transformPastedHTML(html: string) {
+                    // Strip font-family from inline styles so pasted content
+                    // inherits the editor's configured font
+                    return html.replace(/font-family\s*:[^;"']*(;|(?=["']))/gi, '');
+                },
             },
             extensions: [
                 StarterKit.configure({

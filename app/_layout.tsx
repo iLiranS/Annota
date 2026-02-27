@@ -242,6 +242,8 @@ export default function RootLayout() {
           <Stack.Screen name="Tasks/[id]/index" options={{ headerShown: true, presentation: 'modal', title: 'Edit Task' }} />
           <Stack.Screen name="Tasks/new" options={{ headerShown: true, presentation: 'modal', title: 'Edit Task' }} />
           <Stack.Screen name="Notes" options={{ headerShown: false }} />
+          {/* Deep link redirect: annota://note/{id} → Notes/[id] */}
+          <Stack.Screen name="note/[id]" options={{ headerShown: false, animation: 'none' }} />
 
         </Stack>
         <StatusBar style={theme.dark ? 'light' : 'dark'} />
