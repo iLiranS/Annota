@@ -46,13 +46,12 @@ export default function NoteCard({
                 styles.noteCard,
                 {
                     backgroundColor: colors.card,
-                    borderColor: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
                 },
                 isCompact && { paddingVertical: 12 },
                 pressed && styles.pressed,
             ]}
         >
-            <View style={[styles.noteHeader, isCompact && !description && { marginBottom: 0 }]}>
+            <View style={[styles.noteHeader]}>
                 <View style={styles.titleRow}>
                     <Ionicons name="document-text" size={16} color={colors.primary} />
                     <ThemedText style={styles.title} numberOfLines={1}>
@@ -122,9 +121,9 @@ export default function NoteCard({
 
 const styles = StyleSheet.create({
     noteCard: {
-        padding: 16,
-        borderRadius: 12,
-        borderWidth: 1,
+        paddingHorizontal: 20,
+        paddingVertical: 16,
+        // Border and radius removed for full-width list style
     },
     pressed: {
         opacity: 0.7,
@@ -134,7 +133,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 6,
+
     },
     titleRow: {
         flexDirection: 'row',

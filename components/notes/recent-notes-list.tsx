@@ -120,6 +120,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         marginBottom: 16,
         minHeight: 32,
+        paddingHorizontal: 20,
     },
     title: {
         fontSize: 17,
@@ -148,13 +149,14 @@ const styles = StyleSheet.create({
         paddingBottom: 20,
     },
     notesList: {
-        gap: 8,
+        gap: 0,
     },
     emptyState: {
         alignItems: 'center',
         paddingVertical: 32,
         borderRadius: 20,
         borderWidth: 1,
+        marginHorizontal: 20,
     },
     emptyText: {
         fontSize: 14,

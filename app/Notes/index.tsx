@@ -220,22 +220,19 @@ export default function NotesList() {
                     onLongPress={() => handleFolderLongPress(item.data)}
                     onDelete={() => handleDeleteFolder(item.data.id)}
                     swipeable={!item.data.isSystem}
-                    extraMarginTop={item.data.isSystem}
                 />
             );
         }
 
         return (
-            <View style={{ marginBottom: isCompact ? 0 : 6 }}>
-                <NoteCard
-                    note={item.data}
-                    onPress={() => handleNotePress(item.data.id)}
-                    onLongPress={() => handleNoteLongPress(item.data)}
-                    onDelete={() => handleDeleteNote(item.data.id)}
-                    onTogglePin={() => handleTogglePin(item.data)}
-                    onToggleQuickAccess={() => handleToggleQuickAccess(item.data)}
-                />
-            </View>
+            <NoteCard
+                note={item.data}
+                onPress={() => handleNotePress(item.data.id)}
+                onLongPress={() => handleNoteLongPress(item.data)}
+                onDelete={() => handleDeleteNote(item.data.id)}
+                onTogglePin={() => handleTogglePin(item.data)}
+                onToggleQuickAccess={() => handleToggleQuickAccess(item.data)}
+            />
         );
     };
 
@@ -367,7 +364,6 @@ const styles = StyleSheet.create({
         padding: 4,
     },
     listContent: {
-        padding: 16,
         paddingBottom: 100,
     },
     sectionHeader: {
@@ -377,7 +373,7 @@ const styles = StyleSheet.create({
         letterSpacing: 0.5,
         marginTop: 12,
         marginBottom: 10,
-        marginLeft: 4,
+        paddingHorizontal: 20,
     },
     emptyContainer: {
         alignItems: 'center',

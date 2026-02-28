@@ -1,7 +1,7 @@
-import TaskItem from '@/components/tasks/task-item';
+import { TaskCard } from '@/components/tasks/TaskCard';
 import ThemedText from '@/components/themed-text';
 import { useSettingsStore } from '@/lib/stores/settings.store';
-import { Task } from '@/lib/stores/tasks.store';
+import { Task, useTasksStore } from '@/lib/stores/tasks.store';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
@@ -26,6 +26,7 @@ export default function TaskList({
     const { colors, dark } = useTheme();
     const router = useRouter();
     const { general, updateGeneralSettings } = useSettingsStore();
+    const { toggleComplete } = useTasksStore();
     const showCompleted = general.taskListShowDone;
 
     const isToday = useMemo(() => {
@@ -124,10 +125,11 @@ export default function TaskList({
                 <View style={styles.listWrapper}>
                     {sortedTasks.length > 0 ? (
                         sortedTasks.map((task) => (
-                            <TaskItem
+                            <TaskCard
                                 key={task.id}
                                 task={task}
                                 onPress={() => onTaskPress(task)}
+                                onToggle={() => toggleComplete(task.id)}
                             />
                         ))
                     ) : (
@@ -165,11 +167,11 @@ export default function TaskList({
 
                         <View style={styles.upcomingList}>
                             {upcomingTasks.map((task) => (
-                                <TaskItem
+                                <TaskCard
                                     key={task.id}
                                     task={task}
                                     onPress={() => onTaskPress(task)}
-                                    showDate
+                                    onToggle={() => toggleComplete(task.id)}
                                 />
                             ))}
                         </View>
@@ -217,6 +219,7 @@ const styles = StyleSheet.create({
     },
     listWrapper: {
         flex: 1,
+
     },
     scrollContent: {
         paddingBottom: 20,
@@ -253,7 +256,7 @@ const styles = StyleSheet.create({
         letterSpacing: 1,
     },
     upcomingList: {
-        gap: 2,
+
     },
     controlButton: {
         flexDirection: 'row',

@@ -21,6 +21,7 @@ export default function NewTaskScreen() {
             deadline: values.deadline,
             isWholeDay: values.isWholeDay ?? false,
             folderId: values.folderId,
+            links: values.links,
             isDirty: true,
         });
 

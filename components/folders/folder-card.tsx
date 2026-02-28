@@ -13,7 +13,6 @@ interface FolderCardProps {
     onLongPress?: () => void;
     onDelete?: () => void;
     swipeable?: boolean;
-    extraMarginTop?: boolean;
 }
 
 export default function FolderCard({
@@ -22,7 +21,6 @@ export default function FolderCard({
     onLongPress,
     onDelete,
     swipeable = true,
-    extraMarginTop = false
 }: FolderCardProps) {
     const { colors, dark } = useTheme();
     const { general } = useSettingsStore();
@@ -37,9 +35,8 @@ export default function FolderCard({
                 styles.folderCard,
                 {
                     backgroundColor: colors.card,
-                    borderColor: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
-                    marginTop: extraMarginTop ? (isCompact ? 8 : 16) : 0,
-                    padding: isCompact ? 10 : 14,
+                    paddingVertical: isCompact ? 12 : 16,
+                    paddingHorizontal: 20,
                 },
                 pressed && styles.pressed,
             ]}
@@ -74,10 +71,9 @@ const styles = StyleSheet.create({
     folderCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 14,
-        borderRadius: 12,
-        borderWidth: 1,
+        padding: 20,
         gap: 12,
+        // Borders and radius removed for flat list style
     },
     folderIcon: {
         width: 40,

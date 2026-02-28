@@ -83,24 +83,44 @@ export function TaskCard({ task, onToggle, onPress }: TaskCardProps) {
     const linkedFolder = task.folderId ? getFolderById(task.folderId) : null;
 
     const now = new Date();
-    const isOverdue = task.deadline < now && !task.completed;
+    const isPastDay =
+        new Date(task.deadline).setHours(0, 0, 0, 0) <
+        new Date(now).setHours(0, 0, 0, 0);
+
     const isToday =
         task.deadline.getDate() === now.getDate() &&
         task.deadline.getMonth() === now.getMonth() &&
         task.deadline.getFullYear() === now.getFullYear();
 
-    const deadlineColor = isOverdue ? '#EF4444' : isToday ? '#F59E0B' : colors.text + '80';
+    const isTaskInPast = task.deadline < now && !task.completed;
+
+    const deadlineColor = isTaskInPast ? '#EF4444' : isToday ? '#F59E0B' : colors.text + '80';
 
     const formatDeadline = (date: Date): string => {
-        const options: Intl.DateTimeFormatOptions = {
-            month: 'short',
-            day: 'numeric',
-            ...(task.isWholeDay ? {} : {
+        const isToday =
+            date.getDate() === now.getDate() &&
+            date.getMonth() === now.getMonth() &&
+            date.getFullYear() === now.getFullYear();
+
+        const tomorrow = new Date(now);
+        tomorrow.setDate(now.getDate() + 1);
+        const isTomorrow =
+            date.getDate() === tomorrow.getDate() &&
+            date.getMonth() === tomorrow.getMonth() &&
+            date.getFullYear() === tomorrow.getFullYear();
+
+        if (isToday && !task.isWholeDay) {
+            return date.toLocaleTimeString('en-US', {
                 hour: 'numeric',
                 minute: '2-digit',
-            }),
-        };
-        return date.toLocaleDateString('en-US', options);
+                hour12: true,
+            }).toLowerCase();
+        }
+        if (isTomorrow) return 'Tomorrow';
+        return date.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+        });
     };
 
     return (
@@ -133,37 +153,29 @@ export function TaskCard({ task, onToggle, onPress }: TaskCardProps) {
 
             {/* Content */}
             <View style={styles.taskContent}>
-                <ThemedText
-                    style={[
-                        styles.taskTitle,
-                        task.completed && { textDecorationLine: 'line-through', opacity: 0.7 },
-                    ]}
-                    numberOfLines={1}
-                >
-                    {task.title}
-                </ThemedText>
-                {task.description ? (
-                    <ThemedText style={[styles.taskDescription, { color: colors.text + '70' }]} numberOfLines={1}>
-                        {task.description}
+                <View style={styles.titleRow}>
+                    <ThemedText
+                        style={[
+                            styles.taskTitle,
+                            task.completed && { textDecorationLine: 'line-through', opacity: 0.7 },
+                        ]}
+                        numberOfLines={1}
+                    >
+                        {task.title}
                     </ThemedText>
-                ) : null}
-
-                <View style={styles.taskMeta}>
-                    <View style={styles.deadlineBadge}>
-                        <Ionicons name="time-outline" size={11} color={deadlineColor} />
-                        <ThemedText style={[styles.deadlineText, { color: deadlineColor }]}>
-                            {formatDeadline(task.deadline)}
-                        </ThemedText>
-                    </View>
 
                     {linkedFolder && (
-                        <View style={[styles.linkedNoteBadge, { backgroundColor: linkedFolder.color + '20' }]}>
-                            <Ionicons name="folder" size={9} color={linkedFolder.color || colors.primary} />
-                            <ThemedText style={[styles.linkedNoteText, { color: linkedFolder.color || colors.primary }]}>
+                        <View style={[styles.inlineBadge, { backgroundColor: linkedFolder.color + '15', borderColor: linkedFolder.color + '30' }]}>
+                            <Ionicons name="folder" size={10} color={linkedFolder.color || colors.primary} />
+                            <ThemedText style={[styles.inlineBadgeText, { color: linkedFolder.color || colors.primary }]}>
                                 {linkedFolder.name}
                             </ThemedText>
                         </View>
                     )}
+
+                    <ThemedText style={[styles.deadlineText, { color: deadlineColor }]}>
+                        {formatDeadline(task.deadline)}
+                    </ThemedText>
                 </View>
             </View>
 
@@ -179,13 +191,9 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         padding: 12,
-        borderRadius: 12,
+        borderRadius: 14,
         borderWidth: 1,
-        marginBottom: 8,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.03,
-        shadowRadius: 6,
-        elevation: 2,
+        marginBottom: 4,
     },
     checkbox: {
         marginRight: 10,
@@ -201,28 +209,31 @@ const styles = StyleSheet.create({
     taskContent: {
         flex: 1,
     },
-    taskTitle: {
-        fontSize: 15,
-        fontWeight: '600',
-        marginBottom: 1,
-    },
-    taskDescription: {
-        fontSize: 12,
-        marginBottom: 6,
-    },
-    taskMeta: {
+    titleRow: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
-        flexWrap: 'wrap',
     },
-    deadlineBadge: {
+    taskTitle: {
+        fontSize: 15,
+        fontWeight: '600',
+        flex: 1,
+    },
+    inlineBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 3,
+        gap: 4,
+        paddingHorizontal: 6,
+        paddingVertical: 1,
+        borderRadius: 4,
+        borderWidth: 1,
+    },
+    inlineBadgeText: {
+        fontSize: 10,
+        fontWeight: '600',
     },
     deadlineText: {
-        fontSize: 10,
+        fontSize: 11,
         fontWeight: '500',
     },
     linkedNoteBadge: {

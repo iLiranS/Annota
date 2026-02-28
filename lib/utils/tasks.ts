@@ -16,6 +16,7 @@ export const generateTask = (data: Partial<TaskInsert>): TaskInsert => {
         completed: data.completed ?? false,
         completedAt: data.completedAt ?? (data.completed ? now : null),
         folderId: data.folderId ?? null,
+        links: data.links ?? '[]',
         lastSyncedAt: data.lastSyncedAt ?? null,
     };
 }

@@ -1,7 +1,6 @@
 import ThemedText from '@/components/themed-text';
 import { useSettingsStore } from '@/lib/stores/settings.store';
 import { useTasksStore } from '@/lib/stores/tasks.store';
-import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@react-navigation/native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -41,15 +40,6 @@ function getWeekDays(startDate: Date): Date[] {
     });
 }
 
-function formatDateRange(startDate: Date, endDate: Date): string {
-    const startDay = startDate.getDate();
-    const startMonth = startDate.toLocaleString('en-us', { month: 'short' });
-    const endDay = endDate.getDate();
-    const endMonth = endDate.toLocaleString('en-us', { month: 'short' });
-
-    return `${startMonth} ${startDay} - ${endMonth} ${endDay}`;
-}
-
 export default function Calendar({ selectedDate, onDateSelect }: CalendarProps) {
     const { colors, dark } = useTheme();
     const today = useMemo(() => new Date(), []);
@@ -70,20 +60,6 @@ export default function Calendar({ selectedDate, onDateSelect }: CalendarProps) 
     const SWIPE_THRESHOLD = 50;
 
     const weekDays = useMemo(() => getWeekDays(viewDate), [viewDate]);
-    const weekRange = useMemo(() => {
-        const start = weekDays[0];
-        const end = weekDays[6];
-        return formatDateRange(start, end);
-    }, [weekDays]);
-
-    const todayStart = useMemo(() => getStartOfWeek(today, startOfWeekSetting), [today, startOfWeekSetting]);
-
-    const isViewingCurrentWeek = useMemo(() => {
-        return viewDate.getTime() === todayStart.getTime();
-    }, [viewDate, todayStart]);
-
-    const isPast = useMemo(() => viewDate.getTime() < todayStart.getTime(), [viewDate, todayStart]);
-    const isFuture = useMemo(() => viewDate.getTime() > todayStart.getTime(), [viewDate, todayStart]);
 
     // Get tasks from store
     const { tasks } = useTasksStore();
@@ -121,11 +97,6 @@ export default function Calendar({ selectedDate, onDateSelect }: CalendarProps) 
         });
     }, []);
 
-    const handleToday = useCallback(() => {
-        const todayStart = getStartOfWeek(new Date(), startOfWeekSetting);
-        setViewDate(todayStart);
-        onDateSelect(new Date());
-    }, [startOfWeekSetting, onDateSelect]);
 
     // Pan gesture for swiping between weeks
     const panGesture = Gesture.Pan()
@@ -182,47 +153,9 @@ export default function Calendar({ selectedDate, onDateSelect }: CalendarProps) 
                     },
                 ]}
             >
-                {/* Header with Week Navigation */}
-                <View style={styles.header}>
-                    <Pressable onPress={handlePrevWeek} style={styles.navButton} hitSlop={12}>
-                        <Ionicons name="chevron-back" size={20} color={colors.text + '80'} />
-                    </Pressable>
-
-                    <View style={styles.rangeContainer}>
-                        {isFuture && !isViewingCurrentWeek && (
-                            <Pressable onPress={handleToday} style={styles.todayFloatingBefore} hitSlop={8}>
-                                <View style={[styles.todayBadge, { borderColor: colors.primary + '30', backgroundColor: dark ? 'rgba(255,255,255,0.05)' : 'white' }]}>
-                                    <Ionicons name="arrow-back" size={10} color={colors.primary} />
-                                    <ThemedText style={[styles.todayText, { color: colors.primary }]}>
-                                        today
-                                    </ThemedText>
-                                </View>
-                            </Pressable>
-                        )}
-
-                        <ThemedText style={styles.rangeTitle}>
-                            {weekRange}
-                        </ThemedText>
-
-                        {isPast && !isViewingCurrentWeek && (
-                            <Pressable onPress={handleToday} style={styles.todayFloatingAfter} hitSlop={8}>
-                                <View style={[styles.todayBadge, { borderColor: colors.primary + '30', backgroundColor: dark ? 'rgba(255,255,255,0.05)' : 'white' }]}>
-                                    <ThemedText style={[styles.todayText, { color: colors.primary }]}>
-                                        today
-                                    </ThemedText>
-                                    <Ionicons name="arrow-forward" size={10} color={colors.primary} />
-                                </View>
-                            </Pressable>
-                        )}
-                    </View>
-
-                    <Pressable onPress={handleNextWeek} style={styles.navButton} hitSlop={12}>
-                        <Ionicons name="chevron-forward" size={20} color={colors.text + '80'} />
-                    </Pressable>
-                </View>
 
                 {/* Weekday Headers & Calendar Grid with Animation */}
-                <Animated.View style={[styles.calendarContent, animatedStyle]}>
+                <Animated.View style={[animatedStyle]}>
                     {/* Weekday Headers */}
                     <View style={styles.weekdayRow}>
                         {weekdays.map((day) => (
@@ -293,64 +226,17 @@ const styles = StyleSheet.create({
     container: {
         borderRadius: 16,
         borderWidth: 1,
-        padding: 12,
-        paddingBottom: 16,
+        padding: 8,
+        paddingBottom: 4,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.03,
         shadowRadius: 8,
         elevation: 2,
         overflow: 'hidden',
     },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 8,
-    },
-    calendarContent: {
-        overflow: 'hidden',
-    },
-    navButton: {
-        padding: 4,
-    },
-    rangeTitle: {
-        fontSize: 15,
-        fontWeight: '700',
-        letterSpacing: 0.5,
-        paddingHorizontal: 6,
-    },
-    rangeContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        position: 'relative',
-    },
-    todayFloatingBefore: {
-        position: 'absolute',
-        right: '100%',
-        marginRight: 4,
-    },
-    todayFloatingAfter: {
-        position: 'absolute',
-        left: '100%',
-        marginLeft: 4,
-    },
-    todayBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 6,
-        paddingVertical: 2,
-        borderRadius: 12,
-        borderWidth: 1,
-        gap: 2,
-    },
-    todayText: {
-        fontSize: 10,
-        fontWeight: '700',
-    },
     weekdayRow: {
         flexDirection: 'row',
-        marginBottom: 4,
+        marginBottom: 2,
     },
     weekdayCell: {
         flex: 1,

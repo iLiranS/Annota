@@ -5,10 +5,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { zodResolver } from '@hookform/resolvers/zod';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useTheme } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
+    Image,
     KeyboardAvoidingView,
+    Linking,
     Platform,
     Pressable,
     ScrollView,
@@ -42,8 +45,9 @@ export default function TaskForm({
     submitLabel = 'Save',
 }: TaskFormProps) {
     const { colors, dark } = useTheme();
+    const router = useRouter();
     const insets = useSafeAreaInsets();
-    const { notes, folders } = useNotesStore();
+    const { notes, folders, getNoteById } = useNotesStore();
 
     // Setup React Hook Form
     const {
@@ -61,8 +65,19 @@ export default function TaskForm({
             isWholeDay: initialValues?.isWholeDay || false,
             completed: initialValues?.completed || false,
             folderId: initialValues?.folderId || null,
+            links: initialValues?.links || '[]',
         },
     });
+
+    const [localLinks, setLocalLinks] = useState<string[]>(() => {
+        try {
+            return JSON.parse(initialValues?.links || '[]');
+        } catch {
+            return [];
+        }
+    });
+    const [newLink, setNewLink] = useState('');
+    const [showLinkInput, setShowLinkInput] = useState(false);
 
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [showTimePicker, setShowTimePicker] = useState(false);
@@ -189,6 +204,161 @@ export default function TaskForm({
                     )}
                 </View>
 
+                {/* Links */}
+                <View style={styles.field}>
+                    <View style={styles.labelRow}>
+                        <ThemedText style={[styles.label, { color: colors.text + '80', marginBottom: 0 }]}>
+                            Links
+                        </ThemedText>
+                        {localLinks.length < 5 ? (
+                            <Pressable
+                                style={styles.compactCheckbox}
+                                onPress={() => setShowLinkInput(!showLinkInput)}
+                                hitSlop={8}
+                            >
+                                <Ionicons
+                                    name={showLinkInput ? 'close' : 'add'}
+                                    size={18}
+                                    color={colors.primary}
+                                />
+                                <ThemedText style={[styles.compactCheckboxLabel, { color: colors.primary }]}>
+                                    {showLinkInput ? 'Cancel' : 'Add Link'}
+                                </ThemedText>
+                            </Pressable>
+                        ) : (
+                            <ThemedText style={[styles.compactCheckboxLabel, { color: colors.text + '40' }]}>
+                                Max 5 links reached
+                            </ThemedText>
+                        )}
+                    </View>
+
+                    {showLinkInput && (
+                        <View style={styles.linkInputContainer}>
+                            <TextInput
+                                style={[
+                                    styles.input,
+                                    {
+                                        backgroundColor: inputBgColor,
+                                        borderColor: inputBorderColor,
+                                        color: colors.text,
+                                        flex: 1,
+                                    },
+                                ]}
+                                value={newLink}
+                                onChangeText={setNewLink}
+                                placeholder="https://..."
+                                placeholderTextColor={colors.text + '40'}
+                                autoCapitalize="none"
+                                autoCorrect={false}
+                                keyboardType="url"
+                                onSubmitEditing={() => {
+                                    if (newLink.trim() && localLinks.length < 5) {
+                                        const updated = [...localLinks, newLink.trim()];
+                                        setLocalLinks(updated);
+                                        setValue('links', JSON.stringify(updated));
+                                        setNewLink('');
+                                        setShowLinkInput(false);
+                                    }
+                                }}
+                            />
+                            <Pressable
+                                style={[styles.addLinkButton, { backgroundColor: colors.primary }]}
+                                onPress={() => {
+                                    if (newLink.trim() && localLinks.length < 5) {
+                                        const updated = [...localLinks, newLink.trim()];
+                                        setLocalLinks(updated);
+                                        setValue('links', JSON.stringify(updated));
+                                        setNewLink('');
+                                        setShowLinkInput(false);
+                                    }
+                                }}
+                            >
+                                <Ionicons name="checkmark" size={20} color="#fff" />
+                            </Pressable>
+                        </View>
+                    )}
+
+                    {localLinks.length > 0 && (
+                        <ScrollView
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            contentContainerStyle={styles.linksContainer}
+                        >
+                            {localLinks.map((link, index) => {
+                                let text = link;
+                                let isAnnota = false;
+
+                                if (link.startsWith('annota://note/')) {
+                                    const match = link.match(/^annota:\/\/note\/([a-f0-9\-]+)/i);
+                                    if (match) {
+                                        const noteId = match[1];
+                                        const note = getNoteById(noteId);
+                                        text = note ? note.title : 'Unknown Note';
+                                        isAnnota = true;
+                                    }
+                                } else {
+                                    const domainMatch = link.match(/^(?:https?:\/\/)?(?:www\.)?([^\/?#]+)/i);
+                                    if (domainMatch) {
+                                        const domain = domainMatch[1];
+                                        // Strip the TLD (everything after the last dot)
+                                        text = domain.includes('.') ? domain.split('.').slice(0, -1).join('.') : domain;
+                                    }
+                                }
+
+                                return (
+                                    <View key={index} style={[styles.linkChip, { backgroundColor: inputBgColor, borderColor: inputBorderColor }]}>
+                                        <Pressable
+                                            onPress={() => {
+                                                if (isAnnota) {
+                                                    const match = link.match(/^annota:\/\/note\/([a-f0-9\-]+)/i);
+                                                    if (match) {
+                                                        const noteId = match[1];
+                                                        router.push({ pathname: '/Notes/[id]', params: { id: noteId } });
+                                                    }
+                                                } else {
+                                                    Linking.openURL(link).catch(err => console.error("Couldn't load page", err));
+                                                }
+                                            }}
+                                            style={({ pressed }) => [
+                                                styles.linkMainPressable,
+                                                pressed && { opacity: 0.7 }
+                                            ]}
+                                        >
+                                            {isAnnota ? (
+                                                <Image
+                                                    source={require('@/assets/images/icon.png')}
+                                                    style={{ width: 14, height: 14 }}
+                                                    resizeMode="contain"
+                                                />
+                                            ) : (
+                                                <Ionicons name="link" size={14} color={colors.text + '80'} />
+                                            )}
+                                            <ThemedText style={styles.linkText} numberOfLines={1}>
+                                                {text}
+                                            </ThemedText>
+                                        </Pressable>
+
+                                        <Pressable
+                                            onPress={() => {
+                                                const updated = localLinks.filter((_, i) => i !== index);
+                                                setLocalLinks(updated);
+                                                setValue('links', JSON.stringify(updated));
+                                            }}
+                                            hitSlop={12}
+                                            style={({ pressed }) => [
+                                                styles.removeLinkBtn,
+                                                pressed && { opacity: 0.5 }
+                                            ]}
+                                        >
+                                            <Ionicons name="close" size={16} color={colors.text + '60'} />
+                                        </Pressable>
+                                    </View>
+                                );
+                            })}
+                        </ScrollView>
+                    )}
+                </View>
+
                 {/* Description */}
                 <View style={styles.field}>
                     <ThemedText style={[styles.label, { color: colors.text + '80' }]}>
@@ -216,6 +386,8 @@ export default function TaskForm({
                                 multiline
                                 numberOfLines={3}
                                 textAlignVertical="top"
+                                blurOnSubmit={true}
+                                returnKeyType="done"
                             />
                         )}
                     />
@@ -629,5 +801,51 @@ const styles = StyleSheet.create({
     deleteButtonText: {
         fontSize: 16,
         fontWeight: '600',
+    },
+    linkInputContainer: {
+        flexDirection: 'row',
+        gap: 8,
+        marginBottom: 12,
+    },
+    addLinkButton: {
+        width: 48,
+        borderRadius: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    linksContainer: {
+        gap: 8,
+        paddingVertical: 4,
+    },
+    linkChip: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderRadius: 12,
+        borderWidth: 1,
+        maxWidth: 240,
+        marginRight: 8,
+        overflow: 'hidden',
+    },
+    linkMainPressable: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        paddingLeft: 12,
+        paddingRight: 8,
+        paddingVertical: 10,
+        flexShrink: 1,
+    },
+    linkText: {
+        fontSize: 14,
+        fontWeight: '500',
+        color: '#3B82F6',
+    },
+    removeLinkBtn: {
+        paddingHorizontal: 8,
+        paddingVertical: 10,
+        borderLeftWidth: StyleSheet.hairlineWidth,
+        borderLeftColor: 'rgba(0,0,0,0.1)',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
 });

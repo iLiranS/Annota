@@ -180,7 +180,7 @@ export default function HomeScreen() {
   return (
     <ThemedView style={[styles.container, { paddingTop: insets.top + 10 }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingHorizontal: 20 }]}>
         <HapticPressable
           onPress={() => navigation.openDrawer()}
           style={({ pressed }) => ({
@@ -199,102 +199,110 @@ export default function HomeScreen() {
       </View>
 
       {/* Calendar */}
-      <Calendar selectedDate={selectedDate} onDateSelect={handleDateSelect} />
+      <View style={{ paddingHorizontal: 20 }}>
+        <Calendar selectedDate={selectedDate} onDateSelect={handleDateSelect} />
+      </View>
 
       {/* Content Section */}
       <View style={styles.contentSection}>
         {isToday ? (
           <>
             {/* Tab Switcher */}
-            <View
-              style={[styles.tabContainer, { backgroundColor: colors.card }]}
-              onLayout={onTabContainerLayout}
-            >
-              <Animated.View
-                style={[
-                  styles.tabIndicator,
-                  {
-                    backgroundColor: colors.primary + '80',
-                    shadowColor: colors.primary,
-                    width: tabWidth,
-                    transform: [
-                      {
-                        translateX: slideAnim.interpolate({
-                          inputRange: [0, 1],
-                          outputRange: [0, tabWidth + 4],
-                        }),
-                      },
-                    ],
-                  },
-                ]}
-              />
-              <Pressable
-                onPress={() => setActiveTab('tasks')}
-                style={styles.tab}
+            <View style={{ paddingHorizontal: 20 }}>
+              <View
+                style={[styles.tabContainer, { backgroundColor: colors.card }]}
+                onLayout={onTabContainerLayout}
               >
-                <Ionicons
-                  name="checkbox-outline"
-                  size={20}
+                <Animated.View
                   style={[
-                    styles.tabIcon,
-                    { left: 12 },
-                    { color: activeTab === 'tasks' ? '#FFFFFF' : colors.text },
-                    { opacity: activeTab === 'tasks' ? 1 : 0.5 }
+                    styles.tabIndicator,
+                    {
+                      backgroundColor: colors.primary + '80',
+                      shadowColor: colors.primary,
+                      width: tabWidth,
+                      transform: [
+                        {
+                          translateX: slideAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [0, tabWidth + 4],
+                          }),
+                        },
+                      ],
+                    },
                   ]}
                 />
-                <ThemedText
-                  style={[
-                    styles.tabText,
-                    activeTab === 'tasks' && styles.activeTabText
-                  ]}
+                <Pressable
+                  onPress={() => setActiveTab('tasks')}
+                  style={styles.tab}
                 >
-                  Tasks
-                </ThemedText>
-              </Pressable>
-              <Pressable
-                onPress={() => setActiveTab('notes')}
-                style={styles.tab}
-              >
-                <ThemedText
-                  style={[
-                    styles.tabText,
-                    activeTab === 'notes' && styles.activeTabText
-                  ]}
+                  <Ionicons
+                    name="checkbox-outline"
+                    size={20}
+                    style={[
+                      styles.tabIcon,
+                      { left: 12 },
+                      { color: activeTab === 'tasks' ? '#FFFFFF' : colors.text },
+                      { opacity: activeTab === 'tasks' ? 1 : 0.5 }
+                    ]}
+                  />
+                  <ThemedText
+                    style={[
+                      styles.tabText,
+                      activeTab === 'tasks' && styles.activeTabText
+                    ]}
+                  >
+                    Tasks
+                  </ThemedText>
+                </Pressable>
+                <Pressable
+                  onPress={() => setActiveTab('notes')}
+                  style={styles.tab}
                 >
-                  Recent Notes
-                </ThemedText>
-                <Ionicons
-                  name="document-text-outline"
-                  size={20}
-                  style={[
-                    styles.tabIcon,
-                    { right: 12 },
-                    { color: activeTab === 'notes' ? '#FFFFFF' : colors.text },
-                    { opacity: activeTab === 'notes' ? 1 : 0.5 }
-                  ]}
-                />
-              </Pressable>
+                  <ThemedText
+                    style={[
+                      styles.tabText,
+                      activeTab === 'notes' && styles.activeTabText
+                    ]}
+                  >
+                    Recent Notes
+                  </ThemedText>
+                  <Ionicons
+                    name="document-text-outline"
+                    size={20}
+                    style={[
+                      styles.tabIcon,
+                      { right: 12 },
+                      { color: activeTab === 'notes' ? '#FFFFFF' : colors.text },
+                      { opacity: activeTab === 'notes' ? 1 : 0.5 }
+                    ]}
+                  />
+                </Pressable>
+              </View>
             </View>
 
             {activeTab === 'tasks' ? (
-              <TaskList
-                tasks={tasksForSelectedDate}
-                selectedDate={selectedDate}
-                onTaskPress={handleTaskPress}
-                showComingUp={true}
-                upcomingTasks={upcomingTasks}
-              />
+              <View style={[styles.tabContentInner, { paddingHorizontal: 20 }]}>
+                <TaskList
+                  tasks={tasksForSelectedDate}
+                  selectedDate={selectedDate}
+                  onTaskPress={handleTaskPress}
+                  showComingUp={true}
+                  upcomingTasks={upcomingTasks}
+                />
+              </View>
             ) : (
               <RecentNotesList onCreateNote={handleCreateNote} />
             )}
           </>
         ) : (
-          <TaskList
-            tasks={tasksForSelectedDate}
-            selectedDate={selectedDate}
-            onTaskPress={handleTaskPress}
-            showComingUp={false}
-          />
+          <View style={[styles.tabContentInner, { paddingHorizontal: 20 }]}>
+            <TaskList
+              tasks={tasksForSelectedDate}
+              selectedDate={selectedDate}
+              onTaskPress={handleTaskPress}
+              showComingUp={false}
+            />
+          </View>
         )}
       </View>
 
@@ -308,7 +316,6 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 20,
   },
   contentSection: {
     flex: 1,
@@ -371,6 +378,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
   },
   tabContentInner: {
-    minHeight: 200,
+    flex: 1,
   },
 });

@@ -63,6 +63,7 @@ export const tasks = sqliteTable('tasks', {
     completed: integer('completed', { mode: 'boolean' }).notNull().default(false),
     completedAt: integer('completed_at', { mode: 'timestamp' }),
     folderId: text('folder_id'), // Folder ID (no FK constraint)
+    links: text('links').notNull().default('[]'), // JSON array of links
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
     updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
     isDirty: integer('is_dirty', { mode: 'boolean' }).notNull().default(false),

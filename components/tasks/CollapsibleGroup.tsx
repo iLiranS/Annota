@@ -14,6 +14,7 @@ export interface CollapsibleGroupProps {
     onTaskPress: (task: Task) => void;
     onTaskToggle: (taskId: string) => void;
     compact: boolean;
+    isFolder?: boolean;
 }
 
 export function CollapsibleGroup({
@@ -25,6 +26,7 @@ export function CollapsibleGroup({
     onTaskPress,
     onTaskToggle,
     compact,
+    isFolder,
 }: CollapsibleGroupProps) {
     const { colors, dark } = useTheme();
 
@@ -40,12 +42,21 @@ export function CollapsibleGroup({
                         size={14}
                         color={color || colors.text + '60'}
                     />
+                    {isFolder && (
+                        <Ionicons
+                            name="folder-outline"
+                            size={16}
+                            color={color || colors.text + '70'}
+                            style={{ marginLeft: 2 }}
+                        />
+                    )}
                     <ThemedText style={[styles.groupTitle, color && { color }]}>{title}</ThemedText>
-                    <View style={[styles.groupBadge, { backgroundColor: (color || colors.primary) + '20' }]}>
-                        <ThemedText style={[styles.groupBadgeText, { color: color || colors.primary }]}>
-                            {tasks.length}
-                        </ThemedText>
-                    </View>
+                </View>
+
+                <View style={[styles.taskCountBadge, { backgroundColor: colors.primary + '15' }]}>
+                    <ThemedText style={[styles.taskCountText, { color: colors.primary }]}>
+                        {tasks.length}
+                    </ThemedText>
                 </View>
             </Pressable>
 
@@ -96,12 +107,15 @@ const styles = StyleSheet.create({
         fontSize: 13,
         fontWeight: '600',
     },
-    groupBadge: {
+    taskCountBadge: {
+        minWidth: 22,
+        height: 22,
+        borderRadius: 11,
+        alignItems: 'center',
+        justifyContent: 'center',
         paddingHorizontal: 6,
-        paddingVertical: 2,
-        borderRadius: 10,
     },
-    groupBadgeText: {
+    taskCountText: {
         fontSize: 10,
         fontWeight: '700',
     },

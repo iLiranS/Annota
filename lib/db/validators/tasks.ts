@@ -13,4 +13,5 @@ export const insertTaskSchema = createInsertSchema(tasks, {
     isWholeDay: true,
     completed: true,
     folderId: true,
+    links: true,
 });

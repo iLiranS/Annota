@@ -171,7 +171,7 @@ export default function LocationPickerModal({
                         <Ionicons
                             name={browsingFolder?.icon as keyof typeof Ionicons.glyphMap ?? 'home'}
                             size={20}
-                            color={colors.primary}
+                            color={browsingFolder?.color ?? colors.primary}
                         />
                         <Text style={[styles.currentLocationText, { color: colors.text }]}>
                             {browsingFolder?.name ?? 'Notes (Root)'}
@@ -248,11 +248,11 @@ export default function LocationPickerModal({
                                     }
                                 ]}
                             >
-                                <View style={[styles.folderIconWrapper, { backgroundColor: '#F59E0B' + '20' }]}>
+                                <View style={[styles.folderIconWrapper, { backgroundColor: (folder.color ?? '#F59E0B') + '20' }]}>
                                     <Ionicons
                                         name={folder.icon as keyof typeof Ionicons.glyphMap}
                                         size={20}
-                                        color="#F59E0B"
+                                        color={folder.color ?? '#F59E0B'}
                                     />
                                 </View>
                                 <Text style={[styles.folderName, { color: colors.text }]}>

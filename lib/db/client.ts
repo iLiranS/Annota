@@ -72,6 +72,7 @@ const CREATE_TABLES_SQL = `
     completed INTEGER NOT NULL DEFAULT 0,
     completed_at INTEGER,
     folder_id TEXT,
+    links TEXT NOT NULL DEFAULT '[]',
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL,
     is_dirty INTEGER NOT NULL DEFAULT 0,
@@ -161,6 +162,14 @@ export function initDatabase(expoDb: SQLiteDatabase, drizzleDb: DbType): void {
         // Backfill completed_at with updatedAt for currently completed tasks
         expoDb.execSync('UPDATE tasks SET completed_at = updated_at WHERE completed = 1');
         console.log('Migration complete: completed_at column added');
+      }
+
+      // Migration: Add links column to tasks table if it doesn't exist
+      const hasLinksColumn = taskColumns.some((col: any) => col.name === 'links');
+      if (!hasLinksColumn) {
+        console.log('Running migration: Adding links column to tasks table');
+        expoDb.execSync("ALTER TABLE tasks ADD COLUMN links TEXT NOT NULL DEFAULT '[]'");
+        console.log('Migration complete: links column added');
       }
 
       // Migration: Add is_perm_deleted column to note_metadata, folders, and tasks

@@ -75,7 +75,8 @@ export default function TaskItem({ task, onPress, showDate = false }: TaskItemPr
                 styles.taskItem,
                 {
                     backgroundColor: dark ? 'rgba(255,255,255,0.04)' : colors.card,
-                    borderColor: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
+                    borderTopWidth: StyleSheet.hairlineWidth,
+                    borderTopColor: colors.border,
                     opacity: task.completed ? 0.6 : pressed ? 0.9 : 1,
                     transform: [{ scale: pressed ? 0.98 : 1 }],
                 },
@@ -97,48 +98,34 @@ export default function TaskItem({ task, onPress, showDate = false }: TaskItemPr
             </Pressable>
 
             <View style={styles.taskItemContent}>
-                <ThemedText
-                    style={[
-                        styles.taskItemTitle,
-                        task.completed && { textDecorationLine: 'line-through', opacity: 0.7 },
-                    ]}
-                    numberOfLines={1}
-                >
-                    {task.title}
-                </ThemedText>
+                <View style={styles.titleRow}>
+                    <ThemedText
+                        style={[
+                            styles.taskItemTitle,
+                            task.completed && { textDecorationLine: 'line-through', opacity: 0.7 },
+                        ]}
+                        numberOfLines={1}
+                    >
+                        {task.title}
+                    </ThemedText>
 
-                {linkedFolder && (
-                    <View style={[
-                        styles.folderBadge,
-                        { backgroundColor: (linkedFolder.color || colors.primary) + '15' }
-                    ]}>
-                        <Ionicons name="folder" size={10} color={linkedFolder.color || colors.primary} />
-                        <ThemedText style={[styles.folderLabel, { color: linkedFolder.color || colors.primary }]}>
-                            {linkedFolder.name}
-                        </ThemedText>
-                    </View>
-                )}
+                    {linkedFolder && (
+                        <View style={[
+                            styles.folderBadge,
+                            { backgroundColor: (linkedFolder.color || colors.primary) + '15' }
+                        ]}>
+                            <Ionicons name="folder" size={10} color={linkedFolder.color || colors.primary} />
+                            <ThemedText style={[styles.folderLabel, { color: linkedFolder.color || colors.primary }]}>
+                                {linkedFolder.name}
+                            </ThemedText>
+                        </View>
+                    )}
+                </View>
             </View>
 
             <View style={styles.rightSection}>
                 {task.deadline && (
                     <View style={styles.timeContainer}>
-                        {!task.isWholeDay && !task.completed && (
-                            <Ionicons
-                                name="timer-outline"
-                                size={12}
-                                color={(() => {
-                                    if (task.completed) return colors.text + '40';
-                                    if (task.isWholeDay) return colors.text + '60';
-                                    const now = new Date();
-                                    const diff = task.deadline.getTime() - now.getTime();
-                                    if (diff < 0) return '#EF4444'; // Red for passed
-                                    if (diff < 3600000) return '#F59E0B'; // Orange for < 1h
-                                    return colors.text + '60';
-                                })()}
-                                style={{ marginRight: 4 }}
-                            />
-                        )}
                         <ThemedText style={[
                             styles.taskItemTime,
                             {
@@ -167,14 +154,9 @@ const styles = StyleSheet.create({
     taskItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 12,
-        borderRadius: 16,
-        borderWidth: 1,
-        marginBottom: 8,
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.03,
-        shadowRadius: 1,
-        elevation: 2,
+        paddingHorizontal: 12,
+        paddingVertical: 14,
+        marginBottom: 0,
     },
     toggleCircle: {
         width: 22,
@@ -192,7 +174,12 @@ const styles = StyleSheet.create({
     taskItemTitle: {
         fontSize: 16,
         fontWeight: '600',
-        marginBottom: 2,
+        flexShrink: 1,
+    },
+    titleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
     },
     rightSection: {
         flexDirection: 'row',
@@ -216,7 +203,6 @@ const styles = StyleSheet.create({
         paddingVertical: 2,
         borderRadius: 6,
         gap: 4,
-        marginTop: 2,
     },
     folderLabel: {
         fontSize: 11,

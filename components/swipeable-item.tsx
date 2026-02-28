@@ -1,4 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useTheme } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -40,6 +41,7 @@ export default function SwipeableItem({
     onRestore,
 }: SwipeableItemProps) {
     const swipeableRef = React.useRef<SwipeableMethods>(null);
+    const { colors } = useTheme();
 
     const activeRightActions = React.useMemo(() => {
         const actions = rightActions ? [...rightActions] : [];
@@ -137,7 +139,12 @@ export default function SwipeableItem({
             rightThreshold={40}
             leftThreshold={40}
             onSwipeableWillOpen={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
-            containerStyle={styles.container}
+            containerStyle={[styles.container, {
+                backgroundColor: colors.card,
+                borderTopWidth: StyleSheet.hairlineWidth,
+                borderBottomWidth: StyleSheet.hairlineWidth,
+                borderColor: colors.border,
+            }]}
         >
             {children}
         </ReanimatedSwipeable>
@@ -146,16 +153,18 @@ export default function SwipeableItem({
 
 const styles = StyleSheet.create({
     container: {
-        marginBottom: 8,
+        marginBottom: 0,
     },
     actionsContainer: {
         flexDirection: 'row',
         height: '100%',
+        paddingHorizontal: 12,
         gap: 8,
     },
     actionButton: {
-        width: 60,
-        height: '100%',
+        width: 40,
+        height: '90%',
+        alignSelf: 'center',
         borderRadius: 14,
         overflow: 'hidden',
     },

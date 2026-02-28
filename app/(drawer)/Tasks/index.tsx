@@ -27,7 +27,7 @@ export default function TasksScreen() {
     // Stores
     const { tasks, toggleComplete, loadTasks, clearCompletedTasks } = useTasksStore();
     const { general, updateGeneralSettings } = useSettingsStore();
-    const { getFolderById } = useNotesStore();
+    const { getFolderById, notes } = useNotesStore();
     const compactMode = general.compactMode;
     const showCompleted = general.tasksShowDone;
 
@@ -103,55 +103,87 @@ export default function TasksScreen() {
     const pendingTasks = sortedTasks.filter((t) => !t.completed);
     const completedTasks = sortedTasks.filter((t) => t.completed);
 
-    // Group pending tasks
-    const groupedPendingTasks = useMemo(() => {
+    // Group tasks
+    const groupedTasks = useMemo(() => {
         if (groupBy === 'none') return null;
 
         const groups: Map<string, { title: string; color?: string; tasks: Task[] }> = new Map();
 
         if (groupBy === 'folder') {
             // Group by folder
-            pendingTasks.forEach((task) => {
-                const folder = task.folderId ? getFolderById(task.folderId) : null;
+            const processTask = (task: Task) => {
                 const groupId = task.folderId || '__no_folder__';
-                const groupTitle = folder ? folder.name : 'No Folder';
-                const groupColor = folder?.color;
+
+                if (!groups.has(groupId)) {
+                    const folder = task.folderId ? getFolderById(task.folderId) : null;
+                    const groupTitle = folder ? folder.name : 'No Folder';
+                    const groupColor = folder?.color;
+
+                    groups.set(groupId, {
+                        title: groupTitle,
+                        color: groupColor,
+                        tasks: [],
+                        isFolder: !!task.folderId
+                    } as any);
+                }
+                groups.get(groupId)!.tasks.push(task);
+            };
+
+            pendingTasks.forEach(processTask);
+            if (showCompleted) {
+                completedTasks.forEach(processTask);
+            }
+        } else if (groupBy === 'date') {
+            // Group by date (pending only)
+            const now = new Date();
+            const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const tomorrowStart = new Date(todayStart);
+            tomorrowStart.setDate(tomorrowStart.getDate() + 1);
+            const dayAfterTomorrowStart = new Date(tomorrowStart);
+            dayAfterTomorrowStart.setDate(dayAfterTomorrowStart.getDate() + 1);
+
+            pendingTasks.forEach((task) => {
+                let groupId: string;
+                let groupTitle: string;
+                let groupColor: string | undefined;
+
+                if (task.deadline < now) {
+                    groupId = 'past';
+                    groupTitle = 'Past';
+                    groupColor = '#EF4444';
+                } else if (task.deadline < tomorrowStart) {
+                    groupId = 'today';
+                    groupTitle = 'Today';
+                    groupColor = '#F59E0B';
+                } else if (task.deadline < dayAfterTomorrowStart) {
+                    groupId = 'tomorrow';
+                    groupTitle = 'Tomorrow';
+                    groupColor = undefined;
+                } else {
+                    groupId = 'upcoming';
+                    groupTitle = 'Upcoming';
+                    groupColor = undefined;
+                }
 
                 if (!groups.has(groupId)) {
                     groups.set(groupId, { title: groupTitle, color: groupColor, tasks: [] });
                 }
                 groups.get(groupId)!.tasks.push(task);
             });
-        } else if (groupBy === 'date') {
-            // Group by date
-            pendingTasks.forEach((task) => {
-                const dateKey = task.deadline.toDateString();
-                const now = new Date();
-                const isToday = task.deadline.toDateString() === now.toDateString();
-                const tomorrow = new Date(now);
-                tomorrow.setDate(tomorrow.getDate() + 1);
-                const isTomorrow = task.deadline.toDateString() === tomorrow.toDateString();
-
-                let displayTitle = task.deadline.toLocaleDateString('en-US', {
-                    weekday: 'short',
-                    month: 'short',
-                    day: 'numeric',
-                });
-                if (isToday) displayTitle = 'Today';
-                if (isTomorrow) displayTitle = 'Tomorrow';
-
-                const isOverdue = task.deadline < now;
-                const groupColor = isOverdue ? '#EF4444' : isToday ? '#F59E0B' : undefined;
-
-                if (!groups.has(dateKey)) {
-                    groups.set(dateKey, { title: displayTitle, color: groupColor, tasks: [] });
-                }
-                groups.get(dateKey)!.tasks.push(task);
-            });
         }
 
-        return Array.from(groups.entries()).map(([id, data]) => ({ id, ...data }));
-    }, [groupBy, pendingTasks, getFolderById]);
+        let result = Array.from(groups.entries()).map(([id, data]) => ({ id, ...data as any }));
+
+        if (groupBy === 'folder') {
+            const noFolderGroup = result.find(g => g.id === '__no_folder__');
+            if (noFolderGroup) {
+                result = result.filter(g => g.id !== '__no_folder__');
+                result.push(noFolderGroup);
+            }
+        }
+
+        return result;
+    }, [groupBy, pendingTasks, completedTasks, showCompleted, getFolderById]);
 
     const getGroupByLabel = () => {
         if (groupBy === 'none') return 'Group';
@@ -247,8 +279,8 @@ export default function TasksScreen() {
                     </View>
                 </View>
 
-                {/* Pending Tasks - Grouped or Flat */}
-                {pendingTasks.length > 0 && (
+                {/* Tasks - Grouped or Flat */}
+                {(groupBy === 'none' ? pendingTasks.length > 0 : (groupedTasks?.length ?? 0) > 0) && (
                     <View style={styles.section}>
                         {groupBy === 'none' ? (
                             <>
@@ -263,7 +295,7 @@ export default function TasksScreen() {
                                 ))}
                             </>
                         ) : (
-                            groupedPendingTasks?.map((group) => (
+                            groupedTasks?.map((group) => (
                                 <CollapsibleGroup
                                     key={group.id}
                                     title={group.title}
@@ -274,6 +306,7 @@ export default function TasksScreen() {
                                     onTaskPress={handleTaskPress}
                                     onTaskToggle={handleToggle}
                                     compact={compactMode}
+                                    isFolder={(group as any).isFolder}
                                 />
                             ))
                         )}
@@ -281,7 +314,7 @@ export default function TasksScreen() {
                 )}
 
                 {/* Completed Tasks */}
-                {showCompleted && completedTasks.length > 0 && (
+                {showCompleted && groupBy !== 'folder' && completedTasks.length > 0 && (
                     <View style={styles.section}>
                         <View style={styles.completedHeader}>
                             <ThemedText style={[styles.sectionTitle, { color: colors.text + '60', marginBottom: 0 }]}>

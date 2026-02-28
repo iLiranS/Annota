@@ -49,6 +49,7 @@ export default function TaskEditScreen() {
             isWholeDay: values.isWholeDay ?? false,
             completed: values.completed ?? false,
             folderId: values.folderId,
+            links: values.links,
         });
 
         router.back();
@@ -99,6 +100,7 @@ export default function TaskEditScreen() {
                     isWholeDay: task.isWholeDay,
                     completed: task.completed,
                     folderId: task.folderId,
+                    links: task.links,
                 }}
                 onSubmit={handleSave}
                 onDelete={handleDelete}
