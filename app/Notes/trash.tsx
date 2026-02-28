@@ -24,6 +24,8 @@ interface FolderItemProps {
     onPress: () => void;
     onRestore: () => void;
     onPermanentDelete: () => void;
+    isFirst?: boolean;
+    isLast?: boolean;
 }
 
 function OriginalFolderBadge({ folderId }: { folderId: string | null }) {
@@ -50,7 +52,7 @@ function OriginalFolderBadge({ folderId }: { folderId: string | null }) {
     );
 }
 
-function FolderCard({ folder, onPress, onRestore, onPermanentDelete }: FolderItemProps) {
+function FolderCard({ folder, onPress, onRestore, onPermanentDelete, isFirst, isLast }: FolderItemProps) {
     const { colors, dark } = useTheme();
 
     const formatDate = (date: Date | null): string => {
@@ -66,18 +68,21 @@ function FolderCard({ folder, onPress, onRestore, onPermanentDelete }: FolderIte
         return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     };
 
+    const showTopBorder = !isFirst;
+    const showBottomBorder = !isLast;
+
     return (
         <SwipeableItem onRestore={onRestore} onDelete={onPermanentDelete}>
             <ThemedPressable
                 onPress={onPress}
                 style={({ pressed }) => [
                     styles.folderCard,
-                    {
-                        borderColor: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
-                    },
                     pressed && styles.pressed,
                 ]}
             >
+                {showTopBorder && <View style={[styles.border, styles.topBorder, { backgroundColor: colors.border }]} />}
+                {showBottomBorder && <View style={[styles.border, styles.bottomBorder, { backgroundColor: colors.border }]} />}
+
                 <View style={[styles.folderIcon, { backgroundColor: folder.color + '20' }]}>
                     <Ionicons name={folder.icon as keyof typeof Ionicons.glyphMap} size={22} color={folder.color} />
                 </View>
@@ -101,9 +106,11 @@ interface NoteItemProps {
     onPress: () => void;
     onRestore: () => void;
     onPermanentDelete: () => void;
+    isFirst?: boolean;
+    isLast?: boolean;
 }
 
-function NoteCard({ note, onPress, onRestore, onPermanentDelete }: NoteItemProps) {
+function NoteCard({ note, onPress, onRestore, onPermanentDelete, isFirst, isLast }: NoteItemProps) {
     const { colors, dark } = useTheme();
 
     const formatDate = (date: Date | null): string => {
@@ -119,18 +126,20 @@ function NoteCard({ note, onPress, onRestore, onPermanentDelete }: NoteItemProps
         return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     };
 
+    const showTopBorder = !isFirst;
+    const showBottomBorder = !isLast;
+
     return (
         <SwipeableItem onRestore={onRestore} onDelete={onPermanentDelete}>
             <ThemedPressable
                 onPress={onPress}
                 style={({ pressed }) => [
                     styles.noteCard,
-                    {
-                        borderColor: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
-                    },
                     pressed && styles.pressed,
                 ]}
             >
+                {showTopBorder && <View style={[styles.border, styles.topBorder, { backgroundColor: colors.border }]} />}
+                {showBottomBorder && <View style={[styles.border, styles.bottomBorder, { backgroundColor: colors.border }]} />}
                 <View style={styles.noteHeader}>
                     <View style={styles.titleRow}>
                         <Ionicons name="document-text" size={16} color="#EF4444" />
@@ -286,14 +295,23 @@ export default function TrashScreen() {
 
     const headerTitle = currentFolder && currentFolderId !== TRASH_FOLDER_ID ? currentFolder.name : 'Trash';
 
-    const renderItem = ({ item }: { item: ListItem }) => {
+    const renderItem = ({ item, index }: { item: ListItem, index: number }) => {
         if (item.type === 'section-header') {
+            const iconName = item.title === 'Folders' ? 'folder' : 'document-text';
             return (
-                <ThemedText style={[styles.sectionHeader, { color: colors.text + '60' }]}>
-                    {item.title}
-                </ThemedText>
+                <View style={styles.sectionHeaderRow}>
+                    <Ionicons name={iconName} size={14} color={colors.text + '50'} />
+                    <ThemedText style={[styles.sectionHeaderText, { color: colors.text + '50' }]}>
+                        {item.title}
+                    </ThemedText>
+                </View>
             );
         }
+
+        const prevItem = index > 0 ? trashData[index - 1] : null;
+        const nextItem = index < trashData.length - 1 ? trashData[index + 1] : null;
+        const isFirst = !prevItem || prevItem.type !== item.type;
+        const isLast = !nextItem || nextItem.type !== item.type;
 
         if (item.type === 'folder') {
             return (
@@ -304,6 +322,8 @@ export default function TrashScreen() {
                     onPermanentDelete={() =>
                         handlePermanentDeleteFolder(item.data.id, item.data.name)
                     }
+                    isFirst={isFirst}
+                    isLast={isLast}
                 />
             );
         }
@@ -316,6 +336,8 @@ export default function TrashScreen() {
                 onPermanentDelete={() =>
                     handlePermanentDeleteNote(item.data.id, item.data.title)
                 }
+                isFirst={isFirst}
+                isLast={isLast}
             />
         );
     };
@@ -415,11 +437,17 @@ const styles = StyleSheet.create({
     folderCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 14,
-        borderRadius: 12,
-        borderWidth: 1,
-        marginBottom: 8,
+        padding: 16,
+        paddingHorizontal: 20,
+        backgroundColor: 'transparent',
         gap: 12,
+        position: 'relative',
+    },
+    noteCard: {
+        padding: 16,
+        paddingHorizontal: 20,
+        backgroundColor: 'transparent',
+        position: 'relative',
     },
     folderIcon: {
         width: 40,
@@ -436,11 +464,31 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         marginBottom: 2,
     },
-    noteCard: {
-        padding: 16,
-        borderRadius: 12,
-        borderWidth: 1,
+    border: {
+        position: 'absolute',
+        left: '5%',
+        right: '5%',
+        height: StyleSheet.hairlineWidth,
+    },
+    topBorder: {
+        top: 0,
+    },
+    bottomBorder: {
+        bottom: 0,
+    },
+    sectionHeaderRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 4,
+        marginTop: 16,
         marginBottom: 8,
+        gap: 6,
+    },
+    sectionHeaderText: {
+        fontSize: 12,
+        fontWeight: '700',
+        textTransform: 'uppercase',
+        letterSpacing: 0.8,
     },
     pressed: {
         opacity: 0.7,

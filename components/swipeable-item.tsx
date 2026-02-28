@@ -27,6 +27,7 @@ interface SwipeableItemProps {
     onDelete?: () => void;
     /** @deprecated Use leftActions/rightActions instead */
     onRestore?: () => void;
+    compact?: boolean;
 }
 
 /**
@@ -39,9 +40,13 @@ export default function SwipeableItem({
     rightActions,
     onDelete,
     onRestore,
+    compact = false,
 }: SwipeableItemProps) {
     const swipeableRef = React.useRef<SwipeableMethods>(null);
     const { colors } = useTheme();
+
+    const buttonWidth = compact ? 55 : 80;
+    const margin = 12;
 
     const activeRightActions = React.useMemo(() => {
         const actions = rightActions ? [...rightActions] : [];
@@ -75,11 +80,7 @@ export default function SwipeableItem({
         if (actions.length === 0) return null;
 
         const isLeft = side === 'left';
-        // 60 width per button + 8 gap between them + 12 margin from card
-        const buttonWidth = 60;
-        const gap = 8;
-        const margin = 12;
-        const totalWidth = (actions.length * buttonWidth) + ((actions.length - 1) * gap) + margin;
+        const totalWidth = (actions.length * buttonWidth) + margin;
 
         const animatedStyle = useAnimatedStyle(() => {
             return {
@@ -95,6 +96,7 @@ export default function SwipeableItem({
             <Reanimated.View
                 style={[
                     styles.actionsContainer,
+                    { backgroundColor: colors.card },
                     {
                         width: totalWidth,
                         [isLeft ? 'paddingRight' : 'paddingLeft']: margin,
@@ -107,7 +109,7 @@ export default function SwipeableItem({
                         key={index}
                         style={[
                             styles.actionButton,
-                            { backgroundColor: action.backgroundColor },
+                            { backgroundColor: action.backgroundColor, width: buttonWidth },
                         ]}
                     >
                         <Pressable
@@ -121,7 +123,7 @@ export default function SwipeableItem({
                                 pressed && styles.actionPressed,
                             ]}
                         >
-                            <Ionicons name={action.icon} size={22} color="#FFFFFF" />
+                            <Ionicons name={action.icon} size={24} color="#FFFFFF" />
                         </Pressable>
                     </View>
                 ))}
@@ -139,12 +141,7 @@ export default function SwipeableItem({
             rightThreshold={40}
             leftThreshold={40}
             onSwipeableWillOpen={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
-            containerStyle={[styles.container, {
-                backgroundColor: colors.card,
-                borderTopWidth: StyleSheet.hairlineWidth,
-                borderBottomWidth: StyleSheet.hairlineWidth,
-                borderColor: colors.border,
-            }]}
+            containerStyle={[styles.container]}
         >
             {children}
         </ReanimatedSwipeable>
@@ -158,14 +155,10 @@ const styles = StyleSheet.create({
     actionsContainer: {
         flexDirection: 'row',
         height: '100%',
-        paddingHorizontal: 12,
-        gap: 8,
     },
     actionButton: {
-        width: 40,
-        height: '90%',
+        height: '100%',
         alignSelf: 'center',
-        borderRadius: 14,
         overflow: 'hidden',
     },
     actionPressable: {

@@ -5,7 +5,6 @@ import { useAppTheme } from '@/hooks/use-app-theme';
 import { NoteMetadata } from '@/lib/stores/notes.store';
 import { useSettingsStore } from '@/lib/stores/settings.store';
 import { formatRelativeDate } from '@/utils/date-formatter';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, View } from 'react-native';
 
 interface NoteCardProps {
@@ -19,6 +18,8 @@ interface NoteCardProps {
     description?: React.ReactNode;
     showDescription?: boolean;
     showTimestamp?: boolean;
+    isFirst?: boolean;
+    isLast?: boolean;
 }
 
 export default function NoteCard({
@@ -31,12 +32,17 @@ export default function NoteCard({
     description,
     showDescription = true,
     showTimestamp,
-    swipeable = true
+    swipeable = true,
+    isFirst = false,
+    isLast = false,
 }: NoteCardProps) {
     const { colors, dark } = useAppTheme();
     const { general } = useSettingsStore();
     const isCompact = general.compactMode;
     const shouldShowTimestamp = showTimestamp ?? !isCompact;
+
+    const showTopBorder = !isFirst;
+    const showBottomBorder = !isLast;
 
     const CardContent = (
         <ThemedPressable
@@ -44,38 +50,40 @@ export default function NoteCard({
             onLongPress={onLongPress}
             style={({ pressed }) => [
                 styles.noteCard,
-                {
-                    backgroundColor: colors.card,
-                },
-                isCompact && { paddingVertical: 12 },
                 pressed && styles.pressed,
+                { paddingVertical: isCompact ? 10 : 16 }
             ]}
         >
-            <View style={[styles.noteHeader]}>
-                <View style={styles.titleRow}>
-                    <Ionicons name="document-text" size={16} color={colors.primary} />
+            {showTopBorder && (
+                <View style={[styles.border, styles.topBorder, { backgroundColor: colors.border }]} />
+            )}
+            {showBottomBorder && (
+                <View style={[styles.border, styles.bottomBorder, { backgroundColor: colors.border }]} />
+            )}
+
+            <View style={styles.contentContainer}>
+                <View style={styles.mainRow}>
                     <ThemedText style={styles.title} numberOfLines={1}>
                         {note.title || 'Untitled Note'}
                     </ThemedText>
-                </View>
-                {shouldShowTimestamp && (
-                    <View style={styles.timestampRow}>
-                        <ThemedText style={[styles.timestamp, { color: colors.text + '60' }]}>
+                    {shouldShowTimestamp && (
+                        <ThemedText style={[styles.timestamp, { color: colors.text + '50' }]}>
                             {formatRelativeDate(note.updatedAt)}
                         </ThemedText>
-                    </View>
-                )}
+                    )}
+                </View>
+
+                {(description && showDescription) ? (
+                    <View style={styles.descriptionContainer}>{description}</View>
+                ) : (!isCompact && note.preview) ? (
+                    <ThemedText
+                        style={[styles.preview, { color: colors.text + '60' }]}
+                        numberOfLines={1}
+                    >
+                        {note.preview}
+                    </ThemedText>
+                ) : null}
             </View>
-            {description && showDescription ? (
-                description
-            ) : !isCompact ? (
-                <ThemedText
-                    style={[styles.preview, { color: colors.text + '70' }]}
-                    numberOfLines={1}
-                >
-                    {note.preview}
-                </ThemedText>
-            ) : null}
         </ThemedPressable>
     );
 
@@ -109,7 +117,11 @@ export default function NoteCard({
 
         if (rightActions.length > 0 || leftActions.length > 0) {
             return (
-                <SwipeableItem leftActions={leftActions} rightActions={rightActions}>
+                <SwipeableItem
+                    leftActions={leftActions}
+                    rightActions={rightActions}
+                    compact={isCompact}
+                >
                     {CardContent}
                 </SwipeableItem>
             );
@@ -122,27 +134,34 @@ export default function NoteCard({
 const styles = StyleSheet.create({
     noteCard: {
         paddingHorizontal: 20,
-        paddingVertical: 16,
-        // Border and radius removed for full-width list style
+
     },
     pressed: {
         opacity: 0.7,
-        transform: [{ scale: 0.98 }],
     },
-    noteHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-
+    border: {
+        position: 'absolute',
+        left: '5%',
+        right: '5%',
+        height: StyleSheet.hairlineWidth,
     },
-    titleRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
+    topBorder: {
+        top: 0,
+    },
+    bottomBorder: {
+        bottom: 0,
+    },
+    contentContainer: {
         flex: 1,
     },
+    mainRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'baseline',
+        gap: 12,
+    },
     title: {
-        fontSize: 16,
+        fontSize: 17,
         fontWeight: '600',
         flex: 1,
     },
@@ -153,8 +172,12 @@ const styles = StyleSheet.create({
     timestamp: {
         fontSize: 12,
     },
+    descriptionContainer: {
+        marginTop: 4,
+    },
     preview: {
         fontSize: 14,
-        lineHeight: 20,
+        marginTop: 4,
+        lineHeight: 18,
     },
 });

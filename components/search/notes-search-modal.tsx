@@ -137,22 +137,31 @@ export default function NotesSearchModal({
     );
 
     const renderItem = useCallback(
-        ({ item }: { item: ListItem }) => {
+        ({ item, index }: { item: ListItem; index: number }) => {
             if (item.type === 'section-header') {
+                const iconName = item.title === 'Folders' ? 'folder' : 'document-text';
                 return (
-                    <ThemedText style={[styles.sectionHeader, { color: colors.text + '60' }]}>
-                        {item.title}
-                    </ThemedText>
+                    <View style={styles.sectionHeaderRow}>
+                        <Ionicons name={iconName} size={14} color={colors.text + '50'} />
+                        <ThemedText style={[styles.sectionHeaderText, { color: colors.text + '50' }]}>
+                            {item.title}
+                        </ThemedText>
+                    </View>
                 );
             }
 
             if (item.type === 'folder') {
+                const isFirstFolder = index === 0 || searchData[index - 1].type !== 'folder';
+                const isLastFolder = index === searchData.length - 1 || searchData[index + 1].type !== 'folder';
+
                 return (
                     <FolderCard
                         folder={item.data}
                         onPress={() => handleFolderPress(item.data.id)}
                         onLongPress={onFolderLongPress ? () => onFolderLongPress(item.data) : undefined}
                         swipeable={!item.data.isSystem}
+                        isFirst={isFirstFolder}
+                        isLast={isLastFolder}
                     />
                 );
             }
@@ -160,19 +169,11 @@ export default function NotesSearchModal({
             if (item.type === 'note') {
                 const note = item.data;
                 const folder = allFolders.find((f) => f.id === note.folderId);
+                const isFirstNote = index === 0 || searchData[index - 1].type !== 'note';
+                const isLastNote = index === searchData.length - 1 || searchData[index + 1].type !== 'note';
 
                 const footer = (
                     <View style={styles.noteFooter}>
-                        {!isCompact ? (
-                            <ThemedText
-                                style={[styles.preview, { color: colors.text + '70' }]}
-                                numberOfLines={1}
-                            >
-                                {note.preview}
-                            </ThemedText>
-                        ) : (
-                            <View style={{ flex: 1 }} />
-                        )}
                         <View style={[styles.folderInfo, { backgroundColor: folder?.color + '10' || colors.background + '10' }]}>
                             <Ionicons
                                 name={folder ? (folder.icon as any) : 'home'}
@@ -187,24 +188,24 @@ export default function NotesSearchModal({
                 );
 
                 return (
-                    <View style={{ marginVertical: 4 }}>
-                        <NoteCard
-                            note={note}
-                            onPress={() => handleNotePress(note.id)}
-                            onLongPress={onNoteLongPress ? () => onNoteLongPress(note) : undefined}
-                            onDelete={() => handleDeleteNote(note.id)}
-                            onTogglePin={() => handleTogglePin(note)}
-                            onToggleQuickAccess={() => handleToggleQuickAccess(note)}
-                            description={footer}
-                            showTimestamp={true}
-                        />
-                    </View>
+                    <NoteCard
+                        note={note}
+                        onPress={() => handleNotePress(note.id)}
+                        onLongPress={onNoteLongPress ? () => onNoteLongPress(note) : undefined}
+                        onDelete={() => handleDeleteNote(note.id)}
+                        onTogglePin={() => handleTogglePin(note)}
+                        onToggleQuickAccess={() => handleToggleQuickAccess(note)}
+                        description={footer}
+                        showTimestamp={true}
+                        isFirst={isFirstNote}
+                        isLast={isLastNote}
+                    />
                 );
             }
 
             return null;
         },
-        [colors, handleFolderPress, handleNotePress, onFolderLongPress, onNoteLongPress, allFolders, handleDeleteNote, handleTogglePin, handleToggleQuickAccess]
+        [colors, handleFolderPress, handleNotePress, onFolderLongPress, onNoteLongPress, allFolders, handleDeleteNote, handleTogglePin, handleToggleQuickAccess, searchData]
     );
 
     const getItemKey = (item: ListItem, index: number): string => {
@@ -362,14 +363,19 @@ const styles = StyleSheet.create({
         paddingTop: 4,
         paddingBottom: 10,
     },
-    sectionHeader: {
+    sectionHeaderRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 12,
+        marginTop: 16,
+        marginBottom: 8,
+        gap: 6,
+    },
+    sectionHeaderText: {
         fontSize: 12,
-        fontWeight: '600',
+        fontWeight: '700',
         textTransform: 'uppercase',
-        letterSpacing: 0.5,
-        marginTop: 12,
-        marginBottom: 10,
-        marginLeft: 4,
+        letterSpacing: 0.8,
     },
     folderInfo: {
         flexDirection: 'row',

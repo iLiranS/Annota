@@ -91,16 +91,16 @@ export default function NotesList() {
     const browseData = useMemo((): ListItem[] => {
         const items: ListItem[] = [];
 
-        // 1. Pinned Notes
-        if (pinnedNotes.length > 0) {
-            items.push({ type: 'section-header', title: 'Pinned' });
-            pinnedNotes.forEach((n) => items.push({ type: 'note', data: n }));
-        }
-
-        // 2. Folders
+        // 1. Folders
         if (browseFolders.length > 0) {
             items.push({ type: 'section-header', title: 'Folders' });
             browseFolders.forEach((f) => items.push({ type: 'folder', data: f }));
+        }
+
+        // 2. Pinned Notes
+        if (pinnedNotes.length > 0) {
+            items.push({ type: 'section-header', title: 'Pinned' });
+            pinnedNotes.forEach((n) => items.push({ type: 'note', data: n }));
         }
 
         // 3. Remaining Notes
@@ -199,20 +199,30 @@ export default function NotesList() {
 
     const headerTitle = currentFolder ? currentFolder.name : 'Notes';
 
-    const renderItem = ({ item }: { item: ListItem }) => {
+    const renderItem = ({ item, index }: { item: ListItem, index: number }) => {
         if (item.type === 'section-header') {
+            const iconName = item.title === 'Folders' ? 'folder' :
+                item.title === 'Pinned' ? 'pin' : 'document-text';
             return (
-                <ThemedText style={[
-                    styles.sectionHeader,
-                    { color: colors.text + '60' },
-                    isCompact && { marginTop: 8, marginBottom: 4 }
+                <View style={[
+                    styles.sectionHeaderRow,
+                    isCompact && { marginTop: 8, marginBottom: 4 },
                 ]}>
-                    {item.title}
-                </ThemedText>
+                    <Ionicons name={iconName} size={14} color={colors.text + '50'} />
+                    <ThemedText style={[
+                        styles.sectionHeaderText,
+                        { color: colors.text + '50' }
+                    ]}>
+                        {item.title}
+                    </ThemedText>
+                </View>
             );
         }
 
         if (item.type === 'folder') {
+            const isFirstFolder = index === 0 || browseData[index - 1].type !== 'folder';
+            const isLastFolder = index === browseData.length - 1 || browseData[index + 1].type !== 'folder';
+
             return (
                 <FolderCard
                     folder={item.data}
@@ -220,9 +230,14 @@ export default function NotesList() {
                     onLongPress={() => handleFolderLongPress(item.data)}
                     onDelete={() => handleDeleteFolder(item.data.id)}
                     swipeable={!item.data.isSystem}
+                    isFirst={isFirstFolder}
+                    isLast={isLastFolder}
                 />
             );
         }
+
+        const isFirstNote = index === 0 || browseData[index - 1].type !== 'note';
+        const isLastNote = index === browseData.length - 1 || browseData[index + 1].type !== 'note';
 
         return (
             <NoteCard
@@ -232,6 +247,8 @@ export default function NotesList() {
                 onDelete={() => handleDeleteNote(item.data.id)}
                 onTogglePin={() => handleTogglePin(item.data)}
                 onToggleQuickAccess={() => handleToggleQuickAccess(item.data)}
+                isFirst={isFirstNote}
+                isLast={isLastNote}
             />
         );
     };
@@ -359,6 +376,7 @@ export default function NotesList() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        paddingTop: 16,
     },
     headerButton: {
         padding: 4,
@@ -366,14 +384,19 @@ const styles = StyleSheet.create({
     listContent: {
         paddingBottom: 100,
     },
-    sectionHeader: {
-        fontSize: 12,
-        fontWeight: '600',
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
-        marginTop: 12,
-        marginBottom: 10,
+    sectionHeaderRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
         paddingHorizontal: 20,
+        marginTop: 16,
+        marginBottom: 8,
+        gap: 6,
+    },
+    sectionHeaderText: {
+        fontSize: 12,
+        fontWeight: '700',
+        textTransform: 'uppercase',
+        letterSpacing: 0.8,
     },
     emptyContainer: {
         alignItems: 'center',

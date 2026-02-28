@@ -13,6 +13,8 @@ interface FolderCardProps {
     onLongPress?: () => void;
     onDelete?: () => void;
     swipeable?: boolean;
+    isFirst?: boolean;
+    isLast?: boolean;
 }
 
 export default function FolderCard({
@@ -21,11 +23,16 @@ export default function FolderCard({
     onLongPress,
     onDelete,
     swipeable = true,
+    isFirst = false,
+    isLast = false,
 }: FolderCardProps) {
     const { colors, dark } = useTheme();
     const { general } = useSettingsStore();
     const isCompact = general.compactMode;
     const folderColor = folder.color || '#F59E0B'; // Fallback to amber if no color set
+
+    const showTopBorder = !isFirst;
+    const showBottomBorder = !isLast;
 
     const CardContent = (
         <ThemedPressable
@@ -34,13 +41,19 @@ export default function FolderCard({
             style={({ pressed }) => [
                 styles.folderCard,
                 {
-                    backgroundColor: colors.card,
                     paddingVertical: isCompact ? 12 : 16,
                     paddingHorizontal: 20,
                 },
                 pressed && styles.pressed,
             ]}
         >
+            {showTopBorder && (
+                <View style={[styles.border, styles.topBorder, { backgroundColor: colors.border }]} />
+            )}
+            {showBottomBorder && (
+                <View style={[styles.border, styles.bottomBorder, { backgroundColor: colors.border }]} />
+            )}
+
             <View style={[
                 styles.folderIcon,
                 {
@@ -58,7 +71,7 @@ export default function FolderCard({
 
     if (swipeable && onDelete && !folder.isSystem) {
         return (
-            <SwipeableItem onDelete={onDelete}>
+            <SwipeableItem onDelete={onDelete} compact={isCompact}>
                 {CardContent}
             </SwipeableItem>
         );
@@ -73,7 +86,19 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         padding: 20,
         gap: 12,
-        // Borders and radius removed for flat list style
+        position: 'relative',
+    },
+    border: {
+        position: 'absolute',
+        left: '5%',
+        right: '5%',
+        height: StyleSheet.hairlineWidth,
+    },
+    topBorder: {
+        top: 0,
+    },
+    bottomBorder: {
+        bottom: 0,
     },
     folderIcon: {
         width: 40,
@@ -89,6 +114,6 @@ const styles = StyleSheet.create({
     },
     pressed: {
         opacity: 0.7,
-        transform: [{ scale: 0.98 }],
+        backgroundColor: 'rgba(0,0,0,0.02)',
     },
 });

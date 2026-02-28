@@ -79,7 +79,7 @@ export default function RecentNotesList({ onCreateNote }: RecentNotesListProps) 
             >
                 {recentNotes.length > 0 ? (
                     <View style={styles.notesList}>
-                        {recentNotes.map((note) => (
+                        {recentNotes.map((note, index) => (
                             <NoteCard
                                 key={note.id}
                                 note={note}
@@ -88,11 +88,13 @@ export default function RecentNotesList({ onCreateNote }: RecentNotesListProps) 
                                 onDelete={() => handleDeleteNote(note.id)}
                                 onTogglePin={() => handleTogglePin(note)}
                                 onToggleQuickAccess={() => handleToggleQuickAccess(note)}
+                                isFirst={index === 0}
+                                isLast={index === recentNotes.length - 1}
                             />
                         ))}
                     </View>
                 ) : (
-                    <View style={[styles.emptyState, { backgroundColor: dark ? 'rgba(255,255,255,0.02)' : colors.card, borderColor: colors.border }]}>
+                    <View style={[styles.emptyState, { borderColor: colors.border }]}>
                         <Ionicons name="document-text-outline" size={32} color={colors.text + '15'} />
                         <ThemedText style={[styles.emptyText, { color: colors.text + '40' }]}>
                             No recent notes

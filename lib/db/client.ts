@@ -127,61 +127,7 @@ export function initDatabase(expoDb: SQLiteDatabase, drizzleDb: DbType): void {
 
     // Run migrations for existing databases
     try {
-      // Migration: Add color column to folders table if it doesn't exist
-      const folderColumns = expoDb.getAllSync('PRAGMA table_info(folders)') as any[];
-      const hasColorColumn = folderColumns.some((col: any) => col.name === 'color');
-
-      if (!hasColorColumn) {
-        console.log('Running migration: Adding color column to folders table');
-        expoDb.execSync('ALTER TABLE folders ADD COLUMN color TEXT NOT NULL DEFAULT "#F59E0B"');
-
-        // Update system folders with their specific colors
-        expoDb.execSync(`UPDATE folders SET color = '#EF4444' WHERE id = 'system-trash'`);
-        expoDb.execSync(`UPDATE folders SET color = '#8B5CF6' WHERE id = 'system-daily-notes'`);
-
-        console.log('Migration complete: color column added');
-      }
-
-      // Migration: Add is_whole_day column to tasks table if it doesn't exist
-      const taskColumns = expoDb.getAllSync('PRAGMA table_info(tasks)') as any[];
-      const hasIsWholeDayColumn = taskColumns.some((col: any) => col.name === 'is_whole_day');
-
-      if (!hasIsWholeDayColumn) {
-        console.log('Running migration: Adding is_whole_day column to tasks table');
-        expoDb.execSync('ALTER TABLE tasks ADD COLUMN is_whole_day INTEGER NOT NULL DEFAULT 0');
-        console.log('Migration complete: is_whole_day column added');
-      }
-
-      // Migration: Add completed_at column to tasks table if it doesn't exist
-      const hasCompletedAtColumn = taskColumns.some((col: any) => col.name === 'completed_at');
-
-      if (!hasCompletedAtColumn) {
-        console.log('Running migration: Adding completed_at column to tasks table');
-        expoDb.execSync('ALTER TABLE tasks ADD COLUMN completed_at INTEGER');
-
-        // Backfill completed_at with updatedAt for currently completed tasks
-        expoDb.execSync('UPDATE tasks SET completed_at = updated_at WHERE completed = 1');
-        console.log('Migration complete: completed_at column added');
-      }
-
-      // Migration: Add links column to tasks table if it doesn't exist
-      const hasLinksColumn = taskColumns.some((col: any) => col.name === 'links');
-      if (!hasLinksColumn) {
-        console.log('Running migration: Adding links column to tasks table');
-        expoDb.execSync("ALTER TABLE tasks ADD COLUMN links TEXT NOT NULL DEFAULT '[]'");
-        console.log('Migration complete: links column added');
-      }
-
-      // Migration: Add is_perm_deleted column to note_metadata, folders, and tasks
-      const noteColumns = expoDb.getAllSync('PRAGMA table_info(note_metadata)') as any[];
-      const hasNotePermDeleted = noteColumns.some((col: any) => col.name === 'is_perm_deleted');
-      if (!hasNotePermDeleted) {
-        console.log('Running migration: Adding is_perm_deleted columns');
-        expoDb.execSync('ALTER TABLE note_metadata ADD COLUMN is_perm_deleted INTEGER NOT NULL DEFAULT 0');
-        expoDb.execSync('ALTER TABLE folders ADD COLUMN is_perm_deleted INTEGER NOT NULL DEFAULT 0');
-        expoDb.execSync('ALTER TABLE tasks ADD COLUMN is_perm_deleted INTEGER NOT NULL DEFAULT 0');
-        console.log('Migration complete: is_perm_deleted columns added');
-      }
+      // migrations here - I deleted for now as no need
     } catch (migrationError) {
       console.log('Migration check/run completed or not needed:', migrationError);
     }

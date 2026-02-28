@@ -10,11 +10,15 @@ import { router } from 'expo-router';
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { Keyboard, Linking, Modal, Platform, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
 import editorHtml from '../../editor-web/dist/editor-html';
 import { ImageGallery } from './image-gallery';
 import { EditorToolbar } from './toolbar';
 import { EditorState, initialEditorState, PopupType, TipTapEditorProps, TipTapEditorRef } from './types';
+
+const getByteSize = (str: string) => new Blob([str]).size;
+
 
 /** Extract data-image-id values from HTML string */
 function extractImageIds(html: string): string[] {
@@ -81,6 +85,7 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
         keyboardHeightRef.current = keyboardHeight;
         const insets = useSafeAreaInsets();
         const { width, height } = useWindowDimensions();
+        const lastValidContentRef = useRef<string>(initialContent);
 
         // Detect iPhone landscape mode (not tablet, width > height)
         const isIPhoneLandscape = Platform.OS === 'ios' && Platform.isPad === false && width > height;
@@ -227,6 +232,21 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
                             break;
                         case 'content': {
                             // Content updated
+                            const currentSize = getByteSize(data.html);
+                            const previousSize = getByteSize(lastValidContentRef.current);
+
+                            if (currentSize >= 145000 && currentSize > previousSize) {
+                                Toast.show({
+                                    type: 'error',
+                                    text1: 'Note Limit Reached',
+                                    text2: 'Note size is too large. Please shorten it.',
+                                });
+                                // Revert to last valid content
+                                sendCommand('setContent', { content: lastValidContentRef.current });
+                                break;
+                            }
+
+                            lastValidContentRef.current = data.html;
                             onContentChange?.(data.html);
                             break;
 
