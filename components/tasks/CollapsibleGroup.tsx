@@ -14,7 +14,9 @@ export interface CollapsibleGroupProps {
     onTaskPress: (task: Task) => void;
     onTaskToggle: (taskId: string) => void;
     compact: boolean;
+    icon?: string;
     isFolder?: boolean;
+    hideFolder?: boolean;
 }
 
 export function CollapsibleGroup({
@@ -27,6 +29,8 @@ export function CollapsibleGroup({
     onTaskToggle,
     compact,
     isFolder,
+    icon,
+    hideFolder,
 }: CollapsibleGroupProps) {
     const { colors, dark } = useTheme();
 
@@ -44,7 +48,7 @@ export function CollapsibleGroup({
                     />
                     {isFolder && (
                         <Ionicons
-                            name="folder-outline"
+                            name={icon as any ?? "folder-outline"}
                             size={16}
                             color={color || colors.text + '70'}
                             style={{ marginLeft: 2 }}
@@ -69,6 +73,7 @@ export function CollapsibleGroup({
                                 task={task}
                                 onPress={() => onTaskPress(task)}
                                 onToggle={() => onTaskToggle(task.id)}
+                                hideFolder={hideFolder}
                             />
                         ) : (
                             <TaskCard
@@ -76,6 +81,7 @@ export function CollapsibleGroup({
                                 task={task}
                                 onPress={() => onTaskPress(task)}
                                 onToggle={() => onTaskToggle(task.id)}
+                                hideFolder={hideFolder}
                             />
                         )
                     )}

@@ -204,7 +204,7 @@ export default function FolderEditModal({
                                 }
                             ]}
                             value={name}
-                            onChangeText={setName}
+                            onChangeText={(text) => { setName(text.slice(0, 50)); }}
                             placeholder="Folder name"
                             placeholderTextColor={colors.text + '50'}
                         />

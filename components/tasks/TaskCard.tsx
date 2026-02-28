@@ -9,24 +9,50 @@ export interface TaskCardProps {
     task: Task;
     onToggle: () => void;
     onPress: () => void;
+    hideFolder?: boolean;
 }
 
 // ============ COMPACT TASK CARD ============
 
-export function CompactTaskCard({ task, onToggle, onPress }: TaskCardProps) {
+export function CompactTaskCard({ task, onToggle, onPress, hideFolder }: TaskCardProps) {
     const { colors, dark } = useTheme();
+    const { getFolderById } = useNotesStore();
+    const linkedFolder = task.folderId ? getFolderById(task.folderId) : null;
+
     const now = new Date();
-    const isOverdue = task.deadline < now && !task.completed;
     const isToday =
         task.deadline.getDate() === now.getDate() &&
         task.deadline.getMonth() === now.getMonth() &&
         task.deadline.getFullYear() === now.getFullYear();
 
-    const deadlineColor = isOverdue ? '#EF4444' : isToday ? '#F59E0B' : colors.text + '80';
+    const isTaskInPast = task.deadline < now && !task.completed;
+    const deadlineColor = isTaskInPast ? '#EF4444' : isToday ? '#F59E0B' : colors.text + '80';
 
-    const formatShortDate = (date: Date): string => {
-        const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
-        return date.toLocaleDateString('en-US', options);
+    const formatDeadline = (date: Date): string => {
+        const isToday =
+            date.getDate() === now.getDate() &&
+            date.getMonth() === now.getMonth() &&
+            date.getFullYear() === now.getFullYear();
+
+        const tomorrow = new Date(now);
+        tomorrow.setDate(now.getDate() + 1);
+        const isTomorrow =
+            date.getDate() === tomorrow.getDate() &&
+            date.getMonth() === tomorrow.getMonth() &&
+            date.getFullYear() === tomorrow.getFullYear();
+
+        if (isToday && !task.isWholeDay) {
+            return date.toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true,
+            }).toLowerCase();
+        }
+        if (isTomorrow) return 'Tomorrow';
+        return date.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+        });
     };
 
     return (
@@ -67,9 +93,19 @@ export function CompactTaskCard({ task, onToggle, onPress }: TaskCardProps) {
                 {task.title}
             </ThemedText>
 
+            {/* Folder Badge */}
+            {linkedFolder && !hideFolder && (
+                <View style={[styles.inlineBadge, { backgroundColor: linkedFolder.color + '10', borderColor: 'transparent', paddingHorizontal: 4, marginLeft: 4, gap: 3 }]}>
+                    <Ionicons name="folder" size={8} color={linkedFolder.color || colors.primary} />
+                    <ThemedText numberOfLines={1} style={[styles.inlineBadgeText, { color: linkedFolder.color || colors.primary, fontSize: 9 }]}>
+                        {linkedFolder.name}
+                    </ThemedText>
+                </View>
+            )}
+
             {/* Date */}
             <ThemedText style={[styles.compactDate, { color: deadlineColor }]}>
-                {formatShortDate(task.deadline)}
+                {formatDeadline(task.deadline)}
             </ThemedText>
         </Pressable>
     );
@@ -77,7 +113,7 @@ export function CompactTaskCard({ task, onToggle, onPress }: TaskCardProps) {
 
 // ============ REGULAR TASK CARD ============
 
-export function TaskCard({ task, onToggle, onPress }: TaskCardProps) {
+export function TaskCard({ task, onToggle, onPress, hideFolder }: TaskCardProps) {
     const { colors, dark } = useTheme();
     const { getFolderById } = useNotesStore();
     const linkedFolder = task.folderId ? getFolderById(task.folderId) : null;
@@ -164,10 +200,10 @@ export function TaskCard({ task, onToggle, onPress }: TaskCardProps) {
                         {task.title}
                     </ThemedText>
 
-                    {linkedFolder && (
+                    {linkedFolder && !hideFolder && (
                         <View style={[styles.inlineBadge, { backgroundColor: linkedFolder.color + '15', borderColor: linkedFolder.color + '30' }]}>
                             <Ionicons name="folder" size={10} color={linkedFolder.color || colors.primary} />
-                            <ThemedText style={[styles.inlineBadgeText, { color: linkedFolder.color || colors.primary }]}>
+                            <ThemedText numberOfLines={1} style={[styles.inlineBadgeText, { color: linkedFolder.color || colors.primary }]}>
                                 {linkedFolder.name}
                             </ThemedText>
                         </View>
@@ -230,6 +266,7 @@ const styles = StyleSheet.create({
     },
     inlineBadgeText: {
         fontSize: 10,
+        maxWidth: 80,
         fontWeight: '600',
     },
     deadlineText: {

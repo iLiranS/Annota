@@ -58,7 +58,7 @@ const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
 
 const DEFAULT_GENERAL_SETTINGS: GeneralSettings = {
     startOfWeek: 'sunday',
-    compactMode: true,
+    compactMode: false,
     hapticFeedback: true,
     tasksShowDone: true,
     taskListShowDone: true,

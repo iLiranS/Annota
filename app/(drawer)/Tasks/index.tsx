@@ -1,5 +1,5 @@
 import FloatingActionButton from '@/components/floating-action-button';
-import { CollapsibleGroup, CompactTaskCard, TaskCard } from '@/components/tasks';
+import { CollapsibleGroup, CompactTaskCard } from '@/components/tasks';
 import ThemedText from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useNotesStore } from '@/lib/stores/notes.store';
@@ -28,7 +28,6 @@ export default function TasksScreen() {
     const { tasks, toggleComplete, loadTasks, clearCompletedTasks } = useTasksStore();
     const { general, updateGeneralSettings } = useSettingsStore();
     const { getFolderById, notes } = useNotesStore();
-    const compactMode = general.compactMode;
     const showCompleted = general.tasksShowDone;
 
     // Local state
@@ -117,11 +116,13 @@ export default function TasksScreen() {
                 if (!groups.has(groupId)) {
                     const folder = task.folderId ? getFolderById(task.folderId) : null;
                     const groupTitle = folder ? folder.name : 'No Folder';
+                    const groupIcon = folder ? folder.icon : 'folder-outline';
                     const groupColor = folder?.color;
 
                     groups.set(groupId, {
                         title: groupTitle,
                         color: groupColor,
+                        icon: groupIcon,
                         tasks: [],
                         isFolder: !!task.folderId
                     } as any);
@@ -191,7 +192,7 @@ export default function TasksScreen() {
         return 'Date';
     };
 
-    const CardComponent = compactMode ? CompactTaskCard : TaskCard;
+    const CardComponent = CompactTaskCard;
 
     return (
         <ThemedView style={styles.container}>
@@ -301,12 +302,14 @@ export default function TasksScreen() {
                                     title={group.title}
                                     color={group.color}
                                     tasks={group.tasks}
+                                    icon={group.icon}
                                     isCollapsed={collapsedGroups.has(group.id)}
                                     onToggleCollapse={() => toggleGroupCollapse(group.id)}
                                     onTaskPress={handleTaskPress}
                                     onTaskToggle={handleToggle}
-                                    compact={compactMode}
+                                    compact={true}
                                     isFolder={(group as any).isFolder}
+                                    hideFolder={groupBy === 'folder'}
                                 />
                             ))
                         )}
