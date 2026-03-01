@@ -1,4 +1,7 @@
 const IS_DEV = process.env.APP_VARIANT === 'development';
+const iconPath = IS_DEV
+  ? "./assets/images/icon-dev.png"
+  : "./assets/images/icon.png";
 export default {
   "expo": {
     name: IS_DEV ? 'Annota (Dev)' : 'Annota',
@@ -12,9 +15,9 @@ export default {
       "supportsTablet": true,
       bundleIdentifier: IS_DEV ? 'com.anonymous.annota.dev' : 'com.anonymous.annota',
       "icon": {
-        "dark": "./assets/images/icon.png",
-        "light": "./assets/images/icon.png",
-        "tinted": "./assets/images/icon.png"
+        dark: iconPath,
+        light: iconPath,
+        tinted: iconPath
       },
       "requireFullScreen": true,
       "infoPlist": {

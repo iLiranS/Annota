@@ -141,7 +141,7 @@ export function updateTask(
 
     getDb()
         .update(schema.tasks)
-        .set(updates)
+        .set({ ...updates, isDirty: true, updatedAt: new Date() })
         .where(eq(schema.tasks.id, taskId))
         .run();
 }
@@ -162,7 +162,12 @@ export function toggleTaskComplete(taskId: string): void {
 
     getDb()
         .update(schema.tasks)
-        .set({ completed: newCompleted, completedAt: newCompletedAt })
+        .set({
+            completed: newCompleted,
+            completedAt: newCompletedAt,
+            isDirty: true,
+            updatedAt: new Date()
+        })
         .where(eq(schema.tasks.id, taskId))
         .run();
 }

@@ -364,7 +364,7 @@ export default function TasksScreen() {
             <View style={[
                 styles.footer,
                 {
-                    paddingBottom: Math.max(insets.bottom, 16),
+                    paddingBottom: Math.max(insets.bottom, 10),
                     backgroundColor: colors.background,
                     borderTopColor: colors.border,
                 }
@@ -376,6 +376,7 @@ export default function TasksScreen() {
                         onPress={() => router.push('/Tasks/new')}
                         isFloating={false}
                         size={52}
+                        style={{ marginTop: -32 }}
                     />
 
                     <View style={styles.footerSide} />
@@ -488,7 +489,7 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         borderTopWidth: 1,
-        paddingTop: 12,
+        paddingTop: 6,
         paddingHorizontal: 20,
     },
     footerContent: {

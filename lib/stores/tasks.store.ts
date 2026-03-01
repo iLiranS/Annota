@@ -64,7 +64,7 @@ export const useTasksStore = create<TasksState>((set, get) => ({
                     completedAt = updates.completedAt ?? null;
                 }
 
-                return { ...task, ...updates, completedAt };
+                return { ...task, ...updates, completedAt, isDirty: true, updatedAt: new Date() };
             }),
         }));
         SyncScheduler.instance?.notifyContentChange();
@@ -84,7 +84,14 @@ export const useTasksStore = create<TasksState>((set, get) => ({
             tasks: state.tasks.map((task) => {
                 if (task.id !== taskId) return task;
                 const newCompleted = !task.completed;
-                return { ...task, completed: newCompleted, completedAt: newCompleted ? new Date() : null };
+                const newCompletedAt = newCompleted ? new Date() : null;
+                return {
+                    ...task,
+                    completed: newCompleted,
+                    completedAt: newCompletedAt,
+                    isDirty: true,
+                    updatedAt: new Date()
+                };
             }),
         }));
         SyncScheduler.instance?.notifyContentChange();
