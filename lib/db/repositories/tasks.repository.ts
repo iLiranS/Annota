@@ -31,6 +31,12 @@ export function clearDirtyTasks(taskIds: string[], syncedAt: Date): void {
 }
 
 export function upsertSyncedTask(taskData: Task, tx: DbOrTx = getDb()): void {
+    const existing = tx.select().from(schema.tasks).where(eq(schema.tasks.id, taskData.id)).get();
+    if (existing && existing.updatedAt > taskData.updatedAt) {
+        console.log(`[Sync] Local task ${taskData.id} is newer, ignoring pulled row. Local: ${existing.updatedAt}, Pulled: ${taskData.updatedAt}`);
+        return;
+    }
+
     tx.insert(schema.tasks)
         .values(taskData)
         .onConflictDoUpdate({ target: schema.tasks.id, set: taskData })

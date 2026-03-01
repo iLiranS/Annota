@@ -2,10 +2,10 @@ import { generateMnemonic, mnemonicToSeedSync, validateMnemonic } from 'bip39';
 import { Buffer } from 'buffer';
 import * as SecureStore from 'expo-secure-store';
 import crypto from 'react-native-quick-crypto';
+import { useSyncStore } from '../stores/sync.store';
 import './polyfill';
 
 const MASTER_KEY_PREFIX = 'annota_master_key_';
-const LEGACY_MASTER_KEY_ALIAS = 'annota_master_key';
 
 function getMasterKeyAlias(userId: string): string {
     return `${MASTER_KEY_PREFIX}${userId}`;
@@ -56,12 +56,7 @@ export async function removeMasterKey(userId: string) {
     await SecureStore.deleteItemAsync(getMasterKeyAlias(userId));
 }
 
-/**
- * Removes the old global alias used before per-user key storage.
- */
-export async function removeLegacyMasterKey() {
-    await SecureStore.deleteItemAsync(LEGACY_MASTER_KEY_ALIAS);
-}
+
 
 /**
  * Hash the derived encryption key from a mnemonic for server-side validation.
@@ -76,11 +71,20 @@ export async function hashMasterKey(mnemonic: string): Promise<string> {
 }
 
 /**
- * Derive a 256-bit AES key from the 12-word mnemonic.
+ * Derive a 256-bit AES key from the 12-word mnemonic, caching it in the sync store.
  */
 function getAesKeyFromMnemonic(mnemonic: string): Buffer {
+    const { aesKey, activeMnemonic, setAesKey } = useSyncStore.getState();
+
+    if (aesKey && activeMnemonic === mnemonic) {
+        return aesKey;
+    }
+
     const seed = mnemonicToSeedSync(mnemonic);
-    return Buffer.from(seed.subarray(0, 32));
+    const newAesKey = Buffer.from(seed.subarray(0, 32));
+
+    setAesKey(mnemonic, newAesKey);
+    return newAesKey;
 }
 
 export interface EncryptedPayload {

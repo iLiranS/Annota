@@ -27,6 +27,12 @@ export function clearDirtyFolders(folderIds: string[], syncedAt: Date): void {
 }
 
 export function upsertSyncedFolder(folderData: Folder, tx: DbOrTx = getDb()): void {
+    const existing = tx.select().from(schema.folders).where(eq(schema.folders.id, folderData.id)).get();
+    if (existing && existing.updatedAt > folderData.updatedAt) {
+        console.log(`[Sync] Local folder ${folderData.id} is newer, ignoring pulled row. Local: ${existing.updatedAt}, Pulled: ${folderData.updatedAt}`);
+        return;
+    }
+
     tx.insert(schema.folders)
         .values(folderData)
         .onConflictDoUpdate({ target: schema.folders.id, set: folderData })

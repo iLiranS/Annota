@@ -55,6 +55,12 @@ export function clearDirtyNotes(noteIds: string[], syncedAt: Date): void {
 }
 
 export function upsertSyncedNote(noteFullData: any, tx: DbOrTx = getDb()): void {
+    const existing = tx.select().from(schema.noteMetadata).where(eq(schema.noteMetadata.id, noteFullData.id)).get();
+    if (existing && existing.updatedAt > noteFullData.updatedAt) {
+        console.log(`[Sync] Local note ${noteFullData.id} is newer, ignoring pulled row. Local: ${existing.updatedAt}, Pulled: ${noteFullData.updatedAt}`);
+        return;
+    }
+
     const content = normalizeStoredContent(noteFullData.content || '');
     const metadataDetails = { ...noteFullData };
     delete metadataDetails.content; // The rest is metadata
