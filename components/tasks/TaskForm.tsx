@@ -313,7 +313,7 @@ export default function TaskForm({
                                                     const match = link.match(/^annota:\/\/note\/([a-f0-9\-]+)/i);
                                                     if (match) {
                                                         const noteId = match[1];
-                                                        router.push({ pathname: '/Notes/[id]', params: { id: noteId } });
+                                                        router.replace({ pathname: '/Notes/[id]', params: { id: noteId } });
                                                     }
                                                 } else {
                                                     Linking.openURL(link).catch(err => console.error("Couldn't load page", err));

@@ -64,7 +64,7 @@ export default function FolderCard({
             ]}>
                 <Ionicons name={folder.icon as keyof typeof Ionicons.glyphMap} size={isCompact ? 18 : 22} color={folderColor} />
             </View>
-            <ThemedText style={[styles.folderName, isCompact && { fontSize: 15 }]}>{folder.name}</ThemedText>
+            <ThemedText style={styles.folderName}>{folder.name}</ThemedText>
             <Ionicons name="chevron-forward" size={18} color={colors.text + '50'} />
         </ThemedPressable>
     );
@@ -109,7 +109,7 @@ const styles = StyleSheet.create({
     },
     folderName: {
         flex: 1,
-        fontSize: 16,
+        fontSize: 17,
         fontWeight: '600',
     },
     pressed: {

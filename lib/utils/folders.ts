@@ -1,8 +1,8 @@
-import * as Crypto from 'expo-crypto';
+import crypto from 'react-native-quick-crypto';
 import { FolderInsert } from "../db/schema";
 
 export const generateFolder = (data: Partial<FolderInsert>): FolderInsert => {
-    const id = Crypto.randomUUID();
+    const id = crypto.randomUUID();
     const now = new Date();
 
     return {

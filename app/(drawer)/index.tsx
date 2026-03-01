@@ -23,7 +23,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const navigation = useNavigation<DrawerNavigationProp<any>>();
   const { session } = useAuthStore();
-  const [guestDisplayName, setGuestDisplayName] = useState('');
+  const [guestDisplayName, setGuestDisplayName] = useState('Guest');
   const [storeDisplayName, setStoreDisplayName] = useState<string | null>(null);
 
   useEffect(() => {

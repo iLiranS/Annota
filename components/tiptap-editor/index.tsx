@@ -19,6 +19,21 @@ import { EditorState, initialEditorState, PopupType, TipTapEditorProps, TipTapEd
 
 const getByteSize = (str: string) => new Blob([str]).size;
 
+/**
+ * Strip heavy inline src payloads (base64 data URIs) from images that carry
+ * a data-image-id attribute before checking byte size.
+ * These src values are ephemeral (only used for WebView rendering) and are
+ * stripped by normalizeStoredContent before persisting to SQLite.
+ */
+const getStorableByteSize = (html: string): number => {
+    const stripped = html.replace(/<img\b[^>]*>/gi, (imgTag) => {
+        if (!/data-image-id\s*=\s*["'][^"']+["']/i.test(imgTag)) return imgTag;
+        return imgTag
+            .replace(/\s+src\s*=\s*(["']).*?\1/gi, ' src=""')
+            .replace(/\s+src\s*=\s*[^\s>]+/gi, ' src=""');
+    });
+    return getByteSize(stripped);
+};
 
 /** Extract data-image-id values from HTML string */
 function extractImageIds(html: string): string[] {
@@ -231,9 +246,9 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
                             flushQueuedCommands();
                             break;
                         case 'content': {
-                            // Content updated
-                            const currentSize = getByteSize(data.html);
-                            const previousSize = getByteSize(lastValidContentRef.current);
+                            // Content updated — measure storable size (excludes ephemeral base64 src)
+                            const currentSize = getStorableByteSize(data.html);
+                            const previousSize = getStorableByteSize(lastValidContentRef.current);
 
                             if (currentSize >= 145000 && currentSize > previousSize) {
                                 Toast.show({
@@ -536,10 +551,10 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
         const showToolbar = (isKeyboardVisible || isPopupOpen) && !isGalleryVisible;
 
         // ============ IMAGE INSERTION HANDLER ============
-        const handleInsertImage = useCallback(async (source: 'url' | 'library' | 'camera', value?: string) => {
+        const handleInsertImage = useCallback(async (source: 'url' | 'library' | 'camera', value?: string): Promise<boolean> => {
             if (!noteId) {
                 console.warn('Cannot insert image: noteId is required');
-                return;
+                return false;
             }
 
             try {
@@ -549,25 +564,25 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
                     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
                     if (status !== 'granted') {
                         console.warn('Media library permission denied');
-                        return;
+                        return false;
                     }
                     const result = await ImagePicker.launchImageLibraryAsync({
                         mediaTypes: ['images'],
                         quality: 1,
                     });
-                    if (result.canceled || !result.assets[0]) return;
+                    if (result.canceled || !result.assets[0]) return false;
                     imageUri = result.assets[0].uri;
                 } else if (source === 'camera') {
                     const { status } = await ImagePicker.requestCameraPermissionsAsync();
                     if (status !== 'granted') {
                         console.warn('Camera permission denied');
-                        return;
+                        return false;
                     }
                     const result = await ImagePicker.launchCameraAsync({
                         mediaTypes: ['images'],
                         quality: 1,
                     });
-                    if (result.canceled || !result.assets[0]) return;
+                    if (result.canceled || !result.assets[0]) return false;
                     imageUri = result.assets[0].uri;
                 } else if (source === 'url' && value) {
                     // Download and process remote URL
@@ -576,7 +591,7 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
                     sendCommand('insertLocalImage', { imageId: processed.imageId });
                     const imageMap = await NoteImageService.resolveImageSources([processed.imageId]);
                     sendCommand('resolveImages', { imageMap });
-                    return;
+                    return true;
                 }
 
                 if (imageUri) {
@@ -584,9 +599,12 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
                     sendCommand('insertLocalImage', { imageId: processed.imageId });
                     const imageMap = await NoteImageService.resolveImageSources([processed.imageId]);
                     sendCommand('resolveImages', { imageMap });
+                    return true;
                 }
+                return false;
             } catch (err) {
                 console.error('Failed to insert image:', err);
+                return false;
             }
         }, [noteId, sendCommand]);
 

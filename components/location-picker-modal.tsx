@@ -173,7 +173,7 @@ export default function LocationPickerModal({
                             size={20}
                             color={browsingFolder?.color ?? colors.primary}
                         />
-                        <Text style={[styles.currentLocationText, { color: colors.text }]}>
+                        <Text numberOfLines={1} style={[styles.currentLocationText, { color: colors.text }]}>
                             {browsingFolder?.name ?? 'Notes (Root)'}
                         </Text>
                         {isCurrentLocationSelected && (
@@ -331,6 +331,7 @@ const styles = StyleSheet.create({
     currentLocationText: {
         fontSize: 15,
         fontWeight: '500',
+        flexShrink: 1,
     },
     selectedBadge: {
         paddingHorizontal: 8,

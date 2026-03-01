@@ -1,4 +1,5 @@
 import { userApi } from '@/lib/api/user.api';
+import { resetSyncPointer } from '@/lib/sync/sync-service';
 import { generateMasterKey, hashMasterKey, storeMasterKey, validateMasterKey } from '@/lib/utils/crypto';
 
 export const userService = {
@@ -20,6 +21,9 @@ export const userService = {
         const hash = await hashMasterKey(newMnemonic);
         await userApi.updateKeyValidator(userId, hash);
 
+        // Reset the sync pointer to pull any old missing data
+        await resetSyncPointer(userId);
+
         return newMnemonic;
     },
 
@@ -40,6 +44,7 @@ export const userService = {
         await storeMasterKey(userId, mnemonic);
         const hash = await hashMasterKey(mnemonic);
         await userApi.updateKeyValidator(userId, hash);
+        await resetSyncPointer(userId);
     },
 
     /**
@@ -64,6 +69,7 @@ export const userService = {
         }
 
         await storeMasterKey(userId, targetMnemonic);
+        await resetSyncPointer(userId);
     },
 
     updateDisplayName: async (userId: string, displayName: string) => {

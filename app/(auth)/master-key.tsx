@@ -86,6 +86,7 @@ export default function MasterKeyScreen() {
                     style: 'destructive',
                     onPress: async () => {
                         await userService.setupMasterKey(userId, mnemonic, hasCloudData);
+                        useAuthStore.getState().setHasMasterKey(true);
                         router.replace('/(drawer)');
                     },
                 },
@@ -109,14 +110,23 @@ export default function MasterKeyScreen() {
             const storedValidator = await useAuthStore.getState().fetchKeyValidator(userId);
 
             await userService.importMasterKey(userId, joinedWords, storedValidator);
+            useAuthStore.getState().setHasMasterKey(true);
 
             router.replace('/(drawer)');
         } catch (err: any) {
             console.error('Import key validation error:', err);
             if (err.message === 'INVALID_FORMAT') {
-                Alert.alert('Invalid Key', 'The 12-word phrase you entered is invalid. Please check your spelling and try again.');
+                Toast.show({
+                    type: 'error',
+                    text1: 'Invalid Key',
+                    text2: 'The 12-word phrase you entered is invalid. Please check your spelling.',
+                });
             } else if (err.message === 'HASH_MISMATCH') {
-                Alert.alert('Key Mismatch', 'The 12-word phrase does not match your registered key. Please try again.');
+                Toast.show({
+                    type: 'error',
+                    text1: 'Key Mismatch',
+                    text2: 'The 12-word phrase does not match your registered key. Please try again.',
+                });
             } else {
                 Toast.show({
                     type: 'error',
@@ -254,6 +264,18 @@ export default function MasterKeyScreen() {
                         </TouchableOpacity>
                     </>
                 )}
+
+                <TouchableOpacity
+                    style={styles.logoutLink}
+                    onPress={async () => {
+                        await useAuthStore.getState().signOut();
+                        router.replace('/(auth)');
+                    }}
+                >
+                    <Text style={[styles.logoutText, { color: theme.colors.error || '#FF3B30' }]}>
+                        Sign out of this account
+                    </Text>
+                </TouchableOpacity>
             </ScrollView>
         </KeyboardAvoidingView>
     );
@@ -372,5 +394,15 @@ const styles = StyleSheet.create({
     lostKeyText: {
         fontSize: 14,
         textDecorationLine: 'underline',
+    },
+    logoutLink: {
+        alignItems: 'center',
+        marginTop: 20,
+        marginBottom: 20,
+        paddingVertical: 8,
+    },
+    logoutText: {
+        fontSize: 14,
+        fontWeight: '600',
     },
 });

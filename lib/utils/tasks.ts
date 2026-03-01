@@ -1,8 +1,8 @@
-import * as Crypto from 'expo-crypto';
+import crypto from 'react-native-quick-crypto';
 import { TaskInsert } from "../db/schema";
 
 export const generateTask = (data: Partial<TaskInsert>): TaskInsert => {
-    const id = Crypto.randomUUID();
+    const id = crypto.randomUUID();
     const now = new Date();
     return {
         title: data.title ?? '',

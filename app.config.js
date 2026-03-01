@@ -1,6 +1,7 @@
-{
+const IS_DEV = process.env.APP_VARIANT === 'development';
+export default {
   "expo": {
-    "name": "Annota",
+    name: IS_DEV ? 'Annota (Dev)' : 'Annota',
     "slug": "annota",
     "version": "1.0.0",
     "orientation": "default",
@@ -9,11 +10,11 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.annota",
+      bundleIdentifier: IS_DEV ? 'com.anonymous.annota.dev' : 'com.anonymous.annota',
       "icon": {
-        "dark": "./assets/images/icon-dark.png",
-        "light": "./assets/images/icon-light.png",
-        "tinted": "./assets/images/adaptive-icon.png"
+        "dark": "./assets/images/icon.png",
+        "light": "./assets/images/icon.png",
+        "tinted": "./assets/images/icon.png"
       },
       "requireFullScreen": true,
       "infoPlist": {

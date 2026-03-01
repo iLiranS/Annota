@@ -1,6 +1,7 @@
 import { authApi } from '@/lib/api/auth.api';
 import { userApi } from '@/lib/api/user.api';
 import { userService } from '@/lib/services/user.service';
+import { getMasterKey } from '@/lib/utils/crypto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Session, User } from '@supabase/supabase-js';
 import { create } from 'zustand';
@@ -31,6 +32,11 @@ type UserState = {
     updateDisplayName: (displayName: string) => Promise<void>;
     getDisplayName: () => Promise<string | null>;
     getUserRole: () => Promise<string | null>;
+
+    /** Tracks if the master key is present on the device */
+    hasMasterKey: boolean | null;
+    setHasMasterKey: (hasKey: boolean) => void;
+    checkMasterKey: () => Promise<boolean>;
 };
 
 export const useUserStore = create<UserState>()(
@@ -46,6 +52,17 @@ export const useUserStore = create<UserState>()(
             roleFetched: false,
             displayName: null,
             displayNameFetched: false,
+            hasMasterKey: null,
+
+            setHasMasterKey: (hasKey: boolean) => set({ hasMasterKey: hasKey }),
+
+            checkMasterKey: async () => {
+                const state = get();
+                if (!state.user) return false;
+                const key = await getMasterKey(state.user.id);
+                set({ hasMasterKey: !!key });
+                return !!key;
+            },
 
             setSession: (session) =>
                 set((state) => ({
@@ -61,6 +78,7 @@ export const useUserStore = create<UserState>()(
                     roleFetched: false,
                     keyValidator: null,
                     keyValidatorFetched: false,
+                    hasMasterKey: session ? state.hasMasterKey : null,
                 })),
 
             setGuest: (isGuest) =>
@@ -75,7 +93,7 @@ export const useUserStore = create<UserState>()(
 
             signOut: async () => {
                 await authApi.signOut();
-                set({ session: null, user: null, isGuest: false, keyValidator: null, keyValidatorFetched: false, role: null, roleFetched: false, displayName: null, displayNameFetched: false });
+                set({ session: null, user: null, isGuest: false, keyValidator: null, keyValidatorFetched: false, role: null, roleFetched: false, displayName: null, displayNameFetched: false, hasMasterKey: null });
             },
 
             fetchKeyValidator: async (userId: string): Promise<string | null> => {

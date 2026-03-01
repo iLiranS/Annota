@@ -1,6 +1,6 @@
 import { useTheme } from '@react-navigation/native';
 import * as ExpoClipboard from 'expo-clipboard';
-import React from 'react';
+import React, { useState } from 'react';
 import { Keyboard, ScrollView, StyleSheet, View } from 'react-native';
 
 import { HeadingLevel } from '@/constants/editor';
@@ -18,7 +18,7 @@ interface EditorToolbarProps {
     /** Callback to notify parent when popup opens/closes - helps keep toolbar visible */
     onPopupStateChange?: (isOpen: boolean) => void;
     /** Callback to handle image insertion (URL or device picker) */
-    onInsertImage?: (source: 'url' | 'library' | 'camera', value?: string) => Promise<void>;
+    onInsertImage?: (source: 'url' | 'library' | 'camera', value?: string) => Promise<boolean>;
 
     currentLatex?: string | null;
     blockData?: any;
@@ -43,6 +43,7 @@ export function EditorToolbar({
     onInsertImage,
 }: EditorToolbarProps) {
     const { dark, colors } = useTheme();
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleDismiss = () => {
         onDismissKeyboard();
@@ -55,6 +56,7 @@ export function EditorToolbar({
     };
 
     const closePopup = () => {
+        if (isLoading) return; // Prevent closing while picking/uploading
         onActivePopupChange(null);
         onPopupStateChange?.(false);
     };
@@ -345,17 +347,39 @@ export function EditorToolbar({
                 <ToolbarPopup
                     visible={true}
                     type="image"
-                    onSubmit={(url: string) => {
-                        onInsertImage?.('url', url);
-                        closePopup();
+                    isLoading={isLoading}
+                    onSubmit={async (url: string) => {
+                        setIsLoading(true);
+                        try {
+                            const success = await onInsertImage?.('url', url);
+                            if (success) closePopup();
+                        } catch (error) {
+                            console.error('Image upload failed:', error);
+                        } finally {
+                            setIsLoading(false);
+                        }
                     }}
                     onPickFromLibrary={async () => {
-                        await onInsertImage?.('library');
-                        closePopup();
+                        setIsLoading(true);
+                        try {
+                            const success = await onInsertImage?.('library');
+                            if (success) closePopup();
+                        } catch (error) {
+                            console.error('Image pick failed:', error);
+                        } finally {
+                            setIsLoading(false);
+                        }
                     }}
                     onTakePhoto={async () => {
-                        await onInsertImage?.('camera');
-                        closePopup();
+                        setIsLoading(true);
+                        try {
+                            const success = await onInsertImage?.('camera');
+                            if (success) closePopup();
+                        } catch (error) {
+                            console.error('Take photo failed:', error);
+                        } finally {
+                            setIsLoading(false);
+                        }
                     }}
                     onClose={closePopup}
                 />

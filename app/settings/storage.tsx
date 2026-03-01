@@ -269,11 +269,11 @@ export default function StorageSettings() {
                                     {
                                         text: "Reset All",
                                         style: "destructive",
-                                        onPress: () => {
+                                        onPress: async () => {
                                             const { resetAll } = require('@/lib/db/client');
-                                            resetAll();
+                                            await resetAll();
                                             Alert.alert("Reset Complete", "The local database has been wiped.");
-                                            loadStats();
+                                            await loadStats();
                                         }
                                     }
                                 ]

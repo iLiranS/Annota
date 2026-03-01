@@ -208,7 +208,7 @@ function ImageActionMenu({ onAction, onClose }: { onAction: (action: string, dat
 // ============================================================================
 
 export function ToolbarPopup(props: ToolbarPopupProps) {
-    const { visible, onClose, type } = props;
+    const { visible, onClose, type, isLoading } = props;
     const { colors } = useAppTheme();
 
     if (!visible || !type) return null;
@@ -273,6 +273,7 @@ export function ToolbarPopup(props: ToolbarPopupProps) {
                         onPickFromLibrary={(props as ImagePopupProps).onPickFromLibrary}
                         onTakePhoto={(props as ImagePopupProps).onTakePhoto}
                         onClose={onClose}
+                        isLoading={isLoading}
                     />
                 );
             case 'table':

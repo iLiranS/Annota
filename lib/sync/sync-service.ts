@@ -15,6 +15,11 @@ import { imageSyncService } from '../services/sync/image-sync.service';
 
 const getSyncTimeKey = (userId: string) => `${userId}_last_sync_time`;
 
+export async function resetSyncPointer(userId: string) {
+    await AsyncStorage.removeItem(getSyncTimeKey(userId));
+    console.log(`[Sync] Reset sync pointer for user ${userId}`);
+}
+
 export async function syncPush(masterKey: string) {
     const { data: { session } } = await authApi.getSession();
     if (!session?.user) throw new Error("User not authenticated");
@@ -174,8 +179,16 @@ export async function syncPull(masterKey: string) {
 
     const userId = session.user.id;
     const lastSyncStr = await AsyncStorage.getItem(getSyncTimeKey(userId));
-    const lastSyncTime = lastSyncStr ? new Date(lastSyncStr) : new Date(0); // 1970 if never synced
-    const newSyncTime = new Date().toISOString(); // Time right before we fetch (prevents missing things being created right now)
+    let lastSyncTime = new Date('2000-01-01T00:00:00Z'); // Safe past date fallback
+
+    if (lastSyncStr) {
+        const parsed = new Date(lastSyncStr);
+        if (!isNaN(parsed.getTime())) {
+            lastSyncTime = parsed;
+        }
+    }
+
+    const newSyncTime = new Date().toISOString(); // Time right before we fetch
     let didDeleteTombstones = false;
 
     console.log(`[Sync] Pulling changes modified after: ${lastSyncTime.toISOString()}`);
@@ -195,95 +208,119 @@ export async function syncPull(masterKey: string) {
 
     if (cloudFolders && cloudFolders.length > 0) {
         console.log(`[Sync] Received ${cloudFolders.length} updated folders from cloud.`);
-        getDb().transaction((tx) => {
-            for (const row of cloudFolders) {
-                try {
-                    if (row.is_deleted) {
-                        tx.delete(schema.folders).where(eq(schema.folders.id, row.id)).run();
-                        didDeleteTombstones = true;
-                        continue;
+        const chunkSize = 15;
+        for (let i = 0; i < cloudFolders.length; i += chunkSize) {
+            const chunk = cloudFolders.slice(i, i + chunkSize);
+            getDb().transaction((tx) => {
+                for (const row of chunk) {
+                    try {
+                        if (row.is_deleted) {
+                            tx.delete(schema.folders).where(eq(schema.folders.id, row.id)).run();
+                            didDeleteTombstones = true;
+                            continue;
+                        }
+
+                        const decryptedJson = decryptPayload(row.encrypted_data, row.nonce, masterKey);
+                        const folderData = JSON.parse(decryptedJson);
+
+                        // Convert timestamps back to Date objects
+                        folderData.createdAt = new Date(folderData.createdAt);
+                        folderData.updatedAt = new Date(folderData.updatedAt);
+                        folderData.deletedAt = folderData.deletedAt ? new Date(folderData.deletedAt) : null;
+                        folderData.isDirty = false; // We just grabbed it, it's clean
+                        folderData.lastSyncedAt = new Date(newSyncTime);
+
+                        upsertSyncedFolder(folderData, tx);
+                    } catch (e) {
+                        console.error("Failed to decrypt/parse folder", row.id, e);
                     }
-
-                    const decryptedJson = decryptPayload(row.encrypted_data, row.nonce, masterKey);
-                    const folderData = JSON.parse(decryptedJson);
-
-                    // Convert timestamps back to Date objects
-                    folderData.createdAt = new Date(folderData.createdAt);
-                    folderData.updatedAt = new Date(folderData.updatedAt);
-                    folderData.deletedAt = folderData.deletedAt ? new Date(folderData.deletedAt) : null;
-                    folderData.isDirty = false; // We just grabbed it, it's clean
-                    folderData.lastSyncedAt = new Date(newSyncTime);
-
-                    upsertSyncedFolder(folderData, tx);
-                } catch (e) {
-                    console.error("Failed to decrypt/parse folder", row.id, e);
                 }
+            });
+            // Yield to UI thread
+            if (i + chunkSize < cloudFolders.length) {
+                await new Promise(resolve => setTimeout(resolve, 0));
             }
-        });
+        }
     }
 
     // === 2. PULL TASKS ===
 
     if (cloudTasks && cloudTasks.length > 0) {
         console.log(`[Sync] Received ${cloudTasks.length} updated tasks from cloud.`);
-        getDb().transaction((tx) => {
-            for (const row of cloudTasks) {
-                try {
-                    if (row.is_deleted) {
-                        // Task was permanently deleted somewhere else, remove it locally
-                        tx.delete(schema.tasks).where(eq(schema.tasks.id, row.id)).run();
-                        didDeleteTombstones = true;
-                        continue;
+        const chunkSize = 15;
+        for (let i = 0; i < cloudTasks.length; i += chunkSize) {
+            const chunk = cloudTasks.slice(i, i + chunkSize);
+            getDb().transaction((tx) => {
+                for (const row of chunk) {
+                    try {
+                        if (row.is_deleted) {
+                            // Task was permanently deleted somewhere else, remove it locally
+                            tx.delete(schema.tasks).where(eq(schema.tasks.id, row.id)).run();
+                            didDeleteTombstones = true;
+                            continue;
+                        }
+
+                        const decryptedJson = decryptPayload(row.encrypted_data, row.nonce, masterKey);
+                        const taskData = JSON.parse(decryptedJson);
+
+                        taskData.createdAt = new Date(taskData.createdAt);
+                        taskData.updatedAt = new Date(taskData.updatedAt);
+                        taskData.deadline = new Date(taskData.deadline);
+                        taskData.isDirty = false;
+                        taskData.lastSyncedAt = new Date(newSyncTime);
+
+                        upsertSyncedTask(taskData, tx);
+                    } catch (e) {
+                        console.error("Failed to decrypt/parse task", row.id, e);
                     }
-
-                    const decryptedJson = decryptPayload(row.encrypted_data, row.nonce, masterKey);
-                    const taskData = JSON.parse(decryptedJson);
-
-                    taskData.createdAt = new Date(taskData.createdAt);
-                    taskData.updatedAt = new Date(taskData.updatedAt);
-                    taskData.deadline = new Date(taskData.deadline);
-                    taskData.isDirty = false;
-                    taskData.lastSyncedAt = new Date(newSyncTime);
-
-                    upsertSyncedTask(taskData, tx);
-                } catch (e) {
-                    console.error("Failed to decrypt/parse task", row.id, e);
                 }
+            });
+            // Yield to UI thread
+            if (i + chunkSize < cloudTasks.length) {
+                await new Promise(resolve => setTimeout(resolve, 0));
             }
-        });
+        }
     }
 
     // === 3. PULL NOTES ===
 
     if (cloudNotes && cloudNotes.length > 0) {
         console.log(`[Sync] Received ${cloudNotes.length} updated notes from cloud.`);
-        getDb().transaction((tx) => {
-            for (const row of cloudNotes) {
-                try {
-                    if (row.is_deleted) {
-                        tx.delete(schema.noteMetadata).where(eq(schema.noteMetadata.id, row.id)).run();
-                        tx.delete(schema.noteContent).where(eq(schema.noteContent.id, row.id)).run();
-                        tx.delete(schema.noteVersions).where(eq(schema.noteVersions.noteId, row.id)).run();
-                        didDeleteTombstones = true;
-                        continue;
+        const chunkSize = 15;
+        for (let i = 0; i < cloudNotes.length; i += chunkSize) {
+            const chunk = cloudNotes.slice(i, i + chunkSize);
+            getDb().transaction((tx) => {
+                for (const row of chunk) {
+                    try {
+                        if (row.is_deleted) {
+                            tx.delete(schema.noteMetadata).where(eq(schema.noteMetadata.id, row.id)).run();
+                            tx.delete(schema.noteContent).where(eq(schema.noteContent.id, row.id)).run();
+                            tx.delete(schema.noteVersions).where(eq(schema.noteVersions.noteId, row.id)).run();
+                            didDeleteTombstones = true;
+                            continue;
+                        }
+
+                        const decryptedJson = decryptPayload(row.encrypted_data, row.nonce, masterKey);
+                        const noteFullData = JSON.parse(decryptedJson);
+
+                        noteFullData.createdAt = new Date(noteFullData.createdAt);
+                        noteFullData.updatedAt = new Date(noteFullData.updatedAt);
+                        noteFullData.deletedAt = noteFullData.deletedAt ? new Date(noteFullData.deletedAt) : null;
+                        noteFullData.isDirty = false;
+                        noteFullData.lastSyncedAt = new Date(newSyncTime);
+
+                        upsertSyncedNote(noteFullData, tx);
+
+                    } catch (e) {
+                        console.error("Failed to decrypt/parse note", row.id, e);
                     }
-
-                    const decryptedJson = decryptPayload(row.encrypted_data, row.nonce, masterKey);
-                    const noteFullData = JSON.parse(decryptedJson);
-
-                    noteFullData.createdAt = new Date(noteFullData.createdAt);
-                    noteFullData.updatedAt = new Date(noteFullData.updatedAt);
-                    noteFullData.deletedAt = noteFullData.deletedAt ? new Date(noteFullData.deletedAt) : null;
-                    noteFullData.isDirty = false;
-                    noteFullData.lastSyncedAt = new Date(newSyncTime);
-
-                    upsertSyncedNote(noteFullData, tx);
-
-                } catch (e) {
-                    console.error("Failed to decrypt/parse note", row.id, e);
                 }
+            });
+            // Yield to UI thread
+            if (i + chunkSize < cloudNotes.length) {
+                await new Promise(resolve => setTimeout(resolve, 0));
             }
-        });
+        }
     }
 
     // Update the pointer

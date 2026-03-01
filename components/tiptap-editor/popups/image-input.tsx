@@ -3,7 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useTheme } from '@react-navigation/native';
 import React from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { imageInputSchema, type ImageInputData } from '../../../lib/db/validators/image';
 
 interface ImageInputProps {
@@ -11,9 +11,10 @@ interface ImageInputProps {
     onPickFromLibrary?: () => void;
     onTakePhoto?: () => void;
     onClose: () => void;
+    isLoading?: boolean;
 }
 
-export function ImageInput({ onSubmit, onPickFromLibrary, onTakePhoto, onClose }: ImageInputProps) {
+export function ImageInput({ onSubmit, onPickFromLibrary, onTakePhoto, onClose, isLoading }: ImageInputProps) {
     const { colors, dark } = useTheme();
 
     const {
@@ -38,23 +39,32 @@ export function ImageInput({ onSubmit, onPickFromLibrary, onTakePhoto, onClose }
         <View style={styles.container}>
             {/* Source buttons */}
             <View style={styles.sourceRow}>
-                {onPickFromLibrary && (
-                    <Pressable
-                        style={[styles.sourceButton, { backgroundColor: colors.card, borderColor: colors.border }]}
-                        onPress={onPickFromLibrary}
-                    >
-                        <Ionicons name="images-outline" size={22} color={colors.primary} />
-                        <Text style={[styles.sourceLabel, { color: colors.text }]}>Library</Text>
-                    </Pressable>
-                )}
-                {onTakePhoto && (
-                    <Pressable
-                        style={[styles.sourceButton, { backgroundColor: colors.card, borderColor: colors.border }]}
-                        onPress={onTakePhoto}
-                    >
-                        <Ionicons name="camera-outline" size={22} color={colors.primary} />
-                        <Text style={[styles.sourceLabel, { color: colors.text }]}>Camera</Text>
-                    </Pressable>
+                {isLoading ? (
+                    <View style={[styles.loadingContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                        <ActivityIndicator size="small" color={colors.primary} />
+                        <Text style={[styles.sourceLabel, { color: colors.text, marginLeft: 8 }]}>Processing image...</Text>
+                    </View>
+                ) : (
+                    <>
+                        {onPickFromLibrary && (
+                            <Pressable
+                                style={[styles.sourceButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+                                onPress={onPickFromLibrary}
+                            >
+                                <Ionicons name="images-outline" size={22} color={colors.primary} />
+                                <Text style={[styles.sourceLabel, { color: colors.text }]}>Library</Text>
+                            </Pressable>
+                        )}
+                        {onTakePhoto && (
+                            <Pressable
+                                style={[styles.sourceButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+                                onPress={onTakePhoto}
+                            >
+                                <Ionicons name="camera-outline" size={22} color={colors.primary} />
+                                <Text style={[styles.sourceLabel, { color: colors.text }]}>Camera</Text>
+                            </Pressable>
+                        )}
+                    </>
                 )}
             </View>
 
@@ -76,6 +86,7 @@ export function ImageInput({ onSubmit, onPickFromLibrary, onTakePhoto, onClose }
                                 color: colors.text,
                                 backgroundColor: dark ? '#1C1C1E' : '#F2F2F7',
                                 borderColor: errors.url ? '#FF453A' : (dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)'),
+                                opacity: isLoading ? 0.5 : 1,
                             }]}
                             value={value}
                             onChangeText={onChange}
@@ -86,6 +97,7 @@ export function ImageInput({ onSubmit, onPickFromLibrary, onTakePhoto, onClose }
                             autoCorrect={false}
                             keyboardType="url"
                             returnKeyType="done"
+                            editable={!isLoading}
                             onSubmitEditing={handleSubmit(onValidSubmit)}
                         />
                     )}
@@ -98,19 +110,24 @@ export function ImageInput({ onSubmit, onPickFromLibrary, onTakePhoto, onClose }
             {/* Action buttons */}
             <View style={styles.buttonRow}>
                 <Pressable
-                    style={[styles.button, { backgroundColor: dark ? '#3A3A3C' : '#E5E5EA' }]}
+                    style={[styles.button, { backgroundColor: dark ? '#3A3A3C' : '#E5E5EA', opacity: isLoading ? 0.5 : 1 }]}
                     onPress={onClose}
+                    disabled={isLoading}
                 >
                     <Text style={[styles.buttonText, { color: colors.text }]}>Cancel</Text>
                 </Pressable>
                 <Pressable
                     style={[styles.button, {
-                        backgroundColor: isValid ? colors.primary : (dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'),
+                        backgroundColor: (isValid && !isLoading) ? colors.primary : (dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'),
                     }]}
                     onPress={handleSubmit(onValidSubmit)}
-                    disabled={!isValid}
+                    disabled={!isValid || isLoading}
                 >
-                    <Text style={[styles.buttonText, { color: isValid ? '#FFFFFF' : (dark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)') }]}>Insert</Text>
+                    {isLoading ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                        <Text style={[styles.buttonText, { color: isValid ? '#FFFFFF' : (dark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)') }]}>Insert</Text>
+                    )}
                 </Pressable>
             </View>
         </View>
@@ -124,6 +141,15 @@ const styles = StyleSheet.create({
     sourceRow: {
         flexDirection: 'row',
         gap: 10,
+    },
+    loadingContainer: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 12,
+        borderRadius: 10,
+        borderWidth: 1,
     },
     sourceButton: {
         flex: 1,

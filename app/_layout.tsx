@@ -6,7 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
 import * as TaskManager from 'expo-task-manager';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, InteractionManager, Pressable, StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 import Toast, { type ToastConfig, type ToastConfigParams } from 'react-native-toast-message';
@@ -88,7 +88,7 @@ const toastConfig: ToastConfig = {
 
 export default function RootLayout() {
   const theme = useAppTheme();
-  const { initialized, session, user, isGuest, setSession } = useAuthStore();
+  const { initialized, session, user, isGuest, setSession, hasMasterKey, checkMasterKey } = useAuthStore();
   const dbReady = useDbStore(state => state.isReady);
   const initDB = useDbStore(state => state.initDB);
   const [dbError, setDbError] = useState<string | null>(null);
@@ -112,6 +112,7 @@ export default function RootLayout() {
 
     try {
       if (user) {
+        checkMasterKey();
         initDB(user.id);
       } else {
         // Fallback to guest DB for unauthenticated users (so the app can render the Auth screen)
@@ -167,10 +168,17 @@ export default function RootLayout() {
       }
     } else if (session) {
       // User is authenticated
-      if (inAuthGroup && segments[1] !== 'master-key' && segments[1] !== 'lost-key') {
-        // If they are on the login screen, redirect to drawer.
-        // We don't redirect if they are on master-key or lost-key, as they might need those flows.
-        router.replace('/(drawer)');
+      if (hasMasterKey === null) return; // Wait until we verify local key exists
+
+      if (hasMasterKey === false) {
+        if (segments[1] !== 'master-key' && segments[1] !== 'lost-key') {
+          router.replace('/(auth)/master-key');
+        }
+      } else {
+        // hasMasterKey === true
+        if (inAuthGroup && segments[1] !== 'master-key' && segments[1] !== 'lost-key') {
+          router.replace('/(drawer)');
+        }
       }
     } else if (isGuest) {
       // User is a guest
@@ -178,29 +186,31 @@ export default function RootLayout() {
         router.replace('/(drawer)');
       }
     }
-  }, [session, isGuest, initialized, dbReady, segments]);
+  }, [session, isGuest, initialized, dbReady, segments, hasMasterKey]);
 
   // ─── Sync Scheduler ──────────────────────────────────────
   useEffect(() => {
-    if (!session || !dbReady) return;
+    if (!session || !dbReady || !hasMasterKey) return;
 
     let cancelled = false;
 
-    (async () => {
+    InteractionManager.runAfterInteractions(async () => {
+      if (cancelled) return;
+
       const key = await getMasterKey(session.user.id);
       if (!key || cancelled) return;
 
       const scheduler = new SyncScheduler();
       schedulerRef.current = scheduler;
       scheduler.init(key);
-    })();
+    });
 
     return () => {
       cancelled = true;
       schedulerRef.current?.dispose();
       schedulerRef.current = null;
     };
-  }, [session, dbReady]);
+  }, [session, dbReady, hasMasterKey]);
 
   // ─── Background Fetch (OS-level, separate from foreground scheduler) ──
   useEffect(() => {
@@ -230,7 +240,7 @@ export default function RootLayout() {
   // Show loading state while database or auth initializes
   const errorMessage = dbError;
 
-  if (!dbReady || !initialized) {
+  if (!dbReady || !initialized || (session && hasMasterKey === null)) {
     return (
       <View style={styles.loadingContainer}>
         {errorMessage ? (

@@ -1,7 +1,7 @@
 import { deleteImageFile } from '@/lib/services/images/image.service';
 import { getDb } from '@/lib/stores/db.store';
 import { and, desc, eq, gte, inArray, isNull, sql } from 'drizzle-orm';
-import * as Crypto from 'expo-crypto';
+import crypto from 'react-native-quick-crypto';
 import { DbOrTx, schema } from '../client';
 import type { NoteMetadata, NoteMetadataInsert } from '../schema';
 import * as ImagesRepo from './images.repository';
@@ -89,7 +89,7 @@ export function upsertSyncedNote(noteFullData: any, tx: DbOrTx = getDb()): void 
     let activeVersionId: string;
 
     if (!latestVersion) {
-        activeVersionId = Crypto.randomUUID();
+        activeVersionId = crypto.randomUUID();
         tx.insert(schema.noteVersions).values({
             id: activeVersionId,
             noteId: metadataDetails.id,
@@ -108,7 +108,7 @@ export function upsertSyncedNote(noteFullData: any, tx: DbOrTx = getDb()): void 
         if (latestNormalizedContent === content) {
             activeVersionId = latestVersion.id;
         } else {
-            activeVersionId = Crypto.randomUUID();
+            activeVersionId = crypto.randomUUID();
             tx.insert(schema.noteVersions).values({
                 id: activeVersionId,
                 noteId: metadataDetails.id,
@@ -386,7 +386,7 @@ export function updateNoteContent(noteId: string, content: string, preview: stri
 
         if (!latestVersion || (now.getTime() - latestVersion.createdAt.getTime() > VERSION_THRESHOLD_MS)) {
             // Case A: Create NEW version
-            activeVersionId = Crypto.randomUUID();
+            activeVersionId = crypto.randomUUID();
             tx.insert(schema.noteVersions).values({
                 id: activeVersionId,
                 noteId,

@@ -253,7 +253,8 @@ const styles = StyleSheet.create({
     taskTitle: {
         fontSize: 15,
         fontWeight: '600',
-        flex: 1,
+        flexGrow: 1,
+        flexShrink: 1,
     },
     inlineBadge: {
         flexDirection: 'row',
@@ -263,11 +264,12 @@ const styles = StyleSheet.create({
         paddingVertical: 1,
         borderRadius: 4,
         borderWidth: 1,
+        flexShrink: 4,
     },
     inlineBadgeText: {
         fontSize: 10,
-        maxWidth: 80,
         fontWeight: '600',
+        flexShrink: 1,
     },
     deadlineText: {
         fontSize: 11,
@@ -307,9 +309,10 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     compactTitle: {
-        flex: 1,
         fontSize: 13,
         fontWeight: '500',
+        flexGrow: 1,
+        flexShrink: 1,
     },
     compactDate: {
         fontSize: 11,

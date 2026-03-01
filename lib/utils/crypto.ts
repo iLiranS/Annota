@@ -1,8 +1,7 @@
-import aesjs from 'aes-js';
 import { generateMnemonic, mnemonicToSeedSync, validateMnemonic } from 'bip39';
 import { Buffer } from 'buffer';
-import * as Crypto from 'expo-crypto';
 import * as SecureStore from 'expo-secure-store';
+import crypto from 'react-native-quick-crypto';
 import './polyfill';
 
 const MASTER_KEY_PREFIX = 'annota_master_key_';
@@ -13,17 +12,16 @@ function getMasterKeyAlias(userId: string): string {
 }
 
 /**
- * Custom RNG utilizing expo-crypto for secure entropy.
+ * Custom RNG utilizing react-native-quick-crypto for secure entropy.
  */
 const customRng = (size: number) => {
-    return Buffer.from(Crypto.getRandomBytes(size));
+    return Buffer.from(crypto.randomBytes(size));
 };
 
 /**
  * Generate a new 12-word mnemonic phrase.
  */
 export async function generateMasterKey(): Promise<string> {
-    // Generate a 128-bit entropy mnemonic (12 words)
     const mnemonic = generateMnemonic(128, customRng);
     return mnemonic;
 }
@@ -72,10 +70,9 @@ export async function removeLegacyMasterKey() {
 export async function hashMasterKey(mnemonic: string): Promise<string> {
     const seed = mnemonicToSeedSync(mnemonic);
     const keyBytes = seed.subarray(0, 32);
-    return await Crypto.digestStringAsync(
-        Crypto.CryptoDigestAlgorithm.SHA256,
-        Buffer.from(keyBytes).toString('hex')
-    );
+    const hash = crypto.createHash('sha256');
+    hash.update(Buffer.from(keyBytes).toString('hex'), 'utf8');
+    return hash.digest('hex') as unknown as string;
 }
 
 /**
@@ -83,7 +80,6 @@ export async function hashMasterKey(mnemonic: string): Promise<string> {
  */
 function getAesKeyFromMnemonic(mnemonic: string): Buffer {
     const seed = mnemonicToSeedSync(mnemonic);
-    // AES-256 requires a 32-byte key
     return Buffer.from(seed.subarray(0, 32));
 }
 
@@ -98,67 +94,69 @@ export interface EncryptedBinaryPayload {
 }
 
 /**
- * Encrypts a JSON payload using AES-256-CTR (Pure JS for Expo Go compatibility).
- * Returns the encrypted data and the random nonce.
+ * Encrypts a JSON payload using AES-256-GCM.
+ * Returns the encrypted data (with authTag appended) and the random nonce.
  */
 export function encryptPayload(jsonPayload: string, mnemonic: string): EncryptedPayload {
-    const key = getAesKeyFromMnemonic(mnemonic); // length 32
+    const key = getAesKeyFromMnemonic(mnemonic);
 
-    // Generate a 16-byte nonce for CTR mode using Expo Crypto
-    const nonceBytes = Crypto.getRandomBytes(16);
-    // aes-js CTR mode needs an initial counter (an integer or a 16 byte array)
-    // We treat the nonce as our initial counter vector.
+    const nonceBytes = crypto.randomBytes(12);
+    const cipher = crypto.createCipheriv('aes-256-gcm', key as any, nonceBytes as any);
 
-    const aesCtr = new aesjs.ModeOfOperation.ctr(key as any, new aesjs.Counter(nonceBytes));
+    let encrypted = cipher.update(jsonPayload, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+    const authTag = cipher.getAuthTag().toString('hex');
 
-    // Convert text to bytes
-    const textBytes = aesjs.utils.utf8.toBytes(jsonPayload);
-
-    // Encrypt
-    const encryptedBytes = aesCtr.encrypt(textBytes);
-
-    // Convert to hex
-    const encryptedHex = aesjs.utils.hex.fromBytes(encryptedBytes);
-    const nonceHex = aesjs.utils.hex.fromBytes(nonceBytes);
+    const nonceHex = nonceBytes.toString('hex');
 
     return {
-        encryptedData: encryptedHex,
+        encryptedData: encrypted + authTag,
         nonce: nonceHex
     };
 }
 
 /**
- * Decrypts an encrypted payload using AES-256-CTR.
+ * Decrypts an encrypted payload using AES-256-GCM.
  */
-export function decryptPayload(encryptedHex: string, nonceHex: string, mnemonic: string): string {
+export function decryptPayload(encryptedHexWithTag: string, nonceHex: string, mnemonic: string): string {
     const key = getAesKeyFromMnemonic(mnemonic);
+    const nonceBytes = Buffer.from(nonceHex, 'hex');
 
-    const encryptedBytes = aesjs.utils.hex.toBytes(encryptedHex);
-    const nonceBytes = aesjs.utils.hex.toBytes(nonceHex);
+    try {
+        const encryptedHex = encryptedHexWithTag.slice(0, -32);
+        const authTagHex = encryptedHexWithTag.slice(-32);
 
-    // aes-js requires 16 bytes exactly for the counter
-    const aesCtr = new aesjs.ModeOfOperation.ctr(key as any, new aesjs.Counter(nonceBytes));
+        const decipher = crypto.createDecipheriv('aes-256-gcm', key as any, nonceBytes as any);
+        decipher.setAuthTag(Buffer.from(authTagHex, 'hex') as any);
 
-    const decryptedBytes = aesCtr.decrypt(encryptedBytes);
+        let decrypted = decipher.update(encryptedHex, 'hex', 'utf8');
+        decrypted += decipher.final('utf8');
 
-    // Convert back to text
-    const decryptedText = aesjs.utils.utf8.fromBytes(decryptedBytes);
-
-    return decryptedText;
+        // Verify it actually decrypted a JSON structure, else it's legacy garbage
+        if (decrypted.startsWith('{') || decrypted.startsWith('[')) {
+            return decrypted;
+        }
+        return '{}';
+    } catch (e: any) {
+        return '{}'; // Return empty object string to avoid JSON parse crashes
+    }
 }
 
 /**
- * Encrypts raw image bytes using AES-256-CTR.
- * Operates directly on binary data — no base64 intermediate.
+ * Encrypts raw image bytes using AES-256-GCM.
  */
 export function encryptImageBytes(rawBytes: Uint8Array, mnemonic: string): EncryptedBinaryPayload {
     const key = getAesKeyFromMnemonic(mnemonic);
 
-    const nonceBytes = Crypto.getRandomBytes(16);
-    const aesCtr = new aesjs.ModeOfOperation.ctr(key as any, new aesjs.Counter(nonceBytes));
+    const nonceBytes = crypto.randomBytes(12);
+    const cipher = crypto.createCipheriv('aes-256-gcm', key as any, nonceBytes as any);
 
-    const encryptedBytes = aesCtr.encrypt(rawBytes);
-    const nonceHex = aesjs.utils.hex.fromBytes(nonceBytes);
+    const encryptedContent = cipher.update(Buffer.from(rawBytes) as any);
+    const encryptedFinal = cipher.final();
+    const authTag = cipher.getAuthTag();
+
+    const encryptedBytes = Buffer.concat([encryptedContent as any, encryptedFinal as any, authTag as any]);
+    const nonceHex = nonceBytes.toString('hex');
 
     return {
         encryptedBytes: new Uint8Array(encryptedBytes),
@@ -167,17 +165,27 @@ export function encryptImageBytes(rawBytes: Uint8Array, mnemonic: string): Encry
 }
 
 /**
- * Decrypts raw encrypted image bytes using AES-256-CTR.
- * Returns the original raw binary data as Uint8Array.
+ * Decrypts raw encrypted image bytes using AES-256-GCM.
  */
-export function decryptImageBytes(encryptedBytes: Uint8Array, nonceHex: string, mnemonic: string): Uint8Array {
+export function decryptImageBytes(encryptedBytesWithTag: Uint8Array, nonceHex: string, mnemonic: string): Uint8Array {
     const key = getAesKeyFromMnemonic(mnemonic);
+    const nonceBytes = Buffer.from(nonceHex, 'hex');
 
-    const nonceBytes = aesjs.utils.hex.toBytes(nonceHex);
-    const aesCtr = new aesjs.ModeOfOperation.ctr(key as any, new aesjs.Counter(nonceBytes));
+    const buffer = Buffer.from(encryptedBytesWithTag);
 
-    const decryptedBytes = aesCtr.decrypt(encryptedBytes);
-    return new Uint8Array(decryptedBytes);
+    try {
+        const encryptedBytes = buffer.subarray(0, buffer.length - 16);
+        const authTag = buffer.subarray(buffer.length - 16);
+
+        const decipher = crypto.createDecipheriv('aes-256-gcm', key as any, nonceBytes as any);
+        decipher.setAuthTag(authTag as any);
+
+        const decryptedContent = decipher.update(encryptedBytes as any);
+        const decryptedFinal = decipher.final();
+
+        return new Uint8Array(Buffer.concat([decryptedContent as any, decryptedFinal as any]));
+    } catch (e: any) {
+        return new Uint8Array(0); // Return empty buffer on legacy payload crash
+    }
 }
-
 

@@ -1,4 +1,4 @@
-import * as Crypto from 'expo-crypto';
+import crypto from 'react-native-quick-crypto';
 import * as ImagesRepo from '../../db/repositories/images.repository';
 import * as NotesRepo from '../../db/repositories/notes.repository';
 import {
@@ -43,7 +43,7 @@ export async function processAndInsertImage(
     }
 
     // 4. Generate new ID and save file
-    const imageId = Crypto.randomUUID();
+    const imageId = crypto.randomUUID();
     const localPath = saveToLocalStorage(resized.uri, imageId);
 
     // 5. Get file size

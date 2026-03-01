@@ -1,8 +1,8 @@
-import * as Crypto from 'expo-crypto';
 import { Directory, File as ExpoFile, Paths } from 'expo-file-system';
 import * as LegacyFileSystem from 'expo-file-system/legacy';
 import { ImageManipulator, SaveFormat, type ImageResult } from 'expo-image-manipulator';
 import * as MediaLibrary from 'expo-media-library';
+import crypto from 'react-native-quick-crypto';
 
 // ============ CONSTANTS ============
 
@@ -60,7 +60,9 @@ export async function resizeAndCompress(uri: string): Promise<ImageResult> {
 export async function computeHash(fileUri: string): Promise<string> {
     const file = new ExpoFile(fileUri);
     const base64 = await file.base64();
-    return Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, base64);
+    const hash = crypto.createHash('sha256');
+    hash.update(base64, 'utf8');
+    return hash.digest('hex') as unknown as string;
 }
 
 /**

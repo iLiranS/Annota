@@ -1,6 +1,7 @@
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { authApi } from '@/lib/api/auth.api';
 import { userService } from '@/lib/services/user.service';
+import { useUserStore as useAuthStore } from '@/lib/stores/user.store';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import * as LocalAuthentication from 'expo-local-authentication';
@@ -81,6 +82,7 @@ export default function LostKeyScreen() {
     };
 
     const handleDone = () => {
+        useAuthStore.getState().setHasMasterKey(true);
         router.replace('/(drawer)');
     };
 

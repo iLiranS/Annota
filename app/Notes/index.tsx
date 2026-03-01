@@ -19,17 +19,64 @@ import { useTheme } from '@react-navigation/native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import {
-    FlatList,
     StyleSheet,
     Text,
     View
 } from 'react-native';
+import Animated, {
+    Easing,
+    FadeIn,
+    FadeOut,
+    LinearTransition,
+    useAnimatedStyle,
+    withTiming
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type ListItem =
     | { type: 'folder'; data: Folder }
     | { type: 'note'; data: NoteMetadata }
     | { type: 'section-header'; title: string };
+
+interface SectionHeaderProps {
+    title: string;
+    iconName: keyof typeof Ionicons.glyphMap;
+    isCollapsed: boolean;
+    onToggle: () => void;
+    colors: any;
+    isCompact: boolean;
+}
+
+const SectionHeader = ({ title, iconName, isCollapsed, onToggle, colors, isCompact }: SectionHeaderProps) => {
+    const chevronStyle = useAnimatedStyle(() => ({
+        transform: [{
+            rotate: withTiming(!isCollapsed ? '90deg' : '0deg', {
+                duration: 300,
+                easing: Easing.bezier(0.4, 0, 0.2, 1)
+            })
+        }]
+    }));
+
+    return (
+        <HapticPressable
+            onPress={onToggle}
+            style={[
+                styles.sectionHeaderRow,
+            ]}
+        >
+            <Ionicons name={iconName} size={14} color={colors.text + '50'} />
+            <ThemedText style={[
+                styles.sectionHeaderText,
+                { color: colors.text + '50', flex: 1 }
+            ]}>
+                {title}
+            </ThemedText>
+            <Animated.View style={chevronStyle}>
+                <Ionicons name="chevron-forward" size={16} color={colors.text + '50'} />
+            </Animated.View>
+        </HapticPressable>
+    );
+};
 
 export default function NotesList() {
     const router = useRouter();
@@ -64,6 +111,21 @@ export default function NotesList() {
     const [isSearchVisible, setIsSearchVisible] = useState(false);
     const [isCreatingFolder, setIsCreatingFolder] = useState(false);
 
+    // Collapsed sections state
+    const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
+
+    const toggleSection = useCallback((title: string) => {
+        setCollapsedSections(prev => {
+            const next = new Set(prev);
+            if (next.has(title)) {
+                next.delete(title);
+            } else {
+                next.add(title);
+            }
+            return next;
+        });
+    }, []);
+
     // Edit modal state
     const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
     const [editingNote, setEditingNote] = useState<NoteMetadata | null>(null);
@@ -94,23 +156,29 @@ export default function NotesList() {
         // 1. Folders
         if (browseFolders.length > 0) {
             items.push({ type: 'section-header', title: 'Folders' });
-            browseFolders.forEach((f) => items.push({ type: 'folder', data: f }));
+            if (!collapsedSections.has('Folders')) {
+                browseFolders.forEach((f) => items.push({ type: 'folder', data: f }));
+            }
         }
 
         // 2. Pinned Notes
         if (pinnedNotes.length > 0) {
             items.push({ type: 'section-header', title: 'Pinned' });
-            pinnedNotes.forEach((n) => items.push({ type: 'note', data: n }));
+            if (!collapsedSections.has('Pinned')) {
+                pinnedNotes.forEach((n) => items.push({ type: 'note', data: n }));
+            }
         }
 
         // 3. Remaining Notes
         if (unpinnedNotes.length > 0) {
             items.push({ type: 'section-header', title: 'Notes' });
-            unpinnedNotes.forEach((n) => items.push({ type: 'note', data: n }));
+            if (!collapsedSections.has('Notes')) {
+                unpinnedNotes.forEach((n) => items.push({ type: 'note', data: n }));
+            }
         }
 
         return items;
-    }, [browseFolders, pinnedNotes, unpinnedNotes]);
+    }, [browseFolders, pinnedNotes, unpinnedNotes, collapsedSections]);
 
     const handleFolderPress = useCallback(
         (folderId: string) => {
@@ -201,21 +269,19 @@ export default function NotesList() {
 
     const renderItem = ({ item, index }: { item: ListItem, index: number }) => {
         if (item.type === 'section-header') {
+            const isCollapsed = collapsedSections.has(item.title);
             const iconName = item.title === 'Folders' ? 'folder' :
                 item.title === 'Pinned' ? 'pin' : 'document-text';
+
             return (
-                <View style={[
-                    styles.sectionHeaderRow,
-                    isCompact && { marginTop: 8, marginBottom: 4 },
-                ]}>
-                    <Ionicons name={iconName} size={14} color={colors.text + '50'} />
-                    <ThemedText style={[
-                        styles.sectionHeaderText,
-                        { color: colors.text + '50' }
-                    ]}>
-                        {item.title}
-                    </ThemedText>
-                </View>
+                <SectionHeader
+                    title={item.title}
+                    iconName={iconName}
+                    isCollapsed={isCollapsed}
+                    onToggle={() => toggleSection(item.title)}
+                    colors={colors}
+                    isCompact={isCompact}
+                />
             );
         }
 
@@ -224,15 +290,21 @@ export default function NotesList() {
             const isLastFolder = index === browseData.length - 1 || browseData[index + 1].type !== 'folder';
 
             return (
-                <FolderCard
-                    folder={item.data}
-                    onPress={() => handleFolderPress(item.data.id)}
-                    onLongPress={() => handleFolderLongPress(item.data)}
-                    onDelete={() => handleDeleteFolder(item.data.id)}
-                    swipeable={!item.data.isSystem}
-                    isFirst={isFirstFolder}
-                    isLast={isLastFolder}
-                />
+                <Animated.View
+                    entering={FadeIn.duration(200)}
+                    exiting={FadeOut.duration(200)}
+                    layout={LinearTransition.duration(300).easing(Easing.bezier(0.4, 0, 0.2, 1))}
+                >
+                    <FolderCard
+                        folder={item.data}
+                        onPress={() => handleFolderPress(item.data.id)}
+                        onLongPress={() => handleFolderLongPress(item.data)}
+                        onDelete={() => handleDeleteFolder(item.data.id)}
+                        swipeable={!item.data.isSystem}
+                        isFirst={isFirstFolder}
+                        isLast={isLastFolder}
+                    />
+                </Animated.View>
             );
         }
 
@@ -240,16 +312,22 @@ export default function NotesList() {
         const isLastNote = index === browseData.length - 1 || browseData[index + 1].type !== 'note';
 
         return (
-            <NoteCard
-                note={item.data}
-                onPress={() => handleNotePress(item.data.id)}
-                onLongPress={() => handleNoteLongPress(item.data)}
-                onDelete={() => handleDeleteNote(item.data.id)}
-                onTogglePin={() => handleTogglePin(item.data)}
-                onToggleQuickAccess={() => handleToggleQuickAccess(item.data)}
-                isFirst={isFirstNote}
-                isLast={isLastNote}
-            />
+            <Animated.View
+                entering={FadeIn.duration(200)}
+                exiting={FadeOut.duration(200)}
+                layout={LinearTransition.duration(300).easing(Easing.bezier(0.4, 0, 0.2, 1))}
+            >
+                <NoteCard
+                    note={item.data}
+                    onPress={() => handleNotePress(item.data.id)}
+                    onLongPress={() => handleNoteLongPress(item.data)}
+                    onDelete={() => handleDeleteNote(item.data.id)}
+                    onTogglePin={() => handleTogglePin(item.data)}
+                    onToggleQuickAccess={() => handleToggleQuickAccess(item.data)}
+                    isFirst={isFirstNote}
+                    isLast={isLastNote}
+                />
+            </Animated.View>
         );
     };
 
@@ -282,10 +360,11 @@ export default function NotesList() {
                 }}
             />
 
-            <FlatList
+            <Animated.FlatList
                 data={browseData}
                 keyExtractor={getItemKey}
                 contentContainerStyle={styles.listContent}
+                itemLayoutAnimation={LinearTransition.duration(300).easing(Easing.bezier(0.4, 0, 0.2, 1))}
                 ListEmptyComponent={
                     <View style={styles.emptyContainer}>
                         <Ionicons
@@ -388,12 +467,12 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: 20,
-        marginTop: 16,
-        marginBottom: 8,
+        marginVertical: 8,
         gap: 6,
+
     },
     sectionHeaderText: {
-        fontSize: 12,
+        fontSize: 14,
         fontWeight: '700',
         textTransform: 'uppercase',
         letterSpacing: 0.8,

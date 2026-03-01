@@ -184,6 +184,12 @@ export async function resetAll(): Promise<void> {
     }
 
     initDatabase(expoDb, drizzleDb);
+
+    // Re-init stores so UI reflects the wiped database
+    const { useNotesStore } = require('@/lib/stores/notes.store');
+    const { useTasksStore } = require('@/lib/stores/tasks.store');
+    useNotesStore.getState().initApp();
+    useTasksStore.getState().loadTasks();
   } catch (error) {
     console.error('App reset failed:', error);
     throw error;

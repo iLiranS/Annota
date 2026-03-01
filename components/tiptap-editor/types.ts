@@ -191,6 +191,7 @@ export type PopupType = 'headings' | 'highlight' | 'textColor' | 'youtube' | 'li
 export interface BasePopupProps {
     visible: boolean;
     onClose: () => void;
+    isLoading?: boolean;
 }
 
 export interface BlockMenuPopupProps extends BasePopupProps {
