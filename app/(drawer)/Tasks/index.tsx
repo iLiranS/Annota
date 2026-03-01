@@ -375,7 +375,7 @@ export default function TasksScreen() {
                     <FloatingActionButton
                         onPress={() => router.push('/Tasks/new')}
                         isFloating={false}
-                        size={52}
+                        size={64}
                         style={{ marginTop: -32 }}
                     />
 
@@ -489,16 +489,18 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         borderTopWidth: 1,
-        paddingTop: 6,
+        paddingTop: 0,
         paddingHorizontal: 20,
     },
     footerContent: {
         flexDirection: 'row',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         justifyContent: 'space-between',
     },
     footerSide: {
         flex: 1,
         alignItems: 'flex-end',
+        paddingTop: 10,
+        minHeight: 48,
     },
 });

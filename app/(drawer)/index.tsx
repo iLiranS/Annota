@@ -47,7 +47,8 @@ export default function HomeScreen() {
   }, [globalDisplayName]);
 
   const fallbackName = session?.user?.user_metadata?.display_name || session?.user?.user_metadata?.full_name || session?.user?.user_metadata?.name || session?.user?.user_metadata?.preferred_username || guestDisplayName;
-  const displayName = session ? (storeDisplayName || (displayNameFetched ? fallbackName : '...')) : guestDisplayName;
+  // Use storeDisplayName (from cache or fetched), then fallback to metadata, and only show '...' if all else fails
+  const displayName = session ? (storeDisplayName || fallbackName || '...') : guestDisplayName;
   const { editor } = useSettingsStore();
 
 

@@ -65,21 +65,24 @@ export const useUserStore = create<UserState>()(
             },
 
             setSession: (session) =>
-                set((state) => ({
-                    session,
-                    user: session?.user || null,
-                    // If no session is provided, preserve the current guest state
-                    // If session is provided, user is authenticated so they are no longer a guest.
-                    isGuest: session ? false : state.isGuest,
-                    initialized: true,
-                    displayName: null,
-                    displayNameFetched: false,
-                    role: null,
-                    roleFetched: false,
-                    keyValidator: null,
-                    keyValidatorFetched: false,
-                    hasMasterKey: session ? state.hasMasterKey : null,
-                })),
+                set((state) => {
+                    const isSameUser = state.user?.id === session?.user?.id;
+                    return {
+                        session,
+                        user: session?.user || null,
+                        // If no session is provided, preserve the current guest state
+                        // If session is provided, user is authenticated so they are no longer a guest.
+                        isGuest: session ? false : state.isGuest,
+                        initialized: true,
+                        displayName: isSameUser ? state.displayName : null,
+                        displayNameFetched: isSameUser ? state.displayNameFetched : false,
+                        role: isSameUser ? state.role : null,
+                        roleFetched: isSameUser ? state.roleFetched : false,
+                        keyValidator: isSameUser ? state.keyValidator : null,
+                        keyValidatorFetched: isSameUser ? state.keyValidatorFetched : false,
+                        hasMasterKey: session ? state.hasMasterKey : null,
+                    };
+                }),
 
             setGuest: (isGuest) =>
                 set({
@@ -128,9 +131,15 @@ export const useUserStore = create<UserState>()(
                 if (!state.user) return null;
                 if (state.displayNameFetched) return state.displayName;
 
-                const name = await userService.getDisplayName(state.user.id);
-                set({ displayName: name, displayNameFetched: true });
-                return name;
+                try {
+                    const name = await userService.getDisplayName(state.user.id);
+                    set({ displayName: name, displayNameFetched: true });
+                    return name;
+                } catch (e) {
+                    console.warn('[user.store] failed to get display name (offline likely):', e);
+                    // On error, we just return the cached displayName from state instead of throwing
+                    return state.displayName;
+                }
             },
             getUserRole: async () => {
                 const state = get();
@@ -146,7 +155,7 @@ export const useUserStore = create<UserState>()(
         {
             name: 'auth-storage', // Kept for backwards compatibility with existing local installations
             storage: createJSONStorage(() => AsyncStorage),
-            partialize: (state) => ({ isGuest: state.isGuest }),
+            partialize: (state) => ({ isGuest: state.isGuest, displayName: state.displayName } as any),
         }
     )
 );

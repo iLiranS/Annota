@@ -138,15 +138,39 @@ export default function RootLayout() {
   }, [dbReady, user?.id, isGuest]);
 
   useEffect(() => {
-    authApi.getSession().then(({ data: { session } }) => {
-      setSession(session);
-    });
+    let isMounted = true;
+
+    // Add a timeout to prevent infinite spinning when offline
+    Promise.race([
+      authApi.getSession(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Session fetch timeout')), 8000))
+    ])
+      .then((result: any) => {
+        if (isMounted && result?.data?.session) {
+          setSession(result.data.session);
+        } else if (isMounted) {
+          // Even if session is null, we must initialize to dismiss the spinner
+          useAuthStore.setState({ initialized: true });
+        }
+      })
+      .catch((error) => {
+        console.warn('[RootLayout] Auth getSession failed or timed out:', error);
+        if (isMounted) {
+          // Force initialization on network error so the user doesn't stay trapped on the loading screen.
+          useAuthStore.setState({ initialized: true });
+        }
+      });
 
     const subscription = authApi.onAuthStateChange((_event, session) => {
-      setSession(session);
+      if (isMounted) {
+        setSession(session);
+      }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const segments = useSegments();

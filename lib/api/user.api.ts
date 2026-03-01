@@ -68,7 +68,6 @@ export const userApi = {
         return data?.display_name as string | null;
     },
     getUserRole: async (userId: string) => {
-        console.log('Getting user role for user:', userId);
         const { data, error } = await supabase
             .from('profiles')
             .select('role')
