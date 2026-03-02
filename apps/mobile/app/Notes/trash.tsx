@@ -1,0 +1,584 @@
+import SwipeableItem from '@/components/swipeable-item';
+import ThemedText from '@/components/themed-text';
+import { HapticPressable } from '@/components/ui/haptic-pressable';
+import ThemedPressable from '@/components/ui/themed-pressable';
+import {
+    Folder,
+    NoteMetadata,
+    sortFolders,
+    sortNotes,
+    TRASH_FOLDER_ID,
+    useNotesStore,
+} from '@annota/core';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { useTheme } from '@react-navigation/native';
+import { Stack, useRouter } from 'expo-router';
+import React, { useCallback, useMemo, useState } from 'react';
+import {
+    Alert,
+    FlatList,
+    StyleSheet,
+    Text,
+    View
+} from 'react-native';
+
+interface FolderItemProps {
+    folder: Folder;
+    onPress: () => void;
+    onRestore: () => void;
+    onPermanentDelete: () => void;
+    isFirst?: boolean;
+    isLast?: boolean;
+}
+
+function OriginalFolderBadge({ folderId }: { folderId: string | null }) {
+    const { colors } = useTheme();
+    const folder = useNotesStore((state) => folderId ? state.folders.find(f => f.id === folderId) : null);
+
+    if (folderId === TRASH_FOLDER_ID) return null;
+
+    // If the parent folder is also deleted, show "Notes" (root)
+    const isParentDeleted = folder?.isDeleted ?? false;
+    const displayFolder = !isParentDeleted ? folder : null;
+
+    return (
+        <View style={[styles.folderInfo, { backgroundColor: displayFolder?.color + '10' || colors.background + '10' }]}>
+            <Ionicons
+                name={displayFolder ? (displayFolder.icon as any) : 'home'}
+                size={12}
+                color={displayFolder?.color || colors.text + '80'}
+            />
+            <Text style={[styles.folderBadgeName, { color: displayFolder?.color || colors.text + '80' }]}>
+                {displayFolder ? displayFolder.name : 'Notes'}
+            </Text>
+        </View>
+    );
+}
+
+function FolderCard({ folder, onPress, onRestore, onPermanentDelete, isFirst, isLast }: FolderItemProps) {
+    const { colors, dark } = useTheme();
+
+    const formatDate = (date: Date | null): string => {
+        if (!date) return 'Unknown';
+        const now = new Date();
+        const diffMs = now.getTime() - date.getTime();
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+        if (diffDays === 0) return 'Today';
+        if (diffDays === 1) return 'Yesterday';
+        if (diffDays < 7) return `${diffDays} days ago`;
+        if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    };
+
+    const showTopBorder = !isFirst;
+    const showBottomBorder = !isLast;
+
+    return (
+        <SwipeableItem
+            rightActions={[
+                { icon: 'arrow-undo', backgroundColor: '#10B981', onPress: onRestore },
+                { icon: 'trash-outline', backgroundColor: '#EF4444', onPress: onPermanentDelete }
+            ]}
+        >
+            <ThemedPressable
+                onPress={onPress}
+                style={({ pressed }) => [
+                    styles.folderCard,
+                    pressed && styles.pressed,
+                ]}
+            >
+                {showTopBorder && <View style={[styles.border, styles.topBorder, { backgroundColor: colors.border }]} />}
+                {showBottomBorder && <View style={[styles.border, styles.bottomBorder, { backgroundColor: colors.border }]} />}
+
+                <View style={[styles.folderIcon, { backgroundColor: folder.color + '20' }]}>
+                    <Ionicons name={folder.icon as keyof typeof Ionicons.glyphMap} size={22} color={folder.color} />
+                </View>
+                <View style={styles.folderContent}>
+                    <ThemedText style={styles.folderName}>{folder.name}</ThemedText>
+                    <View style={styles.footerRow}>
+                        <ThemedText style={[styles.deletedDate, { color: colors.text + '60' }]}>
+                            Deleted {formatDate(folder.deletedAt)}
+                        </ThemedText>
+                        <OriginalFolderBadge folderId={folder.originalParentId} />
+                    </View>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.text + '50'} />
+            </ThemedPressable>
+        </SwipeableItem>
+    );
+}
+
+interface NoteItemProps {
+    note: NoteMetadata;
+    onPress: () => void;
+    onRestore: () => void;
+    onPermanentDelete: () => void;
+    isFirst?: boolean;
+    isLast?: boolean;
+}
+
+function NoteCard({ note, onPress, onRestore, onPermanentDelete, isFirst, isLast }: NoteItemProps) {
+    const { colors, dark } = useTheme();
+
+    const formatDate = (date: Date | null): string => {
+        if (!date) return 'Unknown';
+        const now = new Date();
+        const diffMs = now.getTime() - date.getTime();
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+        if (diffDays === 0) return 'Today';
+        if (diffDays === 1) return 'Yesterday';
+        if (diffDays < 7) return `${diffDays} days ago`;
+        if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    };
+
+    const showTopBorder = !isFirst;
+    const showBottomBorder = !isLast;
+
+    return (
+        <SwipeableItem
+            rightActions={[
+                { icon: 'arrow-undo', backgroundColor: '#10B981', onPress: onRestore },
+                { icon: 'trash-outline', backgroundColor: '#EF4444', onPress: onPermanentDelete }
+            ]}
+        >
+            <ThemedPressable
+                onPress={onPress}
+                style={({ pressed }) => [
+                    styles.noteCard,
+                    pressed && styles.pressed,
+                ]}
+            >
+                {showTopBorder && <View style={[styles.border, styles.topBorder, { backgroundColor: colors.border }]} />}
+                {showBottomBorder && <View style={[styles.border, styles.bottomBorder, { backgroundColor: colors.border }]} />}
+                <View style={styles.noteHeader}>
+                    <View style={styles.titleRow}>
+                        <Ionicons name="document-text" size={16} color="#EF4444" />
+                        <ThemedText style={styles.title}>{note.title}</ThemedText>
+                    </View>
+                </View>
+
+                <View style={styles.footerRow}>
+                    <ThemedText style={[styles.deletedDate, { color: colors.text + '60' }]}>
+                        Deleted {formatDate(note.deletedAt)}
+                    </ThemedText>
+                    <OriginalFolderBadge folderId={note.originalFolderId} />
+                </View>
+            </ThemedPressable>
+        </SwipeableItem>
+    );
+}
+
+type ListItem =
+    | { type: 'folder'; data: Folder }
+    | { type: 'note'; data: NoteMetadata }
+    | { type: 'section-header'; title: string };
+
+export default function TrashScreen() {
+    const router = useRouter();
+    const { colors } = useTheme();
+    const [currentFolderId, setCurrentFolderId] = useState<string | null>(TRASH_FOLDER_ID);
+
+
+    // Zustand store
+    const {
+        notes,
+        folders,
+        restoreNote,
+        restoreFolder,
+        permanentlyDeleteNote,
+        permanentlyDeleteFolder,
+        emptyTrash,
+        getNotesInFolder,
+        getFoldersInFolder,
+        getFolderById,
+    } = useNotesStore();
+
+    const currentFolder = currentFolderId ? getFolderById(currentFolderId) : null;
+
+    // Get deleted folders and notes in current folder
+    const deletedFolders = useMemo(() => {
+        const folderList = getFoldersInFolder(currentFolderId, true);
+        return sortFolders(folderList.filter((f) => f.isDeleted), 'UPDATED_LAST');
+    }, [folders, currentFolderId]);
+
+    const deletedNotes = useMemo(() => {
+        const noteList = getNotesInFolder(currentFolderId, true);
+        return sortNotes(noteList.filter((n) => n.isDeleted), 'UPDATED_LAST');
+    }, [notes, currentFolderId]);
+
+    const trashData = useMemo((): ListItem[] => {
+        const items: ListItem[] = [];
+        if (deletedFolders.length > 0) {
+            items.push({ type: 'section-header', title: 'Folders' });
+            deletedFolders.forEach((f) => items.push({ type: 'folder', data: f }));
+        }
+        if (deletedNotes.length > 0) {
+            items.push({ type: 'section-header', title: 'Notes' });
+            deletedNotes.forEach((n) => items.push({ type: 'note', data: n }));
+        }
+        return items;
+    }, [deletedFolders, deletedNotes]);
+
+    const handleFolderPress = useCallback(
+        (folderId: string) => {
+            setCurrentFolderId(folderId);
+        },
+        []
+    );
+
+    const handleNotePress = useCallback(
+        (noteId: string) => {
+            router.push({ pathname: '/Notes/[id]', params: { id: noteId } });
+        },
+        [router]
+    );
+
+
+    const handleRestoreFolder = useCallback(
+        async (folderId: string) => {
+            await restoreFolder(folderId);
+
+        },
+        [restoreFolder]
+    );
+
+    const handleRestoreNote = useCallback(
+        async (noteId: string) => {
+            await restoreNote(noteId);
+        },
+        [restoreNote]
+    );
+
+    const handlePermanentDeleteFolder = useCallback(
+        (folderId: string, folderName: string) => {
+            Alert.alert(
+                'Permanently Delete',
+                `Are you sure you want to permanently delete "${folderName}" and all its contents? This action cannot be undone.`,
+                [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                        text: 'Delete',
+                        style: 'destructive',
+                        onPress: async () => await permanentlyDeleteFolder(folderId),
+                    },
+                ]
+            );
+        },
+        [permanentlyDeleteFolder]
+    );
+
+    const handlePermanentDeleteNote = useCallback(
+        (noteId: string, noteTitle: string) => {
+            Alert.alert(
+                'Permanently Delete',
+                `Are you sure you want to permanently delete "${noteTitle}"? This action cannot be undone.`,
+                [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                        text: 'Delete',
+                        style: 'destructive',
+                        onPress: async () => await permanentlyDeleteNote(noteId),
+                    },
+                ]
+            );
+        },
+        [permanentlyDeleteNote]
+    );
+
+    const handleEmptyTrash = useCallback(() => {
+        Alert.alert(
+            'Empty Trash',
+            'Are you sure you want to permanently delete all items in trash? This action cannot be undone.',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Empty Trash',
+                    style: 'destructive',
+                    onPress: async () => {
+                        await emptyTrash();
+                        setCurrentFolderId(TRASH_FOLDER_ID);
+                    },
+                },
+            ]
+        );
+    }, [emptyTrash]);
+
+    const headerTitle = currentFolder && currentFolderId !== TRASH_FOLDER_ID ? currentFolder.name : 'Trash';
+
+    const renderItem = ({ item, index }: { item: ListItem, index: number }) => {
+        if (item.type === 'section-header') {
+            const iconName = item.title === 'Folders' ? 'folder' : 'document-text';
+            return (
+                <View style={styles.sectionHeaderRow}>
+                    <Ionicons name={iconName} size={14} color={colors.text + '50'} />
+                    <ThemedText style={[styles.sectionHeaderText, { color: colors.text + '50' }]}>
+                        {item.title}
+                    </ThemedText>
+                </View>
+            );
+        }
+
+        const prevItem = index > 0 ? trashData[index - 1] : null;
+        const nextItem = index < trashData.length - 1 ? trashData[index + 1] : null;
+        const isFirst = !prevItem || prevItem.type !== item.type;
+        const isLast = !nextItem || nextItem.type !== item.type;
+
+        if (item.type === 'folder') {
+            return (
+                <FolderCard
+                    folder={item.data}
+                    onPress={() => handleFolderPress(item.data.id)}
+                    onRestore={() => handleRestoreFolder(item.data.id)}
+                    onPermanentDelete={() =>
+                        handlePermanentDeleteFolder(item.data.id, item.data.name)
+                    }
+                    isFirst={isFirst}
+                    isLast={isLast}
+                />
+            );
+        }
+
+        return (
+            <NoteCard
+                note={item.data}
+                onPress={() => handleNotePress(item.data.id)}
+                onRestore={() => handleRestoreNote(item.data.id)}
+                onPermanentDelete={() =>
+                    handlePermanentDeleteNote(item.data.id, item.data.title)
+                }
+                isFirst={isFirst}
+                isLast={isLast}
+            />
+        );
+    };
+
+    const getItemKey = (item: ListItem): string => {
+        if (item.type === 'section-header') return `header-${item.title}`;
+        return item.data.id;
+    };
+
+    const isEmpty = trashData.length === 0;
+
+    return (
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
+            <Stack.Screen
+                options={{
+                    headerShown: true,
+                    title: headerTitle,
+                    headerLeft: () => (
+                        <HapticPressable onPress={() => router.back()} style={styles.headerButton} hitSlop={8}>
+                            <Ionicons name="chevron-back" size={26} color={colors.primary} />
+                        </HapticPressable>
+                    ),
+                    headerRight: !isEmpty
+                        ? () => (
+                            <HapticPressable
+                                onPress={handleEmptyTrash}
+                                style={styles.headerButton}
+                                hitSlop={8}
+                            >
+                                <ThemedText style={[styles.emptyTrashButton, { color: colors.primary }]}>
+                                    Empty
+                                </ThemedText>
+                            </HapticPressable>
+                        )
+                        : undefined,
+                }}
+            />
+
+
+
+            <FlatList
+                data={trashData}
+                keyExtractor={getItemKey}
+                contentContainerStyle={styles.listContent}
+                ListEmptyComponent={
+                    <View style={styles.emptyContainer}>
+                        <Ionicons
+                            name="trash-outline"
+                            size={48}
+                            color={colors.border}
+                        />
+                        <ThemedText style={styles.emptyText}>
+                            Trash is empty
+                        </ThemedText>
+                        <ThemedText style={[styles.emptyHint, { color: colors.border }]}>
+                            Deleted items will appear here
+                        </ThemedText>
+                    </View>
+                }
+                renderItem={renderItem}
+            />
+
+            <View style={[styles.hint, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <Ionicons name="information-circle-outline" size={16} color={colors.text + '60'} />
+                <ThemedText style={[styles.hintText, { color: colors.text + '60' }]}>
+                    Swipe left to reveal actions • Restore or permanently delete
+                </ThemedText>
+            </View>
+        </View>
+    );
+}
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+    },
+    headerButton: {
+        padding: 4,
+    },
+    emptyTrashButton: {
+        fontSize: 16,
+        fontWeight: '600',
+    },
+    listContent: {
+        padding: 16,
+        paddingBottom: 100,
+    },
+    sectionHeader: {
+        fontSize: 12,
+        fontWeight: '600',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+        marginTop: 12,
+        marginBottom: 10,
+        marginLeft: 4,
+    },
+    folderCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 16,
+        paddingHorizontal: 20,
+        backgroundColor: 'transparent',
+        gap: 12,
+        position: 'relative',
+    },
+    noteCard: {
+        padding: 16,
+        paddingHorizontal: 20,
+        backgroundColor: 'transparent',
+        position: 'relative',
+    },
+    folderIcon: {
+        width: 40,
+        height: 40,
+        borderRadius: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    folderContent: {
+        flex: 1,
+    },
+    folderName: {
+        fontSize: 16,
+        fontWeight: '600',
+        marginBottom: 2,
+    },
+    border: {
+        position: 'absolute',
+        left: '5%',
+        right: '5%',
+        height: StyleSheet.hairlineWidth,
+    },
+    topBorder: {
+        top: 0,
+    },
+    bottomBorder: {
+        bottom: 0,
+    },
+    sectionHeaderRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 4,
+        marginTop: 16,
+        marginBottom: 8,
+        gap: 6,
+    },
+    sectionHeaderText: {
+        fontSize: 12,
+        fontWeight: '700',
+        textTransform: 'uppercase',
+        letterSpacing: 0.8,
+    },
+    pressed: {
+        opacity: 0.7,
+        transform: [{ scale: 0.98 }],
+    },
+    noteHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 6,
+    },
+    titleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        flex: 1,
+    },
+    title: {
+        fontSize: 16,
+        fontWeight: '600',
+    },
+    preview: {
+        fontSize: 14,
+        lineHeight: 20,
+        marginBottom: 8,
+    },
+    deletedDate: {
+        fontSize: 12,
+    },
+    footerRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    folderInfo: {
+        flexDirection: 'row',
+        borderRadius: 4,
+        paddingHorizontal: 4,
+        paddingVertical: 2,
+        alignItems: 'center',
+        gap: 4,
+    },
+    folderBadgeName: {
+        fontSize: 10,
+        fontWeight: '600',
+    },
+    emptyContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 48,
+        gap: 8,
+    },
+    emptyText: {
+        fontSize: 17,
+        fontWeight: '600',
+    },
+    emptyHint: {
+        fontSize: 14,
+    },
+    loadingContainer: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    hint: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        padding: 12,
+        marginVertical: 12,
+        width: '90%',
+        alignSelf: 'center',
+        borderRadius: 12,
+        borderWidth: 1,
+    },
+    hintText: {
+        fontSize: 11,
+    },
+});

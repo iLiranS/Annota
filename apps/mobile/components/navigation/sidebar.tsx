@@ -1,0 +1,632 @@
+import { useAppTheme } from '@/hooks/use-app-theme';
+import { DAILY_NOTES_FOLDER_ID, SyncScheduler, useUserStore as useAuthStore, useNotesStore, useSyncStore, type Folder } from '@annota/core';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { DrawerContentComponentProps, DrawerContentScrollView } from '@react-navigation/drawer';
+import { useRouter } from 'expo-router';
+import React, { useCallback, useMemo, useState } from 'react';
+import {
+    Image,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
+} from 'react-native';
+import Animated, {
+    Easing,
+    FadeIn,
+    FadeOut,
+    LinearTransition,
+    useAnimatedStyle,
+    withTiming
+} from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import FolderEditModal from '../folder-edit-modal';
+import { HapticPressable } from '../ui/haptic-pressable';
+
+
+
+interface SidebarItemProps {
+    icon: keyof typeof Ionicons.glyphMap;
+    label: string;
+    onPress: () => void;
+    onLongPress?: () => void;
+    iconColor?: string;
+    isActive?: boolean;
+}
+
+function SidebarItem({ icon, label, onPress, onLongPress, iconColor, isActive }: SidebarItemProps) {
+    const { colors } = useAppTheme();
+
+    return (
+        <Animated.View layout={LinearTransition.duration(350).easing(Easing.bezier(0.4, 0, 0.2, 1))}>
+            <HapticPressable
+                onPress={onPress}
+                onLongPress={onLongPress}
+                style={({ pressed }) => [
+                    styles.sidebarItem,
+                    isActive && { backgroundColor: colors.primary + '15' },
+                    pressed && { opacity: 0.7 },
+                ]}
+            >
+                <Ionicons
+                    name={icon}
+                    size={22}
+                    color={iconColor || (isActive ? colors.primary : colors.text)}
+                />
+                <Text style={[
+                    styles.sidebarItemText,
+                    { color: isActive ? colors.primary : colors.text }
+                ]}>
+                    {label}
+                </Text>
+            </HapticPressable>
+        </Animated.View>
+    );
+}
+
+interface FolderTreeItemProps {
+    folder: Folder;
+    depth: number;
+    isExpanded: boolean;
+    hasChildren: boolean;
+    onToggle: () => void;
+    onNavigate: () => void;
+    onLongPress: () => void;
+    renderChildren: () => React.ReactNode;
+}
+
+function FolderTreeItem({
+    folder,
+    depth,
+    isExpanded,
+    hasChildren,
+    onToggle,
+    onNavigate,
+    onLongPress,
+    renderChildren,
+}: FolderTreeItemProps) {
+    const { colors } = useAppTheme();
+
+    const chevronStyle = useAnimatedStyle(() => ({
+        transform: [{ rotate: withTiming(isExpanded ? '90deg' : '0deg', { duration: 300, easing: Easing.bezier(0.4, 0, 0.2, 1) }) }]
+    }));
+
+    return (
+        <Animated.View
+            layout={LinearTransition.duration(350).easing(Easing.bezier(0.4, 0, 0.2, 1))}
+            style={{ overflow: 'hidden' }}
+        >
+            <Pressable
+                onPress={hasChildren ? onToggle : undefined}
+                onLongPress={onLongPress}
+                style={({ pressed }) => [
+                    styles.folderRow,
+                    { paddingLeft: 12 + depth * 14 },
+                    // Removed hover effect for toggle row per request
+                ]}
+            >
+                <Pressable
+                    onPress={onNavigate}
+                    onLongPress={onLongPress}
+                    style={({ pressed }) => [
+                        styles.folderItemButton,
+                        pressed && { opacity: 0.7 },
+                    ]}
+                >
+                    <Ionicons
+                        name={(folder.icon as keyof typeof Ionicons.glyphMap) || 'folder'}
+                        size={18}
+                        color={folder.color}
+                    />
+                    <Text style={[styles.folderItemText, { color: colors.text }]} numberOfLines={1}>
+                        {folder.name}
+                    </Text>
+                </Pressable>
+
+                {hasChildren ? (
+                    <Animated.View style={[styles.folderToggle, chevronStyle]}>
+                        <Ionicons
+                            name="chevron-forward"
+                            size={16}
+                            color={colors.text}
+                        />
+                    </Animated.View>
+                ) : (
+                    <View style={styles.folderTogglePlaceholder} />
+                )}
+            </Pressable>
+
+            {hasChildren && isExpanded ? (
+                <Animated.View
+                    entering={FadeIn.duration(250)}
+                    exiting={FadeOut.duration(200)}
+                    layout={LinearTransition.duration(350).easing(Easing.bezier(0.4, 0, 0.2, 1))}
+                >
+                    {renderChildren()}
+                </Animated.View>
+            ) : null}
+
+        </Animated.View>
+    );
+}
+
+function Separator() {
+    const { colors } = useAppTheme();
+    return (
+        <Animated.View
+            layout={LinearTransition.duration(350).easing(Easing.bezier(0.4, 0, 0.2, 1))}
+            style={[styles.separator, { backgroundColor: colors.border }]}
+        />
+    );
+}
+
+export default function Sidebar(props: DrawerContentComponentProps) {
+    const { colors } = useAppTheme();
+    const insets = useSafeAreaInsets();
+    const router = useRouter();
+
+    const { folders, notes, getFoldersInFolder } = useNotesStore();
+    const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+    const [isQuickAccessExpanded, setIsQuickAccessExpanded] = useState(false);
+    const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
+
+    // Offline / sync state
+    const isOnline = useSyncStore(s => s.isOnline);
+    const isGuest = useAuthStore(s => s.isGuest);
+    const [retryCooldown, setRetryCooldown] = useState(false);
+    const showOfflineBanner = !isOnline && !isGuest;
+
+    const quickAccessChevronStyle = useAnimatedStyle(() => ({
+        transform: [{ rotate: withTiming(isQuickAccessExpanded ? '90deg' : '0deg', { duration: 300, easing: Easing.bezier(0.4, 0, 0.2, 1) }) }]
+    }));
+
+    const handleRetry = useCallback(() => {
+        if (retryCooldown) return;
+        setRetryCooldown(true);
+        SyncScheduler.instance?.requestImmediateSync();
+        setTimeout(() => setRetryCooldown(false), 10_000);
+    }, [retryCooldown]);
+
+    // Get non-system top-level folders
+    const topLevelFolders = useMemo(() => {
+        return folders.filter(f => f.parentId === null && !f.isSystem);
+    }, [folders]);
+
+    // Get Filtered Quick Access Notes
+    const quickAccessNotes = useMemo(() => {
+        return notes.filter(n => n.isQuickAccess && !n.isDeleted);
+    }, [notes]);
+
+    const closeDrawer = () => {
+        props.navigation.closeDrawer();
+    };
+
+    const navigateToNotes = (folderId?: string) => {
+        closeDrawer();
+        if (folderId) {
+            router.push({ pathname: '/Notes', params: { folderId } });
+        } else {
+            router.push('/Notes');
+        }
+    };
+
+    const navigateToDailyNotes = () => {
+        navigateToNotes(DAILY_NOTES_FOLDER_ID);
+    };
+
+    const navigateToTasks = () => {
+        closeDrawer();
+        router.push('/Tasks');
+    };
+
+    const navigateToTrash = () => {
+        closeDrawer();
+        router.push('/Notes/trash');
+    };
+
+    const navigateToHome = () => {
+        closeDrawer();
+        router.push('/');
+    };
+
+    const navigateToSettings = () => {
+        closeDrawer();
+        router.push('/settings');
+    };
+
+    const toggleFolder = (folderId: string) => {
+        setExpandedFolders((prev) => {
+            const next = new Set(prev);
+            if (next.has(folderId)) {
+                next.delete(folderId);
+            } else {
+                next.add(folderId);
+            }
+            return next;
+        });
+    };
+
+    const renderFolderTree = (parentId: string | null, depth: number): React.ReactNode => {
+        const children = folders.filter(f => f.parentId === parentId && !f.isSystem);
+        if (children.length === 0) return null;
+
+        return (
+            <View>
+                {children.map((folder) => {
+                    const nested = folders.filter(f => f.parentId === folder.id && !f.isSystem);
+                    const hasChildren = nested.length > 0;
+                    const isExpanded = expandedFolders.has(folder.id);
+
+                    return (
+                        <FolderTreeItem
+                            key={folder.id}
+                            folder={folder}
+                            depth={depth}
+                            isExpanded={isExpanded}
+                            hasChildren={hasChildren}
+                            onToggle={() => toggleFolder(folder.id)}
+                            onNavigate={() => navigateToNotes(folder.id)}
+                            onLongPress={() => setEditingFolder(folder)}
+                            renderChildren={() => renderFolderTree(folder.id, depth + 1)}
+                        />
+                    );
+                })}
+            </View>
+        );
+    };
+
+    return (
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
+            {/* Header */}
+            <View style={[styles.header, { paddingTop: insets.top + 16, borderBottomColor: colors.border }]}>
+                <Image
+                    source={require('@/assets/images/icon.png')}
+                    style={styles.logo}
+                    resizeMode="contain"
+                />
+                <Text style={[styles.headerTitle, { color: colors.text }]}>Annota</Text>
+            </View>
+
+            <DrawerContentScrollView
+                {...props}
+                contentContainerStyle={styles.scrollContent}
+            >
+                {/* Top Section */}
+                <View style={styles.section}>
+                    <SidebarItem
+                        icon="home"
+                        label="Home"
+                        onPress={navigateToHome}
+                        iconColor={'#6366F1'}
+                    />
+
+                    <SidebarItem
+                        icon="checkmark-circle"
+                        label="Tasks"
+                        onPress={navigateToTasks}
+                        iconColor={'#10B981'}
+                    />
+
+                    <SidebarItem
+                        icon={(folders.find(f => f.id === DAILY_NOTES_FOLDER_ID)?.icon as keyof typeof Ionicons.glyphMap) || "calendar"}
+                        label={"Daily Notes"}
+                        onPress={navigateToDailyNotes}
+                        onLongPress={() => {
+                            const dailyFolder = folders.find(f => f.id === DAILY_NOTES_FOLDER_ID);
+                            if (dailyFolder) setEditingFolder(dailyFolder);
+                        }}
+                        iconColor={folders.find(f => f.id === DAILY_NOTES_FOLDER_ID)?.color || '#8B5CF6'}
+                    />
+
+                    <Animated.View layout={LinearTransition.duration(350).easing(Easing.bezier(0.4, 0, 0.2, 1))}>
+                        <Pressable
+                            onPress={() => setIsQuickAccessExpanded(!isQuickAccessExpanded)}
+                            style={[
+                                styles.sidebarItem,
+                                // Removed hover effect for toggle row per request
+                            ]}
+                        >
+                            <Ionicons
+                                name={'star'}
+                                size={22}
+                                color={"#FBBF24"}
+                            />
+                            <Text style={[
+                                styles.sidebarItemText,
+                                { color: colors.text, flex: 1 }
+                            ]}>
+                                Quick Access
+                            </Text>
+                            <Animated.View style={quickAccessChevronStyle}>
+                                <Ionicons
+                                    name="chevron-forward"
+                                    size={16}
+                                    color={colors.text}
+                                />
+                            </Animated.View>
+                        </Pressable>
+                    </Animated.View>
+
+                    {/* Quick Access List */}
+                    {isQuickAccessExpanded && (
+                        <Animated.View
+                            entering={FadeIn.duration(250)}
+                            exiting={FadeOut.duration(200)}
+                            layout={LinearTransition.duration(350).easing(Easing.bezier(0.4, 0, 0.2, 1))}
+                            style={[styles.quickAccessList, { overflow: 'hidden' }]}
+                        >
+                            {quickAccessNotes.length === 0 ? (
+                                <Text style={[styles.emptyText, { color: colors.text + '80' }]}>
+                                    No starred notes
+                                </Text>
+                            ) : (
+                                quickAccessNotes.map(note => (
+                                    <HapticPressable
+                                        key={note.id}
+                                        onPress={() => {
+                                            closeDrawer();
+                                            router.push({ pathname: '/Notes/[id]', params: { id: note.id } });
+                                        }}
+                                        style={({ pressed }) => [
+                                            styles.quickAccessItem,
+                                            pressed && { opacity: 0.7 }
+                                        ]}
+                                    >
+                                        <Ionicons name="document-text-outline" size={16} color={colors.primary} />
+                                        <Text style={[styles.quickAccessText, { color: colors.text }]} numberOfLines={1}>
+                                            {note.title || 'Untitled Note'}
+                                        </Text>
+                                    </HapticPressable>
+                                ))
+                            )}
+                        </Animated.View>
+                    )}
+
+
+                </View>
+
+                <Separator />
+
+                {/* Middle Section: All Notes & Folders */}
+                <View style={styles.section}>
+                    <SidebarItem
+                        icon="documents"
+                        label="All Notes"
+                        iconColor={colors.primary}
+                        onPress={() => navigateToNotes()}
+                    />
+
+                    <View style={styles.folderContainer}>
+                        {topLevelFolders.map((folder) => {
+                            const nested = folders.filter(f => f.parentId === folder.id && !f.isSystem);
+                            const hasChildren = nested.length > 0;
+                            const isExpanded = expandedFolders.has(folder.id);
+
+                            return (
+                                <FolderTreeItem
+                                    key={folder.id}
+                                    folder={folder}
+                                    depth={0}
+                                    isExpanded={isExpanded}
+                                    hasChildren={hasChildren}
+                                    onToggle={() => toggleFolder(folder.id)}
+                                    onNavigate={() => navigateToNotes(folder.id)}
+                                    onLongPress={() => setEditingFolder(folder)}
+                                    renderChildren={() => renderFolderTree(folder.id, 1)}
+                                />
+                            );
+                        })}
+                    </View>
+                </View>
+            </DrawerContentScrollView>
+
+            {/* Footer Section */}
+            <View style={[styles.footer, { paddingBottom: insets.bottom + 16, borderTopColor: colors.border }]}>
+                {showOfflineBanner && (
+                    <View style={styles.offlineBanner}>
+                        <Ionicons name="cloud-offline-outline" size={16} color="#F59E0B" />
+                        <Text style={[styles.offlineText, { color: colors.text }]}>Offline</Text>
+                        <Pressable
+                            onPress={handleRetry}
+                            disabled={retryCooldown}
+                            style={[styles.offlineRetryBtn, retryCooldown && { opacity: 0.4 }]}
+                        >
+                            <Text style={styles.offlineRetryText}>{retryCooldown ? 'Wait…' : 'Retry'}</Text>
+                        </Pressable>
+                    </View>
+                )}
+
+                <View style={styles.footerRow}>
+                    <HapticPressable
+                        onPress={navigateToTrash}
+                        style={({ pressed }) => [
+                            styles.footerItem,
+                            pressed && { opacity: 0.7 }
+                        ]}
+                    >
+                        <Ionicons name="trash-outline" size={22} color={colors.text} />
+                        <Text style={[styles.footerText, { color: colors.text }]}>Trash</Text>
+                    </HapticPressable>
+
+                    <HapticPressable
+                        onPress={navigateToSettings}
+                        style={({ pressed }) => [
+                            styles.iconButton,
+                            pressed && { opacity: 0.7 }
+                        ]}
+                    >
+                        <Ionicons name="settings-outline" size={24} color={colors.text} />
+                    </HapticPressable>
+                </View>
+            </View>
+
+            {/* Folder Edit Modal */}
+            <FolderEditModal
+                visible={editingFolder !== null}
+                folder={editingFolder}
+                onClose={() => setEditingFolder(null)}
+            />
+        </View>
+    );
+}
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+    },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingBottom: 16,
+        gap: 12,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+    },
+    logo: {
+        width: 32,
+        height: 32,
+        borderRadius: 8,
+    },
+    headerTitle: {
+        fontSize: 22,
+        fontWeight: '700',
+        letterSpacing: -0.5,
+    },
+    scrollContent: {
+        paddingTop: 8,
+    },
+    section: {
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+    },
+    separator: {
+        height: 0.5,
+        marginHorizontal: 20,
+        marginVertical: 4,
+    },
+    sidebarItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 12,
+        paddingHorizontal: 12,
+        borderRadius: 10,
+        gap: 12,
+    },
+    sidebarItemText: {
+        fontSize: 17,
+        fontWeight: '500',
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 1,
+        },
+        shadowOpacity: 0.1,
+        shadowRadius: 1,
+    },
+    folderContainer: {
+        marginTop: 4,
+        paddingLeft: 4,
+    },
+    folderToggle: {
+        width: 20,
+        height: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 2,
+    },
+    folderTogglePlaceholder: {
+        width: 20,
+        height: 20,
+        marginRight: 2,
+    },
+    folderRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 10,
+        paddingRight: 12,
+        borderRadius: 8,
+    },
+    folderItemButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        flex: 1,
+        marginRight: 8,
+    },
+    folderItemText: {
+        fontSize: 16,
+        fontWeight: '500',
+        flex: 1,
+    },
+    footer: {
+        paddingHorizontal: 20,
+        paddingTop: 16,
+        borderTopWidth: StyleSheet.hairlineWidth,
+        gap: 12,
+    },
+    footerRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    footerItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    footerText: {
+        fontSize: 16,
+        fontWeight: '500',
+    },
+    quickAccessList: {
+        paddingLeft: 12,
+        marginBottom: 8,
+    },
+    quickAccessItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        borderRadius: 8,
+        gap: 8,
+    },
+    quickAccessText: {
+        fontSize: 15,
+        fontWeight: '500',
+        flex: 1,
+    },
+    emptyText: {
+        fontSize: 14,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        fontStyle: 'italic',
+    },
+    iconButton: {
+        padding: 4,
+    },
+    offlineBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        paddingVertical: 6,
+        paddingHorizontal: 10,
+        borderRadius: 8,
+        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    },
+    offlineText: {
+        fontSize: 13,
+        fontWeight: '500',
+        flex: 1,
+    },
+    offlineRetryBtn: {
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 6,
+        backgroundColor: 'rgba(99, 102, 241, 0.15)',
+    },
+    offlineRetryText: {
+        color: '#6366F1',
+        fontSize: 12,
+        fontWeight: '600',
+    },
+});

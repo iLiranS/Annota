@@ -1,5 +1,5 @@
 {
-  "name": "editor-web",
+  "name": "@annota/editor-web",
   "private": true,
   "version": "0.0.0",
   "type": "module",
