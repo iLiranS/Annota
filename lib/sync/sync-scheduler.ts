@@ -116,7 +116,11 @@ export class SyncScheduler {
         // Transition: offline → online → drain dirty data
         if (!wasOnline && nowOnline) {
             console.log('[SyncScheduler] Back online — syncing');
+            this.showOnlineToast();
             this.executeSyncPull().then(() => this.executeSyncPush());
+        } else if (wasOnline && !nowOnline) {
+            console.log('[SyncScheduler] Went offline');
+            this.showOfflineToast();
         }
     };
 
@@ -136,7 +140,6 @@ export class SyncScheduler {
 
         // Offline guard
         if (!store.isOnline) {
-            this.showOfflineToast();
             return;
         }
 
@@ -219,6 +222,17 @@ export class SyncScheduler {
             text2: 'Changes are saved locally and will sync when you reconnect.',
             autoHide: true,
             visibilityTime: 5000,
+            position: 'bottom',
+        });
+    }
+
+    private showOnlineToast(): void {
+        Toast.show({
+            type: 'onlineToast',
+            text1: 'Back online',
+            text2: 'Syncing your changes...',
+            autoHide: true,
+            visibilityTime: 4000,
             position: 'bottom',
         });
     }

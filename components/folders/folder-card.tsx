@@ -71,7 +71,14 @@ export default function FolderCard({
 
     if (swipeable && onDelete && !folder.isSystem) {
         return (
-            <SwipeableItem onDelete={onDelete} compact={isCompact}>
+            <SwipeableItem
+                rightActions={[{
+                    icon: 'trash-outline',
+                    backgroundColor: '#EF4444',
+                    onPress: onDelete,
+                }]}
+                compact={isCompact}
+            >
                 {CardContent}
             </SwipeableItem>
         );

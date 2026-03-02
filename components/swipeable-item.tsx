@@ -1,8 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useTheme } from '@react-navigation/native';
+import { useNavigation, useTheme } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import React from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import ReanimatedSwipeable, {
     SwipeableMethods,
 } from 'react-native-gesture-handler/ReanimatedSwipeable';
@@ -21,12 +21,7 @@ export interface SwipeAction {
 
 interface SwipeableItemProps {
     children: React.ReactNode;
-    leftActions?: SwipeAction[];
     rightActions?: SwipeAction[];
-    /** @deprecated Use leftActions/rightActions instead */
-    onDelete?: () => void;
-    /** @deprecated Use leftActions/rightActions instead */
-    onRestore?: () => void;
     compact?: boolean;
 }
 
@@ -36,58 +31,28 @@ interface SwipeableItemProps {
  */
 export default function SwipeableItem({
     children,
-    leftActions,
-    rightActions,
-    onDelete,
-    onRestore,
+    rightActions = [],
     compact = false,
 }: SwipeableItemProps) {
     const swipeableRef = React.useRef<SwipeableMethods>(null);
     const { colors } = useTheme();
+    const navigation = useNavigation();
 
     const buttonWidth = compact ? 55 : 80;
     const margin = 12;
 
-    const activeRightActions = React.useMemo(() => {
-        const actions = rightActions ? [...rightActions] : [];
-        if (onDelete) {
-            actions.push({
-                icon: 'trash-outline',
-                backgroundColor: '#EF4444',
-                onPress: onDelete,
-            });
-        }
-        return actions;
-    }, [rightActions, onDelete]);
-
-    const activeLeftActions = React.useMemo(() => {
-        const actions = leftActions ? [...leftActions] : [];
-        if (onRestore) {
-            actions.push({
-                icon: 'arrow-undo',
-                backgroundColor: '#10B981',
-                onPress: onRestore,
-            });
-        }
-        return actions;
-    }, [leftActions, onRestore]);
-
     const renderActions = (
         actions: SwipeAction[],
-        dragX: SharedValue<number>,
-        side: 'left' | 'right'
+        dragX: SharedValue<number>
     ) => {
         if (actions.length === 0) return null;
 
-        const isLeft = side === 'left';
         const totalWidth = (actions.length * buttonWidth) + margin;
 
         const animatedStyle = useAnimatedStyle(() => {
             return {
                 transform: [{
-                    translateX: isLeft
-                        ? interpolate(dragX.value, [0, totalWidth], [-totalWidth, 0], Extrapolation.CLAMP)
-                        : interpolate(dragX.value, [-totalWidth, 0], [0, totalWidth], Extrapolation.CLAMP)
+                    translateX: interpolate(dragX.value, [-totalWidth, 0], [0, totalWidth], Extrapolation.CLAMP)
                 }],
             };
         });
@@ -99,7 +64,7 @@ export default function SwipeableItem({
                     { backgroundColor: colors.card },
                     {
                         width: totalWidth,
-                        [isLeft ? 'paddingRight' : 'paddingLeft']: margin,
+                        paddingLeft: margin,
                     },
                     animatedStyle,
                 ]}
@@ -134,13 +99,22 @@ export default function SwipeableItem({
     return (
         <ReanimatedSwipeable
             ref={swipeableRef}
-            renderLeftActions={(progress, dragX) => renderActions(activeLeftActions, dragX, 'left')}
-            renderRightActions={(progress, dragX) => renderActions(activeRightActions, dragX, 'right')}
+            renderRightActions={(progress, dragX) => renderActions(rightActions, dragX)}
             friction={2}
             enableTrackpadTwoFingerGesture
+            dragOffsetFromLeftEdge={30}
             rightThreshold={40}
-            leftThreshold={40}
-            onSwipeableWillOpen={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
+            onSwipeableWillOpen={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                if (Platform.OS === 'ios') {
+                    navigation.setOptions({ gestureEnabled: false });
+                }
+            }}
+            onSwipeableWillClose={() => {
+                if (Platform.OS === 'ios') {
+                    navigation.setOptions({ gestureEnabled: true });
+                }
+            }}
             containerStyle={[styles.container]}
         >
             {children}

@@ -89,10 +89,9 @@ export default function NoteCard({
 
     if (swipeable) {
         const rightActions: SwipeAction[] = [];
-        const leftActions: SwipeAction[] = [];
 
         if (onToggleQuickAccess) {
-            leftActions.push({
+            rightActions.push({
                 icon: note.isQuickAccess ? 'star' : 'star-outline' as const,
                 backgroundColor: '#FBBF24',
                 onPress: onToggleQuickAccess,
@@ -100,7 +99,7 @@ export default function NoteCard({
         }
 
         if (onTogglePin) {
-            leftActions.push({
+            rightActions.push({
                 icon: note.isPinned ? 'pin' : 'pin-outline' as const,
                 backgroundColor: colors.primary,
                 onPress: onTogglePin,
@@ -115,10 +114,9 @@ export default function NoteCard({
             });
         }
 
-        if (rightActions.length > 0 || leftActions.length > 0) {
+        if (rightActions.length > 0) {
             return (
                 <SwipeableItem
-                    leftActions={leftActions}
                     rightActions={rightActions}
                     compact={isCompact}
                 >

@@ -39,6 +39,7 @@ interface NotesState {
     getNoteVersions: (noteId: string) => Promise<{ id: string; createdAt: Date }[]>;
     getNoteVersion: (versionId: string) => Promise<{ id: string; content: string; createdAt: Date } | undefined>;
     deleteNoteVersion: (noteId: string, versionId: string) => Promise<void>;
+    deleteAllVersionsExceptLatest: (noteId: string) => Promise<void>;
     revertNote: (noteId: string, versionId: string) => Promise<void>;
 
     // Folder operations
@@ -227,6 +228,11 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
     deleteNoteVersion: async (noteId, versionId) => {
         await NoteService.deleteVersion(noteId, versionId);
+    },
+
+    deleteAllVersionsExceptLatest: async (noteId) => {
+        await NoteService.deleteAllVersionsExceptLatest(noteId);
+        // Note: component handles refetching versions since they aren't part of zustand's persistent state.
     },
 
     // ============ FOLDER OPERATIONS ============

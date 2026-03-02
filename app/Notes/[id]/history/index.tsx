@@ -11,7 +11,7 @@ export default function NoteHistory() {
     const { id } = useLocalSearchParams<{ id: string }>();
     const router = useRouter();
     const { colors } = useTheme();
-    const { getNoteVersions } = useNotesStore();
+    const { getNoteVersions, deleteAllVersionsExceptLatest } = useNotesStore();
 
     const [versions, setVersions] = useState<{ id: string; createdAt: Date }[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -39,6 +39,15 @@ export default function NoteHistory() {
             };
         }, [id, getNoteVersions])
     );
+
+    const handleClearAll = async () => {
+        if (!id) return;
+        setIsLoading(true);
+        await deleteAllVersionsExceptLatest(id);
+        const data = await getNoteVersions(id);
+        setVersions(data);
+        setIsLoading(false);
+    };
 
 
     const handleVersionPress = (versionId: string) => {
@@ -90,6 +99,20 @@ export default function NoteHistory() {
                             <Ionicons name="chevron-back" size={28} color={colors.primary} />
                         </HapticPressable>
                     ),
+                    headerRight: () => (
+                        <HapticPressable
+                            onPress={handleClearAll}
+                            style={styles.headerButton}
+                            disabled={versions.length <= 1}
+                        >
+                            <Text style={[
+                                styles.headerButtonText,
+                                { color: versions.length <= 1 ? colors.text + '40' : colors.primary }
+                            ]}>
+                                Clear All
+                            </Text>
+                        </HapticPressable>
+                    ),
                 }}
             />
 
@@ -126,6 +149,15 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    headerButton: {
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 8,
+    },
+    headerButtonText: {
+        fontSize: 16,
+        fontWeight: '500',
     },
     center: {
         flex: 1,

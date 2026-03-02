@@ -5,8 +5,8 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
 import * as TaskManager from 'expo-task-manager';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, InteractionManager, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { InteractionManager, StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 import Toast, { type ToastConfig, type ToastConfigParams } from 'react-native-toast-message';
@@ -50,38 +50,21 @@ export const unstable_settings = {
 };
 
 // ─── Custom Toast Config ────────────────────────────────────
-const RETRY_COOLDOWN_MS = 10_000;
 
-function OfflineToast({ text1, text2, hide }: ToastConfigParams<any>) {
-  const [cooldown, setCooldown] = useState(false);
-
-  const handleRetry = useCallback(() => {
-    if (cooldown) return;
-    setCooldown(true);
-    SyncScheduler.instance?.requestImmediateSync();
-    setTimeout(() => setCooldown(false), RETRY_COOLDOWN_MS);
-    hide();
-  }, [cooldown, hide]);
-
+function StatusToast({ text1, text2 }: ToastConfigParams<any>) {
   return (
     <View style={toastStyles.container}>
       <View style={toastStyles.textWrap}>
         <Text style={toastStyles.title}>{text1}</Text>
         {text2 ? <Text style={toastStyles.subtitle}>{text2}</Text> : null}
       </View>
-      <Pressable
-        onPress={handleRetry}
-        disabled={cooldown}
-        style={[toastStyles.retryBtn, cooldown && toastStyles.retryBtnDisabled]}
-      >
-        <Text style={toastStyles.retryText}>{cooldown ? 'Wait…' : 'Retry'}</Text>
-      </Pressable>
     </View>
   );
 }
 
 const toastConfig: ToastConfig = {
-  offlineToast: (props: any) => <OfflineToast {...props} />,
+  offlineToast: (props: any) => <StatusToast {...props} />,
+  onlineToast: (props: any) => <StatusToast {...props} />,
 };
 
 // ─── Root Layout ─────────────────────────────────────────────
@@ -111,8 +94,11 @@ export default function RootLayout() {
     if (!initialized) return;
 
     try {
-      if (user) {
+      if (session) {
         checkMasterKey();
+        initDB(session.user.id);
+      } else if (user) {
+        // Offline cold start — hasMasterKey is already restored from persist
         initDB(user.id);
       } else {
         // Fallback to guest DB for unauthenticated users (so the app can render the Auth screen)
@@ -122,7 +108,7 @@ export default function RootLayout() {
     } catch (e) {
       setDbError(e instanceof Error ? e.message : 'Unknown error');
     }
-  }, [initialized, user?.id]);
+  }, [initialized, session?.user?.id, user?.id]);
 
   useEffect(() => {
     if (dbReady) {
@@ -140,30 +126,31 @@ export default function RootLayout() {
   useEffect(() => {
     let isMounted = true;
 
-    // Add a timeout to prevent infinite spinning when offline
-    Promise.race([
-      authApi.getSession(),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Session fetch timeout')), 8000))
-    ])
-      .then((result: any) => {
-        if (isMounted && result?.data?.session) {
-          setSession(result.data.session);
-        } else if (isMounted) {
-          // Even if session is null, we must initialize to dismiss the spinner
-          useAuthStore.setState({ initialized: true });
-        }
-      })
-      .catch((error) => {
-        console.warn('[RootLayout] Auth getSession failed or timed out:', error);
-        if (isMounted) {
-          // Force initialization on network error so the user doesn't stay trapped on the loading screen.
-          useAuthStore.setState({ initialized: true });
-        }
-      });
+    // Fetch the current session as a background task. 
+    // We do NOT block on this resolving, as offline environments will hang here until the request errors out.
+    authApi.getSession().then((result: any) => {
+      if (isMounted && result?.data?.session) {
+        setSession(result.data.session);
+      } else if (isMounted && !useAuthStore.getState().initialized) {
+        useAuthStore.setState({ initialized: true });
+      }
+    }).catch((error) => {
+      console.warn('[RootLayout] Auth getSession failed (likely offline):', error);
+      if (isMounted && !useAuthStore.getState().initialized) {
+        useAuthStore.setState({ initialized: true });
+      }
+    });
 
-    const subscription = authApi.onAuthStateChange((_event, session) => {
-      if (isMounted) {
+    const subscription = authApi.onAuthStateChange((event, session) => {
+      if (!isMounted) return;
+
+      if (session) {
         setSession(session);
+      } else if (event === 'SIGNED_OUT') {
+        setSession(null);
+      } else if (!useAuthStore.getState().initialized) {
+        // INITIAL_SESSION with null -> mark initialized without wiping persisted user
+        useAuthStore.setState({ initialized: true });
       }
     });
 
@@ -181,8 +168,8 @@ export default function RootLayout() {
 
     const inAuthGroup = segments[0] === '(auth)';
 
-    if (!session && !isGuest) {
-      // User is not authenticated nor a guest
+    if (!session && !isGuest && !user) {
+      // User is not authenticated, has no persisted user context, nor a guest
       if (!inAuthGroup) {
         if (router.canDismiss()) {
           router.dismissAll();
@@ -190,8 +177,8 @@ export default function RootLayout() {
           router.replace('/(auth)');
         }
       }
-    } else if (session) {
-      // User is authenticated
+    } else if (session || user) {
+      // User is authenticated (or was previously offline-authenticated)
       if (hasMasterKey === null) return; // Wait until we verify local key exists
 
       if (hasMasterKey === false) {
@@ -264,14 +251,15 @@ export default function RootLayout() {
   // Show loading state while database or auth initializes
   const errorMessage = dbError;
 
-  if (!dbReady || !initialized || (session && hasMasterKey === null)) {
+  // If critical setup isn't done yet, just render a blank screen (no spinner).
+  // The system preserves the splash screen while the app is loading, so we
+  // don't need to manually inject a spinner which can block the UI.
+  if (!dbReady || !initialized) {
     return (
       <View style={styles.loadingContainer}>
         {errorMessage ? (
           <Text style={styles.errorText}>Startup Error: {errorMessage}</Text>
-        ) : (
-          <ActivityIndicator size="large" />
-        )}
+        ) : null}
       </View>
     );
   }
@@ -304,7 +292,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#000',
+    // backgroundColor: '#000', // Removed: Inherit theme background to support light/dark seamlessly
   },
   errorText: {
     color: '#ff6b6b',
@@ -342,19 +330,5 @@ const toastStyles = StyleSheet.create({
   subtitle: {
     color: 'rgba(255,255,255,0.6)',
     fontSize: 13,
-  },
-  retryBtn: {
-    backgroundColor: 'rgba(99,102,241,0.9)',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  retryBtnDisabled: {
-    opacity: 0.4,
-  },
-  retryText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
   },
 });

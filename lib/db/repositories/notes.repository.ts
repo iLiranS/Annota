@@ -525,6 +525,31 @@ export function deleteNoteVersion(versionId: string): void {
         .run();
 }
 
+export function deleteAllNoteVersionsExceptLatest(noteId: string): void {
+    const versions = getDb()
+        .select({ id: schema.noteVersions.id })
+        .from(schema.noteVersions)
+        .where(eq(schema.noteVersions.noteId, noteId))
+        .orderBy(desc(schema.noteVersions.createdAt))
+        .all();
+
+    if (versions.length <= 1) return;
+
+    const versionsToDelete = versions.slice(1).map(v => v.id);
+
+    getDb().transaction((tx) => {
+        ImagesRepo.deleteImagesForVersions(versionsToDelete, tx);
+        tx.delete(schema.noteVersions)
+            .where(inArray(schema.noteVersions.id, versionsToDelete))
+            .run();
+
+        const deletedFilePaths = ImagesRepo.deleteUnreferencedImages(tx);
+        for (const path of deletedFilePaths) {
+            deleteImageFile(path);
+        }
+    });
+}
+
 export function getRecentNotes(limitCount: number = 5): NoteMetadata[] {
     return getDb()
         .select()

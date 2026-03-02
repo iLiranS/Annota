@@ -108,5 +108,9 @@ export const NoteService = {
 
         // 4. Cleanup images that might have become orphans
         NoteImageService.cleanupOrphans(imageIds);
+    },
+
+    deleteAllVersionsExceptLatest: async (noteId: string) => {
+        notesRepo.deleteAllNoteVersionsExceptLatest(noteId);
     }
 };

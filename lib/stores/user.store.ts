@@ -155,7 +155,19 @@ export const useUserStore = create<UserState>()(
         {
             name: 'auth-storage', // Kept for backwards compatibility with existing local installations
             storage: createJSONStorage(() => AsyncStorage),
-            partialize: (state) => ({ isGuest: state.isGuest, displayName: state.displayName } as any),
+            partialize: (state) => ({
+                isGuest: state.isGuest,
+                displayName: state.displayName,
+                user: state.user,
+                hasMasterKey: state.hasMasterKey
+            } as any),
+            onRehydrateStorage: () => {
+                return (state, error) => {
+                    if (!error && state && (state.user || state.isGuest)) {
+                        useUserStore.setState({ initialized: true });
+                    }
+                };
+            },
         }
     )
 );

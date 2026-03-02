@@ -72,7 +72,12 @@ function FolderCard({ folder, onPress, onRestore, onPermanentDelete, isFirst, is
     const showBottomBorder = !isLast;
 
     return (
-        <SwipeableItem onRestore={onRestore} onDelete={onPermanentDelete}>
+        <SwipeableItem
+            rightActions={[
+                { icon: 'arrow-undo', backgroundColor: '#10B981', onPress: onRestore },
+                { icon: 'trash-outline', backgroundColor: '#EF4444', onPress: onPermanentDelete }
+            ]}
+        >
             <ThemedPressable
                 onPress={onPress}
                 style={({ pressed }) => [
@@ -130,7 +135,12 @@ function NoteCard({ note, onPress, onRestore, onPermanentDelete, isFirst, isLast
     const showBottomBorder = !isLast;
 
     return (
-        <SwipeableItem onRestore={onRestore} onDelete={onPermanentDelete}>
+        <SwipeableItem
+            rightActions={[
+                { icon: 'arrow-undo', backgroundColor: '#10B981', onPress: onRestore },
+                { icon: 'trash-outline', backgroundColor: '#EF4444', onPress: onPermanentDelete }
+            ]}
+        >
             <ThemedPressable
                 onPress={onPress}
                 style={({ pressed }) => [
@@ -403,7 +413,7 @@ export default function TrashScreen() {
             <View style={[styles.hint, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <Ionicons name="information-circle-outline" size={16} color={colors.text + '60'} />
                 <ThemedText style={[styles.hintText, { color: colors.text + '60' }]}>
-                    Swipe right to restore • Swipe left to permanently delete
+                    Swipe left to reveal actions • Restore or permanently delete
                 </ThemedText>
             </View>
         </View>
