@@ -1,6 +1,7 @@
 import { HapticPressable } from '@/components/ui/haptic-pressable';
 import { useAppTheme } from '@/hooks/use-app-theme';
-import { authApi, getMasterKey, useUserStore as useAuthStore } from '@annota/core';
+import { authApi, useUserStore as useAuthStore } from '@annota/core';
+import { getMasterKey } from '@annota/core/platform';
 import { Ionicons } from '@expo/vector-icons';
 import { makeRedirectUri } from 'expo-auth-session';
 import * as QueryParams from 'expo-auth-session/build/QueryParams';

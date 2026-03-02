@@ -10,5 +10,10 @@
     "eslint": "^9.25.0",
     "typescript": "~5.9.2"
   },
-  "private": true
+  "private": true,
+  "dependencies": {
+    "expo": "~55.0.4",
+    "react": "19.2.0",
+    "react-native": "0.83.2"
+  }
 }

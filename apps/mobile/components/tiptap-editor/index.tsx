@@ -1,6 +1,6 @@
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { useSettingsStore } from '@annota/core';
-import { NoteImageService } from '@annota/core/src/services/images';
+import { NoteImageService } from '@annota/core/platform';
 import editorHtml from '@annota/editor-web/dist/editor-html';
 import { useKeyboard } from '@react-native-community/hooks';
 import * as ExpoClipboard from 'expo-clipboard';

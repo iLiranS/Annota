@@ -1,6 +1,7 @@
 import { HapticPressable } from '@/components/ui/haptic-pressable';
 import { useAppTheme } from '@/hooks/use-app-theme';
-import { getMasterKey, StorageService, syncPull, syncPush, useUserStore as useAuthStore } from '@annota/core';
+import { StorageService, syncPull, syncPush, useUserStore as useAuthStore } from '@annota/core';
+import { getMasterKey } from '@annota/core/platform';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack } from 'expo-router';
 import React, { useEffect, useState } from 'react';

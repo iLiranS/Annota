@@ -1,7 +1,8 @@
 import SettingItem from '@/components/settings/setting-item';
 import UpdateDisplayNameForm from '@/components/user/updateDisplayNameForm';
 import { useAppTheme } from '@/hooks/use-app-theme';
-import { getMasterKey, useUserStore as useAuthStore } from '@annota/core';
+import { useUserStore as useAuthStore } from '@annota/core';
+import { getMasterKey } from '@annota/core/platform';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as LocalAuthentication from 'expo-local-authentication';

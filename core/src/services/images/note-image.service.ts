@@ -1,4 +1,5 @@
-import crypto from 'react-native-quick-crypto';
+import { Buffer } from 'buffer';
+import { getPlatformAdapters } from '../../adapters';
 import * as ImagesRepo from '../../db/repositories/images.repository';
 import * as NotesRepo from '../../db/repositories/notes.repository';
 import {
@@ -43,11 +44,11 @@ export async function processAndInsertImage(
     }
 
     // 4. Generate new ID and save file
-    const imageId = crypto.randomUUID();
-    const localPath = saveToLocalStorage(resized.uri, imageId);
+    const imageId = Buffer.from(getPlatformAdapters().crypto.randomBytes(16)).toString('hex');
+    const localPath = await saveToLocalStorage(resized.uri, imageId);
 
     // 5. Get file size
-    const size = getFileSize(localPath);
+    const size = await getFileSize(localPath);
 
     // 6. Insert into DB
     ImagesRepo.insertImage({
@@ -77,7 +78,7 @@ export async function processRemoteImage(
     try {
         return await processAndInsertImage(noteId, temp.uri);
     } finally {
-        temp.cleanup();
+        await temp.cleanup();
     }
 }
 
@@ -119,7 +120,7 @@ export async function resolveImageSources(
  * 4. Check for orphans (images not used by ANY version anymore).
  * 5. Delete orphan files and DB records.
  */
-export function cleanupImagesForNote(noteId: string): void {
+export async function cleanupImagesForNote(noteId: string): Promise<void> {
     const versions = NotesRepo.getNoteVersions(noteId);
     if (versions.length === 0) return;
 
@@ -138,7 +139,7 @@ export function cleanupImagesForNote(noteId: string): void {
 
     // Delete files
     for (const path of deletedPaths) {
-        deleteImageFile(path);
+        await deleteImageFile(path);
     }
 }
 
@@ -146,7 +147,7 @@ export function getImageIdsForVersion(versionId: string): string[] {
     return ImagesRepo.getImageIdsForVersions([versionId]);
 }
 
-export function cleanupOrphans(imageIds: string[]): void {
+export async function cleanupOrphans(imageIds: string[]): Promise<void> {
     if (imageIds.length === 0) return;
 
     const distinctIds = Array.from(new Set(imageIds));
@@ -155,6 +156,6 @@ export function cleanupOrphans(imageIds: string[]): void {
 
     // Delete files
     for (const path of deletedPaths) {
-        deleteImageFile(path);
+        await deleteImageFile(path);
     }
 }

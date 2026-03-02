@@ -1,7 +1,6 @@
 import { generateMnemonic, mnemonicToSeedSync, validateMnemonic } from 'bip39';
 import { Buffer } from 'buffer';
-import * as SecureStore from 'expo-secure-store';
-import crypto from 'react-native-quick-crypto';
+import { getPlatformAdapters } from '../adapters';
 import { useSyncStore } from '../stores/sync.store';
 import './polyfill';
 
@@ -15,7 +14,7 @@ function getMasterKeyAlias(userId: string): string {
  * Custom RNG utilizing react-native-quick-crypto for secure entropy.
  */
 const customRng = (size: number) => {
-    return Buffer.from(crypto.randomBytes(size));
+    return Buffer.from(getPlatformAdapters().crypto.randomBytes(size));
 };
 
 /**
@@ -37,23 +36,21 @@ export function validateMasterKey(mnemonic: string): boolean {
  * Store the master key securely in the device's keychain.
  */
 export async function storeMasterKey(userId: string, mnemonic: string) {
-    await SecureStore.setItemAsync(getMasterKeyAlias(userId), mnemonic, {
-        keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
-    });
+    await getPlatformAdapters().secureStore.setItem(getMasterKeyAlias(userId), mnemonic);
 }
 
 /**
  * Retrieve the master key from the device's keychain.
  */
 export async function getMasterKey(userId: string): Promise<string | null> {
-    return await SecureStore.getItemAsync(getMasterKeyAlias(userId));
+    return await getPlatformAdapters().secureStore.getItem(getMasterKeyAlias(userId));
 }
 
 /**
  * Remove the master key from the device's keychain.
  */
 export async function removeMasterKey(userId: string) {
-    await SecureStore.deleteItemAsync(getMasterKeyAlias(userId));
+    await getPlatformAdapters().secureStore.removeItem(getMasterKeyAlias(userId));
 }
 
 
@@ -65,9 +62,8 @@ export async function removeMasterKey(userId: string) {
 export async function hashMasterKey(mnemonic: string): Promise<string> {
     const seed = mnemonicToSeedSync(mnemonic);
     const keyBytes = seed.subarray(0, 32);
-    const hash = crypto.createHash('sha256');
-    hash.update(Buffer.from(keyBytes).toString('hex'), 'utf8');
-    return hash.digest('hex') as unknown as string;
+    const hexData = Buffer.from(keyBytes).toString('hex');
+    return getPlatformAdapters().crypto.sha256HexUtf8(hexData);
 }
 
 /**
@@ -103,18 +99,23 @@ export interface EncryptedBinaryPayload {
  */
 export function encryptPayload(jsonPayload: string, mnemonic: string): EncryptedPayload {
     const key = getAesKeyFromMnemonic(mnemonic);
+    const keyBytes = new Uint8Array(key);
+    const plaintextBytes = new Uint8Array(Buffer.from(jsonPayload, 'utf8'));
 
-    const nonceBytes = crypto.randomBytes(12);
-    const cipher = crypto.createCipheriv('aes-256-gcm', key as any, nonceBytes as any);
+    const nonceBytes = getPlatformAdapters().crypto.randomBytes(12);
 
-    let encrypted = cipher.update(jsonPayload, 'utf8', 'hex');
-    encrypted += cipher.final('hex');
-    const authTag = cipher.getAuthTag().toString('hex');
+    const { ciphertext, authTag } = getPlatformAdapters().crypto.aes256GcmEncrypt({
+        key: keyBytes,
+        nonce: nonceBytes,
+        plaintext: plaintextBytes
+    });
 
-    const nonceHex = nonceBytes.toString('hex');
+    const encryptedHex = Buffer.from(ciphertext).toString('hex');
+    const authTagHex = Buffer.from(authTag).toString('hex');
+    const nonceHex = Buffer.from(nonceBytes).toString('hex');
 
     return {
-        encryptedData: encrypted + authTag,
+        encryptedData: encryptedHex + authTagHex,
         nonce: nonceHex
     };
 }
@@ -124,17 +125,24 @@ export function encryptPayload(jsonPayload: string, mnemonic: string): Encrypted
  */
 export function decryptPayload(encryptedHexWithTag: string, nonceHex: string, mnemonic: string): string {
     const key = getAesKeyFromMnemonic(mnemonic);
-    const nonceBytes = Buffer.from(nonceHex, 'hex');
 
     try {
         const encryptedHex = encryptedHexWithTag.slice(0, -32);
         const authTagHex = encryptedHexWithTag.slice(-32);
 
-        const decipher = crypto.createDecipheriv('aes-256-gcm', key as any, nonceBytes as any);
-        decipher.setAuthTag(Buffer.from(authTagHex, 'hex') as any);
+        const keyBytes = new Uint8Array(key);
+        const nonceBytes = new Uint8Array(Buffer.from(nonceHex, 'hex'));
+        const ciphertextBytes = new Uint8Array(Buffer.from(encryptedHex, 'hex'));
+        const authTagBytes = new Uint8Array(Buffer.from(authTagHex, 'hex'));
 
-        let decrypted = decipher.update(encryptedHex, 'hex', 'utf8');
-        decrypted += decipher.final('utf8');
+        const decryptedBytes = getPlatformAdapters().crypto.aes256GcmDecrypt({
+            key: keyBytes,
+            nonce: nonceBytes,
+            ciphertext: ciphertextBytes,
+            authTag: authTagBytes
+        });
+
+        const decrypted = Buffer.from(decryptedBytes).toString('utf8');
 
         // Verify it actually decrypted a JSON structure, else it's legacy garbage
         if (decrypted.startsWith('{') || decrypted.startsWith('[')) {
@@ -151,19 +159,24 @@ export function decryptPayload(encryptedHexWithTag: string, nonceHex: string, mn
  */
 export function encryptImageBytes(rawBytes: Uint8Array, mnemonic: string): EncryptedBinaryPayload {
     const key = getAesKeyFromMnemonic(mnemonic);
+    const keyBytes = new Uint8Array(key);
 
-    const nonceBytes = crypto.randomBytes(12);
-    const cipher = crypto.createCipheriv('aes-256-gcm', key as any, nonceBytes as any);
+    const nonceBytes = getPlatformAdapters().crypto.randomBytes(12);
 
-    const encryptedContent = cipher.update(Buffer.from(rawBytes) as any);
-    const encryptedFinal = cipher.final();
-    const authTag = cipher.getAuthTag();
+    const { ciphertext, authTag } = getPlatformAdapters().crypto.aes256GcmEncrypt({
+        key: keyBytes,
+        nonce: nonceBytes,
+        plaintext: rawBytes
+    });
 
-    const encryptedBytes = Buffer.concat([encryptedContent as any, encryptedFinal as any, authTag as any]);
-    const nonceHex = nonceBytes.toString('hex');
+    const encryptedFinal = new Uint8Array(ciphertext.length + authTag.length);
+    encryptedFinal.set(ciphertext, 0);
+    encryptedFinal.set(authTag, ciphertext.length);
+
+    const nonceHex = Buffer.from(nonceBytes).toString('hex');
 
     return {
-        encryptedBytes: new Uint8Array(encryptedBytes),
+        encryptedBytes: encryptedFinal,
         nonce: nonceHex,
     };
 }
@@ -173,21 +186,19 @@ export function encryptImageBytes(rawBytes: Uint8Array, mnemonic: string): Encry
  */
 export function decryptImageBytes(encryptedBytesWithTag: Uint8Array, nonceHex: string, mnemonic: string): Uint8Array {
     const key = getAesKeyFromMnemonic(mnemonic);
-    const nonceBytes = Buffer.from(nonceHex, 'hex');
-
-    const buffer = Buffer.from(encryptedBytesWithTag);
+    const keyBytes = new Uint8Array(key);
+    const nonceBytes = new Uint8Array(Buffer.from(nonceHex, 'hex'));
 
     try {
-        const encryptedBytes = buffer.subarray(0, buffer.length - 16);
-        const authTag = buffer.subarray(buffer.length - 16);
+        const ciphertext = encryptedBytesWithTag.subarray(0, encryptedBytesWithTag.length - 16);
+        const authTag = encryptedBytesWithTag.subarray(encryptedBytesWithTag.length - 16);
 
-        const decipher = crypto.createDecipheriv('aes-256-gcm', key as any, nonceBytes as any);
-        decipher.setAuthTag(authTag as any);
-
-        const decryptedContent = decipher.update(encryptedBytes as any);
-        const decryptedFinal = decipher.final();
-
-        return new Uint8Array(Buffer.concat([decryptedContent as any, decryptedFinal as any]));
+        return getPlatformAdapters().crypto.aes256GcmDecrypt({
+            key: keyBytes,
+            nonce: nonceBytes,
+            ciphertext: ciphertext,
+            authTag: authTag
+        });
     } catch (e: any) {
         return new Uint8Array(0); // Return empty buffer on legacy payload crash
     }

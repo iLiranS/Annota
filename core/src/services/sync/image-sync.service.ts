@@ -1,4 +1,4 @@
-import { Directory, File as ExpoFile, Paths } from 'expo-file-system';
+import { getPlatformAdapters } from '../../adapters';
 import { storageApi } from '../../api/storage.api';
 import * as ImagesRepo from '../../db/repositories/images.repository';
 import { getDb } from '../../stores/db.store';
@@ -50,10 +50,12 @@ class ImageSyncService {
             for (const image of pendingImagesList) {
                 try {
                     // 1. Read file from disk as raw bytes
-                    const file = new ExpoFile(image.localPath);
-                    if (!file.exists) continue;
-
-                    const rawBytes = await file.bytes();
+                    let rawBytes: Uint8Array;
+                    try {
+                        rawBytes = await getPlatformAdapters().fileSystem.readBytes(image.localPath);
+                    } catch (e) {
+                        continue; // file doesn't exist or unreadable
+                    }
 
                     // 2. Encrypt raw bytes directly
                     const { encryptedBytes, nonce } = encryptImageBytes(rawBytes, masterKey);
@@ -175,10 +177,7 @@ class ImageSyncService {
             const decryptedBytes = decryptImageBytes(encryptedBytes, item.nonce, item.masterKey);
 
             // Ensure images directory exists
-            const imagesDir = new Directory(Paths.document, 'images');
-            if (!imagesDir.exists) {
-                imagesDir.create();
-            }
+            const imagesDir = await getPlatformAdapters().fileSystem.ensureDir('images');
 
             // Detect if the decrypted data is raw binary (new format) or base64 text (legacy).
             // Raw images start with known magic bytes; base64 text is pure ASCII.
@@ -204,17 +203,16 @@ class ImageSyncService {
             }
 
             // Write to disk
-            const destFile = new ExpoFile(imagesDir, `${item.imageId}.${fileExt}`);
-            destFile.create({ overwrite: true });
-            destFile.write(fileBytes);
-
-            const newLocalPath = destFile.uri;
+            const separator = imagesDir.endsWith('/') ? '' : '/';
+            const newLocalPath = `${imagesDir}${separator}${item.imageId}.${fileExt}`;
+            await getPlatformAdapters().fileSystem.writeBytes(newLocalPath, fileBytes);
+            const fileSize = await getPlatformAdapters().fileSystem.getSize(newLocalPath);
 
             // Construct minimal image record
             const newImage: Parameters<typeof ImagesRepo.insertImage>[0] = {
                 id: item.imageId,
                 localPath: newLocalPath,
-                size: destFile.size,
+                size: fileSize,
                 syncStatus: 'synced',
                 createdAt: new Date(),
             };

@@ -1,5 +1,6 @@
 import { useAppTheme } from '@/hooks/use-app-theme';
-import { DAILY_NOTES_FOLDER_ID, SyncScheduler, useUserStore as useAuthStore, useNotesStore, useSyncStore, type Folder } from '@annota/core';
+import { DAILY_NOTES_FOLDER_ID, useUserStore as useAuthStore, useNotesStore, useSyncStore, type Folder } from '@annota/core';
+import { SyncScheduler } from '@annota/core/platform';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { DrawerContentComponentProps, DrawerContentScrollView } from '@react-navigation/drawer';
 import { useRouter } from 'expo-router';

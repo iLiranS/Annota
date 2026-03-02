@@ -1,6 +1,4 @@
-import NetInfo, { type NetInfoState } from '@react-native-community/netinfo';
-import { AppState, type AppStateStatus } from 'react-native';
-import Toast from 'react-native-toast-message';
+import { getPlatformAdapters, type Unsubscribe } from '../adapters';
 import { useSyncStore } from '../stores/sync.store';
 import { syncPull, syncPush } from './sync-service';
 
@@ -22,8 +20,8 @@ export class SyncScheduler {
     private masterKey: string = '';
     private debounceTimer: ReturnType<typeof setTimeout> | null = null;
     private hardMaxTimer: ReturnType<typeof setTimeout> | null = null;
-    private appStateSubscription: ReturnType<typeof AppState.addEventListener> | null = null;
-    private netInfoUnsubscribe: (() => void) | null = null;
+    private appStateUnsubscribe: Unsubscribe | null = null;
+    private netInfoUnsubscribe: Unsubscribe | null = null;
     private lastOfflineToastAt = 0;
     private disposed = false;
 
@@ -34,14 +32,15 @@ export class SyncScheduler {
         this.disposed = false;
         SyncScheduler.instance = this;
 
+        const adapters = getPlatformAdapters();
+
         // Subscribe to AppState
-        this.appStateSubscription = AppState.addEventListener(
-            'change',
+        this.appStateUnsubscribe = adapters.appState.subscribe(
             this.handleAppStateChange,
         );
 
         // Subscribe to NetInfo
-        this.netInfoUnsubscribe = NetInfo.addEventListener(
+        this.netInfoUnsubscribe = adapters.network.subscribe(
             this.handleNetInfoChange,
         );
 
@@ -81,8 +80,8 @@ export class SyncScheduler {
         this.disposed = true;
         this.clearAllTimers();
 
-        this.appStateSubscription?.remove();
-        this.appStateSubscription = null;
+        this.appStateUnsubscribe?.();
+        this.appStateUnsubscribe = null;
 
         this.netInfoUnsubscribe?.();
         this.netInfoUnsubscribe = null;
@@ -94,31 +93,30 @@ export class SyncScheduler {
 
     // ─── Internals ─────────────────────────────────────────────
 
-    private handleAppStateChange = (nextState: AppStateStatus): void => {
+    private handleAppStateChange = (isActive: boolean): void => {
         if (this.disposed) return;
 
         // Flush immediately when going to background/inactive
-        if (nextState === 'background' || nextState === 'inactive') {
+        if (!isActive) {
             console.log('[SyncScheduler] App going to background — flushing changes');
             this.clearAllTimers();
             this.executeSyncPush();
         }
     };
 
-    private handleNetInfoChange = (state: NetInfoState): void => {
+    private handleNetInfoChange = (isOnline: boolean): void => {
         if (this.disposed) return;
 
         const wasOnline = useSyncStore.getState().isOnline;
-        const nowOnline = !!state.isConnected && !!state.isInternetReachable;
 
-        useSyncStore.getState().setOnline(nowOnline);
+        useSyncStore.getState().setOnline(isOnline);
 
         // Transition: offline → online → drain dirty data
-        if (!wasOnline && nowOnline) {
+        if (!wasOnline && isOnline) {
             console.log('[SyncScheduler] Back online — syncing');
             this.showOnlineToast();
             this.executeSyncPull().then(() => this.executeSyncPush());
-        } else if (wasOnline && !nowOnline) {
+        } else if (wasOnline && !isOnline) {
             console.log('[SyncScheduler] Went offline');
             this.showOfflineToast();
         }
@@ -202,8 +200,8 @@ export class SyncScheduler {
      */
     private reinitStores(): void {
         try {
-            const { useNotesStore } = require('@annota/core/src/stores/notes.store');
-            const { useTasksStore } = require('@annota/core/src/stores/tasks.store');
+            const { useNotesStore } = require('../stores/notes.store');
+            const { useTasksStore } = require('../stores/tasks.store');
             useNotesStore.getState().initApp();
             useTasksStore.getState().loadTasks();
         } catch (err) {
@@ -216,24 +214,18 @@ export class SyncScheduler {
         if (now - this.lastOfflineToastAt < OFFLINE_TOAST_COOLDOWN_MS) return;
 
         this.lastOfflineToastAt = now;
-        Toast.show({
-            type: 'offlineToast',
-            text1: 'You\'re offline',
-            text2: 'Changes are saved locally and will sync when you reconnect.',
-            autoHide: true,
-            visibilityTime: 5000,
-            position: 'bottom',
+        getPlatformAdapters().toast.show({
+            type: 'info',
+            title: 'You\'re offline',
+            message: 'Changes are saved locally and will sync when you reconnect.',
         });
     }
 
     private showOnlineToast(): void {
-        Toast.show({
-            type: 'onlineToast',
-            text1: 'Back online',
-            text2: 'Syncing your changes...',
-            autoHide: true,
-            visibilityTime: 4000,
-            position: 'bottom',
+        getPlatformAdapters().toast.show({
+            type: 'info',
+            title: 'Back online',
+            message: 'Syncing your changes...',
         });
     }
 

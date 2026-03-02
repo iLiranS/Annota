@@ -1,24 +1,14 @@
-import { Directory, File as ExpoFile, Paths } from 'expo-file-system';
-import * as LegacyFileSystem from 'expo-file-system/legacy';
-import { ImageManipulator, SaveFormat, type ImageResult } from 'expo-image-manipulator';
-import * as MediaLibrary from 'expo-media-library';
-import crypto from 'react-native-quick-crypto';
+import { getPlatformAdapters } from '../../adapters';
 
 // ============ CONSTANTS ============
 
-const IMAGES_DIR_NAME = 'images';
 const MAX_DIMENSION = 1500;
 const WEBP_QUALITY = 0.8;
 
 // ============ DIRECTORY MANAGEMENT ============
 
-/** Returns the images directory, creating it if needed */
-export function getImagesDirectory(): Directory {
-    const dir = new Directory(Paths.document, IMAGES_DIR_NAME);
-    if (!dir.exists) {
-        dir.create();
-    }
-    return dir;
+export async function getImagesDirectory(): Promise<string> {
+    return await getPlatformAdapters().fileSystem.ensureDir('images');
 }
 
 // ============ IMAGE PROCESSING ============
@@ -28,29 +18,13 @@ export function getImagesDirectory(): Directory {
  * Targets the long edge to MAX_DIMENSION (landscape → width, portrait → height).
  * Skips resize if both dimensions are already within limits.
  */
-export async function resizeAndCompress(uri: string): Promise<ImageResult> {
-    const context = ImageManipulator.manipulate(uri);
-
-    // Render once to get original dimensions
-    const original = await context.renderAsync();
-    const { width: origW, height: origH } = await original.saveAsync({ format: SaveFormat.WEBP, compress: 1 });
-
-    let manipulated = ImageManipulator.manipulate(uri);
-
-    if (origW > MAX_DIMENSION || origH > MAX_DIMENSION) {
-        // Resize the long edge; expo-image-manipulator auto-computes the other
-        if (origW >= origH) {
-            manipulated = manipulated.resize({ width: MAX_DIMENSION });
-        } else {
-            manipulated = manipulated.resize({ height: MAX_DIMENSION });
-        }
-    }
-
-    const rendered = await manipulated.renderAsync();
-    return rendered.saveAsync({
-        format: SaveFormat.WEBP,
-        compress: WEBP_QUALITY,
+export async function resizeAndCompress(uri: string): Promise<{ uri: string; width: number; height: number }> {
+    const { path, width, height } = await getPlatformAdapters().image.resizeAndCompress(uri, {
+        maxDimension: MAX_DIMENSION,
+        quality: WEBP_QUALITY,
+        format: 'webp',
     });
+    return { uri: path, width, height };
 }
 
 /**
@@ -58,23 +32,21 @@ export async function resizeAndCompress(uri: string): Promise<ImageResult> {
  * Reads as base64 then hashes — ensures consistent hashing after resize.
  */
 export async function computeHash(fileUri: string): Promise<string> {
-    const file = new ExpoFile(fileUri);
-    const base64 = await file.base64();
-    const hash = crypto.createHash('sha256');
-    hash.update(base64, 'utf8');
-    return hash.digest('hex') as unknown as string;
+    const base64 = await getPlatformAdapters().fileSystem.readBase64(fileUri);
+    return getPlatformAdapters().crypto.sha256HexUtf8(base64);
 }
 
 /**
  * Save an image file to the local images directory.
  * Returns the final local path (URI).
  */
-export function saveToLocalStorage(sourceUri: string, imageId: string): string {
-    const dir = getImagesDirectory();
-    const destFile = new ExpoFile(dir, `${imageId}.webp`);
-    const sourceFile = new ExpoFile(sourceUri);
-    sourceFile.copy(destFile);
-    return destFile.uri;
+export async function saveToLocalStorage(sourceUri: string, imageId: string): Promise<string> {
+    const dir = await getImagesDirectory();
+    // Normalize path just in case
+    const separator = dir.endsWith('/') ? '' : '/';
+    const destPath = `${dir}${separator}${imageId}.webp`;
+    await getPlatformAdapters().fileSystem.copyFile(sourceUri, destPath);
+    return destPath;
 }
 
 /**
@@ -82,8 +54,7 @@ export function saveToLocalStorage(sourceUri: string, imageId: string): string {
  * Returns `data:image/jpeg;base64,...`
  */
 export async function readAsBase64DataUri(localPath: string): Promise<string> {
-    const file = new ExpoFile(localPath);
-    const base64 = await file.base64();
+    const base64 = await getPlatformAdapters().fileSystem.readBase64(localPath);
     // Detect MIME from extension — legacy .jpg files still need to work
     const mime = localPath.endsWith('.webp') ? 'image/webp' : 'image/jpeg';
     return `data:${mime};base64,${base64}`;
@@ -93,30 +64,19 @@ export async function readAsBase64DataUri(localPath: string): Promise<string> {
  * Download a remote image to a temporary file.
  * Returns the URI and a cleanup function.
  */
-export async function downloadRemoteImage(url: string): Promise<{ uri: string; cleanup: () => void }> {
-    const tempDir = new Directory(Paths.cache, 'downloads');
-    if (!tempDir.exists) {
-        tempDir.create();
-    }
-    const downloaded = await ExpoFile.downloadFileAsync(url, tempDir);
-    return {
-        uri: downloaded.uri,
-        cleanup: () => { try { downloaded.delete(); } catch { /* ignore */ } },
-    };
+export async function downloadRemoteImage(url: string): Promise<{ uri: string; cleanup: () => Promise<void> }> {
+    const result = await getPlatformAdapters().fileSystem.downloadToTemp(url);
+    return { uri: result.path, cleanup: result.cleanup };
 }
 
 /** Delete an image file from local storage */
-export function deleteImageFile(localPath: string): void {
-    const file = new ExpoFile(localPath);
-    if (file.exists) {
-        file.delete();
-    }
+export async function deleteImageFile(localPath: string): Promise<void> {
+    await getPlatformAdapters().fileSystem.deleteFile(localPath).catch(() => { });
 }
 
 /** Get file size in bytes */
-export function getFileSize(localPath: string): number {
-    const file = new ExpoFile(localPath);
-    return file.size;
+export async function getFileSize(localPath: string): Promise<number> {
+    return await getPlatformAdapters().fileSystem.getSize(localPath).catch(() => 0);
 }
 
 // ============ DEVICE INTEGRATION ============
@@ -128,8 +88,8 @@ export function getFileSize(localPath: string): number {
  */
 export async function saveImageToGallery(imageId?: string, base64Uri?: string): Promise<boolean> {
     try {
-        const { status } = await MediaLibrary.requestPermissionsAsync();
-        if (status !== 'granted') {
+        const hasPermission = await getPlatformAdapters().image.requestGalleryPermission();
+        if (!hasPermission) {
             console.log('No permission to save images to gallery');
             return false;
         }
@@ -137,30 +97,33 @@ export async function saveImageToGallery(imageId?: string, base64Uri?: string): 
         let localUri = '';
 
         if (imageId) {
-            const dir = getImagesDirectory();
-            // Try .webp first, fall back to legacy .jpg
-            let file = new ExpoFile(dir, `${imageId}.webp`);
-            if (!file.exists) {
-                file = new ExpoFile(dir, `${imageId}.jpg`);
-            }
-            if (file.exists) {
-                const ext = file.uri.endsWith('.webp') ? 'webp' : 'jpg';
-                const tempFileUri = LegacyFileSystem.cacheDirectory + `download-${Date.now()}.${ext}`;
-                await LegacyFileSystem.copyAsync({
-                    from: file.uri,
-                    to: tempFileUri
-                });
-                localUri = tempFileUri;
+            const dir = await getImagesDirectory();
+            const separator = dir.endsWith('/') ? '' : '/';
+            const webpPath = `${dir}${separator}${imageId}.webp`;
+            let size = await getFileSize(webpPath);
+            if (size > 0) {
+                localUri = webpPath;
+            } else {
+                const jpgPath = `${dir}${separator}${imageId}.jpg`;
+                size = await getFileSize(jpgPath);
+                if (size > 0) {
+                    localUri = jpgPath;
+                }
             }
         }
 
         if (!localUri && base64Uri && base64Uri.startsWith('data:image/')) {
             const base64Data = base64Uri.replace(/^data:image\/\w+;base64,/, "");
-            const tempFileUri = LegacyFileSystem.cacheDirectory + `download-${Date.now()}.jpg`;
-            await LegacyFileSystem.writeAsStringAsync(tempFileUri, base64Data, {
-                encoding: LegacyFileSystem.EncodingType.Base64,
-            });
-            localUri = tempFileUri;
+            const tempDir = await getPlatformAdapters().fileSystem.ensureDir('cache');
+            const separator = tempDir.endsWith('/') ? '' : '/';
+            localUri = `${tempDir}${separator}download-${Date.now()}.jpg`;
+
+            const binaryString = atob(base64Data);
+            const rawBytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                rawBytes[i] = binaryString.charCodeAt(i);
+            }
+            await getPlatformAdapters().fileSystem.writeBytes(localUri, rawBytes);
         }
 
         if (!localUri) {
@@ -168,7 +131,7 @@ export async function saveImageToGallery(imageId?: string, base64Uri?: string): 
             return false;
         }
 
-        await MediaLibrary.saveToLibraryAsync(localUri);
+        await getPlatformAdapters().image.saveToGallery(localUri);
         console.log('Image successfully saved to gallery!');
         return true;
     } catch (e) {

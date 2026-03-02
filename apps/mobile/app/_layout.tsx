@@ -4,16 +4,16 @@ import { ThemeProvider } from '@react-navigation/native';
 import { drizzle } from 'drizzle-orm/expo-sqlite';
 import * as BackgroundTask from 'expo-background-task';
 import { Stack, useRouter, useSegments } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
 import { openDatabaseSync } from 'expo-sqlite';
+import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
 import * as TaskManager from 'expo-task-manager';
 import { useEffect, useRef, useState } from 'react';
 import { InteractionManager, StyleSheet, Text, View } from 'react-native';
-import 'react-native-url-polyfill/auto';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 import Toast, { type ToastConfig, type ToastConfigParams } from 'react-native-toast-message';
+import 'react-native-url-polyfill/auto';
 
 const BACKGROUND_SYNC_TASK = 'BACKGROUND_SYNC_TASK';
 
@@ -21,7 +21,7 @@ TaskManager.defineTask(BACKGROUND_SYNC_TASK, async () => {
   try {
     const { authApi } = require('@annota/core');
     const { syncPull, syncPush } = require('@annota/core');
-    const { getMasterKey } = require('@annota/core');
+    const { getMasterKey } = require('@annota/core/platform');
 
     const { data: { session } } = await authApi.getSession();
     if (!session) return BackgroundTask.BackgroundTaskResult.Success;
@@ -43,9 +43,12 @@ TaskManager.defineTask(BACKGROUND_SYNC_TASK, async () => {
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { useDailyCleanup } from '@/hooks/use-daily-cleanup';
 import { useDisplayNameSync } from '@/hooks/use-display-name-sync';
-import { authApi, getMasterKey, initDatabase, initDb, setStorageEngine, SyncScheduler, useUserStore as useAuthStore, useDbStore } from '@annota/core';
+import { authApi, initDatabase, initDb, setStorageEngine, useUserStore as useAuthStore, useDbStore } from '@annota/core';
+import { SyncScheduler, getMasterKey, initPlatformAdapters } from '@annota/core/platform';
+import { createMobileAdapters } from './bootstrap/mobile-adapters';
 
 setStorageEngine(AsyncStorage);
+initPlatformAdapters(createMobileAdapters());
 
 type MobileDbBundle = {
   expoDb: ReturnType<typeof openDatabaseSync>;

@@ -1,5 +1,6 @@
 import { useAppTheme } from '@/hooks/use-app-theme';
-import { authApi, generateMasterKey, useUserStore as useAuthStore, userService } from '@annota/core';
+import { authApi, useUserStore as useAuthStore, userService } from '@annota/core';
+import { generateMasterKey } from '@annota/core/platform';
 import * as Clipboard from 'expo-clipboard';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';

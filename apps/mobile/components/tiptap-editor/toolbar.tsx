@@ -3,8 +3,8 @@ import * as ExpoClipboard from 'expo-clipboard';
 import React, { useState } from 'react';
 import { Keyboard, ScrollView, StyleSheet, View } from 'react-native';
 
-import { HeadingLevel } from '@annota/core/constants/editor';
-import { ImageService } from '@annota/core/src/services/images';
+import { HeadingLevel } from '@annota/core';
+import { ImageService } from '@annota/core/platform';
 import { ToolbarButton } from './toolbar-button';
 import { ToolbarPopup } from './toolbar-popup';
 import type { EditorState, PopupType } from './types';
