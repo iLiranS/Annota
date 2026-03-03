@@ -1,11 +1,11 @@
+import { Session, User } from '@supabase/supabase-js';
+import { create } from 'zustand';
+import { createJSONStorage, persist } from 'zustand/middleware';
 import { authApi } from '../api/auth.api';
 import { userApi } from '../api/user.api';
 import { userService } from '../services/user.service';
 import { getMasterKey } from '../utils/crypto';
 import { createStorageAdapter } from './config';
-import { Session, User } from '@supabase/supabase-js';
-import { create } from 'zustand';
-import { createJSONStorage, persist } from 'zustand/middleware';
 
 type UserState = {
     session: Session | null;
@@ -163,7 +163,7 @@ export const useUserStore = create<UserState>()(
             } as any),
             onRehydrateStorage: () => {
                 return (state, error) => {
-                    if (!error && state && (state.user || state.isGuest)) {
+                    if (!error) {
                         useUserStore.setState({ initialized: true });
                     }
                 };
