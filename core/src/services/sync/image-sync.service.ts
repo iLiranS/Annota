@@ -1,7 +1,7 @@
 import { getPlatformAdapters } from '../../adapters';
 import { storageApi } from '../../api/storage.api';
 import * as ImagesRepo from '../../db/repositories/images.repository';
-import { getDb } from '../../stores/db.store';
+import type { ImageInsert } from '../../db/schema';
 import { decryptImageBytes, encryptImageBytes } from '../../utils/crypto';
 
 const BUCKET_NAME = 'e2e_images';
@@ -36,7 +36,7 @@ class ImageSyncService {
      * Push pending images linked to HEAD versions of notes up to Supabase.
      */
     async pushImages(masterKey: string, userId: string, noteIdsToRefresh: string[] = []): Promise<void> {
-        const candidates = ImagesRepo.getPendingImagesLinkedToLatestVersions();
+        const candidates = await ImagesRepo.getPendingImagesLinkedToLatestVersions();
 
         const notesWithPendingImages = new Set(candidates.map(c => c.noteId));
         const uniquePendingImages = new Map(candidates.map(c => [c.image.id, c.image]));
@@ -58,7 +58,7 @@ class ImageSyncService {
                     }
 
                     // 2. Encrypt raw bytes directly
-                    const { encryptedBytes, nonce } = encryptImageBytes(rawBytes, masterKey);
+                    const { encryptedBytes, nonce } = await encryptImageBytes(rawBytes, masterKey);
 
                     // 3. Upload encrypted bytes to Storage
                     const storagePath = `${userId}/${image.id}`;
@@ -87,7 +87,7 @@ class ImageSyncService {
 
             // 5. Update local DB
             if (pushedImageIds.length > 0) {
-                ImagesRepo.markImagesAsSynced(pushedImageIds);
+                await ImagesRepo.markImagesAsSynced(pushedImageIds);
                 console.log(`[ImageSync] Successfully pushed ${pushedImageIds.length} images.`);
             }
         }
@@ -101,12 +101,12 @@ class ImageSyncService {
             return;
         }
 
-        const latestImageStateByNote = ImagesRepo.getLatestVersionImageIdsForNotes(noteIdsNeedingReplace);
+        const latestImageStateByNote = await ImagesRepo.getLatestVersionImageIdsForNotes(noteIdsNeedingReplace);
         for (const { noteId, imageIds } of latestImageStateByNote) {
             try {
                 // Only reference images that have been successfully pushed (exist in encrypted_images)
                 const syncedImageIds = imageIds.length > 0
-                    ? ImagesRepo.getImagesByIds(imageIds)
+                    ? (await ImagesRepo.getImagesByIds(imageIds))
                         .filter(img => img.syncStatus === 'synced')
                         .map(img => img.id)
                     : [];
@@ -174,7 +174,7 @@ class ImageSyncService {
             const encryptedBytes = new Uint8Array(arrayBuffer);
 
             // Decrypt → raw bytes
-            const decryptedBytes = decryptImageBytes(encryptedBytes, item.nonce, item.masterKey);
+            const decryptedBytes = await decryptImageBytes(encryptedBytes, item.nonce, item.masterKey);
 
             // Ensure images directory exists
             const imagesDir = await getPlatformAdapters().fileSystem.ensureDir('images');
@@ -209,7 +209,7 @@ class ImageSyncService {
             const fileSize = await getPlatformAdapters().fileSystem.getSize(newLocalPath);
 
             // Construct minimal image record
-            const newImage: Parameters<typeof ImagesRepo.insertImage>[0] = {
+            const newImage: ImageInsert = {
                 id: item.imageId,
                 localPath: newLocalPath,
                 size: fileSize,
@@ -218,14 +218,12 @@ class ImageSyncService {
             };
 
             // Save to DB
-            getDb().transaction(tx => {
-                const existing = ImagesRepo.getImageById(newImage.id, tx);
-                if (!existing) {
-                    ImagesRepo.insertImage(newImage, tx);
-                } else if (existing.syncStatus !== 'synced') {
-                    ImagesRepo.markImagesAsSynced([newImage.id], tx);
-                }
-            });
+            const existing = await ImagesRepo.getImageById(newImage.id);
+            if (!existing) {
+                await ImagesRepo.insertImage(newImage);
+            } else if (existing.syncStatus !== 'synced') {
+                await ImagesRepo.markImagesAsSynced([newImage.id]);
+            }
 
             console.log(`[ImageSync] Downloaded and synced image ${item.imageId} (${isRawBinary ? 'binary' : 'legacy'})`);
         } catch (error) {

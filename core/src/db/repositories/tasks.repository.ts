@@ -1,5 +1,5 @@
-import { getDb } from '../../stores/db.store';
 import { and, asc, eq, gte, inArray, lt } from 'drizzle-orm';
+import { getDb } from '../../stores/db.store';
 import type { Task, TaskInsert } from '../schema';
 import * as schema from '../schema';
 import type { DbOrTx } from '../types';
@@ -19,26 +19,26 @@ export interface CreateTaskInput {
 
 // ============ SYNC OPERATIONS ============
 
-export function getDirtyTasks(): Task[] {
-    return getDb().select().from(schema.tasks).where(eq(schema.tasks.isDirty, true)).all();
+export async function getDirtyTasks(): Promise<Task[]> {
+    return await getDb().select().from(schema.tasks).where(eq(schema.tasks.isDirty, true)).all();
 }
 
-export function clearDirtyTasks(taskIds: string[], syncedAt: Date): void {
+export async function clearDirtyTasks(taskIds: string[], syncedAt: Date): Promise<void> {
     if (taskIds.length === 0) return;
-    getDb().update(schema.tasks)
+    await getDb().update(schema.tasks)
         .set({ isDirty: false, lastSyncedAt: syncedAt })
         .where(inArray(schema.tasks.id, taskIds))
         .run();
 }
 
-export function upsertSyncedTask(taskData: Task, tx: DbOrTx = getDb()): void {
-    const existing = tx.select().from(schema.tasks).where(eq(schema.tasks.id, taskData.id)).get();
+export async function upsertSyncedTask(taskData: Task, tx: DbOrTx = getDb()): Promise<void> {
+    const existing = await tx.select().from(schema.tasks).where(eq(schema.tasks.id, taskData.id)).get();
     if (existing && existing.updatedAt > taskData.updatedAt) {
         console.log(`[Sync] Local task ${taskData.id} is newer, ignoring pulled row. Local: ${existing.updatedAt}, Pulled: ${taskData.updatedAt}`);
         return;
     }
 
-    tx.insert(schema.tasks)
+    await tx.insert(schema.tasks)
         .values(taskData)
         .onConflictDoUpdate({ target: schema.tasks.id, set: taskData })
         .run();
@@ -46,16 +46,16 @@ export function upsertSyncedTask(taskData: Task, tx: DbOrTx = getDb()): void {
 
 // ============ TASK OPERATIONS ============
 
-export function getAllTasks(): Task[] {
-    return getDb()
+export async function getAllTasks(): Promise<Task[]> {
+    return await getDb()
         .select()
         .from(schema.tasks)
         .where(eq(schema.tasks.isPermDeleted, false))
         .all();
 }
 
-export function getTaskById(taskId: string): Task | null {
-    const result = getDb()
+export async function getTaskById(taskId: string): Promise<Task | null> {
+    const result = await getDb()
         .select()
         .from(schema.tasks)
         .where(eq(schema.tasks.id, taskId))
@@ -64,7 +64,7 @@ export function getTaskById(taskId: string): Task | null {
     return result ?? null;
 }
 
-export function getTasksByDate(date: Date): Task[] {
+export async function getTasksByDate(date: Date): Promise<Task[]> {
     // Get start and end of day
     const startOfDay = new Date(date);
     startOfDay.setHours(0, 0, 0, 0);
@@ -72,7 +72,7 @@ export function getTasksByDate(date: Date): Task[] {
     const endOfDay = new Date(date);
     endOfDay.setHours(23, 59, 59, 999);
 
-    return getDb()
+    return await getDb()
         .select()
         .from(schema.tasks)
         .where(
@@ -85,8 +85,8 @@ export function getTasksByDate(date: Date): Task[] {
         .all();
 }
 
-export function getTasksSortedByDeadline(): Task[] {
-    return getDb()
+export async function getTasksSortedByDeadline(): Promise<Task[]> {
+    return await getDb()
         .select()
         .from(schema.tasks)
         .where(eq(schema.tasks.isPermDeleted, false))
@@ -94,8 +94,8 @@ export function getTasksSortedByDeadline(): Task[] {
         .all();
 }
 
-export function getPendingTasks(): Task[] {
-    return getDb()
+export async function getPendingTasks(): Promise<Task[]> {
+    return await getDb()
         .select()
         .from(schema.tasks)
         .where(
@@ -108,8 +108,8 @@ export function getPendingTasks(): Task[] {
         .all();
 }
 
-export function getCompletedTasks(): Task[] {
-    return getDb()
+export async function getCompletedTasks(): Promise<Task[]> {
+    return await getDb()
         .select()
         .from(schema.tasks)
         .where(
@@ -122,46 +122,46 @@ export function getCompletedTasks(): Task[] {
         .all();
 }
 
-export function createTask(data: TaskInsert): Task {
-    getDb().insert(schema.tasks).values(data).run();
+export async function createTask(data: TaskInsert): Promise<Task> {
+    await getDb().insert(schema.tasks).values(data).run();
 
-    return getDb()
+    return await getDb()
         .select()
         .from(schema.tasks)
         .where(eq(schema.tasks.id, data.id))
         .get()!;
 }
 
-export function updateTask(
+export async function updateTask(
     taskId: string,
     updates: Partial<Omit<Task, 'id' | 'createdAt'>>
-): void {
+): Promise<void> {
     if ('completed' in updates && !('completedAt' in updates)) {
         updates.completedAt = updates.completed ? new Date() : null;
     }
 
-    getDb()
+    await getDb()
         .update(schema.tasks)
         .set({ ...updates, isDirty: true, updatedAt: new Date() })
         .where(eq(schema.tasks.id, taskId))
         .run();
 }
 
-export function deleteTask(taskId: string): void {
-    getDb().update(schema.tasks)
+export async function deleteTask(taskId: string): Promise<void> {
+    await getDb().update(schema.tasks)
         .set({ isPermDeleted: true, isDirty: true, updatedAt: new Date() })
         .where(eq(schema.tasks.id, taskId))
         .run();
 }
 
-export function toggleTaskComplete(taskId: string): void {
-    const task = getTaskById(taskId);
+export async function toggleTaskComplete(taskId: string): Promise<void> {
+    const task = await getTaskById(taskId);
     if (!task) return;
 
     const newCompleted = !task.completed;
     const newCompletedAt = newCompleted ? new Date() : null;
 
-    getDb()
+    await getDb()
         .update(schema.tasks)
         .set({
             completed: newCompleted,
@@ -173,15 +173,15 @@ export function toggleTaskComplete(taskId: string): void {
         .run();
 }
 
-export function deleteCompletedTasks(): void {
-    getDb().update(schema.tasks)
+export async function deleteCompletedTasks(): Promise<void> {
+    await getDb().update(schema.tasks)
         .set({ isPermDeleted: true, isDirty: true, updatedAt: new Date() })
         .where(eq(schema.tasks.completed, true))
         .run();
 }
 
-export function clearCompletedSince(date: Date): void {
-    getDb().update(schema.tasks)
+export async function clearCompletedSince(date: Date): Promise<void> {
+    await getDb().update(schema.tasks)
         .set({ isPermDeleted: true, isDirty: true, updatedAt: new Date() })
         .where(
             and(
@@ -194,11 +194,11 @@ export function clearCompletedSince(date: Date): void {
 
 // ============ CALENDAR HELPERS ============
 
-export function getTaskDatesInMonth(year: number, month: number): Set<number> {
+export async function getTaskDatesInMonth(year: number, month: number): Promise<Set<number>> {
     const startOfMonth = new Date(year, month, 1);
     const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59, 999);
 
-    const tasks = getDb()
+    const tasks = await getDb()
         .select()
         .from(schema.tasks)
         .where(

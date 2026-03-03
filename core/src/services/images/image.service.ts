@@ -33,7 +33,7 @@ export async function resizeAndCompress(uri: string): Promise<{ uri: string; wid
  */
 export async function computeHash(fileUri: string): Promise<string> {
     const base64 = await getPlatformAdapters().fileSystem.readBase64(fileUri);
-    return getPlatformAdapters().crypto.sha256HexUtf8(base64);
+    return await getPlatformAdapters().crypto.sha256HexUtf8(base64);
 }
 
 /**
@@ -139,4 +139,3 @@ export async function saveImageToGallery(imageId?: string, base64Uri?: string): 
         return false;
     }
 }
-

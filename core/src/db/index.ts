@@ -1,5 +1,7 @@
 import * as schema from './schema';
 export { getDb, initDb, resetDb } from './runtime';
+// AsyncDbDriver has been removed.
+export { CREATE_TABLES_SQL } from './client';
 
 export function initDatabase(expoDb: any, drizzleDb: any): void {
     const dbClient = require('./client');
@@ -21,7 +23,7 @@ export async function resetMasterKey(userId: string): Promise<void> {
     await dbClient.resetMasterKey(userId);
 }
 
-export { schema };
+
 export * from './repositories/folders.repository';
 export * from './repositories/images.repository';
 export * from './repositories/notes.repository';
@@ -32,3 +34,5 @@ export * from './validators/folders';
 export * from './validators/image';
 export * from './validators/notes';
 export * from './validators/tasks';
+export { schema };
+

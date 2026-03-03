@@ -1,5 +1,7 @@
 import { Buffer } from 'buffer';
 
-if (typeof global.Buffer === 'undefined') {
-    global.Buffer = Buffer;
+const runtime = globalThis as typeof globalThis & { Buffer?: typeof Buffer };
+
+if (typeof runtime.Buffer === 'undefined') {
+    runtime.Buffer = Buffer;
 }

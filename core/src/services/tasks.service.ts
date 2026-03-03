@@ -5,62 +5,59 @@ import { generateTask } from '../utils/tasks';
 
 
 export const TaskService = {
-    // 0. Getters
-    getAllTasks: (): Task[] => {
-        return tasksRepo.getAllTasks();
+    // Async getters
+    getAllTasks: async (): Promise<Task[]> => {
+        return await tasksRepo.getAllTasks();
     },
 
-    getTaskById: (taskId: string): Task | null => {
-        return tasksRepo.getTaskById(taskId);
+    getTaskById: async (taskId: string): Promise<Task | null> => {
+        return await tasksRepo.getTaskById(taskId);
     },
 
-    getTasksByDate: (date: Date): Task[] => {
-        return tasksRepo.getTasksByDate(date);
+    getTasksByDate: async (date: Date): Promise<Task[]> => {
+        return await tasksRepo.getTasksByDate(date);
     },
 
-    getTasksSortedByDeadline: (): Task[] => {
-        return tasksRepo.getTasksSortedByDeadline();
+    getTasksSortedByDeadline: async (): Promise<Task[]> => {
+        return await tasksRepo.getTasksSortedByDeadline();
     },
 
-    getPendingTasks: (): Task[] => {
-        return tasksRepo.getPendingTasks();
+    getPendingTasks: async (): Promise<Task[]> => {
+        return await tasksRepo.getPendingTasks();
     },
 
-    getCompletedTasks: (): Task[] => {
-        return tasksRepo.getCompletedTasks();
+    getCompletedTasks: async (): Promise<Task[]> => {
+        return await tasksRepo.getCompletedTasks();
     },
 
-    getTaskDatesInMonth: (year: number, month: number): Set<number> => {
-        return tasksRepo.getTaskDatesInMonth(year, month);
+    getTaskDatesInMonth: async (year: number, month: number): Promise<Set<number>> => {
+        return await tasksRepo.getTaskDatesInMonth(year, month);
     },
 
-    // 1. Create
-    create: (data: Partial<TaskInsert>): Task => {
+    create: async (data: Partial<TaskInsert>): Promise<Task> => {
         const task = generateTask(data);
-        return tasksRepo.createTask(task);
+        return await tasksRepo.createTask(task);
     },
 
-    // 2. Update
-    update: (taskId: string, updates: Partial<Omit<Task, 'id' | 'createdAt'>>) => {
-        tasksRepo.updateTask(taskId, updates);
+    update: async (taskId: string, updates: Partial<Omit<Task, 'id' | 'createdAt'>>): Promise<void> => {
+        await tasksRepo.updateTask(taskId, updates);
     },
 
-    // 3. Delete
-    delete: (taskId: string) => {
-        tasksRepo.deleteTask(taskId);
+    delete: async (taskId: string): Promise<void> => {
+        await tasksRepo.deleteTask(taskId);
     },
 
-    // 4. Toggle Complete
-    toggleComplete: (taskId: string) => {
-        tasksRepo.toggleTaskComplete(taskId);
+    toggleComplete: async (taskId: string): Promise<void> => {
+        await tasksRepo.toggleTaskComplete(taskId);
     },
 
-    // 5. Clear Completed
-    clearCompleted: () => {
-        tasksRepo.deleteCompletedTasks();
+    clearCompleted: async (): Promise<void> => {
+        await tasksRepo.deleteCompletedTasks();
     },
 
-    clearCompletedSince: (date: Date) => {
-        tasksRepo.clearCompletedSince(date);
+    clearCompletedSince: async (date: Date): Promise<void> => {
+        await tasksRepo.clearCompletedSince(date);
     },
+
+    // Obsolete sync wrappers deleted
 };

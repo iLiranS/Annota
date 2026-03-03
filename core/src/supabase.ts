@@ -1,9 +1,20 @@
-import { createClient, processLock } from '@supabase/supabase-js'
-import { createStorageAdapter } from './stores/config'
+import { createClient, processLock } from '@supabase/supabase-js';
+import { createStorageAdapter } from './stores/config';
+
+let supabaseUrl: string | undefined;
+let supabaseKey: string | undefined;
+
+try {
+    supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+    supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_KEY || process.env.VITE_SUPABASE_KEY;
+} catch (e) {
+    // Ignore ReferenceError for process in Vite without process polyfill
+}
+
 
 export const supabase = createClient(
-    process.env.EXPO_PUBLIC_SUPABASE_URL!,
-    process.env.EXPO_PUBLIC_SUPABASE_KEY!,
+    supabaseUrl!,
+    supabaseKey!,
     {
         auth: {
             storage: createStorageAdapter(),

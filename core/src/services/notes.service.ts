@@ -7,22 +7,22 @@ import * as NoteImageService from './images/note-image.service';
 
 export const NoteService = {
     // 0. Getters
-    getNotesInFolder: (folderId: string | null, includeDeleted: boolean = false): NoteMetadata[] => {
-        return notesRepo.getNotesInFolder(folderId, includeDeleted);
+    getNotesInFolder: async (folderId: string | null, includeDeleted: boolean = false): Promise<NoteMetadata[]> => {
+        return await notesRepo.getNotesInFolder(folderId, includeDeleted);
     },
 
-    getNoteById: (noteId: string): NoteMetadata | null => {
-        return notesRepo.getNoteMetadataById(noteId);
+    getNoteById: async (noteId: string): Promise<NoteMetadata | null> => {
+        return await notesRepo.getNoteMetadataById(noteId);
     },
 
-    getNoteContent: (noteId: string): string => {
-        return notesRepo.getNoteContent(noteId);
+    getNoteContent: async (noteId: string): Promise<string> => {
+        return await notesRepo.getNoteContent(noteId);
     },
 
     // 1. Create
     create: async (data: Partial<NoteMetadata>): Promise<NoteMetadata> => {
         const metadata = generateNoteMetadata(data);
-        return notesRepo.createNoteMetadata(metadata);
+        return await notesRepo.createNoteMetadata(metadata);
     },
 
     // 2. Update Metadata
@@ -36,7 +36,7 @@ export const NoteService = {
             // though schema validation handles min/max length.
             // The previous logic called generateTitle, let's keep it if it does specific formatting.
             if (validatedUpdates.title) {
-                const existing = notesRepo.getNoteMetadataById(noteId);
+                const existing = await notesRepo.getNoteMetadataById(noteId);
                 if (existing?.folderId === 'system-daily-notes') {
                     delete (validatedUpdates as any).title;
                 } else {
@@ -46,12 +46,12 @@ export const NoteService = {
 
             // If only title was provided and it was a daily note, we might have no updates left
             if (Object.keys(validatedUpdates).length === 0) {
-                return notesRepo.getNoteMetadataById(noteId);
+                return await notesRepo.getNoteMetadataById(noteId);
             }
 
             // console.log(`[NoteService] Updating note ${noteId} with:`, validatedUpdates);
 
-            return notesRepo.updateNoteMetadata(noteId, { ...validatedUpdates, isDirty: true });
+            return await notesRepo.updateNoteMetadata(noteId, { ...validatedUpdates, isDirty: true });
         } catch (err) {
             console.error('[NoteService] Update validation failed:', err);
             return null;
@@ -60,57 +60,57 @@ export const NoteService = {
 
     // 3. Update Content
     updateContent: async (noteId: string, content: string) => {
-        const metadata = notesRepo.getNoteMetadataById(noteId);
+        const metadata = await notesRepo.getNoteMetadataById(noteId);
         const isDailyNote = metadata?.folderId === 'system-daily-notes';
 
         const preview = isDailyNote ? generateTitle(content) : generatePreview(content);
-        notesRepo.updateNoteContent(noteId, content, preview);
+        await notesRepo.updateNoteContent(noteId, content, preview);
     },
 
     // 4. Soft Delete
     softDelete: async (noteId: string) => {
-        notesRepo.softDeleteNote(noteId);
+        await notesRepo.softDeleteNote(noteId);
     },
 
     // 5. Restore
     restore: async (noteId: string, targetFolderId?: string | null) => {
-        notesRepo.restoreNote(noteId, targetFolderId);
+        await notesRepo.restoreNote(noteId, targetFolderId);
     },
 
     // 6. Permanent Delete
     permanentlyDelete: async (noteId: string) => {
         // 1. Clean up images (moved from repo)
-        NoteImageService.cleanupImagesForNote(noteId);
+        await NoteImageService.cleanupImagesForNote(noteId);
 
         // 2. Delete Note
-        notesRepo.permanentlyDeleteNote(noteId);
+        await notesRepo.permanentlyDeleteNote(noteId);
     },
 
     // 7. Versions
     getVersions: async (noteId: string) => {
-        return notesRepo.getNoteVersions(noteId);
+        return await notesRepo.getNoteVersions(noteId);
     },
 
     getVersion: async (versionId: string) => {
-        return notesRepo.getNoteVersion(versionId);
+        return await notesRepo.getNoteVersion(versionId);
     },
 
-    deleteVersion: async (noteId: string, versionId: string) => {
+    deleteVersion: async (_noteId: string, versionId: string) => {
         // 1. Get images used in this version (before they are unlinked by deletion)
-        const imageIds = NoteImageService.getImageIdsForVersion(versionId);
+        const imageIds = await NoteImageService.getImageIdsForVersion(versionId);
 
         // 2. Delete the links in version_images table (Critical Step for Orphans check)
         // We must remove the links SO THAT cleanupOrphans sees the count decrease.
-        ImagesRepo.deleteImagesForVersions([versionId]);
+        await ImagesRepo.deleteImagesForVersions([versionId]);
 
         // 3. Delete the version record
-        notesRepo.deleteNoteVersion(versionId);
+        await notesRepo.deleteNoteVersion(versionId);
 
         // 4. Cleanup images that might have become orphans
-        NoteImageService.cleanupOrphans(imageIds);
+        await NoteImageService.cleanupOrphans(imageIds);
     },
 
     deleteAllVersionsExceptLatest: async (noteId: string) => {
-        notesRepo.deleteAllNoteVersionsExceptLatest(noteId);
+        await notesRepo.deleteAllNoteVersionsExceptLatest(noteId);
     }
 };

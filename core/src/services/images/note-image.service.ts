@@ -26,7 +26,7 @@ export interface ProcessedImage {
  * Works for both device-picked images and downloaded remote images.
  */
 export async function processAndInsertImage(
-    noteId: string,
+    _noteId: string,
     sourceUri: string,
 ): Promise<ProcessedImage> {
     // 1. Resize and compress
@@ -36,7 +36,7 @@ export async function processAndInsertImage(
     const hash = await computeHash(resized.uri);
 
     // 3. Check for duplicate
-    const existing = ImagesRepo.getImageByHash(hash);
+    const existing = await ImagesRepo.getImageByHash(hash);
     if (existing) {
         console.log('Image already exists:', existing.id);
         // Reuse existing image, return ID (Linkage happens in updateNoteContent)
@@ -51,7 +51,7 @@ export async function processAndInsertImage(
     const size = await getFileSize(localPath);
 
     // 6. Insert into DB
-    ImagesRepo.insertImage({
+    await ImagesRepo.insertImage({
         id: imageId,
         hash,
         localPath,
@@ -93,7 +93,7 @@ export async function resolveImageSources(
 ): Promise<Record<string, string>> {
     if (imageIds.length === 0) return {};
 
-    const images = ImagesRepo.getImagesByIds(imageIds);
+    const images = await ImagesRepo.getImagesByIds(imageIds);
     const result: Record<string, string> = {};
 
     await Promise.all(
@@ -121,21 +121,21 @@ export async function resolveImageSources(
  * 5. Delete orphan files and DB records.
  */
 export async function cleanupImagesForNote(noteId: string): Promise<void> {
-    const versions = NotesRepo.getNoteVersions(noteId);
+    const versions = await NotesRepo.getNoteVersions(noteId);
     if (versions.length === 0) return;
 
     const versionIds = versions.map(v => v.id);
 
     // Get image IDs used by these versions (BEFORE deleting links)
-    const imageIds = ImagesRepo.getImageIdsForVersions(versionIds);
+    const imageIds = await ImagesRepo.getImageIdsForVersions(versionIds);
     if (imageIds.length === 0) return;
 
     // Delete links
-    ImagesRepo.deleteImagesForVersions(versionIds);
+    await ImagesRepo.deleteImagesForVersions(versionIds);
 
     // Identify and delete orphans (force check, ignore time buffer)
     const distinctIds = Array.from(new Set(imageIds));
-    const deletedPaths = ImagesRepo.deleteImagesIfUnreferenced(distinctIds);
+    const deletedPaths = await ImagesRepo.deleteImagesIfUnreferenced(distinctIds);
 
     // Delete files
     for (const path of deletedPaths) {
@@ -143,8 +143,8 @@ export async function cleanupImagesForNote(noteId: string): Promise<void> {
     }
 }
 
-export function getImageIdsForVersion(versionId: string): string[] {
-    return ImagesRepo.getImageIdsForVersions([versionId]);
+export async function getImageIdsForVersion(versionId: string): Promise<string[]> {
+    return await ImagesRepo.getImageIdsForVersions([versionId]);
 }
 
 export async function cleanupOrphans(imageIds: string[]): Promise<void> {
@@ -152,7 +152,7 @@ export async function cleanupOrphans(imageIds: string[]): Promise<void> {
 
     const distinctIds = Array.from(new Set(imageIds));
     // Check if these images are still referenced by ANY version
-    const deletedPaths = ImagesRepo.deleteImagesIfUnreferenced(distinctIds);
+    const deletedPaths = await ImagesRepo.deleteImagesIfUnreferenced(distinctIds);
 
     // Delete files
     for (const path of deletedPaths) {

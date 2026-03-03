@@ -2,10 +2,10 @@ import type { PlatformAdapters } from '@annota/core/platform';
 import NetInfo from '@react-native-community/netinfo';
 import { Buffer } from 'buffer';
 import { Directory, File as ExpoFile, Paths } from 'expo-file-system';
-import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
+import { Action, manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import * as MediaLibrary from 'expo-media-library';
 import * as SecureStore from 'expo-secure-store';
-import { AppState } from 'react-native';
+import { AppState, Image } from 'react-native';
 import crypto from 'react-native-quick-crypto';
 import Toast from 'react-native-toast-message';
 
@@ -56,12 +56,12 @@ export function createMobileAdapters(): PlatformAdapters {
             randomBytes: (size: number) => {
                 return new Uint8Array(crypto.randomBytes(size));
             },
-            sha256HexUtf8: (data: string) => {
+            sha256HexUtf8: async (data: string) => {
                 const hash = crypto.createHash('sha256');
                 hash.update(data, 'utf8');
                 return hash.digest('hex') as unknown as string;
             },
-            aes256GcmEncrypt: ({ key, nonce, plaintext }: { key: Uint8Array; nonce: Uint8Array; plaintext: Uint8Array }) => {
+            aes256GcmEncrypt: async ({ key, nonce, plaintext }: { key: Uint8Array; nonce: Uint8Array; plaintext: Uint8Array }) => {
                 const cipher = crypto.createCipheriv('aes-256-gcm', key as any, nonce as any);
                 const encryptedContent = cipher.update(Buffer.from(plaintext) as any);
                 const encryptedFinal = cipher.final();
@@ -73,7 +73,7 @@ export function createMobileAdapters(): PlatformAdapters {
                     authTag: new Uint8Array(authTag),
                 };
             },
-            aes256GcmDecrypt: ({ key, nonce, ciphertext, authTag }: { key: Uint8Array; nonce: Uint8Array; ciphertext: Uint8Array; authTag: Uint8Array }) => {
+            aes256GcmDecrypt: async ({ key, nonce, ciphertext, authTag }: { key: Uint8Array; nonce: Uint8Array; ciphertext: Uint8Array; authTag: Uint8Array }) => {
                 const decipher = crypto.createDecipheriv('aes-256-gcm', key as any, nonce as any);
                 decipher.setAuthTag(Buffer.from(authTag) as any);
 
@@ -131,25 +131,30 @@ export function createMobileAdapters(): PlatformAdapters {
         },
         image: {
             resizeAndCompress: async (sourcePath: string, opts: { maxDimension: number; format: 'jpeg' | 'webp'; quality: number }) => {
-                let manipulated = ImageManipulator.manipulate(sourcePath);
-                const original = await manipulated.renderAsync();
-                const { width: origW, height: origH } = await original.saveAsync({ format: SaveFormat.WEBP, compress: 1 });
+                const { width: origW, height: origH } = await new Promise<{ width: number, height: number }>((resolve, reject) => {
+                    Image.getSize(sourcePath, (width, height) => resolve({ width, height }), reject);
+                });
+
+                const actions: Action[] = [];
 
                 if (origW > opts.maxDimension || origH > opts.maxDimension) {
                     if (origW >= origH) {
-                        manipulated = manipulated.resize({ width: opts.maxDimension });
+                        actions.push({ resize: { width: opts.maxDimension } });
                     } else {
-                        manipulated = manipulated.resize({ height: opts.maxDimension });
+                        actions.push({ resize: { height: opts.maxDimension } });
                     }
                 }
 
-                const rendered = await manipulated.renderAsync();
-                const saved = await rendered.saveAsync({
-                    format: opts.format === 'webp' ? SaveFormat.WEBP : SaveFormat.JPEG,
-                    compress: opts.quality,
-                });
+                const result = await manipulateAsync(
+                    sourcePath,
+                    actions,
+                    {
+                        compress: opts.quality,
+                        format: opts.format === 'webp' ? SaveFormat.WEBP : SaveFormat.JPEG,
+                    }
+                );
 
-                return { path: saved.uri, width: saved.width, height: saved.height };
+                return { path: result.uri, width: result.width, height: result.height };
             },
             requestGalleryPermission: async () => {
                 const { status } = await MediaLibrary.requestPermissionsAsync();

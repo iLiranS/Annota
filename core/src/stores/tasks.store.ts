@@ -11,15 +11,15 @@ interface TasksState {
     tasks: Task[];
 
     // Load from DB
-    loadTasks: () => void;
+    loadTasks: () => Promise<void>;
 
     // Task operations
-    createTask: (data: Partial<TaskInsert>) => Task;
-    updateTask: (taskId: string, updates: Partial<Omit<Task, 'id' | 'createdAt'>>) => void;
-    deleteTask: (taskId: string) => void;
-    toggleComplete: (taskId: string) => void;
-    clearCompletedTasks: () => void;
-    clearOldCompletedTasks: (date: Date) => void;
+    createTask: (data: Partial<TaskInsert>) => Promise<Task>;
+    updateTask: (taskId: string, updates: Partial<Omit<Task, 'id' | 'createdAt'>>) => Promise<void>;
+    deleteTask: (taskId: string) => Promise<void>;
+    toggleComplete: (taskId: string) => Promise<void>;
+    clearCompletedTasks: () => Promise<void>;
+    clearOldCompletedTasks: (date: Date) => Promise<void>;
 
     // Getters (operate on cached state)
     getTaskById: (taskId: string) => Task | undefined;
@@ -35,15 +35,15 @@ export const useTasksStore = create<TasksState>((set, get) => ({
     tasks: [],
 
     // Load tasks from database
-    loadTasks: () => {
-        const tasks = TaskService.getAllTasks();
+    loadTasks: async () => {
+        const tasks = await TaskService.getAllTasks();
         set({ tasks });
     },
 
     // Task operations
-    createTask: (data) => {
+    createTask: async (data) => {
         // Service handles ID generation and DB insertion
-        const task = TaskService.create(data);
+        const task = await TaskService.create(data);
         set((state) => ({
             tasks: [...state.tasks, task],
         }));
@@ -51,8 +51,8 @@ export const useTasksStore = create<TasksState>((set, get) => ({
         return task;
     },
 
-    updateTask: (taskId: string, updates) => {
-        TaskService.update(taskId, updates);
+    updateTask: async (taskId: string, updates) => {
+        await TaskService.update(taskId, updates);
         set((state) => ({
             tasks: state.tasks.map((task) => {
                 if (task.id !== taskId) return task;
@@ -70,16 +70,16 @@ export const useTasksStore = create<TasksState>((set, get) => ({
         SyncScheduler.instance?.notifyContentChange();
     },
 
-    deleteTask: (taskId: string) => {
-        TaskService.delete(taskId);
+    deleteTask: async (taskId: string) => {
+        await TaskService.delete(taskId);
         set((state) => ({
             tasks: state.tasks.filter((task) => task.id !== taskId),
         }));
         SyncScheduler.instance?.notifyContentChange();
     },
 
-    toggleComplete: (taskId: string) => {
-        TaskService.toggleComplete(taskId);
+    toggleComplete: async (taskId: string) => {
+        await TaskService.toggleComplete(taskId);
         set((state) => ({
             tasks: state.tasks.map((task) => {
                 if (task.id !== taskId) return task;
@@ -97,33 +97,32 @@ export const useTasksStore = create<TasksState>((set, get) => ({
         SyncScheduler.instance?.notifyContentChange();
     },
 
-    clearCompletedTasks: () => {
-        TaskService.clearCompleted();
+    clearCompletedTasks: async () => {
+        await TaskService.clearCompleted();
         set((state) => ({
             tasks: state.tasks.filter((task) => !task.completed),
         }));
         SyncScheduler.instance?.notifyContentChange();
     },
 
-    clearOldCompletedTasks: (date: Date) => {
-        set((state) => {
-            let clearedCount = 0;
-            const newTasks = state.tasks.filter((task) => {
-                let keep = true;
-                if (task.completed && task.completedAt && task.completedAt < date) {
-                    keep = false;
-                    clearedCount++;
-                }
-                return keep;
-            });
-
-            if (clearedCount > 0) {
-                console.log(`[DAILY_CLEANUP] Cleared ${clearedCount} old completed tasks.`);
-                TaskService.clearCompletedSince(date);
+    clearOldCompletedTasks: async (date: Date) => {
+        const currentTasks = get().tasks;
+        let clearedCount = 0;
+        const newTasks = currentTasks.filter((task) => {
+            let keep = true;
+            if (task.completed && task.completedAt && task.completedAt < date) {
+                keep = false;
+                clearedCount++;
             }
-
-            return { tasks: newTasks };
+            return keep;
         });
+
+        if (clearedCount > 0) {
+            console.log(`[DAILY_CLEANUP] Cleared ${clearedCount} old completed tasks.`);
+            await TaskService.clearCompletedSince(date);
+        }
+
+        set({ tasks: newTasks });
         SyncScheduler.instance?.notifyContentChange();
     },
 

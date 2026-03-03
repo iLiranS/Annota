@@ -14,18 +14,22 @@ export default function NewTaskScreen() {
     // Get createTask from store
     const { createTask } = useTasksStore();
 
-    const handleCreate = (values: TaskFormValues) => {
-        createTask({
-            title: values.title,
-            description: values.description ?? '',
-            deadline: values.deadline,
-            isWholeDay: values.isWholeDay ?? false,
-            folderId: values.folderId,
-            links: values.links,
-            isDirty: true,
-        });
+    const handleCreate = async (values: TaskFormValues) => {
+        try {
+            await createTask({
+                title: values.title,
+                description: values.description ?? '',
+                deadline: values.deadline,
+                isWholeDay: values.isWholeDay ?? false,
+                folderId: values.folderId,
+                links: values.links,
+                isDirty: true,
+            });
 
-        router.back();
+            router.back();
+        } catch (error) {
+            console.error('Failed to create task', error);
+        }
     };
 
     const handleClose = () => {

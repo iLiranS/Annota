@@ -43,8 +43,8 @@ export default function NoteEditor() {
     const currentNote = id ? getNoteById(id) : undefined;
 
     // Lazy-loaded content state
-    const [content, setContent] = useState<string | null>(() => (id ? getNoteContent(id) : null));
-    const [isLoading, setIsLoading] = useState(() => !id);
+    const [content, setContent] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(() => Boolean(id));
 
     // Track the current title for the header (updates as user types)
     const [displayTitle, setDisplayTitle] = useState(currentNote?.title || 'Untitled Note');
@@ -62,16 +62,40 @@ export default function NoteEditor() {
 
     // Load content from database on mount
     useEffect(() => {
-        if (id) {
-            const loadedContent = getNoteContent(id);
-            setContent(loadedContent);
-            setIsLoading(false);
-            pendingScrollElementIdRef.current = scrollToElementId ?? null;
-        } else {
-            setContent(null);
-            setIsLoading(false);
-            pendingScrollElementIdRef.current = null;
-        }
+        let cancelled = false;
+
+        const load = async () => {
+            if (id) {
+                try {
+                    const loadedContent = await getNoteContent(id);
+                    if (cancelled) return;
+                    setContent(loadedContent);
+                } catch (error) {
+                    if (!cancelled) {
+                        console.error('Failed to load note content', error);
+                        setContent('');
+                    }
+                } finally {
+                    if (!cancelled) {
+                        setIsLoading(false);
+                        pendingScrollElementIdRef.current = scrollToElementId ?? null;
+                    }
+                }
+            } else {
+                if (!cancelled) {
+                    setContent(null);
+                    setIsLoading(false);
+                    pendingScrollElementIdRef.current = null;
+                }
+            }
+        };
+
+        setIsLoading(Boolean(id));
+        void load();
+
+        return () => {
+            cancelled = true;
+        };
     }, [id, getNoteContent, scrollToElementId]);
 
     useEffect(() => {
@@ -136,11 +160,29 @@ export default function NoteEditor() {
         updateNoteMetadata(id, { title });
     }, [id, updateNoteMetadata, updateNoteContent]);
 
-    const handleBack = useCallback(() => {
+    const persistLatestEditorState = useCallback(async () => {
+        if (!id || !editorRef.current) return;
+
+        try {
+            const latestHtml = await editorRef.current.getContent();
+            if (!latestHtml) return;
+
+            const latestTitle = generateTitle(latestHtml);
+            setDisplayTitle(latestTitle);
+
+            await updateNoteContent(id, latestHtml);
+            await updateNoteMetadata(id, { title: latestTitle });
+        } catch (error) {
+            console.warn('Failed to persist editor content before leaving note', error);
+        }
+    }, [id, updateNoteContent, updateNoteMetadata]);
+
+    const handleBack = useCallback(async () => {
+        await persistLatestEditorState();
         // Blur editor before navigating back
         editorRef.current?.blur();
-        router.back()
-    }, [router]);
+        router.back();
+    }, [persistLatestEditorState, router]);
 
     // Search handlers
     const handleOpenSearch = useCallback(() => {

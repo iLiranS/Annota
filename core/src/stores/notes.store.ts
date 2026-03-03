@@ -22,7 +22,7 @@ interface NotesState {
     isInitialized: boolean;
 
     // Initialization
-    initApp: () => void;
+    initApp: () => Promise<void>;
 
     // Note operations
     createNote: (data: Partial<NoteMetadata>) => Promise<NoteMetadata>;
@@ -34,7 +34,7 @@ interface NotesState {
 
     // Content operations (lazy loaded)
     // Content operations (lazy loaded)
-    getNoteContent: (noteId: string) => string;
+    getNoteContent: (noteId: string) => Promise<string>;
     updateNoteContent: (noteId: string, content: string) => Promise<void>;
     getNoteVersions: (noteId: string) => Promise<{ id: string; createdAt: Date }[]>;
     getNoteVersion: (versionId: string) => Promise<{ id: string; content: string; createdAt: Date } | undefined>;
@@ -73,19 +73,19 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     isInitialized: false,
 
     // Initialize App - Load ALL data on startup
-    initApp: () => {
-        const allFolders = FolderService.getFoldersInFolder(null, true);
-        const allNotes = NoteService.getNotesInFolder(null, true);
+    initApp: async () => {
+        const allFolders = await FolderService.getFoldersInFolder(null, true);
+        const allNotes = await NoteService.getNotesInFolder(null, true);
 
         // Recursively load all folders
-        const loadAllFolders = (): Folder[] => {
+        const loadAllFolders = async (): Promise<Folder[]> => {
             const result: Folder[] = [];
             const queue = [...allFolders];
 
             while (queue.length > 0) {
                 const folder = queue.shift()!;
                 result.push(folder);
-                const children = FolderService.getFoldersInFolder(folder.id, true);
+                const children = await FolderService.getFoldersInFolder(folder.id, true);
                 queue.push(...children);
             }
 
@@ -93,20 +93,20 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         };
 
         // Recursively load all notes
-        const loadAllNotes = (): NoteMetadata[] => {
+        const loadAllNotes = async (): Promise<NoteMetadata[]> => {
             const result: NoteMetadata[] = [...allNotes];
-            const allFoldersData = loadAllFolders();
+            const allFoldersData = await loadAllFolders();
 
             for (const folder of allFoldersData) {
-                const notes = NoteService.getNotesInFolder(folder.id, true);
+                const notes = await NoteService.getNotesInFolder(folder.id, true);
                 result.push(...notes);
             }
 
             return result;
         };
 
-        const folders = loadAllFolders();
-        const notes = loadAllNotes();
+        const folders = await loadAllFolders();
+        const notes = await loadAllNotes();
 
         const wasInitialized = get().isInitialized;
         set({ folders, notes, isInitialized: true });
@@ -176,7 +176,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         await NoteService.restore(noteId, targetFolderId);
 
         // Fetch the updated note to get the correct restored state
-        const restoredNote = NoteService.getNoteById(noteId);
+        const restoredNote = await NoteService.getNoteById(noteId);
 
         if (restoredNote) {
             set(state => ({
@@ -201,7 +201,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         await NoteService.updateContent(noteId, content);
 
         // Fetch updated metadata (with new preview)
-        const updatedNote = NoteService.getNoteById(noteId);
+        const updatedNote = await NoteService.getNoteById(noteId);
         if (updatedNote) {
             set(state => ({
                 notes: state.notes.map(n => n.id === noteId ? updatedNote : n)

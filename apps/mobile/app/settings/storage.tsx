@@ -74,7 +74,7 @@ export default function StorageSettings() {
                         setIsLoading(true);
                         setTimeout(async () => {
                             try {
-                                const count = StorageService.runGarbageCollection(true); // Force clean
+                                const count = await StorageService.runGarbageCollection(true); // Force clean
                                 Alert.alert("Cleanup Complete", `Deleted ${count} unused images.`);
                                 await loadStats();
                             } catch (e) {
@@ -142,8 +142,8 @@ export default function StorageSettings() {
             // Reload local stores to reflect pulled changes
             const { useNotesStore } = require('@annota/core');
             const { useTasksStore } = require('@annota/core');
-            useNotesStore.getState().initApp();
-            useTasksStore.getState().loadTasks();
+            await useNotesStore.getState().initApp();
+            await useTasksStore.getState().loadTasks();
 
             Alert.alert("Sync Complete", "Successfully synchronized your data with the cloud.");
         } catch (error: any) {

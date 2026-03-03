@@ -1,5 +1,5 @@
 import { NoteMetadataInsert } from '../db/schema';
-import crypto from 'react-native-quick-crypto';
+import { generateId } from './id';
 
 // Constants
 export const MAX_TITLE_LENGTH = 50;
@@ -52,7 +52,7 @@ export function generatePreview(htmlContent: string, maxLength = MAX_PREVIEW_LEN
  * Generates initial metadata for a new note.
  */
 export function generateNoteMetadata(data: Partial<NoteMetadataInsert>): NoteMetadataInsert {
-    const id = crypto.randomUUID();
+    const id = generateId();
     const now = new Date();
     let folderId = null
     if (data && data.folderId && data.folderId.length > 0) folderId = data.folderId

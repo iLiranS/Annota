@@ -43,7 +43,14 @@ TaskManager.defineTask(BACKGROUND_SYNC_TASK, async () => {
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { useDailyCleanup } from '@/hooks/use-daily-cleanup';
 import { useDisplayNameSync } from '@/hooks/use-display-name-sync';
-import { authApi, initDatabase, initDb, setStorageEngine, useUserStore as useAuthStore, useDbStore } from '@annota/core';
+import {
+  authApi,
+  initDatabase,
+  initDb,
+  setStorageEngine,
+  useUserStore as useAuthStore,
+  useDbStore
+} from '@annota/core';
 import { SyncScheduler, getMasterKey, initPlatformAdapters } from '@annota/core/platform';
 import { createMobileAdapters } from './bootstrap/mobile-adapters';
 
@@ -151,8 +158,12 @@ export default function RootLayout() {
       // Initialize store (load all data into memory)
       const { useNotesStore } = require('@annota/core');
       const { useTasksStore } = require('@annota/core');
-      useNotesStore.getState().initApp();
-      useTasksStore.getState().loadTasks();
+      void useNotesStore.getState().initApp().catch((error: unknown) => {
+        console.error('[RootLayout] Failed to initialize notes store:', error);
+      });
+      void useTasksStore.getState().loadTasks().catch((error: unknown) => {
+        console.error('[RootLayout] Failed to initialize tasks store:', error);
+      });
 
 
 

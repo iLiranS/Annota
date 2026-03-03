@@ -40,7 +40,7 @@ export function useDailyCleanup() {
                     cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
 
                     // 3. Run your store function
-                    useTasksStore.getState().clearOldCompletedTasks(cutoffDate);
+                    await useTasksStore.getState().clearOldCompletedTasks(cutoffDate);
 
                     // 4. Update the last run time
                     await AsyncStorage.setItem(storageKey, now.toISOString());

@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "pnpm --filter @annota/mobile start",
+    "dev:desktop": "pnpm --filter @annota/desktop tauri dev",
+    "build:desktop": "pnpm --filter @annota/desktop build",
     "lint": "pnpm --recursive run lint"
   },
   "devDependencies": {

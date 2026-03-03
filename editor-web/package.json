@@ -6,9 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build && node scripts/emit-editor-html.cjs",
-    "preview": "vite preview",
-    "android": "expo run:android",
-    "ios": "expo run:ios"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@floating-ui/dom": "^1.7.4",
@@ -32,12 +30,10 @@
     "@tiptap/extension-underline": "^3.17.0",
     "@tiptap/extension-youtube": "^3.17.0",
     "@tiptap/starter-kit": "^3.17.0",
-    "expo": "~54.0.31",
     "highlight.js": "^11.9.0",
     "katex": "^0.16.27",
     "lowlight": "^3.1.0",
-    "react": "19.1.0",
-    "react-native": "0.81.5"
+    "react": "19.1.0"
   },
   "devDependencies": {
     "typescript": "^5.2.2",

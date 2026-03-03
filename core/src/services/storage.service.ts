@@ -2,110 +2,64 @@ import { vacuumDatabase } from '../db';
 import * as ImagesRepo from '../db/repositories/images.repository';
 import * as NotesRepo from '../db/repositories/notes.repository';
 import { useDbStore } from '../stores/db.store';
-import { Directory, File as ExpoFile, Paths } from 'expo-file-system';
-import * as LegacyFileSystem from 'expo-file-system/legacy';
-import { openDatabaseSync } from 'expo-sqlite';
 import { deleteImageFile } from './images/image.service';
 
+type StorageStats = {
+    totalImages: number;
+    totalLinks: number;
+    orphans: number;
+    totalImagesSize: number;
+    notesSize: number;
+    totalSize: number;
+    dbName: string;
+};
+
 export const StorageService = {
-    listDatabases: async () => {
-        try {
-            const dbDir = new Directory(Paths.document, 'SQLite').uri;
-            const files = await LegacyFileSystem.readDirectoryAsync(dbDir);
-            return files.filter(f => f.endsWith('.db'));
-        } catch (e) {
-            console.error('Failed to list databases:', e);
-            return [];
-        }
+    listDatabases: async (): Promise<string[]> => {
+        const { currentUserId, isGuest, isReady } = useDbStore.getState();
+        if (!isReady) return [];
+        const dbName = isGuest ? 'local_guest.db' : `user_${currentUserId}.db`;
+        return [dbName];
     },
 
-    getStats: async (dbNameOverride?: string) => {
+    getStats: async (_dbNameOverride?: string): Promise<StorageStats> => {
         const { currentUserId, isGuest, isReady } = useDbStore.getState();
 
-        let dbName = dbNameOverride;
-        if (!dbName) {
-            if (!isReady) {
-                return {
-                    totalImages: 0,
-                    totalLinks: 0,
-                    orphans: 0,
-                    totalImagesSize: 0,
-                    notesSize: 0,
-                    totalSize: 0,
-                    dbName: 'none'
-                };
-            }
-            dbName = isGuest ? 'local_guest.db' : `user_${currentUserId}.db`;
+        if (!isReady) {
+            return {
+                totalImages: 0,
+                totalLinks: 0,
+                orphans: 0,
+                totalImagesSize: 0,
+                notesSize: 0,
+                totalSize: 0,
+                dbName: 'none',
+            };
         }
 
-        const activeDbName = isGuest ? 'local_guest.db' : `user_${currentUserId}.db`;
-        let stats;
-
-        if (dbName === activeDbName) {
-            stats = ImagesRepo.getStorageStats();
-        } else {
-            // Fetch stats for non-active DB using raw SQLite
-            try {
-                const db = openDatabaseSync(dbName);
-                const imagesCount = db.getFirstSync<{ count: number }>('SELECT count(*) as count FROM images')?.count ?? 0;
-                const linksCount = db.getFirstSync<{ count: number }>('SELECT count(*) as count FROM version_images')?.count ?? 0;
-                const imagesSize = db.getFirstSync<{ sum: number }>('SELECT sum(size) as sum FROM images')?.sum ?? 0;
-                const orphansCount = db.getFirstSync<{ count: number }>(
-                    'SELECT count(*) as count FROM images WHERE id NOT IN (SELECT image_id FROM version_images)'
-                )?.count ?? 0;
-
-                stats = {
-                    totalImages: imagesCount,
-                    totalLinks: linksCount,
-                    orphans: orphansCount,
-                    totalImagesSize: imagesSize
-                };
-            } catch (error) {
-                console.error(`Failed to get stats for ${dbName}:`, error);
-                stats = { totalImages: 0, totalLinks: 0, orphans: 0, totalImagesSize: 0 };
-            }
-        }
-
-        let notesSize = 0;
-        try {
-            const dbDir = new Directory(Paths.document, 'SQLite');
-
-            const dbFile = new ExpoFile(dbDir, dbName);
-            if (dbFile.exists) notesSize += dbFile.size;
-
-            const walFile = new ExpoFile(dbDir, `${dbName}-wal`);
-            if (walFile.exists) notesSize += walFile.size;
-
-            const shmFile = new ExpoFile(dbDir, `${dbName}-shm`);
-            if (shmFile.exists) notesSize += shmFile.size;
-        } catch (e) {
-            console.error('Failed to get database size:', e);
-        }
+        const stats = await ImagesRepo.getStorageStats();
+        const dbName = isGuest ? 'local_guest.db' : `user_${currentUserId}.db`;
 
         return {
             ...stats,
-            notesSize,
-            totalSize: stats.totalImagesSize + notesSize,
-            dbName
+            notesSize: 0,
+            totalSize: stats.totalImagesSize,
+            dbName,
         };
     },
 
-    runGarbageCollection: (force = false) => {
-        // ... (remaining code unchanged)
-        // Clean up invalid links first (so their referenced images might become orphans)
-        ImagesRepo.deleteOrphanLinks();
+    runGarbageCollection: async (force = false): Promise<number> => {
+        await ImagesRepo.deleteOrphanLinks();
 
-        // Normalize old note/version rows that still embed heavy image src payloads.
-        const normalizedRows = NotesRepo.normalizeAllStoredContent();
+        const normalizedRows = await NotesRepo.normalizeAllStoredContent();
+        const deletedPaths = await ImagesRepo.deleteUnreferencedImages(undefined, force);
 
-        const deletedPaths = ImagesRepo.deleteUnreferencedImages(undefined, force);
         let deletedCount = 0;
         for (const path of deletedPaths) {
-            deleteImageFile(path);
+            await deleteImageFile(path);
             deletedCount++;
         }
 
-        // Reclaim raw DB space and shrink WAL file now that images/data are deleted
         vacuumDatabase();
 
         if (normalizedRows > 0) {
@@ -113,5 +67,5 @@ export const StorageService = {
         }
 
         return deletedCount;
-    }
+    },
 };

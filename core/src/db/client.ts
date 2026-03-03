@@ -1,12 +1,10 @@
-import * as LegacyFileSystem from 'expo-file-system/legacy';
-import { type SQLiteDatabase } from 'expo-sqlite';
 import { getStorageEngine } from '../stores/config';
 import * as schema from './schema';
 import { seedSystemData } from './seed';
 import type { DbType } from './types';
 
 // SQL for creating tables (CREATE TABLE IF NOT EXISTS)
-const CREATE_TABLES_SQL = `
+export const CREATE_TABLES_SQL = `
   CREATE TABLE IF NOT EXISTS note_metadata (
     id TEXT PRIMARY KEY,
     folder_id TEXT,
@@ -112,10 +110,10 @@ const CREATE_TABLES_SQL = `
 `;
 
 // Initialize database (create tables and seed system data)
-export function initDatabase(expoDb: SQLiteDatabase, drizzleDb: DbType): void {
+export function initDatabase(nativeDb: { execSync: (sql: string) => void }, drizzleDb: DbType): void {
   try {
     // Create all tables
-    expoDb.execSync(CREATE_TABLES_SQL);
+    nativeDb.execSync(CREATE_TABLES_SQL);
 
     // Run migrations for existing databases
     try {
@@ -137,7 +135,7 @@ export function initDatabase(expoDb: SQLiteDatabase, drizzleDb: DbType): void {
 // Reset everything (DB, Storage, Files) - USE WITH CAUTION
 export async function resetAll(): Promise<void> {
   const { getExpoDb, getDb } = require('../stores/db.store');
-  const expoDb = getExpoDb();
+  const nativeDb = getExpoDb() as { execSync: (sql: string) => void };
   const drizzleDb = getDb();
   try {
     const tables = [
@@ -153,7 +151,7 @@ export async function resetAll(): Promise<void> {
     ];
 
     tables.forEach(table => {
-      expoDb.execSync(`DROP TABLE IF EXISTS ${table}`);
+      nativeDb.execSync(`DROP TABLE IF EXISTS ${table}`);
     });
 
     console.log('All tables dropped successfully');
@@ -163,27 +161,13 @@ export async function resetAll(): Promise<void> {
       await storage.clear();
       console.log('Storage cleared');
     }
-
-
-
-    // Clear FileSystem (except SQLite)
-    if (LegacyFileSystem.documentDirectory) {
-      const dir = await LegacyFileSystem.readDirectoryAsync(LegacyFileSystem.documentDirectory);
-      for (const file of dir) {
-        if (file !== 'SQLite') {
-          await LegacyFileSystem.deleteAsync(LegacyFileSystem.documentDirectory + file, { idempotent: true });
-        }
-      }
-      console.log('FileSystem cleared');
-    }
-
-    initDatabase(expoDb, drizzleDb);
+    initDatabase(nativeDb, drizzleDb);
 
     // Re-init stores so UI reflects the wiped database
     const { useNotesStore } = require('../stores/notes.store');
     const { useTasksStore } = require('../stores/tasks.store');
-    useNotesStore.getState().initApp();
-    useTasksStore.getState().loadTasks();
+    await useNotesStore.getState().initApp();
+    await useTasksStore.getState().loadTasks();
   } catch (error) {
     console.error('App reset failed:', error);
     throw error;
@@ -194,11 +178,11 @@ export async function resetAll(): Promise<void> {
 export function vacuumDatabase(): void {
   try {
     const { getExpoDb } = require('../stores/db.store');
-    const expoDb = getExpoDb();
+    const nativeDb = getExpoDb() as { execSync: (sql: string) => void };
     // Force WAL checkpoint to shrink WAL file
-    expoDb.execSync('PRAGMA wal_checkpoint(TRUNCATE);');
+    nativeDb.execSync('PRAGMA wal_checkpoint(TRUNCATE);');
     // Vacuum to reclaim deleted space in the main database
-    expoDb.execSync('VACUUM;');
+    nativeDb.execSync('VACUUM;');
     console.log('Database vacuumed successfully');
   } catch (error) {
     console.error('Database vacuum failed:', error);

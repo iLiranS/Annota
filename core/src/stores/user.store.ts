@@ -162,7 +162,7 @@ export const useUserStore = create<UserState>()(
                 hasMasterKey: state.hasMasterKey
             } as any),
             onRehydrateStorage: () => {
-                return (state, error) => {
+                return (_state, error) => {
                     if (!error) {
                         useUserStore.setState({ initialized: true });
                     }

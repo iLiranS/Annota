@@ -1,7 +1,7 @@
+import { and, desc, eq, gte, inArray, isNull, sql } from 'drizzle-orm';
 import { deleteImageFile } from '../../services/images/image.service';
 import { getDb } from '../../stores/db.store';
-import { and, desc, eq, gte, inArray, isNull, sql } from 'drizzle-orm';
-import crypto from 'react-native-quick-crypto';
+import { generateId } from '../../utils/id';
 import type { NoteMetadata, NoteMetadataInsert } from '../schema';
 import * as schema from '../schema';
 import type { DbOrTx } from '../types';
@@ -33,30 +33,33 @@ function normalizeStoredContent(content: string): string {
 }
 
 function extractImageIdsFromContent(content: string): string[] {
-    return Array.from(content.matchAll(/data-image-id=['"]([^'"]+)['"]/g), (match) => match[1]);
+    const regex = /data-image-id\s*=\s*(["'])(.*?)\1/gi;
+    const ids: string[] = [];
+    let match;
+    while ((match = regex.exec(content)) !== null) {
+        ids.push(match[2]);
+    }
+    return ids;
 }
-
-
-
 
 
 
 // ============ SYNC OPERATIONS ============
 
-export function getDirtyNotes(): NoteMetadata[] {
-    return getDb().select().from(schema.noteMetadata).where(eq(schema.noteMetadata.isDirty, true)).all();
+export async function getDirtyNotes(): Promise<NoteMetadata[]> {
+    return await getDb().select().from(schema.noteMetadata).where(eq(schema.noteMetadata.isDirty, true)).all();
 }
 
-export function clearDirtyNotes(noteIds: string[], syncedAt: Date): void {
+export async function clearDirtyNotes(noteIds: string[], syncedAt: Date): Promise<void> {
     if (noteIds.length === 0) return;
-    getDb().update(schema.noteMetadata)
+    await getDb().update(schema.noteMetadata)
         .set({ isDirty: false, lastSyncedAt: syncedAt })
         .where(inArray(schema.noteMetadata.id, noteIds))
         .run();
 }
 
-export function upsertSyncedNote(noteFullData: any, tx: DbOrTx = getDb()): void {
-    const existing = tx.select().from(schema.noteMetadata).where(eq(schema.noteMetadata.id, noteFullData.id)).get();
+export async function upsertSyncedNote(noteFullData: any, tx: DbOrTx = getDb()): Promise<void> {
+    const existing = await tx.select().from(schema.noteMetadata).where(eq(schema.noteMetadata.id, noteFullData.id)).get();
     if (existing && existing.updatedAt > noteFullData.updatedAt) {
         console.log(`[Sync] Local note ${noteFullData.id} is newer, ignoring pulled row. Local: ${existing.updatedAt}, Pulled: ${noteFullData.updatedAt}`);
         return;
@@ -67,13 +70,13 @@ export function upsertSyncedNote(noteFullData: any, tx: DbOrTx = getDb()): void 
     delete metadataDetails.content; // The rest is metadata
 
     // Insert or Update Metadata
-    tx.insert(schema.noteMetadata)
+    await tx.insert(schema.noteMetadata)
         .values(metadataDetails)
         .onConflictDoUpdate({ target: schema.noteMetadata.id, set: metadataDetails })
         .run();
 
     // Insert or Update Content (Heavy Data)
-    tx.insert(schema.noteContent)
+    await tx.insert(schema.noteContent)
         .values({ id: metadataDetails.id, content })
         .onConflictDoUpdate({ target: schema.noteContent.id, set: { content } })
         .run();
@@ -83,7 +86,7 @@ export function upsertSyncedNote(noteFullData: any, tx: DbOrTx = getDb()): void 
     const MAX_VERSIONS = 50;
 
     // Keep the synced note represented by a local version so image links are not orphaned.
-    const latestVersion = tx.select({
+    const latestVersion = await tx.select({
         id: schema.noteVersions.id,
         content: schema.noteVersions.content,
     })
@@ -96,8 +99,8 @@ export function upsertSyncedNote(noteFullData: any, tx: DbOrTx = getDb()): void 
     let activeVersionId: string;
 
     if (!latestVersion) {
-        activeVersionId = crypto.randomUUID();
-        tx.insert(schema.noteVersions).values({
+        activeVersionId = generateId();
+        await tx.insert(schema.noteVersions).values({
             id: activeVersionId,
             noteId: metadataDetails.id,
             content,
@@ -106,7 +109,7 @@ export function upsertSyncedNote(noteFullData: any, tx: DbOrTx = getDb()): void 
     } else {
         const latestNormalizedContent = normalizeStoredContent(latestVersion.content);
         if (latestNormalizedContent !== latestVersion.content) {
-            tx.update(schema.noteVersions)
+            await tx.update(schema.noteVersions)
                 .set({ content: latestNormalizedContent })
                 .where(eq(schema.noteVersions.id, latestVersion.id))
                 .run();
@@ -115,25 +118,25 @@ export function upsertSyncedNote(noteFullData: any, tx: DbOrTx = getDb()): void 
         if (latestNormalizedContent === content) {
             activeVersionId = latestVersion.id;
         } else {
-            activeVersionId = crypto.randomUUID();
-            tx.insert(schema.noteVersions).values({
+            activeVersionId = generateId();
+            await tx.insert(schema.noteVersions).values({
                 id: activeVersionId,
                 noteId: metadataDetails.id,
                 content,
                 createdAt: noteUpdatedAt,
             }).run();
 
-            const versions = tx.select({ id: schema.noteVersions.id })
+            const versions = await tx.select({ id: schema.noteVersions.id })
                 .from(schema.noteVersions)
                 .where(eq(schema.noteVersions.noteId, metadataDetails.id))
                 .orderBy(desc(schema.noteVersions.createdAt))
                 .all();
 
             if (versions.length > MAX_VERSIONS) {
-                const versionsToDelete = versions.slice(MAX_VERSIONS).map(v => v.id);
+                const versionsToDelete = versions.slice(MAX_VERSIONS).map((v: { id: string }) => v.id);
                 if (versionsToDelete.length > 0) {
-                    ImagesRepo.deleteImagesForVersions(versionsToDelete, tx);
-                    tx.delete(schema.noteVersions)
+                    await ImagesRepo.deleteImagesForVersions(versionsToDelete, tx);
+                    await tx.delete(schema.noteVersions)
                         .where(inArray(schema.noteVersions.id, versionsToDelete))
                         .run();
                 }
@@ -141,21 +144,21 @@ export function upsertSyncedNote(noteFullData: any, tx: DbOrTx = getDb()): void 
         }
     }
 
-    ImagesRepo.setImagesForVersion(activeVersionId, imageIds, tx);
+    await ImagesRepo.setImagesForVersion(activeVersionId, imageIds, tx);
 }
 
 // ============ METADATA OPERATIONS (fast, for lists) ============
 
-export function getNotesInFolder(folderId: string | null, includeDeleted = false): NoteMetadata[] {
+export async function getNotesInFolder(folderId: string | null, includeDeleted = false): Promise<NoteMetadata[]> {
     if (folderId === null) {
         if (includeDeleted) {
-            return getDb()
+            return await getDb()
                 .select()
                 .from(schema.noteMetadata)
                 .where(isNull(schema.noteMetadata.folderId))
                 .all();
         }
-        return getDb()
+        return await getDb()
             .select()
             .from(schema.noteMetadata)
             .where(
@@ -169,14 +172,14 @@ export function getNotesInFolder(folderId: string | null, includeDeleted = false
     }
 
     if (includeDeleted) {
-        return getDb()
+        return await getDb()
             .select()
             .from(schema.noteMetadata)
             .where(eq(schema.noteMetadata.folderId, folderId))
             .all();
     }
 
-    return getDb()
+    return await getDb()
         .select()
         .from(schema.noteMetadata)
         .where(
@@ -189,8 +192,8 @@ export function getNotesInFolder(folderId: string | null, includeDeleted = false
         .all();
 }
 
-export function getNoteMetadataById(noteId: string): NoteMetadata | null {
-    const result = getDb()
+export async function getNoteMetadataById(noteId: string): Promise<NoteMetadata | null> {
+    const result = await getDb()
         .select()
         .from(schema.noteMetadata)
         .where(eq(schema.noteMetadata.id, noteId))
@@ -199,41 +202,42 @@ export function getNoteMetadataById(noteId: string): NoteMetadata | null {
     return result ?? null;
 }
 
-export function createNoteMetadata(metadata: NoteMetadataInsert): NoteMetadata {
+export async function createNoteMetadata(metadata: NoteMetadataInsert): Promise<NoteMetadata> {
     // 2. Run as a TRANSACTION (All or Nothing)
-    return getDb().transaction((tx) => {
+    return await getDb().transaction(async (tx: DbOrTx) => {
         // A. Insert Metadata
-        const insertedNote = tx.insert(schema.noteMetadata)
+        const insertedNote = await tx.insert(schema.noteMetadata)
             .values(metadata)
             .returning()
             .get();
 
         // B. Insert Empty Content
-        tx.insert(schema.noteContent).values({
+        await tx.insert(schema.noteContent).values({
             id: metadata.id,
             content: '',
         }).run();
 
-        return insertedNote;
+        return insertedNote!;
     });
 }
-export function updateNoteMetadata(noteId: string, updates: Partial<Omit<NoteMetadata, 'id' | 'createdAt'>>): NoteMetadata {
-    const noteMetadata = getDb()
+
+export async function updateNoteMetadata(noteId: string, updates: Partial<Omit<NoteMetadata, 'id' | 'createdAt'>>): Promise<NoteMetadata> {
+    const noteMetadata = await getDb()
         .update(schema.noteMetadata)
         .set({ ...updates, updatedAt: new Date() })
         .where(eq(schema.noteMetadata.id, noteId))
         .returning()
         .get();
-    return noteMetadata
+    return noteMetadata;
 }
 
 
-export function softDeleteNote(noteId: string): void {
-    const note = getNoteMetadataById(noteId);
+export async function softDeleteNote(noteId: string): Promise<void> {
+    const note = await getNoteMetadataById(noteId);
     if (!note) return;
 
     const now = new Date();
-    getDb()
+    await getDb()
         .update(schema.noteMetadata)
         .set({
             isDeleted: true,
@@ -246,8 +250,8 @@ export function softDeleteNote(noteId: string): void {
         .run();
 }
 
-export function restoreNote(noteId: string, targetFolderId?: string | null): void {
-    const note = getNoteMetadataById(noteId);
+export async function restoreNote(noteId: string, targetFolderId?: string | null): Promise<void> {
+    const note = await getNoteMetadataById(noteId);
     if (!note) return;
 
     const now = new Date();
@@ -258,7 +262,7 @@ export function restoreNote(noteId: string, targetFolderId?: string | null): voi
         restoredFolderId = targetFolderId;
     } else if (note.originalFolderId) {
         // Check if original folder exists and is not deleted
-        const originalFolder = getDb()
+        const originalFolder = await getDb()
             .select()
             .from(schema.folders)
             .where(eq(schema.folders.id, note.originalFolderId))
@@ -270,7 +274,7 @@ export function restoreNote(noteId: string, targetFolderId?: string | null): voi
         // If original folder is deleted or doesn't exist, restore to root (null)
     }
 
-    getDb()
+    await getDb()
         .update(schema.noteMetadata)
         .set({
             isDeleted: false,
@@ -283,18 +287,18 @@ export function restoreNote(noteId: string, targetFolderId?: string | null): voi
         .run();
 }
 
-export function permanentlyDeleteNote(noteId: string): void {
-    getDb().transaction((tx) => {
+export async function permanentlyDeleteNote(noteId: string): Promise<void> {
+    await getDb().transaction(async (tx: DbOrTx) => {
         // We defer all deletions to allow the full object to sync as a tombstone
-        tx.update(schema.noteMetadata)
+        await tx.update(schema.noteMetadata)
             .set({ isPermDeleted: true, isDirty: true, updatedAt: new Date() })
             .where(eq(schema.noteMetadata.id, noteId))
             .run();
     });
 }
 
-export function getQuickAccessNotes(): NoteMetadata[] {
-    return getDb()
+export async function getQuickAccessNotes(): Promise<NoteMetadata[]> {
+    return await getDb()
         .select()
         .from(schema.noteMetadata)
         .where(
@@ -307,8 +311,8 @@ export function getQuickAccessNotes(): NoteMetadata[] {
         .all();
 }
 
-export function getPinnedNotesInFolder(folderId: string): NoteMetadata[] {
-    return getDb()
+export async function getPinnedNotesInFolder(folderId: string): Promise<NoteMetadata[]> {
+    return await getDb()
         .select()
         .from(schema.noteMetadata)
         .where(
@@ -322,8 +326,8 @@ export function getPinnedNotesInFolder(folderId: string): NoteMetadata[] {
         .all();
 }
 
-export function getDeletedNotes(): NoteMetadata[] {
-    return getDb()
+export async function getDeletedNotes(): Promise<NoteMetadata[]> {
+    return await getDb()
         .select()
         .from(schema.noteMetadata)
         .where(
@@ -337,8 +341,8 @@ export function getDeletedNotes(): NoteMetadata[] {
 
 // ============ CONTENT OPERATIONS (lazy loaded) ============
 
-export function getNoteContent(noteId: string): string {
-    const result = getDb()
+export async function getNoteContent(noteId: string): Promise<string> {
+    const result = await getDb()
         .select()
         .from(schema.noteContent)
         .where(eq(schema.noteContent.id, noteId))
@@ -349,7 +353,7 @@ export function getNoteContent(noteId: string): string {
 
     // Self-heal previously stored rows that lost src attribute.
     if (result && normalized !== rawContent) {
-        getDb().update(schema.noteContent)
+        await getDb().update(schema.noteContent)
             .set({ content: normalized })
             .where(eq(schema.noteContent.id, noteId))
             .run();
@@ -358,7 +362,7 @@ export function getNoteContent(noteId: string): string {
     return normalized;
 }
 
-export function updateNoteContent(noteId: string, content: string, preview: string): void {
+export async function updateNoteContent(noteId: string, content: string, preview: string): Promise<void> {
     const now = new Date();
     const VERSION_THRESHOLD_MS = 10000; // 10 seconds
     const MAX_VERSIONS = 50;
@@ -368,21 +372,21 @@ export function updateNoteContent(noteId: string, content: string, preview: stri
     const imageIds = extractImageIdsFromContent(normalizedContent);
 
     // 1. Update current content (Always)
-    getDb().transaction((tx) => {
-        tx.update(schema.noteContent)
+    await getDb().transaction(async (tx: DbOrTx) => {
+        await tx.update(schema.noteContent)
             .set({ content: normalizedContent })
             .where(eq(schema.noteContent.id, noteId))
             .run();
 
         // 2. Update preview in metadata
-        tx.update(schema.noteMetadata)
+        await tx.update(schema.noteMetadata)
             .set({ preview, updatedAt: now })
             .where(eq(schema.noteMetadata.id, noteId))
             .run();
 
         // 3. Handle Versioning
         // Get latest version
-        const latestVersion = tx.select()
+        const latestVersion = await tx.select()
             .from(schema.noteVersions)
             .where(eq(schema.noteVersions.noteId, noteId))
             .orderBy(desc(schema.noteVersions.createdAt))
@@ -393,8 +397,8 @@ export function updateNoteContent(noteId: string, content: string, preview: stri
 
         if (!latestVersion || (now.getTime() - latestVersion.createdAt.getTime() > VERSION_THRESHOLD_MS)) {
             // Case A: Create NEW version
-            activeVersionId = crypto.randomUUID();
-            tx.insert(schema.noteVersions).values({
+            activeVersionId = generateId();
+            await tx.insert(schema.noteVersions).values({
                 id: activeVersionId,
                 noteId,
                 content: normalizedContent,
@@ -402,18 +406,18 @@ export function updateNoteContent(noteId: string, content: string, preview: stri
             }).run();
 
             // Enforce Limit (cleanup old versions)
-            const versions = tx.select({ id: schema.noteVersions.id }).from(schema.noteVersions)
+            const versions = await tx.select({ id: schema.noteVersions.id }).from(schema.noteVersions)
                 .where(eq(schema.noteVersions.noteId, noteId))
                 .orderBy(desc(schema.noteVersions.createdAt))
                 .all();
 
             if (versions.length > MAX_VERSIONS) {
-                const versionsToDelete = versions.slice(MAX_VERSIONS).map(v => v.id);
+                const versionsToDelete = versions.slice(MAX_VERSIONS).map((v: { id: string }) => v.id);
                 if (versionsToDelete.length > 0) {
                     // Detach images from deleted versions
-                    ImagesRepo.deleteImagesForVersions(versionsToDelete, tx);
+                    await ImagesRepo.deleteImagesForVersions(versionsToDelete, tx);
 
-                    tx.delete(schema.noteVersions)
+                    await tx.delete(schema.noteVersions)
                         .where(inArray(schema.noteVersions.id, versionsToDelete))
                         .run();
                 }
@@ -421,21 +425,21 @@ export function updateNoteContent(noteId: string, content: string, preview: stri
         } else {
             // Case B: Update EXISTING latest version (debounce)
             activeVersionId = latestVersion.id;
-            tx.update(schema.noteVersions)
+            await tx.update(schema.noteVersions)
                 .set({ content: normalizedContent, createdAt: now })
                 .where(eq(schema.noteVersions.id, latestVersion.id))
                 .run();
         }
 
         // 4. Sync images to active version
-        ImagesRepo.setImagesForVersion(activeVersionId, imageIds, tx);
+        await ImagesRepo.setImagesForVersion(activeVersionId, imageIds, tx);
 
         // 5. Garbage Collection: Delete images not referenced by ANY version
-        const deletedFilePaths = ImagesRepo.deleteUnreferencedImages(tx);
+        const deletedFilePaths = await ImagesRepo.deleteUnreferencedImages(tx);
 
         // Clean up files (best effort)
         for (const path of deletedFilePaths) {
-            deleteImageFile(path);
+            await deleteImageFile(path);
         }
     });
 }
@@ -445,11 +449,11 @@ export function updateNoteContent(noteId: string, content: string, preview: stri
  * don't carry inline `src` payloads in SQLite.
  * Returns number of rows updated across both tables.
  */
-export function normalizeAllStoredContent(): number {
+export async function normalizeAllStoredContent(): Promise<number> {
     let updatedRows = 0;
 
-    getDb().transaction((tx) => {
-        const notes = tx
+    await getDb().transaction(async (tx: DbOrTx) => {
+        const notes = await tx
             .select({ id: schema.noteContent.id, content: schema.noteContent.content })
             .from(schema.noteContent)
             .all();
@@ -458,14 +462,14 @@ export function normalizeAllStoredContent(): number {
             const normalized = normalizeStoredContent(note.content);
             if (normalized === note.content) continue;
 
-            tx.update(schema.noteContent)
+            await tx.update(schema.noteContent)
                 .set({ content: normalized })
                 .where(eq(schema.noteContent.id, note.id))
                 .run();
             updatedRows++;
         }
 
-        const versions = tx
+        const versions = await tx
             .select({ id: schema.noteVersions.id, content: schema.noteVersions.content })
             .from(schema.noteVersions)
             .all();
@@ -474,7 +478,7 @@ export function normalizeAllStoredContent(): number {
             const normalized = normalizeStoredContent(version.content);
             if (normalized === version.content) continue;
 
-            tx.update(schema.noteVersions)
+            await tx.update(schema.noteVersions)
                 .set({ content: normalized })
                 .where(eq(schema.noteVersions.id, version.id))
                 .run();
@@ -487,8 +491,8 @@ export function normalizeAllStoredContent(): number {
 
 // ============ VERSION OPERATIONS ============
 
-export function getNoteVersions(noteId: string): { id: string; createdAt: Date }[] {
-    return getDb()
+export async function getNoteVersions(noteId: string): Promise<{ id: string; createdAt: Date }[]> {
+    return await getDb()
         .select({
             id: schema.noteVersions.id,
             createdAt: schema.noteVersions.createdAt
@@ -499,8 +503,8 @@ export function getNoteVersions(noteId: string): { id: string; createdAt: Date }
         .all();
 }
 
-export function getNoteVersion(versionId: string) {
-    const version = getDb()
+export async function getNoteVersion(versionId: string) {
+    const version = await getDb()
         .select()
         .from(schema.noteVersions)
         .where(eq(schema.noteVersions.id, versionId))
@@ -510,7 +514,7 @@ export function getNoteVersion(versionId: string) {
 
     const normalized = normalizeStoredContent(version.content);
     if (normalized !== version.content) {
-        getDb().update(schema.noteVersions)
+        await getDb().update(schema.noteVersions)
             .set({ content: normalized })
             .where(eq(schema.noteVersions.id, versionId))
             .run();
@@ -520,14 +524,14 @@ export function getNoteVersion(versionId: string) {
     return version;
 }
 
-export function deleteNoteVersion(versionId: string): void {
-    getDb().delete(schema.noteVersions)
+export async function deleteNoteVersion(versionId: string): Promise<void> {
+    await getDb().delete(schema.noteVersions)
         .where(eq(schema.noteVersions.id, versionId))
         .run();
 }
 
-export function deleteAllNoteVersionsExceptLatest(noteId: string): void {
-    const versions = getDb()
+export async function deleteAllNoteVersionsExceptLatest(noteId: string): Promise<void> {
+    const versions = await getDb()
         .select({ id: schema.noteVersions.id })
         .from(schema.noteVersions)
         .where(eq(schema.noteVersions.noteId, noteId))
@@ -536,23 +540,23 @@ export function deleteAllNoteVersionsExceptLatest(noteId: string): void {
 
     if (versions.length <= 1) return;
 
-    const versionsToDelete = versions.slice(1).map(v => v.id);
+    const versionsToDelete = versions.slice(1).map((v: { id: string }) => v.id);
 
-    getDb().transaction((tx) => {
-        ImagesRepo.deleteImagesForVersions(versionsToDelete, tx);
-        tx.delete(schema.noteVersions)
+    await getDb().transaction(async (tx: DbOrTx) => {
+        await ImagesRepo.deleteImagesForVersions(versionsToDelete, tx);
+        await tx.delete(schema.noteVersions)
             .where(inArray(schema.noteVersions.id, versionsToDelete))
             .run();
 
-        const deletedFilePaths = ImagesRepo.deleteUnreferencedImages(tx);
+        const deletedFilePaths = await ImagesRepo.deleteUnreferencedImages(tx);
         for (const path of deletedFilePaths) {
-            deleteImageFile(path);
+            await deleteImageFile(path);
         }
     });
 }
 
-export function getRecentNotes(limitCount: number = 5): NoteMetadata[] {
-    return getDb()
+export async function getRecentNotes(limitCount: number = 5): Promise<NoteMetadata[]> {
+    return await getDb()
         .select()
         .from(schema.noteMetadata)
         .where(
@@ -568,20 +572,20 @@ export function getRecentNotes(limitCount: number = 5): NoteMetadata[] {
 
 // ============ BULK OPERATIONS (for Folder Service Cascading) ============
 
-export function permanentlyDeleteNotesInFolders(folderIds: string[], tx: DbOrTx = getDb()): void {
+export async function permanentlyDeleteNotesInFolders(folderIds: string[], tx: DbOrTx = getDb()): Promise<void> {
     if (folderIds.length === 0) return;
 
     // We defer all deletions to allow the full object to sync as a tombstone
-    tx.update(schema.noteMetadata)
+    await tx.update(schema.noteMetadata)
         .set({ isPermDeleted: true, isDirty: true, updatedAt: new Date() })
         .where(inArray(schema.noteMetadata.folderId, folderIds))
         .run();
 }
 
-export function softDeleteNotesInFolders(folderIds: string[], now: Date, tx: DbOrTx = getDb()): void {
+export async function softDeleteNotesInFolders(folderIds: string[], now: Date, tx: DbOrTx = getDb()): Promise<void> {
     if (folderIds.length === 0) return;
 
-    tx.update(schema.noteMetadata)
+    await tx.update(schema.noteMetadata)
         .set({
             isDeleted: true,
             deletedAt: now,
@@ -594,10 +598,10 @@ export function softDeleteNotesInFolders(folderIds: string[], now: Date, tx: DbO
 }
 // restore notes in folders - called from folders.service.ts when restoring a folder
 // only restore notes that were not deleted before the folder was deleted
-export function restoreNotesInFolders(folderIds: string[], folderDeletedAt: Date, tx: DbOrTx = getDb()): void {
+export async function restoreNotesInFolders(folderIds: string[], folderDeletedAt: Date, tx: DbOrTx = getDb()): Promise<void> {
     if (folderIds.length === 0) return;
 
-    tx.update(schema.noteMetadata)
+    await tx.update(schema.noteMetadata)
         .set({
             isDeleted: false,
             deletedAt: null,
@@ -609,18 +613,18 @@ export function restoreNotesInFolders(folderIds: string[], folderDeletedAt: Date
         .run();
 }
 
-export function permanentlyDeleteDeletedNotes(tx: DbOrTx = getDb()): void {
+export async function permanentlyDeleteDeletedNotes(tx: DbOrTx = getDb()): Promise<void> {
     // We defer all deletions to allow the full object to sync as a tombstone
-    tx.update(schema.noteMetadata)
+    await tx.update(schema.noteMetadata)
         .set({ isPermDeleted: true, isDirty: true, updatedAt: new Date() })
         .where(eq(schema.noteMetadata.isDeleted, true))
         .run();
 }
 
-export function getNoteIdsByOriginalFolderIds(folderIds: string[], folderDeletedAt: Date): string[] {
+export async function getNoteIdsByOriginalFolderIds(folderIds: string[], folderDeletedAt: Date): Promise<string[]> {
     if (folderIds.length === 0) return [];
 
-    const results = getDb().select({ id: schema.noteMetadata.id })
+    const results = await getDb().select({ id: schema.noteMetadata.id })
         .from(schema.noteMetadata)
         .where(and(
             gte(schema.noteMetadata.deletedAt, folderDeletedAt),
@@ -628,13 +632,13 @@ export function getNoteIdsByOriginalFolderIds(folderIds: string[], folderDeleted
         ))
         .all();
 
-    return results.map(r => r.id);
+    return results.map((r: { id: string }) => r.id);
 }
 
-export function getDeletedNoteIds(tx: DbOrTx = getDb()): string[] {
-    const results = tx.select({ id: schema.noteMetadata.id })
+export async function getDeletedNoteIds(tx: DbOrTx = getDb()): Promise<string[]> {
+    const results = await tx.select({ id: schema.noteMetadata.id })
         .from(schema.noteMetadata)
         .where(eq(schema.noteMetadata.isDeleted, true))
         .all();
-    return results.map(r => r.id);
+    return results.map((r: { id: string }) => r.id);
 }

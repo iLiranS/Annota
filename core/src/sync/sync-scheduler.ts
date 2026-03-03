@@ -202,8 +202,12 @@ export class SyncScheduler {
         try {
             const { useNotesStore } = require('../stores/notes.store');
             const { useTasksStore } = require('../stores/tasks.store');
-            useNotesStore.getState().initApp();
-            useTasksStore.getState().loadTasks();
+            void useNotesStore.getState().initApp().catch((error: unknown) => {
+                console.error('[SyncScheduler] Notes store reinit failed:', error);
+            });
+            void useTasksStore.getState().loadTasks().catch((error: unknown) => {
+                console.error('[SyncScheduler] Tasks store reinit failed:', error);
+            });
         } catch (err) {
             console.error('[SyncScheduler] Store reinit failed:', err);
         }

@@ -41,18 +41,22 @@ export default function TaskEditScreen() {
         );
     }
 
-    const handleSave = (values: TaskFormValues) => {
-        updateTask(task.id, {
-            title: values.title,
-            description: values.description ?? '',
-            deadline: values.deadline,
-            isWholeDay: values.isWholeDay ?? false,
-            completed: values.completed ?? false,
-            folderId: values.folderId,
-            links: values.links,
-        });
+    const handleSave = async (values: TaskFormValues) => {
+        try {
+            await updateTask(task.id, {
+                title: values.title,
+                description: values.description ?? '',
+                deadline: values.deadline,
+                isWholeDay: values.isWholeDay ?? false,
+                completed: values.completed ?? false,
+                folderId: values.folderId,
+                links: values.links,
+            });
 
-        router.back();
+            router.back();
+        } catch (error) {
+            console.error('Failed to update task', error);
+        }
     };
 
     const handleDelete = () => {
@@ -64,9 +68,13 @@ export default function TaskEditScreen() {
                 {
                     text: 'Delete',
                     style: 'destructive',
-                    onPress: () => {
-                        deleteTask(task.id);
-                        router.back();
+                    onPress: async () => {
+                        try {
+                            await deleteTask(task.id);
+                            router.back();
+                        } catch (error) {
+                            console.error('Failed to delete task', error);
+                        }
                     },
                 },
             ]

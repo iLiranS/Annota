@@ -1,5 +1,5 @@
-import { getDb } from '../../stores/db.store';
 import { and, eq, inArray, sql } from 'drizzle-orm';
+import { getDb } from '../../stores/db.store';
 import type { ImageInsert, ImageRecord } from '../schema';
 import { images, noteVersions, versionImages } from '../schema';
 import type { DbOrTx } from '../types';
@@ -8,27 +8,27 @@ export type { ImageRecord } from '../schema';
 
 // ============ IMAGE OPERATIONS ============
 
-export function getImageById(imageId: string, tx: DbOrTx = getDb()): ImageRecord | null {
-    const result = tx.select().from(images).where(eq(images.id, imageId)).get();
+export async function getImageById(imageId: string, tx: DbOrTx = getDb()): Promise<ImageRecord | null> {
+    const result = await tx.select().from(images).where(eq(images.id, imageId)).get();
     return result ?? null;
 }
 
-export function getImageByHash(hash: string, tx: DbOrTx = getDb()): ImageRecord | null {
-    const result = tx.select().from(images).where(eq(images.hash, hash)).get();
+export async function getImageByHash(hash: string, tx: DbOrTx = getDb()): Promise<ImageRecord | null> {
+    const result = await tx.select().from(images).where(eq(images.hash, hash)).get();
     return result ?? null;
 }
 
-export function getImagesByIds(ids: string[], tx: DbOrTx = getDb()): ImageRecord[] {
+export async function getImagesByIds(ids: string[], tx: DbOrTx = getDb()): Promise<ImageRecord[]> {
     if (ids.length === 0) return [];
-    return tx.select().from(images).where(inArray(images.id, ids)).all();
+    return await tx.select().from(images).where(inArray(images.id, ids)).all();
 }
 
-export function insertImage(data: ImageInsert, tx: DbOrTx = getDb()): ImageRecord {
-    return tx.insert(images).values(data).returning().get();
+export async function insertImage(data: ImageInsert, tx: DbOrTx = getDb()): Promise<ImageRecord> {
+    return await tx.insert(images).values(data).returning().get();
 }
 
-export function deleteImage(imageId: string, tx: DbOrTx = getDb()): void {
-    tx.delete(images).where(eq(images.id, imageId)).run();
+export async function deleteImage(imageId: string, tx: DbOrTx = getDb()): Promise<void> {
+    await tx.delete(images).where(eq(images.id, imageId)).run();
 }
 
 // ============ VERSION-IMAGE OPERATIONS ============
@@ -36,26 +36,26 @@ export function deleteImage(imageId: string, tx: DbOrTx = getDb()): void {
 /**
  * atomic update of images for a version
  */
-export function setImagesForVersion(versionId: string, imageIds: string[], tx: DbOrTx = getDb()): void {
+export async function setImagesForVersion(versionId: string, imageIds: string[], tx: DbOrTx = getDb()): Promise<void> {
     // 1. Delete existing associations for this version
-    tx.delete(versionImages).where(eq(versionImages.versionId, versionId)).run();
+    await tx.delete(versionImages).where(eq(versionImages.versionId, versionId)).run();
 
     // 2. Insert new associations
     const uniqueImageIds = Array.from(new Set(imageIds));
     if (uniqueImageIds.length > 0) {
-        tx.insert(versionImages)
+        await tx.insert(versionImages)
             .values(uniqueImageIds.map(imageId => ({ versionId, imageId })))
             .run();
     }
 }
 
-export function deleteImagesForVersions(versionIds: string[], tx: DbOrTx = getDb()): void {
+export async function deleteImagesForVersions(versionIds: string[], tx: DbOrTx = getDb()): Promise<void> {
     if (versionIds.length === 0) return;
-    tx.delete(versionImages).where(inArray(versionImages.versionId, versionIds)).run();
+    await tx.delete(versionImages).where(inArray(versionImages.versionId, versionIds)).run();
 }
 
-export function countImageReferences(imageId: string, tx: DbOrTx = getDb()): number {
-    const result = tx
+export async function countImageReferences(imageId: string, tx: DbOrTx = getDb()): Promise<number> {
+    const result = await tx
         .select({ count: sql<number>`count(*)` })
         .from(versionImages)
         .where(eq(versionImages.imageId, imageId))
@@ -64,20 +64,20 @@ export function countImageReferences(imageId: string, tx: DbOrTx = getDb()): num
 }
 
 // ============ GC OPERATIONS ============
-export function getImageIdsForVersions(versionIds: string[], tx: DbOrTx = getDb()): string[] {
+export async function getImageIdsForVersions(versionIds: string[], tx: DbOrTx = getDb()): Promise<string[]> {
     if (versionIds.length === 0) return [];
-    return tx.select({ imageId: versionImages.imageId })
+    return await tx.select({ imageId: versionImages.imageId })
         .from(versionImages)
         .where(inArray(versionImages.versionId, versionIds))
         .all()
-        .map(r => r.imageId);
+        .map((r: { imageId: string }) => r.imageId);
 }
 
 /**
  * Garbage Collection: Delete images that are not referenced by ANY version
  * and are older than 5 minutes (to avoid race conditions with new uploads).
  */
-export function deleteUnreferencedImages(tx: DbOrTx = getDb(), ignoreTimeBuffer = false): string[] {
+export async function deleteUnreferencedImages(tx: DbOrTx = getDb(), ignoreTimeBuffer = false): Promise<string[]> {
     const now = new Date();
     const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
 
@@ -94,60 +94,62 @@ export function deleteUnreferencedImages(tx: DbOrTx = getDb(), ignoreTimeBuffer 
         );
     }
 
-    const orphans = tx.select({ id: images.id, localPath: images.localPath })
+    const orphans = await tx.select({ id: images.id, localPath: images.localPath })
         .from(images)
         .where(condition)
         .all();
     if (orphans.length === 0) return [];
 
-    const orphanIds = orphans.map(o => o.id);
+    const orphanIds = orphans.map((o: { id: string }) => o.id);
 
     // Delete DB records
-    tx.delete(images).where(inArray(images.id, orphanIds)).run();
+    await tx.delete(images).where(inArray(images.id, orphanIds)).run();
 
     // Return paths so caller can delete files
-    return orphans.map(o => o.localPath);
+    return orphans.map((o: { localPath: string }) => o.localPath);
 }
 
 /**
  * delete specific images permissions if they are no longer referenced by any version.
  * Used when permanently deleting notes/versions to clean up immediately (ignoring time buffer).
  */
-export function deleteImagesIfUnreferenced(imageIds: string[], tx: DbOrTx = getDb()): string[] {
+export async function deleteImagesIfUnreferenced(imageIds: string[], tx: DbOrTx = getDb()): Promise<string[]> {
     if (imageIds.length === 0) return [];
 
     // Filter to find which of these are TRULY unreferenced now
-    // (We assume the caller has ALREADY deleted the version_images links for the context they are removing)
-    const trulyOrphaned = imageIds.filter(id => {
-        const count = tx
+    const trulyOrphaned: string[] = [];
+    for (const id of imageIds) {
+        const countRes = await tx
             .select({ count: sql<number>`count(*)` })
             .from(versionImages)
             .where(eq(versionImages.imageId, id))
-            .get()?.count ?? 0;
-        return count === 0;
-    });
+            .get();
+        if ((countRes?.count ?? 0) === 0) {
+            trulyOrphaned.push(id);
+        }
+    }
 
     if (trulyOrphaned.length === 0) return [];
 
     // Get paths before deleting
-    const filesToDelete = tx.select({ localPath: images.localPath })
+    const filesToDelete = await tx.select({ localPath: images.localPath })
         .from(images)
         .where(inArray(images.id, trulyOrphaned))
         .all();
 
     // Delete DB records
-    tx.delete(images).where(inArray(images.id, trulyOrphaned)).run();
+    await tx.delete(images).where(inArray(images.id, trulyOrphaned)).run();
 
-    return filesToDelete.map(f => f.localPath);
+    return filesToDelete.map((f: { localPath: string }) => f.localPath);
 }
 
-export function getStorageStats(tx: DbOrTx = getDb()) {
-    const totalImages = tx.select({ count: sql<number>`count(*)` }).from(images).get()?.count ?? 0;
-    const totalLinks = tx.select({ count: sql<number>`count(*)` }).from(versionImages).get()?.count ?? 0;
-    const totalImagesSize = tx.select({ sum: sql<number>`sum(${images.size})` }).from(images).get()?.sum ?? 0;
+export async function getStorageStats(tx: DbOrTx = getDb()) {
+    const totalImages = await tx.select({ count: sql<number>`count(*)` }).from(images).get()?.count ?? 0;
+    const totalLinks = await tx.select({ count: sql<number>`count(*)` }).from(versionImages).get()?.count ?? 0;
+    const totalImagesSize = await tx.select({ sum: sql<number>`sum(${images.size})` }).from(images).get()?.sum ?? 0;
 
     // Orphans (ignoring time buffer)
-    const orphans = tx.select({ count: sql<number>`count(*)` })
+    const orphans = await tx.select({ count: sql<number>`count(*)` })
         .from(images)
         .where(sql`${images.id} NOT IN (SELECT ${versionImages.imageId} FROM ${versionImages})`)
         .get()?.count ?? 0;
@@ -155,9 +157,9 @@ export function getStorageStats(tx: DbOrTx = getDb()) {
     return { totalImages, totalLinks, orphans, totalImagesSize };
 }
 
-export function deleteOrphanLinks(tx: DbOrTx = getDb()): void {
+export async function deleteOrphanLinks(tx: DbOrTx = getDb()): Promise<void> {
     // Delete links pointing to non-existent versions
-    tx.delete(versionImages)
+    await tx.delete(versionImages)
         .where(
             sql`${versionImages.versionId} NOT IN (SELECT ${noteVersions.id} FROM ${noteVersions})`
         )
@@ -170,14 +172,14 @@ export function deleteOrphanLinks(tx: DbOrTx = getDb()): void {
  * Returns a list of image records that are pending sync AND are linked to the 
  * latest version of any note. We skip images that are only in older history.
  */
-export function getPendingImagesLinkedToLatestVersions(tx: DbOrTx = getDb()): {
+export async function getPendingImagesLinkedToLatestVersions(tx: DbOrTx = getDb()): Promise<{
     image: ImageRecord;
     noteId: string;
-}[] {
+}[]> {
     // 1. Get the latest version ID for each note
     // Note: SQLite doesn't have a clean DISTINCT ON, so we do it with a subquery or group by hack.
     // We'll use a subquery to find max created_at per note.
-    const latestVersionsSubquery = tx
+    const latestVersionsSubquery = await tx
         .select({
             id: noteVersions.id,
             noteId: noteVersions.noteId
@@ -190,10 +192,10 @@ export function getPendingImagesLinkedToLatestVersions(tx: DbOrTx = getDb()): {
 
     if (latestVersionsSubquery.length === 0) return [];
 
-    const latestVersionIds = latestVersionsSubquery.map(v => v.id);
+    const latestVersionIds = latestVersionsSubquery.map((v: { id: string }) => v.id);
 
     // 2. Find images linked to those versions that are pending
-    const results = tx
+    const results = await tx
         .select({
             image: images,
             versionId: versionImages.versionId,
@@ -209,11 +211,13 @@ export function getPendingImagesLinkedToLatestVersions(tx: DbOrTx = getDb()): {
         .all();
 
     // 3. Map back to include the noteId for easier insertion into note_images later
-    const versionNoteMap = new Map(latestVersionsSubquery.map(v => [v.id, v.noteId]));
+    const versionNoteMap = new Map(
+        latestVersionsSubquery.map((v: { id: string; noteId: string }) => [v.id, v.noteId] as const),
+    );
 
     // We might have duplicates if an image is in multiple head versions of DIFFERENT notes.
     // We return all occurrences because we need to link each note to the image in the cloud.
-    return results.map(row => ({
+    return results.map((row: { image: ImageRecord; versionId: string }) => ({
         image: row.image,
         noteId: versionNoteMap.get(row.versionId) as string,
     }));
@@ -223,14 +227,14 @@ export function getPendingImagesLinkedToLatestVersions(tx: DbOrTx = getDb()): {
  * Returns the latest-version image IDs for each provided note ID.
  * Notes without a latest version (or without linked images) are returned with an empty imageIds array.
  */
-export function getLatestVersionImageIdsForNotes(noteIds: string[], tx: DbOrTx = getDb()): {
+export async function getLatestVersionImageIdsForNotes(noteIds: string[], tx: DbOrTx = getDb()): Promise<{
     noteId: string;
     imageIds: string[];
-}[] {
+}[]> {
     const uniqueNoteIds = Array.from(new Set(noteIds));
     if (uniqueNoteIds.length === 0) return [];
 
-    const latestVersions = tx
+    const latestVersions = await tx
         .select({
             id: noteVersions.id,
             noteId: noteVersions.noteId,
@@ -253,10 +257,12 @@ export function getLatestVersionImageIdsForNotes(noteIds: string[], tx: DbOrTx =
         return uniqueNoteIds.map(noteId => ({ noteId, imageIds: [] }));
     }
 
-    const latestVersionIds = latestVersions.map(v => v.id);
-    const versionToNote = new Map(latestVersions.map(v => [v.id, v.noteId]));
+    const latestVersionIds = latestVersions.map((v: { id: string }) => v.id);
+    const versionToNote = new Map(
+        latestVersions.map((v: { id: string; noteId: string }) => [v.id, v.noteId] as const),
+    );
 
-    const links = tx
+    const links = await tx
         .select({
             versionId: versionImages.versionId,
             imageId: versionImages.imageId,
@@ -266,9 +272,9 @@ export function getLatestVersionImageIdsForNotes(noteIds: string[], tx: DbOrTx =
         .all();
 
     for (const link of links) {
-        const noteId = versionToNote.get(link.versionId);
+        const noteId = versionToNote.get(link.versionId) as string | undefined;
         if (!noteId) continue;
-        imageIdsByNote.get(noteId)?.add(link.imageId);
+        imageIdsByNote.get(noteId)?.add(link.imageId as string);
     }
 
     return uniqueNoteIds.map(noteId => ({
@@ -277,9 +283,9 @@ export function getLatestVersionImageIdsForNotes(noteIds: string[], tx: DbOrTx =
     }));
 }
 
-export function markImagesAsSynced(imageIds: string[], tx: DbOrTx = getDb()): void {
+export async function markImagesAsSynced(imageIds: string[], tx: DbOrTx = getDb()): Promise<void> {
     if (imageIds.length === 0) return;
-    tx.update(images)
+    await tx.update(images)
         .set({ syncStatus: 'synced' })
         .where(inArray(images.id, imageIds))
         .run();

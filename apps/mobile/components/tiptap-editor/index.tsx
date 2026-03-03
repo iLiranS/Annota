@@ -37,11 +37,11 @@ const getStorableByteSize = (html: string): number => {
 
 /** Extract data-image-id values from HTML string */
 function extractImageIds(html: string): string[] {
-    const regex = /data-image-id="([^"]+)"/g;
+    const regex = /data-image-id\s*=\s*(["'])(.*?)\1/gi;
     const ids: string[] = [];
     let match;
     while ((match = regex.exec(html)) !== null) {
-        ids.push(match[1]);
+        ids.push(match[2]);
     }
     return ids;
 }

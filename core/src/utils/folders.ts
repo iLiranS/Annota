@@ -1,8 +1,8 @@
-import crypto from 'react-native-quick-crypto';
 import { FolderInsert } from "../db/schema";
+import { generateId } from './id';
 
 export const generateFolder = (data: Partial<FolderInsert>): FolderInsert => {
-    const id = crypto.randomUUID();
+    const id = generateId();
     const now = new Date();
 
     return {
