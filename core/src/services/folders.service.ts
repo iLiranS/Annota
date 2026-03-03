@@ -42,7 +42,6 @@ export const FolderService = {
         }
 
         const now = new Date();
-        const nowMs = now.getTime();
 
         // Get all descendant IDs recursively
         const allDescendantIds = await foldersRepo.getAllDescendantFolderIds(folderId);

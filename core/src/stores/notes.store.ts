@@ -31,6 +31,8 @@ interface NotesState {
     permanentlyDeleteNote: (noteId: string) => Promise<void>;
     restoreNote: (noteId: string, targetFolderId?: string | null) => Promise<void>;
     getNoteById: (noteId: string) => NoteMetadata | undefined;
+    toggleQuickAccess: (noteId: string) => Promise<void>;
+    togglePin: (noteId: string) => Promise<void>;
 
     // Content operations (lazy loaded)
     // Content operations (lazy loaded)
@@ -188,6 +190,22 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
     getNoteById: (noteId) => {
         return get().notes.find(n => n.id === noteId);
+    },
+
+    toggleQuickAccess: async (noteId) => {
+        const note = get().getNoteById(noteId);
+        if (!note) return;
+
+        const newValue = !note.isQuickAccess;
+        await get().updateNoteMetadata(noteId, { isQuickAccess: newValue });
+    },
+
+    togglePin: async (noteId) => {
+        const note = get().getNoteById(noteId);
+        if (!note) return;
+
+        const newValue = !note.isPinned;
+        await get().updateNoteMetadata(noteId, { isPinned: newValue });
     },
 
     // ============ CONTENT OPERATIONS ============

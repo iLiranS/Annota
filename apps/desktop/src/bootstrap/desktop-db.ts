@@ -17,13 +17,31 @@ export async function initDesktopSqlite(): Promise<void> {
     sqliteBootstrapPromise = (async () => {
       const db = await Database.load("sqlite:annota.db");
 
+      // tauri-plugin-sql uses sqlx with a connection pool — each execute() call
+      // may hit a different connection, so SQL-level transactions (BEGIN/COMMIT/ROLLBACK)
+      // cannot work across separate IPC calls. We skip them and rely on auto-commit.
+      const TX_CONTROL_RE = /^\s*(begin|commit|rollback|savepoint|release savepoint)\b/i;
+
       const drizzleDb = drizzle(async (sql, params, method) => {
-        if (method === "run") {
-          await db.execute(sql, params);
-          return { rows: [] };
-        } else {
-          const result = await db.select<any[]>(sql, params);
-          return { rows: result };
+        try {
+          // Skip transaction control statements — they can't work across IPC calls.
+          if (TX_CONTROL_RE.test(sql)) {
+            return { rows: [] };
+          }
+
+          // tauri-plugin-sql expects undefined or non-empty arrays for bind values.
+          const bindParams = params.length > 0 ? params : undefined;
+
+          if (method === "run") {
+            await db.execute(sql, bindParams);
+            return { rows: [] };
+          } else {
+            const result = await db.select<any[]>(sql, bindParams);
+            return { rows: result.map((row) => Object.values(row)) };
+          }
+        } catch (error) {
+          console.error(`[DesktopDB] Failed query: ${sql}`, params, error);
+          throw error;
         }
       });
 

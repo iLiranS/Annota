@@ -196,18 +196,18 @@ export class SyncScheduler {
 
     /**
      * Force a heavy re-init of stores so the UI repaints.
-     * Same pattern used in the old _layout.tsx sync loop.
+     * Uses dynamic import() to work in both ESM (Vite/desktop) and CJS (Metro/mobile).
      */
-    private reinitStores(): void {
+    private async reinitStores(): Promise<void> {
         try {
-            const { useNotesStore } = require('../stores/notes.store');
-            const { useTasksStore } = require('../stores/tasks.store');
-            void useNotesStore.getState().initApp().catch((error: unknown) => {
-                console.error('[SyncScheduler] Notes store reinit failed:', error);
-            });
-            void useTasksStore.getState().loadTasks().catch((error: unknown) => {
-                console.error('[SyncScheduler] Tasks store reinit failed:', error);
-            });
+            const [{ useNotesStore }, { useTasksStore }] = await Promise.all([
+                import('../stores/notes.store'),
+                import('../stores/tasks.store'),
+            ]);
+            await Promise.all([
+                useNotesStore.getState().initApp(),
+                useTasksStore.getState().loadTasks(),
+            ]);
         } catch (err) {
             console.error('[SyncScheduler] Store reinit failed:', err);
         }

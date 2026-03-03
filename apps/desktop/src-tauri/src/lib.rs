@@ -1,6 +1,57 @@
+use std::io::{Read, Write};
+use std::net::TcpListener;
+use tauri::{Emitter, Window};
+
+#[tauri::command]
+async fn start_auth_listener(window: Window) -> Result<(), String> {
+    // We run this in a new thread so it doesn't freeze the app while waiting
+    std::thread::spawn(move || {
+        // Listen on the port we set in our OAuth provider
+        let listener = TcpListener::bind("127.0.0.1:8484").expect("Failed to bind to port 8484");
+        
+        // Wait for the browser to redirect here in a loop so we can handle multiple requests
+        for stream in listener.incoming() {
+            if let Ok(mut stream) = stream {
+                let mut buffer = [0; 4096];
+                if stream.read(&mut buffer).is_ok() {
+                    let request = String::from_utf8_lossy(&buffer[..]).to_string();
+                    
+                    // If the browser is sending back the JS extracted hash
+                    if request.starts_with("GET /_tauri_callback") {
+                        let response = "HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\n\r\n";
+                        let _ = stream.write_all(response.as_bytes());
+                        let _ = window.emit("oauth-callback", request);
+                        break;
+                    } 
+                    // If Supabase gave us query parameters directly (PKCE flow)
+                    else if request.contains("GET /?code=") || request.contains("GET /?error=") {
+                        let response = "HTTP/1.1 200 OK\r\n\r\n<html><body><h2>Authentication successful!</h2><p>You can close this tab and return to Annota.</p><script>window.close()</script></body></html>";
+                        let _ = stream.write_all(response.as_bytes());
+                        let _ = window.emit("oauth-callback", request);
+                        break;
+                    } 
+                    // Otherwise, the tokens are likely trapped in the URL Hash fragment! 
+                    // We return HTML that extracts the hash and calls /_tauri_callback
+                    else {
+                        let response = "HTTP/1.1 200 OK\r\n\r\n<html><body><h2>Completing authentication...</h2><script>
+                            let data = window.location.hash.substring(1) || window.location.search.substring(1);
+                            fetch('/_tauri_callback?' + data).then(() => { window.close() });
+                        </script></body></html>";
+                        let _ = stream.write_all(response.as_bytes());
+                    }
+                }
+            }
+        }
+    });
+
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .invoke_handler(tauri::generate_handler![start_auth_listener])
+        .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_opener::init())

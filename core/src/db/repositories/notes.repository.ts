@@ -11,6 +11,7 @@ import * as ImagesRepo from './images.repository';
 export type { NoteMetadata, NoteVersion } from '../schema';
 
 function normalizeStoredContent(content: string): string {
+    if (!content) return content ?? '';
     // Keep image references by data-image-id, but strip heavy src payloads
     // (typically base64 data URIs injected only for rendering in WebView).
     return content.replace(/<img\b[^>]*>/gi, (imgTag) => {
