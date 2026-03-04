@@ -63,7 +63,7 @@ export async function initDesktopSqlite(userId: string | null): Promise<void> {
             return { rows: [] };
           } else {
             const result = await db.select<any[]>(sql, bindParams);
-            return { rows: result.map((row) => Object.values(row)) };
+            console.log("[DesktopDB] sql:", sql, "row keys:", result.length > 0 ? Object.keys(result[0]) : []); if (sql.includes("RETURNING")) { console.warn("[DB_RETURNING]", sql, result); } return { rows: result.map((row) => Object.values(row)) };
           }
         } catch (error) {
           console.error(`[DesktopDB] Failed query: ${sql}`, params, error);

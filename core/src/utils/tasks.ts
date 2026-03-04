@@ -11,6 +11,7 @@ export const generateTask = (data: Partial<TaskInsert>): TaskInsert => {
         createdAt: now,
         updatedAt: now,
         isDirty: true,
+        isPermDeleted: data.isPermDeleted ?? false,
         description: data.description ?? '',
         isWholeDay: data.isWholeDay ?? false,
         completed: data.completed ?? false,

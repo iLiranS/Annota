@@ -57,12 +57,6 @@ export default function DesktopNoteCard({
                             <h3 className="truncate font-semibold text-foreground/90 group-hover:text-primary transition-colors">
                                 {note.title || "Untitled Note"}
                             </h3>
-                            {note.isPinned && (
-                                <Ionicons name="pin" size={12} className="shrink-0 text-primary" />
-                            )}
-                            {note.isQuickAccess && (
-                                <Ionicons name="star" size={12} className="shrink-0 text-amber-400" />
-                            )}
                         </div>
                         {shouldShowTimestamp && (
                             <span className="shrink-0 text-xs text-muted-foreground/80">

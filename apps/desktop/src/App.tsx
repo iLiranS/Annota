@@ -1,6 +1,5 @@
 import {
   authApi,
-  resetSyncPointer,
   setStorageEngine,
   useNotesStore,
   useSettingsStore,
@@ -35,10 +34,10 @@ import MasterKeyPage from "./pages/auth/master-key";
 import NoteEditor from "./pages/notes/note-editor";
 import NotesEmpty from "./pages/notes/notes-empty";
 import NotesLayout from "./pages/notes/notes-layout";
+import TrashPage from "./pages/notes/trash-page";
 
 // Tasks pages
-import NewTaskDialog from "./pages/tasks/new-task-dialog";
-import TaskDetailSidebar from "./pages/tasks/task-detail-sidebar";
+import TaskDetailDialog from "./pages/tasks/task-detail-dialog";
 import TasksLayout from "./pages/tasks/tasks-layout";
 
 // Home Page
@@ -92,12 +91,6 @@ function App() {
 
         // Initialise (or switch to) the per-user SQLite database.
         await initDesktopSqlite(activeUserId);
-
-        // Force a full re-sync on first desktop launch to pull all data.
-        // TODO: Remove this once all desktop users have completed their initial sync.
-        if (activeUserId) {
-          await resetSyncPointer(activeUserId);
-        }
 
         await Promise.all([
           useNotesStore.getState().initApp(),
@@ -238,20 +231,21 @@ function App() {
             <Route path="home" element={<HomePage />} />
 
             {/* Notes */}
+            <Route path="notes/trash" element={<TrashPage />} />
             <Route path="notes" element={<NotesLayout />}>
               <Route index element={<NotesEmpty />} />
               <Route path=":folderId/:noteId" element={<NoteEditor />} />
             </Route>
 
             {/* Tasks */}
-            <Route path="tasks" element={<TasksLayout />}>
-              <Route path="new" element={<NewTaskDialog />} />
-              <Route path=":id" element={<TaskDetailSidebar />} />
-            </Route>
+            <Route path="tasks" element={<TasksLayout />} />
 
-            {/* Settings as a normal route (fallback if no background) */}
+            {/* Modal-style routes as regular routes (fallback if no background) */}
             {!state?.background && (
-              <Route path="settings" element={<SettingsDialog />} />
+              <>
+                <Route path="settings" element={<SettingsDialog />} />
+                <Route path="task/:id" element={<TaskDetailDialog />} />
+              </>
             )}
           </Route>
         </Route>
@@ -261,6 +255,7 @@ function App() {
       {state?.background && (
         <Routes>
           <Route path="settings" element={<SettingsDialog />} />
+          <Route path="task/:id" element={<TaskDetailDialog />} />
         </Routes>
       )}
     </>

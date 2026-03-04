@@ -6,15 +6,10 @@ import {
     type Folder,
     type NoteMetadata
 } from "@annota/core";
-import { useCallback, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
-import {
-    Collapsible,
-    CollapsibleContent,
-    CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import {
     ContextMenu,
     ContextMenuContent,
@@ -25,6 +20,7 @@ import {
 import { Ionicons } from "@/components/ui/ionicons";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { NotesCollapsibleGroup } from "./components/notes-collapsible-group";
 
 interface NotesSidebarProps {
     currentFolderId?: string;
@@ -49,19 +45,6 @@ export function NotesSidebar({ currentFolderId }: NotesSidebarProps) {
         ? getFolderById(currentFolderId)
         : null;
     const currentSortType = getSortType(currentFolderId ?? null);
-
-    const [collapsedSections, setCollapsedSections] = useState<Set<string>>(
-        new Set(),
-    );
-
-    const toggleSection = useCallback((title: string) => {
-        setCollapsedSections((prev) => {
-            const next = new Set(prev);
-            if (next.has(title)) next.delete(title);
-            else next.add(title);
-            return next;
-        });
-    }, []);
 
     // Browsing data
     const browseFolders = useMemo(() => {
@@ -126,37 +109,37 @@ export function NotesSidebar({ currentFolderId }: NotesSidebarProps) {
             <ScrollArea className="flex-1 px-2 py-2">
                 {/* Folders section */}
                 {browseFolders.length > 0 && (
-                    <SectionBlock
+                    <NotesCollapsibleGroup
                         title="Folders"
-                        icon={<Ionicons name="folder" size={14} />}
-                        isCollapsed={collapsedSections.has("Folders")}
-                        onToggle={() => toggleSection("Folders")}
+                        icon="folder"
+                        count={browseFolders.length}
                     >
                         {browseFolders.map((folder) => (
                             <button
                                 key={folder.id}
                                 type="button"
                                 onClick={() => handleFolderPress(folder.id)}
-                                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-accent"
+                                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-accent group/folder"
                             >
-                                <Ionicons
-                                    name={(folder.icon as any) || "folder"}
-                                    size={16}
-                                    style={{ color: folder.color || undefined }}
-                                />
+                                <div className="flex h-5 w-5 items-center justify-center rounded transition-colors group-hover/folder:bg-accent">
+                                    <Ionicons
+                                        name={(folder.icon as any) || "folder"}
+                                        size={16}
+                                        style={{ color: folder.color || undefined }}
+                                    />
+                                </div>
                                 <span className="truncate font-medium">{folder.name}</span>
                             </button>
                         ))}
-                    </SectionBlock>
+                    </NotesCollapsibleGroup>
                 )}
 
                 {/* Pinned section */}
                 {pinnedNotes.length > 0 && (
-                    <SectionBlock
+                    <NotesCollapsibleGroup
                         title="Pinned"
-                        icon={<Ionicons name="pin" size={14} />}
-                        isCollapsed={collapsedSections.has("Pinned")}
-                        onToggle={() => toggleSection("Pinned")}
+                        icon="pin"
+                        count={pinnedNotes.length}
                     >
                         {pinnedNotes.map((note) => (
                             <NoteItem
@@ -166,16 +149,15 @@ export function NotesSidebar({ currentFolderId }: NotesSidebarProps) {
                                 onDelete={() => deleteNote(note.id)}
                             />
                         ))}
-                    </SectionBlock>
+                    </NotesCollapsibleGroup>
                 )}
 
                 {/* Notes section */}
                 {unpinnedNotes.length > 0 && (
-                    <SectionBlock
+                    <NotesCollapsibleGroup
                         title="Notes"
-                        icon={<Ionicons name="document-text" size={14} />}
-                        isCollapsed={collapsedSections.has("Notes")}
-                        onToggle={() => toggleSection("Notes")}
+                        icon="document-text"
+                        count={unpinnedNotes.length}
                     >
                         {unpinnedNotes.map((note) => (
                             <NoteItem
@@ -185,7 +167,7 @@ export function NotesSidebar({ currentFolderId }: NotesSidebarProps) {
                                 onDelete={() => deleteNote(note.id)}
                             />
                         ))}
-                    </SectionBlock>
+                    </NotesCollapsibleGroup>
                 )}
 
                 {/* Empty state */}
@@ -202,40 +184,6 @@ export function NotesSidebar({ currentFolderId }: NotesSidebarProps) {
 }
 
 /* ── Shared sub-components ────────────────────────────────────── */
-
-interface SectionBlockProps {
-    title: string;
-    icon: React.ReactNode;
-    isCollapsed: boolean;
-    onToggle: () => void;
-    children: React.ReactNode;
-}
-
-function SectionBlock({
-    title,
-    icon,
-    isCollapsed,
-    onToggle,
-    children,
-}: SectionBlockProps) {
-    return (
-        <Collapsible open={!isCollapsed} className="mb-1">
-            <CollapsibleTrigger
-                onClick={onToggle}
-                className="flex w-full items-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground"
-            >
-                {icon}
-                <span className="flex-1 text-left">{title}</span>
-                <Ionicons
-                    name="chevron-forward"
-                    size={14}
-                    className={`transition-transform ${!isCollapsed ? "rotate-90" : ""}`}
-                />
-            </CollapsibleTrigger>
-            <CollapsibleContent>{children}</CollapsibleContent>
-        </Collapsible>
-    );
-}
 
 interface NoteItemProps {
     note: NoteMetadata;
@@ -266,12 +214,6 @@ function NoteItem({
                             <p className="truncate font-medium">
                                 {note.title || "Untitled Note"}
                             </p>
-                            {note.isPinned && (
-                                <Ionicons name="pin" size={12} className="text-primary shrink-0" />
-                            )}
-                            {note.isQuickAccess && (
-                                <Ionicons name="star" size={12} className="text-amber-400 shrink-0" />
-                            )}
                         </div>
                         {note.updatedAt && (
                             <p className="truncate text-xs text-muted-foreground">

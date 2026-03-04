@@ -1,6 +1,6 @@
 import { getPlatformAdapters, type Unsubscribe } from '../adapters';
 import { useSyncStore } from '../stores/sync.store';
-import { syncPull, syncPush } from './sync-service';
+import { syncPullRaw as syncPull, syncPushRaw as syncPush } from './sync-service';
 
 const DEBOUNCE_MS = 10_000;       // 10 seconds of idle → push
 const HARD_MAX_MS = 2 * 60_000;   // 2 minutes absolute cap

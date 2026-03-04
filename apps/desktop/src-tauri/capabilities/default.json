@@ -13,6 +13,7 @@
     "fs:allow-appcache-write-recursive",
     "fs:allow-appdata-read-recursive",
     "fs:allow-appdata-write-recursive",
+    "fs:allow-mkdir",
     "store:default",
     "sql:default",
     "sql:allow-execute",

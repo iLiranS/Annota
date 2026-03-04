@@ -12,7 +12,7 @@ export default function AppShell() {
     useAppTheme();
 
     return (
-        <SidebarProvider>
+        <SidebarProvider className="h-svh">
             <AppSidebar />
             <div className="flex flex-1 flex-col overflow-hidden">
                 <MainNavbar />

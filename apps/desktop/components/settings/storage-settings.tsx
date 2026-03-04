@@ -17,6 +17,7 @@ import {
     syncPull,
     syncPush,
     useNotesStore,
+    useSyncStore,
     useTasksStore,
     useUserStore
 } from "@annota/core";
@@ -80,9 +81,9 @@ function formatBytes(bytes: number, decimals = 2) {
 
 export function StorageSettings() {
     const { session } = useUserStore();
+    const { isSyncing } = useSyncStore();
     const [stats, setStats] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(false);
-    const [isSyncing, setIsSyncing] = useState(false);
     const [showResetDialog, setShowResetDialog] = useState(false);
     const [showRemoveKeyDialog, setShowRemoveKeyDialog] = useState(false);
 
@@ -109,7 +110,6 @@ export function StorageSettings() {
             return;
         }
 
-        setIsSyncing(true);
         try {
             const key = await getMasterKey(session.user.id);
             if (!key) {
@@ -126,8 +126,6 @@ export function StorageSettings() {
         } catch (error: any) {
             console.error("Manual Sync Error:", error);
             toast.error(error?.message || "Sync failed");
-        } finally {
-            setIsSyncing(false);
         }
     };
 

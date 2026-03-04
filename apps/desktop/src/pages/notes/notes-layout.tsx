@@ -6,7 +6,7 @@ export default function NotesLayout() {
     const folderId = searchParams.get("folderId") ?? undefined;
 
     return (
-        <div className="flex h-screen w-full">
+        <div className="flex h-full w-full">
             <NotesSidebar currentFolderId={folderId} />
             <div className="flex-1 overflow-auto">
                 <Outlet />

@@ -3,12 +3,13 @@ import { useNotesStore, useSettingsStore, useTasksStore, useUserStore } from "@a
 import { Ionicons } from "@/components/ui/ionicons";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import DesktopNoteCard from "./components/desktop-note-card";
 import DesktopTaskCard from "./components/desktop-task-card";
 
 export default function HomePage() {
     const navigate = useNavigate();
+    const location = useLocation();
     const { colors } = useAppTheme();
 
     // User Data
@@ -64,7 +65,7 @@ export default function HomePage() {
     };
 
     const handleTaskPress = (id: string) => {
-        navigate(`/tasks/${id}`);
+        navigate(`/task/${id}`, { state: { background: location } });
     };
 
     const handleTaskToggle = (id: string) => {

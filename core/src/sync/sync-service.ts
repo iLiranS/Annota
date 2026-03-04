@@ -24,6 +24,7 @@ import { StorageService } from '../services/storage.service';
 import { imageSyncService } from '../services/sync/image-sync.service';
 import { createStorageAdapter } from '../stores/config';
 import { getDb } from '../stores/db.store';
+import { useSyncStore } from '../stores/sync.store';
 import { decryptPayload, encryptPayload } from '../utils/crypto';
 
 const getSyncTimeKey = (userId: string) => `${userId}_last_sync_time`;
@@ -36,7 +37,8 @@ export async function resetSyncPointer(userId: string) {
     console.log(`[Sync] Reset sync pointer for user ${userId}`);
 }
 
-export async function syncPush(masterKey: string) {
+/** @internal Used by SyncScheduler which manages its own isSyncing lifecycle */
+export async function syncPushRaw(masterKey: string) {
     const { data: { session } } = await authApi.getSession();
     if (!session?.user) throw new Error("User not authenticated");
 
@@ -195,7 +197,8 @@ export async function syncPush(masterKey: string) {
 }
 
 
-export async function syncPull(masterKey: string) {
+/** @internal Used by SyncScheduler which manages its own isSyncing lifecycle */
+export async function syncPullRaw(masterKey: string) {
     const { data: { session } } = await authApi.getSession();
     if (!session?.user) throw new Error("User not authenticated");
 
@@ -429,5 +432,53 @@ export async function syncPull(masterKey: string) {
                 imageSyncService.queueImagesForDownload(downloadQueue);
             }
         }
+    }
+}
+
+/**
+ * Public wrapper around the raw push that manages the isSyncing flag
+ * in the sync store and prevents overlapping operations.
+ */
+export async function syncPush(masterKey: string): Promise<void> {
+    const store = useSyncStore.getState();
+    if (store.isSyncing) {
+        console.log('[syncPush] Skipped — sync already in-flight');
+        return;
+    }
+
+    store.setSyncing(true);
+    try {
+        await syncPushRaw(masterKey);
+        store.setLastSyncAt(new Date());
+    } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Unknown sync error';
+        store.setSyncError(msg);
+        throw err;
+    } finally {
+        useSyncStore.getState().setSyncing(false);
+    }
+}
+
+/**
+ * Public wrapper around the raw pull that manages the isSyncing flag
+ * in the sync store and prevents overlapping operations.
+ */
+export async function syncPull(masterKey: string): Promise<void> {
+    const store = useSyncStore.getState();
+    if (store.isSyncing) {
+        console.log('[syncPull] Skipped — sync already in-flight');
+        return;
+    }
+
+    store.setSyncing(true);
+    try {
+        await syncPullRaw(masterKey);
+        store.setLastSyncAt(new Date());
+    } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Unknown sync error';
+        store.setSyncError(msg);
+        throw err;
+    } finally {
+        useSyncStore.getState().setSyncing(false);
     }
 }
