@@ -1,7 +1,7 @@
+import { create } from 'zustand';
 import type { Task, TaskInsert } from '../db/schema';
 import { TaskService } from '../services/tasks.service';
 import { SyncScheduler } from '../sync/sync-scheduler';
-import { create } from 'zustand';
 
 // Re-export types
 export type { Task, TaskInsert };

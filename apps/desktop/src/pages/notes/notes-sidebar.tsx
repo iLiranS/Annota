@@ -84,7 +84,7 @@ export function NotesSidebar({ currentFolderId }: NotesSidebarProps) {
     const headerTitle = currentFolder ? currentFolder.name : "Notes";
 
     return (
-        <div className="flex h-full w-[280px] min-w-[280px] flex-col border-r border-border bg-card/50">
+        <div className="flex h-full w-[220px] min-w-[220px] flex-col border-r border-border bg-card/50">
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3">
                 <h2 className="text-lg font-bold tracking-tight">{headerTitle}</h2>

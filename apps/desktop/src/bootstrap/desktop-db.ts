@@ -58,13 +58,34 @@ export async function initDesktopSqlite(userId: string | null): Promise<void> {
           // tauri-plugin-sql expects undefined or non-empty arrays for bind values.
           const bindParams = params.length > 0 ? params : undefined;
 
-          if (method === "run") {
+          // Detect if the query expects data back (e.g. INSERT ... RETURNING *)
+          const isReturning = /\bRETURNING\b/i.test(sql);
+
+          // Pure write with no returning clause — execute and discard.
+          if (method === "run" && !isReturning) {
             await db.execute(sql, bindParams);
             return { rows: [] };
-          } else {
-            const result = await db.select<any[]>(sql, bindParams);
-            return { rows: result.map((row) => Object.values(row)) };
           }
+
+          // Read query OR write-with-RETURNING — fetch the rows.
+          const result = await db.select<Record<string, unknown>[]>(
+            sql,
+            bindParams,
+          );
+
+          // Drizzle's mapResultRow accesses values by column *index* (row[columnIndex]),
+          // so we must convert objects → arrays. Object.values() preserves insertion
+          // order in V8/JSC, and tauri-plugin-sql returns keys in SQLite's column order
+          // which matches Drizzle's schema field order.
+
+          if (method === "get") {
+            // For .get(), Drizzle expects `rows` to be the single row directly,
+            // NOT wrapped in an outer array.
+            return { rows: result[0] ? Object.values(result[0]) : [] };
+          }
+
+          // For .all() / .values() / write-with-RETURNING
+          return { rows: result.map((row) => Object.values(row)) };
         } catch (error) {
           console.error(`[DesktopDB] Failed query: ${sql}`, params, error);
           throw error;

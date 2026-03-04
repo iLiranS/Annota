@@ -32,13 +32,9 @@ export default function DesktopNoteCard({
     const isCompact = general.compactMode;
     const shouldShowTimestamp = showTimestamp ?? !isCompact;
 
-    const handleTogglePin = useCallback(async (note: NoteMetadata) => {
-        await updateNoteMetadata(note.id, { isPinned: !note.isPinned });
-    }, [updateNoteMetadata]);
 
     const handleToggleQuickAccess = useCallback(async (note: NoteMetadata) => {
-        console.log("toggle quick access", note);
-        return
+        await updateNoteMetadata(note.id, { isQuickAccess: !note.isQuickAccess });
     }, [updateNoteMetadata]);
 
     return (
@@ -77,10 +73,6 @@ export default function DesktopNoteCard({
                 <ContextMenuItem onClick={() => handleToggleQuickAccess(note)} className="gap-2 focus:bg-amber-500/10 focus:text-amber-600">
                     <Ionicons name="star" size={16} />
                     <span>{note.isQuickAccess ? "Remove from Starred" : "Star Note"}</span>
-                </ContextMenuItem>
-                <ContextMenuItem onClick={() => handleTogglePin(note)} className="gap-2 focus:bg-primary/10 focus:text-primary">
-                    <Ionicons name="pin" size={16} />
-                    <span>{note.isPinned ? "Unpin Note" : "Pin Note"}</span>
                 </ContextMenuItem>
                 {onDelete && (
                     <ContextMenuSeparator />

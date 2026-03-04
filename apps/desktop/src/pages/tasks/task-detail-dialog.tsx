@@ -163,10 +163,8 @@ export default function TaskDetailDialog() {
 
     const handleDelete = async () => {
         if (!task) return;
-        if (confirm("Are you sure you want to delete this task?")) {
-            await deleteTask(task.id);
-            handleClose();
-        }
+        await deleteTask(task.id);
+        handleClose();
     };
 
     if (!task) {
@@ -197,7 +195,7 @@ export default function TaskDetailDialog() {
                                 {...register("title")}
                                 placeholder="Task Title"
                                 maxLength={50}
-                                className="border-none bg-transparent p-0 text-xl font-bold shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/40"
+                                className="border-none bg-transparent p-2 text-xl font-bold shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/40"
                             />
                         </div>
 

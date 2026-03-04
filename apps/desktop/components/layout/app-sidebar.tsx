@@ -1,3 +1,4 @@
+import icon from "@/src/assets/icon.png";
 import {
     DAILY_NOTES_FOLDER_ID,
     useNotesStore,
@@ -74,22 +75,24 @@ export function AppSidebar() {
     const isActive = (path: string) => location.pathname.startsWith(path);
 
     return (
-        <Sidebar collapsible="offcanvas" className="border-sidebar-border">
+        <Sidebar collapsible="offcanvas" className="border-sidebar-border select-none">
             {/* ── Header ───────────────────────────────────── */}
             <SidebarHeader
                 data-tauri-drag-region
                 className="flex h-8 shrink-0 flex-row items-center gap-2 px-2 py-0"
             >
-                <div className="flex items-center gap-2 px-2">
+                <div className="flex items-center gap-2  h-full pt-1">
+
                     <img
-                        src="/annota-icon.png"
+                        src={icon}
+                        data-tauri-drag-region
+                        className="h-full aspect-square select-none"
                         alt="Annota"
-                        className="h-5 w-5 rounded-md"
                         onError={(e) => {
                             (e.target as HTMLImageElement).style.display = "none";
                         }}
                     />
-                    <span className="text-sm font-bold tracking-tight group-data-[collapsible=icon]:hidden">
+                    <span data-tauri-drag-region className="text-sm  font-bold tracking-tight group-data-[collapsible=icon]:hidden">
                         Annota
                     </span>
                 </div>
