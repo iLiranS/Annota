@@ -2,9 +2,7 @@ import NoteHeaderMenu from '@/components/notes/note-header-menu';
 import { SearchOverlay } from '@/components/notes/search-overlay';
 import TipTapEditor, { TipTapEditorRef } from '@/components/tiptap-editor';
 import { HapticPressable } from '@/components/ui/haptic-pressable';
-import { useNotesStore } from '@annota/core';
-import { useSettingsStore } from '@annota/core';
-import { generateTitle } from '@annota/core';
+import { generateTitle, useNotesStore, useSettingsStore } from '@annota/core';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
 import * as ExpoClipboard from 'expo-clipboard';
@@ -16,7 +14,6 @@ import {
     Platform,
     StyleSheet,
     Text,
-    useWindowDimensions,
     View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -35,7 +32,6 @@ export default function NoteEditor() {
     const insets = useSafeAreaInsets();
     const editorRef = useRef<TipTapEditorRef>(null);
     const { general, editor } = useSettingsStore();
-    const { width, height } = useWindowDimensions();
 
 
 
@@ -146,7 +142,6 @@ export default function NoteEditor() {
     // Handle content changes from the editor
     const handleContentChange = useCallback((html: string) => {
         if (!id) return;
-
         // Extract title from the content
         const title = generateTitle(html);
 
@@ -160,29 +155,12 @@ export default function NoteEditor() {
         updateNoteMetadata(id, { title });
     }, [id, updateNoteMetadata, updateNoteContent]);
 
-    const persistLatestEditorState = useCallback(async () => {
-        if (!id || !editorRef.current) return;
 
-        try {
-            const latestHtml = await editorRef.current.getContent();
-            if (!latestHtml) return;
 
-            const latestTitle = generateTitle(latestHtml);
-            setDisplayTitle(latestTitle);
-
-            await updateNoteContent(id, latestHtml);
-            await updateNoteMetadata(id, { title: latestTitle });
-        } catch (error) {
-            console.warn('Failed to persist editor content before leaving note', error);
-        }
-    }, [id, updateNoteContent, updateNoteMetadata]);
-
-    const handleBack = useCallback(async () => {
-        await persistLatestEditorState();
-        // Blur editor before navigating back
+    const handleBack = useCallback(() => {
         editorRef.current?.blur();
         router.back();
-    }, [persistLatestEditorState, router]);
+    }, [router]);
 
     // Search handlers
     const handleOpenSearch = useCallback(() => {

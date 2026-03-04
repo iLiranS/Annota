@@ -32,8 +32,7 @@
     "@tiptap/starter-kit": "^3.17.0",
     "highlight.js": "^11.9.0",
     "katex": "^0.16.27",
-    "lowlight": "^3.1.0",
-    "react": "19.1.0"
+    "lowlight": "^3.1.0"
   },
   "devDependencies": {
     "typescript": "^5.2.2",

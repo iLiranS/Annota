@@ -31,6 +31,14 @@ let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 let currentFontFamily: string | null = null;
 let hasAppliedFontToContent = false;
 
+/**
+ * When true, `onUpdate` will NOT send content messages back to React Native.
+ * Used during initial editor setup to prevent spurious content updates caused
+ * by `applyFontFamily`, `migrateMathStrings`, and the autofocus heading
+ * insertion — none of which represent real user edits.
+ */
+let suppressContentUpdates = false;
+
 const WEB_FONT_FAMILIES: Record<string, string> = {
     system: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
     serif: "Georgia, 'Times New Roman', serif",
@@ -351,6 +359,8 @@ export function setupEditor(options: any) {
             content: content,
             autofocus: autofocus, // Pass directly
             onCreate: function ({ editor }) {
+                // Suppress content updates during all setup mutations
+                suppressContentUpdates = true;
                 migrateMathStrings(editor);
                 if (editor.isEmpty) {
                     if (autofocus && typeof editor.chain === 'function') {
@@ -369,6 +379,12 @@ export function setupEditor(options: any) {
                 // `resolveImages` only injects display src values for rendering.
                 // Do not persist these view-only changes back into note content.
                 if (transaction?.getMeta('resolveImages')) {
+                    return;
+                }
+
+                // Suppress content messages during initial editor setup
+                // (font application, math migration, autofocus heading, etc.)
+                if (suppressContentUpdates) {
                     return;
                 }
 
@@ -404,6 +420,13 @@ export function setupEditor(options: any) {
 
         applyFontFamily(fontFamily);
         loadingEl.style.display = 'none';
+
+        // Allow content updates after setup is fully complete.
+        // Use a timeout longer than the onUpdate debounce (300ms) to ensure
+        // any queued updates from setup mutations are discarded.
+        setTimeout(() => {
+            suppressContentUpdates = false;
+        }, 500);
 
     } catch (e) {
         console.error('Error during editor initialization:', e);
