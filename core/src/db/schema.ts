@@ -75,11 +75,6 @@ export const tags = sqliteTable('tags', {
     color: text('color').notNull(),
 });
 
-// ============ SETTINGS ============
-export const settings = sqliteTable('settings', {
-    key: text('key').primaryKey(),
-    value: text('value').notNull(), // JSON
-});
 
 // ============ IMAGES ============
 export const images = sqliteTable('images', {
@@ -112,7 +107,6 @@ export type FolderInsert = typeof folders.$inferInsert;
 export type Task = typeof tasks.$inferSelect;
 export type TaskInsert = typeof tasks.$inferInsert;
 export type Tag = typeof tags.$inferSelect;
-export type Settings = typeof settings.$inferSelect;
 export type ImageRecord = typeof images.$inferSelect;
 export type ImageInsert = typeof images.$inferInsert;
 

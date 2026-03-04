@@ -219,9 +219,12 @@ class ImageSyncService {
 
             // Save to DB
             const existing = await ImagesRepo.getImageById(newImage.id);
-            if (!existing) {
+            const existingRecord = Array.isArray(existing) ? existing[0] : existing;
+
+            // Explicitly check for the primary key (id) to filter out the ghost object
+            if (!existingRecord || !existingRecord.id) {
                 await ImagesRepo.insertImage(newImage);
-            } else if (existing.syncStatus !== 'synced') {
+            } else if (existingRecord.syncStatus !== 'synced') {
                 await ImagesRepo.markImagesAsSynced([newImage.id]);
             }
 

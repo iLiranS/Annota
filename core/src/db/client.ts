@@ -76,10 +76,6 @@ export const CREATE_TABLES_SQL = `
     color TEXT NOT NULL
   );
 
-  CREATE TABLE IF NOT EXISTS settings (
-    key TEXT PRIMARY KEY,
-    value TEXT NOT NULL
-  );
 
   CREATE TABLE IF NOT EXISTS images (
     id TEXT PRIMARY KEY,
@@ -147,7 +143,6 @@ export async function resetAll(): Promise<void> {
       'folders',
       'tasks',
       'tags',
-      'settings'
     ];
 
     tables.forEach(table => {

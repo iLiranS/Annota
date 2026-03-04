@@ -211,13 +211,6 @@ export function StorageSettings() {
                 </h4>
                 <div className="bg-card border rounded-2xl overflow-hidden shadow-sm">
                     <SettingItem
-                        label="Total Images"
-                        icon={<Ionicons name="image" size={20} />}
-                        iconBg="bg-emerald-500"
-                        value={stats?.totalImages ?? '...'}
-                    />
-                    <Separator />
-                    <SettingItem
                         label="Total Notes"
                         icon={<Ionicons name="journal" size={20} />}
                         iconBg="bg-violet-500"
@@ -225,10 +218,24 @@ export function StorageSettings() {
                     />
                     <Separator />
                     <SettingItem
+                        label="Total Tasks"
+                        icon={<Ionicons name="checkbox" size={20} />}
+                        iconBg="bg-teal-500"
+                        value={stats?.totalTasks ?? '...'}
+                    />
+                    <Separator />
+                    <SettingItem
                         label="Total Folders"
                         icon={<Ionicons name="folder" size={20} />}
                         iconBg="bg-sky-500"
                         value={stats?.totalFolders ?? '...'}
+                    />
+                    <Separator />
+                    <SettingItem
+                        label="Total Images"
+                        icon={<Ionicons name="image" size={20} />}
+                        iconBg="bg-emerald-500"
+                        value={stats?.totalImages ?? '...'}
                     />
                 </div>
             </section>

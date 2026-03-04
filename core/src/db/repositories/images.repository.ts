@@ -10,12 +10,15 @@ export type { ImageRecord } from '../schema';
 
 export async function getImageById(imageId: string, tx: DbOrTx = getDb()): Promise<ImageRecord | null> {
     const result = await tx.select().from(images).where(eq(images.id, imageId)).get();
-    return result ?? null;
+    // Guard against Drizzle ghost object { createdAt: null } on empty results (Tauri IPC quirk)
+    if (!result || !result.id) return null;
+    return result;
 }
 
 export async function getImageByHash(hash: string, tx: DbOrTx = getDb()): Promise<ImageRecord | null> {
     const result = await tx.select().from(images).where(eq(images.hash, hash)).get();
-    return result ?? null;
+    if (!result || !result.id) return null;
+    return result;
 }
 
 export async function getImagesByIds(ids: string[], tx: DbOrTx = getDb()): Promise<ImageRecord[]> {
@@ -143,16 +146,32 @@ export async function deleteImagesIfUnreferenced(imageIds: string[], tx: DbOrTx 
     return filesToDelete.map((f: { localPath: string }) => f.localPath);
 }
 
+// Helper to safely extract a value from a `.get()` result that may be
+// a ghost object or an array (Tauri SQLite driver quirk).
+function safeGet<T>(row: unknown, key: string, fallback: T): T {
+    const record = Array.isArray(row) ? row[0] : row;
+    if (record && typeof record === 'object' && key in record) {
+        return (record as Record<string, unknown>)[key] as T;
+    }
+    return fallback;
+}
+
 export async function getStorageStats(tx: DbOrTx = getDb()) {
-    const totalImages = await tx.select({ count: sql<number>`count(*)` }).from(images).get()?.count ?? 0;
-    const totalLinks = await tx.select({ count: sql<number>`count(*)` }).from(versionImages).get()?.count ?? 0;
-    const totalImagesSize = await tx.select({ sum: sql<number>`sum(${images.size})` }).from(images).get()?.sum ?? 0;
+    const imgCountRow = await tx.select({ count: sql<number>`count(*)` }).from(images).get();
+    const totalImages = safeGet(imgCountRow, 'count', 0);
+
+    const linkCountRow = await tx.select({ count: sql<number>`count(*)` }).from(versionImages).get();
+    const totalLinks = safeGet(linkCountRow, 'count', 0);
+
+    const imgSizeRow = await tx.select({ sum: sql<number>`sum(${images.size})` }).from(images).get();
+    const totalImagesSize = safeGet(imgSizeRow, 'sum', 0);
 
     // Orphans (ignoring time buffer)
-    const orphans = await tx.select({ count: sql<number>`count(*)` })
+    const orphanRow = await tx.select({ count: sql<number>`count(*)` })
         .from(images)
         .where(sql`${images.id} NOT IN (SELECT ${versionImages.imageId} FROM ${versionImages})`)
-        .get()?.count ?? 0;
+        .get();
+    const orphans = safeGet(orphanRow, 'count', 0);
 
     return { totalImages, totalLinks, orphans, totalImagesSize };
 }

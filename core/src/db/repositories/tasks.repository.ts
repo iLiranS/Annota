@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, inArray, lt } from 'drizzle-orm';
+import { and, asc, eq, gte, inArray, lt, sql } from 'drizzle-orm';
 import { getDb } from '../../stores/db.store';
 import type { Task, TaskInsert } from '../schema';
 import * as schema from '../schema';
@@ -190,6 +190,16 @@ export async function clearCompletedSince(date: Date): Promise<void> {
             )
         )
         .run();
+}
+
+// ============ COUNT OPERATIONS ============
+
+export async function getTasksCount(tx: DbOrTx = getDb()): Promise<number> {
+    const result = await tx.select({ count: sql<number>`count(*)` })
+        .from(schema.tasks)
+        .where(eq(schema.tasks.isPermDeleted, false))
+        .get();
+    return result?.count ?? 0;
 }
 
 // ============ CALENDAR HELPERS ============
