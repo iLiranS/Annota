@@ -1,3 +1,4 @@
+import { encode } from 'base64-arraybuffer';
 import { getPlatformAdapters } from '../../adapters';
 import { storageApi } from '../../api/storage.api';
 import * as ImagesRepo from '../../db/repositories/images.repository';
@@ -67,7 +68,6 @@ class ImageSyncService {
                         encryptedBytes.byteOffset + encryptedBytes.byteLength,
                     ) as ArrayBuffer;
 
-                    const { encode } = require('base64-arraybuffer');
                     const base64Data = encode(uploadBuffer);
 
                     const { error: uploadError } = await storageApi.uploadImage(storagePath, base64Data, 'application/octet-stream', BUCKET_NAME);

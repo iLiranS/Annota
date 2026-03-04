@@ -51,10 +51,10 @@ export async function getDirtyNotes(): Promise<NoteMetadata[]> {
     return await getDb().select().from(schema.noteMetadata).where(eq(schema.noteMetadata.isDirty, true)).all();
 }
 
-export async function clearDirtyNotes(noteIds: string[], syncedAt: Date): Promise<void> {
+export async function clearDirtyNotes(noteIds: string[]): Promise<void> {
     if (noteIds.length === 0) return;
     await getDb().update(schema.noteMetadata)
-        .set({ isDirty: false, lastSyncedAt: syncedAt })
+        .set({ isDirty: false })
         .where(inArray(schema.noteMetadata.id, noteIds))
         .run();
 }
@@ -642,4 +642,12 @@ export async function getDeletedNoteIds(tx: DbOrTx = getDb()): Promise<string[]>
         .where(eq(schema.noteMetadata.isDeleted, true))
         .all();
     return results.map((r: { id: string }) => r.id);
+}
+
+export async function getNotesCount(tx: DbOrTx = getDb()): Promise<number> {
+    const result = await tx.select({ count: sql<number>`count(*)` })
+        .from(schema.noteMetadata)
+        .where(and(eq(schema.noteMetadata.isDeleted, false), eq(schema.noteMetadata.isPermDeleted, false)))
+        .get();
+    return result?.count ?? 0;
 }

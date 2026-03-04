@@ -1,6 +1,7 @@
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { Outlet } from "react-router-dom";
+import { MainNavbar } from "../navbar/main-navbar";
 import { AppSidebar } from "./app-sidebar";
 
 /**
@@ -13,9 +14,12 @@ export default function AppShell() {
     return (
         <SidebarProvider>
             <AppSidebar />
-            <main className="flex flex-1 overflow-hidden">
-                <Outlet />
-            </main>
+            <div className="flex flex-1 flex-col overflow-hidden">
+                <MainNavbar />
+                <main className="flex-1 overflow-hidden">
+                    <Outlet />
+                </main>
+            </div>
         </SidebarProvider>
     );
 }

@@ -7,6 +7,8 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { AccountSettings } from "./account-settings";
+import { AppearanceSettings } from "./appearance-settings";
 
 import {
     Dialog,
@@ -16,6 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { StorageSettings } from "./storage-settings";
 
 interface SettingsTab {
     id: string;
@@ -67,16 +70,16 @@ export default function SettingsDialog() {
 
     return (
         <Dialog open onOpenChange={(open) => !open && handleClose()}>
-            <DialogContent className="max-h-[600px] max-w-[640px] gap-0 overflow-hidden p-0">
-                <DialogHeader className="px-6 pt-5 pb-0">
+            <DialogContent className="max-w-4xl h-[75vh] min-h-[500px] w-[90vw] gap-0 overflow-hidden p-0 shadow-2xl flex flex-col">
+                <DialogHeader className="px-6 pt-5 pb-0 shrink-0">
                     <DialogTitle className="text-lg">Settings</DialogTitle>
                 </DialogHeader>
 
-                <Separator className="mt-4" />
+                <Separator className="mt-4 shrink-0" />
 
-                <div className="flex min-h-[420px]">
+                <div className="flex flex-1 min-h-0">
                     {/* Left nav */}
-                    <nav className="w-[180px] space-y-0.5 border-r border-border p-2">
+                    <nav className="w-[200px] space-y-0.5 border-r border-border p-3 bg-muted/30">
                         {tabs.map((tab) => (
                             <button
                                 key={tab.id}
@@ -103,14 +106,23 @@ export default function SettingsDialog() {
                     </nav>
 
                     {/* Right content */}
-                    <div className="flex-1 overflow-auto p-6">
+                    <div className="flex-1 overflow-auto p-10">
                         <h3 className="mb-4 text-base font-bold">
                             {tabs.find((t) => t.id === activeTab)?.label}
                         </h3>
-                        <p className="text-sm text-muted-foreground">
-                            Settings for {tabs.find((t) => t.id === activeTab)?.label} will
-                            be implemented in a later phase.
-                        </p>
+
+                        {activeTab === "account" ? (
+                            <AccountSettings />
+                        ) : activeTab === "appearance" ? (
+                            <AppearanceSettings />
+                        ) : activeTab === "storage" ? (
+                            <StorageSettings />
+                        ) : (
+                            <p className="text-sm text-muted-foreground">
+                                Settings for {tabs.find((t) => t.id === activeTab)?.label} will
+                                be implemented in a later phase.
+                            </p>
+                        )}
                     </div>
                 </div>
             </DialogContent>

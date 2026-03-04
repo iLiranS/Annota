@@ -78,7 +78,7 @@ export async function syncPush(masterKey: string) {
 
         const aliveFolders = dirtyFolders.filter((f: any) => !f.isPermDeleted);
         if (aliveFolders.length > 0) {
-            await clearDirtyFolders(aliveFolders.map((f: any) => f.id), now);
+            await clearDirtyFolders(aliveFolders.map((f: any) => f.id));
         }
     };
 
@@ -115,7 +115,7 @@ export async function syncPush(masterKey: string) {
 
         const aliveTasks = dirtyTasks.filter((t: any) => !t.isPermDeleted);
         if (aliveTasks.length > 0) {
-            await clearDirtyTasks(aliveTasks.map((t: any) => t.id), now);
+            await clearDirtyTasks(aliveTasks.map((t: any) => t.id));
         }
     };
 
@@ -165,7 +165,7 @@ export async function syncPush(masterKey: string) {
 
         const aliveNotes = dirtyNotes.filter((n: any) => !n.isPermDeleted);
         if (aliveNotes.length > 0) {
-            await clearDirtyNotes(aliveNotes.map((n: any) => n.id), now);
+            await clearDirtyNotes(aliveNotes.map((n: any) => n.id));
         }
     };
 
@@ -264,7 +264,6 @@ export async function syncPull(masterKey: string) {
                     folderData.updatedAt = new Date(folderData.updatedAt);
                     folderData.deletedAt = folderData.deletedAt ? new Date(folderData.deletedAt) : null;
                     folderData.isDirty = false; // We just grabbed it, it's clean
-                    folderData.lastSyncedAt = new Date(newSyncTime);
 
                     parsedFolders.push(folderData);
                 } catch (e) {
@@ -314,7 +313,6 @@ export async function syncPull(masterKey: string) {
                     taskData.deadline = new Date(taskData.deadline);
                     taskData.completedAt = taskData.completedAt ? new Date(taskData.completedAt) : null;
                     taskData.isDirty = false;
-                    taskData.lastSyncedAt = new Date(newSyncTime);
 
                     parsedTasks.push(taskData);
                 } catch (e) {
@@ -362,7 +360,6 @@ export async function syncPull(masterKey: string) {
                     noteFullData.updatedAt = new Date(noteFullData.updatedAt);
                     noteFullData.deletedAt = noteFullData.deletedAt ? new Date(noteFullData.deletedAt) : null;
                     noteFullData.isDirty = false;
-                    noteFullData.lastSyncedAt = new Date(newSyncTime);
 
                     parsedNotes.push(noteFullData);
                 } catch (e) {

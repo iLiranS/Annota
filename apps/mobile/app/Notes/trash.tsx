@@ -413,12 +413,7 @@ export default function TrashScreen() {
                 renderItem={renderItem}
             />
 
-            <View style={[styles.hint, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <Ionicons name="information-circle-outline" size={16} color={colors.text + '60'} />
-                <ThemedText style={[styles.hintText, { color: colors.text + '60' }]}>
-                    Swipe left to reveal actions • Restore or permanently delete
-                </ThemedText>
-            </View>
+
         </View>
     );
 }
@@ -560,25 +555,5 @@ const styles = StyleSheet.create({
     },
     emptyHint: {
         fontSize: 14,
-    },
-    loadingContainer: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    hint: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
-        padding: 12,
-        marginVertical: 12,
-        width: '90%',
-        alignSelf: 'center',
-        borderRadius: 12,
-        borderWidth: 1,
-    },
-    hintText: {
-        fontSize: 11,
     },
 });

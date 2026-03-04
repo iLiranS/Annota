@@ -3,8 +3,9 @@ import {
   resetSyncPointer,
   setStorageEngine,
   useNotesStore,
+  useSettingsStore,
   useTasksStore,
-  useUserStore,
+  useUserStore
 } from "@annota/core";
 import {
   SyncScheduler,
@@ -13,7 +14,7 @@ import {
 } from "@annota/core/platform";
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Location, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import "./App.css";
 import { createDesktopAdapters } from "./bootstrap/desktop-adapters";
 import { initDesktopSqlite } from "./bootstrap/desktop-db";
@@ -65,8 +66,12 @@ function App() {
       try {
         // Keep deterministic ordering: storage -> adapters -> db.
         setStorageEngine(createDesktopStorageEngine());
+
+        // Rehydrate persisted stores manually since skipHydration is true
+        await useUserStore.persist.rehydrate();
+        await useSettingsStore.persist.rehydrate();
+
         initPlatformAdapters(createDesktopAdapters());
-        await initDesktopSqlite();
 
         let activeUserId: string | null = null;
         try {
@@ -84,6 +89,9 @@ function App() {
 
         if (!activeUserId)
           activeUserId = useUserStore.getState().user?.id ?? null;
+
+        // Initialise (or switch to) the per-user SQLite database.
+        await initDesktopSqlite(activeUserId);
 
         // Force a full re-sync on first desktop launch to pull all data.
         // TODO: Remove this once all desktop users have completed their initial sync.
@@ -123,13 +131,22 @@ function App() {
       unlistenDeepLink = unlisten;
     });
 
-    const subscription = authApi.onAuthStateChange((event, session) => {
-      if (session) {
-        setSession(session);
+    const subscription = authApi.onAuthStateChange((event, newSession) => {
+      const prevUserId = useUserStore.getState().user?.id ?? null;
+
+      if (newSession) {
+        setSession(newSession);
         // Ensure AuthGuard knows whether to redirect to /auth/master-key
         useUserStore.getState().checkMasterKey();
+
+        // Different user signed in — re-bootstrap to switch DB + reload stores.
+        if (newSession.user.id !== prevUserId) {
+          setRunId((v) => v + 1);
+        }
       } else if (event === "SIGNED_OUT") {
         setSession(null);
+        // Re-bootstrap so the next login starts with a fresh DB context.
+        setRunId((v) => v + 1);
       }
     });
 
@@ -196,43 +213,57 @@ function App() {
     );
   }
 
+  const location = useLocation();
+  const state = location.state as { background?: Location };
+
   // ── Ready — Route tree ───────────────────────────────────────
   return (
-    <Routes>
-      {/* Auth routes (no sidebar) */}
-      <Route path="/auth" element={<AuthLayout />}>
-        <Route index element={<Navigate to="login" replace />} />
-        <Route path="login" element={<LoginPage />} />
-        <Route path="lost-key" element={<LostKeyPage />} />
-        <Route path="master-key" element={<MasterKeyPage />} />
-      </Route>
-
-      {/* Protected app routes */}
-      <Route element={<AuthGuard />}>
-        <Route element={<AppShell />}>
-          {/* Default redirect */}
-          <Route index element={<Navigate to="/home" replace />} />
-
-          {/* Home */}
-          <Route path="home" element={<HomePage />} />
-
-          {/* Notes */}
-          <Route path="notes" element={<NotesLayout />}>
-            <Route index element={<NotesEmpty />} />
-            <Route path=":folderId/:noteId" element={<NoteEditor />} />
-          </Route>
-
-          {/* Tasks */}
-          <Route path="tasks" element={<TasksLayout />}>
-            <Route path="new" element={<NewTaskDialog />} />
-            <Route path=":id" element={<TaskDetailSidebar />} />
-          </Route>
-
-          {/* Settings (modal overlay) */}
-          <Route path="settings" element={<SettingsDialog />} />
+    <>
+      <Routes location={state?.background || location}>
+        {/* Auth routes (no sidebar) */}
+        <Route path="/auth" element={<AuthLayout />}>
+          <Route index element={<Navigate to="login" replace />} />
+          <Route path="login" element={<LoginPage />} />
+          <Route path="lost-key" element={<LostKeyPage />} />
+          <Route path="master-key" element={<MasterKeyPage />} />
         </Route>
-      </Route>
-    </Routes>
+
+        {/* Protected app routes */}
+        <Route element={<AuthGuard />}>
+          <Route element={<AppShell />}>
+            {/* Default redirect */}
+            <Route index element={<Navigate to="/home" replace />} />
+
+            {/* Home */}
+            <Route path="home" element={<HomePage />} />
+
+            {/* Notes */}
+            <Route path="notes" element={<NotesLayout />}>
+              <Route index element={<NotesEmpty />} />
+              <Route path=":folderId/:noteId" element={<NoteEditor />} />
+            </Route>
+
+            {/* Tasks */}
+            <Route path="tasks" element={<TasksLayout />}>
+              <Route path="new" element={<NewTaskDialog />} />
+              <Route path=":id" element={<TaskDetailSidebar />} />
+            </Route>
+
+            {/* Settings as a normal route (fallback if no background) */}
+            {!state?.background && (
+              <Route path="settings" element={<SettingsDialog />} />
+            )}
+          </Route>
+        </Route>
+      </Routes>
+
+      {/* Modal routes */}
+      {state?.background && (
+        <Routes>
+          <Route path="settings" element={<SettingsDialog />} />
+        </Routes>
+      )}
+    </>
   );
 }
 

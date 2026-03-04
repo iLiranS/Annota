@@ -49,7 +49,8 @@ import {
   initDb,
   setStorageEngine,
   useUserStore as useAuthStore,
-  useDbStore
+  useDbStore,
+  useSettingsStore
 } from '@annota/core';
 import { SyncScheduler, getMasterKey, initPlatformAdapters } from '@annota/core/platform';
 import { createMobileAdapters } from './bootstrap/mobile-adapters';
@@ -172,38 +173,53 @@ export default function RootLayout() {
 
   useEffect(() => {
     let isMounted = true;
+    let subscription: any = null;
 
-    // Fetch the current session as a background task. 
-    // We do NOT block on this resolving, as offline environments will hang here until the request errors out.
-    authApi.getSession().then((result: any) => {
-      if (isMounted && result?.data?.session) {
-        setSession(result.data.session);
-      } else if (isMounted && !useAuthStore.getState().initialized) {
-        useAuthStore.setState({ initialized: true });
+    const initAuth = async () => {
+      try {
+        // 1. Rehydrate stores from AsyncStorage sequentially
+        await useAuthStore.persist.rehydrate();
+        await useSettingsStore.persist.rehydrate();
+      } catch (err) {
+        console.error('[RootLayout] Hydration error:', err);
       }
-    }).catch((error) => {
-      console.warn('[RootLayout] Auth getSession failed (likely offline):', error);
-      if (isMounted && !useAuthStore.getState().initialized) {
-        useAuthStore.setState({ initialized: true });
-      }
-    });
 
-    const subscription = authApi.onAuthStateChange((event, session) => {
-      if (!isMounted) return;
+      // 2. Hydration completes so properties like isGuest exist.
+      // Now start listening to real auth changes
+      subscription = authApi.onAuthStateChange((event, session) => {
+        if (!isMounted) return;
 
-      if (session) {
-        setSession(session);
-      } else if (event === 'SIGNED_OUT') {
-        setSession(null);
-      } else if (!useAuthStore.getState().initialized) {
-        // INITIAL_SESSION with null -> mark initialized without wiping persisted user
-        useAuthStore.setState({ initialized: true });
-      }
-    });
+        if (session) {
+          setSession(session);
+        } else if (event === 'SIGNED_OUT') {
+          setSession(null);
+        } else if (!useAuthStore.getState().initialized) {
+          useAuthStore.setState({ initialized: true });
+        }
+      });
+
+      // 3. Fallback request to make sure session connects
+      authApi.getSession().then((result: any) => {
+        if (isMounted && result?.data?.session) {
+          setSession(result.data.session);
+        } else if (isMounted && !useAuthStore.getState().initialized) {
+          useAuthStore.setState({ initialized: true });
+        }
+      }).catch((error) => {
+        console.warn('[RootLayout] Auth getSession failed (likely offline):', error);
+        if (isMounted && !useAuthStore.getState().initialized) {
+          useAuthStore.setState({ initialized: true });
+        }
+      });
+    };
+
+    initAuth();
 
     return () => {
       isMounted = false;
-      subscription.unsubscribe();
+      if (subscription) {
+        subscription.unsubscribe();
+      }
     };
   }, []);
 

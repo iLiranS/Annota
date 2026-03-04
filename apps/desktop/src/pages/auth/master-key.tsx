@@ -1,6 +1,6 @@
 import { authApi, useUserStore, userService } from "@annota/core";
 import { generateMasterKey } from "@annota/core/platform";
-import { Loader2 } from "lucide-react";
+import { AlertCircle, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -22,6 +22,7 @@ export default function MasterKeyPage() {
     const [mnemonic, setMnemonic] = useState("");
     const [importWords, setImportWords] = useState<string[]>(Array(12).fill(""));
     const [importing, setImporting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const getCurrentUserId = async (): Promise<string | null> => {
         const {
@@ -96,9 +97,9 @@ export default function MasterKeyPage() {
 
         const joinedWords = importWords.join(" ").trim().toLowerCase();
         setImporting(true);
+        setError(null);
         try {
-            const storedValidator =
-                await useUserStore.getState().fetchKeyValidator(userId);
+            const storedValidator = await useUserStore.getState().fetchKeyValidator(userId);
             await userService.importMasterKey(userId, joinedWords, storedValidator);
             useUserStore.getState().setHasMasterKey(true);
             navigate("/", { replace: true });
@@ -106,15 +107,11 @@ export default function MasterKeyPage() {
             const message =
                 err instanceof Error ? err.message : "Validation failed";
             if (message === "INVALID_FORMAT") {
-                window.alert(
-                    "The 12-word phrase you entered is invalid. Please check your spelling.",
-                );
+                setError("The 12-word phrase you entered is invalid. Please check your spelling.");
             } else if (message === "HASH_MISMATCH") {
-                window.alert(
-                    "The 12-word phrase does not match your registered key. Please try again.",
-                );
+                setError("The 12-word phrase does not match your registered key. Please try again.");
             } else {
-                window.alert("Could not verify your key. Please try again.");
+                setError("Could not verify your key. Please try again.");
             }
         } finally {
             setImporting(false);
@@ -130,6 +127,7 @@ export default function MasterKeyPage() {
         const newWords = [...importWords];
         newWords[index] = text.toLowerCase().trim();
         setImportWords(newWords);
+        if (error) setError(null);
     };
 
     if (checkingUser) {
@@ -256,6 +254,15 @@ export default function MasterKeyPage() {
                                 </div>
                             ))}
                         </div>
+
+                        {error && (
+                            <div className="rounded-lg bg-destructive/10 p-3 flex items-center gap-2 border border-destructive/20 animate-in fade-in slide-in-from-top-1">
+                                <AlertCircle className="h-4 w-4 text-destructive shrink-0" />
+                                <p className="text-xs font-medium text-destructive">
+                                    {error}
+                                </p>
+                            </div>
+                        )}
 
                         <Button
                             className="w-full"

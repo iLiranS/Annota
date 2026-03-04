@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull } from 'drizzle-orm';
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { getDb } from '../../stores/db.store';
 import type { Folder, FolderInsert, NoteMetadata } from '../schema';
 import * as schema from '../schema';
@@ -19,10 +19,10 @@ export async function getDirtyFolders(): Promise<Folder[]> {
     return await getDb().select().from(schema.folders).where(eq(schema.folders.isDirty, true)).all();
 }
 
-export async function clearDirtyFolders(folderIds: string[], syncedAt: Date): Promise<void> {
+export async function clearDirtyFolders(folderIds: string[]): Promise<void> {
     if (folderIds.length === 0) return;
     await getDb().update(schema.folders)
-        .set({ isDirty: false, lastSyncedAt: syncedAt })
+        .set({ isDirty: false })
         .where(inArray(schema.folders.id, folderIds))
         .run();
 }
@@ -204,4 +204,12 @@ export async function getDeletedFolders(): Promise<Folder[]> {
             )
         )
         .all();
+}
+
+export async function getFoldersCount(tx: DbOrTx = getDb()): Promise<number> {
+    const result = await tx.select({ count: sql<number>`count(*)` })
+        .from(schema.folders)
+        .where(and(eq(schema.folders.isDeleted, false), eq(schema.folders.isPermDeleted, false), eq(schema.folders.isSystem, false)))
+        .get();
+    return result?.count ?? 0;
 }

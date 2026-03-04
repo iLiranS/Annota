@@ -6,17 +6,6 @@ import {
     type Folder,
     type NoteMetadata
 } from "@annota/core";
-import {
-    ChevronRight,
-    FileText,
-    Folder as FolderIcon,
-    FolderOpen,
-    Pin,
-    Plus,
-    Search,
-    Star,
-    Trash2,
-} from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -33,6 +22,7 @@ import {
     ContextMenuSeparator,
     ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import { Ionicons } from "@/components/ui/ionicons";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 
@@ -53,8 +43,6 @@ export function NotesSidebar({ currentFolderId }: NotesSidebarProps) {
         getFolderById,
         getSortType,
         deleteNote,
-        toggleQuickAccess,
-        togglePin,
     } = useNotesStore();
 
     const currentFolder = currentFolderId
@@ -119,7 +107,7 @@ export function NotesSidebar({ currentFolderId }: NotesSidebarProps) {
                 <h2 className="text-lg font-bold tracking-tight">{headerTitle}</h2>
                 <div className="flex gap-1">
                     <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <Search className="h-4 w-4" />
+                        <Ionicons name="search" size={16} />
                     </Button>
                     <Button
                         variant="ghost"
@@ -127,7 +115,7 @@ export function NotesSidebar({ currentFolderId }: NotesSidebarProps) {
                         className="h-8 w-8"
                         onClick={handleCreateNote}
                     >
-                        <Plus className="h-4 w-4" />
+                        <Ionicons name="add" size={18} />
                     </Button>
                 </div>
             </div>
@@ -140,7 +128,7 @@ export function NotesSidebar({ currentFolderId }: NotesSidebarProps) {
                 {browseFolders.length > 0 && (
                     <SectionBlock
                         title="Folders"
-                        icon={<FolderIcon className="h-3.5 w-3.5" />}
+                        icon={<Ionicons name="folder" size={14} />}
                         isCollapsed={collapsedSections.has("Folders")}
                         onToggle={() => toggleSection("Folders")}
                     >
@@ -151,8 +139,9 @@ export function NotesSidebar({ currentFolderId }: NotesSidebarProps) {
                                 onClick={() => handleFolderPress(folder.id)}
                                 className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-accent"
                             >
-                                <FolderOpen
-                                    className="h-4 w-4 shrink-0"
+                                <Ionicons
+                                    name={(folder.icon as any) || "folder"}
+                                    size={16}
                                     style={{ color: folder.color || undefined }}
                                 />
                                 <span className="truncate font-medium">{folder.name}</span>
@@ -165,7 +154,7 @@ export function NotesSidebar({ currentFolderId }: NotesSidebarProps) {
                 {pinnedNotes.length > 0 && (
                     <SectionBlock
                         title="Pinned"
-                        icon={<Pin className="h-3.5 w-3.5" />}
+                        icon={<Ionicons name="pin" size={14} />}
                         isCollapsed={collapsedSections.has("Pinned")}
                         onToggle={() => toggleSection("Pinned")}
                     >
@@ -175,8 +164,6 @@ export function NotesSidebar({ currentFolderId }: NotesSidebarProps) {
                                 note={note}
                                 onClick={() => handleNotePress(note)}
                                 onDelete={() => deleteNote(note.id)}
-                                onToggleQuickAccess={() => toggleQuickAccess(note.id)}
-                                onTogglePin={() => togglePin(note.id)}
                             />
                         ))}
                     </SectionBlock>
@@ -186,7 +173,7 @@ export function NotesSidebar({ currentFolderId }: NotesSidebarProps) {
                 {unpinnedNotes.length > 0 && (
                     <SectionBlock
                         title="Notes"
-                        icon={<FileText className="h-3.5 w-3.5" />}
+                        icon={<Ionicons name="document-text" size={14} />}
                         isCollapsed={collapsedSections.has("Notes")}
                         onToggle={() => toggleSection("Notes")}
                     >
@@ -196,8 +183,6 @@ export function NotesSidebar({ currentFolderId }: NotesSidebarProps) {
                                 note={note}
                                 onClick={() => handleNotePress(note)}
                                 onDelete={() => deleteNote(note.id)}
-                                onToggleQuickAccess={() => toggleQuickAccess(note.id)}
-                                onTogglePin={() => togglePin(note.id)}
                             />
                         ))}
                     </SectionBlock>
@@ -206,7 +191,7 @@ export function NotesSidebar({ currentFolderId }: NotesSidebarProps) {
                 {/* Empty state */}
                 {browseFolders.length === 0 && browseNotes.length === 0 && (
                     <div className="flex flex-col items-center gap-2 py-12 text-muted-foreground">
-                        <FolderOpen className="h-10 w-10 text-border" />
+                        <Ionicons name="folder-open" size={40} className="text-border" />
                         <p className="text-sm font-medium">This folder is empty</p>
                         <p className="text-xs">Create a note or folder to get started</p>
                     </div>
@@ -241,8 +226,10 @@ function SectionBlock({
             >
                 {icon}
                 <span className="flex-1 text-left">{title}</span>
-                <ChevronRight
-                    className={`h-3.5 w-3.5 transition-transform ${!isCollapsed ? "rotate-90" : ""}`}
+                <Ionicons
+                    name="chevron-forward"
+                    size={14}
+                    className={`transition-transform ${!isCollapsed ? "rotate-90" : ""}`}
                 />
             </CollapsibleTrigger>
             <CollapsibleContent>{children}</CollapsibleContent>
@@ -273,17 +260,17 @@ function NoteItem({
                     onClick={onClick}
                     className="group flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-accent"
                 >
-                    <FileText className="h-4 w-4 shrink-0 text-primary" />
+                    <Ionicons name="document-text" size={16} className="text-primary shrink-0" />
                     <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5">
                             <p className="truncate font-medium">
                                 {note.title || "Untitled Note"}
                             </p>
                             {note.isPinned && (
-                                <Pin className="h-3 w-3 shrink-0 text-primary" />
+                                <Ionicons name="pin" size={12} className="text-primary shrink-0" />
                             )}
                             {note.isQuickAccess && (
-                                <Star className="h-3 w-3 shrink-0 fill-amber-400 text-amber-400" />
+                                <Ionicons name="star" size={12} className="text-amber-400 shrink-0" />
                             )}
                         </div>
                         {note.updatedAt && (
@@ -301,7 +288,7 @@ function NoteItem({
                         onClick={onToggleQuickAccess}
                         className="gap-2 focus:bg-amber-500/10 focus:text-amber-600"
                     >
-                        <Star className="h-4 w-4" />
+                        <Ionicons name="star" size={16} />
                         <span>
                             {note.isQuickAccess ? "Remove from Starred" : "Star Note"}
                         </span>
@@ -312,7 +299,7 @@ function NoteItem({
                         onClick={onTogglePin}
                         className="gap-2 focus:bg-primary/10 focus:text-primary"
                     >
-                        <Pin className="h-4 w-4" />
+                        <Ionicons name="pin" size={16} />
                         <span>{note.isPinned ? "Unpin Note" : "Pin Note"}</span>
                     </ContextMenuItem>
                 )}
@@ -324,7 +311,7 @@ function NoteItem({
                         onClick={onDelete}
                         className="gap-2 text-destructive focus:bg-destructive/10 focus:text-destructive"
                     >
-                        <Trash2 className="h-4 w-4" />
+                        <Ionicons name="trash-outline" size={16} />
                         <span>Delete Note</span>
                     </ContextMenuItem>
                 )}

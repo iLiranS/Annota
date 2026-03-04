@@ -1,8 +1,12 @@
-import { CREATE_TABLES_SQL, initDb } from "@annota/core";
+import { CREATE_TABLES_SQL, initDb, resetDb, useDbStore } from "@annota/core";
 import Database from "@tauri-apps/plugin-sql";
 import { drizzle } from "drizzle-orm/sqlite-proxy";
 
-let sqliteBootstrapPromise: Promise<void> | null = null;
+/** Per-user bootstrap cache — avoids re-initialising for the same user. */
+const userDbCache = new Map<string, Promise<void>>();
+
+/** The cache key that was last successfully activated. */
+let activeUserKey: string | null = null;
 
 function splitSqlStatements(sql: string): string[] {
   return sql
@@ -12,15 +16,37 @@ function splitSqlStatements(sql: string): string[] {
     .map((statement) => `${statement};`);
 }
 
-export async function initDesktopSqlite(): Promise<void> {
-  if (!sqliteBootstrapPromise) {
-    sqliteBootstrapPromise = (async () => {
-      const db = await Database.load("sqlite:annota.db");
+/**
+ * Initialise (or switch to) a per-user SQLite database.
+ *
+ * `tauri-plugin-sql` resolves the relative `sqlite:` URI to the correct
+ * sandboxed Application Support directory automatically, so we only need to
+ * vary the filename per user.
+ */
+export async function initDesktopSqlite(userId: string | null): Promise<void> {
+  const cacheKey = userId ?? "__guest__";
+  const dbName = userId ? `user_${userId}.db` : "local_guest.db";
+
+  // Same user already active — nothing to do.
+  if (activeUserKey === cacheKey && userDbCache.has(cacheKey)) {
+    await userDbCache.get(cacheKey);
+    return;
+  }
+
+  // Switching users — clear the previous Drizzle instance.
+  if (activeUserKey !== null && activeUserKey !== cacheKey) {
+    resetDb();
+  }
+
+  if (!userDbCache.has(cacheKey)) {
+    const bootstrapPromise = (async () => {
+      const db = await Database.load(`sqlite:${dbName}`);
 
       // tauri-plugin-sql uses sqlx with a connection pool — each execute() call
       // may hit a different connection, so SQL-level transactions (BEGIN/COMMIT/ROLLBACK)
       // cannot work across separate IPC calls. We skip them and rely on auto-commit.
-      const TX_CONTROL_RE = /^\s*(begin|commit|rollback|savepoint|release savepoint)\b/i;
+      const TX_CONTROL_RE =
+        /^\s*(begin|commit|rollback|savepoint|release savepoint)\b/i;
 
       const drizzleDb = drizzle(async (sql, params, method) => {
         try {
@@ -54,14 +80,50 @@ export async function initDesktopSqlite(): Promise<void> {
       for (const statement of statements) {
         await db.execute(statement);
       }
+
+      // Register the active user in the DB store.
+      useDbStore.getState().initDB(userId);
     })();
+
+    userDbCache.set(cacheKey, bootstrapPromise);
   }
 
   try {
-    await sqliteBootstrapPromise;
+    await userDbCache.get(cacheKey);
+    activeUserKey = cacheKey;
   } catch (error) {
-    sqliteBootstrapPromise = null;
+    userDbCache.delete(cacheKey);
     console.error("[DesktopDB] SQLite init failed:", error);
     throw error;
+  }
+}
+
+export async function resetDesktopDatabase(): Promise<void> {
+  const cacheKey = activeUserKey ?? "__guest__";
+  const userId = activeUserKey === "__guest__" ? null : activeUserKey;
+  const dbName = userId ? `user_${userId}.db` : "local_guest.db";
+
+  const db = await Database.load(`sqlite:${dbName}`);
+
+  const tables = [
+    'note_images',
+    'images',
+    'note_metadata',
+    'note_content',
+    'note_versions',
+    'folders',
+    'tasks',
+    'tags',
+    'settings',
+    'version_images'
+  ];
+
+  for (const table of tables) {
+    await db.execute(`DROP TABLE IF EXISTS ${table}`);
+  }
+
+  const statements = splitSqlStatements(CREATE_TABLES_SQL);
+  for (const statement of statements) {
+    await db.execute(statement);
   }
 }

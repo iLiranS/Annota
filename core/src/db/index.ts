@@ -1,25 +1,23 @@
+import * as dbClient from './client';
 import * as schema from './schema';
+
 export { getDb, initDb, resetDb } from './runtime';
 // AsyncDbDriver has been removed.
 export { CREATE_TABLES_SQL } from './client';
 
 export function initDatabase(expoDb: any, drizzleDb: any): void {
-    const dbClient = require('./client');
     dbClient.initDatabase(expoDb, drizzleDb);
 }
 
 export async function resetAll(): Promise<void> {
-    const dbClient = require('./client');
     await dbClient.resetAll();
 }
 
-export function vacuumDatabase(): void {
-    const dbClient = require('./client');
-    dbClient.vacuumDatabase();
+export async function vacuumDatabase(): Promise<void> {
+    await dbClient.vacuumDatabase();
 }
 
 export async function resetMasterKey(userId: string): Promise<void> {
-    const dbClient = require('./client');
     await dbClient.resetMasterKey(userId);
 }
 

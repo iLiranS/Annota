@@ -16,7 +16,6 @@ export const noteMetadata = sqliteTable('note_metadata', {
     tags: text('tags').notNull().default('[]'), // JSON array of tag IDs
     originalFolderId: text('original_folder_id'),
     isDirty: integer('is_dirty', { mode: 'boolean' }).notNull().default(false),
-    lastSyncedAt: integer('last_synced_at', { mode: 'timestamp' }),
     isPermDeleted: integer('is_perm_deleted', { mode: 'boolean' }).notNull().default(false),
 });
 
@@ -49,7 +48,6 @@ export const folders = sqliteTable('folders', {
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
     updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
     isDirty: integer('is_dirty', { mode: 'boolean' }).notNull().default(false),
-    lastSyncedAt: integer('last_synced_at', { mode: 'timestamp' }),
     isPermDeleted: integer('is_perm_deleted', { mode: 'boolean' }).notNull().default(false),
 });
 
@@ -67,7 +65,6 @@ export const tasks = sqliteTable('tasks', {
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
     updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
     isDirty: integer('is_dirty', { mode: 'boolean' }).notNull().default(false),
-    lastSyncedAt: integer('last_synced_at', { mode: 'timestamp' }),
     isPermDeleted: integer('is_perm_deleted', { mode: 'boolean' }).notNull().default(false),
 });
 

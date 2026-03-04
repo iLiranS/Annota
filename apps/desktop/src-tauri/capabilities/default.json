@@ -17,6 +17,8 @@
     "sql:default",
     "sql:allow-execute",
     "http:default",
-    "deep-link:default"
+    "deep-link:default",
+    "core:window:default",
+    "core:window:allow-start-dragging"
   ]
 }

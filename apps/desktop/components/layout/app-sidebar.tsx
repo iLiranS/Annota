@@ -6,18 +6,6 @@ import {
     type Folder,
 } from "@annota/core";
 import { SyncScheduler } from "@annota/core/platform";
-import {
-    Calendar,
-    ChevronRight,
-    CloudOff,
-    FileText,
-    FolderIcon,
-    Home,
-    ListChecks,
-    Settings,
-    Star,
-    Trash2,
-} from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -44,10 +32,13 @@ import {
     SidebarRail,
     SidebarSeparator,
 } from "@/components/ui/sidebar";
+import { useAppTheme } from "@/hooks/use-app-theme";
+import { Ionicons } from "../ui/ionicons";
 
 export function AppSidebar() {
     const navigate = useNavigate();
     const location = useLocation();
+    const { colors } = useAppTheme();
 
     const { folders, notes } = useNotesStore();
     const isOnline = useSyncStore((s) => s.isOnline);
@@ -83,26 +74,29 @@ export function AppSidebar() {
     const isActive = (path: string) => location.pathname.startsWith(path);
 
     return (
-        <Sidebar collapsible="icon" className="border-r border-sidebar-border">
+        <Sidebar collapsible="offcanvas" className="border-sidebar-border">
             {/* ── Header ───────────────────────────────────── */}
-            <SidebarHeader className="px-4 py-3">
-                <div className="flex items-center gap-3">
+            <SidebarHeader
+                data-tauri-drag-region
+                className="flex h-8 shrink-0 flex-row items-center gap-2 px-2 py-0"
+            >
+                <div className="flex items-center gap-2 px-2">
                     <img
                         src="/annota-icon.png"
                         alt="Annota"
-                        className="h-8 w-8 rounded-lg"
+                        className="h-5 w-5 rounded-md"
                         onError={(e) => {
                             (e.target as HTMLImageElement).style.display = "none";
                         }}
                     />
-                    <span className="text-lg font-bold tracking-tight group-data-[collapsible=icon]:hidden">
+                    <span className="text-sm font-bold tracking-tight group-data-[collapsible=icon]:hidden">
                         Annota
                     </span>
                 </div>
             </SidebarHeader>
 
             {/* ── Content ──────────────────────────────────── */}
-            <SidebarContent>
+            <SidebarContent className="min-w-0 overflow-x-hidden">
                 {/* Navigation group */}
                 <SidebarGroup>
                     <SidebarGroupContent>
@@ -113,7 +107,7 @@ export function AppSidebar() {
                                     onClick={() => navigate("/home")}
                                     tooltip="Home"
                                 >
-                                    <Home className="text-indigo-500" />
+                                    <Ionicons name="home" size={18} className="text-indigo-500" />
                                     <span>Home</span>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
@@ -124,7 +118,7 @@ export function AppSidebar() {
                                     onClick={() => navigate("/tasks")}
                                     tooltip="Tasks"
                                 >
-                                    <ListChecks className="text-emerald-500" />
+                                    <Ionicons name="checkmark-circle" size={18} className="text-emerald-500" />
                                     <span>Tasks</span>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
@@ -140,7 +134,12 @@ export function AppSidebar() {
                                     }
                                     tooltip="Daily Notes"
                                 >
-                                    <Calendar className="text-violet-500" />
+                                    <Ionicons
+                                        name={(dailyFolder?.icon as any) || "calendar"}
+                                        size={18}
+                                        className="text-violet-500"
+                                        color={dailyFolder?.color}
+                                    />
                                     <span>{dailyFolder?.name ?? "Daily Notes"}</span>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
@@ -153,9 +152,9 @@ export function AppSidebar() {
                     <SidebarGroup>
                         <SidebarGroupLabel asChild>
                             <CollapsibleTrigger className="flex w-full items-center gap-2">
-                                <Star className="h-4 w-4 text-amber-400" />
+                                <Ionicons name="star" size={16} className="text-amber-400" />
                                 <span className="flex-1 text-left">Quick Access</span>
-                                <ChevronRight className="h-4 w-4 transition-transform group-data-[state=open]/quick-access:rotate-90" />
+                                <Ionicons name="chevron-forward" size={14} className="transition-transform group-data-[state=open]/quick-access:rotate-90" />
                             </CollapsibleTrigger>
                         </SidebarGroupLabel>
                         <CollapsibleContent>
@@ -175,7 +174,7 @@ export function AppSidebar() {
                                                     }}
                                                     className="text-sm"
                                                 >
-                                                    <FileText className="h-4 w-4 text-primary" />
+                                                    <Ionicons name="document-text" size={16} className="text-primary" />
                                                     <span className="truncate">
                                                         {note.title || "Untitled Note"}
                                                     </span>
@@ -205,7 +204,7 @@ export function AppSidebar() {
                                     onClick={() => navigate("/notes")}
                                     tooltip="All Notes"
                                 >
-                                    <FileText className="text-primary" />
+                                    <Ionicons name="documents" color={colors.primary} size={18} className="text-primary" />
                                     <span>All Notes</span>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
@@ -230,7 +229,7 @@ export function AppSidebar() {
             <SidebarFooter className="gap-2 px-3 pb-3">
                 {showOfflineBanner && (
                     <div className="flex items-center gap-2 rounded-lg bg-amber-500/10 px-3 py-1.5">
-                        <CloudOff className="h-4 w-4 text-amber-500" />
+                        <Ionicons name="cloud-offline" size={16} className="text-amber-500" />
                         <span className="flex-1 text-xs font-medium">Offline</span>
                         <Button
                             variant="ghost"
@@ -250,16 +249,16 @@ export function AppSidebar() {
                             onClick={() => navigate("/notes/trash")}
                             tooltip="Trash"
                         >
-                            <Trash2 />
+                            <Ionicons name="trash-outline" size={18} />
                             <span>Trash</span>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
                         <SidebarMenuButton
-                            onClick={() => navigate("/settings")}
+                            onClick={() => navigate("/settings", { state: { background: location } })}
                             tooltip="Settings"
                         >
-                            <Settings />
+                            <Ionicons name="settings-outline" size={18} />
                             <span>Settings</span>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -289,8 +288,9 @@ function FolderTreeItem({ folder, allFolders, onNavigate }: FolderTreeItemProps)
         return (
             <SidebarMenuItem>
                 <SidebarMenuButton onClick={() => onNavigate(folder.id)}>
-                    <FolderIcon
-                        className="h-4 w-4"
+                    <Ionicons
+                        name={(folder.icon as any) || "folder"}
+                        size={16}
                         style={{ color: folder.color || undefined }}
                     />
                     <span className="truncate">{folder.name}</span>
@@ -303,8 +303,9 @@ function FolderTreeItem({ folder, allFolders, onNavigate }: FolderTreeItemProps)
         <Collapsible className="group/folder">
             <SidebarMenuItem>
                 <SidebarMenuButton onClick={() => onNavigate(folder.id)}>
-                    <FolderIcon
-                        className="h-4 w-4"
+                    <Ionicons
+                        name={(folder.icon as any) || "folder"}
+                        size={16}
                         style={{ color: folder.color || undefined }}
                     />
                     <span className="truncate">{folder.name}</span>
@@ -314,7 +315,7 @@ function FolderTreeItem({ folder, allFolders, onNavigate }: FolderTreeItemProps)
                         type="button"
                         className="absolute right-1 top-1/2 -translate-y-1/2 rounded-md p-1 hover:bg-sidebar-accent"
                     >
-                        <ChevronRight className="h-3.5 w-3.5 transition-transform group-data-[state=open]/folder:rotate-90" />
+                        <Ionicons name="chevron-forward" size={12} className="transition-transform group-data-[state=open]/folder:rotate-90" />
                     </button>
                 </CollapsibleTrigger>
             </SidebarMenuItem>
@@ -337,8 +338,9 @@ function FolderTreeItem({ folder, allFolders, onNavigate }: FolderTreeItemProps)
                         return (
                             <SidebarMenuSubItem key={child.id}>
                                 <SidebarMenuSubButton onClick={() => onNavigate(child.id)}>
-                                    <FolderIcon
-                                        className="h-3.5 w-3.5"
+                                    <Ionicons
+                                        name={(child.icon as any) || "folder"}
+                                        size={14}
                                         style={{ color: child.color || undefined }}
                                     />
                                     <span className="truncate">{child.name}</span>

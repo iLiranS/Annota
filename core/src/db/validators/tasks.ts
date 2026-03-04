@@ -11,6 +11,5 @@ export const insertTaskSchema = createInsertSchema(tasks, {
     createdAt: true,
     updatedAt: true,
     isDirty: true,
-    lastSyncedAt: true,
     isPermDeleted: true
 });

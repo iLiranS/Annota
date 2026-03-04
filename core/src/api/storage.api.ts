@@ -1,3 +1,4 @@
+import { decode } from 'base64-arraybuffer';
 import { supabase } from '../supabase';
 
 export const storageApi = {
@@ -6,7 +7,6 @@ export const storageApi = {
      * using the built-in `decode` method to ensure it's sent properly across the RN bridge.
      */
     uploadImage: async (path: string, base64Data: string, contentType: string, bucket = 'e2e_images') => {
-        const { decode } = require('base64-arraybuffer');
         return await supabase.storage.from(bucket).upload(path, decode(base64Data), {
             contentType,
             cacheControl: '3600',

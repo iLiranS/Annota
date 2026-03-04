@@ -155,6 +155,7 @@ export const useUserStore = create<UserState>()(
         {
             name: 'auth-storage', // Kept for backwards compatibility with existing local installations
             storage: createJSONStorage(() => createStorageAdapter()),
+            skipHydration: true,
             partialize: (state) => ({
                 isGuest: state.isGuest,
                 displayName: state.displayName,

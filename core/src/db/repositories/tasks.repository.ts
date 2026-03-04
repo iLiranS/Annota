@@ -23,10 +23,10 @@ export async function getDirtyTasks(): Promise<Task[]> {
     return await getDb().select().from(schema.tasks).where(eq(schema.tasks.isDirty, true)).all();
 }
 
-export async function clearDirtyTasks(taskIds: string[], syncedAt: Date): Promise<void> {
+export async function clearDirtyTasks(taskIds: string[]): Promise<void> {
     if (taskIds.length === 0) return;
     await getDb().update(schema.tasks)
-        .set({ isDirty: false, lastSyncedAt: syncedAt })
+        .set({ isDirty: false })
         .where(inArray(schema.tasks.id, taskIds))
         .run();
 }

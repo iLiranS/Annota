@@ -4,8 +4,8 @@ import {
     ContextMenuItem,
     ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import { Ionicons } from "@/components/ui/ionicons";
 import { Task, useNotesStore } from "@annota/core";
-import { Check, Edit2, FolderIcon, Trash2 } from "lucide-react";
 
 interface DesktopTaskCardProps {
     task: Task;
@@ -86,7 +86,7 @@ export default function DesktopTaskCard({
                             ${task.completed ? "border-emerald-500 bg-emerald-500 hover:bg-emerald-600" : "border-muted-foreground/40"}
                         `}
                     >
-                        {task.completed && <Check className="h-3.5 w-3.5 text-white" />}
+                        {task.completed && <Ionicons name="checkmark" size={14} className="text-white" />}
                     </div>
 
                     {/* Content */}
@@ -99,7 +99,11 @@ export default function DesktopTaskCard({
                             <div
                                 className="flex shrink-0 items-center gap-1.5 rounded bg-muted/50 px-2 py-0.5"
                             >
-                                <FolderIcon className="h-3 w-3" style={{ color: linkedFolder.color || undefined }} />
+                                <Ionicons
+                                    name={(linkedFolder.icon as any) || "folder"}
+                                    size={12}
+                                    style={{ color: linkedFolder.color || undefined }}
+                                />
                                 <span className="text-[10px] font-medium" style={{ color: linkedFolder.color || undefined }}>
                                     {linkedFolder.name}
                                 </span>
@@ -117,11 +121,11 @@ export default function DesktopTaskCard({
             {onDelete && (
                 <ContextMenuContent className="w-40">
                     <ContextMenuItem onClick={onPress} className="gap-2">
-                        <Edit2 className="h-4 w-4" />
+                        <Ionicons name="pencil" size={16} />
                         <span>Edit Task</span>
                     </ContextMenuItem>
                     <ContextMenuItem onClick={onDelete} className="gap-2 text-destructive focus:bg-destructive/10 focus:text-destructive">
-                        <Trash2 className="h-4 w-4" />
+                        <Ionicons name="trash-outline" size={16} />
                         <span>Delete Task</span>
                     </ContextMenuItem>
                 </ContextMenuContent>

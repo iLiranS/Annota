@@ -1,5 +1,7 @@
 import { useNotesStore, useSettingsStore, useTasksStore, useUserStore } from "@annota/core";
-import { CheckCircle2, FileText } from "lucide-react";
+
+import { Ionicons } from "@/components/ui/ionicons";
+import { useAppTheme } from "@/hooks/use-app-theme";
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import DesktopNoteCard from "./components/desktop-note-card";
@@ -7,6 +9,7 @@ import DesktopTaskCard from "./components/desktop-task-card";
 
 export default function HomePage() {
     const navigate = useNavigate();
+    const { colors } = useAppTheme();
 
     // User Data
     const session = useUserStore((state) => state.session);
@@ -24,7 +27,7 @@ export default function HomePage() {
     // Stores
     const { editor } = useSettingsStore();
     const { tasks } = useTasksStore();
-    const { notes, createNote, deleteNote, togglePin, toggleQuickAccess } = useNotesStore();
+    const { notes, deleteNote } = useNotesStore();
 
     // Notes Data
     const recentNotes = useMemo(() => {
@@ -80,7 +83,7 @@ export default function HomePage() {
             {/* Header Greeting */}
             <header className="mb-10">
                 <h1 className="text-3xl font-light tracking-tight text-foreground" style={{ fontFamily: editor.fontFamily }}>
-                    {greeting}, <span className="font-semibold text-primary">{displayName}</span>
+                    {greeting}, <span style={{ color: colors.primary }} className="font-semibold">{displayName}</span>
                 </h1>
                 <p className="mt-2 text-sm text-muted-foreground">
                     {today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
@@ -91,7 +94,7 @@ export default function HomePage() {
                 {/* Left Column: Notes (Takes up more space) */}
                 <div className="lg:col-span-8 flex flex-col gap-4">
                     <div className="flex items-center gap-2 mb-2">
-                        <FileText className="h-5 w-5 text-indigo-500" />
+                        <Ionicons name="document-text-outline" color={colors.primary} />
                         <h2 className="text-lg font-semibold text-foreground/90">Recent Notes</h2>
                     </div>
                     {recentNotes.length > 0 ? (
@@ -102,8 +105,6 @@ export default function HomePage() {
                                     note={note}
                                     onPress={() => handleNotePress(note.id, note.folderId)}
                                     onDelete={() => deleteNote(note.id)}
-                                    onTogglePin={() => togglePin(note.id)}
-                                    onToggleQuickAccess={() => toggleQuickAccess(note.id)}
                                 />
                             ))}
                         </div>
@@ -117,7 +118,7 @@ export default function HomePage() {
                 {/* Right Column: Tasks Focus */}
                 <div className="lg:col-span-4 flex flex-col gap-4">
                     <div className="flex items-center gap-2 mb-2">
-                        <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                        <Ionicons name="checkbox-outline" color={colors.primary} />
                         <h2 className="text-lg font-semibold text-foreground/90">Today's Tasks</h2>
                     </div>
                     {todayTasks.length > 0 ? (

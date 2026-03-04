@@ -134,7 +134,7 @@ export function initDatabase(nativeDb: { execSync: (sql: string) => void }, driz
 
 // Reset everything (DB, Storage, Files) - USE WITH CAUTION
 export async function resetAll(): Promise<void> {
-  const { getExpoDb, getDb } = require('../stores/db.store');
+  const { getExpoDb, getDb } = await import('../stores/db.store');
   const nativeDb = getExpoDb() as { execSync: (sql: string) => void };
   const drizzleDb = getDb();
   try {
@@ -164,8 +164,8 @@ export async function resetAll(): Promise<void> {
     initDatabase(nativeDb, drizzleDb);
 
     // Re-init stores so UI reflects the wiped database
-    const { useNotesStore } = require('../stores/notes.store');
-    const { useTasksStore } = require('../stores/tasks.store');
+    const { useNotesStore } = await import('../stores/notes.store');
+    const { useTasksStore } = await import('../stores/tasks.store');
     await useNotesStore.getState().initApp();
     await useTasksStore.getState().loadTasks();
   } catch (error) {
@@ -175,9 +175,9 @@ export async function resetAll(): Promise<void> {
 }
 
 // Reclaim unused space and optimize database performance
-export function vacuumDatabase(): void {
+export async function vacuumDatabase(): Promise<void> {
   try {
-    const { getExpoDb } = require('../stores/db.store');
+    const { getExpoDb } = await import('../stores/db.store');
     const nativeDb = getExpoDb() as { execSync: (sql: string) => void };
     // Force WAL checkpoint to shrink WAL file
     nativeDb.execSync('PRAGMA wal_checkpoint(TRUNCATE);');
@@ -194,13 +194,10 @@ export { schema };
 
 // Remove master key from secure storage
 export async function resetMasterKey(userId: string): Promise<void> {
-  const { removeMasterKey, removeLegacyMasterKey } = require('../utils/crypto');
+  const { removeMasterKey } = await import('../utils/crypto');
   try {
     if (userId) {
       await removeMasterKey(userId);
-    }
-    if (typeof removeLegacyMasterKey === 'function') {
-      await removeLegacyMasterKey();
     }
     console.log('SecureStore cleared for master key');
   } catch (error) {
