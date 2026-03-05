@@ -12,19 +12,17 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import {
+    resetAll,
     resetMasterKey,
     StorageService,
-    syncPull,
-    syncPush,
     useNotesStore,
     useSyncStore,
     useTasksStore,
     useUserStore
 } from "@annota/core";
-import { getMasterKey } from "@annota/core/platform";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { resetDesktopDatabase } from "../../src/bootstrap/desktop-db";
+
 import { Ionicons } from "../ui/ionicons";
 
 interface SettingItemProps {
@@ -111,15 +109,8 @@ export function StorageSettings() {
         }
 
         try {
-            const key = await getMasterKey(session.user.id);
-            if (!key) {
-                toast.error("Master Key not found. Please set your Master Key.");
-                return;
-            }
-
             toast.info("Syncing with cloud...");
-            await syncPull(key);
-            await syncPush(key);
+            await useSyncStore.getState().forceSync();
 
             toast.success("Sync complete");
             await loadStats();
@@ -143,7 +134,7 @@ export function StorageSettings() {
 
     const handleResetDatabase = async () => {
         try {
-            await resetDesktopDatabase();
+            await resetAll();
 
             // Re-init stores so UI reflects the wiped database
             await useNotesStore.getState().initApp();

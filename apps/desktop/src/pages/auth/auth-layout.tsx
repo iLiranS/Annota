@@ -26,9 +26,17 @@ export default function AuthLayout() {
     }, [session, isGuest, hasMasterKey, location.pathname, navigate]);
 
     return (
-        <div className="flex min-h-screen items-center justify-center bg-background p-6">
-            <div className="w-full max-w-md">
-                <Outlet />
+        <div className="relative flex min-h-screen flex-col bg-background">
+            {/* Tauri Drag Region */}
+            <div
+                data-tauri-drag-region
+                className="absolute top-0 left-0 right-0 h-10 z-50 cursor-default"
+            />
+
+            <div className="flex flex-1 items-center justify-center p-6">
+                <div className="w-full max-w-md">
+                    <Outlet />
+                </div>
             </div>
         </div>
     );

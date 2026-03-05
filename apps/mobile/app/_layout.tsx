@@ -65,7 +65,7 @@ type MobileDbBundle = {
 
 const mobileDbCache = new Map<string, MobileDbBundle>();
 
-const getOrCreateMobileDb = (userId: string | null): MobileDbBundle => {
+const getOrCreateMobileDb = async (userId: string | null): Promise<MobileDbBundle> => {
   const cacheKey = userId ?? '__guest__';
   const existing = mobileDbCache.get(cacheKey);
   if (existing) {
@@ -76,7 +76,7 @@ const getOrCreateMobileDb = (userId: string | null): MobileDbBundle => {
   const expoDb = openDatabaseSync(dbName);
   const drizzleDb = drizzle(expoDb);
 
-  initDatabase(expoDb, drizzleDb as any);
+  await initDatabase(expoDb, drizzleDb as any);
 
   const bundle = { expoDb, drizzleDb };
   mobileDbCache.set(cacheKey, bundle);
@@ -131,27 +131,31 @@ export default function RootLayout() {
   useEffect(() => {
     if (!initialized) return;
 
-    try {
-      const bootstrapDb = (userId: string | null) => {
-        const { expoDb, drizzleDb } = getOrCreateMobileDb(userId);
-        initDb(drizzleDb as any);
-        initDB(userId, expoDb);
-      };
+    const runBootstrap = async () => {
+      try {
+        const bootstrapDb = async (userId: string | null) => {
+          const { expoDb, drizzleDb } = await getOrCreateMobileDb(userId);
+          initDb(drizzleDb as any);
+          initDB(userId, expoDb);
+        };
 
-      if (session) {
-        checkMasterKey();
-        bootstrapDb(session.user.id);
-      } else if (user) {
-        // Offline cold start — hasMasterKey is already restored from persist
-        bootstrapDb(user.id);
-      } else {
-        // Fallback to guest DB for unauthenticated users (so the app can render the Auth screen)
-        // Without this, dbReady stays false forever.
-        bootstrapDb(null);
+        if (session) {
+          checkMasterKey();
+          await bootstrapDb(session.user.id);
+        } else if (user) {
+          // Offline cold start — hasMasterKey is already restored from persist
+          await bootstrapDb(user.id);
+        } else {
+          // Fallback to guest DB for unauthenticated users (so the app can render the Auth screen)
+          // Without this, dbReady stays false forever.
+          await bootstrapDb(null);
+        }
+      } catch (e) {
+        setDbError(e instanceof Error ? e.message : 'Unknown error');
       }
-    } catch (e) {
-      setDbError(e instanceof Error ? e.message : 'Unknown error');
-    }
+    };
+
+    runBootstrap();
   }, [initialized, session?.user?.id, user?.id]);
 
   useEffect(() => {

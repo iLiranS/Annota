@@ -1,5 +1,4 @@
 import { sql } from 'drizzle-orm';
-import { vacuumDatabase } from '../db';
 import * as FoldersRepo from '../db/repositories/folders.repository';
 import * as ImagesRepo from '../db/repositories/images.repository';
 import * as NotesRepo from '../db/repositories/notes.repository';
@@ -88,8 +87,6 @@ export const StorageService = {
             await deleteImageFile(path);
             deletedCount++;
         }
-
-        await vacuumDatabase();
 
         if (normalizedRows > 0) {
             console.log(`[StorageService] Normalized ${normalizedRows} note/version rows`);

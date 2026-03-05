@@ -31,10 +31,13 @@ export default function DesktopTaskCard({
         task.deadline.getMonth() === now.getMonth() &&
         task.deadline.getFullYear() === now.getFullYear();
 
-    const isTaskInPast = task.deadline < now && !task.completed;
+    const isTaskInPast = task.isWholeDay
+        ? (new Date(task.deadline.getFullYear(), task.deadline.getMonth(), task.deadline.getDate()) < new Date(now.getFullYear(), now.getMonth(), now.getDate()))
+        : (task.deadline < now);
+    const isTaskOverdue = isTaskInPast && !task.completed;
 
     let deadlineColor = "text-muted-foreground/80";
-    if (isTaskInPast) deadlineColor = "text-destructive font-medium";
+    if (isTaskOverdue) deadlineColor = "text-destructive font-medium";
     else if (isToday) deadlineColor = "text-amber-500 font-medium";
 
     const formatDeadline = (date: Date | string | number): string => {

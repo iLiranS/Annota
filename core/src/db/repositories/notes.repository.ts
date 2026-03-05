@@ -297,6 +297,7 @@ export async function restoreNote(noteId: string, targetFolderId?: string | null
             deletedAt: null,
             folderId: restoredFolderId,
             originalFolderId: null,
+            isDirty: true,
             updatedAt: now,
         })
         .where(eq(schema.noteMetadata.id, noteId))
@@ -401,7 +402,7 @@ export async function updateNoteContent(noteId: string, content: string, preview
 
         // 2. Update preview in metadata
         await tx.update(schema.noteMetadata)
-            .set({ preview, updatedAt: now })
+            .set({ preview, isDirty: true, updatedAt: now })
             .where(eq(schema.noteMetadata.id, noteId))
             .run();
 
@@ -623,6 +624,7 @@ export async function softDeleteNotesInFolders(folderIds: string[], now: Date, t
     await tx.update(schema.noteMetadata)
         .set({
             isDeleted: true,
+            isDirty: true,
             deletedAt: now,
             originalFolderId: sql`${schema.noteMetadata.folderId}`, // Snapshot current folder as original
             folderId: 'system-trash',
@@ -642,6 +644,8 @@ export async function restoreNotesInFolders(folderIds: string[], folderDeletedAt
             deletedAt: null,
             folderId: sql`${schema.noteMetadata.originalFolderId}`, // Restore from original
             originalFolderId: null,
+            isDirty: true,
+            updatedAt: new Date(),
         })
         .where(and(gte(schema.noteMetadata.deletedAt, folderDeletedAt),
             inArray(schema.noteMetadata.originalFolderId, folderIds))) // Matches based on where they CAME from
@@ -684,7 +688,7 @@ export async function getDeletedNoteIds(tx: DbOrTx = getDb()): Promise<string[]>
 export async function getNotesCount(tx: DbOrTx = getDb()): Promise<number> {
     const result = await tx.select({ count: sql<number>`count(*)` })
         .from(schema.noteMetadata)
-        .where(and(eq(schema.noteMetadata.isDeleted, false), eq(schema.noteMetadata.isPermDeleted, false)))
+        .where(eq(schema.noteMetadata.isPermDeleted, false))
         .get();
     const safeResult = safeGet<{ count: number }>(result);
     return safeResult?.count ?? 0;

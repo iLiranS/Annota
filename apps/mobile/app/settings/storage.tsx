@@ -1,7 +1,6 @@
 import { HapticPressable } from '@/components/ui/haptic-pressable';
 import { useAppTheme } from '@/hooks/use-app-theme';
-import { StorageService, syncPull, syncPush, useUserStore as useAuthStore } from '@annota/core';
-import { getMasterKey } from '@annota/core/platform';
+import { StorageService, useUserStore as useAuthStore } from '@annota/core';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -24,6 +23,9 @@ export default function StorageSettings() {
         totalLinks: number;
         orphans: number;
         totalImagesSize: number;
+        totalNotes: number;
+        totalTasks: number;
+        totalFolders: number;
         notesSize: number;
         totalSize: number;
         dbName: string;
@@ -130,22 +132,11 @@ export default function StorageSettings() {
         }
         setIsLoading(true);
         try {
-            const key = await getMasterKey(user.id);
-            if (!key) {
-                Alert.alert("Error", "Master Key not found. Please set your Master Key.");
-                return;
-            }
-
-            await syncPull(key);
-            await syncPush(key);
-
-            // Reload local stores to reflect pulled changes
-            const { useNotesStore } = require('@annota/core');
-            const { useTasksStore } = require('@annota/core');
-            await useNotesStore.getState().initApp();
-            await useTasksStore.getState().loadTasks();
+            const { useSyncStore } = require('@annota/core');
+            await useSyncStore.getState().forceSync();
 
             Alert.alert("Sync Complete", "Successfully synchronized your data with the cloud.");
+            await loadStats();
         } catch (error: any) {
             console.error("Manual Sync Error:", error);
             Alert.alert("Sync Failed", error?.message || "An unknown error occurred during sync.");
@@ -153,6 +144,41 @@ export default function StorageSettings() {
             setIsLoading(false);
         }
     };
+
+    const handleResetDatabase = async () => {
+        Alert.alert(
+            "Reset Local Database?",
+            "This will completely erase all local notes, tasks, and images from your device. If you haven't synced, they will be lost forever.",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Reset All",
+                    style: "destructive",
+                    onPress: async () => {
+                        setIsLoading(true);
+                        try {
+                            const { resetAll } = require('@annota/core');
+                            await resetAll();
+
+                            // Re-init stores
+                            const { useNotesStore } = require('@annota/core');
+                            const { useTasksStore } = require('@annota/core');
+                            await useNotesStore.getState().initApp();
+                            await useTasksStore.getState().loadTasks();
+
+                            Alert.alert("Reset Complete", "The local database has been wiped.");
+                            await loadStats();
+                        } catch (e) {
+                            console.error(e);
+                            Alert.alert("Error", "Failed to reset database.");
+                        } finally {
+                            setIsLoading(false);
+                        }
+                    }
+                }
+            ]
+        );
+    }
 
     return (
         <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -192,97 +218,131 @@ export default function StorageSettings() {
             )}
 
             <View style={styles.section}>
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>Image Storage Stats</Text>
-
-                <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                    <StatRow label="Images Size" value={stats ? formatBytes(stats.totalImagesSize) : '-'} color={colors.text} />
-                    <StatRow label="Total Images" value={stats?.totalImages ?? '-'} color={colors.text} />
-                    <StatRow label="Version Links" value={stats?.totalLinks ?? '-'} color={colors.text} />
-                    <StatRow label="Orphaned Images" value={stats?.orphans ?? '-'} color={colors.error} highlight />
-                </View>
-            </View>
-
-            <View style={styles.section}>
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>Database Stats</Text>
-
-                <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                    <StatRow label="Notes & Data Size" value={stats ? formatBytes(stats.notesSize) : '-'} color={colors.text} />
-                </View>
-            </View>
-
-            <View style={styles.section}>
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>Total App Size</Text>
-
-                <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                    <StatRow label="Total Size" value={stats ? formatBytes(stats.totalSize) : '-'} color={colors.primary} highlight />
-                </View>
-            </View>
-
-            {isActiveDb && (
-                <View style={styles.actions}>
-                    <HapticPressable
-                        style={[styles.button, { backgroundColor: colors.card, borderColor: colors.border }]}
-                        onPress={() => loadStats()}
-                    >
-                        <Ionicons name="refresh" size={20} color={colors.primary} />
-                        <Text style={[styles.buttonText, { color: colors.primary }]}>Refresh Stats</Text>
+                <View style={styles.sectionHeader}>
+                    <Text style={[styles.sectionTitle, { color: colors.text }]}>Storage Usage</Text>
+                    <HapticPressable onPress={() => loadStats()} disabled={isLoading}>
+                        <Ionicons name="refresh" size={18} color={colors.primary} style={isLoading ? { opacity: 0.5 } : {}} />
                     </HapticPressable>
+                </View>
+                <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                    <SettingItem
+                        label="Images Size"
+                        description="Physical image files on device"
+                        icon="images"
+                        iconBg="#3b82f6"
+                        value={stats ? formatBytes(stats.totalImagesSize) : '...'}
+                        colors={colors}
+                    />
+                    <Divider colors={colors} />
+                    <SettingItem
+                        label="Notes & Data Size"
+                        description="Database file size (optimized)"
+                        icon="document-text"
+                        iconBg="#f59e0b"
+                        value={stats ? formatBytes(stats.notesSize) : '...'}
+                        colors={colors}
+                    />
+                    <Divider colors={colors} />
+                    <SettingItem
+                        label="Total Size"
+                        description="Combined app data usage"
+                        icon="pie-chart"
+                        iconBg="#4f46e5"
+                        value={stats ? formatBytes(stats.totalSize) : '...'}
+                        colors={colors}
+                        highlight
+                    />
+                </View>
+            </View>
 
+            <View style={styles.section}>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>Items Count</Text>
+                <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                    <SettingItem
+                        label="Total Notes"
+                        icon="journal"
+                        iconBg="#8b5cf6"
+                        value={stats?.totalNotes ?? '...'}
+                        colors={colors}
+                    />
+                    <Divider colors={colors} />
+                    <SettingItem
+                        label="Total Tasks"
+                        icon="checkbox"
+                        iconBg="#14b8a6"
+                        value={stats?.totalTasks ?? '...'}
+                        colors={colors}
+                    />
+                    <Divider colors={colors} />
+                    <SettingItem
+                        label="Total Folders"
+                        icon="folder"
+                        iconBg="#0ea5e9"
+                        value={stats?.totalFolders ?? '...'}
+                        colors={colors}
+                    />
+                    <Divider colors={colors} />
+                    <SettingItem
+                        label="Total Images"
+                        icon="image"
+                        iconBg="#10b981"
+                        value={stats?.totalImages ?? '...'}
+                        colors={colors}
+                    />
+                </View>
+            </View>
+
+            <View style={styles.section}>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>Database Actions</Text>
+                <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
                     {user && (
                         <>
-                            <HapticPressable
-                                style={[styles.button, { backgroundColor: colors.card, borderColor: colors.border }]}
+                            <SettingItem
+                                label="Sync with Cloud DB"
+                                description="Force a full recursive sync"
+                                icon="cloud-upload"
+                                iconBg={colors.primary}
                                 onPress={handleManualSync}
-                            >
-                                <Ionicons name="cloud-upload-outline" size={20} color={colors.primary} />
-                                <Text style={[styles.buttonText, { color: colors.primary }]}>Sync with Cloud DB</Text>
-                            </HapticPressable>
-
-                            <HapticPressable
-                                style={[styles.button, { backgroundColor: colors.error + '20', borderColor: colors.error }]}
+                                action={<Ionicons name="chevron-forward" size={16} color={colors.text + '60'} />}
+                                colors={colors}
+                            />
+                            <Divider colors={colors} />
+                            <SettingItem
+                                label="Remove Master Key"
+                                description="Clear encryption key from this device"
+                                icon="key-outline"
+                                iconBg="#f97316"
                                 onPress={handleRemoveMasterKey}
-                            >
-                                <Ionicons name="key-outline" size={20} color={colors.error} />
-                                <Text style={[styles.buttonText, { color: colors.error }]}>Remove Master Key</Text>
-                            </HapticPressable>
+                                action={<Ionicons name="chevron-forward" size={16} color={colors.text + '60'} />}
+                                colors={colors}
+                            />
+                            <Divider colors={colors} />
                         </>
                     )}
-
-                    <HapticPressable
-                        style={[styles.button, { backgroundColor: colors.primary + '20', borderColor: colors.border }]}
+                    <SettingItem
+                        label="Shrink Database"
+                        description="Remove unused images (GC)"
+                        icon="trash-bin-outline"
+                        iconBg={colors.primary}
                         onPress={handleGC}
-                    >
-                        <Ionicons name="trash-bin-outline" size={20} color={colors.primary} />
-                        <Text style={[styles.buttonText, { color: colors.primary }]}>Shrink Database</Text>
-                    </HapticPressable>
-
-                    <HapticPressable
-                        style={[styles.button, { backgroundColor: colors.error + '20', borderColor: colors.error }]}
-                        onPress={() => {
-                            Alert.alert(
-                                "Reset Local Database?",
-                                "This will completely erase all local notes, tasks, and images from your device. If you haven't synced, they will be lost forever.",
-                                [
-                                    { text: "Cancel", style: "cancel" },
-                                    {
-                                        text: "Reset All",
-                                        style: "destructive",
-                                        onPress: async () => {
-                                            const { resetAll } = require('@annota/core');
-                                            await resetAll();
-                                            Alert.alert("Reset Complete", "The local database has been wiped.");
-                                            await loadStats();
-                                        }
-                                    }
-                                ]
-                            )
-                        }}
-                    >
-                        <Ionicons name="warning-outline" size={20} color={colors.error} />
-                        <Text style={[styles.buttonText, { color: colors.error }]}>Reset Local Database</Text>
-                    </HapticPressable>
+                        action={<Ionicons name="chevron-forward" size={16} color={colors.text + '60'} />}
+                        colors={colors}
+                    />
+                    <Divider colors={colors} />
+                    <SettingItem
+                        label="Reset Local Database"
+                        description="Permanently delete ALL local data"
+                        icon="warning-outline"
+                        iconBg="#e11d48"
+                        danger
+                        onPress={handleResetDatabase}
+                        action={<Ionicons name="chevron-forward" size={16} color={colors.text + '60'} />}
+                        colors={colors}
+                    />
                 </View>
-            )}
+            </View>
+
+            <View style={{ height: 100 }} />
 
             {isLoading && (
                 <View style={styles.loadingOverlay}>
@@ -293,14 +353,72 @@ export default function StorageSettings() {
     );
 }
 
-function StatRow({ label, value, color, highlight }: { label: string, value: number | string, color: string, highlight?: boolean }) {
-    return (
-        <View style={styles.statRow}>
-            <Text style={[styles.statLabel, { color }]}>{label}</Text>
-            <Text style={[styles.statValue, { color, fontWeight: highlight ? 'bold' : 'normal' }]}>{value}</Text>
+function Divider({ colors }: { colors: any }) {
+    return <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: colors.border, marginHorizontal: 12 }} />;
+}
+
+function SettingItem({
+    label,
+    description,
+    icon,
+    iconBg,
+    action,
+    onPress,
+    value,
+    danger,
+    colors,
+    highlight
+}: {
+    label: string,
+    description?: string,
+    icon: keyof typeof Ionicons.glyphMap,
+    iconBg: string,
+    action?: React.ReactNode,
+    onPress?: () => void,
+    value?: React.ReactNode,
+    danger?: boolean,
+    colors: any,
+    highlight?: boolean
+}) {
+    const Content = (
+        <View style={styles.settingItem}>
+            <View style={styles.settingItemLeft}>
+                <View style={[styles.iconContainer, { backgroundColor: iconBg }]}>
+                    <Ionicons name={icon} size={20} color="#fff" />
+                </View>
+                <View style={styles.settingItemText}>
+                    <Text style={[styles.settingItemLabel, { color: danger ? colors.error : colors.text }]}>
+                        {label}
+                    </Text>
+                    {description && (
+                        <Text style={[styles.settingItemDescription, { color: colors.text + '90' }]}>
+                            {description}
+                        </Text>
+                    )}
+                </View>
+            </View>
+            <View style={styles.settingItemRight}>
+                {value !== undefined && (
+                    <Text style={[styles.settingItemValue, { color: highlight ? colors.primary : colors.text, fontWeight: highlight ? 'bold' : '500' }]}>
+                        {value}
+                    </Text>
+                )}
+                {action}
+            </View>
         </View>
     );
+
+    if (onPress) {
+        return (
+            <HapticPressable onPress={onPress}>
+                {Content}
+            </HapticPressable>
+        );
+    }
+
+    return Content;
 }
+
 
 const styles = StyleSheet.create({
     container: {
@@ -310,30 +428,64 @@ const styles = StyleSheet.create({
     section: {
         marginBottom: 24,
     },
-    sectionTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
+    sectionHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingRight: 8,
         marginBottom: 12,
+    },
+    sectionTitle: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        opacity: 0.6,
+        textTransform: 'uppercase',
+        letterSpacing: 1,
         marginLeft: 4,
     },
     card: {
-        borderRadius: 12,
+        borderRadius: 20,
         borderWidth: 1,
-        padding: 16,
+        overflow: 'hidden',
     },
-    statRow: {
+    settingItem: {
         flexDirection: 'row',
+        alignItems: 'center',
         justifyContent: 'space-between',
-        paddingVertical: 8,
-        borderBottomWidth: StyleSheet.hairlineWidth,
-        borderBottomColor: '#ccc',
+        padding: 12,
     },
-    statLabel: {
+    settingItemLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        flex: 1,
+    },
+    settingItemText: {
+        flexDirection: 'column',
+        flex: 1,
+    },
+    settingItemLabel: {
         fontSize: 16,
+        fontWeight: '600',
     },
-    statValue: {
+    settingItemDescription: {
+        fontSize: 12,
+    },
+    settingItemRight: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+    },
+    settingItemValue: {
         fontSize: 16,
         fontVariant: ['tabular-nums'],
+    },
+    iconContainer: {
+        width: 36,
+        height: 36,
+        borderRadius: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     dbSelector: {
         paddingVertical: 8,
@@ -365,23 +517,6 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: '500',
         flex: 1,
-    },
-    actions: {
-        gap: 12,
-        paddingBottom: 100,
-    },
-    button: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 16,
-        borderRadius: 12,
-        borderWidth: 1,
-        gap: 8,
-    },
-    buttonText: {
-        fontSize: 16,
-        fontWeight: '600',
     },
     loadingOverlay: {
         ...StyleSheet.absoluteFillObject,

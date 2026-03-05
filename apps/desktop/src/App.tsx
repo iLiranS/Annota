@@ -1,3 +1,4 @@
+import { useAppTheme } from "@/hooks/use-app-theme";
 import {
   authApi,
   setStorageEngine,
@@ -46,6 +47,7 @@ import HomePage from "./pages/home/home-page";
 type BootstrapState = "booting" | "ready" | "error";
 
 function App() {
+  useAppTheme();
   const [bootstrapState, setBootstrapState] =
     useState<BootstrapState>("booting");
   const [bootstrapError, setBootstrapError] = useState<string | null>(null);

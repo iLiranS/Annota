@@ -51,6 +51,7 @@ export const FolderService = {
             await tx.update(schema.folders)
                 .set({
                     isDeleted: true,
+                    isDirty: true,
                     deletedAt: now,
                     originalParentId: folder.parentId ?? null,
                     parentId: foldersRepo.TRASH_FOLDER_ID,
@@ -63,6 +64,7 @@ export const FolderService = {
                 await tx.update(schema.folders)
                     .set({
                         isDeleted: true,
+                        isDirty: true,
                         deletedAt: now,
                         originalParentId: sql`${schema.folders.parentId}`,
                         updatedAt: now
@@ -103,6 +105,8 @@ export const FolderService = {
             await tx.update(schema.folders)
                 .set({
                     isDeleted: false,
+                    isDirty: true,
+                    updatedAt: now,
                     deletedAt: null,
                     parentId: restoredParentId,
                     originalParentId: null
@@ -114,6 +118,8 @@ export const FolderService = {
                 await tx.update(schema.folders)
                     .set({
                         isDeleted: false,
+                        isDirty: true,
+                        updatedAt: now,
                         deletedAt: null,
                         originalParentId: null
                     })

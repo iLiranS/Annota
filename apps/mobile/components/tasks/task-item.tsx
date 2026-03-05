@@ -1,6 +1,5 @@
 import ThemedText from '@/components/themed-text';
-import { useNotesStore } from '@annota/core';
-import { useTasksStore, type Task } from '@annota/core';
+import { useNotesStore, useTasksStore, type Task } from '@annota/core';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@react-navigation/native';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -131,8 +130,15 @@ export default function TaskItem({ task, onPress, showDate = false }: TaskItemPr
                             {
                                 color: (() => {
                                     if (task.completed) return colors.text + '40';
-                                    if (task.isWholeDay) return colors.text + '60';
                                     const now = new Date();
+
+                                    if (task.isWholeDay) {
+                                        const deadlineDate = new Date(task.deadline.getFullYear(), task.deadline.getMonth(), task.deadline.getDate());
+                                        const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                                        if (deadlineDate < todayDate) return '#EF4444';
+                                        return colors.text + '60';
+                                    }
+
                                     const diff = task.deadline.getTime() - now.getTime();
                                     if (diff < 0) return '#EF4444';
                                     if (diff < 3600000) return '#F59E0B';

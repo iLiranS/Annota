@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/context-menu";
 import { Ionicons } from "@/components/ui/ionicons";
 import { formatRelativeDate } from "@/lib/date-formatter";
+import { cn } from "@/lib/utils";
 import {
     NoteMetadata,
     useNotesStore,
@@ -21,6 +22,10 @@ interface NoteListItemProps {
     onDelete?: () => void;
     showDescription?: boolean;
     showTimestamp?: boolean;
+    className?: string;
+    suffix?: React.ReactNode;
+    isActive?: boolean;
+    style?: React.CSSProperties;
 }
 
 export function NoteListItem({
@@ -29,6 +34,10 @@ export function NoteListItem({
     onDelete,
     showDescription = true,
     showTimestamp = false,
+    className,
+    suffix,
+    isActive,
+    style,
 }: NoteListItemProps) {
     const { updateNoteMetadata } = useNotesStore();
     const { general } = useSettingsStore();
@@ -55,28 +64,40 @@ export function NoteListItem({
                     <button
                         type="button"
                         onClick={onClick}
-                        className={`
-                            group flex w-full flex-col gap-0.5 rounded-lg px-3 py-2 text-left transition-all hover:bg-accent
-                            ${isCompact ? "py-1.5" : "py-2"}
-                        `}
+                        className={cn(
+                            "group/note flex w-full flex-col gap-0.5 rounded-lg px-3 py-2 text-left transition-all hover:bg-accent",
+                            isCompact ? "py-1.5" : "py-2",
+                            isActive && "bg-accent",
+                            className
+                        )}
+                        style={style}
                     >
                         <div className="flex w-full items-center justify-between gap-2.5">
                             <div className="flex min-w-0 items-center gap-2">
                                 <Ionicons
                                     name="document-text"
                                     size={16}
-                                    className="text-primary shrink-0 opacity-80 group-hover:opacity-100 transition-opacity"
+                                    className={cn(
+                                        "text-primary shrink-0 transition-opacity",
+                                        isActive ? "opacity-100" : "opacity-80 group-hover/note:opacity-100"
+                                    )}
                                 />
-                                <p className="truncate text-sm font-medium text-foreground/90 group-hover:text-primary transition-colors">
+                                <p className={cn(
+                                    "truncate text-sm font-medium transition-colors",
+                                    isActive ? "text-primary" : "text-foreground/90 group-hover/note:text-primary"
+                                )}>
                                     {note.title || "Untitled Note"}
                                 </p>
                             </div>
 
-                            {showTimestamp && note.updatedAt && (
-                                <span className="shrink-0 text-[11px] text-muted-foreground/60">
-                                    {formatRelativeDate(note.updatedAt)}
-                                </span>
-                            )}
+                            <div className="flex items-center gap-2 shrink-0">
+                                {suffix}
+                                {showTimestamp && note.updatedAt && (
+                                    <span className="text-[11px] text-muted-foreground/60">
+                                        {formatRelativeDate(note.updatedAt)}
+                                    </span>
+                                )}
+                            </div>
                         </div>
 
                         {!isCompact && showDescription && note.preview && (

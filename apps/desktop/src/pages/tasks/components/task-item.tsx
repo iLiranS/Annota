@@ -126,8 +126,15 @@ export function TaskItem({ task, onClick, showDate = false, hideFolder = false }
                             "flex items-center gap-1.5 text-xs font-medium",
                             (() => {
                                 if (task.completed) return "text-muted-foreground/40";
-                                if (task.isWholeDay) return "text-muted-foreground/60";
                                 const now = new Date();
+
+                                if (task.isWholeDay) {
+                                    const deadlineDate = new Date(task.deadline.getFullYear(), task.deadline.getMonth(), task.deadline.getDate());
+                                    const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                                    if (deadlineDate < todayDate) return "text-destructive";
+                                    return "text-muted-foreground/60";
+                                }
+
                                 const diff = task.deadline.getTime() - now.getTime();
                                 if (diff < 0) return "text-destructive";
                                 if (diff < 3600000) return "text-orange-500";

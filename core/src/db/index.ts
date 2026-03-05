@@ -5,8 +5,8 @@ export { getDb, initDb, resetDb } from './runtime';
 // AsyncDbDriver has been removed.
 export { CREATE_TABLES_SQL } from './client';
 
-export function initDatabase(expoDb: any, drizzleDb: any): void {
-    dbClient.initDatabase(expoDb, drizzleDb);
+export async function initDatabase(expoDb: any, drizzleDb: any): Promise<void> {
+    await dbClient.initDatabase(expoDb, drizzleDb);
 }
 
 export async function resetAll(): Promise<void> {

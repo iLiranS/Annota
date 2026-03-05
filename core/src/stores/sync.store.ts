@@ -22,9 +22,10 @@ interface SyncState {
     setSyncError: (e: string | null) => void;
     setAesKey: (mnemonic: string | null, key: Buffer | null) => void;
     clearAesKey: () => void;
+    forceSync: () => Promise<void>;
 }
 
-export const useSyncStore = create<SyncState>((set) => ({
+export const useSyncStore = create<SyncState>((set, get) => ({
     isSyncing: false,
     isOnline: true, // Optimistic default
     lastSyncAt: null,
@@ -38,4 +39,18 @@ export const useSyncStore = create<SyncState>((set) => ({
     setSyncError: (syncError) => set({ syncError }),
     setAesKey: (activeMnemonic, aesKey) => set({ activeMnemonic, aesKey }),
     clearAesKey: () => set({ activeMnemonic: null, aesKey: null }),
+    forceSync: async () => {
+        const { SyncScheduler } = await import('../sync/sync-scheduler');
+        if (SyncScheduler.instance) {
+            const state = get();
+            if (!state.isOnline) {
+                throw new Error("Cannot sync while offline");
+            }
+            set({ syncError: null });
+            await SyncScheduler.instance.forceSync();
+        } else {
+            console.warn('[SyncStore] SyncScheduler instance not available for forceSync');
+            throw new Error("Sync service is not initialized");
+        }
+    },
 }));

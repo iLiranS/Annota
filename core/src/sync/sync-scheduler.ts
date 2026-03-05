@@ -69,11 +69,27 @@ export class SyncScheduler {
         }
     }
 
-    /** Manual retry from the UI (toast button / sidebar button) */
-    requestImmediateSync(): void {
+    /**
+     * Immediate manual sync triggered by the user from the UI.
+     * Interrupts scheduled timers, pulls fresh data, pushes local
+     * changes, and repaints the UI.
+     */
+    async forceSync(): Promise<void> {
         if (this.disposed) return;
+
+        console.log('[SyncScheduler] Force sync requested');
         this.clearAllTimers();
-        this.executeSyncPush();
+
+        // Execute pull then push sequentially
+        await this.executeSyncPull();
+
+        let state = useSyncStore.getState();
+        if (state.syncError) throw new Error(state.syncError);
+
+        await this.executeSyncPush();
+
+        state = useSyncStore.getState();
+        if (state.syncError) throw new Error(state.syncError);
     }
 
     dispose(): void {

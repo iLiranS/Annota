@@ -102,8 +102,16 @@ export async function initDesktopSqlite(userId: string | null): Promise<void> {
         await db.execute(statement);
       }
 
-      // Register the active user in the DB store.
-      useDbStore.getState().initDB(userId);
+      // Register the active user in the DB store and provide an Expo SQLite-compatible nativeDb wrapper
+      useDbStore.getState().initDB(userId, {
+        execAsync: async (rawSql: string) => {
+          // Tauri's db.execute doesn't support multiple statements separated by ';' directly
+          const statements = splitSqlStatements(rawSql);
+          for (const statement of statements) {
+            await db.execute(statement);
+          }
+        }
+      });
     })();
 
     userDbCache.set(cacheKey, bootstrapPromise);

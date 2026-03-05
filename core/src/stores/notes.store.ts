@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { vacuumDatabase } from '../db';
 import type { Folder, FolderInsert, NoteMetadata } from '../db/schema';
 import { DAILY_NOTES_FOLDER_ID, FolderService, TRASH_FOLDER_ID } from '../services/folders.service';
 import { NoteService } from '../services/notes.service';
@@ -74,6 +75,20 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
     // Initialize App - Load ALL data on startup
     initApp: async () => {
+        const wasInitialized = get().isInitialized;
+
+        // 1. Run Maintenance FIRST, only on cold starts
+        if (!wasInitialized) {
+            console.log('[Store] Running startup database maintenance...');
+            try {
+                // Assuming vacuumDatabase is imported at the top of your store file
+                await vacuumDatabase();
+            } catch (err) {
+                console.warn('[Store] Startup vacuum failed, continuing init...', err);
+            }
+        }
+
+        // 2. Now it is completely safe to open read cursors
         const allFolders = await FolderService.getFoldersInFolder(null, true);
         const allNotes = await NoteService.getNotesInFolder(null, true);
 
@@ -106,16 +121,20 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         };
 
         const folders = await loadAllFolders();
-        const notes = await loadAllNotes();
+        const baseNotes = await loadAllNotes(); // Pulls the regular notes
 
-        // Load virtual folders' notes
+        // We MUST pull virtual folders because "system-trash" isn't caught by loadAllNotes
         const trashNotes = await NoteService.getNotesInFolder(TRASH_FOLDER_ID, true);
         const dailyNotes = await NoteService.getNotesInFolder(DAILY_NOTES_FOLDER_ID, true);
 
-        // Push virtual notes into main array
-        notes.push(...trashNotes, ...dailyNotes);
+        // Combine everything
+        const allFetchedNotes = [...baseNotes, ...trashNotes, ...dailyNotes];
 
-        const wasInitialized = get().isInitialized;
+        // DEDUPLICATE: This prevents the "11 notes" bug by ensuring IDs are unique
+        const uniqueNotesMap = new Map();
+        allFetchedNotes.forEach((note) => uniqueNotesMap.set(note.id, note));
+        const notes = Array.from(uniqueNotesMap.values());
+
         set({ folders, notes, isInitialized: true });
 
         if (!wasInitialized) {
@@ -123,7 +142,6 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         } else {
             console.log(`[Store] Reinitialized with ${folders.length} folders and ${notes.length} notes from local database.`);
         }
-
     },
 
     // ============ NOTE OPERATIONS ============
@@ -445,6 +463,19 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         const sortType = get().getSortType(folderId);
 
         const filtered = notes.filter((note) => {
+            // 1. Virtual Folder Override: TRASH
+            if (folderId === TRASH_FOLDER_ID) {
+                // If we are looking at the trash, ignore the note's original folderId.
+                // Just return it if it's marked as deleted.
+                return note.isDeleted;
+            }
+
+            // 2. Virtual Folder Override: DAILY NOTES
+            if (folderId === DAILY_NOTES_FOLDER_ID) {
+                return note.folderId === DAILY_NOTES_FOLDER_ID && (includeDeleted ? true : !note.isDeleted);
+            }
+
+            // 3. Standard Folders
             const folderMatch = note.folderId === folderId;
             const deletedMatch = includeDeleted ? true : !note.isDeleted;
             return folderMatch && deletedMatch;

@@ -1,14 +1,14 @@
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { SidebarTrigger } from "@/components/ui/sidebar"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { useAppTheme } from "@/hooks/use-app-theme"
 import { useCreateNote } from "@/hooks/use-create-note"
 import { useCreateTask } from "@/hooks/use-create-task"
 import { cn } from "@/lib/utils"
-import { syncPull, syncPush, useSyncStore, useUserStore } from "@annota/core"
-import { getMasterKey } from "@annota/core/platform"
+import { useSyncStore, useUserStore } from "@annota/core"
 import { useEffect, useRef, useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
+import { NotesSearchModal } from "../search/notes-search-modal"
 import { Ionicons } from "../ui/ionicons"
 
 /**
@@ -25,6 +25,7 @@ export function MainNavbar() {
     const [canSync, setCanSync] = useState(true);
     const [canGoBack, setCanGoBack] = useState(false);
     const [canGoForward, setCanGoForward] = useState(false);
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
     const maxIdxRef = useRef(0);
 
     useEffect(() => {
@@ -37,6 +38,17 @@ export function MainNavbar() {
             setCanGoForward(hState.idx < maxIdxRef.current);
         }
     }, [location]);
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
+                e.preventDefault();
+                setIsSearchOpen(true);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
 
     useEffect(() => {
         if (isSyncing) {
@@ -53,12 +65,7 @@ export function MainNavbar() {
         }
 
         try {
-            const key = await getMasterKey(session.user.id);
-            if (!key) {
-                return;
-            }
-            await syncPush(key);
-            await syncPull(key);
+            await useSyncStore.getState().forceSync();
         } catch (error: any) {
             console.error("Manual Sync Error:", error);
         }
@@ -111,22 +118,21 @@ export function MainNavbar() {
                     </div>
                 </div>
 
-                <div className="relative flex w-64 items-center group">
-                    <Ionicons
-                        name="search"
-                        size={14}
-                        className="absolute left-2.5 text-muted-foreground/40 transition-colors group-focus-within:text-primary/70"
-                    />
-                    <Input
-                        type="search"
-                        placeholder="Search..."
-                        className={cn(
-                            "h-6 w-full rounded-full border-none bg-background/30 pl-8 pr-3 text-[11px] leading-none",
-                            "placeholder:text-muted-foreground/40 focus-visible:ring-1 focus-visible:ring-primary/20",
-                            "transition-all hover:bg-background/50 focus:bg-background/80 focus:w-80"
-                        )}
-                    />
-                </div>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 rounded-full bg-background/30 text-muted-foreground/60 transition-all hover:bg-background/80 hover:text-primary active:scale-95"
+                            onClick={() => setIsSearchOpen(true)}
+                        >
+                            <Ionicons name="search" size={15} />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="text-[10px]">
+                        Search <span className="opacity-50 ml-1">⌘F</span>
+                    </TooltipContent>
+                </Tooltip>
             </div>
 
             {/* Right Section: Actions */}
@@ -135,27 +141,35 @@ export function MainNavbar() {
                     "flex items-center gap-1 transition-opacity duration-300",
                     isSyncing || !canSync ? "text-muted-foreground/30" : "text-muted-foreground/60"
                 )}>
-                    <p className="text-xs">{isSyncing ? "Syncing..." : "In sync"}</p>
-                    <Button
-                        disabled={isSyncing || !canSync}
-                        onClick={handleManualSync}
-                        variant="ghost"
-                        size="icon"
-                        className={cn(
-                            "h-6 w-6 text-muted-foreground/60 transition-colors",
-                            !isSyncing && "hover:bg-sidebar-accent"
-                        )}
-                        title="Reload & Sync"
-                    >
-                        <Ionicons
-                            name="refresh-outline"
-                            size={15}
-                            className={cn(
-                                "transition-transform",
-                                isSyncing && "animate-spin"
-                            )}
-                        />
-                    </Button>
+                    <Tooltip>
+                        <TooltipTrigger>
+                            <Button
+                                disabled={isSyncing || !canSync}
+                                onClick={handleManualSync}
+                                variant="ghost"
+                                size="icon"
+                                className={cn(
+                                    "h-6 w-6 text-muted-foreground/60 transition-colors",
+                                    !isSyncing && "hover:bg-sidebar-accent"
+                                )}
+                                title="Reload & Sync"
+                            >
+                                <Ionicons
+                                    name="sync-outline"
+                                    size={15}
+                                    className={cn(
+                                        "transition-transform",
+                                        isSyncing && "animate-spin"
+                                    )}
+                                />
+                            </Button>
+                        </TooltipTrigger>
+
+                        <TooltipContent>
+                            {isSyncing ? "Syncing..." : "In Sync"}
+                        </TooltipContent>
+                    </Tooltip>
+
                 </div>}
 
                 <div className="mx-1 h-3 w-px bg-sidebar-border/60" />
@@ -168,7 +182,7 @@ export function MainNavbar() {
                         onClick={() => createNewNote()}
                         variant="ghost"
                         size="sm"
-                        className="h-6 gap-1.5 rounded-full px-2.5 text-[11px] font-semibold hover:scale-105 transition-all active:scale-95"
+                        className={`h-6 gap-1.5 rounded-full px-2.5 text-[11px] font-semibold transition-all active:scale-95 hover:bg-ring/10`}
                         style={{ color: colors.primary }}
                     >
                         <Ionicons name="document-text-outline" size={13} />
@@ -181,7 +195,7 @@ export function MainNavbar() {
                         onClick={() => createNewTask()}
                         variant="ghost"
                         size="sm"
-                        className="h-6 gap-1.5 rounded-full px-2.5 text-[11px] font-semibold hover:scale-105 transition-all active:scale-95"
+                        className={`h-6 gap-1.5 rounded-full px-2.5 text-[11px] font-semibold  transition-all active:scale-95 hover:bg-ring/10`}
                         style={{ color: colors.primary }}
                     >
                         <span>Task</span>
@@ -199,6 +213,10 @@ export function MainNavbar() {
                     <Ionicons name="settings-outline" size={15} />
                 </Button>
             </div>
+            <NotesSearchModal
+                open={isSearchOpen}
+                onOpenChange={setIsSearchOpen}
+            />
         </header>
     );
 }

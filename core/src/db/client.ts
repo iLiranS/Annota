@@ -75,6 +75,10 @@ export const CREATE_TABLES_SQL = `
     name TEXT NOT NULL,
     color TEXT NOT NULL
   );
+    CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  );
 
 
   CREATE TABLE IF NOT EXISTS images (
@@ -106,10 +110,10 @@ export const CREATE_TABLES_SQL = `
 `;
 
 // Initialize database (create tables and seed system data)
-export function initDatabase(nativeDb: { execSync: (sql: string) => void }, drizzleDb: DbType): void {
+export async function initDatabase(nativeDb: { execAsync: (sql: string) => Promise<void> }, drizzleDb: DbType): Promise<void> {
   try {
     // Create all tables
-    nativeDb.execSync(CREATE_TABLES_SQL);
+    await nativeDb.execAsync(CREATE_TABLES_SQL);
 
     // Run migrations for existing databases
     try {
@@ -130,33 +134,65 @@ export function initDatabase(nativeDb: { execSync: (sql: string) => void }, driz
 
 // Reset everything (DB, Storage, Files) - USE WITH CAUTION
 export async function resetAll(): Promise<void> {
-  const { getExpoDb, getDb } = await import('../stores/db.store');
-  const nativeDb = getExpoDb() as { execSync: (sql: string) => void };
+  const { getExpoDb, getDb, useDbStore } = await import('../stores/db.store');
+  const nativeDb = getExpoDb() as { execAsync: (sql: string) => Promise<void> };
   const drizzleDb = getDb();
+  const userId = useDbStore.getState().currentUserId;
+
   try {
-    const tables = [
-      'note_images',
-      'images',
-      'note_metadata',
-      'note_content',
-      'note_versions',
-      'folders',
-      'tasks',
-      'tags',
-    ];
+    // 1. Stop background sync activity to prevent "database is locked" errors
+    const { SyncScheduler } = await import('../sync/sync-scheduler');
+    SyncScheduler.instance?.dispose();
 
-    tables.forEach(table => {
-      nativeDb.execSync(`DROP TABLE IF EXISTS ${table}`);
-    });
+    // Yield the event loop to allow pending SQLite promises to finish executing
+    await new Promise(resolve => setTimeout(resolve, 100));
 
-    console.log('All tables dropped successfully');
+    // Sign out user and clear auth stores BEFORE clearing storage
+    // If we clear storage first, the Supabase client may fail to sign out properly
+    const { useUserStore } = await import('../stores/user.store');
+    await useUserStore.getState().signOut();
 
+    // Reset sync store states explicitly
+    const { useSyncStore } = await import('../stores/sync.store');
+    useSyncStore.getState().setLastSyncAt(new Date(0));
+    useSyncStore.getState().clearAesKey();
+
+    // 2. Clear sync pointers explicitly before clearing all storage
     const storage = getStorageEngine();
+    if (userId) {
+      const syncTimeKey = `${userId}_last_sync_time`;
+      await storage.removeItem(syncTimeKey);
+      console.log(`[Reset] Cleared sync pointer for ${userId}`);
+    }
+
     if (typeof storage.clear === 'function') {
       await storage.clear();
       console.log('Storage cleared');
     }
-    initDatabase(nativeDb, drizzleDb);
+
+    // 3. Batch the drops into a single statement
+    // This requires only ONE lock acquisition instead of fighting for it 8 times in a loop.
+    const dropStatements = `
+      DROP TABLE IF EXISTS note_images;
+      DROP TABLE IF EXISTS images;
+      DROP TABLE IF EXISTS note_metadata;
+      DROP TABLE IF EXISTS note_content;
+      DROP TABLE IF EXISTS note_versions;
+      DROP TABLE IF EXISTS folders;
+      DROP TABLE IF EXISTS tasks;
+      DROP TABLE IF EXISTS tags;
+      DROP TABLE IF EXISTS settings;
+      DROP TABLE IF EXISTS version_images;
+    `;
+
+    // Disable foreign key constraints temporarily so tables can be dropped in any order
+    await nativeDb.execAsync('PRAGMA foreign_keys = OFF;');
+    await nativeDb.execAsync(dropStatements);
+    await nativeDb.execAsync('PRAGMA foreign_keys = ON;');
+
+    console.log('All tables dropped successfully');
+
+    await initDatabase(nativeDb, drizzleDb);
 
     // Re-init stores so UI reflects the wiped database
     const { useNotesStore } = await import('../stores/notes.store');
@@ -173,14 +209,23 @@ export async function resetAll(): Promise<void> {
 export async function vacuumDatabase(): Promise<void> {
   try {
     const { getExpoDb } = await import('../stores/db.store');
-    const nativeDb = getExpoDb() as { execSync: (sql: string) => void };
-    // Force WAL checkpoint to shrink WAL file
-    nativeDb.execSync('PRAGMA wal_checkpoint(TRUNCATE);');
-    // Vacuum to reclaim deleted space in the main database
-    nativeDb.execSync('VACUUM;');
+    const nativeDb = getExpoDb() as { execAsync: (sql: string) => Promise<void> };
+
+    await nativeDb.execAsync('VACUUM;');
     console.log('Database vacuumed successfully');
-  } catch (error) {
-    console.error('Database vacuum failed:', error);
+  } catch (error: any) {
+    const errMsg = error.message || '';
+
+    // Catch active readers, active writers, and open transactions
+    if (
+      errMsg.includes('database is locked') ||
+      errMsg.includes('transaction') ||
+      errMsg.includes('SQL statements in progress')
+    ) {
+      console.log('[StorageService] Vacuum skipped gracefully: Database is currently active/reading.');
+    } else {
+      console.error('Database vacuum failed with unexpected error:', error);
+    }
   }
 }
 

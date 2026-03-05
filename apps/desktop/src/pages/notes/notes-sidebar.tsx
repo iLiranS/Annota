@@ -5,9 +5,12 @@ import {
     type Folder,
     type NoteMetadata
 } from "@annota/core";
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
+import { ConfirmDialog } from "@/components/custom-ui/confirm-dialog";
+import { FolderEditModal } from "@/components/notes/folder-edit-modal";
+import { FolderListItem } from '@/components/notes/folder-list-item';
 import { NoteListItem } from '@/components/notes/note-list-item';
 import { Button } from "@/components/ui/button";
 import { Ionicons } from "@/components/ui/ionicons";
@@ -32,7 +35,12 @@ export function NotesSidebar({ currentFolderId }: NotesSidebarProps) {
         getFolderById,
         getSortType,
         deleteNote,
+        deleteFolder,
     } = useNotesStore();
+
+    const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [folderToDelete, setFolderToDelete] = useState<Folder | null>(null);
 
     const currentFolder = currentFolderId
         ? getFolderById(currentFolderId)
@@ -74,6 +82,17 @@ export function NotesSidebar({ currentFolderId }: NotesSidebarProps) {
         navigate(`/notes/${currentFolderId || "root"}/${newNote.id}`);
     };
 
+    const handleEditFolder = useCallback((folder: Folder) => {
+        setEditingFolder(folder);
+        setIsEditModalOpen(true);
+    }, []);
+
+    const handleDeleteFolder = useCallback(async () => {
+        if (!folderToDelete) return;
+        await deleteFolder(folderToDelete.id);
+        setFolderToDelete(null);
+    }, [deleteFolder, folderToDelete]);
+
     const headerTitle = currentFolder ? currentFolder.name : "Notes";
 
     return (
@@ -108,21 +127,13 @@ export function NotesSidebar({ currentFolderId }: NotesSidebarProps) {
                         count={browseFolders.length}
                     >
                         {browseFolders.map((folder) => (
-                            <button
+                            <FolderListItem
                                 key={folder.id}
-                                type="button"
+                                folder={folder}
                                 onClick={() => handleFolderPress(folder.id)}
-                                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-accent group/folder"
-                            >
-                                <div className="flex h-5 w-5 items-center justify-center rounded transition-colors group-hover/folder:bg-accent">
-                                    <Ionicons
-                                        name={(folder.icon as any) || "folder"}
-                                        size={16}
-                                        style={{ color: folder.color || undefined }}
-                                    />
-                                </div>
-                                <span className="truncate font-medium">{folder.name}</span>
-                            </button>
+                                onEdit={handleEditFolder}
+                                onDelete={setFolderToDelete}
+                            />
                         ))}
                     </NotesCollapsibleGroup>
                 )}
@@ -172,6 +183,23 @@ export function NotesSidebar({ currentFolderId }: NotesSidebarProps) {
                     </div>
                 )}
             </ScrollArea>
+
+            {/* Modals */}
+            <FolderEditModal
+                open={isEditModalOpen}
+                onOpenChange={setIsEditModalOpen}
+                folder={editingFolder}
+            />
+
+            <ConfirmDialog
+                open={!!folderToDelete}
+                onOpenChange={(open) => !open && setFolderToDelete(null)}
+                title="Delete Folder?"
+                description={`This will permanently delete "${folderToDelete?.name}" and all its contents.`}
+                confirmText="Delete Folder"
+                onConfirm={handleDeleteFolder}
+                variant="destructive"
+            />
         </div>
     );
 }

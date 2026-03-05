@@ -134,3 +134,44 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+@theme {
+  --animate-folder-jump: folder-jump 500ms;
+
+  @keyframes folder-jump {
+    0% {
+      transform: translateY(0) scale(1, 1);
+    }
+
+    /* tiny anticipation up before squish */
+    10% {
+      transform: translateY(-2px) scale(1.02, 0.98);
+    }
+
+    /* stronger squish down */
+    25% {
+      transform: translateY(6px) scale(0.7, 0.8);
+    }
+
+    /* big explosive stretch, mostly sideways */
+    50% {
+      transform: translateY(-4px) scale(1.22, 0.9);
+    }
+
+    /* recoil back toward normal */
+    65% {
+      transform: translateY(-2px) scale(1.08, 0.97);
+    }
+
+    /* subtle overshoot past resting state */
+    80% {
+      transform: translateY(1px) scale(0.98, 1.02);
+    }
+
+    /* final settle */
+    100% {
+      transform: translateY(0) scale(1, 1);
+    }
+  }
+
+}

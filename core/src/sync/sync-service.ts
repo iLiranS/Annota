@@ -171,12 +171,10 @@ export async function syncPushRaw(masterKey: string) {
         }
     };
 
-    // === FIRE ALL CONCURRENTLY ===
-    await Promise.allSettled([
-        pushFolders(),
-        pushTasks(),
-        pushNotes()
-    ]);
+    // === FIRE SEQUENTIALLY TO PREVENT SQLITE LOCKS ===
+    await pushFolders();
+    await pushTasks();
+    await pushNotes();
 
     // === 4. IMAGES ===
     // We push images AFTER notes to avoid foreign key constraints in `note_images` where `note_id` might not exist in `encrypted_notes` yet.
@@ -192,6 +190,10 @@ export async function syncPushRaw(masterKey: string) {
 
     if (didDeleteTombstones) {
         console.log('[Sync] Tombstones deleted locally. Running garbage collection to free space...');
+
+        // Yield the event loop to ensure all previous DB locks are fully released
+        await new Promise(resolve => setTimeout(resolve, 50));
+
         await StorageService.runGarbageCollection(true);
     }
 }
@@ -393,6 +395,10 @@ export async function syncPullRaw(masterKey: string) {
 
     if (didDeleteTombstones) {
         console.log('[SyncPull] Tombstones deleted locally. Running garbage collection to free space...');
+
+        // Yield the event loop to ensure all previous DB locks are fully released
+        await new Promise(resolve => setTimeout(resolve, 50));
+
         await StorageService.runGarbageCollection(true);
     }
 

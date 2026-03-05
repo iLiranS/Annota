@@ -1,6 +1,5 @@
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { DAILY_NOTES_FOLDER_ID, useUserStore as useAuthStore, useNotesStore, useSyncStore, type Folder } from '@annota/core';
-import { SyncScheduler } from '@annota/core/platform';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { DrawerContentComponentProps, DrawerContentScrollView } from '@react-navigation/drawer';
 import { useRouter } from 'expo-router';
@@ -184,7 +183,7 @@ export default function Sidebar(props: DrawerContentComponentProps) {
     const handleRetry = useCallback(() => {
         if (retryCooldown) return;
         setRetryCooldown(true);
-        SyncScheduler.instance?.requestImmediateSync();
+        useSyncStore.getState().forceSync().catch(console.error);
         setTimeout(() => setRetryCooldown(false), 10_000);
     }, [retryCooldown]);
 

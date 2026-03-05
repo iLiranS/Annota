@@ -1,6 +1,6 @@
 import ThemedText from '@/components/themed-text';
-import { useNotesStore } from '@annota/core';
 import type { Task } from '@annota/core';
+import { useNotesStore } from '@annota/core';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@react-navigation/native';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -25,8 +25,11 @@ export function CompactTaskCard({ task, onToggle, onPress, hideFolder }: TaskCar
         task.deadline.getMonth() === now.getMonth() &&
         task.deadline.getFullYear() === now.getFullYear();
 
-    const isTaskInPast = task.deadline < now && !task.completed;
-    const deadlineColor = isTaskInPast ? '#EF4444' : isToday ? '#F59E0B' : colors.text + '80';
+    const isTaskInPast = task.isWholeDay
+        ? (new Date(task.deadline.getFullYear(), task.deadline.getMonth(), task.deadline.getDate()) < new Date(now.getFullYear(), now.getMonth(), now.getDate()))
+        : (task.deadline < now);
+    const isTaskOverdue = isTaskInPast && !task.completed;
+    const deadlineColor = isTaskOverdue ? '#EF4444' : isToday ? '#F59E0B' : colors.text + '80';
 
     const formatDeadline = (date: Date): string => {
         const isToday =
@@ -128,9 +131,11 @@ export function TaskCard({ task, onToggle, onPress, hideFolder }: TaskCardProps)
         task.deadline.getMonth() === now.getMonth() &&
         task.deadline.getFullYear() === now.getFullYear();
 
-    const isTaskInPast = task.deadline < now && !task.completed;
-
-    const deadlineColor = isTaskInPast ? '#EF4444' : isToday ? '#F59E0B' : colors.text + '80';
+    const isTaskInPast = task.isWholeDay
+        ? (new Date(task.deadline.getFullYear(), task.deadline.getMonth(), task.deadline.getDate()) < new Date(now.getFullYear(), now.getMonth(), now.getDate()))
+        : (task.deadline < now);
+    const isTaskOverdue = isTaskInPast && !task.completed;
+    const deadlineColor = isTaskOverdue ? '#EF4444' : isToday ? '#F59E0B' : colors.text + '80';
 
     const formatDeadline = (date: Date): string => {
         const isToday =

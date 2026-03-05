@@ -6,34 +6,20 @@ import {
     useUserStore,
     type Folder,
 } from "@annota/core";
-import { SyncScheduler } from "@annota/core/platform";
 import { useCallback, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
+import { FolderListItem, FolderListItemContent } from "@/components/notes/folder-list-item";
 import { Button } from "@/components/ui/button";
 import {
     Collapsible,
     CollapsibleContent,
     CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import {
-    Sidebar,
-    SidebarContent,
-    SidebarFooter,
-    SidebarGroup,
-    SidebarGroupContent,
-    SidebarGroupLabel,
-    SidebarHeader,
-    SidebarMenu,
-    SidebarMenuButton,
-    SidebarMenuItem,
-    SidebarMenuSub,
-    SidebarMenuSubButton,
-    SidebarMenuSubItem,
-    SidebarRail,
-    SidebarSeparator,
-} from "@/components/ui/sidebar";
+import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubButton, SidebarMenuSubItem, SidebarRail, SidebarSeparator } from "@/components/ui/sidebar";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { ConfirmDialog } from "../custom-ui/confirm-dialog";
+import { FolderEditModal } from "../notes/folder-edit-modal";
 import { Ionicons } from "../ui/ionicons";
 
 export function AppSidebar() {
@@ -41,19 +27,33 @@ export function AppSidebar() {
     const location = useLocation();
     const { colors } = useAppTheme();
 
-    const { folders, notes } = useNotesStore();
+    const { folders, notes, deleteFolder } = useNotesStore();
     const isOnline = useSyncStore((s) => s.isOnline);
     const isGuest = useUserStore((s) => s.isGuest);
     const showOfflineBanner = !isOnline && !isGuest;
 
     const [retryCooldown, setRetryCooldown] = useState(false);
+    const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [folderToDelete, setFolderToDelete] = useState<Folder | null>(null);
 
     const handleRetry = useCallback(() => {
         if (retryCooldown) return;
         setRetryCooldown(true);
-        SyncScheduler.instance?.requestImmediateSync();
+        useSyncStore.getState().forceSync().catch(console.error);
         setTimeout(() => setRetryCooldown(false), 10_000);
     }, [retryCooldown]);
+
+    const handleEditFolder = useCallback((folder: Folder) => {
+        setEditingFolder(folder);
+        setIsEditModalOpen(true);
+    }, []);
+
+    const handleDeleteFolder = useCallback(async () => {
+        if (!folderToDelete) return;
+        await deleteFolder(folderToDelete.id);
+        setFolderToDelete(null);
+    }, [deleteFolder, folderToDelete]);
 
     // Non-system top-level folders
     const topLevelFolders = useMemo(() => {
@@ -81,12 +81,12 @@ export function AppSidebar() {
                 data-tauri-drag-region
                 className="flex h-8 shrink-0 flex-row items-center gap-2 px-2 py-0"
             >
-                <div className="flex items-center gap-2  h-full pt-1">
+                <div className="flex items-center pt-2 px-1 gap-1  h-full">
 
                     <img
                         src={icon}
                         data-tauri-drag-region
-                        className="h-full aspect-square select-none"
+                        className="w-6 aspect-square select-none"
                         alt="Annota"
                         onError={(e) => {
                             (e.target as HTMLImageElement).style.display = "none";
@@ -99,7 +99,7 @@ export function AppSidebar() {
             </SidebarHeader>
 
             {/* ── Content ──────────────────────────────────── */}
-            <SidebarContent className="min-w-0 overflow-x-hidden">
+            <SidebarContent className="min-w-0 overflow-x-hidden pt-2">
                 {/* Navigation group */}
                 <SidebarGroup>
                     <SidebarGroupContent>
@@ -221,6 +221,8 @@ export function AppSidebar() {
                                     onNavigate={(folderId) =>
                                         navigate(`/notes?folderId=${folderId}`)
                                     }
+                                    onEdit={handleEditFolder}
+                                    onDelete={setFolderToDelete}
                                 />
                             ))}
                         </SidebarMenu>
@@ -269,19 +271,36 @@ export function AppSidebar() {
             </SidebarFooter>
 
             <SidebarRail />
+
+            {/* Modals */}
+            <FolderEditModal
+                open={isEditModalOpen}
+                onOpenChange={setIsEditModalOpen}
+                folder={editingFolder}
+            />
+
+            <ConfirmDialog
+                open={!!folderToDelete}
+                onOpenChange={(open) => !open && setFolderToDelete(null)}
+                title="Delete Folder?"
+                description={`This will permanently delete "${folderToDelete?.name}" and all its contents.`}
+                confirmText="Delete Folder"
+                onConfirm={handleDeleteFolder}
+                variant="destructive"
+            />
         </Sidebar>
     );
 }
-
-/* ── Recursive folder tree item ───────────────────────────────── */
 
 interface FolderTreeItemProps {
     folder: Folder;
     allFolders: Folder[];
     onNavigate: (folderId: string) => void;
+    onEdit: (folder: Folder) => void;
+    onDelete: (folder: Folder) => void;
 }
 
-function FolderTreeItem({ folder, allFolders, onNavigate }: FolderTreeItemProps) {
+function FolderTreeItem({ folder, allFolders, onNavigate, onEdit, onDelete }: FolderTreeItemProps) {
     const children = allFolders.filter(
         (f) => f.parentId === folder.id && !f.isSystem,
     );
@@ -290,14 +309,17 @@ function FolderTreeItem({ folder, allFolders, onNavigate }: FolderTreeItemProps)
     if (!hasChildren) {
         return (
             <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => onNavigate(folder.id)}>
-                    <Ionicons
-                        name={(folder.icon as any) || "folder"}
-                        size={16}
-                        style={{ color: folder.color || undefined }}
-                    />
-                    <span className="truncate">{folder.name}</span>
-                </SidebarMenuButton>
+                <FolderListItem
+                    asChild
+                    folder={folder}
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                    className="group/item"
+                >
+                    <SidebarMenuButton onClick={() => onNavigate(folder.id)}>
+                        <FolderListItemContent folder={folder} />
+                    </SidebarMenuButton>
+                </FolderListItem>
             </SidebarMenuItem>
         );
     }
@@ -305,18 +327,21 @@ function FolderTreeItem({ folder, allFolders, onNavigate }: FolderTreeItemProps)
     return (
         <Collapsible className="group/folder">
             <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => onNavigate(folder.id)}>
-                    <Ionicons
-                        name={(folder.icon as any) || "folder"}
-                        size={16}
-                        style={{ color: folder.color || undefined }}
-                    />
-                    <span className="truncate">{folder.name}</span>
-                </SidebarMenuButton>
+                <FolderListItem
+                    asChild
+                    folder={folder}
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                    className="group/item"
+                >
+                    <SidebarMenuButton onClick={() => onNavigate(folder.id)}>
+                        <FolderListItemContent folder={folder} />
+                    </SidebarMenuButton>
+                </FolderListItem>
                 <CollapsibleTrigger asChild>
                     <button
                         type="button"
-                        className="absolute right-1 top-1/2 -translate-y-1/2 rounded-md p-1 hover:bg-sidebar-accent"
+                        className="absolute right-1 top-1/2 -translate-y-1/2 rounded-md p-1 hover:bg-sidebar-accent "
                     >
                         <Ionicons name="chevron-forward" size={12} className="transition-transform group-data-[state=open]/folder:rotate-90" />
                     </button>
@@ -335,19 +360,24 @@ function FolderTreeItem({ folder, allFolders, onNavigate }: FolderTreeItemProps)
                                     folder={child}
                                     allFolders={allFolders}
                                     onNavigate={onNavigate}
+                                    onEdit={onEdit}
+                                    onDelete={onDelete}
                                 />
                             );
                         }
                         return (
                             <SidebarMenuSubItem key={child.id}>
-                                <SidebarMenuSubButton onClick={() => onNavigate(child.id)}>
-                                    <Ionicons
-                                        name={(child.icon as any) || "folder"}
-                                        size={14}
-                                        style={{ color: child.color || undefined }}
-                                    />
-                                    <span className="truncate">{child.name}</span>
-                                </SidebarMenuSubButton>
+                                <FolderListItem
+                                    asChild
+                                    folder={child}
+                                    onEdit={onEdit}
+                                    onDelete={onDelete}
+                                    className="group/item "
+                                >
+                                    <SidebarMenuSubButton onClick={() => onNavigate(child.id)}>
+                                        <FolderListItemContent folder={child} />
+                                    </SidebarMenuSubButton>
+                                </FolderListItem>
                             </SidebarMenuSubItem>
                         );
                     })}

@@ -15,6 +15,7 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import logo from "@/src/assets/icon.png";
 
 type OAuthProvider = "google" | "github";
 
@@ -118,22 +119,24 @@ export default function LoginPage() {
     };
 
     return (
-        <Card className="border-border/50 shadow-lg">
-            <CardHeader className="items-center space-y-3 pb-2">
+        <Card className="border-border/50 shadow-xl overflow-hidden backdrop-blur-sm bg-card/95">
+            <CardHeader className="flex flex-col items-center space-y-4 pb-4">
+                {/* Refined indigo glow with pulse animation */}
+                <div className="absolute h-[275px] w-[500px] -top-[150px] blur-2xl  rounded-full bg-[#6366F1]/20 " />
+
                 <img
-                    src="/annota-icon.png"
+                    src={logo}
                     alt="Annota"
-                    className="h-20 w-20 rounded-2xl"
-                    onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = "none";
-                    }}
+                    className="relative  h-24 w-24 rounded-3xl  transition-all duration-500 group-hover:scale-105 group-hover:rotate-1"
                 />
-                <CardTitle className="text-3xl font-extrabold tracking-tight">
-                    Annota
-                </CardTitle>
-                <CardDescription className="max-w-[280px] text-center text-base leading-relaxed">
-                    Sign in to sync your data with end-to-end encryption.
-                </CardDescription>
+                <div className="space-y-1.5 flex flex-col items-center w-full">
+                    <CardTitle className="text-4xl font-black tracking-tight text-center bg-clip-text text-transparent bg-linear-to-br from-foreground to-foreground/70">
+                        Annota
+                    </CardTitle>
+                    <CardDescription className="max-w-[280px] text-center text-base font-medium leading-relaxed text-muted-foreground/80">
+                        Sign in to sync your data with end-to-end encryption.
+                    </CardDescription>
+                </div>
             </CardHeader>
 
             <CardContent className="space-y-4 pt-4">

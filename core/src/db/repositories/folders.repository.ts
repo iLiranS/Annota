@@ -225,7 +225,7 @@ export async function getDeletedFolders(): Promise<Folder[]> {
 export async function getFoldersCount(tx: DbOrTx = getDb()): Promise<number> {
     const result = await tx.select({ count: sql<number>`count(*)` })
         .from(schema.folders)
-        .where(and(eq(schema.folders.isDeleted, false), eq(schema.folders.isPermDeleted, false), eq(schema.folders.isSystem, false)))
+        .where(and(eq(schema.folders.isPermDeleted, false), eq(schema.folders.isSystem, false)))
         .get();
     const safeResult = safeGet<{ count: number }>(result);
     return safeResult?.count ?? 0;

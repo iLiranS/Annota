@@ -96,6 +96,11 @@ export const versionImages = sqliteTable('version_images', {
 }, (t) => ({
     pk: primaryKey({ columns: [t.versionId, t.imageId] }),
 }));
+// ============ SETTINGS ============
+export const settings = sqliteTable('settings', {
+    key: text('key').primaryKey(),
+    value: text('value').notNull(), // JSON
+});
 
 // ============ TYPE EXPORTS ============
 export type NoteMetadata = typeof noteMetadata.$inferSelect;

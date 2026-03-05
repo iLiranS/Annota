@@ -37,8 +37,10 @@ const FOLDER_ICONS = [
     'bulb', 'color-palette', 'compass', 'cut',
     'flash', 'glasses', 'ice-cream', 'magnet', 'map',
     'pint', 'podium', 'ribbon', 'skull', 'speedometer',
-    'thermometer', 'thunderstorm', 'watch', 'water'
+    'thermometer', 'thunderstorm', 'watch', 'water', 'ellipse-outline', 'ellipse'
 ];
+
+const ALL_IONICON_KEYS = Object.keys(Ionicons.glyphMap);
 
 // Available folder colors
 
@@ -67,10 +69,21 @@ export default function FolderEditModal({
     const [color, setColor] = useState(COLOR_PALETTE[0].value); // Default amber color
     const [parentId, setParentId] = useState<string | null>(null);
     const [showLocationPicker, setShowLocationPicker] = useState(false);
+    const [iconSearch, setIconSearch] = useState('');
+
+    const filteredIcons = useMemo(() => {
+        if (!iconSearch || iconSearch.trim().length < 2) return FOLDER_ICONS;
+
+        const searchLower = iconSearch.toLowerCase().trim();
+        return ALL_IONICON_KEYS.filter(i =>
+            i.includes(searchLower)
+        ).slice(0, 100); // Limit results for performance
+    }, [iconSearch]);
 
     // Reset state when folder changes or modal opens
     useEffect(() => {
         if (visible) {
+            setIconSearch('');
             if (folder) {
                 // Edit mode
                 setName(folder.name);
@@ -236,29 +249,60 @@ export default function FolderEditModal({
                     {/* Folder Icon */}
                     <View style={styles.section}>
                         <Text style={[styles.sectionTitle, { color: colors.text }]}>Icon</Text>
-                        <View style={[styles.iconScrollContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                        <View style={[styles.iconPickerContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                            {/* Search Header */}
+                            <View style={[styles.searchContainer, { borderBottomColor: colors.border }]}>
+                                <Ionicons name="search" size={18} color={colors.text + '40'} />
+                                <TextInput
+                                    style={[styles.searchInput, { color: colors.text }]}
+                                    value={iconSearch}
+                                    onChangeText={setIconSearch}
+                                    placeholder="Search icons (min 2 chars)..."
+                                    placeholderTextColor={colors.text + '40'}
+                                    autoCapitalize="none"
+                                />
+                                {iconSearch.length > 0 && (
+                                    <Pressable onPress={() => setIconSearch('')} hitSlop={10}>
+                                        <Ionicons name="close-circle" size={18} color={colors.text + '40'} />
+                                    </Pressable>
+                                )}
+                            </View>
+
+                            {/* Icon Grid Area */}
                             <ScrollView
                                 style={styles.iconScroll}
                                 contentContainerStyle={styles.iconGrid}
                                 nestedScrollEnabled={true}
-                                showsVerticalScrollIndicator={true}
+                                keyboardShouldPersistTaps="always"
                             >
-                                {FOLDER_ICONS.map((iconName) => (
+                                {filteredIcons.map((iconName) => (
                                     <Pressable
                                         key={iconName}
                                         onPress={() => setIcon(iconName)}
                                         style={[
                                             styles.iconButton,
-                                            icon === iconName && { backgroundColor: color + '20' }
+                                            icon === iconName && {
+                                                backgroundColor: color + '20',
+                                                borderColor: color,
+                                                borderWidth: 1.5,
+                                            }
                                         ]}
                                     >
                                         <Ionicons
-                                            name={iconName as keyof typeof Ionicons.glyphMap}
-                                            size={24}
-                                            color={icon === iconName ? color || folder?.color || colors.primary : colors.text + '80'}
+                                            name={iconName as any}
+                                            size={26}
+                                            color={icon === iconName ? color : colors.text + '80'}
                                         />
                                     </Pressable>
                                 ))}
+                                {filteredIcons.length === 0 && (
+                                    <View style={styles.noResults}>
+                                        <Ionicons name="search-outline" size={40} color={colors.text + '20'} />
+                                        <Text style={[styles.noResultsText, { color: colors.text + '40' }]}>
+                                            No icons found for "{iconSearch}"
+                                        </Text>
+                                    </View>
+                                )}
                             </ScrollView>
                         </View>
                     </View>
@@ -378,14 +422,28 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         borderWidth: 1,
     },
-    iconScrollContainer: {
-        maxHeight: 220,
+    iconPickerContainer: {
+        height: 280,
         borderRadius: 12,
         borderWidth: 1,
         overflow: 'hidden',
     },
+    searchContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 12,
+        height: 44,
+        borderBottomWidth: 1,
+    },
+    searchInput: {
+        flex: 1,
+        fontSize: 14,
+        paddingHorizontal: 8,
+        height: '100%',
+        paddingVertical: 0,
+    },
     iconScroll: {
-        flex: 0,
+        flex: 1,
     },
     iconGrid: {
         flexDirection: 'row',
@@ -393,6 +451,16 @@ const styles = StyleSheet.create({
         padding: 12,
         gap: 8,
         justifyContent: 'center',
+    },
+    noResults: {
+        width: '100%',
+        paddingVertical: 32,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    noResultsText: {
+        fontSize: 13,
+        fontStyle: 'italic',
     },
     iconButton: {
         width: 44,
