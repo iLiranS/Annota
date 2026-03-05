@@ -1,10 +1,10 @@
 import { useNotesStore, useSettingsStore, useTasksStore, useUserStore } from "@annota/core";
 
+import { NoteListItem } from '@/components/notes/note-list-item';
 import { Ionicons } from "@/components/ui/ionicons";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import DesktopNoteCard from "./components/desktop-note-card";
 import DesktopTaskCard from "./components/desktop-task-card";
 
 export default function HomePage() {
@@ -101,11 +101,13 @@ export default function HomePage() {
                     {recentNotes.length > 0 ? (
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             {recentNotes.map((note) => (
-                                <DesktopNoteCard
+                                <NoteListItem
                                     key={note.id}
                                     note={note}
-                                    onPress={() => handleNotePress(note.id, note.folderId)}
+                                    onClick={() => handleNotePress(note.id, note.folderId)}
                                     onDelete={() => deleteNote(note.id)}
+                                    showTimestamp={true}
+                                    showDescription={true}
                                 />
                             ))}
                         </div>

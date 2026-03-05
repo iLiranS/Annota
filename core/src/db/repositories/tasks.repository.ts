@@ -3,6 +3,7 @@ import { getDb } from '../../stores/db.store';
 import type { Task, TaskInsert } from '../schema';
 import * as schema from '../schema';
 import type { DbOrTx } from '../types';
+import { safeGet, safeGetAll } from '../utils';
 
 // Re-export types
 export type { Task } from '../schema';
@@ -20,7 +21,8 @@ export interface CreateTaskInput {
 // ============ SYNC OPERATIONS ============
 
 export async function getDirtyTasks(): Promise<Task[]> {
-    return await getDb().select().from(schema.tasks).where(eq(schema.tasks.isDirty, true)).all();
+    const result = await getDb().select().from(schema.tasks).where(eq(schema.tasks.isDirty, true)).all();
+    return safeGetAll<Task>(result);
 }
 
 export async function clearDirtyTasks(taskIds: string[]): Promise<void> {
@@ -32,7 +34,8 @@ export async function clearDirtyTasks(taskIds: string[]): Promise<void> {
 }
 
 export async function upsertSyncedTask(taskData: Task, tx: DbOrTx = getDb()): Promise<void> {
-    const existing = await tx.select().from(schema.tasks).where(eq(schema.tasks.id, taskData.id)).get();
+    const result = await tx.select().from(schema.tasks).where(eq(schema.tasks.id, taskData.id)).get();
+    const existing = safeGet<Task>(result);
     if (existing && existing.updatedAt > taskData.updatedAt) {
         console.log(`[Sync] Local task ${taskData.id} is newer, ignoring pulled row. Local: ${existing.updatedAt}, Pulled: ${taskData.updatedAt}`);
         return;
@@ -47,11 +50,12 @@ export async function upsertSyncedTask(taskData: Task, tx: DbOrTx = getDb()): Pr
 // ============ TASK OPERATIONS ============
 
 export async function getAllTasks(): Promise<Task[]> {
-    return await getDb()
+    const result = await getDb()
         .select()
         .from(schema.tasks)
         .where(eq(schema.tasks.isPermDeleted, false))
         .all();
+    return safeGetAll<Task>(result);
 }
 
 export async function getTaskById(taskId: string): Promise<Task | null> {
@@ -61,7 +65,7 @@ export async function getTaskById(taskId: string): Promise<Task | null> {
         .where(eq(schema.tasks.id, taskId))
         .get();
 
-    return result ?? null;
+    return safeGet<Task>(result);
 }
 
 export async function getTasksByDate(date: Date): Promise<Task[]> {
@@ -72,7 +76,7 @@ export async function getTasksByDate(date: Date): Promise<Task[]> {
     const endOfDay = new Date(date);
     endOfDay.setHours(23, 59, 59, 999);
 
-    return await getDb()
+    const result = await getDb()
         .select()
         .from(schema.tasks)
         .where(
@@ -83,19 +87,21 @@ export async function getTasksByDate(date: Date): Promise<Task[]> {
             )
         )
         .all();
+    return safeGetAll<Task>(result);
 }
 
 export async function getTasksSortedByDeadline(): Promise<Task[]> {
-    return await getDb()
+    const result = await getDb()
         .select()
         .from(schema.tasks)
         .where(eq(schema.tasks.isPermDeleted, false))
         .orderBy(asc(schema.tasks.deadline))
         .all();
+    return safeGetAll<Task>(result);
 }
 
 export async function getPendingTasks(): Promise<Task[]> {
-    return await getDb()
+    const result = await getDb()
         .select()
         .from(schema.tasks)
         .where(
@@ -106,10 +112,11 @@ export async function getPendingTasks(): Promise<Task[]> {
         )
         .orderBy(asc(schema.tasks.deadline))
         .all();
+    return safeGetAll<Task>(result);
 }
 
 export async function getCompletedTasks(): Promise<Task[]> {
-    return await getDb()
+    const result = await getDb()
         .select()
         .from(schema.tasks)
         .where(
@@ -120,16 +127,20 @@ export async function getCompletedTasks(): Promise<Task[]> {
         )
         .orderBy(asc(schema.tasks.deadline))
         .all();
+    return safeGetAll<Task>(result);
 }
 
 export async function createTask(data: TaskInsert): Promise<Task> {
     await getDb().insert(schema.tasks).values(data).run();
 
-    return await getDb()
+    const result = await getDb()
         .select()
         .from(schema.tasks)
         .where(eq(schema.tasks.id, data.id))
-        .get()!;
+        .get();
+
+    const task = safeGet<Task>(result);
+    return task!;
 }
 
 export async function updateTask(
@@ -199,7 +210,8 @@ export async function getTasksCount(tx: DbOrTx = getDb()): Promise<number> {
         .from(schema.tasks)
         .where(eq(schema.tasks.isPermDeleted, false))
         .get();
-    return result?.count ?? 0;
+    const safeResult = safeGet<{ count: number }>(result);
+    return safeResult?.count ?? 0;
 }
 
 // ============ CALENDAR HELPERS ============
@@ -220,8 +232,10 @@ export async function getTaskDatesInMonth(year: number, month: number): Promise<
         )
         .all();
 
+    const safeTasks = safeGetAll<Task>(tasks);
+
     const dates = new Set<number>();
-    for (const task of tasks) {
+    for (const task of safeTasks) {
         dates.add(task.deadline.getDate());
     }
 

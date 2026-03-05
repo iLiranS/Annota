@@ -3,6 +3,7 @@ import { getDb } from '../../stores/db.store';
 import type { Folder, FolderInsert, NoteMetadata } from '../schema';
 import * as schema from '../schema';
 import type { DbOrTx } from '../types';
+import { safeGet, safeGetAll } from '../utils';
 import { getDeletedNotes } from './notes.repository';
 
 
@@ -16,7 +17,8 @@ export const DAILY_NOTES_FOLDER_ID = 'system-daily-notes';
 // ============ SYNC OPERATIONS ============
 
 export async function getDirtyFolders(): Promise<Folder[]> {
-    return await getDb().select().from(schema.folders).where(eq(schema.folders.isDirty, true)).all();
+    const result = await getDb().select().from(schema.folders).where(eq(schema.folders.isDirty, true)).all();
+    return safeGetAll<Folder>(result);
 }
 
 export async function clearDirtyFolders(folderIds: string[]): Promise<void> {
@@ -28,7 +30,8 @@ export async function clearDirtyFolders(folderIds: string[]): Promise<void> {
 }
 
 export async function upsertSyncedFolder(folderData: Folder, tx: DbOrTx = getDb()): Promise<void> {
-    const existing = await tx.select().from(schema.folders).where(eq(schema.folders.id, folderData.id)).get();
+    const result = await tx.select().from(schema.folders).where(eq(schema.folders.id, folderData.id)).get();
+    const existing = safeGet<Folder>(result);
     if (existing && existing.updatedAt > folderData.updatedAt) {
         console.log(`[Sync] Local folder ${folderData.id} is newer, ignoring pulled row. Local: ${existing.updatedAt}, Pulled: ${folderData.updatedAt}`);
         return;
@@ -46,13 +49,14 @@ export async function upsertSyncedFolder(folderData: Folder, tx: DbOrTx = getDb(
 export async function getFoldersInFolder(parentId: string | null, includeDeleted = false): Promise<Folder[]> {
     if (parentId === null) {
         if (includeDeleted) {
-            return await getDb()
+            const result = await getDb()
                 .select()
                 .from(schema.folders)
                 .where(isNull(schema.folders.parentId))
                 .all();
+            return safeGetAll<Folder>(result);
         }
-        return await getDb()
+        const result2 = await getDb()
             .select()
             .from(schema.folders)
             .where(
@@ -63,17 +67,19 @@ export async function getFoldersInFolder(parentId: string | null, includeDeleted
                 )
             )
             .all();
+        return safeGetAll<Folder>(result2);
     }
 
     if (includeDeleted) {
-        return await getDb()
+        const result3 = await getDb()
             .select()
             .from(schema.folders)
             .where(eq(schema.folders.parentId, parentId))
             .all();
+        return safeGetAll<Folder>(result3);
     }
 
-    return await getDb()
+    const result4 = await getDb()
         .select()
         .from(schema.folders)
         .where(
@@ -84,6 +90,7 @@ export async function getFoldersInFolder(parentId: string | null, includeDeleted
             )
         )
         .all();
+    return safeGetAll<Folder>(result4);
 }
 
 export async function getFolderById(folderId: string): Promise<Folder | null> {
@@ -93,11 +100,12 @@ export async function getFolderById(folderId: string): Promise<Folder | null> {
         .where(eq(schema.folders.id, folderId))
         .get();
 
-    return result ?? null;
+    return safeGet<Folder>(result);
 }
 
 export async function createFolder(folderData: FolderInsert): Promise<Folder> {
-    const folder = await getDb().insert(schema.folders).values(folderData).returning().get();
+    const folderRes = await getDb().insert(schema.folders).values(folderData).returning().get();
+    const folder = safeGet<Folder>(folderRes);
     if (!folder) {
         throw new Error('Failed to create folder');
     }
@@ -170,14 +178,19 @@ export async function getAllDescendantFolderIds(folderId: string, includeDeleted
         .where(whereClause)
         .all();
 
-    const childIds = children.map((f: Folder) => f.id);
-    const grandchildIds = childIds.flatMap((id: string) => getAllDescendantFolderIds(id, includeDeleted));
+    const safeChildren = safeGetAll<Folder>(children);
+
+    const childIds = safeChildren.map(f => f.id);
+    const grandchildIdsNested = await Promise.all(
+        childIds.map((id: string) => getAllDescendantFolderIds(id, includeDeleted))
+    );
+    const grandchildIds = grandchildIdsNested.flat();
 
     return [...childIds, ...grandchildIds];
 }
 
 export async function getTrashContents(): Promise<{ folders: Folder[], notes: NoteMetadata[] }> {
-    const folders = await getDb()
+    const foldersRes = await getDb()
         .select()
         .from(schema.folders)
         .where(
@@ -187,6 +200,8 @@ export async function getTrashContents(): Promise<{ folders: Folder[], notes: No
             )
         )
         .all();
+
+    const folders = safeGetAll<Folder>(foldersRes);
 
     const notes = await getDeletedNotes();
 
@@ -194,7 +209,7 @@ export async function getTrashContents(): Promise<{ folders: Folder[], notes: No
 }
 
 export async function getDeletedFolders(): Promise<Folder[]> {
-    return await getDb()
+    const result = await getDb()
         .select()
         .from(schema.folders)
         .where(
@@ -204,6 +219,7 @@ export async function getDeletedFolders(): Promise<Folder[]> {
             )
         )
         .all();
+    return safeGetAll<Folder>(result);
 }
 
 export async function getFoldersCount(tx: DbOrTx = getDb()): Promise<number> {
@@ -211,5 +227,6 @@ export async function getFoldersCount(tx: DbOrTx = getDb()): Promise<number> {
         .from(schema.folders)
         .where(and(eq(schema.folders.isDeleted, false), eq(schema.folders.isPermDeleted, false), eq(schema.folders.isSystem, false)))
         .get();
-    return result?.count ?? 0;
+    const safeResult = safeGet<{ count: number }>(result);
+    return safeResult?.count ?? 0;
 }

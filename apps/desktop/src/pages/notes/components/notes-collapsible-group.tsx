@@ -34,7 +34,7 @@ export function NotesCollapsibleGroup({
             className="w-full space-y-1 mb-2"
         >
             <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left transition-all hover:bg-accent/40 group focus:outline-none focus:ring-1 focus:ring-primary/20">
-                <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-2 text-muted-foreground/70">
                     <div
                         className="flex h-6 w-6 items-center justify-center rounded-md transition-colors"
                         style={{ backgroundColor: color ? `${color}15` : 'transparent' }}
@@ -42,7 +42,7 @@ export function NotesCollapsibleGroup({
                         <Ionicons
                             name={icon}
                             size={14}
-                            style={{ color: color || 'currentColor' }}
+                            color={color || 'currentColor'}
                             className={cn(!color && "text-muted-foreground/70 group-hover:text-foreground transition-colors")}
                         />
                     </div>
@@ -59,7 +59,7 @@ export function NotesCollapsibleGroup({
                 </div>
                 <ChevronDown
                     className={cn(
-                        "h-3.5 w-3.5 text-muted-foreground/20 transition-transform duration-300 ease-in-out group-hover:text-muted-foreground/50",
+                        "h-3.5 w-3.5 text-muted-foreground/70 transition-transform duration-300 ease-in-out group-hover:text-muted-foreground/50",
                         !isOpen && "-rotate-90"
                     )}
                 />

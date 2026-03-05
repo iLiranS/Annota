@@ -5,6 +5,7 @@ import { generateId } from '../../utils/id';
 import type { NoteMetadata, NoteMetadataInsert } from '../schema';
 import * as schema from '../schema';
 import type { DbOrTx } from '../types';
+import { safeGet, safeGetAll } from '../utils';
 import * as ImagesRepo from './images.repository';
 
 // Re-export types for convenience
@@ -48,7 +49,8 @@ function extractImageIdsFromContent(content: string): string[] {
 // ============ SYNC OPERATIONS ============
 
 export async function getDirtyNotes(): Promise<NoteMetadata[]> {
-    return await getDb().select().from(schema.noteMetadata).where(eq(schema.noteMetadata.isDirty, true)).all();
+    const result = await getDb().select().from(schema.noteMetadata).where(eq(schema.noteMetadata.isDirty, true)).all();
+    return safeGetAll<NoteMetadata>(result);
 }
 
 export async function clearDirtyNotes(noteIds: string[]): Promise<void> {
@@ -60,7 +62,8 @@ export async function clearDirtyNotes(noteIds: string[]): Promise<void> {
 }
 
 export async function upsertSyncedNote(noteFullData: any, tx: DbOrTx = getDb()): Promise<void> {
-    const existing = await tx.select().from(schema.noteMetadata).where(eq(schema.noteMetadata.id, noteFullData.id)).get();
+    const result = await tx.select().from(schema.noteMetadata).where(eq(schema.noteMetadata.id, noteFullData.id)).get();
+    const existing = safeGet<NoteMetadata>(result);
     if (existing && existing.updatedAt > noteFullData.updatedAt) {
         console.log(`[Sync] Local note ${noteFullData.id} is newer, ignoring pulled row. Local: ${existing.updatedAt}, Pulled: ${noteFullData.updatedAt}`);
         return;
@@ -97,9 +100,11 @@ export async function upsertSyncedNote(noteFullData: any, tx: DbOrTx = getDb()):
         .limit(1)
         .get();
 
+    const safeLatestVersion = safeGet<{ id: string; content: string }>(latestVersion);
+
     let activeVersionId: string;
 
-    if (!latestVersion) {
+    if (!safeLatestVersion) {
         activeVersionId = generateId();
         await tx.insert(schema.noteVersions).values({
             id: activeVersionId,
@@ -108,16 +113,16 @@ export async function upsertSyncedNote(noteFullData: any, tx: DbOrTx = getDb()):
             createdAt: noteUpdatedAt,
         }).run();
     } else {
-        const latestNormalizedContent = normalizeStoredContent(latestVersion.content);
-        if (latestNormalizedContent !== latestVersion.content) {
+        const latestNormalizedContent = normalizeStoredContent(safeLatestVersion.content);
+        if (latestNormalizedContent !== safeLatestVersion.content) {
             await tx.update(schema.noteVersions)
                 .set({ content: latestNormalizedContent })
-                .where(eq(schema.noteVersions.id, latestVersion.id))
+                .where(eq(schema.noteVersions.id, safeLatestVersion.id))
                 .run();
         }
 
         if (latestNormalizedContent === content) {
-            activeVersionId = latestVersion.id;
+            activeVersionId = safeLatestVersion.id;
         } else {
             activeVersionId = generateId();
             await tx.insert(schema.noteVersions).values({
@@ -133,8 +138,10 @@ export async function upsertSyncedNote(noteFullData: any, tx: DbOrTx = getDb()):
                 .orderBy(desc(schema.noteVersions.createdAt))
                 .all();
 
-            if (versions.length > MAX_VERSIONS) {
-                const versionsToDelete = versions.slice(MAX_VERSIONS).map((v: { id: string }) => v.id);
+            const safeVersions = safeGetAll<{ id: string }>(versions);
+
+            if (safeVersions.length > MAX_VERSIONS) {
+                const versionsToDelete = safeVersions.slice(MAX_VERSIONS).map(v => v.id);
                 if (versionsToDelete.length > 0) {
                     await ImagesRepo.deleteImagesForVersions(versionsToDelete, tx);
                     await tx.delete(schema.noteVersions)
@@ -153,13 +160,14 @@ export async function upsertSyncedNote(noteFullData: any, tx: DbOrTx = getDb()):
 export async function getNotesInFolder(folderId: string | null, includeDeleted = false): Promise<NoteMetadata[]> {
     if (folderId === null) {
         if (includeDeleted) {
-            return await getDb()
+            const result = await getDb()
                 .select()
                 .from(schema.noteMetadata)
                 .where(isNull(schema.noteMetadata.folderId))
                 .all();
+            return safeGetAll<NoteMetadata>(result);
         }
-        return await getDb()
+        const result2 = await getDb()
             .select()
             .from(schema.noteMetadata)
             .where(
@@ -170,17 +178,19 @@ export async function getNotesInFolder(folderId: string | null, includeDeleted =
                 )
             )
             .all();
+        return safeGetAll<NoteMetadata>(result2);
     }
 
     if (includeDeleted) {
-        return await getDb()
+        const result = await getDb()
             .select()
             .from(schema.noteMetadata)
             .where(eq(schema.noteMetadata.folderId, folderId))
             .all();
+        return safeGetAll<NoteMetadata>(result);
     }
 
-    return await getDb()
+    const result3 = await getDb()
         .select()
         .from(schema.noteMetadata)
         .where(
@@ -191,6 +201,7 @@ export async function getNotesInFolder(folderId: string | null, includeDeleted =
             )
         )
         .all();
+    return safeGetAll<NoteMetadata>(result3);
 }
 
 export async function getNoteMetadataById(noteId: string): Promise<NoteMetadata | null> {
@@ -200,7 +211,7 @@ export async function getNoteMetadataById(noteId: string): Promise<NoteMetadata 
         .where(eq(schema.noteMetadata.id, noteId))
         .get();
 
-    return result ?? null;
+    return safeGet<NoteMetadata>(result);
 }
 
 export async function createNoteMetadata(metadata: NoteMetadataInsert): Promise<NoteMetadata> {
@@ -211,6 +222,7 @@ export async function createNoteMetadata(metadata: NoteMetadataInsert): Promise<
             .values(metadata)
             .returning()
             .get();
+        const safeInsertedNote = safeGet<NoteMetadata>(insertedNote);
 
         // B. Insert Empty Content
         await tx.insert(schema.noteContent).values({
@@ -218,7 +230,7 @@ export async function createNoteMetadata(metadata: NoteMetadataInsert): Promise<
             content: '',
         }).run();
 
-        return insertedNote!;
+        return safeInsertedNote!;
     });
 }
 
@@ -229,12 +241,14 @@ export async function updateNoteMetadata(noteId: string, updates: Partial<Omit<N
         .where(eq(schema.noteMetadata.id, noteId))
         .returning()
         .get();
-    return noteMetadata;
+    const safeNoteMetadata = safeGet<NoteMetadata>(noteMetadata);
+    return safeNoteMetadata!;
 }
 
 
 export async function softDeleteNote(noteId: string): Promise<void> {
     const note = await getNoteMetadataById(noteId);
+    console.log(note);
     if (!note) return;
 
     const now = new Date();
@@ -245,6 +259,7 @@ export async function softDeleteNote(noteId: string): Promise<void> {
             deletedAt: now,
             originalFolderId: note.folderId,
             folderId: 'system-trash',
+            isDirty: true,
             updatedAt: now,
         })
         .where(eq(schema.noteMetadata.id, noteId))
@@ -299,7 +314,7 @@ export async function permanentlyDeleteNote(noteId: string): Promise<void> {
 }
 
 export async function getQuickAccessNotes(): Promise<NoteMetadata[]> {
-    return await getDb()
+    const result = await getDb()
         .select()
         .from(schema.noteMetadata)
         .where(
@@ -310,10 +325,11 @@ export async function getQuickAccessNotes(): Promise<NoteMetadata[]> {
             )
         )
         .all();
+    return safeGetAll<NoteMetadata>(result);
 }
 
 export async function getPinnedNotesInFolder(folderId: string): Promise<NoteMetadata[]> {
-    return await getDb()
+    const result = await getDb()
         .select()
         .from(schema.noteMetadata)
         .where(
@@ -325,10 +341,11 @@ export async function getPinnedNotesInFolder(folderId: string): Promise<NoteMeta
             )
         )
         .all();
+    return safeGetAll<NoteMetadata>(result);
 }
 
 export async function getDeletedNotes(): Promise<NoteMetadata[]> {
-    return await getDb()
+    const result = await getDb()
         .select()
         .from(schema.noteMetadata)
         .where(
@@ -338,6 +355,7 @@ export async function getDeletedNotes(): Promise<NoteMetadata[]> {
             )
         )
         .all();
+    return safeGetAll<NoteMetadata>(result);
 }
 
 // ============ CONTENT OPERATIONS (lazy loaded) ============
@@ -349,7 +367,9 @@ export async function getNoteContent(noteId: string): Promise<string> {
         .where(eq(schema.noteContent.id, noteId))
         .get();
 
-    const rawContent = result?.content ?? '';
+    const safeResult = safeGet<{ content: string }>(result);
+
+    const rawContent = safeResult?.content ?? '';
     const normalized = normalizeStoredContent(rawContent);
 
     // Self-heal previously stored rows that lost src attribute.
@@ -394,9 +414,11 @@ export async function updateNoteContent(noteId: string, content: string, preview
             .limit(1)
             .get();
 
+        const safeLatestVersion = safeGet<{ id: string; createdAt: Date }>(latestVersion);
+
         let activeVersionId: string;
 
-        if (!latestVersion || (now.getTime() - latestVersion.createdAt.getTime() > VERSION_THRESHOLD_MS)) {
+        if (!safeLatestVersion || (now.getTime() - safeLatestVersion.createdAt.getTime() > VERSION_THRESHOLD_MS)) {
             // Case A: Create NEW version
             activeVersionId = generateId();
             await tx.insert(schema.noteVersions).values({
@@ -412,8 +434,10 @@ export async function updateNoteContent(noteId: string, content: string, preview
                 .orderBy(desc(schema.noteVersions.createdAt))
                 .all();
 
-            if (versions.length > MAX_VERSIONS) {
-                const versionsToDelete = versions.slice(MAX_VERSIONS).map((v: { id: string }) => v.id);
+            const safeVersions = safeGetAll<{ id: string }>(versions);
+
+            if (safeVersions.length > MAX_VERSIONS) {
+                const versionsToDelete = safeVersions.slice(MAX_VERSIONS).map(v => v.id);
                 if (versionsToDelete.length > 0) {
                     // Detach images from deleted versions
                     await ImagesRepo.deleteImagesForVersions(versionsToDelete, tx);
@@ -425,10 +449,10 @@ export async function updateNoteContent(noteId: string, content: string, preview
             }
         } else {
             // Case B: Update EXISTING latest version (debounce)
-            activeVersionId = latestVersion.id;
+            activeVersionId = safeLatestVersion.id;
             await tx.update(schema.noteVersions)
                 .set({ content: normalizedContent, createdAt: now })
-                .where(eq(schema.noteVersions.id, latestVersion.id))
+                .where(eq(schema.noteVersions.id, safeLatestVersion.id))
                 .run();
         }
 
@@ -459,7 +483,9 @@ export async function normalizeAllStoredContent(): Promise<number> {
             .from(schema.noteContent)
             .all();
 
-        for (const note of notes) {
+        const safeNotes = safeGetAll<{ id: string, content: string }>(notes);
+
+        for (const note of safeNotes) {
             const normalized = normalizeStoredContent(note.content);
             if (normalized === note.content) continue;
 
@@ -475,7 +501,9 @@ export async function normalizeAllStoredContent(): Promise<number> {
             .from(schema.noteVersions)
             .all();
 
-        for (const version of versions) {
+        const safeVersionsList = safeGetAll<{ id: string, content: string }>(versions);
+
+        for (const version of safeVersionsList) {
             const normalized = normalizeStoredContent(version.content);
             if (normalized === version.content) continue;
 
@@ -493,7 +521,7 @@ export async function normalizeAllStoredContent(): Promise<number> {
 // ============ VERSION OPERATIONS ============
 
 export async function getNoteVersions(noteId: string): Promise<{ id: string; createdAt: Date }[]> {
-    return await getDb()
+    const result = await getDb()
         .select({
             id: schema.noteVersions.id,
             createdAt: schema.noteVersions.createdAt
@@ -502,14 +530,17 @@ export async function getNoteVersions(noteId: string): Promise<{ id: string; cre
         .where(eq(schema.noteVersions.noteId, noteId))
         .orderBy(desc(schema.noteVersions.createdAt))
         .all();
+    return safeGetAll<{ id: string; createdAt: Date }>(result);
 }
 
 export async function getNoteVersion(versionId: string) {
-    const version = await getDb()
+    const result = await getDb()
         .select()
         .from(schema.noteVersions)
         .where(eq(schema.noteVersions.id, versionId))
         .get();
+
+    const version = safeGet<any>(result);
 
     if (!version) return version;
 
@@ -539,9 +570,11 @@ export async function deleteAllNoteVersionsExceptLatest(noteId: string): Promise
         .orderBy(desc(schema.noteVersions.createdAt))
         .all();
 
-    if (versions.length <= 1) return;
+    const safeVersions = safeGetAll<{ id: string }>(versions);
 
-    const versionsToDelete = versions.slice(1).map((v: { id: string }) => v.id);
+    if (safeVersions.length <= 1) return;
+
+    const versionsToDelete = safeVersions.slice(1).map(v => v.id);
 
     await getDb().transaction(async (tx: DbOrTx) => {
         await ImagesRepo.deleteImagesForVersions(versionsToDelete, tx);
@@ -557,7 +590,7 @@ export async function deleteAllNoteVersionsExceptLatest(noteId: string): Promise
 }
 
 export async function getRecentNotes(limitCount: number = 5): Promise<NoteMetadata[]> {
-    return await getDb()
+    const result = await getDb()
         .select()
         .from(schema.noteMetadata)
         .where(
@@ -569,6 +602,7 @@ export async function getRecentNotes(limitCount: number = 5): Promise<NoteMetada
         .orderBy(desc(schema.noteMetadata.updatedAt))
         .limit(limitCount)
         .all();
+    return safeGetAll<NoteMetadata>(result);
 }
 
 // ============ BULK OPERATIONS (for Folder Service Cascading) ============
@@ -633,7 +667,9 @@ export async function getNoteIdsByOriginalFolderIds(folderIds: string[], folderD
         ))
         .all();
 
-    return results.map((r: { id: string }) => r.id);
+    const safeResults = safeGetAll<{ id: string }>(results);
+
+    return safeResults.map(r => r.id);
 }
 
 export async function getDeletedNoteIds(tx: DbOrTx = getDb()): Promise<string[]> {
@@ -641,7 +677,8 @@ export async function getDeletedNoteIds(tx: DbOrTx = getDb()): Promise<string[]>
         .from(schema.noteMetadata)
         .where(eq(schema.noteMetadata.isDeleted, true))
         .all();
-    return results.map((r: { id: string }) => r.id);
+    const safeResults = safeGetAll<{ id: string }>(results);
+    return safeResults.map(r => r.id);
 }
 
 export async function getNotesCount(tx: DbOrTx = getDb()): Promise<number> {
@@ -649,5 +686,6 @@ export async function getNotesCount(tx: DbOrTx = getDb()): Promise<number> {
         .from(schema.noteMetadata)
         .where(and(eq(schema.noteMetadata.isDeleted, false), eq(schema.noteMetadata.isPermDeleted, false)))
         .get();
-    return result?.count ?? 0;
+    const safeResult = safeGet<{ count: number }>(result);
+    return safeResult?.count ?? 0;
 }

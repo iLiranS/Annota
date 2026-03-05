@@ -3,6 +3,7 @@ import { getDb } from '../../stores/db.store';
 import type { ImageInsert, ImageRecord } from '../schema';
 import { images, noteVersions, versionImages } from '../schema';
 import type { DbOrTx } from '../types';
+import { safeGet, safeGetAll } from '../utils';
 
 export type { ImageRecord } from '../schema';
 
@@ -10,20 +11,23 @@ export type { ImageRecord } from '../schema';
 
 export async function getImageById(imageId: string, tx: DbOrTx = getDb()): Promise<ImageRecord | null> {
     const result = await tx.select().from(images).where(eq(images.id, imageId)).get();
+    const safeResult = safeGet<ImageRecord>(result);
     // Guard against Drizzle ghost object { createdAt: null } on empty results (Tauri IPC quirk)
-    if (!result || !result.id) return null;
-    return result;
+    if (!safeResult || !safeResult.id) return null;
+    return safeResult;
 }
 
 export async function getImageByHash(hash: string, tx: DbOrTx = getDb()): Promise<ImageRecord | null> {
     const result = await tx.select().from(images).where(eq(images.hash, hash)).get();
-    if (!result || !result.id) return null;
-    return result;
+    const safeResult = safeGet<ImageRecord>(result);
+    if (!safeResult || !safeResult.id) return null;
+    return safeResult;
 }
 
 export async function getImagesByIds(ids: string[], tx: DbOrTx = getDb()): Promise<ImageRecord[]> {
     if (ids.length === 0) return [];
-    return await tx.select().from(images).where(inArray(images.id, ids)).all();
+    const result = await tx.select().from(images).where(inArray(images.id, ids)).all();
+    return safeGetAll<ImageRecord>(result);
 }
 
 export async function insertImage(data: ImageInsert, tx: DbOrTx = getDb()): Promise<ImageRecord> {
@@ -63,17 +67,18 @@ export async function countImageReferences(imageId: string, tx: DbOrTx = getDb()
         .from(versionImages)
         .where(eq(versionImages.imageId, imageId))
         .get();
-    return result?.count ?? 0;
+    const safeResult = safeGet<{ count: number }>(result);
+    return safeResult?.count ?? 0;
 }
 
 // ============ GC OPERATIONS ============
 export async function getImageIdsForVersions(versionIds: string[], tx: DbOrTx = getDb()): Promise<string[]> {
     if (versionIds.length === 0) return [];
-    return await tx.select({ imageId: versionImages.imageId })
+    const result = await tx.select({ imageId: versionImages.imageId })
         .from(versionImages)
         .where(inArray(versionImages.versionId, versionIds))
-        .all()
-        .map((r: { imageId: string }) => r.imageId);
+        .all();
+    return safeGetAll<{ imageId: string }>(result).map(r => r.imageId);
 }
 
 /**
@@ -101,15 +106,16 @@ export async function deleteUnreferencedImages(tx: DbOrTx = getDb(), ignoreTimeB
         .from(images)
         .where(condition)
         .all();
-    if (orphans.length === 0) return [];
+    const safeOrphans = safeGetAll<{ id: string, localPath: string }>(orphans);
+    if (safeOrphans.length === 0) return [];
 
-    const orphanIds = orphans.map((o: { id: string }) => o.id);
+    const orphanIds = safeOrphans.map(o => o.id);
 
     // Delete DB records
     await tx.delete(images).where(inArray(images.id, orphanIds)).run();
 
     // Return paths so caller can delete files
-    return orphans.map((o: { localPath: string }) => o.localPath);
+    return safeOrphans.map(o => o.localPath);
 }
 
 /**
@@ -127,7 +133,8 @@ export async function deleteImagesIfUnreferenced(imageIds: string[], tx: DbOrTx 
             .from(versionImages)
             .where(eq(versionImages.imageId, id))
             .get();
-        if ((countRes?.count ?? 0) === 0) {
+        const safeCountRes = safeGet<{ count: number }>(countRes);
+        if ((safeCountRes?.count ?? 0) === 0) {
             trulyOrphaned.push(id);
         }
     }
@@ -140,38 +147,36 @@ export async function deleteImagesIfUnreferenced(imageIds: string[], tx: DbOrTx 
         .where(inArray(images.id, trulyOrphaned))
         .all();
 
+    const safeFilesToDelete = safeGetAll<{ localPath: string }>(filesToDelete);
+
     // Delete DB records
     await tx.delete(images).where(inArray(images.id, trulyOrphaned)).run();
 
-    return filesToDelete.map((f: { localPath: string }) => f.localPath);
+    return safeFilesToDelete.map(f => f.localPath);
 }
 
-// Helper to safely extract a value from a `.get()` result that may be
 // a ghost object or an array (Tauri SQLite driver quirk).
-function safeGet<T>(row: unknown, key: string, fallback: T): T {
-    const record = Array.isArray(row) ? row[0] : row;
-    if (record && typeof record === 'object' && key in record) {
-        return (record as Record<string, unknown>)[key] as T;
-    }
-    return fallback;
-}
+// Replaced by safeGet in utils.ts
+// function safeGet<T>(row: unknown, key: string, fallback: T): T {
+// ...
+// }
 
 export async function getStorageStats(tx: DbOrTx = getDb()) {
     const imgCountRow = await tx.select({ count: sql<number>`count(*)` }).from(images).get();
-    const totalImages = safeGet(imgCountRow, 'count', 0);
+    const totalImages = safeGet<{ count: number }>(imgCountRow)?.count ?? 0;
 
     const linkCountRow = await tx.select({ count: sql<number>`count(*)` }).from(versionImages).get();
-    const totalLinks = safeGet(linkCountRow, 'count', 0);
+    const totalLinks = safeGet<{ count: number }>(linkCountRow)?.count ?? 0;
 
     const imgSizeRow = await tx.select({ sum: sql<number>`sum(${images.size})` }).from(images).get();
-    const totalImagesSize = safeGet(imgSizeRow, 'sum', 0);
+    const totalImagesSize = safeGet<{ sum: number }>(imgSizeRow)?.sum ?? 0;
 
     // Orphans (ignoring time buffer)
     const orphanRow = await tx.select({ count: sql<number>`count(*)` })
         .from(images)
         .where(sql`${images.id} NOT IN (SELECT ${versionImages.imageId} FROM ${versionImages})`)
         .get();
-    const orphans = safeGet(orphanRow, 'count', 0);
+    const orphans = safeGet<{ count: number }>(orphanRow)?.count ?? 0;
 
     return { totalImages, totalLinks, orphans, totalImagesSize };
 }
@@ -211,7 +216,9 @@ export async function getPendingImagesLinkedToLatestVersions(tx: DbOrTx = getDb(
 
     if (latestVersionsSubquery.length === 0) return [];
 
-    const latestVersionIds = latestVersionsSubquery.map((v: { id: string }) => v.id);
+    const safeLatestVersions = safeGetAll<{ id: string, noteId: string }>(latestVersionsSubquery);
+
+    const latestVersionIds = safeLatestVersions.map(v => v.id);
 
     // 2. Find images linked to those versions that are pending
     const results = await tx
@@ -229,14 +236,16 @@ export async function getPendingImagesLinkedToLatestVersions(tx: DbOrTx = getDb(
         )
         .all();
 
+    const safeResults = safeGetAll<{ image: ImageRecord; versionId: string }>(results);
+
     // 3. Map back to include the noteId for easier insertion into note_images later
     const versionNoteMap = new Map(
-        latestVersionsSubquery.map((v: { id: string; noteId: string }) => [v.id, v.noteId] as const),
+        safeLatestVersions.map(v => [v.id, v.noteId] as const),
     );
 
     // We might have duplicates if an image is in multiple head versions of DIFFERENT notes.
     // We return all occurrences because we need to link each note to the image in the cloud.
-    return results.map((row: { image: ImageRecord; versionId: string }) => ({
+    return safeResults.map(row => ({
         image: row.image,
         noteId: versionNoteMap.get(row.versionId) as string,
     }));
@@ -267,18 +276,20 @@ export async function getLatestVersionImageIdsForNotes(noteIds: string[], tx: Db
         )
         .all();
 
+    const safeLatestVersions = safeGetAll<{ id: string, noteId: string }>(latestVersions);
+
     const imageIdsByNote = new Map<string, Set<string>>();
     for (const noteId of uniqueNoteIds) {
         imageIdsByNote.set(noteId, new Set<string>());
     }
 
-    if (latestVersions.length === 0) {
+    if (safeLatestVersions.length === 0) {
         return uniqueNoteIds.map(noteId => ({ noteId, imageIds: [] }));
     }
 
-    const latestVersionIds = latestVersions.map((v: { id: string }) => v.id);
+    const latestVersionIds = safeLatestVersions.map(v => v.id);
     const versionToNote = new Map(
-        latestVersions.map((v: { id: string; noteId: string }) => [v.id, v.noteId] as const),
+        safeLatestVersions.map(v => [v.id, v.noteId] as const),
     );
 
     const links = await tx
@@ -290,7 +301,9 @@ export async function getLatestVersionImageIdsForNotes(noteIds: string[], tx: Db
         .where(inArray(versionImages.versionId, latestVersionIds))
         .all();
 
-    for (const link of links) {
+    const safeLinks = safeGetAll<{ versionId: string, imageId: string }>(links);
+
+    for (const link of safeLinks) {
         const noteId = versionToNote.get(link.versionId) as string | undefined;
         if (!noteId) continue;
         imageIdsByNote.get(noteId)?.add(link.imageId as string);

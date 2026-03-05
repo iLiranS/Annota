@@ -1,4 +1,3 @@
-import { formatRelativeDate } from "@/lib/date-formatter";
 import {
     sortFolders,
     sortNotes,
@@ -9,14 +8,8 @@ import {
 import { useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
+import { NoteListItem } from '@/components/notes/note-list-item';
 import { Button } from "@/components/ui/button";
-import {
-    ContextMenu,
-    ContextMenuContent,
-    ContextMenuItem,
-    ContextMenuSeparator,
-    ContextMenuTrigger,
-} from "@/components/ui/context-menu";
 import { Ionicons } from "@/components/ui/ionicons";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -142,7 +135,7 @@ export function NotesSidebar({ currentFolderId }: NotesSidebarProps) {
                         count={pinnedNotes.length}
                     >
                         {pinnedNotes.map((note) => (
-                            <NoteItem
+                            <NoteListItem
                                 key={note.id}
                                 note={note}
                                 onClick={() => handleNotePress(note)}
@@ -160,7 +153,7 @@ export function NotesSidebar({ currentFolderId }: NotesSidebarProps) {
                         count={unpinnedNotes.length}
                     >
                         {unpinnedNotes.map((note) => (
-                            <NoteItem
+                            <NoteListItem
                                 key={note.id}
                                 note={note}
                                 onClick={() => handleNotePress(note)}
@@ -174,8 +167,8 @@ export function NotesSidebar({ currentFolderId }: NotesSidebarProps) {
                 {browseFolders.length === 0 && browseNotes.length === 0 && (
                     <div className="flex flex-col items-center gap-2 py-12 text-muted-foreground">
                         <Ionicons name="folder-open" size={40} className="text-border" />
-                        <p className="text-sm font-medium">This folder is empty</p>
-                        <p className="text-xs">Create a note or folder to get started</p>
+                        <p className="text-sm font-medium text-center">This folder is empty</p>
+                        <p className="text-xs text-center">Create a note or folder to get started</p>
                     </div>
                 )}
             </ScrollArea>
@@ -183,81 +176,4 @@ export function NotesSidebar({ currentFolderId }: NotesSidebarProps) {
     );
 }
 
-/* ── Shared sub-components ────────────────────────────────────── */
 
-interface NoteItemProps {
-    note: NoteMetadata;
-    onClick: () => void;
-    onDelete?: () => void;
-    onToggleQuickAccess?: () => void;
-    onTogglePin?: () => void;
-}
-
-function NoteItem({
-    note,
-    onClick,
-    onDelete,
-    onToggleQuickAccess,
-    onTogglePin,
-}: NoteItemProps) {
-    return (
-        <ContextMenu>
-            <ContextMenuTrigger asChild>
-                <button
-                    type="button"
-                    onClick={onClick}
-                    className="group flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-accent"
-                >
-                    <Ionicons name="document-text" size={16} className="text-primary shrink-0" />
-                    <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5">
-                            <p className="truncate font-medium">
-                                {note.title || "Untitled Note"}
-                            </p>
-                        </div>
-                        {note.updatedAt && (
-                            <p className="truncate text-xs text-muted-foreground">
-                                {formatRelativeDate(note.updatedAt)}
-                            </p>
-                        )}
-                    </div>
-                </button>
-            </ContextMenuTrigger>
-
-            <ContextMenuContent className="w-48">
-                {onToggleQuickAccess && (
-                    <ContextMenuItem
-                        onClick={onToggleQuickAccess}
-                        className="gap-2 focus:bg-amber-500/10 focus:text-amber-600"
-                    >
-                        <Ionicons name="star" size={16} />
-                        <span>
-                            {note.isQuickAccess ? "Remove from Starred" : "Star Note"}
-                        </span>
-                    </ContextMenuItem>
-                )}
-                {onTogglePin && (
-                    <ContextMenuItem
-                        onClick={onTogglePin}
-                        className="gap-2 focus:bg-primary/10 focus:text-primary"
-                    >
-                        <Ionicons name="pin" size={16} />
-                        <span>{note.isPinned ? "Unpin Note" : "Pin Note"}</span>
-                    </ContextMenuItem>
-                )}
-                {(onToggleQuickAccess || onTogglePin) && onDelete && (
-                    <ContextMenuSeparator />
-                )}
-                {onDelete && (
-                    <ContextMenuItem
-                        onClick={onDelete}
-                        className="gap-2 text-destructive focus:bg-destructive/10 focus:text-destructive"
-                    >
-                        <Ionicons name="trash-outline" size={16} />
-                        <span>Delete Note</span>
-                    </ContextMenuItem>
-                )}
-            </ContextMenuContent>
-        </ContextMenu>
-    );
-}

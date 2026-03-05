@@ -1,4 +1,6 @@
-import { useTasksStore } from "@annota/core";
+import icon from "@/src/assets/icon.png";
+import { useNotesStore, useTasksStore } from "@annota/core";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { format } from "date-fns";
 import {
     Calendar as CalendarIcon,
@@ -7,12 +9,14 @@ import {
     FolderIcon,
     Link as LinkIcon,
     Plus,
-    Trash2
+    Trash2,
+    X
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate, useParams } from "react-router-dom";
 
+import { LocationPickerModal } from "@/components/location-picker-modal";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -23,6 +27,7 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FieldGroup } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Ionicons } from "@/components/ui/ionicons";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
@@ -46,6 +51,7 @@ export default function TaskDetailDialog() {
     const tasks = useTasksStore((s) => s.tasks);
     const updateTask = useTasksStore((s) => s.updateTask);
     const deleteTask = useTasksStore((s) => s.deleteTask);
+    const { getNoteById, getFolderById } = useNotesStore();
 
     const task = tasks.find((t) => t.id === id);
 
@@ -76,6 +82,7 @@ export default function TaskDetailDialog() {
 
     const [newLink, setNewLink] = useState("");
     const [showLinkInput, setShowLinkInput] = useState(false);
+    const [showFolderPicker, setShowFolderPicker] = useState(false);
 
     // Track the last submitted values to avoid redundant updates
     const lastSubmittedValues = useRef<string>("");
@@ -167,6 +174,9 @@ export default function TaskDetailDialog() {
         handleClose();
     };
 
+    const watchedFolderId = watch("folderId");
+    const linkedFolder = watchedFolderId ? getFolderById(watchedFolderId) : null;
+
     if (!task) {
         return null;
     }
@@ -195,7 +205,7 @@ export default function TaskDetailDialog() {
                                 {...register("title")}
                                 placeholder="Task Title"
                                 maxLength={50}
-                                className="border-none bg-transparent p-2 text-xl font-bold shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/40"
+                                className="border-none bg-muted/40  p-2 text-xl font-bold shadow-none focus-visible:ring-1 placeholder:text-muted-foreground/40"
                             />
                         </div>
 
@@ -306,15 +316,40 @@ export default function TaskDetailDialog() {
                                 <Button
                                     variant="outline"
                                     type="button"
-                                    className="w-full justify-between h-9 text-xs bg-muted/30 border-muted-foreground/10 text-muted-foreground hover:text-foreground"
-                                    onClick={() => alert("Folder picker popup not implemented - as requested placeholder")}
+                                    className={cn(
+                                        "w-full justify-between h-9 text-xs bg-muted/30 border-muted-foreground/10 text-muted-foreground hover:text-foreground",
+                                        watchedFolderId && "text-foreground border-primary/20 bg-primary/5"
+                                    )}
+                                    onClick={() => setShowFolderPicker(true)}
                                 >
                                     <span className="flex items-center gap-2">
-                                        <FolderIcon className="h-3.5 w-3.5 opacity-40" />
-                                        {task.folderId ? "Connected Folder" : "Link Folder"}
+                                        {linkedFolder ? (
+                                            <>
+                                                <Ionicons name={linkedFolder.icon || "folder"} className="h-3.5 w-3.5" style={{ color: linkedFolder.color || colors.primary }} />
+                                                <span className="font-medium">{linkedFolder.name}</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <FolderIcon className="h-3.5 w-3.5 opacity-40" />
+                                                <span>Link Folder</span>
+                                            </>
+                                        )}
                                     </span>
                                     <ChevronDown className="h-3.5 w-3.5 opacity-40" />
                                 </Button>
+                                {watchedFolderId && (
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setValue("folderId", null);
+                                            triggerUpdate();
+                                        }}
+                                        className="mt-1 text-[10px] text-muted-foreground hover:text-destructive flex items-center gap-1 transition-colors"
+                                    >
+                                        <X className="h-3 w-3" /> Remove Link
+                                    </button>
+                                )}
                             </div>
                         </div>
 
@@ -339,19 +374,61 @@ export default function TaskDetailDialog() {
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                {watchedLinks.map((link, index) => (
-                                    <div key={index} className="group flex items-center gap-2 p-2 rounded-md bg-muted/20 border border-transparent hover:border-primary/20 transition-all">
-                                        <LinkIcon className="h-3 w-3 text-muted-foreground" />
-                                        <span className="flex-1 text-[11px] truncate">{link}</span>
-                                        <button
-                                            type="button"
-                                            onClick={() => handleRemoveLink(index)}
-                                            className="opacity-0 group-hover:opacity-100 p-1 rounded-sm hover:bg-destructive/10 text-destructive/70 hover:text-destructive transition-all"
+                                {watchedLinks.map((link, index) => {
+                                    let text = link;
+                                    let isAnnota = false;
+                                    let noteId = "";
+
+                                    if (link.startsWith("annota://note/")) {
+                                        const match = link.match(/^annota:\/\/note\/([a-f0-9\-]+)/i);
+                                        if (match) {
+                                            noteId = match[1];
+                                            const note = getNoteById(noteId);
+                                            text = note ? note.title : "Unknown Note";
+                                            isAnnota = true;
+                                        }
+                                    } else {
+                                        const domainMatch = link.match(/^(?:https?:\/\/)?(?:www\.)?([^\/?#]+)/i);
+                                        if (domainMatch) {
+                                            const domain = domainMatch[1];
+                                            // Strip the TLD (everything after the last dot)
+                                            text = domain.includes(".") ? domain.split(".").slice(0, -1).join(".") : domain;
+                                        }
+                                    }
+
+                                    return (
+                                        <div
+                                            key={index}
+                                            className="group flex items-center gap-2 p-2 rounded-md bg-muted/20 border border-transparent hover:border-primary/20 transition-all cursor-pointer"
+                                            onClick={() => {
+                                                if (isAnnota && noteId) {
+                                                    const note = getNoteById(noteId);
+                                                    const folderId = note?.folderId || "root";
+                                                    navigate(`/notes/${folderId}/${noteId}`);
+                                                } else if (!isAnnota) {
+                                                    void openUrl(link).catch((err) => console.error("Couldn't load page", err));
+                                                }
+                                            }}
                                         >
-                                            <Trash2 className="h-3 w-3" />
-                                        </button>
-                                    </div>
-                                ))}
+                                            {isAnnota ? (
+                                                <img src={icon} className="h-3.5 w-3.5 rounded-sm" alt="Annota" />
+                                            ) : (
+                                                <LinkIcon className="h-3 w-3 text-muted-foreground" />
+                                            )}
+                                            <span className="flex-1 text-[11px] truncate font-medium">{text}</span>
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleRemoveLink(index);
+                                                }}
+                                                className="opacity-0 group-hover:opacity-100 p-1 rounded-sm hover:bg-destructive/10 text-destructive/70 hover:text-destructive transition-all"
+                                            >
+                                                <Trash2 className="h-3 w-3" />
+                                            </button>
+                                        </div>
+                                    );
+                                })}
                             </div>
 
                             {showLinkInput && (
@@ -421,6 +498,16 @@ export default function TaskDetailDialog() {
                     </form>
                 </div>
             </DialogContent>
+
+            <LocationPickerModal
+                open={showFolderPicker}
+                onOpenChange={setShowFolderPicker}
+                selectedParentId={watchedFolderId}
+                onSelect={(folderId) => {
+                    setValue("folderId", folderId);
+                    triggerUpdate();
+                }}
+            />
         </Dialog>
     );
 }

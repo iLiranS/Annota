@@ -108,6 +108,13 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         const folders = await loadAllFolders();
         const notes = await loadAllNotes();
 
+        // Load virtual folders' notes
+        const trashNotes = await NoteService.getNotesInFolder(TRASH_FOLDER_ID, true);
+        const dailyNotes = await NoteService.getNotesInFolder(DAILY_NOTES_FOLDER_ID, true);
+
+        // Push virtual notes into main array
+        notes.push(...trashNotes, ...dailyNotes);
+
         const wasInitialized = get().isInitialized;
         set({ folders, notes, isInitialized: true });
 
@@ -289,6 +296,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
                         isDeleted: true,
                         deletedAt: now,
                         originalFolderId: n.folderId,
+                        folderId: TRASH_FOLDER_ID,
                         updatedAt: now
                     };
                 }
