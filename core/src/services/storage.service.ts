@@ -53,13 +53,34 @@ export const StorageService = {
         const totalTasks = await TasksRepo.getTasksCount(tx);
         const totalFolders = await FoldersRepo.getFoldersCount(tx);
 
-        // Get DB size using SQLite pragmas
+        // Get DB size using standard SQLite pragmas
+        // Get DB size using standard SQLite pragmas
         let notesSize = 0;
         try {
-            const pageSizeRes = await tx.get<{ value: number }>(sql`SELECT page_size as value FROM pragma_page_size`);
-            const pageCountRes = await tx.get<{ value: number }>(sql`SELECT page_count as value FROM pragma_page_count`);
-            if (pageSizeRes && pageCountRes) {
-                notesSize = pageSizeRes.value * pageCountRes.value;
+            const pageSizeRes = await tx.get<any>(sql`PRAGMA page_size`);
+            const pageCountRes = await tx.get<any>(sql`PRAGMA page_count`);
+
+            // 1. Log the raw response to your desktop console to see the exact shape
+            console.log('[StorageService] Raw PRAGMA response:', { pageSizeRes, pageCountRes });
+
+            if (pageSizeRes !== undefined && pageCountRes !== undefined) {
+                // 2. A helper to extract the number no matter how the driver wraps it
+                const extractValue = (res: any): number => {
+                    if (typeof res === 'number') return res; // Driver returned a raw number
+                    if (Array.isArray(res)) return Number(res[0]) || 0; // Driver returned an array
+                    if (res && typeof res === 'object') {
+                        // Check standard keys, then fallback to the very first value in the object
+                        const val = res.page_size ?? res.page_count ?? res.value ?? Object.values(res)[0];
+                        return Number(val) || 0;
+                    }
+                    return 0;
+                };
+
+                const pageSize = extractValue(pageSizeRes);
+                const pageCount = extractValue(pageCountRes);
+
+                notesSize = pageSize * pageCount;
+                console.log('[StorageService] Calculated notesSize:', notesSize);
             }
         } catch (e) {
             console.error('[StorageService] Failed to get DB size:', e);

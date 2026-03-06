@@ -74,7 +74,8 @@
         "zod": "^4.3.6",
         "zustand": "^5.0.10",
         "@annota/core": "workspace:*",
-        "@annota/editor-web": "workspace:*"
+        "@annota/editor-web": "workspace:*",
+        "@annota/tiptap-editor": "workspace:*"
     },
     "devDependencies": {
         "@types/aes-js": "^3.1.4",

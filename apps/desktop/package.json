@@ -12,6 +12,7 @@
   "dependencies": {
     "@annota/core": "workspace:*",
     "@annota/editor-web": "workspace:*",
+    "@annota/tiptap-editor": "workspace:*",
     "@hookform/resolvers": "^5.2.2",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-deep-link": "^2.4.7",

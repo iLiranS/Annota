@@ -1,0 +1,15 @@
+{
+    "name": "@annota/tiptap-editor",
+    "version": "1.0.0",
+    "main": "src/index.ts",
+    "types": "src/index.ts",
+    "react-native": "src/index.native.tsx",
+    "dependencies": {
+        "@annota/core": "workspace:*",
+        "@annota/editor-web": "workspace:*"
+    },
+    "peerDependencies": {
+        "react": "*",
+        "react-native": "*"
+    }
+}

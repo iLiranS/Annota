@@ -8,28 +8,28 @@
 
 /* Begin PBXBuildFile section */
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
-		1DC986758E569DAB7457EE24 /* libPods-Annota.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 1B261CC67DDCA22260C31034 /* libPods-Annota.a */; };
-		25B61BACE14AC85B11C078CD /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A93232983000C5D8DA1822A /* ExpoModulesProvider.swift */; };
+		14C9F72334EB2A6B6A92BCEC /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 306353B36B5DB25EACC4234C /* ExpoModulesProvider.swift */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
+		6883A88A8A449B497D97CA27 /* libPods-AnnotaDev.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 6AFB3BB217E63874D8401F4E /* libPods-AnnotaDev.a */; };
+		6B9A42CA758ADBA7DDBA4B82 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 9A2ACDEFE6CF8809A8E3A785 /* PrivacyInfo.xcprivacy */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
-		C425B8D3533388683D74C4AC /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 60AF4E65F269D1EE9FF85520 /* PrivacyInfo.xcprivacy */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		13B07F961A680F5B00A75B9A /* Annota.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Annota.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = Annota/Images.xcassets; sourceTree = "<group>"; };
-		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = Annota/Info.plist; sourceTree = "<group>"; };
-		1B261CC67DDCA22260C31034 /* libPods-Annota.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Annota.a"; sourceTree = BUILT_PRODUCTS_DIR; };
-		60AF4E65F269D1EE9FF85520 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = Annota/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		8A93232983000C5D8DA1822A /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-Annota/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
-		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = Annota/SplashScreen.storyboard; sourceTree = "<group>"; };
-		B2E20FBC6A9E769991A1361A /* Pods-Annota.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Annota.release.xcconfig"; path = "Target Support Files/Pods-Annota/Pods-Annota.release.xcconfig"; sourceTree = "<group>"; };
+		13B07F961A680F5B00A75B9A /* AnnotaDev.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AnnotaDev.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = AnnotaDev/Images.xcassets; sourceTree = "<group>"; };
+		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = AnnotaDev/Info.plist; sourceTree = "<group>"; };
+		306353B36B5DB25EACC4234C /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-AnnotaDev/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
+		4B394BC607550CC81546DF83 /* Pods-AnnotaDev.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-AnnotaDev.release.xcconfig"; path = "Target Support Files/Pods-AnnotaDev/Pods-AnnotaDev.release.xcconfig"; sourceTree = "<group>"; };
+		6AFB3BB217E63874D8401F4E /* libPods-AnnotaDev.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-AnnotaDev.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		9A2ACDEFE6CF8809A8E3A785 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = AnnotaDev/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = AnnotaDev/SplashScreen.storyboard; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
-		C82AB6D860DFEA7F18508827 /* Pods-Annota.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Annota.debug.xcconfig"; path = "Target Support Files/Pods-Annota/Pods-Annota.debug.xcconfig"; sourceTree = "<group>"; };
+		BEB9556E5FCDCAF8E1F29BBB /* Pods-AnnotaDev.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-AnnotaDev.debug.xcconfig"; path = "Target Support Files/Pods-AnnotaDev/Pods-AnnotaDev.debug.xcconfig"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
-		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = Annota/AppDelegate.swift; sourceTree = "<group>"; };
-		F11748442D0722820044C1D9 /* Annota-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "Annota-Bridging-Header.h"; path = "Annota/Annota-Bridging-Header.h"; sourceTree = "<group>"; };
+		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = AnnotaDev/AppDelegate.swift; sourceTree = "<group>"; };
+		F11748442D0722820044C1D9 /* AnnotaDev-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "AnnotaDev-Bridging-Header.h"; path = "AnnotaDev/AnnotaDev-Bridging-Header.h"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -37,52 +37,50 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				1DC986758E569DAB7457EE24 /* libPods-Annota.a in Frameworks */,
+				6883A88A8A449B497D97CA27 /* libPods-AnnotaDev.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		13B07FAE1A68108700A75B9A /* Annota */ = {
+		13B07FAE1A68108700A75B9A /* AnnotaDev */ = {
 			isa = PBXGroup;
 			children = (
 				F11748412D0307B40044C1D9 /* AppDelegate.swift */,
-				F11748442D0722820044C1D9 /* Annota-Bridging-Header.h */,
+				F11748442D0722820044C1D9 /* AnnotaDev-Bridging-Header.h */,
 				BB2F792B24A3F905000567C9 /* Supporting */,
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				60AF4E65F269D1EE9FF85520 /* PrivacyInfo.xcprivacy */,
+				9A2ACDEFE6CF8809A8E3A785 /* PrivacyInfo.xcprivacy */,
 			);
-			name = Annota;
+			name = AnnotaDev;
 			sourceTree = "<group>";
 		};
 		2D16E6871FA4F8E400B85C8A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				1B261CC67DDCA22260C31034 /* libPods-Annota.a */,
+				6AFB3BB217E63874D8401F4E /* libPods-AnnotaDev.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
-		4CCD283D422A4C19C8D6D353 /* Annota */ = {
+		4A3344D247A7D5E0E6948099 /* ExpoModulesProviders */ = {
 			isa = PBXGroup;
 			children = (
-				8A93232983000C5D8DA1822A /* ExpoModulesProvider.swift */,
+				7CCE62154A757B68F05B0FDC /* AnnotaDev */,
 			);
-			name = Annota;
+			name = ExpoModulesProviders;
 			sourceTree = "<group>";
 		};
-		692E4A436CB7F8D03676C3CF /* Pods */ = {
+		7CCE62154A757B68F05B0FDC /* AnnotaDev */ = {
 			isa = PBXGroup;
 			children = (
-				C82AB6D860DFEA7F18508827 /* Pods-Annota.debug.xcconfig */,
-				B2E20FBC6A9E769991A1361A /* Pods-Annota.release.xcconfig */,
+				306353B36B5DB25EACC4234C /* ExpoModulesProvider.swift */,
 			);
-			name = Pods;
-			path = Pods;
+			name = AnnotaDev;
 			sourceTree = "<group>";
 		};
 		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
@@ -95,12 +93,12 @@
 		83CBB9F61A601CBA00E9B192 = {
 			isa = PBXGroup;
 			children = (
-				13B07FAE1A68108700A75B9A /* Annota */,
+				13B07FAE1A68108700A75B9A /* AnnotaDev */,
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
-				692E4A436CB7F8D03676C3CF /* Pods */,
-				E56E260431B84250A7028C37 /* ExpoModulesProviders */,
+				CFEC72A0677C5480B92353E5 /* Pods */,
+				4A3344D247A7D5E0E6948099 /* ExpoModulesProviders */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -110,7 +108,7 @@
 		83CBBA001A601CBA00E9B192 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				13B07F961A680F5B00A75B9A /* Annota.app */,
+				13B07F961A680F5B00A75B9A /* AnnotaDev.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -121,41 +119,43 @@
 				BB2F792C24A3F905000567C9 /* Expo.plist */,
 			);
 			name = Supporting;
-			path = Annota/Supporting;
+			path = AnnotaDev/Supporting;
 			sourceTree = "<group>";
 		};
-		E56E260431B84250A7028C37 /* ExpoModulesProviders */ = {
+		CFEC72A0677C5480B92353E5 /* Pods */ = {
 			isa = PBXGroup;
 			children = (
-				4CCD283D422A4C19C8D6D353 /* Annota */,
+				BEB9556E5FCDCAF8E1F29BBB /* Pods-AnnotaDev.debug.xcconfig */,
+				4B394BC607550CC81546DF83 /* Pods-AnnotaDev.release.xcconfig */,
 			);
-			name = ExpoModulesProviders;
+			name = Pods;
+			path = Pods;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		13B07F861A680F5B00A75B9A /* Annota */ = {
+		13B07F861A680F5B00A75B9A /* AnnotaDev */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "Annota" */;
+			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "AnnotaDev" */;
 			buildPhases = (
 				08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */,
-				81137EA89C1CEBF18A4D75AA /* [Expo] Configure project */,
+				C873E4D02F343378D45A79DA /* [Expo] Configure project */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
-				A65EFB47105B45C8A50314AE /* [Expo Dev Launcher] Strip Local Network Keys for Release */,
-				2D15F334DFF09C9CAFC98EB8 /* [CP] Embed Pods Frameworks */,
+				D1E35A96E52B4CE2B4F90FCC /* [Expo Dev Launcher] Strip Local Network Keys for Release */,
+				48131E13501DB276CDB38E99 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
-			name = Annota;
-			productName = Annota;
-			productReference = 13B07F961A680F5B00A75B9A /* Annota.app */;
+			name = AnnotaDev;
+			productName = AnnotaDev;
+			productReference = 13B07F961A680F5B00A75B9A /* AnnotaDev.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -173,7 +173,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 83CBB9FA1A601CBA00E9B192 /* Build configuration list for PBXProject "Annota" */;
+			buildConfigurationList = 83CBB9FA1A601CBA00E9B192 /* Build configuration list for PBXProject "AnnotaDev" */;
 			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -186,7 +186,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				13B07F861A680F5B00A75B9A /* Annota */,
+				13B07F861A680F5B00A75B9A /* AnnotaDev */,
 			);
 		};
 /* End PBXProject section */
@@ -199,7 +199,7 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
-				C425B8D3533388683D74C4AC /* PrivacyInfo.xcprivacy in Resources */,
+				6B9A42CA758ADBA7DDBA4B82 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -238,20 +238,20 @@
 			outputFileListPaths = (
 			);
 			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-Annota-checkManifestLockResult.txt",
+				"$(DERIVED_FILE_DIR)/Pods-AnnotaDev-checkManifestLockResult.txt",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
-		2D15F334DFF09C9CAFC98EB8 /* [CP] Embed Pods Frameworks */ = {
+		48131E13501DB276CDB38E99 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			inputPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-Annota/Pods-Annota-frameworks.sh",
+				"${PODS_ROOT}/Target Support Files/Pods-AnnotaDev/Pods-AnnotaDev-frameworks.sh",
 				"${PODS_XCFRAMEWORKS_BUILD_DIR}/QuickCrypto/OpenSSL.framework/OpenSSL",
 				"${PODS_XCFRAMEWORKS_BUILD_DIR}/React-Core-prebuilt/React.framework/React",
 				"${PODS_XCFRAMEWORKS_BUILD_DIR}/ReactNativeDependencies/ReactNativeDependencies.framework/ReactNativeDependencies",
@@ -266,7 +266,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Annota/Pods-Annota-frameworks.sh\"\n";
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-AnnotaDev/Pods-AnnotaDev-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
 		800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */ = {
@@ -275,7 +275,7 @@
 			files = (
 			);
 			inputPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-Annota/Pods-Annota-resources.sh",
+				"${PODS_ROOT}/Target Support Files/Pods-AnnotaDev/Pods-AnnotaDev-resources.sh",
 				"${PODS_CONFIGURATION_BUILD_DIR}/EXApplication/ExpoApplication_privacy.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/EXConstants/EXConstants.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/EXConstants/ExpoConstants_privacy.bundle",
@@ -308,10 +308,10 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Annota/Pods-Annota-resources.sh\"\n";
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-AnnotaDev/Pods-AnnotaDev-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		81137EA89C1CEBF18A4D75AA /* [Expo] Configure project */ = {
+		C873E4D02F343378D45A79DA /* [Expo] Configure project */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
@@ -322,20 +322,20 @@
 			inputPaths = (
 				"$(SRCROOT)/.xcode.env",
 				"$(SRCROOT)/.xcode.env.local",
-				"$(SRCROOT)/Annota/Annota.entitlements",
-				"$(SRCROOT)/Pods/Target Support Files/Pods-Annota/expo-configure-project.sh",
+				"$(SRCROOT)/AnnotaDev/AnnotaDev.entitlements",
+				"$(SRCROOT)/Pods/Target Support Files/Pods-AnnotaDev/expo-configure-project.sh",
 			);
 			name = "[Expo] Configure project";
 			outputFileListPaths = (
 			);
 			outputPaths = (
-				"$(SRCROOT)/Pods/Target Support Files/Pods-Annota/ExpoModulesProvider.swift",
+				"$(SRCROOT)/Pods/Target Support Files/Pods-AnnotaDev/ExpoModulesProvider.swift",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-Annota/expo-configure-project.sh\"\n";
+			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-AnnotaDev/expo-configure-project.sh\"\n";
 		};
-		A65EFB47105B45C8A50314AE /* [Expo Dev Launcher] Strip Local Network Keys for Release */ = {
+		D1E35A96E52B4CE2B4F90FCC /* [Expo Dev Launcher] Strip Local Network Keys for Release */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -357,7 +357,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
-				25B61BACE14AC85B11C078CD /* ExpoModulesProvider.swift in Sources */,
+				14C9F72334EB2A6B6A92BCEC /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -366,18 +366,18 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = C82AB6D860DFEA7F18508827 /* Pods-Annota.debug.xcconfig */;
+			baseConfigurationReference = BEB9556E5FCDCAF8E1F29BBB /* Pods-AnnotaDev.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_ENTITLEMENTS = Annota/Annota.entitlements;
+				CODE_SIGN_ENTITLEMENTS = AnnotaDev/AnnotaDev.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_BITCODE = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
 					"FB_SONARKIT_ENABLED=1",
 				);
-				INFOPLIST_FILE = Annota/Info.plist;
+				INFOPLIST_FILE = AnnotaDev/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -390,9 +390,9 @@
 					"-lc++",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
-				PRODUCT_BUNDLE_IDENTIFIER = com.anonymous.annota;
-				PRODUCT_NAME = Annota;
-				SWIFT_OBJC_BRIDGING_HEADER = "Annota/Annota-Bridging-Header.h";
+				PRODUCT_BUNDLE_IDENTIFIER = com.anonymous.annota.dev;
+				PRODUCT_NAME = AnnotaDev;
+				SWIFT_OBJC_BRIDGING_HEADER = "AnnotaDev/AnnotaDev-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -405,13 +405,13 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = B2E20FBC6A9E769991A1361A /* Pods-Annota.release.xcconfig */;
+			baseConfigurationReference = 4B394BC607550CC81546DF83 /* Pods-AnnotaDev.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_ENTITLEMENTS = Annota/Annota.entitlements;
+				CODE_SIGN_ENTITLEMENTS = AnnotaDev/AnnotaDev.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
-				INFOPLIST_FILE = Annota/Info.plist;
+				INFOPLIST_FILE = AnnotaDev/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -424,9 +424,9 @@
 					"-lc++",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
-				PRODUCT_BUNDLE_IDENTIFIER = com.anonymous.annota;
-				PRODUCT_NAME = Annota;
-				SWIFT_OBJC_BRIDGING_HEADER = "Annota/Annota-Bridging-Header.h";
+				PRODUCT_BUNDLE_IDENTIFIER = com.anonymous.annota.dev;
+				PRODUCT_NAME = AnnotaDev;
+				SWIFT_OBJC_BRIDGING_HEADER = "AnnotaDev/AnnotaDev-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VERSIONING_SYSTEM = "apple-generic";
@@ -561,7 +561,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "Annota" */ = {
+		13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "AnnotaDev" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				13B07F941A680F5B00A75B9A /* Debug */,
@@ -570,7 +570,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		83CBB9FA1A601CBA00E9B192 /* Build configuration list for PBXProject "Annota" */ = {
+		83CBB9FA1A601CBA00E9B192 /* Build configuration list for PBXProject "AnnotaDev" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				83CBBA201A601CBA00E9B192 /* Debug */,

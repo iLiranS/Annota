@@ -236,7 +236,7 @@ export default function MasterKeyPage() {
                             {importWords.map((word, index) => (
                                 <div
                                     key={index}
-                                    className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-1"
+                                    className="flex items-center gap-2 rounded-lg bg-card border border-border px-2 py-1"
                                 >
                                     <span className="w-4 text-xs text-muted-foreground">
                                         {index + 1}
@@ -244,7 +244,7 @@ export default function MasterKeyPage() {
                                     <Input
                                         value={word}
                                         onChange={(e) => handleWordChange(e.target.value, index)}
-                                        className="h-8 border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0"
+                                        className="h-8 border-0 bg-transparent dark:bg-transparent p-0 text-sm shadow-none focus-visible:ring-0"
                                         placeholder="word"
                                         autoComplete="off"
                                         autoCapitalize="off"

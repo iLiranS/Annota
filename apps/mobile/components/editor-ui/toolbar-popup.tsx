@@ -1,5 +1,5 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import React from 'react';
+import { useTheme } from '@react-navigation/native';
 import {
     Modal,
     StyleSheet,
@@ -13,7 +13,6 @@ import { CodeLanguageSelector } from './popups/code-language-selector';
 import { ColorSelector } from './popups/color-selector';
 import { HeadingSelector } from './popups/heading-selector';
 
-import { useAppTheme } from '@/hooks/use-app-theme';
 import { ImageInput } from './popups/image-input';
 import { LinkInput } from './popups/link-input';
 import { MathInput } from './popups/math-input';
@@ -32,7 +31,7 @@ import {
     TablePopupProps,
     ToolbarPopupProps,
     YouTubePopupProps
-} from './types';
+} from '@annota/tiptap-editor';
 
 // ============================================================================
 // Block Action Menu (Modular)
@@ -68,7 +67,7 @@ const getBlockActions = (blockType: string): BlockAction[] => {
 };
 
 function BlockActionMenu({ blockType, onAction, onClose }: { blockType: string, onAction: (action: string) => void, onClose: () => void }) {
-    const { colors } = useAppTheme();
+    const { colors } = useTheme();
     const actions = getBlockActions(blockType);
 
     return (
@@ -129,7 +128,7 @@ const RESIZE_OPTIONS = [
 ];
 
 function ImageActionMenu({ onAction, onClose }: { onAction: (action: string, data?: any) => void, onClose: () => void }) {
-    const { colors } = useAppTheme();
+    const { colors } = useTheme();
 
     return (
         <View>
@@ -209,7 +208,7 @@ function ImageActionMenu({ onAction, onClose }: { onAction: (action: string, dat
 
 export function ToolbarPopup(props: ToolbarPopupProps) {
     const { visible, onClose, type, isLoading } = props;
-    const { colors } = useAppTheme();
+    const { colors } = useTheme();
 
     if (!visible || !type) return null;
 

@@ -113,11 +113,13 @@ function FolderTreeItem({
                         pressed && { opacity: 0.7 },
                     ]}
                 >
-                    <Ionicons
-                        name={(folder.icon as keyof typeof Ionicons.glyphMap) || 'folder'}
-                        size={18}
-                        color={folder.color}
-                    />
+                    <View style={[styles.folderIconWrapper, { backgroundColor: folder.color + '20' }]}>
+                        <Ionicons
+                            name={(folder.icon as keyof typeof Ionicons.glyphMap) || 'folder'}
+                            size={16}
+                            color={folder.color}
+                        />
+                    </View>
                     <Text style={[styles.folderItemText, { color: colors.text }]} numberOfLines={1}>
                         {folder.name}
                     </Text>
@@ -552,6 +554,22 @@ const styles = StyleSheet.create({
         gap: 10,
         flex: 1,
         marginRight: 8,
+    },
+    folderIconWrapper: {
+        width: 24,
+        height: 24,
+        borderRadius: 6,
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 1,
+        },
+        shadowOpacity: 0.1,
+        shadowRadius: 1,
+        elevation: 1,
     },
     folderItemText: {
         fontSize: 16,

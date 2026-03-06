@@ -238,6 +238,32 @@ export function createDesktopAdapters(): PlatformAdapters {
           },
         };
       },
+      toImageUrl: async (path: string) => {
+        try {
+          // 1. Read the raw bytes. If Tauri blocks the absolute path, this will throw.
+          const fileBytes = await readFile(path);
+
+          // 2. Map the correct mime type
+          const mime = path.endsWith('.webp') ? 'image/webp' :
+            path.endsWith('.png') ? 'image/png' : 'image/jpeg';
+
+          // 3. Use the native browser engine to handle the base64 conversion.
+          // This is lightning fast and handles massive files without crashing.
+          const base64Uri = await new Promise<string>((resolve, reject) => {
+            const blob = new Blob([fileBytes], { type: mime });
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob); // Directly outputs "data:image/jpeg;base64,..."
+          });
+
+          return base64Uri;
+        } catch (error) {
+          // If you see this in your terminal/console, Tauri is blocking the path.
+          console.error("Desktop Adapter: Failed to load image at path:", path, error);
+          return ""; // Return empty to prevent malformed src injection
+        }
+      }
     },
     image: {
       resizeAndCompress: async (sourcePath, opts) => {

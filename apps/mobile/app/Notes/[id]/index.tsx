@@ -1,8 +1,10 @@
+import { ImageGallery } from '@/components/editor-ui/image-gallery';
+import { EditorToolbar } from '@/components/editor-ui/toolbar';
 import NoteHeaderMenu from '@/components/notes/note-header-menu';
 import { SearchOverlay } from '@/components/notes/search-overlay';
-import TipTapEditor, { TipTapEditorRef } from '@/components/tiptap-editor';
 import { HapticPressable } from '@/components/ui/haptic-pressable';
 import { generateTitle, useNotesStore, useSettingsStore } from '@annota/core';
+import TipTapEditor, { TipTapEditorRef } from '@annota/tiptap-editor';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
 import * as ExpoClipboard from 'expo-clipboard';
@@ -373,6 +375,8 @@ export default function NoteEditor() {
                         autofocus={shouldAutofocus}
                         onGalleryVisibilityChange={setIsGalleryOpen}
                         onCopyBlockLink={handleCopyBlockLink}
+                        renderToolbar={(props: any) => <EditorToolbar {...props} />}
+                        renderImageGallery={(props: any) => <ImageGallery {...props} />}
                     />
                 </View>
             )}

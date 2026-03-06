@@ -6,6 +6,7 @@ import { defineConfig, loadEnv } from "vite";
 const host = process.env.TAURI_DEV_HOST;
 
 // https://vite.dev/config/
+// @ts-ignore
 export default defineConfig(async ({ mode }) => {
   const env = loadEnv(mode, __dirname, "");
 
@@ -20,9 +21,13 @@ export default defineConfig(async ({ mode }) => {
       },
     },
     resolve: {
+      extensions: [
+        '.desktop.tsx', '.desktop.ts', '.desktop.jsx', '.desktop.js',
+        '.mjs', '.js', '.mts', '.ts', '.jsx', '.tsx', '.json'
+      ],
       alias: {
         "@": path.resolve(__dirname, "."),
-        "@annota/editor-web": path.resolve(__dirname, "../../editor-web"),
+        "@annota/editor-web": path.resolve(__dirname, "../../packages/editor-web"),
       },
     },
 

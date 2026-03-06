@@ -38,6 +38,7 @@ export interface PlatformAdapters {
         writeBytes: (path: string, bytes: Uint8Array) => Promise<void>;
         getSize: (path: string) => Promise<number>;
         downloadToTemp: (url: string) => Promise<{ path: string; cleanup: () => Promise<void> }>;
+        toImageUrl: (path: string) => Promise<string>;
     };
 
     image: {

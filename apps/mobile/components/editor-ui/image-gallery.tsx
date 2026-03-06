@@ -22,7 +22,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ImageInfo } from './types';
+import { ImageInfo } from '@annota/tiptap-editor';
 
 // ============================================================================
 // GallerySlide — a single image positioned by absolute offset

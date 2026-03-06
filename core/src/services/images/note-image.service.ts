@@ -7,7 +7,6 @@ import {
     deleteImageFile,
     downloadRemoteImage,
     getFileSize,
-    readAsBase64DataUri,
     resizeAndCompress,
     saveToLocalStorage
 } from './image.service';
@@ -99,9 +98,9 @@ export async function resolveImageSources(
     await Promise.all(
         images.map(async (img) => {
             try {
-                result[img.id] = await readAsBase64DataUri(img.localPath);
+                result[img.id] = await getPlatformAdapters().fileSystem.toImageUrl(img.localPath);
             } catch (err) {
-                console.warn(`Failed to read image ${img.id}:`, err);
+                console.warn(`Failed to resolve image ${img.id}:`, err);
                 // Image file may have been deleted — skip it
             }
         }),

@@ -1,4 +1,19 @@
 import { HeadingLevel } from '@annota/core/constants/editor';
+import React from 'react';
+
+export interface ToolbarRenderProps {
+    editorState: EditorState;
+    sendCommand: (cmd: string, params?: Record<string, unknown>) => void;
+    toolbarHeight: number;
+    onDismissKeyboard: () => void;
+    activePopup: PopupType;
+    onActivePopupChange: (type: PopupType) => void;
+    onPopupStateChange: (isOpen: boolean) => void;
+    onInsertImage: (source: 'url' | 'library' | 'camera', value?: string) => Promise<boolean>;
+    currentLatex: string | null;
+    blockData: any;
+    onInsertMath: () => void;
+}
 
 export interface TipTapEditorRef {
     getContent: () => Promise<string>;
@@ -30,6 +45,22 @@ export interface TipTapEditorProps {
     editable?: boolean;
     /** Callback for when a block link is copied */
     onCopyBlockLink?: (blockId: string) => void;
+    /** Render prop for customizing the toolbar and its popup menus */
+    renderToolbar?: (props: ToolbarRenderProps) => React.ReactNode;
+    /** Render prop for full-screen image gallery and zoom */
+    renderImageGallery?: (props: {
+        images: ImageInfo[];
+        initialIndex: number;
+        visible: boolean;
+        onClose: () => void;
+    }) => React.ReactNode;
+    /** Theme adaptation */
+    isDark?: boolean;
+    colors?: {
+        primary: string;
+        background: string;
+        text: string;
+    };
 }
 
 export interface EditorState {

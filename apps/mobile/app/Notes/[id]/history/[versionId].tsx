@@ -1,6 +1,7 @@
-import TipTapEditor from '@/components/tiptap-editor';
+import { ImageGallery } from '@/components/editor-ui/image-gallery';
 import { HapticPressable } from '@/components/ui/haptic-pressable';
 import { useNotesStore } from '@annota/core';
+import TipTapEditor from '@annota/tiptap-editor';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
 import { format } from 'date-fns';
@@ -131,6 +132,7 @@ export default function VersionDetail() {
                         initialContent={version.content}
                         editable={false} // Read-only
                         placeholder=""
+                        renderImageGallery={(props: any) => <ImageGallery {...props} />}
                     />
                 </View>
             ) : (

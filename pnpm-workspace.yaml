@@ -1,5 +1,5 @@
 nodeLinker: hoisted
 packages:
   - "apps/*"
+  - "packages/*"
   - "core"
-  - "editor-web"

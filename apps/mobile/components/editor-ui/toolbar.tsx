@@ -7,7 +7,7 @@ import { HeadingLevel } from '@annota/core';
 import { ImageService } from '@annota/core/platform';
 import { ToolbarButton } from './toolbar-button';
 import { ToolbarPopup } from './toolbar-popup';
-import type { EditorState, PopupType } from './types';
+import type { EditorState, PopupType } from '@annota/tiptap-editor';
 
 interface EditorToolbarProps {
     editorState: EditorState;

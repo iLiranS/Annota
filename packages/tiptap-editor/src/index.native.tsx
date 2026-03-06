@@ -1,20 +1,18 @@
-import { useAppTheme } from '@/hooks/use-app-theme';
 import { useSettingsStore } from '@annota/core';
 import { NoteImageService } from '@annota/core/platform';
 import editorHtml from '@annota/editor-web/dist/editor-html';
 import { useKeyboard } from '@react-native-community/hooks';
+import { useTheme } from '@react-navigation/native';
 import * as ExpoClipboard from 'expo-clipboard';
 import { Directory, File as ExpoFile, Paths } from 'expo-file-system';
 import * as LegacyFileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { Keyboard, Linking, Modal, Platform, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Keyboard, Linking, Platform, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
-import { ImageGallery } from './image-gallery';
-import { EditorToolbar } from './toolbar';
 import { EditorState, initialEditorState, PopupType, TipTapEditorProps, TipTapEditorRef } from './types';
 
 const getByteSize = (str: string) => new Blob([str]).size;
@@ -71,8 +69,21 @@ function parsePastedImageData(payload: string): { base64: string; extension: str
 }
 
 const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
-    ({ initialContent = '', onContentChange, placeholder = 'Start typing...', autofocus = false, onSearchResults, contentPaddingTop = 0, onGalleryVisibilityChange, editable = true, noteId, onCopyBlockLink }, ref) => {
-        const { colors, dark } = useAppTheme();
+    ({
+        initialContent = '',
+        onContentChange,
+        placeholder = 'Start typing...',
+        autofocus = false,
+        onSearchResults,
+        contentPaddingTop = 0,
+        onGalleryVisibilityChange,
+        editable = true,
+        noteId,
+        onCopyBlockLink,
+        renderToolbar,
+        renderImageGallery
+    }, ref) => {
+        const { colors, dark } = useTheme();
         const { editor: editorSettings } = useSettingsStore();
         const webViewRef = useRef<WebView>(null);
         const scrollViewRef = useRef<ScrollView>(null);
@@ -705,7 +716,7 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
                     />
                 </ScrollView>
 
-                {showToolbar && (
+                {showToolbar && renderToolbar && (
                     <View
                         style={[
                             styles.toolbarContainer,
@@ -719,56 +730,41 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
                             },
                         ]}
                     >
-                        <EditorToolbar
-                            editorState={editorState}
-                            onDismissKeyboard={handleDismissKeyboard}
-                            activePopup={activePopup}
-                            onActivePopupChange={(type) => {
+                        {renderToolbar({
+                            editorState,
+                            sendCommand,
+                            toolbarHeight,
+                            onDismissKeyboard: handleDismissKeyboard,
+                            activePopup,
+                            onActivePopupChange: (type) => {
                                 setActivePopup(type);
                                 handlePopupStateChange(!!type);
-                            }}
-                            onPopupStateChange={handlePopupStateChange}
-                            onCommand={sendCommand}
-                            blockData={tempBlockData}
-                            currentLatex={currentLatex}
-                            onInsertMath={() => {
+                            },
+                            onPopupStateChange: handlePopupStateChange,
+                            onInsertImage: handleInsertImage,
+                            currentLatex,
+                            blockData: tempBlockData,
+                            onInsertMath: () => {
                                 setCurrentLatex(null);
                                 setActivePopup('math');
                                 setIsPopupOpen(true);
-                            }}
-                            onInsertImage={handleInsertImage}
-                        />
+                            }
+                        })}
                     </View>
                 )}
 
 
-                {/* Full Screen Image Gallery — rendered in a Modal to avoid WebView touch interception */}
-                <Modal
-                    visible={isGalleryVisible}
-                    transparent
-                    animationType="none"
-                    statusBarTranslucent
-                    supportedOrientations={['portrait', 'landscape', 'landscape-left', 'landscape-right']}
-                    onRequestClose={() => {
+                {/* Full Screen Image Gallery — conditionally rendered by the host app via render props */}
+                {renderImageGallery?.({
+                    images: galleryImages,
+                    initialIndex: galleryCurrentIndex,
+                    visible: isGalleryVisible,
+                    onClose: () => {
                         setIsGalleryVisible(false);
                         isGalleryVisibleRef.current = false;
                         onGalleryVisibilityChange?.(false);
-                    }}
-                >
-                    <ImageGallery
-                        visible={isGalleryVisible}
-                        images={galleryImages}
-                        initialIndex={galleryCurrentIndex}
-                        onClose={() => {
-                            setIsGalleryVisible(false);
-                            isGalleryVisibleRef.current = false;
-                            onGalleryVisibilityChange?.(false);
-                        }}
-                        onNavigate={(index) => {
-                            setGalleryCurrentIndex(index);
-                        }}
-                    />
-                </Modal>
+                    }
+                })}
             </View >
         );
     }

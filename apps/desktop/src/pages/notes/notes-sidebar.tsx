@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Ionicons } from "@/components/ui/ionicons";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { useAppTheme } from "@/hooks/use-app-theme";
 import { NotesCollapsibleGroup } from "./components/notes-collapsible-group";
 
 interface NotesSidebarProps {
@@ -25,6 +26,7 @@ interface NotesSidebarProps {
 export function NotesSidebar({ currentFolderId }: NotesSidebarProps) {
     const navigate = useNavigate();
     const [, setSearchParams] = useSearchParams();
+    const { colors } = useAppTheme();
 
     const {
         notes,
@@ -99,11 +101,13 @@ export function NotesSidebar({ currentFolderId }: NotesSidebarProps) {
         <div className="flex h-full w-[220px] min-w-[220px] flex-col border-r border-border bg-card/50">
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3">
-                <h2 className="text-lg font-bold tracking-tight">{headerTitle}</h2>
+                <div className="flex items-center gap-2">
+                    <div style={{ backgroundColor: (currentFolder?.color || colors.primary) + "30" }} className="flex h-6 w-6 shrink-0 items-center justify-center rounded transition-colors shadow-sm">
+                        <Ionicons name={currentFolder ? currentFolder.icon : "documents"} color={currentFolder?.color || colors.primary} size={20} />
+                    </div>
+                    <h2 className="text-lg font-bold tracking-tight">{headerTitle}</h2>
+                </div>
                 <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <Ionicons name="search" size={16} />
-                    </Button>
                     <Button
                         variant="ghost"
                         size="icon"

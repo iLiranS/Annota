@@ -7,7 +7,7 @@
                 "./*"
             ],
             "@annota/editor-web/*": [
-                "../../editor-web/*"
+                "../../packages/editor-web/*"
             ]
         }
     },

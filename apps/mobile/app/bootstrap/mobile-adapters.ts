@@ -128,6 +128,12 @@ export function createMobileAdapters(): PlatformAdapters {
                     cleanup: async () => { try { downloaded.delete(); } catch { } }
                 };
             },
+            toImageUrl: async (path: string) => {
+                const file = new ExpoFile(path);
+                const base64 = await file.base64();
+                const mime = path.endsWith('.webp') ? 'image/webp' : 'image/jpeg';
+                return `data:${mime};base64,${base64}`;
+            },
         },
         image: {
             resizeAndCompress: async (sourcePath: string, opts: { maxDimension: number; format: 'jpeg' | 'webp'; quality: number }) => {

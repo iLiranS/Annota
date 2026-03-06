@@ -248,8 +248,9 @@ if (content) resizeObserver.observe(content);
 // Notify Ready
 sendMessage({ type: 'ready' });
 
-// Auto-init for debugging in browser (no bridge)
-if (!window.ReactNativeWebView) {
+// Auto-init for debugging in browser (no bridge and not in iframe)
+const inIframe = window !== window.parent;
+if (!window.ReactNativeWebView && !inIframe) {
     loadingEl.textContent = 'No Bridge detected. Auto-init...';
     console.log('No WebView bridge found, auto-initializing defaults...');
     setTimeout(() => {

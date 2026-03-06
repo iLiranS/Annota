@@ -59,8 +59,33 @@ body {
     font-size: var(--editor-font-size);
     line-height: var(--editor-line-height);
     -webkit-text-size-adjust: 100%;
-    overflow: hidden !important;
-    -webkit-overflow-scrolling: auto;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 10px;
+    border: 2px solid var(--bg-color);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-color);
+    opacity: 0.8;
+}
+
+/* Firefox support */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) transparent;
 }
 
 #editor-container {
