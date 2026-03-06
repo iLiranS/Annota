@@ -4,7 +4,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { cn } from "@/lib/utils";
 import { Folder, NoteMetadata, useNotesStore } from "@annota/core";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { FolderListItem } from "../notes/folder-list-item";
 import { NoteListItem } from "../notes/note-list-item";
@@ -25,6 +25,7 @@ export function NotesSearchModal({ open, onOpenChange }: NotesSearchModalProps) 
     const [searchQuery, setSearchQuery] = useState("");
     const [searchScope, setSearchScope] = useState<"current" | "all">("all");
     const [selectedIndex, setSelectedIndex] = useState(0);
+    const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
 
     // Current folder detection
     const folderIdFromParam = searchParams.get("folderId");
@@ -81,13 +82,26 @@ export function NotesSearchModal({ open, onOpenChange }: NotesSearchModalProps) 
             setSearchQuery("");
             setSearchScope("all");
             setSelectedIndex(0);
+            itemRefs.current = [];
         }
     }, [open]);
 
     // Reset selection when search changes
     useEffect(() => {
         setSelectedIndex(0);
+        itemRefs.current = [];
     }, [searchQuery, searchScope]);
+
+    // Scroll selected item into view
+    useEffect(() => {
+        const item = itemRefs.current[selectedIndex];
+        if (item) {
+            item.scrollIntoView({
+                block: "nearest",
+                behavior: "auto"
+            });
+        }
+    }, [selectedIndex]);
 
     const handleClose = () => onOpenChange(false);
 
@@ -135,11 +149,11 @@ export function NotesSearchModal({ open, onOpenChange }: NotesSearchModalProps) 
 
         return (
             <div
-                className="flex items-center gap-1.5 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-tight shadow-sm transition-all border"
+                className="flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-tight border shrink-0"
                 style={{
-                    backgroundColor: folder?.color ? `${folder.color}15` : `${colors.primary}10`,
+                    backgroundColor: folder?.color ? `${folder.color}20` : `${colors.primary}15`,
                     color: folder?.color || colors.primary,
-                    borderColor: folder?.color ? `${folder.color}30` : `${colors.primary}30`
+                    borderColor: folder?.color ? `${folder.color}40` : `${colors.primary}40`
                 }}
             >
                 <Ionicons name={folder?.icon ? (folder.icon as any) : "folder"} size={10} />
@@ -152,55 +166,59 @@ export function NotesSearchModal({ open, onOpenChange }: NotesSearchModalProps) 
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent
                 showCloseButton={false}
-                className="max-w-2xl p-0 overflow-hidden flex flex-col h-[600px] max-h-[85vh] top-[10%] translate-y-0 gap-0 border-primary/20 shadow-[0_0_50px_-12px_rgba(0,0,0,0.5)]"
+                className="max-w-2xl p-0 overflow-hidden flex flex-col h-[500px] max-h-[85vh] top-[10%] translate-y-0 gap-0 border-primary/20 shadow-[0_0_50px_-12px_rgba(0,0,0,0.5)]"
             >
-                {/* Header */}
-                <div className="flex items-center gap-3 px-4 pt-4 pb-2  bg-accent/20 shrink-0">
+                {/* Header Section */}
+                <div className="flex items-center gap-4 px-5 py-3 bg-background border-b shrink-0 relative z-20">
+                    <Ionicons name="search" size={20} className="text-muted-foreground/30" />
                     <Input
                         autoFocus
-                        placeholder={searchScope === "all" ? "Search notes & folders..." : "Search in " + (currentFolder?.name || "this folder") + "..."}
+                        placeholder={"Search in " + (searchScope === "current" && currentFolder ? currentFolder.name : "all folders") + "..."}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="flex-1 border-none bg-transparent shadow-none focus-visible:ring-0 text-lg px-2 h-auto placeholder:text-muted-foreground/30 font-medium"
+                        className="flex-1  border-none bg-transparent shadow-none focus-visible:ring-0 text-lg h-auto px-2 placeholder:text-muted-foreground/30 font-semibold"
                     />
-                    <div onClick={handleClose} className="px-1.5 cursor-pointer py-0.5 rounded border border-border bg-background text-[10px] font-black text-muted-foreground/60 shadow-xs hover:border-primary/30 transition-colors">
-                        ESC
-                    </div>
+                    {isFolderContext && (
+                        <div className="flex bg-muted/30 p-1 rounded-xl border border-border/50 shadow-sm shrink-0 items-center">
+                            <button
+                                onClick={() => setSearchScope("current")}
+                                className={cn(
+                                    "px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg flex items-center gap-2",
+                                    searchScope === "current"
+                                        ? "bg-background shadow-md text-foreground ring-1 ring-border/20 scale-[1.02]"
+                                        : "text-muted-foreground/40 hover:text-foreground/70 hover:bg-muted/20"
+                                )}
+                            >
+                                <Ionicons
+                                    name={currentFolder?.icon || "folder"}
+                                    size={12}
+                                    style={{ color: searchScope === "current" ? (currentFolder?.color || colors.primary) : undefined }}
+                                />
+                                <span className="max-w-[100px] truncate">{currentFolder?.name || "Folder"}</span>
+                            </button>
+                            <button
+                                onClick={() => setSearchScope("all")}
+                                className={cn(
+                                    "px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg flex items-center gap-2 ml-1",
+                                    searchScope === "all"
+                                        ? "bg-background shadow-md text-foreground ring-1 ring-border/20 scale-[1.02]"
+                                        : "text-muted-foreground/40 hover:text-foreground/70 hover:bg-muted/20"
+                                )}
+                            >
+                                <Ionicons
+                                    name="copy"
+                                    size={12}
+                                    style={{ color: searchScope === "all" ? colors.primary : undefined }}
+                                />
+                                All
+                            </button>
+                        </div>
+                    )}
                 </div>
 
-                {/* Scope Toggle */}
-                {isFolderContext && (
-                    <div className="flex items-center gap-1 p-1 bg-muted/20 border-b pb-2 shrink-0">
-                        <button
-                            onClick={() => setSearchScope("current")}
-                            className={cn(
-                                "flex-1 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-md transition-all flex items-center justify-center gap-2",
-                                searchScope === "current"
-                                    ? "bg-background shadow-md text-foreground ring-1 ring-primary/20"
-                                    : "text-muted-foreground/60 hover:text-foreground hover:bg-muted/50"
-                            )}
-                        >
-                            <Ionicons name={currentFolder?.icon || "folder-outline"} size={12} style={{ color: currentFolder?.color || colors.primary }} />
-                            {currentFolder?.name || "Current Folder"}
-                        </button>
-                        <button
-                            onClick={() => setSearchScope("all")}
-                            className={cn(
-                                "flex-1 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-md transition-all flex items-center justify-center gap-2",
-                                searchScope === "all"
-                                    ? "bg-background shadow-md text-foreground ring-1 ring-primary/20"
-                                    : "text-muted-foreground/60 hover:text-foreground hover:bg-muted/50"
-                            )}
-                        >
-                            <Ionicons name="copy-outline" size={12} style={{ color: searchScope === "all" ? colors.primary : undefined }} />
-                            All Folders
-                        </button>
-                    </div>
-                )}
-
                 {/* Results Area */}
-                <ScrollArea className="flex-1 min-h-0">
-                    <div className="p-2 space-y-4">
+                <ScrollArea className="flex-1 min-h-0 bg-muted/40">
+                    <div className="p-4 space-y-4">
                         {results.length > 0 && (
                             <div className="space-y-4">
                                 {filteredNotes.length > 0 && (
@@ -215,16 +233,10 @@ export function NotesSearchModal({ open, onOpenChange }: NotesSearchModalProps) 
                                                 return (
                                                     <div
                                                         key={note.id}
+                                                        ref={el => { itemRefs.current[i] = el; }}
                                                         className="relative group/result"
                                                         onMouseEnter={() => setSelectedIndex(i)}
                                                     >
-                                                        <div
-                                                            className={cn(
-                                                                "absolute inset-y-0 left-0 w-[2px]  z-10",
-                                                                isSelected ? "opacity-100" : "opacity-0"
-                                                            )}
-                                                            style={{ backgroundColor: colors.primary }}
-                                                        />
                                                         <NoteListItem
                                                             note={note}
                                                             onClick={() => onNoteClick(note)}
@@ -233,13 +245,11 @@ export function NotesSearchModal({ open, onOpenChange }: NotesSearchModalProps) 
                                                             suffix={(searchScope === "all" || !isFolderContext) && (
                                                                 <FolderBadge folderId={note.folderId} />
                                                             )}
-                                                            className={cn(
-                                                                " border border-transparent",
-                                                                isSelected ? "shadow-sm" : ""
-                                                            )}
+                                                            className="border border-transparent"
                                                             style={isSelected ? {
-                                                                backgroundColor: `${colors.primary}10`,
-                                                                borderColor: `${colors.primary}20`
+                                                                backgroundColor: `${colors.primary}25`,
+                                                                borderColor: `${colors.primary}40`,
+                                                                boxShadow: `inset 0 0 20px -10px ${colors.primary}40`
                                                             } : undefined}
                                                         />
                                                     </div>
@@ -262,28 +272,20 @@ export function NotesSearchModal({ open, onOpenChange }: NotesSearchModalProps) 
                                                 return (
                                                     <div
                                                         key={folder.id}
+                                                        ref={el => { itemRefs.current[globalIndex] = el; }}
                                                         className="relative group/result"
                                                         onMouseEnter={() => setSelectedIndex(globalIndex)}
                                                     >
-                                                        <div
-                                                            className={cn(
-                                                                "absolute inset-y-0 left-0 w-[2px] z-10",
-                                                                isSelected ? "opacity-100" : "opacity-0"
-                                                            )}
-                                                            style={{ backgroundColor: colors.primary }}
-                                                        />
                                                         <FolderListItem
                                                             folder={folder}
                                                             onClick={() => onFolderClick(folder)}
                                                             onEdit={() => { }}
                                                             isActive={isSelected}
-                                                            className={cn(
-                                                                "border border-transparent",
-                                                                isSelected ? "shadow-sm" : ""
-                                                            )}
+                                                            className="border border-transparent"
                                                             style={isSelected ? {
-                                                                backgroundColor: `${colors.primary}10`,
-                                                                borderColor: `${colors.primary}20`
+                                                                backgroundColor: `${colors.primary}25`,
+                                                                borderColor: `${colors.primary}40`,
+                                                                boxShadow: `inset 0 0 20px -10px ${colors.primary}40`
                                                             } : undefined}
                                                         />
                                                     </div>
@@ -296,22 +298,21 @@ export function NotesSearchModal({ open, onOpenChange }: NotesSearchModalProps) 
                         )}
 
                         {searchQuery && filteredNotes.length === 0 && filteredFolders.length === 0 && (
-                            <div className="flex flex-col items-center justify-center py-20 text-center animate-in fade-in zoom-in-95 duration-300">
-                                <div className="p-4 rounded-full bg-muted/50 mb-4 ring-1 ring-border">
-                                    <Ionicons name="search-outline" size={32} className="text-muted-foreground/30" />
+                            <div className="flex flex-col items-center justify-center py-20 text-center">
+                                <div className="p-4 rounded-full bg-muted/40 mb-4 ring-1 ring-border/50">
+                                    <Ionicons name="search-outline" size={32} className="text-muted-foreground/20" />
                                 </div>
-                                <p className="text-sm font-semibold text-foreground">No results found</p>
-                                <p className="text-xs text-muted-foreground/50 mt-1 italic">
-                                    " {searchQuery} " didn't match anything
+                                <p className="text-sm font-bold text-foreground opacity-80">No results found</p>
+                                <p className="text-[11px] text-muted-foreground/40 mt-1 italic font-medium">
+                                    " {searchQuery} "
                                 </p>
                             </div>
                         )}
 
                         {!searchQuery && (
-                            <div className="flex flex-col items-center justify-center py-20 text-center opacity-30 select-none">
-                                <Ionicons name="sparkles-outline" size={48} className="mb-4 text-primary animate-pulse" />
-                                <p className="text-sm font-black uppercase tracking-widest italic">Search Anything</p>
-                                <p className="text-[10px] uppercase tracking-[0.2em] mt-3 font-bold group"> Search across all notes & folders</p>
+                            <div className="flex flex-col items-center justify-center py-24 text-center opacity-20 select-none">
+                                <Ionicons name="sparkles-outline" size={42} className="mb-4 text-primary" />
+                                <p className="text-[10px] font-black uppercase tracking-[0.25em] italic">Search your notes & folders</p>
                             </div>
                         )}
                     </div>
@@ -321,17 +322,17 @@ export function NotesSearchModal({ open, onOpenChange }: NotesSearchModalProps) 
                 <div className="px-4 py-2 border-t bg-muted/20 flex items-center justify-between text-[10px] text-muted-foreground font-bold uppercase tracking-wider shrink-0">
                     <div className="flex items-center gap-4">
                         <div className="flex items-center gap-1.5 group">
-                            <span className="px-1 py-0.5 rounded border border-border bg-background shadow-xs text-foreground group-hover:border-primary/30 transition-colors">↵</span>
+                            <span className="px-1 py-0.5 rounded border border-border bg-background shadow-xs text-foreground group-hover:border-primary/30">↵</span>
                             <span className="opacity-60">to select</span>
                         </div>
                         <div className="flex items-center gap-1.5 group">
-                            <span className="px-1 py-0.5 rounded border border-border bg-background shadow-xs text-foreground group-hover:border-primary/30 transition-colors">↑↓</span>
+                            <span className="px-1 py-0.5 rounded border border-border bg-background shadow-xs text-foreground group-hover:border-primary/30">↑↓</span>
                             <span className="opacity-60">to navigate</span>
                         </div>
                     </div>
                     {isFolderContext && (
                         <div className="flex items-center gap-1.5 group">
-                            <span className="px-1 py-0.5 rounded border border-border bg-background shadow-xs text-foreground group-hover:border-primary/30 transition-colors">⌘ K</span>
+                            <span className="px-1 py-0.5 rounded border border-border bg-background shadow-xs text-foreground group-hover:border-primary/30">⌘ K</span>
                             <span className="opacity-60">to toggle scope</span>
                         </div>
                     )}

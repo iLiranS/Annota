@@ -50,6 +50,7 @@ export default function TrashPage() {
             "UPDATED_LAST",
         ) as Folder[];
     }, [folders, currentFolderId]);
+    console.log("deletedFolders", deletedFolders);
 
     const deletedNotes = useMemo(() => {
         const noteList = getNotesInFolder(currentFolderId, true);
@@ -58,6 +59,7 @@ export default function TrashPage() {
             "UPDATED_LAST",
         );
     }, [notes, currentFolderId]);
+
 
     const isEmpty = deletedFolders.length === 0 && deletedNotes.length === 0;
 

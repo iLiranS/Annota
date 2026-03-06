@@ -120,12 +120,19 @@ export const useNotesStore = create<NotesState>((set, get) => ({
             return result;
         };
 
-        const folders = await loadAllFolders();
+        const baseFolders = await loadAllFolders();
         const baseNotes = await loadAllNotes(); // Pulls the regular notes
 
         // We MUST pull virtual folders because "system-trash" isn't caught by loadAllNotes
+        const trashFolders = await FolderService.getFoldersInFolder(TRASH_FOLDER_ID, true);
         const trashNotes = await NoteService.getNotesInFolder(TRASH_FOLDER_ID, true);
         const dailyNotes = await NoteService.getNotesInFolder(DAILY_NOTES_FOLDER_ID, true);
+
+        // Deduplicate Folders
+        const allFetchedFolders = [...baseFolders, ...trashFolders];
+        const uniqueFoldersMap = new Map();
+        allFetchedFolders.forEach((f) => uniqueFoldersMap.set(f.id, f));
+        const folders = Array.from(uniqueFoldersMap.values());
 
         // Combine everything
         const allFetchedNotes = [...baseNotes, ...trashNotes, ...dailyNotes];
@@ -459,15 +466,30 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     },
 
     getNotesInFolder: (folderId, includeDeleted = false) => {
-        const { notes } = get();
+        const { notes, folders } = get();
         const sortType = get().getSortType(folderId);
 
+        // Helper to safely compare Date objects, strings, or numbers
+        const getTs = (d: any) => d ? new Date(d).getTime() : 0;
+
         const filtered = notes.filter((note) => {
-            // 1. Virtual Folder Override: TRASH
+            // 1. Browsing the Trash Root
             if (folderId === TRASH_FOLDER_ID) {
-                // If we are looking at the trash, ignore the note's original folderId.
-                // Just return it if it's marked as deleted.
-                return note.isDeleted;
+                if (!note.isDeleted) return false;
+
+                // Show if originally at the root
+                if (!note.originalFolderId) return true;
+
+                const origFolder = folders.find(f => f.id === note.originalFolderId);
+
+                // Show if original folder is hard-deleted or still active
+                if (!origFolder || !origFolder.isDeleted) return true;
+
+                // 🚨 NEW: Timestamp Comparison
+                // If note was deleted strictly BEFORE the folder, it's an independent deletion.
+                const noteDeletedTs = getTs(note.deletedAt);
+                const folderDeletedTs = getTs(origFolder.deletedAt);
+                return noteDeletedTs < folderDeletedTs;
             }
 
             // 2. Virtual Folder Override: DAILY NOTES
@@ -475,7 +497,25 @@ export const useNotesStore = create<NotesState>((set, get) => ({
                 return note.folderId === DAILY_NOTES_FOLDER_ID && (includeDeleted ? true : !note.isDeleted);
             }
 
-            // 3. Standard Folders
+            // 3. Browsing INSIDE a deleted folder
+            if (note.isDeleted) {
+                if (!includeDeleted) return false;
+                if (note.originalFolderId !== folderId) return false;
+
+                // 🚨 NEW: Hide independent deletions from inside the reconstructed folder
+                const origFolder = folders.find(f => f.id === folderId);
+                if (origFolder && origFolder.isDeleted) {
+                    const noteDeletedTs = getTs(note.deletedAt);
+                    const folderDeletedTs = getTs(origFolder.deletedAt);
+
+                    // If note was deleted before the folder, it doesn't belong here anymore
+                    if (noteDeletedTs < folderDeletedTs) return false;
+                }
+
+                return true;
+            }
+
+            // 4. Standard active notes
             const folderMatch = note.folderId === folderId;
             const deletedMatch = includeDeleted ? true : !note.isDeleted;
             return folderMatch && deletedMatch;
@@ -488,7 +528,39 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         const { folders } = get();
         const sortType = get().getSortType(parentId);
 
+        const getTs = (d: any) => d ? new Date(d).getTime() : 0;
+
         const filtered = folders.filter((folder) => {
+            // 1. Browsing the Trash Root
+            if (parentId === TRASH_FOLDER_ID) {
+                if (!folder.isDeleted) return false;
+                if (!folder.originalParentId) return true;
+
+                const origParent = folders.find(f => f.id === folder.originalParentId);
+                if (!origParent || !origParent.isDeleted) return true;
+
+                // Timestamp check for nested folders
+                const folderDeletedTs = getTs(folder.deletedAt);
+                const parentDeletedTs = getTs(origParent.deletedAt);
+                return folderDeletedTs < parentDeletedTs;
+            }
+
+            // 2. Browsing INSIDE a deleted folder
+            if (folder.isDeleted) {
+                if (!includeDeleted) return false;
+                if (folder.originalParentId !== parentId) return false;
+
+                const origParent = folders.find(f => f.id === parentId);
+                if (origParent && origParent.isDeleted) {
+                    const folderDeletedTs = getTs(folder.deletedAt);
+                    const parentDeletedTs = getTs(origParent.deletedAt);
+                    if (folderDeletedTs < parentDeletedTs) return false;
+                }
+
+                return true;
+            }
+
+            // 3. Standard active folders
             const parentMatch = folder.parentId === parentId;
             const deletedMatch = includeDeleted ? true : !folder.isDeleted;
             return parentMatch && deletedMatch;

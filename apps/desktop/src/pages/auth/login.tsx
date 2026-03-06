@@ -122,7 +122,7 @@ export default function LoginPage() {
         <Card className="border-border/50 shadow-xl overflow-hidden backdrop-blur-sm bg-card/95">
             <CardHeader className="flex flex-col items-center space-y-4 pb-4">
                 {/* Refined indigo glow with pulse animation */}
-                <div className="absolute h-[275px] w-[500px] -top-[150px] blur-2xl  rounded-full bg-[#6366F1]/20 " />
+                <div className="absolute h-[275px] w-[500px] -top-[150px] blur-2xl  rounded-full bg-[#6366F1]/10 " />
 
                 <img
                     src={logo}
