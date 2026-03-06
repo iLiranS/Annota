@@ -16,16 +16,18 @@ import {
 import { useCallback, useState } from "react";
 import { LocationPickerModal } from "../location-picker-modal";
 
-interface NoteListItemProps {
+import { Slot } from "@radix-ui/react-slot";
+
+interface NoteListItemProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     note: NoteMetadata;
-    onClick: () => void;
     onDelete?: () => void;
     showDescription?: boolean;
     showTimestamp?: boolean;
     className?: string;
     suffix?: React.ReactNode;
     isActive?: boolean;
-    style?: React.CSSProperties;
+    asChild?: boolean;
+    children?: React.ReactNode;
 }
 
 export function NoteListItem({
@@ -38,6 +40,9 @@ export function NoteListItem({
     suffix,
     isActive,
     style,
+    asChild,
+    children,
+    ...props
 }: NoteListItemProps) {
     const { updateNoteMetadata } = useNotesStore();
     const { general } = useSettingsStore();
@@ -57,55 +62,64 @@ export function NoteListItem({
         await updateNoteMetadata(note.id, { folderId: targetFolderId });
     }, [note.id, updateNoteMetadata]);
 
+    const Comp = asChild ? Slot : "button";
+
     return (
         <>
             <ContextMenu>
                 <ContextMenuTrigger asChild>
-                    <button
+                    <Comp
                         type="button"
                         onClick={onClick}
                         className={cn(
-                            "group/note flex w-full flex-col gap-0.5 rounded-lg px-3 py-2 text-left transition-all hover:bg-accent",
-                            isCompact ? "py-1.5" : "py-2",
+                            !asChild && "group/note flex w-full flex-col gap-0.5 rounded-lg px-3 py-2 text-left transition-all hover:bg-accent",
+                            !asChild && isCompact ? "py-1.5" : "py-2",
                             isActive && "bg-accent",
                             className
                         )}
                         style={style}
+                        {...props}
                     >
-                        <div className="flex w-full items-center justify-between gap-2.5">
-                            <div className="flex min-w-0 items-center gap-2">
-                                <Ionicons
-                                    name="document-text"
-                                    size={16}
-                                    className={cn(
-                                        "text-primary shrink-0 transition-opacity",
-                                        isActive ? "opacity-100" : "opacity-80 group-hover/note:opacity-100"
-                                    )}
-                                />
-                                <p className={cn(
-                                    "truncate text-sm font-medium transition-colors",
-                                    isActive ? "text-primary" : "text-foreground/90 group-hover/note:text-primary"
-                                )}>
-                                    {note.title || "Untitled Note"}
-                                </p>
-                            </div>
+                        {asChild ? (
+                            children
+                        ) : (
+                            <>
+                                <div className="flex w-full items-center justify-between gap-2.5">
+                                    <div className="flex min-w-0 items-center gap-2">
+                                        <Ionicons
+                                            name="document-text"
+                                            size={16}
+                                            className={cn(
+                                                "text-primary shrink-0 transition-opacity",
+                                                isActive ? "opacity-100" : "opacity-80 group-hover/note:opacity-100"
+                                            )}
+                                        />
+                                        <p className={cn(
+                                            "truncate text-sm font-medium transition-colors",
+                                            isActive ? "text-primary" : "text-foreground/90 group-hover/note:text-primary"
+                                        )}>
+                                            {note.title || "Untitled Note"}
+                                        </p>
+                                    </div>
 
-                            <div className="flex items-center gap-2 shrink-0">
-                                {suffix}
-                                {showTimestamp && note.updatedAt && (
-                                    <span className="text-[11px] text-muted-foreground/60">
-                                        {formatRelativeDate(note.updatedAt)}
-                                    </span>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        {suffix}
+                                        {showTimestamp && note.updatedAt && (
+                                            <span className="text-[11px] text-muted-foreground/60">
+                                                {formatRelativeDate(note.updatedAt)}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {!isCompact && showDescription && note.preview && (
+                                    <p className="line-clamp-1 w-full pl-6 text-[11px] text-muted-foreground/50 leading-tight">
+                                        {note.preview}
+                                    </p>
                                 )}
-                            </div>
-                        </div>
-
-                        {!isCompact && showDescription && note.preview && (
-                            <p className="line-clamp-1 w-full pl-6 text-[11px] text-muted-foreground/50 leading-tight">
-                                {note.preview}
-                            </p>
+                            </>
                         )}
-                    </button>
+                    </Comp>
                 </ContextMenuTrigger>
 
                 <ContextMenuContent className="w-52">

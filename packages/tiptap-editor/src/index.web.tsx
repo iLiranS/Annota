@@ -64,6 +64,9 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
                             document.addEventListener('mousedown', () => {
                                 window.parent.postMessage({ type: 'interact' }, '*');
                             }, { capture: true });
+                            document.addEventListener('mouseenter', () => {
+                                window.parent.postMessage({ type: 'interact' }, '*');
+                            }, { capture: true });
                         </script>
                     `);
                     doc.close();
@@ -153,7 +156,7 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
                     data = event.data;
                 }
 
-                console.log("Desktop Bridge Received Event Type:", data?.type);
+
 
                 switch (data.type) {
                     case 'ready':
@@ -178,7 +181,6 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
                         const imageIds = extractImageIds(initialContent);
                         if (imageIds.length > 0) {
                             NoteImageService.resolveImageSources(imageIds).then((imageMap: any) => {
-                                console.log("INITIAL LOAD: NoteImageService found:", imageMap);
                                 if (Object.keys(imageMap).length > 0) {
                                     sendCommand('resolveImages', { imageMap });
                                 }
@@ -204,16 +206,9 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
                         if (Array.isArray(data.imageIds) && data.imageIds.length > 0) {
                             (async () => {
                                 try {
-                                    console.log("1. TipTap is asking for Image IDs:", data.imageIds);
-
                                     const imageMap = await NoteImageService.resolveImageSources(data.imageIds);
-
-                                    console.log("2. NoteImageService found:", imageMap);
-
                                     if (Object.keys(imageMap).length > 0) {
                                         sendCommand('resolveImages', { imageMap });
-                                    } else {
-                                        console.warn("3. ABORTED: NoteImageService returned empty map for IDs:", data.imageIds);
                                     }
                                 } catch (err) {
                                     console.error('Failed to resolve image IDs on desktop:', err);
@@ -222,17 +217,34 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
                         }
                         break;
                     case 'interact':
-                        // Dispatch simulated events on the parent document to trigger Radix UI's outside click dismissal.
+                        // Dispatch simulated events on document.body instead of document
+                        // document.body has .getAttribute(), preventing the Tauri drag-region script crash.
                         const eventProps = { bubbles: true, cancelable: true };
-                        document.dispatchEvent(new PointerEvent('pointerdown', eventProps));
-                        document.dispatchEvent(new MouseEvent('mousedown', eventProps));
-                        document.dispatchEvent(new FocusEvent('focusin', eventProps));
 
-                        // If any element in the parent window currently has focus (like a button in the toolbar)
+                        document.body.dispatchEvent(new PointerEvent('pointerdown', eventProps));
+                        document.body.dispatchEvent(new MouseEvent('mousedown', eventProps));
+                        document.body.dispatchEvent(new FocusEvent('focusin', eventProps));
+
+                        // Dispatch a pointermove event at -1, -1 to clear any hover states
+                        document.body.dispatchEvent(new PointerEvent('pointermove', {
+                            ...eventProps,
+                            clientX: -1,
+                            clientY: -1,
+                        }));
+
+                        // Forcefully trigger pointerleave on any tooltip triggers to ensure they close
+                        document.querySelectorAll('[data-slot="tooltip-trigger"]').forEach((el) => {
+                            el.dispatchEvent(new PointerEvent('pointerleave', { ...eventProps }));
+                        });
+
+                        // If any element in the parent window currently has focus 
                         // blurring it can help trigger the closing of menus.
                         if (document.activeElement instanceof HTMLElement && document.activeElement !== document.body) {
                             document.activeElement.blur();
                         }
+                        break;
+                    case 'searchResults':
+                        onSearchResults?.(data.count, data.currentIndex);
                         break;
                     case 'imageSelected':
                         setGalleryImages(data.images || []);
@@ -274,6 +286,13 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
             }
         }, [dark, colors, isReady, sendCommand, contentPaddingTop, editorSettings]);
 
+        // Support dynamic content updates (e.g. for version history)
+        useEffect(() => {
+            if (isReady && initialContent !== undefined) {
+                sendCommand('setContent', { content: initialContent });
+            }
+        }, [initialContent, isReady, sendCommand]);
+
         useEffect(() => {
             window.addEventListener('message', handleMessage);
             return () => window.removeEventListener('message', handleMessage);
@@ -284,6 +303,7 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
                 {renderToolbar?.({
                     editorState,
                     sendCommand,
+                    onCommand: sendCommand,
                     toolbarHeight: 0, // Not used much on desktop yet
                     onDismissKeyboard: () => { },
                     activePopup: null,

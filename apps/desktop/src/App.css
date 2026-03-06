@@ -4,6 +4,12 @@
 
 @custom-variant dark (&:is(.dark *));
 
+html,
+body {
+  overscroll-behavior: none;
+  overflow: hidden;
+}
+
 :root {
   font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: #132238;

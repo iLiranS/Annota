@@ -14,18 +14,31 @@ import { FolderListItem } from '@/components/notes/folder-list-item';
 import { NoteListItem } from '@/components/notes/note-list-item';
 import { Button } from "@/components/ui/button";
 import { Ionicons } from "@/components/ui/ionicons";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import { useAppTheme } from "@/hooks/use-app-theme";
-import { NotesCollapsibleGroup } from "./components/notes-collapsible-group";
+
+import {
+    SidebarContent,
+    SidebarGroup,
+    SidebarGroupContent,
+    SidebarGroupLabel,
+    SidebarHeader,
+    SidebarMenu,
+    SidebarMenuButton,
+    SidebarMenuItem,
+    SidebarRail,
+    useSidebar
+} from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
+import { useParams } from "react-router-dom";
 
 interface NotesSidebarProps {
-    currentFolderId?: string;
+    className?: string;
 }
 
-export function NotesSidebar({ currentFolderId }: NotesSidebarProps) {
+export function NotesSidebar({ className }: NotesSidebarProps) {
     const navigate = useNavigate();
-    const [, setSearchParams] = useSearchParams();
+    const { folderId: routeFolderId } = useParams();
+    const [searchParams, setSearchParams] = useSearchParams();
     const { colors } = useAppTheme();
 
     const {
@@ -39,6 +52,12 @@ export function NotesSidebar({ currentFolderId }: NotesSidebarProps) {
         deleteNote,
         deleteFolder,
     } = useNotesStore();
+
+    // Location awareness: prioritize folderId from route path over search params
+    const currentFolderId = useMemo(() => {
+        if (routeFolderId && routeFolderId !== "root") return routeFolderId;
+        return searchParams.get("folderId") || undefined;
+    }, [routeFolderId, searchParams]);
 
     const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -96,86 +115,131 @@ export function NotesSidebar({ currentFolderId }: NotesSidebarProps) {
     }, [deleteFolder, folderToDelete]);
 
     const headerTitle = currentFolder ? currentFolder.name : "Notes";
+    const { open } = useSidebar();
 
     return (
-        <div className="flex h-full w-[220px] min-w-[220px] flex-col border-r border-border bg-card/50">
+        <aside
+            data-state={open ? "expanded" : "collapsed"}
+            className={cn(
+                "group/sidebar relative flex h-full flex-col border-r border-border bg-card/50 transition-[width,opacity] duration-300 ease-in-out",
+                !open ? "w-0 border-none opacity-0 invisible" : "w-(--sidebar-width) opacity-100 visible",
+                className
+            )}
+        >
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3">
-                <div className="flex items-center gap-2">
-                    <div style={{ backgroundColor: (currentFolder?.color || colors.primary) + "30" }} className="flex h-6 w-6 shrink-0 items-center justify-center rounded transition-colors shadow-sm">
-                        <Ionicons name={currentFolder ? currentFolder.icon : "documents"} color={currentFolder?.color || colors.primary} size={20} />
+            <SidebarHeader className="h-12 border-b border-border/50 px-2 py-0 justify-center overflow-hidden">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 overflow-hidden">
+                        <div style={{ backgroundColor: (currentFolder?.color || colors.primary) + "30" }} className="flex h-6 w-6 shrink-0 items-center justify-center rounded transition-colors shadow-sm">
+                            <Ionicons name={currentFolder ? currentFolder.icon : "documents"} color={currentFolder?.color || colors.primary} size={16} />
+                        </div>
+                        <h2 className="text-sm font-bold tracking-tight truncate">{headerTitle}</h2>
                     </div>
-                    <h2 className="text-lg font-bold tracking-tight">{headerTitle}</h2>
+                    <div className="flex items-center gap-1">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 shrink-0"
+                            onClick={handleCreateNote}
+                        >
+                            <Ionicons name="add" size={18} />
+                        </Button>
+                    </div>
                 </div>
-                <div className="flex gap-1">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={handleCreateNote}
-                    >
-                        <Ionicons name="add" size={18} />
-                    </Button>
-                </div>
-            </div>
-
-            <Separator />
+            </SidebarHeader>
 
             {/* Content */}
-            <ScrollArea className="flex-1 px-2 py-2">
+            <SidebarContent className="px-2 py-2">
                 {/* Folders section */}
                 {browseFolders.length > 0 && (
-                    <NotesCollapsibleGroup
-                        title="Folders"
-                        icon="folder"
-                        count={browseFolders.length}
-                    >
-                        {browseFolders.map((folder) => (
-                            <FolderListItem
-                                key={folder.id}
-                                folder={folder}
-                                onClick={() => handleFolderPress(folder.id)}
-                                onEdit={handleEditFolder}
-                                onDelete={setFolderToDelete}
-                            />
-                        ))}
-                    </NotesCollapsibleGroup>
+                    <SidebarGroup className="px-0">
+                        <SidebarGroupLabel className="px-2 h-7 mb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+                            Folders
+                        </SidebarGroupLabel>
+                        <SidebarGroupContent>
+                            <SidebarMenu>
+                                {browseFolders.map((folder) => (
+                                    <SidebarMenuItem key={folder.id}>
+                                        <FolderListItem
+                                            asChild
+                                            folder={folder}
+                                            onEdit={handleEditFolder}
+                                            onDelete={setFolderToDelete}
+                                        >
+                                            <SidebarMenuButton
+                                                onClick={() => handleFolderPress(folder.id)}
+                                                isActive={currentFolderId === folder.id}
+                                            >
+                                                <Ionicons name={folder.icon || "folder"} size={14} color={folder.color} className="shrink-0" />
+                                                <span className="truncate">{folder.name}</span>
+                                            </SidebarMenuButton>
+                                        </FolderListItem>
+                                    </SidebarMenuItem>
+                                ))}
+                            </SidebarMenu>
+                        </SidebarGroupContent>
+                    </SidebarGroup>
                 )}
 
                 {/* Pinned section */}
                 {pinnedNotes.length > 0 && (
-                    <NotesCollapsibleGroup
-                        title="Pinned"
-                        icon="pin"
-                        count={pinnedNotes.length}
-                    >
-                        {pinnedNotes.map((note) => (
-                            <NoteListItem
-                                key={note.id}
-                                note={note}
-                                onClick={() => handleNotePress(note)}
-                                onDelete={() => deleteNote(note.id)}
-                            />
-                        ))}
-                    </NotesCollapsibleGroup>
+                    <SidebarGroup className="px-0">
+                        <SidebarGroupLabel className="px-2 h-7 mb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+                            Pinned
+                        </SidebarGroupLabel>
+                        <SidebarGroupContent>
+                            <SidebarMenu>
+                                {pinnedNotes.map((note) => (
+                                    <SidebarMenuItem key={note.id}>
+                                        <NoteListItem
+                                            asChild
+                                            note={note}
+                                            onDelete={() => deleteNote(note.id)}
+                                        >
+                                            <SidebarMenuButton
+                                                onClick={() => handleNotePress(note)}
+                                                className="group/note"
+                                            >
+                                                <Ionicons name="document-text" size={14} className="text-muted-foreground/40 group-hover/note:text-primary transition-colors shrink-0" />
+                                                <span className="truncate">{note.title || "Untitled"}</span>
+                                                <Ionicons name="pin" size={10} className="ml-auto text-primary/60" />
+                                            </SidebarMenuButton>
+                                        </NoteListItem>
+                                    </SidebarMenuItem>
+                                ))}
+                            </SidebarMenu>
+                        </SidebarGroupContent>
+                    </SidebarGroup>
                 )}
 
                 {/* Notes section */}
                 {unpinnedNotes.length > 0 && (
-                    <NotesCollapsibleGroup
-                        title="Notes"
-                        icon="document-text"
-                        count={unpinnedNotes.length}
-                    >
-                        {unpinnedNotes.map((note) => (
-                            <NoteListItem
-                                key={note.id}
-                                note={note}
-                                onClick={() => handleNotePress(note)}
-                                onDelete={() => deleteNote(note.id)}
-                            />
-                        ))}
-                    </NotesCollapsibleGroup>
+                    <SidebarGroup className="px-0">
+                        <SidebarGroupLabel className="px-2 h-7 mb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+                            Notes
+                        </SidebarGroupLabel>
+                        <SidebarGroupContent>
+                            <SidebarMenu>
+                                {unpinnedNotes.map((note) => (
+                                    <SidebarMenuItem key={note.id}>
+                                        <NoteListItem
+                                            asChild
+                                            note={note}
+                                            onDelete={() => deleteNote(note.id)}
+                                        >
+                                            <SidebarMenuButton
+                                                onClick={() => handleNotePress(note)}
+                                                className="group/note"
+                                            >
+                                                <Ionicons name="document-text" size={14} className="text-muted-foreground/40 group-hover/note:text-primary transition-colors shrink-0" />
+                                                <span className="truncate">{note.title || "Untitled"}</span>
+                                            </SidebarMenuButton>
+                                        </NoteListItem>
+                                    </SidebarMenuItem>
+                                ))}
+                            </SidebarMenu>
+                        </SidebarGroupContent>
+                    </SidebarGroup>
                 )}
 
                 {/* Empty state */}
@@ -186,7 +250,7 @@ export function NotesSidebar({ currentFolderId }: NotesSidebarProps) {
                         <p className="text-xs text-center">Create a note or folder to get started</p>
                     </div>
                 )}
-            </ScrollArea>
+            </SidebarContent>
 
             {/* Modals */}
             <FolderEditModal
@@ -204,7 +268,8 @@ export function NotesSidebar({ currentFolderId }: NotesSidebarProps) {
                 onConfirm={handleDeleteFolder}
                 variant="destructive"
             />
-        </div>
+            <SidebarRail />
+        </aside>
     );
 }
 

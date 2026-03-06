@@ -191,17 +191,38 @@ export function DesktopToolbar({
         const observer = new ResizeObserver((entries) => {
             const width = entries[0].contentRect.width;
             if (width < 200) return;
-            const availableWidth = width - 80;
-            let currentWidth = 0;
-            let count = 0;
 
-            for (const item of items) {
-                const itemWidth = item.id === 'heading' ? 100 : 40;
-                if (currentWidth + itemWidth > availableWidth) break;
-                currentWidth += itemWidth;
-                count++;
+            const HEADING_WIDTH = 52;
+            const ITEM_WIDTH = 36;
+            const GAP = 2; // gap-0.5 is 2px
+            const PADDING = 12; // horizontal padding + safe area
+            const RIGHT_FIXED_WIDTH = 74; // Undo (36) + Redo (36) + Gap (2)
+            const OVERFLOW_WIDTH = 38; // More button (36) + Gap (2)
+
+            // Check if all items fit without overflow button
+            let totalAllWidth = 0;
+            for (let i = 0; i < items.length; i++) {
+                const w = items[i].id === 'heading' ? HEADING_WIDTH : ITEM_WIDTH;
+                totalAllWidth += (i === 0 ? w : w + GAP);
             }
-            setVisibleCount(count);
+
+            if (totalAllWidth + RIGHT_FIXED_WIDTH + PADDING <= width) {
+                setVisibleCount(items.length);
+            } else {
+                // Not all fit, need overflow button
+                let currentWidth = 0;
+                let count = 0;
+                const availableForItems = width - PADDING - RIGHT_FIXED_WIDTH - OVERFLOW_WIDTH;
+
+                for (let i = 0; i < items.length; i++) {
+                    const w = items[i].id === 'heading' ? HEADING_WIDTH : ITEM_WIDTH;
+                    const needed = (i === 0 ? w : w + GAP);
+                    if (currentWidth + needed > availableForItems) break;
+                    currentWidth += needed;
+                    count++;
+                }
+                setVisibleCount(Math.max(1, count));
+            }
         });
 
         if (containerRef.current) observer.observe(containerRef.current);
@@ -240,7 +261,7 @@ export function DesktopToolbar({
             >
                 <div className="flex items-center gap-0.5 w-full px-1">
                     {visibleItems.map((item) => (
-                        <Tooltip key={item.id}>
+                        <Tooltip key={item.id} open={openMenusCount > 0 ? false : undefined}>
                             <TooltipTrigger asChild>
                                 <div className="flex shrink-0">
                                     {item.render}
@@ -272,7 +293,7 @@ export function DesktopToolbar({
                             </DropdownMenu>
                         )}
 
-                        <Tooltip>
+                        <Tooltip open={openMenusCount > 0 ? false : undefined}>
                             <TooltipTrigger asChild>
                                 <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('undo')} disabled={!editorState.canUndo}>
                                     <Undo className="h-5 w-5" />
@@ -281,7 +302,7 @@ export function DesktopToolbar({
                             <TooltipContent side="top" sideOffset={12}>Undo</TooltipContent>
                         </Tooltip>
 
-                        <Tooltip>
+                        <Tooltip open={openMenusCount > 0 ? false : undefined}>
                             <TooltipTrigger asChild>
                                 <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('redo')} disabled={!editorState.canRedo}>
                                     <Redo className="h-5 w-5" />

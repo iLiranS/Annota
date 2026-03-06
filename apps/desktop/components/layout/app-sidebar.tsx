@@ -16,8 +16,9 @@ import {
     CollapsibleContent,
     CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubButton, SidebarMenuSubItem, SidebarRail, SidebarSeparator } from "@/components/ui/sidebar";
+import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubButton, SidebarMenuSubItem, SidebarRail, SidebarSeparator, useSidebar } from "@/components/ui/sidebar";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useEffect } from "react";
 import { ConfirmDialog } from "../custom-ui/confirm-dialog";
 import { FolderEditModal } from "../notes/folder-edit-modal";
 import { Ionicons } from "../ui/ionicons";
@@ -26,6 +27,7 @@ export function AppSidebar() {
     const navigate = useNavigate();
     const location = useLocation();
     const { colors } = useAppTheme();
+    const { toggleSidebar, setOpen } = useSidebar();
 
     const { folders, notes, deleteFolder } = useNotesStore();
     const isOnline = useSyncStore((s) => s.isOnline);
@@ -43,6 +45,18 @@ export function AppSidebar() {
         useSyncStore.getState().forceSync().catch(console.error);
         setTimeout(() => setRetryCooldown(false), 10_000);
     }, [retryCooldown]);
+
+    useEffect(() => {
+        const handleToggle = (e: any) => {
+            if (e.detail?.open !== undefined) {
+                setOpen(e.detail.open);
+            } else {
+                toggleSidebar();
+            }
+        };
+        window.addEventListener('annota-toggle-main-sidebar', handleToggle);
+        return () => window.removeEventListener('annota-toggle-main-sidebar', handleToggle);
+    }, [toggleSidebar, setOpen]);
 
     const handleEditFolder = useCallback((folder: Folder) => {
         setEditingFolder(folder);

@@ -26,7 +26,7 @@ export function HeadingSelector({ editorState, sendCommand, onOpenChange, isMenu
             editorState.isHeading3 ? 'H3' :
                 editorState.isHeading4 ? 'H4' :
                     editorState.isHeading5 ? 'H5' :
-                        editorState.isHeading6 ? 'H6' : 'Normal';
+                        editorState.isHeading6 ? 'H6' : 'T';
 
     const items = (
         <>
@@ -61,7 +61,7 @@ export function HeadingSelector({ editorState, sendCommand, onOpenChange, isMenu
     return (
         <DropdownMenu onOpenChange={onOpenChange}>
             <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-9 min-w-[90px] justify-between gap-1 px-3 font-bold text-foreground">
+                <Button variant="ghost" size="sm" className="h-9 w-13 justify-between gap-1 px-3 font-bold text-foreground">
                     {currentHeadingLabel}
                     <ChevronDown className="h-4 w-4 opacity-50" />
                 </Button>

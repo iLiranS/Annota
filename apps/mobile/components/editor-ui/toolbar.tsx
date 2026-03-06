@@ -5,25 +5,11 @@ import { Keyboard, ScrollView, StyleSheet, View } from 'react-native';
 
 import { HeadingLevel } from '@annota/core';
 import { ImageService } from '@annota/core/platform';
+import type { PopupType, ToolbarRenderProps } from '@annota/tiptap-editor';
 import { ToolbarButton } from './toolbar-button';
 import { ToolbarPopup } from './toolbar-popup';
-import type { EditorState, PopupType } from '@annota/tiptap-editor';
 
-interface EditorToolbarProps {
-    editorState: EditorState;
-    onCommand: (command: string, params?: Record<string, unknown>) => void;
-    onDismissKeyboard: () => void;
-    activePopup: PopupType;
-    onActivePopupChange: (type: PopupType) => void;
-    /** Callback to notify parent when popup opens/closes - helps keep toolbar visible */
-    onPopupStateChange?: (isOpen: boolean) => void;
-    /** Callback to handle image insertion (URL or device picker) */
-    onInsertImage?: (source: 'url' | 'library' | 'camera', value?: string) => Promise<boolean>;
-
-    currentLatex?: string | null;
-    blockData?: any;
-    onInsertMath?: () => void;
-}
+interface EditorToolbarProps extends ToolbarRenderProps { }
 
 /**
  * Scrollable formatting toolbar for the TipTap editor.

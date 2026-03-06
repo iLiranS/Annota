@@ -733,6 +733,7 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
                         {renderToolbar({
                             editorState,
                             sendCommand,
+                            onCommand: sendCommand,
                             toolbarHeight,
                             onDismissKeyboard: handleDismissKeyboard,
                             activePopup,

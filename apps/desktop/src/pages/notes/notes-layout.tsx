@@ -1,16 +1,14 @@
-import { Outlet, useSearchParams } from "react-router-dom";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { Outlet } from "react-router-dom";
 import { NotesSidebar } from "./notes-sidebar";
 
 export default function NotesLayout() {
-    const [searchParams] = useSearchParams();
-    const folderId = searchParams.get("folderId") ?? undefined;
-
     return (
-        <div className="flex h-full w-full">
-            <NotesSidebar currentFolderId={folderId} />
-            <div className="flex-1 overflow-auto">
+        <SidebarProvider className="flex h-full w-full">
+            <NotesSidebar />
+            <SidebarInset className="flex-1 overflow-auto bg-transparent">
                 <Outlet />
-            </div>
-        </div>
+            </SidebarInset>
+        </SidebarProvider>
     );
 }

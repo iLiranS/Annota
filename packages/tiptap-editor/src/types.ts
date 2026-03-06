@@ -4,6 +4,7 @@ import React from 'react';
 export interface ToolbarRenderProps {
     editorState: EditorState;
     sendCommand: (cmd: string, params?: Record<string, unknown>) => void;
+    onCommand: (cmd: string, params?: Record<string, unknown>) => void;
     toolbarHeight: number;
     onDismissKeyboard: () => void;
     activePopup: PopupType;
