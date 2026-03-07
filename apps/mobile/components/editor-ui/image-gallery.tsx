@@ -9,18 +9,18 @@ import {
     View,
     useWindowDimensions
 } from 'react-native';
-import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
     Extrapolation,
     SharedValue,
     interpolate,
-    runOnJS,
     useAnimatedStyle,
     useSharedValue,
     withSpring,
     withTiming
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { scheduleOnRN } from 'react-native-worklets';
 
 import { ImageInfo } from '@annota/tiptap-editor';
 
@@ -77,8 +77,8 @@ interface ImageGalleryProps {
     visible: boolean;
     images: ImageInfo[];
     initialIndex: number;
-    onClose: () => void;
-    onNavigate: (index: number) => void;
+    onClose?: () => void;
+    onNavigate?: (index: number) => void;
 }
 
 const DISMISS_THRESHOLD = 100;
@@ -134,7 +134,7 @@ export function ImageGallery({
     useEffect(() => {
         if (!visible) return;
         const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-            onClose();
+            if (onClose) scheduleOnRN(onClose);
             return true;
         });
         return () => sub.remove();
@@ -161,7 +161,7 @@ export function ImageGallery({
 
     const handleClose = useCallback(() => {
         enterProgress.value = withTiming(0, { duration: 150 }, () => {
-            runOnJS(onClose)();
+            if (onClose) scheduleOnRN(onClose);
         });
     }, [onClose, enterProgress]);
 
@@ -260,7 +260,7 @@ export function ImageGallery({
                 // Dismiss check
                 if (dismissY.value > DISMISS_THRESHOLD || e.velocityY > 800) {
                     dismissY.value = withTiming(screenHeightSV.value, { duration: 200 }, () => {
-                        runOnJS(onClose)();
+                        if (onClose) scheduleOnRN(onClose);
                     });
                     return;
                 } else if (dismissY.value > 0) {
@@ -286,8 +286,8 @@ export function ImageGallery({
                     if (targetPage !== currentPage) {
                         resetZoom();
                     }
-                    runOnJS(setActiveIndex)(targetPage);
-                    runOnJS(onNavigate)(targetPage);
+                    scheduleOnRN(setActiveIndex, targetPage);
+                    if (onNavigate) scheduleOnRN(onNavigate, targetPage);
                 });
             }
         });
@@ -332,48 +332,46 @@ export function ImageGallery({
     if (!visible) return null;
 
     return (
-        <GestureHandlerRootView style={{ flex: 1 }}>
-            <Animated.View style={[styles.fullScreenContainer, containerAnimatedStyle]}>
-                <GestureDetector gesture={combined}>
-                    <View style={styles.imageContainer}>
-                        {visibleIndices.map(i => (
-                            <GallerySlide
-                                key={i}
-                                image={images[i]}
-                                index={i}
-                                totalOffset={totalOffset}
-                                screenWidthSV={screenWidthSV}
-                                zoomScale={scale}
-                                zoomTranslateX={translateX}
-                                zoomTranslateY={translateY}
-                                isActive={i === activeIndex}
-                            />
-                        ))}
-                    </View>
-                </GestureDetector>
-
-                {/* Header overlay */}
-                <View style={[styles.header, { paddingTop: insets.top + 8 }]} pointerEvents="box-none">
-                    <View style={styles.counterContainer}>
-                        <Text style={styles.counterText}>
-                            {activeIndex + 1} / {images.length}
-                        </Text>
-                    </View>
-                    <Pressable
-                        style={({ pressed }) => [styles.closeButton, pressed && styles.buttonPressed]}
-                        onPress={handleClose}
-                    >
-                        <MaterialCommunityIcons name="close" size={24} color="#FFFFFF" />
-                    </Pressable>
+        <Animated.View style={[styles.fullScreenContainer, containerAnimatedStyle]}>
+            <GestureDetector gesture={combined}>
+                <View style={styles.imageContainer}>
+                    {visibleIndices.map(i => (
+                        <GallerySlide
+                            key={i}
+                            image={images[i]}
+                            index={i}
+                            totalOffset={totalOffset}
+                            screenWidthSV={screenWidthSV}
+                            zoomScale={scale}
+                            zoomTranslateX={translateX}
+                            zoomTranslateY={translateY}
+                            isActive={i === activeIndex}
+                        />
+                    ))}
                 </View>
-            </Animated.View>
-        </GestureHandlerRootView>
+            </GestureDetector>
+
+            {/* Header overlay */}
+            <View style={[styles.header, { paddingTop: insets.top + 8 }]} pointerEvents="box-none">
+                <View style={styles.counterContainer}>
+                    <Text style={styles.counterText}>
+                        {activeIndex + 1} / {images.length}
+                    </Text>
+                </View>
+                <Pressable
+                    style={({ pressed }) => [styles.closeButton, pressed && styles.buttonPressed]}
+                    onPress={handleClose}
+                >
+                    <MaterialCommunityIcons name="close" size={24} color="#FFFFFF" />
+                </Pressable>
+            </View>
+        </Animated.View>
     );
 }
 
 const styles = StyleSheet.create({
     fullScreenContainer: {
-        flex: 1,
+        ...StyleSheet.absoluteFillObject,
         backgroundColor: '#000000',
     },
     imageContainer: {

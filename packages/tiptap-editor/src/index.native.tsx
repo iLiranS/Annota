@@ -756,16 +756,23 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
 
 
                 {/* Full Screen Image Gallery — conditionally rendered by the host app via render props */}
-                {renderImageGallery?.({
-                    images: galleryImages,
-                    initialIndex: galleryCurrentIndex,
-                    visible: isGalleryVisible,
-                    onClose: () => {
-                        setIsGalleryVisible(false);
-                        isGalleryVisibleRef.current = false;
-                        onGalleryVisibilityChange?.(false);
-                    }
-                })}
+                {isGalleryVisible && (
+                    <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+                        {renderImageGallery?.({
+                            images: galleryImages,
+                            initialIndex: galleryCurrentIndex,
+                            visible: isGalleryVisible,
+                            onClose: () => {
+                                setIsGalleryVisible(false);
+                                isGalleryVisibleRef.current = false;
+                                onGalleryVisibilityChange?.(false);
+                            },
+                            onNavigate: (index: number) => {
+                                setGalleryCurrentIndex(index);
+                            }
+                        })}
+                    </View>
+                )}
             </View >
         );
     }

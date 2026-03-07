@@ -54,6 +54,7 @@ export interface TipTapEditorProps {
         initialIndex: number;
         visible: boolean;
         onClose: () => void;
+        onNavigate: (index: number) => void;
     }) => React.ReactNode;
     /** Theme adaptation */
     isDark?: boolean;
