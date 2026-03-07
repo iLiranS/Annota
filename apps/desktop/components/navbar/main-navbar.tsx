@@ -123,7 +123,7 @@ export function MainNavbar() {
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7 rounded-full bg-background/30 text-muted-foreground/60 transition-all hover:bg-background/80 hover:text-primary active:scale-95"
+                            className="h-7 w-7 rounded-full bg-transparent dark:bg-transparent text-muted-foreground/60 transition-all hover:bg-background/80 hover:text-primary active:scale-95"
                             onClick={() => setIsSearchOpen(true)}
                         >
                             <Ionicons name="search" size={15} />
@@ -172,7 +172,7 @@ export function MainNavbar() {
 
                 </div>}
 
-                <div className="mx-1 h-3 w-px bg-sidebar-border/60" />
+
 
                 <div
                     className="flex items-center rounded-full p-0.5"

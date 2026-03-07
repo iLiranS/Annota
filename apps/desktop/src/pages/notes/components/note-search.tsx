@@ -72,7 +72,7 @@ export function NoteSearch({
                         value={searchTerm}
                         onChange={(e) => onSearchTermChange(e.target.value)}
                         placeholder="Search..."
-                        className="h-7 pl-6 pr-12 bg-transparent border-none focus-visible:ring-0 text-[11px] placeholder:text-muted-foreground/40"
+                        className="h-7 pl-6 pr-12 bg-transparent dark:bg-transparent border-none focus-visible:ring-0 text-[11px] placeholder:text-muted-foreground/40"
                         onKeyDown={(e) => {
                             if (e.key === 'Enter') {
                                 e.preventDefault();
@@ -85,7 +85,7 @@ export function NoteSearch({
                         }}
                     />
                     {searchTerm && (
-                        <div className="absolute right-1 top-1/2 -translate-y-1/2">
+                        <div className="absolute right-1 top-1/2 -translate-y-3/5">
                             <span className="text-[9px] font-medium tabular-nums text-muted-foreground/50 bg-muted/20 px-1 rounded">
                                 {resultCount > 0 ? `${currentResultIndex + 1}/${resultCount}` : '0/0'}
                             </span>

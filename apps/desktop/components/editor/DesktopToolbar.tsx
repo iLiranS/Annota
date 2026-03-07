@@ -35,6 +35,7 @@ import { Button } from '../ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { ColorPicker } from './toolbar/toolbar-color-picker';
 import { HeadingSelector } from './toolbar/toolbar-heading-selector';
+import { ToolbarImageUpload } from './toolbar/toolbar-image-upload';
 import { LinkPopover } from './toolbar/toolbar-link-popover';
 import { MathPopover } from './toolbar/toolbar-math-popover';
 
@@ -48,6 +49,7 @@ type ToolbarItem = {
 export function DesktopToolbar({
     editorState,
     sendCommand,
+    onInsertImage,
 }: ToolbarRenderProps) {
     const { colors } = useAppTheme();
     const containerRef = useRef<HTMLDivElement>(null);
@@ -184,8 +186,14 @@ export function DesktopToolbar({
             label: 'Table',
             render: <Button key="table" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => { if (!editorState.isInTable) sendCommand('insertTable', { rows: 3, cols: 3, withHeaderRow: true }); }} style={activeStyle(editorState.isInTable)}><TableIcon className="h-5 w-5" /></Button>,
             dropdownRender: <DropdownMenuItem key="table-dropdown" onClick={() => { if (!editorState.isInTable) sendCommand('insertTable', { rows: 3, cols: 3, withHeaderRow: true }); }} className={cn("gap-2", editorState.isInTable && "text-primary")}><TableIcon className="h-4 w-4" /> Table</DropdownMenuItem>
+        },
+        {
+            id: 'image',
+            label: 'Image',
+            render: <ToolbarImageUpload key="image" onInsertImage={onInsertImage} onOpenChange={handleOpenChange} />,
+            dropdownRender: <ToolbarImageUpload key="image-dropdown" onInsertImage={onInsertImage} onOpenChange={handleOpenChange} isMenu />
         }
-    ], [editorState, sendCommand, colors.primary, activeStyle, handleOpenChange]);
+    ], [editorState, sendCommand, colors.primary, activeStyle, handleOpenChange, onInsertImage]);
 
     const [resetKey, setResetKey] = useState(0);
 
@@ -243,7 +251,7 @@ export function DesktopToolbar({
                 }}
                 className="
                             absolute bottom-6 left-1/2 -translate-x-1/2
-                            w-[90%] max-w-[900px]
+                            w-[90%] max-w-[920px]
                             flex items-center
                             p-0.5
                             rounded-2xl

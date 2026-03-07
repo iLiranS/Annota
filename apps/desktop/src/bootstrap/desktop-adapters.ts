@@ -1,4 +1,5 @@
 import type { PlatformAdapters } from '@annota/core/platform';
+import { invoke } from '@tauri-apps/api/core';
 import { appCacheDir, appDataDir, join } from '@tauri-apps/api/path';
 import { copyFile, mkdir, readFile, remove, stat, writeFile } from '@tauri-apps/plugin-fs';
 import { Store } from '@tauri-apps/plugin-store';
@@ -54,29 +55,7 @@ async function writeFileBytes(path: string, bytes: Uint8Array): Promise<void> {
   await writeFile(path, toStrictUint8Array(bytes));
 }
 
-async function toCanvasImageSource(sourcePath: string): Promise<ImageBitmap> {
-  const bytes = await readFileBytes(sourcePath);
-  const blob = new Blob([toArrayBuffer(bytes)]);
-  return await createImageBitmap(blob);
-}
 
-async function canvasToWebpBytes(canvas: HTMLCanvasElement, quality: number): Promise<Uint8Array> {
-  const blob = await new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob(
-      (result) => {
-        if (!result) {
-          reject(new Error('Failed to produce WEBP blob'));
-          return;
-        }
-        resolve(result);
-      },
-      'image/webp',
-      quality,
-    );
-  });
-
-  return new Uint8Array(await blob.arrayBuffer());
-}
 
 export function createDesktopAdapters(): PlatformAdapters {
   return {
@@ -267,37 +246,28 @@ export function createDesktopAdapters(): PlatformAdapters {
     },
     image: {
       resizeAndCompress: async (sourcePath, opts) => {
-        const bitmap = await toCanvasImageSource(sourcePath);
-        let width = bitmap.width;
-        let height = bitmap.height;
-        if (width > opts.maxDimension || height > opts.maxDimension) {
-          if (width >= height) {
-            const ratio = opts.maxDimension / width;
-            width = opts.maxDimension;
-            height = Math.round(height * ratio);
-          } else {
-            const ratio = opts.maxDimension / height;
-            height = opts.maxDimension;
-            width = Math.round(width * ratio);
-          }
+        try {
+          const cacheDir = await ensureScopedDir('cache');
+          // We are outputting to JPEG as it matches native mobile behavior best
+          const outPath = await join(cacheDir, makeTempFilename('jpg'));
+
+          // Tauri expects a u8 integer for quality (1-100). 
+          // If your frontend passes 0.8, convert it to 80.
+          const normalizedQuality = opts.quality <= 1 ? Math.round(opts.quality * 100) : opts.quality;
+
+          // Call the Rust backend!
+          const [width, height] = await invoke<[number, number]>('compress_image_native', {
+            sourcePath,
+            outputPath: outPath,
+            maxDimension: opts.maxDimension,
+            quality: normalizedQuality,
+          });
+
+          return { path: outPath, width, height };
+        } catch (error) {
+          console.error("Native compression failed:", error);
+          throw error;
         }
-
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          throw new Error('2D canvas context unavailable');
-        }
-        ctx.drawImage(bitmap, 0, 0, width, height);
-        bitmap.close();
-
-        const compressed = await canvasToWebpBytes(canvas, opts.quality);
-        const cacheDir = await ensureScopedDir('cache');
-        const outPath = await join(cacheDir, makeTempFilename('webp'));
-        await writeFileBytes(outPath, compressed);
-
-        return { path: outPath, width, height };
       },
       requestGalleryPermission: async () => {
         return true;

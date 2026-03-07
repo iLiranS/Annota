@@ -21,13 +21,22 @@ export default defineConfig(async ({ mode }) => {
       },
     },
     resolve: {
+      dedupe: [
+        'react',
+        'react-dom',
+        '@tiptap/core',
+        '@tiptap/react',
+        '@tiptap/pm',
+        'prosemirror-state',
+        'prosemirror-view',
+        'prosemirror-model'
+      ],
       extensions: [
         '.desktop.tsx', '.desktop.ts', '.desktop.jsx', '.desktop.js',
         '.mjs', '.js', '.mts', '.ts', '.jsx', '.tsx', '.json'
       ],
       alias: {
         "@": path.resolve(__dirname, "."),
-        "@annota/editor-web": path.resolve(__dirname, "../../packages/editor-web"),
       },
     },
 

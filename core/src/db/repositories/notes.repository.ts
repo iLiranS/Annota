@@ -104,14 +104,14 @@ export async function upsertSyncedNote(noteFullData: any, tx: DbOrTx = getDb()):
 
     let activeVersionId: string;
 
-    if (!safeLatestVersion) {
-        activeVersionId = generateId();
-        await tx.insert(schema.noteVersions).values({
-            id: activeVersionId,
+    if (!safeLatestVersion || !safeLatestVersion.id) {
+        const inserted = await tx.insert(schema.noteVersions).values({
+            id: generateId(),
             noteId: metadataDetails.id,
             content,
             createdAt: noteUpdatedAt,
-        }).run();
+        }).returning().get();
+        activeVersionId = safeGet<any>(inserted)!.id;
     } else {
         const latestNormalizedContent = normalizeStoredContent(safeLatestVersion.content);
         if (latestNormalizedContent !== safeLatestVersion.content) {
@@ -124,13 +124,13 @@ export async function upsertSyncedNote(noteFullData: any, tx: DbOrTx = getDb()):
         if (latestNormalizedContent === content) {
             activeVersionId = safeLatestVersion.id;
         } else {
-            activeVersionId = generateId();
-            await tx.insert(schema.noteVersions).values({
-                id: activeVersionId,
+            const inserted = await tx.insert(schema.noteVersions).values({
+                id: generateId(),
                 noteId: metadataDetails.id,
                 content,
                 createdAt: noteUpdatedAt,
-            }).run();
+            }).returning().get();
+            activeVersionId = safeGet<any>(inserted)!.id;
 
             const versions = await tx.select({ id: schema.noteVersions.id })
                 .from(schema.noteVersions)
@@ -419,15 +419,15 @@ export async function updateNoteContent(noteId: string, content: string, preview
 
         let activeVersionId: string;
 
-        if (!safeLatestVersion || (now.getTime() - safeLatestVersion.createdAt.getTime() > VERSION_THRESHOLD_MS)) {
+        if (!safeLatestVersion || !safeLatestVersion.id || (now.getTime() - safeLatestVersion.createdAt.getTime() > VERSION_THRESHOLD_MS)) {
             // Case A: Create NEW version
-            activeVersionId = generateId();
-            await tx.insert(schema.noteVersions).values({
-                id: activeVersionId,
+            const inserted = await tx.insert(schema.noteVersions).values({
+                id: generateId(),
                 noteId,
                 content: normalizedContent,
                 createdAt: now,
-            }).run();
+            }).returning().get();
+            activeVersionId = safeGet<any>(inserted)!.id;
 
             // Enforce Limit (cleanup old versions)
             const versions = await tx.select({ id: schema.noteVersions.id }).from(schema.noteVersions)
@@ -450,11 +450,11 @@ export async function updateNoteContent(noteId: string, content: string, preview
             }
         } else {
             // Case B: Update EXISTING latest version (debounce)
-            activeVersionId = safeLatestVersion.id;
-            await tx.update(schema.noteVersions)
+            const updated = await tx.update(schema.noteVersions)
                 .set({ content: normalizedContent, createdAt: now })
                 .where(eq(schema.noteVersions.id, safeLatestVersion.id))
-                .run();
+                .returning().get();
+            activeVersionId = safeGet<any>(updated)!.id;
         }
 
         // 4. Sync images to active version

@@ -1,18 +1,18 @@
 import { authApi } from "@annota/core";
 import { onOpenUrl } from "@tauri-apps/plugin-deep-link";
 
-export async function initDeepLinkListener(onSuccess?: () => void, onError?: (err: Error) => void) {
+export async function initDeepLinkListener(
+    onNavigate?: (url: string) => void,
+    onSuccess?: () => void,
+    onError?: (err: Error) => void
+) {
     try {
         const unlisten = await onOpenUrl(async (urls) => {
             for (const url of urls) {
-                if (url.startsWith("annota-desktop://login-callback")) {
+                // Handle Auth Callback
+                if (url.startsWith("annota://login-callback") || url.startsWith("annota-desktop://login-callback")) {
                     try {
-                        // Parse the URL
                         const urlObj = new URL(url);
-
-                        // Extract hash fragments (Supabase typically returns tokens in hash for implicit flow)
-                        // Or extract query params for PKCE flow (which authApi setup uses via code)
-
                         const params = new URLSearchParams(urlObj.search || urlObj.hash.replace(/^#/, ''));
 
                         const code = params.get("code");
@@ -32,13 +32,15 @@ export async function initDeepLinkListener(onSuccess?: () => void, onError?: (er
                             const { error } = await authApi.setSession(access_token, refresh_token);
                             if (error) throw error;
                             onSuccess?.();
-                        } else {
-                            console.warn("No auth tokens found in callback URL:", url);
                         }
                     } catch (err) {
                         console.error("Failed to handle auth callback:", err);
                         onError?.(err instanceof Error ? err : new Error(String(err)));
                     }
+                }
+                // Handle App Direct Links
+                else if (url.startsWith("annota://")) {
+                    onNavigate?.(url);
                 }
             }
         });

@@ -250,6 +250,36 @@ export const DetailsSummary = TiptapDetailsSummary.extend({
 
             // ID is now generated via ProseMirror plugin!
 
+            // Toggle open state on click
+            dom.onclick = (e) => {
+                // If clicking the menu button, don't toggle
+                if (menuBtn.contains(e.target as Node)) return;
+
+                e.preventDefault();
+                e.stopPropagation();
+
+                if (typeof getPos !== 'function') return;
+                const pos = getPos();
+                if (typeof pos !== 'number') return;
+
+                const { state, view } = editor;
+
+                // Find parent details node
+                const $pos = state.doc.resolve(pos);
+                const parentNode = $pos.parent;
+                const parentPos = $pos.before($pos.depth);
+
+                if (parentNode.type.name === 'details') {
+                    const isOpen = parentNode.attrs.open;
+                    view.dispatch(
+                        state.tr.setNodeMarkup(parentPos, undefined, {
+                            ...parentNode.attrs,
+                            open: !isOpen
+                        })
+                    );
+                }
+            };
+
             dom.appendChild(content);
             dom.appendChild(menuBtn);
 

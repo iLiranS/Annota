@@ -1,6 +1,7 @@
 import type { NodeViewRenderer } from '@tiptap/core';
 import { Image } from '@tiptap/extension-image';
-import { NodeSelection, Plugin } from '@tiptap/pm/state';
+import { Node as PMNode } from '@tiptap/pm/model';
+import { NodeSelection, Plugin, type EditorState, type Transaction } from '@tiptap/pm/state';
 import { sendMessage } from '../bridge';
 import '../types'; // Import global window types
 import { createBlockMenuButton } from './block-menu-button';
@@ -81,7 +82,13 @@ function getCopiedImageId(clipboardData: DataTransfer | null | undefined): strin
     return match?.[1]?.trim() || null;
 }
 
-export const CustomImage = Image.extend({
+export const CustomImage = Image.extend<any>({
+    addOptions() {
+        return {
+            ...this.parent?.(),
+            onImageSelected: null as ((data: { images: any[], currentIndex: number }) => void) | null,
+        };
+    },
     addAttributes() {
         return {
             ...this.parent?.(),
@@ -108,6 +115,35 @@ export const CustomImage = Image.extend({
                 },
             },
         }
+    },
+    addCommands() {
+        return {
+            resolveImages: ({ imageMap }: { imageMap: Record<string, string> }) => ({ tr, state, dispatch }: { tr: Transaction, state: EditorState, dispatch?: (tr: Transaction) => void }) => {
+                let hasChanges = false;
+                state.doc.descendants((node: PMNode, pos: number) => {
+                    if (node.type.name === 'image' && node.attrs.imageId) {
+                        const dataUri = imageMap[node.attrs.imageId];
+                        if (dataUri && node.attrs.src !== dataUri) {
+                            tr.setNodeMarkup(pos, undefined, {
+                                ...node.attrs,
+                                src: dataUri,
+                            });
+                            hasChanges = true;
+                        }
+                    }
+                });
+
+                if (hasChanges && dispatch) {
+                    tr.setMeta('resolveImages', true);
+                    dispatch(tr);
+                }
+                return hasChanges;
+            },
+            // Legacy/bridge support
+            insertLocalImage: ({ imageId }: { imageId: string }) => ({ chain }: { chain: any }) => {
+                return (chain() as any).insertContent(`<img data-image-id="${imageId}" />`).run();
+            }
+        } as any;
     },
     addNodeView() {
         return (({ node, getPos, editor }) => {
@@ -167,11 +203,18 @@ export const CustomImage = Image.extend({
                 if (typeof currentPos !== 'number') return;
                 selectNode(currentPos);
                 const { images, currentIndex } = collectImages(currentPos);
-                sendMessage({
-                    type: 'imageSelected',
-                    images,
-                    currentIndex,
-                });
+                if (this.options.onImageSelected) {
+                    this.options.onImageSelected({
+                        images,
+                        currentIndex,
+                    });
+                } else {
+                    sendMessage({
+                        type: 'imageSelected',
+                        images,
+                        currentIndex,
+                    });
+                }
             };
 
             // Three-dot menu button — shared utility
@@ -390,27 +433,6 @@ export function setupImageUpdater() {
 export function setupImageResolver() {
     window.resolveImages = function (imageMap: Record<string, string>) {
         if (!window.editor) return;
-        const e = window.editor;
-        const { tr } = e.state;
-        let hasChanges = false;
-
-        e.state.doc.descendants((node, pos) => {
-            if (node.type.name === 'image' && node.attrs.imageId) {
-                const dataUri = imageMap[node.attrs.imageId];
-                if (dataUri && node.attrs.src !== dataUri) {
-                    tr.setNodeMarkup(pos, undefined, {
-                        ...node.attrs,
-                        src: dataUri,
-                    });
-                    hasChanges = true;
-                }
-            }
-        });
-
-        if (hasChanges) {
-            // Mark as non-content-changing to avoid triggering save
-            tr.setMeta('resolveImages', true);
-            e.view.dispatch(tr);
-        }
+        (window.editor.commands as any).resolveImages({ imageMap });
     };
 }

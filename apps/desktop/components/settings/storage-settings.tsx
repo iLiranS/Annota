@@ -237,25 +237,29 @@ export function StorageSettings() {
                     Database Actions
                 </h4>
                 <div className="bg-card border rounded-2xl overflow-hidden shadow-sm">
-                    <SettingItem
-                        label="Sync with Cloud DB"
-                        description="Force a full recursive sync"
-                        icon={<Ionicons name="cloud-upload" size={20} />}
-                        iconBg="bg-primary"
-                        onClick={handleManualSync}
-                        loading={isSyncing}
-                        action={<Ionicons name="chevron-forward" size={16} className="text-muted-foreground" />}
-                    />
-                    <Separator />
-                    <SettingItem
-                        label="Remove Master Key"
-                        description="Clear encryption key from this device"
-                        icon={<Ionicons name="key-outline" size={20} />}
-                        iconBg="bg-orange-500"
-                        onClick={() => setShowRemoveKeyDialog(true)}
-                        action={<Ionicons name="chevron-forward" size={16} className="text-muted-foreground" />}
-                    />
-                    <Separator />
+                    {session && session.user && (
+                        <>
+                            <SettingItem
+                                label="Sync with Cloud DB"
+                                description="Force a full recursive sync"
+                                icon={<Ionicons name="cloud-upload" size={20} />}
+                                iconBg="bg-primary"
+                                onClick={handleManualSync}
+                                loading={isSyncing}
+                                action={<Ionicons name="chevron-forward" size={16} className="text-muted-foreground" />}
+                            />
+                            <Separator />
+                            <SettingItem
+                                label="Remove Master Key"
+                                description="Clear encryption key from this device"
+                                icon={<Ionicons name="key-outline" size={20} />}
+                                iconBg="bg-orange-500"
+                                onClick={() => setShowRemoveKeyDialog(true)}
+                                action={<Ionicons name="chevron-forward" size={16} className="text-muted-foreground" />}
+                            />
+                            <Separator />
+                        </>
+                    )}
                     <SettingItem
                         label="Reset Local Database"
                         description="Permanently delete ALL local data"

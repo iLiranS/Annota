@@ -9,16 +9,19 @@ import {
 import { Ionicons } from "@/components/ui/ionicons";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { NoteMetadata, useNotesStore } from "@annota/core";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { Check, MoreVertical } from "lucide-react";
 import { useCallback, useState } from "react";
+import { toast } from "sonner";
 import { VersionHistoryDialog } from "./version-history-dialog";
 
 interface NoteActionsMenuProps {
     note: NoteMetadata;
     onRevert?: (content: string) => void;
+    onOpenChange?: (open: boolean) => void;
 }
 
-export function NoteActionsMenu({ note, onRevert }: NoteActionsMenuProps) {
+export function NoteActionsMenu({ note, onRevert, onOpenChange }: NoteActionsMenuProps) {
     const { updateNoteMetadata } = useNotesStore();
     const { colors } = useAppTheme();
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -33,9 +36,22 @@ export function NoteActionsMenu({ note, onRevert }: NoteActionsMenuProps) {
         await updateNoteMetadata(note.id, { isQuickAccess: !note.isQuickAccess });
     }, [note.id, note.isQuickAccess, updateNoteMetadata]);
 
+    const handleCopyLink = useCallback(async () => {
+        const link = `annota://note/${note.id}`;
+        try {
+            await writeText(link);
+            toast.success("Link copied to clipboard", {
+                description: "You can now paste it anywhere to link to this note.",
+            });
+        } catch (err) {
+            console.error("Failed to copy link:", err);
+            toast.error("Failed to copy link to clipboard");
+        }
+    }, [note.id]);
+
     return (
         <>
-            <DropdownMenu modal={false}>
+            <DropdownMenu modal={false} onOpenChange={onOpenChange}>
                 <DropdownMenuTrigger asChild>
                     <Button
                         variant="ghost"
@@ -86,7 +102,10 @@ export function NoteActionsMenu({ note, onRevert }: NoteActionsMenuProps) {
                         <span className="text-sm font-medium">Version history</span>
                     </DropdownMenuItem>
 
-                    <DropdownMenuItem className="rounded-lg gap-3 py-2 cursor-default opacity-50">
+                    <DropdownMenuItem
+                        className="rounded-lg gap-3 py-2 cursor-pointer"
+                        onClick={handleCopyLink}
+                    >
                         <Ionicons name="link-outline" size={18} />
                         <span className="text-sm font-medium">Copy link to note</span>
                     </DropdownMenuItem>

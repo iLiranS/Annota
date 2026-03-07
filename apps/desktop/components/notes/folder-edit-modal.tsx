@@ -151,9 +151,9 @@ export function FolderEditModal({
                                     {name.length}/50
                                 </span>
                             </div>
-                            <div className="flex items-center pl-3 border border-border/50 rounded-md ">
+                            <div className="flex items-center pl-3 border  rounded-md ">
                                 <div
-                                    className="flex items-center justify-center rounded-md w-7 h-7 transition-colors"
+                                    className="flex  items-center justify-center rounded-md w-7 h-7 transition-colors"
                                     style={{ backgroundColor: `${color}15` }}
                                 >
                                     <Ionicons
@@ -167,7 +167,7 @@ export function FolderEditModal({
                                     value={name}
                                     onChange={(e) => setName(e.target.value.slice(0, 50))}
                                     placeholder="Folder name"
-                                    className="h-10 shadow-none bg-transparent border-none  focus-visible:ring-0 focus-visible:ring-offset-0 flex-1"
+                                    className="h-10 shadow-none bg-transparent dark:bg-transparent border-none  focus-visible:ring-0 focus-visible:ring-offset-0 flex-1"
                                 />
                             </div>
                         </div>
@@ -209,7 +209,7 @@ export function FolderEditModal({
                                     placeholder="Search icons..."
                                     value={iconSearch}
                                     onChange={(e) => setIconSearch(e.target.value)}
-                                    className="h-8 text-xs bg-accent/20 border-border/30 focus:bg-accent/40 focus-visible:ring-0 focus-visible:ring-offset-0"
+                                    className="h-8 text-xs bg-accent/20  border-border/30 focus:bg-accent/40 focus-visible:ring-0 focus-visible:ring-offset-0"
                                 />
                                 <div className="grid grid-cols-8 gap-1 p-2 rounded-xl border border-border/50 bg-accent/10 max-h-[140px] overflow-y-auto">
                                     {filteredIcons.map((iconName) => (

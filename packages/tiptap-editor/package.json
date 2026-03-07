@@ -6,7 +6,9 @@
     "react-native": "src/index.native.tsx",
     "dependencies": {
         "@annota/core": "workspace:*",
-        "@annota/editor-web": "workspace:*"
+        "@annota/editor-web": "workspace:*",
+        "@tiptap/react": "^3.18.0",
+        "@tiptap/core": "^3.18.0"
     },
     "peerDependencies": {
         "react": "*",

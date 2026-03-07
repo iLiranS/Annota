@@ -206,6 +206,7 @@ function OriginalFolderBadge({ folderId }: { folderId: string | null }) {
     );
 }
 
+//@ts-ignore
 interface RowProps<T> {
     onPress: () => void;
     onRestore: () => void;

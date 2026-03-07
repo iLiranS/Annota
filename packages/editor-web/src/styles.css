@@ -1,4 +1,5 @@
-:root {
+.native-editor-container,
+#editor-container {
     --bg-color: #ffffff;
     --text-color: #000000;
     --accent-color: #007AFF;
@@ -12,10 +13,13 @@
     --editor-font-size: 16px;
     --editor-line-height: 1.6;
     --editor-max-width: 100%;
+    --editor-padding-top: 0px;
 }
 
 @media (prefers-color-scheme: dark) {
-    :root {
+
+    .native-editor-container,
+    #editor-container {
         --bg-color: #000000;
         --text-color: #FFFFFF;
         --placeholder-color: rgba(255, 255, 255, 0.4);
@@ -49,11 +53,16 @@
     -webkit-tap-highlight-color: transparent;
 }
 
-html,
-body {
+/* Base Styles - only for editor containers */
+.native-editor-container,
+#editor-container {
     margin: 0;
     padding: 0;
-    height: auto !important;
+}
+
+.native-editor-container,
+#editor-container,
+.ProseMirror {
     background-color: var(--bg-color);
     color: var(--text-color);
     font-family: var(--editor-font-family);
@@ -125,6 +134,9 @@ body {
     min-height: calc(100vh - 100px);
     font-family: var(--editor-font-family);
     font-size: var(--editor-font-size);
+    padding-top: var(--editor-padding-top);
+    padding-bottom: 200px;
+    /* Safe bottom margin inside editor */
 }
 
 .ProseMirror p {

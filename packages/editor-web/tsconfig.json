@@ -20,7 +20,8 @@
     "noFallthroughCasesInSwitch": true
   },
   "include": [
-    "src"
+    "src",
+    "dist/editor-html.ts"
   ],
   "extends": "expo/tsconfig.base"
 }

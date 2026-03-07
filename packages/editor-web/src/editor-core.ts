@@ -1,23 +1,9 @@
 import { Editor } from '@tiptap/core';
-import { Color } from '@tiptap/extension-color';
-import { Highlight } from '@tiptap/extension-highlight';
-import { Link } from '@tiptap/extension-link';
-import { Placeholder } from '@tiptap/extension-placeholder';
-import { Table } from '@tiptap/extension-table';
-import { TableRow } from '@tiptap/extension-table-row';
-import { TaskItem } from '@tiptap/extension-task-item';
-import { TaskList } from '@tiptap/extension-task-list';
-import { FontFamily, TextStyle } from '@tiptap/extension-text-style';
-import { Underline } from '@tiptap/extension-underline';
-import { Youtube } from '@tiptap/extension-youtube';
-import { StarterKit } from '@tiptap/starter-kit';
-
-import { Mathematics, migrateMathStrings } from '@tiptap/extension-mathematics';
+import { migrateMathStrings } from '@tiptap/extension-mathematics';
 import { loadingEl, sendMessage, showError } from './bridge';
-import { CustomCodeBlock, CustomHeading, CustomImage, CustomTableCell, CustomTableHeader, Details, DetailsContent, DetailsSummary, SearchExtension, ShortcutManager } from './extensions';
-import { hexToRgba } from './utils';
-
+import { getEditorProps, getEditorState, getExtensions, resolveFontFamily } from './config';
 import './types';
+import { hexToRgba } from './utils';
 
 // DOM Elements
 export const editorEl = document.getElementById('editor-content')!;
@@ -39,16 +25,6 @@ let hasAppliedFontToContent = false;
  */
 let suppressContentUpdates = false;
 
-const WEB_FONT_FAMILIES: Record<string, string> = {
-    system: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-    serif: "Georgia, 'Times New Roman', serif",
-    mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
-    poppins: 'Poppins',
-    varela: 'VarelaRound',
-    'varela round': 'VarelaRound',
-    'system (default)': "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-};
-
 const editorOrigin = (() => {
     try {
         if (typeof window === 'undefined') return '';
@@ -58,12 +34,6 @@ const editorOrigin = (() => {
         return '';
     }
 })();
-
-function resolveFontFamily(value?: string) {
-    if (!value) return WEB_FONT_FAMILIES.system;
-    const key = value.toLowerCase();
-    return WEB_FONT_FAMILIES[key] ?? value;
-}
 
 function applyFontFamilyToContent(value?: string) {
     if (!window.editor) return;
@@ -86,7 +56,8 @@ export function applyFontFamily(value?: string) {
         return;
     }
 
-    document.documentElement.style.setProperty('--editor-font-family', resolved);
+    const container = document.getElementById('editor-container') || document.documentElement;
+    container.style.setProperty('--editor-font-family', resolved);
     document.body.style.fontFamily = resolved;
     editorEl.style.fontFamily = resolved;
 
@@ -96,65 +67,6 @@ export function applyFontFamily(value?: string) {
 
 // --- Logic ---
 
-export function getEditorState() {
-    if (!window.editor) return {};
-    const e = window.editor;
-    const highlightAttrs = e.getAttributes('highlight');
-    const textStyleAttrs = e.getAttributes('textStyle');
-    const linkAttrs = e.getAttributes('link');
-    const imageAttrs = e.getAttributes('image');
-
-    const isInTable = e.isActive('table');
-    const isCodeBlock = e.isActive('codeBlock');
-    const codeBlockAttrs = e.getAttributes('codeBlock');
-
-    const { from, to } = e.state.selection;
-    const selectedText = from !== to ? e.state.doc.textBetween(from, to, ' ') : '';
-    const headingAttrs = e.isActive('heading') ? e.getAttributes('heading') : null;
-
-    return {
-        isBold: e.isActive('bold'),
-        isItalic: e.isActive('italic'),
-        isUnderline: e.isActive('underline'),
-        isStrike: e.isActive('strike'),
-        isTaskList: e.isActive('taskList'),
-        isCode: e.isActive('code'),
-        isBulletList: e.isActive('bulletList'),
-        isOrderedList: e.isActive('orderedList'),
-        canSinkListItem: e.can().sinkListItem('listItem'),
-        canLiftListItem: e.can().liftListItem('listItem'),
-        isBlockquote: e.isActive('blockquote'),
-        isCodeBlock,
-        currentCodeLanguage: isCodeBlock ? (codeBlockAttrs.language || null) : null,
-        isHeading1: e.isActive('heading', { level: 1 }),
-        isHeading2: e.isActive('heading', { level: 2 }),
-        isHeading3: e.isActive('heading', { level: 3 }),
-        isHeading4: e.isActive('heading', { level: 4 }),
-        isHeading5: e.isActive('heading', { level: 5 }),
-        isHeading6: e.isActive('heading', { level: 6 }),
-        currentHeadingLevel: headingAttrs?.level ?? null,
-        currentHeadingId: headingAttrs?.id ?? null,
-        isLink: e.isActive('link'),
-        linkHref: linkAttrs.href || null,
-        selectedText,
-        highlightColor: highlightAttrs.color || null,
-        textColor: textStyleAttrs.color || null,
-        canUndo: e.can().undo(),
-        canRedo: e.can().redo(),
-        isInTable,
-        canAddRowBefore: isInTable && e.can().addRowBefore(),
-        canAddRowAfter: isInTable && e.can().addRowAfter(),
-        canAddColumnBefore: isInTable && e.can().addColumnBefore(),
-        canAddColumnAfter: isInTable && e.can().addColumnAfter(),
-        canDeleteRow: isInTable && e.can().deleteRow(),
-        canDeleteColumn: isInTable && e.can().deleteColumn(),
-        canDeleteTable: isInTable && e.can().deleteTable(),
-        isImage: e.isActive('image'),
-        imageAttrs: e.isActive('image') ? imageAttrs : null,
-        isDetails: e.isActive('details'),
-        detailsBackgroundColor: e.isActive('details') ? e.getAttributes('details').backgroundColor : null,
-    };
-}
 
 let scrollDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -200,22 +112,23 @@ export function setupEditor(options: any) {
     } = options;
 
     // Set CSS variables for theme
-    document.documentElement.style.setProperty('--bg-color', colors.background);
-    document.documentElement.style.setProperty('--text-color', colors.text);
-    document.documentElement.style.setProperty('--accent-color', colors.primary);
-    document.documentElement.style.setProperty('--placeholder-color', isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)');
-    document.documentElement.style.setProperty('--code-bg', isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)');
-    document.documentElement.style.setProperty('--code-block-bg', isDark ? '#1E1E1E' : '#F5F5F5');
-    document.documentElement.style.setProperty('--border-color', isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)');
-    document.documentElement.style.setProperty('--quote-bg', hexToRgba(colors.primary, 0.2));
-    document.documentElement.style.setProperty('--editor-font-size', `${fontSize}px`);
-    document.documentElement.style.setProperty('--editor-line-height', `${lineSpacing}`);
-    document.documentElement.style.setProperty('--editor-max-width', noteWidth > 0 ? `${noteWidth}px` : '100%');
+    const container = document.getElementById('editor-container') || document.documentElement;
+    container.style.setProperty('--bg-color', colors.background);
+    container.style.setProperty('--text-color', colors.text);
+    container.style.setProperty('--accent-color', colors.primary);
+    container.style.setProperty('--placeholder-color', isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)');
+    container.style.setProperty('--code-bg', isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)');
+    container.style.setProperty('--code-block-bg', isDark ? '#1E1E1E' : '#F5F5F5');
+    container.style.setProperty('--border-color', isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)');
+    container.style.setProperty('--quote-bg', hexToRgba(colors.primary, 0.2));
+    container.style.setProperty('--editor-font-size', `${fontSize}px`);
+    container.style.setProperty('--editor-line-height', `${lineSpacing}`);
+    container.style.setProperty('--editor-max-width', noteWidth > 0 ? `${noteWidth}px` : '100%');
+    container.style.setProperty('--editor-padding-top', `${paddingTop}px`);
     applyFontFamily(fontFamily);
 
-    // Apply content padding to the body so it scrolls with the header
-    document.body.style.paddingTop = `${paddingTop}px`;
-    document.body.style.height = 'auto'; // Ensure body can grow with padding
+    // Height is auto so it can grow
+    document.body.style.height = 'auto';
     document.body.style.minHeight = '100%';
 
     // Apply text direction to the editor element
@@ -254,13 +167,10 @@ export function setupEditor(options: any) {
 
         // Make sure scroll prop is kept
         window.editor.setOptions({
-            editorProps: {
-                ...window.editor.options.editorProps,
-                handleScrollToSelection: () => {
-                    scrollCursorIntoView();
-                    return true; // prevent default browser scroll
-                }
-            }
+            editorProps: getEditorProps({
+                direction,
+                onScroll: scrollCursorIntoView
+            })
         });
 
         return;
@@ -277,88 +187,23 @@ export function setupEditor(options: any) {
             // We handle direction ourselves via the DOM dir attribute + CSS.
             enableCoreExtensions: { textDirection: false } as any,
             element: editorEl,
-            editorProps: {
-                attributes: { dir: direction },
-                handleScrollToSelection: () => {
-                    // We handle scroll in React Native Space
-                    scrollCursorIntoView();
-                    return true; // prevent default tiptap scrolling
-                },
-                transformPastedHTML(html: string) {
-                    // Strip font-family from inline styles so pasted content
-                    // inherits the editor's configured font
-                    return html.replace(/font-family\s*:[^;"']*(;|(?=["']))/gi, '');
-                },
-            },
-            extensions: [
-                StarterKit.configure({
-                    heading: false,
-                    codeBlock: false,
-                }),
-                ShortcutManager,
-                CustomHeading.configure({ levels: [1, 2, 3, 4, 5, 6] }),
-                Underline,
-                Placeholder.configure({ placeholder }),
-                Link.configure({
-                    openOnClick: false,
-                    protocols: ['http', 'https', 'mailto', 'tel', 'annota'],
-                    HTMLAttributes: { rel: 'noopener noreferrer' },
-                }),
-                Highlight.configure({ multicolor: true }),
-                TextStyle,
-                FontFamily.configure({
-                    types: ['textStyle'],
-                }),
-                Color,
-                Youtube.configure({
-                    width: 320,
-                    height: 180,
-                    nocookie: true,
-                    origin: editorOrigin || undefined,
-                    HTMLAttributes: {
-                        referrerPolicy: 'strict-origin-when-cross-origin' as any,
-                        playsinline: 'true',
-                        allow: 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share',
-                    },
-                }),
-                CustomImage.configure({ inline: false, allowBase64: true }),
-                Table.configure({ resizable: true, HTMLAttributes: { class: 'editor-table' } }),
-                TableRow,
-                CustomTableCell,
-                CustomTableHeader,
-                TaskList,
-                TaskItem.configure({ nested: true }),
-                CustomCodeBlock,
-                // @ts-ignore - Type mismatch due to tiptap version difference between packages
-                Details,
-                // @ts-ignore - Type mismatch due to tiptap version difference between packages
-                DetailsSummary,
-                // @ts-ignore - Type mismatch due to tiptap version difference between packages
-                DetailsContent,
-                Mathematics.configure({
-                    katexOptions: {
-                        throwOnError: false,
-                        output: 'html',
-                    },
-                    inlineOptions: {
-                        onClick: (node, pos) => {
-                            if (window.editor && typeof pos === 'number') {
-                                window.editor.chain().setNodeSelection(pos).run();
-                                sendMessage({ type: 'mathSelected', latex: node.attrs.latex, isBlock: false });
-                            }
+            editorProps: getEditorProps({
+                direction,
+                onScroll: scrollCursorIntoView
+            }),
+            extensions: getExtensions({
+                placeholder,
+                editorOrigin,
+                onMathSelected: (latex, isBlock, pos) => {
+                    if (window.editor) {
+                        // We still need to handle the selection for the iframe bridge
+                        if (typeof pos === 'number') {
+                            window.editor.chain().setNodeSelection(pos).run();
                         }
-                    },
-                    blockOptions: {
-                        onClick: (node, pos) => {
-                            if (window.editor) {
-                                window.editor.chain().setNodeSelection(pos).run();
-                                sendMessage({ type: 'mathSelected', latex: node.attrs.latex, isBlock: true });
-                            }
-                        }
+                        sendMessage({ type: 'mathSelected', latex, isBlock });
                     }
-                }),
-                SearchExtension,
-            ],
+                }
+            }),
             content: content,
             autofocus: autofocus, // Pass directly
             onCreate: function ({ editor }) {
@@ -412,12 +257,12 @@ export function setupEditor(options: any) {
             onBlur: function () {
                 sendMessage({ type: 'blur' });
             },
-            onSelectionUpdate: function () {
-                sendMessage({ type: 'state', state: getEditorState() });
+            onSelectionUpdate: function ({ editor }) {
+                sendMessage({ type: 'state', state: getEditorState(editor) });
                 scrollCursorIntoView();
             },
-            onTransaction: function () {
-                sendMessage({ type: 'state', state: getEditorState() });
+            onTransaction: function ({ editor }) {
+                sendMessage({ type: 'state', state: getEditorState(editor) });
             }
         });
 

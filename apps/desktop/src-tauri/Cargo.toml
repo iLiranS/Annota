@@ -27,3 +27,5 @@ tauri-plugin-store = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tauri-plugin-deep-link = "2.4.7"
+image = "0.24"
+tauri-plugin-clipboard-manager = "2.3.2"

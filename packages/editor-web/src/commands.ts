@@ -1,7 +1,7 @@
 import { sendMessage, showError } from './bridge';
+import { getEditorState } from './config';
 import {
     applyFontFamily,
-    getEditorState,
     scrollCursorIntoView,
     setupEditor
 } from './editor-core';
@@ -433,7 +433,7 @@ export function setupCommands() {
         }
 
         if (command !== 'getContent') {
-            setTimeout(() => sendMessage({ type: 'state', state: getEditorState() }), 50);
+            setTimeout(() => sendMessage({ type: 'state', state: getEditorState(window.editor) }), 50);
         }
     };
 }

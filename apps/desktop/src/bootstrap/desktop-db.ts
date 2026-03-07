@@ -2,6 +2,8 @@ import { CREATE_TABLES_SQL, initDb, resetDb, useDbStore } from "@annota/core";
 import Database from "@tauri-apps/plugin-sql";
 import { drizzle } from "drizzle-orm/sqlite-proxy";
 
+
+
 /** Per-user bootstrap cache — avoids re-initialising for the same user. */
 const userDbCache = new Map<string, Promise<void>>();
 

@@ -13,8 +13,8 @@ import {
   initPlatformAdapters,
 } from "@annota/core/platform";
 import { Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { Location, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Location, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import "./App.css";
 import { createDesktopAdapters } from "./bootstrap/desktop-adapters";
 import { initDesktopSqlite } from "./bootstrap/desktop-db";
@@ -50,6 +50,11 @@ function App() {
   useAppTheme();
   const [bootstrapState, setBootstrapState] =
     useState<BootstrapState>("booting");
+  const bootstrapStateRef = useRef<BootstrapState>(bootstrapState);
+  useEffect(() => {
+    bootstrapStateRef.current = bootstrapState;
+  }, [bootstrapState]);
+
   const [bootstrapError, setBootstrapError] = useState<string | null>(null);
   const [runId, setRunId] = useState(0);
 
@@ -118,11 +123,68 @@ function App() {
     };
   }, [runId, setSession]);
 
+  const navigate = useNavigate();
+  const [pendingDeepLink, setPendingDeepLink] = useState<string | null>(null);
+
+  // Handle pending deep link once ready
+  useEffect(() => {
+    if (bootstrapState === "ready" && pendingDeepLink) {
+      try {
+        const url = pendingDeepLink;
+        setPendingDeepLink(null);
+
+        const parsedUrl = new URL(url);
+        if (parsedUrl.host === "note") {
+          const noteId = parsedUrl.pathname.replace("/", "");
+          const elementId = parsedUrl.searchParams.get("elementId");
+          const note = useNotesStore.getState().notes.find((n) => n.id === noteId);
+          if (note) {
+            let routePath = `/notes/${note.folderId}/${noteId}`;
+            if (elementId) routePath += `?elementId=${elementId}`;
+            navigate(routePath);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to handle pending deep link:", err);
+      }
+    }
+  }, [bootstrapState, pendingDeepLink, navigate]);
+
   // Auth and Deep Link listeners
   useEffect(() => {
     let unlistenDeepLink: (() => void) | undefined;
 
-    initDeepLinkListener().then((unlisten) => {
+    const handleDeepLink = (url: string) => {
+      try {
+        const parsedUrl = new URL(url);
+        // Parse 'annota://note/123?elementId=456'
+        if (parsedUrl.host === "note") {
+          if (bootstrapStateRef.current !== "ready") {
+            setPendingDeepLink(url);
+            return;
+          }
+
+          const noteId = parsedUrl.pathname.replace("/", "");
+          const elementId = parsedUrl.searchParams.get("elementId");
+
+          // Try to find the note to get its folderId for the route
+          const note = useNotesStore.getState().notes.find((n) => n.id === noteId);
+          if (note) {
+            let routePath = `/notes/${note.folderId}/${noteId}`;
+            if (elementId) {
+              routePath += `?elementId=${elementId}`;
+            }
+            navigate(routePath);
+          } else {
+            console.warn("[DeepLink] Note not found in store, can't route yet:", noteId);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to handle deep link:", err);
+      }
+    };
+
+    initDeepLinkListener(handleDeepLink).then((unlisten) => {
       unlistenDeepLink = unlisten;
     });
 
@@ -149,7 +211,7 @@ function App() {
       if (unlistenDeepLink) unlistenDeepLink();
       subscription.unsubscribe();
     };
-  }, [setSession]);
+  }, [setSession, navigate]);
 
   // Sync Scheduler
   useEffect(() => {

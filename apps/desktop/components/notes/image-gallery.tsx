@@ -81,10 +81,10 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
                 </div>
 
                 {/* Main Content Area */}
-                <div className="relative w-full h-full flex items-center justify-center p-4 md:p-16 lg:p-24 overflow-hidden pointer-events-none">
+                <div className="relative w-full h-full flex items-center justify-center p-8 md:p-12 lg:p-16 overflow-hidden pointer-events-none">
                     <div
                         onClick={(e) => e.stopPropagation()}
-                        className="relative group max-w-full max-h-full pointer-events-auto"
+                        className="relative group flex items-center justify-center max-w-full max-h-full pointer-events-auto"
                     >
                         {/* Subtle Glow behind image */}
                         <div className="absolute inset-0 bg-primary/10 blur-[120px] rounded-full opacity-30 pointer-events-none" />
@@ -93,7 +93,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
                             key={currentImage.src}
                             src={currentImage.src}
                             alt={`Image ${currentIndex + 1}`}
-                            className="relative max-w-full max-h-full object-contain select-none shadow-[0_32px_64px_-12px_rgba(0,0,0,0.8)] rounded-sm animate-in zoom-in-95 duration-500 pointer-events-none"
+                            className="max-w-full max-h-[85vh] md:max-h-[80vh] object-contain select-none shadow-[0_32px_64px_-12px_rgba(0,0,0,0.8)] rounded-sm animate-in zoom-in-95 duration-500 pointer-events-none"
                         />
                     </div>
                 </div>
