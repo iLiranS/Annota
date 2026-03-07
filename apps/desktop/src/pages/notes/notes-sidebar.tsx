@@ -12,8 +12,10 @@ import { ConfirmDialog } from "@/components/custom-ui/confirm-dialog";
 import { FolderEditModal } from "@/components/notes/folder-edit-modal";
 import { FolderListItem } from '@/components/notes/folder-list-item';
 import { NoteListItem } from '@/components/notes/note-list-item';
+import { SortDropdown } from "@/components/notes/sort-dropdown";
 import { Button } from "@/components/ui/button";
 import { Ionicons } from "@/components/ui/ionicons";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAppTheme } from "@/hooks/use-app-theme";
 
 import {
@@ -23,12 +25,12 @@ import {
     SidebarGroupLabel,
     SidebarHeader,
     SidebarMenu,
-    SidebarMenuButton,
     SidebarMenuItem,
     SidebarRail,
     useSidebar
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
+import { FolderPlus, SquarePen } from "lucide-react";
 import { useParams } from "react-router-dom";
 
 interface NotesSidebarProps {
@@ -37,7 +39,7 @@ interface NotesSidebarProps {
 
 export function NotesSidebar({ className }: NotesSidebarProps) {
     const navigate = useNavigate();
-    const { folderId: routeFolderId } = useParams();
+    const { folderId: routeFolderId, noteId: routeNoteId } = useParams();
     const [searchParams, setSearchParams] = useSearchParams();
     const { colors } = useAppTheme();
 
@@ -51,6 +53,7 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
         getSortType,
         deleteNote,
         deleteFolder,
+        setFolderSortType,
     } = useNotesStore();
 
     // Location awareness: prioritize folderId from route path over search params
@@ -108,6 +111,11 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
         setIsEditModalOpen(true);
     }, []);
 
+    const handleCreateFolder = useCallback(() => {
+        setEditingFolder(null); // Create mode
+        setIsEditModalOpen(true);
+    }, []);
+
     const handleDeleteFolder = useCallback(async () => {
         if (!folderToDelete) return;
         await deleteFolder(folderToDelete.id);
@@ -128,52 +136,69 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
         >
             {/* Header */}
             <SidebarHeader className="h-12 border-b border-border/50 px-2 py-0 justify-center overflow-hidden">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 overflow-hidden">
-                        <div style={{ backgroundColor: (currentFolder?.color || colors.primary) + "30" }} className="flex h-6 w-6 shrink-0 items-center justify-center rounded transition-colors shadow-sm">
-                            <Ionicons name={currentFolder ? currentFolder.icon : "documents"} color={currentFolder?.color || colors.primary} size={16} />
+                <TooltipProvider>
+                    <div className="flex items-center justify-between gap-1 w-full">
+                        <div className="flex items-center gap-2 overflow-hidden flex-1">
+                            <div style={{ backgroundColor: (currentFolder?.color || colors.primary) + "30" }} className="flex h-6 w-6 shrink-0 items-center justify-center rounded transition-colors shadow-sm">
+                                <Ionicons name={currentFolder ? currentFolder.icon : "documents"} color={currentFolder?.color || colors.primary} size={16} />
+                            </div>
+                            <h2 className="text-sm font-bold tracking-tight truncate">{headerTitle}</h2>
                         </div>
-                        <h2 className="text-sm font-bold tracking-tight truncate">{headerTitle}</h2>
+                        <div className="flex items-center gap-0.5 shrink-0">
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 shrink-0 text-muted-foreground/60 hover:text-primary hover:bg-primary/10 transition-colors"
+                                        onClick={handleCreateFolder}
+                                    >
+                                        <FolderPlus className="h-5 w-5" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="bottom" className="text-[10px] font-bold">New Folder</TooltipContent>
+                            </Tooltip>
+
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 shrink-0 text-muted-foreground/60 hover:text-primary hover:bg-primary/10 transition-colors"
+                                        onClick={handleCreateNote}
+                                    >
+                                        <SquarePen className="h-5 w-5" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="bottom" className="text-[10px] font-bold">New Note</TooltipContent>
+                            </Tooltip>
+                        </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 shrink-0"
-                            onClick={handleCreateNote}
-                        >
-                            <Ionicons name="add" size={18} />
-                        </Button>
-                    </div>
-                </div>
+                </TooltipProvider>
             </SidebarHeader>
 
             {/* Content */}
-            <SidebarContent className="px-2 py-2">
+            <SidebarContent className="px-2 py-2 gap-0">
                 {/* Folders section */}
                 {browseFolders.length > 0 && (
                     <SidebarGroup className="px-0">
                         <SidebarGroupLabel className="px-2 h-7 mb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
-                            Folders
+                            <div className="flex items-center gap-2">
+                                <Ionicons name="folder-outline" size={17} />
+                                <p>Folders</p>
+                            </div>
                         </SidebarGroupLabel>
                         <SidebarGroupContent>
                             <SidebarMenu>
                                 {browseFolders.map((folder) => (
                                     <SidebarMenuItem key={folder.id}>
                                         <FolderListItem
-                                            asChild
                                             folder={folder}
                                             onEdit={handleEditFolder}
                                             onDelete={setFolderToDelete}
-                                        >
-                                            <SidebarMenuButton
-                                                onClick={() => handleFolderPress(folder.id)}
-                                                isActive={currentFolderId === folder.id}
-                                            >
-                                                <Ionicons name={folder.icon || "folder"} size={14} color={folder.color} className="shrink-0" />
-                                                <span className="truncate">{folder.name}</span>
-                                            </SidebarMenuButton>
-                                        </FolderListItem>
+                                            onClick={() => handleFolderPress(folder.id)}
+                                            isActive={currentFolderId === folder.id}
+                                        />
                                     </SidebarMenuItem>
                                 ))}
                             </SidebarMenu>
@@ -185,26 +210,21 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
                 {pinnedNotes.length > 0 && (
                     <SidebarGroup className="px-0">
                         <SidebarGroupLabel className="px-2 h-7 mb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
-                            Pinned
+                            <div className="flex items-center gap-2">
+                                <Ionicons name="pin" size={17} />
+                                <p>Pinned</p>
+                            </div>
                         </SidebarGroupLabel>
                         <SidebarGroupContent>
                             <SidebarMenu>
                                 {pinnedNotes.map((note) => (
                                     <SidebarMenuItem key={note.id}>
                                         <NoteListItem
-                                            asChild
                                             note={note}
                                             onDelete={() => deleteNote(note.id)}
-                                        >
-                                            <SidebarMenuButton
-                                                onClick={() => handleNotePress(note)}
-                                                className="group/note"
-                                            >
-                                                <Ionicons name="document-text" size={14} className="text-muted-foreground/40 group-hover/note:text-primary transition-colors shrink-0" />
-                                                <span className="truncate">{note.title || "Untitled"}</span>
-                                                <Ionicons name="pin" size={10} className="ml-auto text-primary/60" />
-                                            </SidebarMenuButton>
-                                        </NoteListItem>
+                                            onClick={() => handleNotePress(note)}
+                                            isActive={routeNoteId === note.id}
+                                        />
                                     </SidebarMenuItem>
                                 ))}
                             </SidebarMenu>
@@ -216,25 +236,21 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
                 {unpinnedNotes.length > 0 && (
                     <SidebarGroup className="px-0">
                         <SidebarGroupLabel className="px-2 h-7 mb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
-                            Notes
+                            <div className="flex items-center gap-2">
+                                <Ionicons name="document-text-outline" size={17} />
+                                <p>Notes</p>
+                            </div>
                         </SidebarGroupLabel>
                         <SidebarGroupContent>
                             <SidebarMenu>
                                 {unpinnedNotes.map((note) => (
                                     <SidebarMenuItem key={note.id}>
                                         <NoteListItem
-                                            asChild
                                             note={note}
                                             onDelete={() => deleteNote(note.id)}
-                                        >
-                                            <SidebarMenuButton
-                                                onClick={() => handleNotePress(note)}
-                                                className="group/note"
-                                            >
-                                                <Ionicons name="document-text" size={14} className="text-muted-foreground/40 group-hover/note:text-primary transition-colors shrink-0" />
-                                                <span className="truncate">{note.title || "Untitled"}</span>
-                                            </SidebarMenuButton>
-                                        </NoteListItem>
+                                            onClick={() => handleNotePress(note)}
+                                            isActive={routeNoteId === note.id}
+                                        />
                                     </SidebarMenuItem>
                                 ))}
                             </SidebarMenu>
@@ -252,11 +268,20 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
                 )}
             </SidebarContent>
 
+            {/* Sort Controls */}
+            <div className="mt-auto px-4 py-2 border-t border-border/10 flex items-center justify-center bg-accent/5">
+                <SortDropdown
+                    currentSortType={currentSortType}
+                    onSortChange={(type) => setFolderSortType(currentFolderId ?? null, type)}
+                />
+            </div>
+
             {/* Modals */}
             <FolderEditModal
                 open={isEditModalOpen}
                 onOpenChange={setIsEditModalOpen}
                 folder={editingFolder}
+                defaultParentId={currentFolderId}
             />
 
             <ConfirmDialog

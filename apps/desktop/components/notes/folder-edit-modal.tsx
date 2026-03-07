@@ -101,11 +101,15 @@ export function FolderEditModal({
         }
     }, [folder, open, defaultParentId]);
 
+    const parentFolder = useMemo(() => {
+        if (!parentId) return null;
+        return getFolderById(parentId);
+    }, [parentId, getFolderById]);
+
     const getParentName = useCallback((id: string | null) => {
         if (id === null) return 'Notes (Root)';
-        const parent = getFolderById(id);
-        return parent?.name ?? 'Unknown';
-    }, [getFolderById]);
+        return parentFolder?.name ?? 'Unknown';
+    }, [parentFolder]);
 
     const handleSave = () => {
         if (!name.trim()) return;
@@ -147,13 +151,25 @@ export function FolderEditModal({
                                     {name.length}/50
                                 </span>
                             </div>
-                            <Input
-                                id="folder-name"
-                                value={name}
-                                onChange={(e) => setName(e.target.value.slice(0, 50))}
-                                placeholder="Folder name"
-                                className="h-10 bg-accent/30 border-border/50 focus:bg-accent/50 transition-colors focus-visible:ring-0 focus-visible:ring-offset-0"
-                            />
+                            <div className="flex items-center pl-3 border border-border/50 rounded-md ">
+                                <div
+                                    className="flex items-center justify-center rounded-md w-7 h-7 transition-colors"
+                                    style={{ backgroundColor: `${color}15` }}
+                                >
+                                    <Ionicons
+                                        name={icon as any}
+                                        size={18}
+                                        style={{ color: color }}
+                                    />
+                                </div>
+                                <Input
+                                    id="folder-name"
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value.slice(0, 50))}
+                                    placeholder="Folder name"
+                                    className="h-10 shadow-none bg-transparent border-none  focus-visible:ring-0 focus-visible:ring-offset-0 flex-1"
+                                />
+                            </div>
                         </div>
 
                         {/* Location */}
@@ -167,7 +183,16 @@ export function FolderEditModal({
                                 className="w-full h-10 justify-between px-3 bg-accent/30 border-border/50 hover:bg-accent/50 transition-colors"
                             >
                                 <div className="flex items-center gap-2.5">
-                                    <Ionicons name="folder" size={16} style={{ color: color || colors.primary }} />
+                                    <div
+                                        className="flex items-center justify-center rounded-md w-7 h-7 shrink-0 transition-colors"
+                                        style={{ backgroundColor: `${parentFolder?.color || colors.primary}15` }}
+                                    >
+                                        <Ionicons
+                                            name={(parentFolder?.icon || 'folder') as any}
+                                            size={14}
+                                            style={{ color: parentFolder?.color || colors.primary }}
+                                        />
+                                    </div>
                                     <span className="text-sm font-medium">{getParentName(parentId)}</span>
                                 </div>
                                 <Ionicons name="chevron-forward" size={14} className="text-muted-foreground/40" />

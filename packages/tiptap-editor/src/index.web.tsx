@@ -173,6 +173,7 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
                             fontFamily: editorSettings.fontFamily,
                             fontSize: editorSettings.fontSize,
                             lineSpacing: editorSettings.lineSpacing,
+                            noteWidth: editorSettings.noteWidth,
                             editable,
                         });
 
@@ -223,7 +224,7 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
 
                         document.body.dispatchEvent(new PointerEvent('pointerdown', eventProps));
                         document.body.dispatchEvent(new MouseEvent('mousedown', eventProps));
-                        document.body.dispatchEvent(new FocusEvent('focusin', eventProps));
+                        // document.body.dispatchEvent(new FocusEvent('focusin', eventProps));
 
                         // Dispatch a pointermove event at -1, -1 to clear any hover states
                         document.body.dispatchEvent(new PointerEvent('pointermove', {
@@ -239,9 +240,9 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
 
                         // If any element in the parent window currently has focus 
                         // blurring it can help trigger the closing of menus.
-                        if (document.activeElement instanceof HTMLElement && document.activeElement !== document.body) {
-                            document.activeElement.blur();
-                        }
+                        // if (document.activeElement instanceof HTMLElement && document.activeElement !== document.body) {
+                        //     document.activeElement.blur();
+                        // }
                         break;
                     case 'searchResults':
                         onSearchResults?.(data.count, data.currentIndex);
@@ -282,6 +283,7 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
                     fontFamily: editorSettings.fontFamily,
                     fontSize: editorSettings.fontSize,
                     lineSpacing: editorSettings.lineSpacing,
+                    noteWidth: editorSettings.noteWidth,
                 });
             }
         }, [dark, colors, isReady, sendCommand, contentPaddingTop, editorSettings]);
@@ -336,6 +338,9 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
                     onClose: () => {
                         setIsGalleryVisible(false);
                         onGalleryVisibilityChange?.(false);
+                    },
+                    onNavigate: (index: number) => {
+                        setGalleryCurrentIndex(index);
                     }
                 })}
             </div>

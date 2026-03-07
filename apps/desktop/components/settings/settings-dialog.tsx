@@ -9,6 +9,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AccountSettings } from "./account-settings";
 import { AppearanceSettings } from "./appearance-settings";
+import { EditorSettings } from "./editor-settings";
+import { GeneralSettings } from "./general-settings";
 
 import {
     Dialog,
@@ -115,6 +117,10 @@ export default function SettingsDialog() {
                             <AccountSettings />
                         ) : activeTab === "appearance" ? (
                             <AppearanceSettings />
+                        ) : activeTab === "editor" ? (
+                            <EditorSettings />
+                        ) : activeTab === "general" ? (
+                            <GeneralSettings />
                         ) : activeTab === "storage" ? (
                             <StorageSettings />
                         ) : (

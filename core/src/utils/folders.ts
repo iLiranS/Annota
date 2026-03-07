@@ -14,7 +14,7 @@ export const generateFolder = (data: Partial<FolderInsert>): FolderInsert => {
         createdAt: now,
         updatedAt: now,
         isDirty: true,
-        sortType: 'UPDATED_LAST',
+        sortType: 'CREATED_FIRST',
         isDeleted: false,
         isSystem: false,
     };

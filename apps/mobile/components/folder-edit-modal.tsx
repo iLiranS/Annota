@@ -125,12 +125,16 @@ export default function FolderEditModal({
         );
     }, [folder, folders, getDescendantIds, isCreateMode]);
 
+    const parentFolder = useMemo(() => {
+        if (!parentId) return null;
+        return getFolderById(parentId);
+    }, [parentId, getFolderById]);
+
     // Get parent folder name for display
     const getParentName = useCallback((id: string | null) => {
         if (id === null) return 'Notes (Root)';
-        const parent = getFolderById(id);
-        return parent?.name ?? 'Unknown';
-    }, [getFolderById]);
+        return parentFolder?.name ?? 'Unknown';
+    }, [parentFolder]);
 
     // Build breadcrumb path for a folder
     const getFolderPath = useCallback((folderId: string | null): string => {
@@ -207,20 +211,38 @@ export default function FolderEditModal({
                     {/* Folder Name */}
                     <View style={styles.section}>
                         <Text style={[styles.sectionTitle, { color: colors.text }]}>Name</Text>
-                        <TextInput
-                            style={[
-                                styles.textInput,
-                                {
-                                    backgroundColor: colors.card,
-                                    color: colors.text,
-                                    borderColor: colors.border,
-                                }
-                            ]}
-                            value={name}
-                            onChangeText={(text) => { setName(text.slice(0, 50)); }}
-                            placeholder="Folder name"
-                            placeholderTextColor={colors.text + '50'}
-                        />
+                        <View style={[
+                            styles.inputWrapper,
+                            {
+                                backgroundColor: colors.card,
+                                borderColor: colors.border,
+                            }
+                        ]}>
+                            <View
+                                style={[
+                                    styles.iconContainer,
+                                    { backgroundColor: color + '15' }
+                                ]}
+                            >
+                                <Ionicons
+                                    name={icon as any}
+                                    size={18}
+                                    color={color}
+                                />
+                            </View>
+                            <TextInput
+                                style={[
+                                    styles.flexInput,
+                                    {
+                                        color: colors.text,
+                                    }
+                                ]}
+                                value={name}
+                                onChangeText={(text) => { setName(text.slice(0, 50)); }}
+                                placeholder="Folder name"
+                                placeholderTextColor={colors.text + '50'}
+                            />
+                        </View>
                     </View>
 
                     {/* Folder Location */}
@@ -237,7 +259,18 @@ export default function FolderEditModal({
                             ]}
                         >
                             <View style={styles.locationContent}>
-                                <Ionicons name="folder" size={20} color={folder?.color || colors.primary} />
+                                <View
+                                    style={[
+                                        styles.iconContainerSmall,
+                                        { backgroundColor: (parentFolder?.color || colors.text) + '15' }
+                                    ]}
+                                >
+                                    <Ionicons
+                                        name={(parentFolder?.icon || 'folder') as any}
+                                        size={14}
+                                        color={parentFolder?.color || colors.text + '50'}
+                                    />
+                                </View>
                                 <Text style={[styles.locationText, { color: colors.text }]}>
                                     {getParentName(parentId)}
                                 </Text>
@@ -521,11 +554,33 @@ const styles = StyleSheet.create({
         fontSize: 12,
         marginTop: 2,
     },
-    folderIcon: {
-        width: 40,
-        height: 40,
-        borderRadius: 10,
+    iconContainer: {
+        width: 32,
+        height: 32,
+        borderRadius: 8,
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    iconContainerSmall: {
+        width: 28,
+        height: 28,
+        borderRadius: 6,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    inputWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 12,
+        borderRadius: 12,
+        borderWidth: 1,
+        height: 52,
+        gap: 12,
+    },
+    flexInput: {
+        flex: 1,
+        fontSize: 16,
+        height: '100%',
+        paddingVertical: 0,
     },
 });

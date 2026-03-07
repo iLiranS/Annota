@@ -16,7 +16,7 @@ export const COLOR_PALETTE: ColorOption[] = [
     { name: 'Teal', value: '#38D9A9' },
     { name: 'Blue', value: '#74C0FC' },
     { name: 'Purple', value: '#6366F1' },
-    { name: 'Pink', value: '#F783AC' },
     { name: 'Gray', value: '#727272' },
+    { name: 'Pink', value: '#F783AC' },
     { name: 'Brown', value: '#A07855' }
 ];

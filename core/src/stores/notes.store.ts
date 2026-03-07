@@ -34,7 +34,6 @@ interface NotesState {
     getNoteById: (noteId: string) => NoteMetadata | undefined;
 
     // Content operations (lazy loaded)
-    // Content operations (lazy loaded)
     getNoteContent: (noteId: string) => Promise<string>;
     updateNoteContent: (noteId: string, content: string) => Promise<void>;
     getNoteVersions: (noteId: string) => Promise<{ id: string; createdAt: Date }[]>;
@@ -455,6 +454,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         } else {
             get().updateFolder(folderId, { sortType });
         }
+        SyncScheduler.instance?.notifyContentChange();
     },
 
     getSortType: (folderId) => {

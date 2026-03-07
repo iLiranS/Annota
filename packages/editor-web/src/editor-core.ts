@@ -14,7 +14,7 @@ import { StarterKit } from '@tiptap/starter-kit';
 
 import { Mathematics, migrateMathStrings } from '@tiptap/extension-mathematics';
 import { loadingEl, sendMessage, showError } from './bridge';
-import { CustomCodeBlock, CustomHeading, CustomImage, CustomTableCell, CustomTableHeader, Details, DetailsContent, DetailsSummary, SearchExtension } from './extensions';
+import { CustomCodeBlock, CustomHeading, CustomImage, CustomTableCell, CustomTableHeader, Details, DetailsContent, DetailsSummary, SearchExtension, ShortcutManager } from './extensions';
 import { hexToRgba } from './utils';
 
 import './types';
@@ -195,7 +195,8 @@ export function setupEditor(options: any) {
         direction = 'auto',
         fontFamily = 'system',
         fontSize = 16,
-        lineSpacing = 1.5
+        lineSpacing = 1.5,
+        noteWidth = 0
     } = options;
 
     // Set CSS variables for theme
@@ -209,6 +210,7 @@ export function setupEditor(options: any) {
     document.documentElement.style.setProperty('--quote-bg', hexToRgba(colors.primary, 0.2));
     document.documentElement.style.setProperty('--editor-font-size', `${fontSize}px`);
     document.documentElement.style.setProperty('--editor-line-height', `${lineSpacing}`);
+    document.documentElement.style.setProperty('--editor-max-width', noteWidth > 0 ? `${noteWidth}px` : '100%');
     applyFontFamily(fontFamily);
 
     // Apply content padding to the body so it scrolls with the header
@@ -293,6 +295,7 @@ export function setupEditor(options: any) {
                     heading: false,
                     codeBlock: false,
                 }),
+                ShortcutManager,
                 CustomHeading.configure({ levels: [1, 2, 3, 4, 5, 6] }),
                 Underline,
                 Placeholder.configure({ placeholder }),

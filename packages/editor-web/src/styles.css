@@ -11,6 +11,7 @@
     --editor-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     --editor-font-size: 16px;
     --editor-line-height: 1.6;
+    --editor-max-width: 100%;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -106,6 +107,9 @@ body {
 #editor-content {
     outline: none;
     min-height: calc(100vh - 100px);
+    max-width: var(--editor-max-width);
+    margin-left: auto;
+    margin-right: auto;
 }
 
 /* Hidden state */

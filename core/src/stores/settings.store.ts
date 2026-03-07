@@ -15,6 +15,7 @@ export interface EditorSettings {
     paragraphSpacing: number; // pixels (e.g. 10, 20)
     fontFamily: EditorFontId | string;
     floatingNoteHeader: boolean;
+    noteWidth: number; // pixels, 0 for full width
 }
 
 export interface GeneralSettings {
@@ -54,6 +55,7 @@ const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
     paragraphSpacing: 16,
     fontFamily: 'system',
     floatingNoteHeader: true,
+    noteWidth: 800,
 };
 
 const DEFAULT_GENERAL_SETTINGS: GeneralSettings = {

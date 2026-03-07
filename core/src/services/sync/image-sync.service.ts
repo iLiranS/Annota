@@ -4,6 +4,7 @@ import { storageApi } from '../../api/storage.api';
 import * as ImagesRepo from '../../db/repositories/images.repository';
 import type { ImageInsert } from '../../db/schema';
 import { decryptImageBytes, encryptImageBytes } from '../../utils/crypto';
+import { resolveLocalUri } from '../images/image.service';
 
 const BUCKET_NAME = 'e2e_images';
 const MAX_CONCURRENT_DOWNLOADS = 3;
@@ -53,8 +54,10 @@ class ImageSyncService {
                     // 1. Read file from disk as raw bytes
                     let rawBytes: Uint8Array;
                     try {
-                        rawBytes = await getPlatformAdapters().fileSystem.readBytes(image.localPath);
+                        const absoluteUri = await resolveLocalUri(image.localPath);
+                        rawBytes = await getPlatformAdapters().fileSystem.readBytes(absoluteUri);
                     } catch (e) {
+                        console.warn(`[ImageSync] Could not read file for image ${image.id} at ${image.localPath}. Skipping.`, e);
                         continue; // file doesn't exist or unreadable
                     }
 
@@ -211,7 +214,7 @@ class ImageSyncService {
             // Construct minimal image record
             const newImage: ImageInsert = {
                 id: item.imageId,
-                localPath: newLocalPath,
+                localPath: `${item.imageId}.${fileExt}`, // Store only relative filename
                 size: fileSize,
                 syncStatus: 'synced',
                 createdAt: new Date(),

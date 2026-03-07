@@ -112,7 +112,11 @@ export function LinkPopover({
                     variant="ghost"
                     size="icon"
                     className="h-9 w-9 shrink-0"
-                    style={{ color: isActive ? activeColor : undefined }}
+                    style={{
+                        color: isActive ? activeColor : undefined,
+                        backgroundColor: isActive && activeColor ? `${activeColor}15` : undefined,
+                        borderRadius: isActive ? '8px' : undefined
+                    }}
                 >
                     <Icon className="h-5 w-5" />
                 </Button>

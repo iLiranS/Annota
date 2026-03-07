@@ -86,14 +86,7 @@ export function NoteListItem({
                             <>
                                 <div className="flex w-full items-center justify-between gap-2.5">
                                     <div className="flex min-w-0 items-center gap-2">
-                                        <Ionicons
-                                            name="document-text"
-                                            size={16}
-                                            className={cn(
-                                                "text-primary shrink-0 transition-opacity",
-                                                isActive ? "opacity-100" : "opacity-80 group-hover/note:opacity-100"
-                                            )}
-                                        />
+
                                         <p className={cn(
                                             "truncate text-sm font-medium transition-colors",
                                             isActive ? "text-primary" : "text-foreground/90 group-hover/note:text-primary"
@@ -113,7 +106,7 @@ export function NoteListItem({
                                 </div>
 
                                 {!isCompact && showDescription && note.preview && (
-                                    <p className="line-clamp-1 w-full pl-6 text-[11px] text-muted-foreground/50 leading-tight">
+                                    <p className="line-clamp-1 w-full  text-[11px] text-muted-foreground/50 leading-tight">
                                         {note.preview}
                                     </p>
                                 )}

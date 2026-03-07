@@ -24,6 +24,7 @@ interface ColorPickerProps {
     label: string;
     onOpenChange?: (open: boolean) => void;
     isMenu?: boolean;
+    activeColor?: string;
 }
 
 export function ColorPicker({
@@ -34,7 +35,8 @@ export function ColorPicker({
     onClear,
     label,
     onOpenChange,
-    isMenu
+    isMenu,
+    activeColor
 }: ColorPickerProps) {
     const [open, setOpen] = useState(false);
 
@@ -96,7 +98,11 @@ export function ColorPicker({
                     size="icon"
                     className="h-9 w-9"
                     title={title}
-                    style={{ color: currentColor || undefined }}
+                    style={{
+                        color: currentColor || undefined,
+                        backgroundColor: currentColor && activeColor ? `${activeColor}15` : undefined,
+                        borderRadius: currentColor ? '8px' : undefined
+                    }}
                 >
                     <Icon className="h-5 w-5" />
                 </Button>

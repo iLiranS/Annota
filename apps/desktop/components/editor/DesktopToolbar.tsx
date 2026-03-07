@@ -12,6 +12,7 @@ import {
     Bold,
     CheckSquare,
     Code,
+    FileInput,
     Highlighter,
     Indent,
     Italic,
@@ -20,7 +21,6 @@ import {
     ListOrdered,
     MoreHorizontal,
     Outdent,
-    PlusSquare,
     Quote,
     Redo,
     SquareCode,
@@ -59,15 +59,17 @@ export function DesktopToolbar({
     }, []);
 
     const activeStyle = useCallback((active: boolean) => ({
-        color: active ? colors.primary : undefined
+        color: active ? colors.primary : undefined,
+        backgroundColor: active ? `${colors.primary}15` : undefined,
+        borderRadius: '8px'
     }), [colors.primary]);
 
     const items: ToolbarItem[] = React.useMemo(() => [
         {
             id: 'heading',
             label: 'Text Type',
-            render: <HeadingSelector key="heading" editorState={editorState} sendCommand={sendCommand} onOpenChange={handleOpenChange} />,
-            dropdownRender: <HeadingSelector key="heading-dropdown" editorState={editorState} sendCommand={sendCommand} onOpenChange={handleOpenChange} isMenu />
+            render: <HeadingSelector key="heading" editorState={editorState} sendCommand={sendCommand} onOpenChange={handleOpenChange} activeColor={colors.primary} />,
+            dropdownRender: <HeadingSelector key="heading-dropdown" editorState={editorState} sendCommand={sendCommand} onOpenChange={handleOpenChange} activeColor={colors.primary} isMenu />
         },
         {
             id: 'bold',
@@ -96,14 +98,14 @@ export function DesktopToolbar({
         {
             id: 'textColor',
             label: 'Text Color',
-            render: <ColorPicker key="textColor" title="Text Color" label="Color" icon={Baseline} currentColor={editorState.textColor} onSelect={(color) => sendCommand('setColor', { color })} onClear={() => sendCommand('unsetColor')} onOpenChange={handleOpenChange} />,
-            dropdownRender: <ColorPicker key="textColor-dropdown" title="Text Color" label="Color" icon={Baseline} currentColor={editorState.textColor} onSelect={(color) => sendCommand('setColor', { color })} onClear={() => sendCommand('unsetColor')} onOpenChange={handleOpenChange} isMenu />
+            render: <ColorPicker key="textColor" title="Text Color" label="Color" icon={Baseline} currentColor={editorState.textColor} onSelect={(color) => sendCommand('setColor', { color })} onClear={() => sendCommand('unsetColor')} onOpenChange={handleOpenChange} activeColor={colors.primary} />,
+            dropdownRender: <ColorPicker key="textColor-dropdown" title="Text Color" label="Color" icon={Baseline} currentColor={editorState.textColor} onSelect={(color) => sendCommand('setColor', { color })} onClear={() => sendCommand('unsetColor')} onOpenChange={handleOpenChange} activeColor={colors.primary} isMenu />
         },
         {
             id: 'highlight',
             label: 'Highlight',
-            render: <ColorPicker key="highlight" title="Highlight" label="Highlight" icon={Highlighter} currentColor={editorState.highlightColor} onSelect={(color) => sendCommand('setHighlight', { color })} onClear={() => sendCommand('unsetHighlight')} onOpenChange={handleOpenChange} />,
-            dropdownRender: <ColorPicker key="highlight-dropdown" title="Highlight" label="Highlight" icon={Highlighter} currentColor={editorState.highlightColor} onSelect={(color) => sendCommand('setHighlight', { color })} onClear={() => sendCommand('unsetHighlight')} onOpenChange={handleOpenChange} isMenu />
+            render: <ColorPicker key="highlight" title="Highlight" label="Highlight" icon={Highlighter} currentColor={editorState.highlightColor} onSelect={(color) => sendCommand('setHighlight', { color })} onClear={() => sendCommand('unsetHighlight')} onOpenChange={handleOpenChange} activeColor={colors.primary} />,
+            dropdownRender: <ColorPicker key="highlight-dropdown" title="Highlight" label="Highlight" icon={Highlighter} currentColor={editorState.highlightColor} onSelect={(color) => sendCommand('setHighlight', { color })} onClear={() => sendCommand('unsetHighlight')} onOpenChange={handleOpenChange} activeColor={colors.primary} isMenu />
         },
         {
             id: 'bulletList',
@@ -156,8 +158,8 @@ export function DesktopToolbar({
         {
             id: 'details',
             label: 'Collapsible',
-            render: <Button key="details" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleDetails')} style={activeStyle(editorState.isDetails)}><PlusSquare className="h-5 w-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="details-dropdown" onClick={() => sendCommand('toggleDetails')} className={cn("gap-2", editorState.isDetails && "text-primary")}><PlusSquare className="h-4 w-4" /> Details</DropdownMenuItem>
+            render: <Button key="details" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleDetails')} style={activeStyle(editorState.isDetails)}><FileInput className="h-5 w-5" /></Button>,
+            dropdownRender: <DropdownMenuItem key="details-dropdown" onClick={() => sendCommand('toggleDetails')} className={cn("gap-2", editorState.isDetails && "text-primary")}><FileInput className="h-4 w-4" /> Details</DropdownMenuItem>
         },
         {
             id: 'math',

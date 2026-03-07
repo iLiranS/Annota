@@ -18,9 +18,10 @@ interface HeadingSelectorProps {
     sendCommand: ToolbarRenderProps['sendCommand'];
     onOpenChange?: (open: boolean) => void;
     isMenu?: boolean;
+    activeColor?: string;
 }
 
-export function HeadingSelector({ editorState, sendCommand, onOpenChange, isMenu }: HeadingSelectorProps) {
+export function HeadingSelector({ editorState, sendCommand, onOpenChange, isMenu, activeColor }: HeadingSelectorProps) {
     const currentHeadingLabel = editorState.isHeading1 ? 'H1' :
         editorState.isHeading2 ? 'H2' :
             editorState.isHeading3 ? 'H3' :
@@ -61,7 +62,16 @@ export function HeadingSelector({ editorState, sendCommand, onOpenChange, isMenu
     return (
         <DropdownMenu onOpenChange={onOpenChange}>
             <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-9 w-13 justify-between gap-1 px-3 font-bold text-foreground">
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-9 w-13 justify-between gap-1 px-3 font-bold"
+                    style={{
+                        color: currentHeadingLabel !== 'T' ? activeColor : undefined,
+                        backgroundColor: currentHeadingLabel !== 'T' && activeColor ? `${activeColor}15` : undefined,
+                        borderRadius: currentHeadingLabel !== 'T' ? '8px' : undefined
+                    }}
+                >
                     {currentHeadingLabel}
                     <ChevronDown className="h-4 w-4 opacity-50" />
                 </Button>
