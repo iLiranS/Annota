@@ -5,7 +5,6 @@ import { useKeyboard } from '@react-native-community/hooks';
 import { useTheme } from '@react-navigation/native';
 import * as ExpoClipboard from 'expo-clipboard';
 import { Directory, File as ExpoFile, Paths } from 'expo-file-system';
-import * as LegacyFileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
@@ -324,14 +323,15 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
 
                                         stage = 'writeTempFile';
                                         const tempFile = new ExpoFile(tempDir, `pasted-${Date.now()}.${parsed.extension}`);
-                                        try {
-                                            tempFile.create({ overwrite: true, intermediates: true });
-                                            tempFile.write(parsed.base64, { encoding: 'base64' });
-                                        } catch {
-                                            await LegacyFileSystem.writeAsStringAsync(tempFile.uri, parsed.base64, {
-                                                encoding: LegacyFileSystem.EncodingType.Base64,
-                                            });
+                                        tempFile.create({ overwrite: true, intermediates: true });
+
+                                        // Manual conversion of base64 to Uint8Array for safety
+                                        const binaryString = atob(parsed.base64);
+                                        const rawBytes = new Uint8Array(binaryString.length);
+                                        for (let i = 0; i < binaryString.length; i++) {
+                                            rawBytes[i] = binaryString.charCodeAt(i);
                                         }
+                                        tempFile.write(rawBytes);
 
                                         stage = 'processImage';
                                         const processed = await NoteImageService.processAndInsertImage(noteId, tempFile.uri);

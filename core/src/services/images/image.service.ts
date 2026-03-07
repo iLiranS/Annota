@@ -11,6 +11,26 @@ export async function getImagesDirectory(): Promise<string> {
     return await getPlatformAdapters().fileSystem.ensureDir('images');
 }
 
+/**
+ * Resolves a stored path (which could be a full path or just a filename)
+ * to a current absolute URI. This is necessary because iOS app container UUIDs
+ * change on rebuild/update.
+ */
+export async function resolveLocalUri(storedPath: string): Promise<string> {
+    if (!storedPath) return '';
+
+    // If it's already an absolute file URI or path, extract the filename.
+    // If it's just a filename (no slashes), we'll use it as is.
+    let filename = storedPath;
+    if (storedPath.includes('/') || storedPath.includes('\\')) {
+        filename = storedPath.split(/[/\\]/).pop() || storedPath;
+    }
+
+    const dir = await getImagesDirectory();
+    const separator = dir.endsWith('/') ? '' : '/';
+    return `${dir}${separator}${filename}`;
+}
+
 // ============ IMAGE PROCESSING ============
 
 /**
@@ -54,9 +74,10 @@ export async function saveToLocalStorage(sourceUri: string, imageId: string): Pr
  * Returns `data:image/jpeg;base64,...`
  */
 export async function readAsBase64DataUri(localPath: string): Promise<string> {
-    const base64 = await getPlatformAdapters().fileSystem.readBase64(localPath);
+    const absoluteUri = await resolveLocalUri(localPath);
+    const base64 = await getPlatformAdapters().fileSystem.readBase64(absoluteUri);
     // Detect MIME from extension — legacy .jpg files still need to work
-    const mime = localPath.endsWith('.webp') ? 'image/webp' : 'image/jpeg';
+    const mime = absoluteUri.endsWith('.webp') ? 'image/webp' : 'image/jpeg';
     return `data:${mime};base64,${base64}`;
 }
 
@@ -71,12 +92,14 @@ export async function downloadRemoteImage(url: string): Promise<{ uri: string; c
 
 /** Delete an image file from local storage */
 export async function deleteImageFile(localPath: string): Promise<void> {
-    await getPlatformAdapters().fileSystem.deleteFile(localPath).catch(() => { });
+    const absoluteUri = await resolveLocalUri(localPath);
+    await getPlatformAdapters().fileSystem.deleteFile(absoluteUri).catch(() => { });
 }
 
 /** Get file size in bytes */
 export async function getFileSize(localPath: string): Promise<number> {
-    return await getPlatformAdapters().fileSystem.getSize(localPath).catch(() => 0);
+    const absoluteUri = await resolveLocalUri(localPath);
+    return await getPlatformAdapters().fileSystem.getSize(absoluteUri).catch(() => 0);
 }
 
 // ============ DEVICE INTEGRATION ============
@@ -97,14 +120,12 @@ export async function saveImageToGallery(imageId?: string, base64Uri?: string): 
         let localUri = '';
 
         if (imageId) {
-            const dir = await getImagesDirectory();
-            const separator = dir.endsWith('/') ? '' : '/';
-            const webpPath = `${dir}${separator}${imageId}.webp`;
+            const webpPath = await resolveLocalUri(`${imageId}.webp`);
             let size = await getFileSize(webpPath);
             if (size > 0) {
                 localUri = webpPath;
             } else {
-                const jpgPath = `${dir}${separator}${imageId}.jpg`;
+                const jpgPath = await resolveLocalUri(`${imageId}.jpg`);
                 size = await getFileSize(jpgPath);
                 if (size > 0) {
                     localUri = jpgPath;

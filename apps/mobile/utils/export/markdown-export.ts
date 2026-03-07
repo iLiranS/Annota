@@ -1,4 +1,4 @@
-import * as LegacyFileSystem from 'expo-file-system/legacy';
+import { File as ExpoFile, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 function convertHtmlToMarkdown(html: string): string {
     let md = html;
@@ -68,14 +68,13 @@ export async function exportToMarkdown(htmlContent: string, title: string = 'Not
         // Create a safe valid filename
         const safeTitle = title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
         const filename = `${safeTitle || 'note'}.md`;
-        const fileUri = `${LegacyFileSystem.cacheDirectory}${filename}`;
+        const file = new ExpoFile(Paths.cache, filename);
 
         // Write string to cache directory
-        await LegacyFileSystem.writeAsStringAsync(fileUri, markdown, {
-            encoding: LegacyFileSystem.EncodingType.UTF8
-        });
+        await file.write(markdown);
 
         // Open share dialog
+        const fileUri = file.uri;
         const canShare = await Sharing.isAvailableAsync();
         if (canShare) {
             await Sharing.shareAsync(fileUri, {

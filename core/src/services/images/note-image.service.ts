@@ -7,6 +7,7 @@ import {
     deleteImageFile,
     downloadRemoteImage,
     getFileSize,
+    readAsBase64DataUri,
     resizeAndCompress,
     saveToLocalStorage
 } from './image.service';
@@ -44,16 +45,17 @@ export async function processAndInsertImage(
 
     // 4. Generate new ID and save file
     const imageId = Buffer.from(getPlatformAdapters().crypto.randomBytes(16)).toString('hex');
-    const localPath = await saveToLocalStorage(resized.uri, imageId);
+    const fullPath = await saveToLocalStorage(resized.uri, imageId);
+    const filename = fullPath.split('/').pop() || fullPath;
 
     // 5. Get file size
-    const size = await getFileSize(localPath);
+    const size = await getFileSize(fullPath);
 
     // 6. Insert into DB
     await ImagesRepo.insertImage({
         id: imageId,
         hash,
-        localPath,
+        localPath: filename, // Store only the filename
         mimeType: 'image/webp',
         size: size ?? null,
         width: resized.width,
@@ -98,7 +100,7 @@ export async function resolveImageSources(
     await Promise.all(
         images.map(async (img) => {
             try {
-                result[img.id] = await getPlatformAdapters().fileSystem.toImageUrl(img.localPath);
+                result[img.id] = await readAsBase64DataUri(img.localPath);
             } catch (err) {
                 console.warn(`Failed to resolve image ${img.id}:`, err);
                 // Image file may have been deleted — skip it
