@@ -136,7 +136,18 @@
     font-size: var(--editor-font-size);
     padding-top: var(--editor-padding-top);
     padding-bottom: 200px;
+    -webkit-user-drag: auto;
     /* Safe bottom margin inside editor */
+}
+
+/* Visualization for where the drop will land */
+.ProseMirror .details-wrapper,
+.ProseMirror [data-type="details"] {
+    -webkit-user-drag: element;
+}
+
+.ProseMirror-dropcursor {
+    border-left: 2px solid var(--accent-color) !important;
 }
 
 .ProseMirror p {
@@ -203,8 +214,14 @@
     text-align: start;
 }
 
-.ProseMirror ul,
+.ProseMirror ul {
+    list-style-type: disc;
+    padding-inline-start: 24px;
+    margin: 8px 0;
+}
+
 .ProseMirror ol {
+    list-style-type: decimal;
     padding-inline-start: 24px;
     margin: 8px 0;
 }

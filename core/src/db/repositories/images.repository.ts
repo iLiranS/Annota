@@ -322,3 +322,11 @@ export async function markImagesAsSynced(imageIds: string[], tx: DbOrTx = getDb(
         .where(inArray(images.id, imageIds))
         .run();
 }
+// Revert images to pending (used when sync fails)
+export async function revertImagesToPending(imageIds: string[], tx: DbOrTx = getDb()): Promise<void> {
+    if (imageIds.length === 0) return;
+    await tx.update(images)
+        .set({ syncStatus: 'pending' })
+        .where(inArray(images.id, imageIds))
+        .run();
+}

@@ -13,11 +13,11 @@ function stripDir(attrs: Record<string, any>): Record<string, any> {
 
 declare module '@tiptap/core' {
     interface Commands<ReturnType> {
-        customDetails: {
-            setDetailsBackground: (color: string) => ReturnType;
-            unsetDetailsBackground: () => ReturnType;
-        };
-
+        setDetails: () => ReturnType;
+        unsetDetails: () => ReturnType;
+        toggleDetails: () => ReturnType;
+        setDetailsBackground: (color: string) => ReturnType;
+        unsetDetailsBackground: () => ReturnType;
     }
 }
 
@@ -192,14 +192,54 @@ export const Details = TiptapDetails.extend({
     addCommands() {
         return {
             ...this.parent?.(),
+            setDetails:
+                () =>
+                    ({ commands, state }: { commands: any; state: any }) => {
+                        const { selection } = state;
+                        const { $from } = selection;
+
+                        // Check if we are already inside a details node
+                        for (let d = $from.depth; d > 0; d--) {
+                            if ($from.node(d).type.name === 'details') {
+                                return false;
+                            }
+                        }
+
+                        let contentToWrap: any[] = [];
+                        if (!selection.empty) {
+                            const fragment = state.doc.slice(selection.from, selection.to).content;
+                            contentToWrap = fragment.toJSON() || [];
+                        }
+
+                        // If empty selection or failed to extract, add a default paragraph
+                        if (contentToWrap.length === 0) {
+                            contentToWrap = [{ type: 'paragraph' }];
+                        }
+
+                        return commands.insertContent({
+                            type: this.name,
+                            content: [
+                                { type: 'detailsSummary', content: [{ type: 'text', text: 'Summary' }] },
+                                { type: 'detailsContent', content: contentToWrap },
+                            ],
+                        });
+                    },
+            toggleDetails:
+                () =>
+                    ({ commands, state }: { commands: any; state: any }) => {
+                        if (this.editor.isActive('details')) {
+                            return commands.unsetDetails();
+                        }
+                        return commands.setDetails();
+                    },
             setDetailsBackground:
                 (color: string) =>
-                    ({ commands }: any) => {
+                    ({ commands }: { commands: any }) => {
                         return commands.updateAttributes('details', { backgroundColor: color });
                     },
             unsetDetailsBackground:
                 () =>
-                    ({ commands }: any) => {
+                    ({ commands }: { commands: any }) => {
                         return commands.updateAttributes('details', { backgroundColor: null });
                     },
         };

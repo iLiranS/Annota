@@ -195,6 +195,7 @@ export function DesktopToolbar({
         }
     ], [editorState, sendCommand, colors.primary, activeStyle, handleOpenChange, onInsertImage]);
 
+    const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
     const [resetKey, setResetKey] = useState(0);
 
     useEffect(() => {
@@ -247,6 +248,7 @@ export function DesktopToolbar({
             <div
                 ref={containerRef}
                 onMouseLeave={() => {
+                    setActiveTooltip(null);
                     if (openMenusCount === 0) setResetKey(prev => prev + 1);
                 }}
                 className="
@@ -271,7 +273,11 @@ export function DesktopToolbar({
             >
                 <div className="flex items-center gap-0.5 w-full px-1">
                     {visibleItems.map((item) => (
-                        <Tooltip key={item.id} open={openMenusCount > 0 ? false : undefined}>
+                        <Tooltip
+                            key={item.id}
+                            open={openMenusCount === 0 && activeTooltip === item.id}
+                            onOpenChange={(open) => setActiveTooltip(open ? item.id : null)}
+                        >
                             <TooltipTrigger asChild>
                                 <div className="flex shrink-0">
                                     {item.render}
@@ -303,7 +309,10 @@ export function DesktopToolbar({
                             </DropdownMenu>
                         )}
 
-                        <Tooltip open={openMenusCount > 0 ? false : undefined}>
+                        <Tooltip
+                            open={openMenusCount === 0 && activeTooltip === 'undo'}
+                            onOpenChange={(open) => setActiveTooltip(open ? 'undo' : null)}
+                        >
                             <TooltipTrigger asChild>
                                 <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('undo')} disabled={!editorState.canUndo}>
                                     <Undo className="h-5 w-5" />
@@ -312,7 +321,10 @@ export function DesktopToolbar({
                             <TooltipContent side="top" sideOffset={12}>Undo</TooltipContent>
                         </Tooltip>
 
-                        <Tooltip open={openMenusCount > 0 ? false : undefined}>
+                        <Tooltip
+                            open={openMenusCount === 0 && activeTooltip === 'redo'}
+                            onOpenChange={(open) => setActiveTooltip(open ? 'redo' : null)}
+                        >
                             <TooltipTrigger asChild>
                                 <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('redo')} disabled={!editorState.canRedo}>
                                     <Redo className="h-5 w-5" />

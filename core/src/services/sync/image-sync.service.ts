@@ -116,7 +116,17 @@ class ImageSyncService {
 
                 const { error } = await storageApi.replaceE2ENoteImages(noteId, userId, syncedImageIds);
 
-                if (error) throw error;
+                if (error) {
+                    //Catch Postgres Foreign Key Violation for missing images - auto heal
+                    if (error.code === '23503' && error.message?.includes('note_images_image_id_fkey')) {
+                        console.warn(`[ImageSync] Remote DB missing images for note ${noteId}. Reverting local status to pending to force re-upload.`);
+
+                        if (syncedImageIds.length > 0) {
+                            await ImagesRepo.revertImagesToPending(syncedImageIds);
+                        }
+                    }
+                    throw error;
+                }
             } catch (err) {
                 console.error(`[ImageSync] Failed to replace note_images for note ${noteId}`, err);
             }

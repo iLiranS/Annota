@@ -137,40 +137,14 @@ export default function NoteEditor() {
                 setInitialContent("");
             });
     }, [noteId, getNoteContent]);
-
-    const lastContentRef = useRef<string | null>(null);
-
-    // Debounced update to avoid spamming the DB
-    const debouncedSave = useCallback((html: string) => {
+    const handleContentChange = useCallback((html: string) => {
         if (!noteId) return;
+        console.log("[NoteEditor] Content changed", html);
+
         const title = generateTitle(html);
         updateNoteContent(noteId, html);
         updateNoteMetadata(noteId, { title });
-    }, [noteId, updateNoteContent, updateNoteMetadata]);
 
-    const saveTimeoutRef = useRef<any>(null);
-
-    const handleContentChange = (html: string) => {
-        lastContentRef.current = html;
-
-        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-        saveTimeoutRef.current = setTimeout(() => {
-            debouncedSave(html);
-        }, 500); // 500ms debounce
-    };
-
-    // Ensure we save on unmount if there's a pending change
-    useEffect(() => {
-        return () => {
-            if (saveTimeoutRef.current) {
-                clearTimeout(saveTimeoutRef.current);
-                if (lastContentRef.current && noteId) {
-                    const title = generateTitle(lastContentRef.current);
-                    updateNoteContent(noteId, lastContentRef.current);
-                    updateNoteMetadata(noteId, { title });
-                }
-            }
-        };
     }, [noteId, updateNoteContent, updateNoteMetadata]);
 
     if (!note) {

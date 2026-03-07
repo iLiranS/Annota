@@ -37,17 +37,19 @@ export async function resetSyncPointer(userId: string) {
     console.log(`[Sync] Reset sync pointer for user ${userId}`);
 }
 
-/** @internal Used by SyncScheduler which manages its own isSyncing lifecycle */
-export async function syncPushRaw(masterKey: string) {
+/**
+ * Internal push implementation.
+ * @internal Use syncPush instead.
+ */
+export async function performSyncPush(masterKey: string) {
     const { data: { session } } = await authApi.getSession();
     if (!session?.user) throw new Error("User not authenticated");
 
     const db = getDb();
     const userId = session.user.id;
-    const now = new Date(); // To standardize the timestamp of this push
+    const now = new Date();
     let didDeleteTombstones = false;
 
-    // === 1. FOLDERS ISOLATED PUSH ===
     const pushFolders = async () => {
         const dirtyFolders = await getDirtyFolders();
         if (dirtyFolders.length === 0) return;
@@ -66,10 +68,7 @@ export async function syncPushRaw(masterKey: string) {
         }));
 
         const { error } = await syncApi.upsertFolders(payloadFolders);
-        if (error) {
-            console.error(`Push folders error: ${error.message}`);
-            return;
-        }
+        if (error) throw error;
 
         const tombstones = dirtyFolders.filter((f: any) => f.isPermDeleted);
         if (tombstones.length > 0) {
@@ -84,7 +83,6 @@ export async function syncPushRaw(masterKey: string) {
         }
     };
 
-    // === 2. TASKS ISOLATED PUSH ===
     const pushTasks = async () => {
         const dirtyTasks = await getDirtyTasks();
         if (dirtyTasks.length === 0) return;
@@ -103,10 +101,7 @@ export async function syncPushRaw(masterKey: string) {
         }));
 
         const { error } = await syncApi.upsertTasks(payloadTasks);
-        if (error) {
-            console.error(`Push tasks error: ${error.message}`);
-            return;
-        }
+        if (error) throw error;
 
         const tombstones = dirtyTasks.filter((t: any) => t.isPermDeleted);
         if (tombstones.length > 0) {
@@ -121,8 +116,7 @@ export async function syncPushRaw(masterKey: string) {
         }
     };
 
-    // === 3. NOTES ISOLATED PUSH ===
-    let pushedNoteIds: string[] = []; // Used for pushing images later
+    let pushedNoteIds: string[] = [];
     const pushNotes = async () => {
         const dirtyNotes = await getDirtyNotes();
         if (dirtyNotes.length === 0) return;
@@ -131,10 +125,8 @@ export async function syncPushRaw(masterKey: string) {
 
         const payloadNotes = await Promise.all(dirtyNotes.map(async (metadata: any) => {
             const isTombstone = metadata.isPermDeleted;
-
-            // Fetch content
             const content = await getNoteContent(metadata.id);
-            const dataToEncrypt = { ...metadata, content }; // Combine metadata & heavy content for cloud storage
+            const dataToEncrypt = { ...metadata, content };
 
             const { encryptedData, nonce } = await encryptPayload(JSON.stringify(dataToEncrypt), masterKey);
             return {
@@ -149,10 +141,7 @@ export async function syncPushRaw(masterKey: string) {
         }));
 
         const { error } = await syncApi.upsertNotes(payloadNotes);
-        if (error) {
-            console.error(`Push notes error: ${error.message}`);
-            return;
-        }
+        if (error) throw error;
 
         const tombstones = dirtyNotes.filter((n: any) => n.isPermDeleted);
         if (tombstones.length > 0) {
@@ -171,86 +160,59 @@ export async function syncPushRaw(masterKey: string) {
         }
     };
 
-    // === FIRE SEQUENTIALLY TO PREVENT SQLITE LOCKS ===
     await pushFolders();
     await pushTasks();
     await pushNotes();
 
-    // === 4. IMAGES ===
-    // We push images AFTER notes to avoid foreign key constraints in `note_images` where `note_id` might not exist in `encrypted_notes` yet.
     if (pushedNoteIds.length > 0) {
-        await imageSyncService.pushImages(
-            masterKey,
-            userId,
-            pushedNoteIds
-        );
+        await imageSyncService.pushImages(masterKey, userId, pushedNoteIds);
     }
 
-    // Note: We don't update SyncTime here because Push doesn't necessarily mean we want to skip Pulling things that happened *during* our offline state. 
-
     if (didDeleteTombstones) {
-        console.log('[Sync] Tombstones deleted locally. Running garbage collection to free space...');
-
-        // Yield the event loop to ensure all previous DB locks are fully released
+        console.log('[Sync] Tombstones deleted locally. Running garbage collection...');
         await new Promise(resolve => setTimeout(resolve, 50));
-
         await StorageService.runGarbageCollection(true);
     }
 }
 
-
-/** @internal Used by SyncScheduler which manages its own isSyncing lifecycle */
-export async function syncPullRaw(masterKey: string) {
+/**
+ * Internal pull implementation.
+ * @internal Use syncPull instead.
+ */
+export async function performSyncPull(masterKey: string) {
     const { data: { session } } = await authApi.getSession();
     if (!session?.user) throw new Error("User not authenticated");
 
     const db = getDb();
     const userId = session.user.id;
     const lastSyncStr = await storage.getItem(getSyncTimeKey(userId));
-    let lastSyncTime = new Date('2000-01-01T00:00:00Z'); // Safe past date fallback
+    let lastSyncTime = new Date('2000-01-01T00:00:00Z');
 
     if (lastSyncStr) {
         try {
-            // AsyncStorage might return a literal "undefined", "null", or just an invalid format
-            if (typeof lastSyncStr === 'string' && lastSyncStr !== 'undefined' && lastSyncStr !== 'null') {
-                const parsed = new Date(lastSyncStr);
-                if (!isNaN(parsed.getTime())) {
-                    lastSyncTime = parsed;
-                }
-            } else if ((lastSyncStr as any) instanceof Date) {
-                // In case the storage adapter dynamically casted it
-                if (!isNaN((lastSyncStr as any).getTime())) {
-                    lastSyncTime = (lastSyncStr as any);
-                }
-            }
+            const parsed = new Date(lastSyncStr);
+            if (!isNaN(parsed.getTime())) lastSyncTime = parsed;
         } catch (e) {
             console.error('[Sync] Failed to parse last sync time', e);
         }
     }
 
-    const newSyncTime = new Date().toISOString(); // Time right before we fetch
+    const newSyncTime = new Date().toISOString();
     let didDeleteTombstones = false;
 
-    console.log(`[Sync] Pulling changes modified after: ${lastSyncTime.toISOString()}`);
-
+    console.log(`[Sync] Pulling changes after: ${lastSyncTime.toISOString()}`);
     const { data, error } = await syncApi.pullSyncData(lastSyncTime.toISOString());
 
-    if (error) {
-        console.error("Sync pull failed:", error);
-        throw error;
-    }
+    if (error) throw error;
 
-    const cloudFolders = data.folders;
-    const cloudTasks = data.tasks;
-    const cloudNotes = data.notes;
+    const cloudFolders = data.folders || [];
+    const cloudTasks = data.tasks || [];
+    const cloudNotes = data.notes || [];
 
-    // === 1. PULL FOLDERS ===
-
-    if (cloudFolders && cloudFolders.length > 0) {
-        console.log(`[Sync] Received ${cloudFolders.length} updated folders from cloud.`);
-        const chunkSize = 15;
-        for (let i = 0; i < cloudFolders.length; i += chunkSize) {
-            const chunk = cloudFolders.slice(i, i + chunkSize);
+    // Pull Folders
+    if (cloudFolders.length > 0) {
+        for (let i = 0; i < cloudFolders.length; i += 15) {
+            const chunk = cloudFolders.slice(i, i + 15);
             const deletedIds: string[] = [];
             const parsedFolders: any[] = [];
 
@@ -260,94 +222,66 @@ export async function syncPullRaw(masterKey: string) {
                         deletedIds.push(row.id);
                         continue;
                     }
-
                     const decryptedJson = await decryptPayload(row.encrypted_data, row.nonce, masterKey);
                     const folderData = JSON.parse(decryptedJson);
-
-                    // Convert timestamps back to Date objects
                     folderData.createdAt = new Date(folderData.createdAt);
                     folderData.updatedAt = new Date(folderData.updatedAt);
                     folderData.deletedAt = folderData.deletedAt ? new Date(folderData.deletedAt) : null;
-                    folderData.isDirty = false; // We just grabbed it, it's clean
-
+                    folderData.isDirty = false;
                     parsedFolders.push(folderData);
                 } catch (e) {
-                    console.error("Failed to decrypt/parse folder", row.id, e);
+                    console.error("Failed to decrypt folder", row.id, e);
                 }
             }
 
             await db.transaction(async (tx: any) => {
-                if (deletedIds.length > 0) {
-                    await tx.delete(schema.folders).where(inArray(schema.folders.id, deletedIds));
-                }
-                for (const folderData of parsedFolders) {
-                    await upsertSyncedFolder(folderData, tx);
-                }
+                if (deletedIds.length > 0) await tx.delete(schema.folders).where(inArray(schema.folders.id, deletedIds));
+                for (const f of parsedFolders) await upsertSyncedFolder(f, tx);
             });
             if (deletedIds.length > 0) didDeleteTombstones = true;
-            // Yield to UI thread
-            if (i + chunkSize < cloudFolders.length) {
-                await new Promise(resolve => setTimeout(resolve, 0));
-            }
+            await new Promise(resolve => setTimeout(resolve, 0));
         }
     }
 
-    // === 2. PULL TASKS ===
-
-    if (cloudTasks && cloudTasks.length > 0) {
-        console.log(`[Sync] Received ${cloudTasks.length} updated tasks from cloud.`);
-        const chunkSize = 15;
-        for (let i = 0; i < cloudTasks.length; i += chunkSize) {
-            const chunk = cloudTasks.slice(i, i + chunkSize);
+    // Pull Tasks
+    if (cloudTasks.length > 0) {
+        for (let i = 0; i < cloudTasks.length; i += 15) {
+            const chunk = cloudTasks.slice(i, i + 15);
             const deletedIds: string[] = [];
             const parsedTasks: any[] = [];
 
             for (const row of chunk) {
                 try {
                     if (row.is_deleted) {
-                        // Task was permanently deleted somewhere else, remove it locally
                         deletedIds.push(row.id);
                         continue;
                     }
-
                     const decryptedJson = await decryptPayload(row.encrypted_data, row.nonce, masterKey);
                     const taskData = JSON.parse(decryptedJson);
-
                     taskData.createdAt = new Date(taskData.createdAt);
                     taskData.updatedAt = new Date(taskData.updatedAt);
                     taskData.deadline = new Date(taskData.deadline);
                     taskData.completedAt = taskData.completedAt ? new Date(taskData.completedAt) : null;
                     taskData.isDirty = false;
-
                     parsedTasks.push(taskData);
                 } catch (e) {
-                    console.error("Failed to decrypt/parse task", row.id, e);
+                    console.error("Failed to decrypt task", row.id, e);
                 }
             }
 
             await db.transaction(async (tx: any) => {
-                if (deletedIds.length > 0) {
-                    await tx.delete(schema.tasks).where(inArray(schema.tasks.id, deletedIds));
-                }
-                for (const taskData of parsedTasks) {
-                    await upsertSyncedTask(taskData, tx);
-                }
+                if (deletedIds.length > 0) await tx.delete(schema.tasks).where(inArray(schema.tasks.id, deletedIds));
+                for (const t of parsedTasks) await upsertSyncedTask(t, tx);
             });
             if (deletedIds.length > 0) didDeleteTombstones = true;
-            // Yield to UI thread
-            if (i + chunkSize < cloudTasks.length) {
-                await new Promise(resolve => setTimeout(resolve, 0));
-            }
+            await new Promise(resolve => setTimeout(resolve, 0));
         }
     }
 
-    // === 3. PULL NOTES ===
-
-    if (cloudNotes && cloudNotes.length > 0) {
-        console.log(`[Sync] Received ${cloudNotes.length} updated notes from cloud.`);
-        const chunkSize = 15;
-        for (let i = 0; i < cloudNotes.length; i += chunkSize) {
-            const chunk = cloudNotes.slice(i, i + chunkSize);
+    // Pull Notes
+    if (cloudNotes.length > 0) {
+        for (let i = 0; i < cloudNotes.length; i += 15) {
+            const chunk = cloudNotes.slice(i, i + 15);
             const deletedIds: string[] = [];
             const parsedNotes: any[] = [];
 
@@ -357,18 +291,15 @@ export async function syncPullRaw(masterKey: string) {
                         deletedIds.push(row.id);
                         continue;
                     }
-
                     const decryptedJson = await decryptPayload(row.encrypted_data, row.nonce, masterKey);
                     const noteFullData = JSON.parse(decryptedJson);
-
                     noteFullData.createdAt = new Date(noteFullData.createdAt);
                     noteFullData.updatedAt = new Date(noteFullData.updatedAt);
                     noteFullData.deletedAt = noteFullData.deletedAt ? new Date(noteFullData.deletedAt) : null;
                     noteFullData.isDirty = false;
-
                     parsedNotes.push(noteFullData);
                 } catch (e) {
-                    console.error("Failed to decrypt/parse note", row.id, e);
+                    console.error("Failed to decrypt note", row.id, e);
                 }
             }
 
@@ -378,63 +309,38 @@ export async function syncPullRaw(masterKey: string) {
                     await tx.delete(schema.noteContent).where(inArray(schema.noteContent.id, deletedIds));
                     await tx.delete(schema.noteVersions).where(inArray(schema.noteVersions.noteId, deletedIds));
                 }
-                for (const noteFullData of parsedNotes) {
-                    await upsertSyncedNote(noteFullData, tx);
-                }
+                for (const n of parsedNotes) await upsertSyncedNote(n, tx);
             });
             if (deletedIds.length > 0) didDeleteTombstones = true;
-            // Yield to UI thread
-            if (i + chunkSize < cloudNotes.length) {
-                await new Promise(resolve => setTimeout(resolve, 0));
-            }
+            await new Promise(resolve => setTimeout(resolve, 0));
         }
     }
 
-    // Update the pointer
     await storage.setItem(getSyncTimeKey(userId), newSyncTime);
 
     if (didDeleteTombstones) {
-        console.log('[SyncPull] Tombstones deleted locally. Running garbage collection to free space...');
-
-        // Yield the event loop to ensure all previous DB locks are fully released
         await new Promise(resolve => setTimeout(resolve, 50));
-
         await StorageService.runGarbageCollection(true);
     }
 
-    // === 4. PULL IMAGES (Background) ===
-    // After pulling notes, let's figure out what images we are missing.
-    // 1. Get all image links for this user from Supabase
-    // (Optimization: we only get links for the notes we just updated or we get all links. 
-    // Getting all links is simple and reliable for fixing gaps).
+    // Background Image Pull
     const { data: cloudLinks, error: linkError } = await storageApi.getUserImageLinks(userId);
-
-    if (linkError) {
-        console.error("[SyncPull] Failed to fetch image links", linkError);
-    } else if (cloudLinks && cloudLinks.length > 0) {
-        // Collect unique image IDs
+    if (!linkError && cloudLinks && cloudLinks.length > 0) {
         const uniqueImageIds = Array.from(new Set(cloudLinks.map(l => l.image_id as string)));
-
-        // Which ones do we already have locally?
         const localImages = await getImagesByIds(uniqueImageIds);
         const localImageIds = new Set(localImages.map((i: any) => i.id));
-
         const missingIds = uniqueImageIds.filter(id => !localImageIds.has(id));
 
         if (missingIds.length > 0) {
-            console.log(`[SyncPull] Identified ${missingIds.length} missing images.`);
-            // Fetch metadata for nonces
             const { data: cloudMeta, error: metaError } = await storageApi.getEncryptedImagesMetadata(userId, missingIds);
-
             if (!metaError && cloudMeta) {
                 const downloadQueue = cloudMeta.map(meta => ({
                     imageId: meta.id,
-                    noteId: '', // Note ID doesn't matter for downloading
+                    noteId: '',
                     nonce: meta.nonce,
                     masterKey,
                     userId
                 }));
-
                 imageSyncService.queueImagesForDownload(downloadQueue);
             }
         }
@@ -442,49 +348,54 @@ export async function syncPullRaw(masterKey: string) {
 }
 
 /**
- * Public wrapper around the raw push that manages the isSyncing flag
- * in the sync store and prevents overlapping operations.
+ * Public wrapper that handles isSyncing lock and offline checks.
+ * This is the ONLY method that should be called by components/schedulers.
  */
-export async function syncPush(masterKey: string): Promise<void> {
+export async function syncPush(masterKey: string): Promise<boolean> {
     const store = useSyncStore.getState();
+    if (!store.isOnline) return false;
     if (store.isSyncing) {
-        console.log('[syncPush] Skipped — sync already in-flight');
-        return;
+        console.log('[syncPush] Skipped — already in-flight');
+        return false;
     }
 
     store.setSyncing(true);
     try {
-        await syncPushRaw(masterKey);
+        await performSyncPush(masterKey);
         store.setLastSyncAt(new Date());
+        return true;
     } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Unknown sync error';
+        const msg = err instanceof Error ? err.message : 'Unknown error';
         store.setSyncError(msg);
         throw err;
     } finally {
-        useSyncStore.getState().setSyncing(false);
+        store.setSyncing(false);
     }
 }
 
 /**
- * Public wrapper around the raw pull that manages the isSyncing flag
- * in the sync store and prevents overlapping operations.
+ * Public wrapper that handles isSyncing lock and offline checks.
+ * This is the ONLY method that should be called by components/schedulers.
  */
-export async function syncPull(masterKey: string): Promise<void> {
+export async function syncPull(masterKey: string): Promise<boolean> {
     const store = useSyncStore.getState();
+    if (!store.isOnline) return false;
     if (store.isSyncing) {
-        console.log('[syncPull] Skipped — sync already in-flight');
-        return;
+        console.log('[syncPull] Skipped — already in-flight');
+        return false;
     }
 
     store.setSyncing(true);
     try {
-        await syncPullRaw(masterKey);
+        await performSyncPull(masterKey);
         store.setLastSyncAt(new Date());
+        return true;
     } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Unknown sync error';
+        const msg = err instanceof Error ? err.message : 'Unknown error';
         store.setSyncError(msg);
         throw err;
     } finally {
-        useSyncStore.getState().setSyncing(false);
+        store.setSyncing(false);
     }
 }
+

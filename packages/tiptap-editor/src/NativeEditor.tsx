@@ -42,6 +42,7 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
         const [galleryImages, setGalleryImages] = useState<ImageInfo[]>([]);
         const [galleryCurrentIndex, setGalleryCurrentIndex] = useState(0);
         const containerRef = React.useRef<HTMLDivElement>(null);
+        const isHydrating = React.useRef(false);
 
         const extensions = React.useMemo(() => getExtensions({
             placeholder,
@@ -77,6 +78,7 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                 setEditorState(getEditorState(editor) as EditorState);
             },
             onUpdate: ({ editor }) => {
+                if (isHydrating.current) return;
                 onContentChange?.(editor.getHTML());
                 setEditorState(getEditorState(editor) as EditorState);
             },
@@ -119,11 +121,13 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                     editor.commands.setContent(initialContent, { emitUpdate: false });
                 }
 
-                const imageIds = extractImageIds(initialContent);
+                const imageIds = extractImageIds(initialContent || '');
                 if (imageIds.length > 0) {
                     NoteImageService.resolveImageSources(imageIds).then((imageMap: any) => {
-                        if (Object.keys(imageMap).length > 0) {
+                        if (imageMap && Object.keys(imageMap).length > 0) {
+                            isHydrating.current = true;
                             (editor.commands as any).resolveImages({ imageMap });
+                            isHydrating.current = false;
                         }
                     });
                 }
@@ -145,6 +149,8 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                 case 'toggleBulletList': c.toggleBulletList().run(); break;
                 case 'toggleOrderedList': c.toggleOrderedList().run(); break;
                 case 'toggleTaskList': c.toggleTaskList().run(); break;
+                case 'toggleDetails': c.toggleDetails().run(); break;
+                case 'toggleCodeBlock': c.toggleCodeBlock().run(); break;
                 case 'sinkListItem': c.sinkListItem('listItem').run(); break;
                 case 'liftListItem': c.liftListItem('listItem').run(); break;
                 case 'undo': c.undo().run(); break;
@@ -165,10 +171,12 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                 case 'deleteTable': c.deleteTable().run(); break;
                 case 'setLink': c.setLink({ href: params.href as string }).run(); break;
                 case 'unsetLink': c.unsetLink().run(); break;
+                case 'setMath': c.insertContent({ type: 'inlineMath', attrs: { latex: params.latex } }).run(); break;
+                case 'setYoutubeVideo': c.setYoutubeVideo({ src: params.src as string }).run(); break;
                 case 'insertImage': c.setImage({ src: params.src as string }).run(); break;
                 case 'insertLocalImage':
                     if (params.imageId) {
-                        c.insertContent(`<img data-image-id="${params.imageId}" />`).run();
+                        c.insertContent({ type: 'image', attrs: { imageId: params.imageId } }).run();
                     }
                     break;
                 case 'resolveImages':
@@ -204,15 +212,27 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
             try {
                 if (source === 'url' && value) {
                     const processed = await NoteImageService.processRemoteImage(noteId, value);
-                    editor.chain().focus().insertContent(`<img data-image-id="${processed.imageId}" />`).run();
+                    // This triggers onUpdate (good, parent saves image ID)
+                    editor.chain().focus().insertContent({ type: 'image', attrs: { imageId: processed.imageId } }).run();
+
                     const imageMap = await NoteImageService.resolveImageSources([processed.imageId]);
-                    (editor.commands as any).resolveImages({ imageMap });
+                    if (imageMap && Object.keys(imageMap).length > 0) {
+                        isHydrating.current = true;
+                        (editor.commands as any).resolveImages({ imageMap });
+                        isHydrating.current = false;
+                    }
                     return true;
                 } else if (source === 'library' && value) {
                     const processed = await NoteImageService.processAndInsertImage(noteId, value);
-                    editor.chain().focus().insertContent(`<img data-image-id="${processed.imageId}" />`).run();
+                    // This triggers onUpdate
+                    editor.chain().focus().insertContent({ type: 'image', attrs: { imageId: processed.imageId } }).run();
+
                     const imageMap = await NoteImageService.resolveImageSources([processed.imageId]);
-                    (editor.commands as any).resolveImages({ imageMap });
+                    if (imageMap && Object.keys(imageMap).length > 0) {
+                        isHydrating.current = true;
+                        (editor.commands as any).resolveImages({ imageMap });
+                        isHydrating.current = false;
+                    }
                     return true;
                 }
                 return false;

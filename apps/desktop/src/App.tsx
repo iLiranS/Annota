@@ -218,23 +218,25 @@ function App() {
     if (!session || !hasMasterKey || bootstrapState !== "ready") return;
 
     let cancelled = false;
-    let scheduler: SyncScheduler | null = null;
 
     const setupScheduler = async () => {
       const key = await getMasterKey(session.user.id);
       if (!key || cancelled) return;
 
-      scheduler = new SyncScheduler();
-      scheduler.init(key);
+      SyncScheduler.getInstance().init(key);
     };
 
     void setupScheduler();
 
     return () => {
       cancelled = true;
-      scheduler?.dispose();
+      // We don't dispose here normally because we want it to persist across route changes
+      // It will only re-init if the masterKey changes or if it was disposed.
     };
   }, [session, hasMasterKey, bootstrapState]);
+
+  const location = useLocation();
+  const locationState = location.state as { background?: Location };
 
   // ── Booting ──────────────────────────────────────────────────
   if (bootstrapState === "booting") {
@@ -270,13 +272,10 @@ function App() {
     );
   }
 
-  const location = useLocation();
-  const state = location.state as { background?: Location };
-
   // ── Ready — Route tree ───────────────────────────────────────
   return (
     <>
-      <Routes location={state?.background || location}>
+      <Routes location={locationState?.background || location}>
         {/* Auth routes (no sidebar) */}
         <Route path="/auth" element={<AuthLayout />}>
           <Route index element={<Navigate to="login" replace />} />
@@ -305,7 +304,7 @@ function App() {
             <Route path="tasks" element={<TasksLayout />} />
 
             {/* Modal-style routes as regular routes (fallback if no background) */}
-            {!state?.background && (
+            {!locationState?.background && (
               <>
                 <Route path="settings" element={<SettingsDialog />} />
                 <Route path="task/:id" element={<TaskDetailDialog />} />
@@ -316,7 +315,7 @@ function App() {
       </Routes>
 
       {/* Modal routes */}
-      {state?.background && (
+      {locationState?.background && (
         <Routes>
           <Route path="settings" element={<SettingsDialog />} />
           <Route path="task/:id" element={<TaskDetailDialog />} />

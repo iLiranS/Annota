@@ -142,7 +142,7 @@ export function MainNavbar() {
                     isSyncing || !canSync ? "text-muted-foreground/30" : "text-muted-foreground/60"
                 )}>
                     <Tooltip>
-                        <TooltipTrigger>
+                        <TooltipTrigger asChild>
                             <Button
                                 disabled={isSyncing || !canSync}
                                 onClick={handleManualSync}

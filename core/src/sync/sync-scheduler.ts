@@ -1,6 +1,6 @@
 import { getPlatformAdapters, type Unsubscribe } from '../adapters';
 import { useSyncStore } from '../stores/sync.store';
-import { syncPullRaw as syncPull, syncPushRaw as syncPush } from './sync-service';
+import { syncPull, syncPush } from './sync-service';
 
 const DEBOUNCE_MS = 10_000;       // 10 seconds of idle → push
 const HARD_MAX_MS = 2 * 60_000;   // 2 minutes absolute cap
@@ -15,7 +15,20 @@ const OFFLINE_TOAST_COOLDOWN_MS = 30_000; // Don't spam offline toast
  * - Overlap prevention via isSyncing lock
  */
 export class SyncScheduler {
-    static instance: SyncScheduler | null = null;
+    private static _instance: SyncScheduler | null = null;
+
+    public static get instance(): SyncScheduler | null {
+        return SyncScheduler._instance;
+    }
+
+    public static getInstance(): SyncScheduler {
+        if (!SyncScheduler._instance) {
+            SyncScheduler._instance = new SyncScheduler();
+        }
+        return SyncScheduler._instance;
+    }
+
+    private constructor() { }
 
     private masterKey: string = '';
     private debounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -24,13 +37,24 @@ export class SyncScheduler {
     private netInfoUnsubscribe: Unsubscribe | null = null;
     private lastOfflineToastAt = 0;
     private disposed = false;
+    private initialized = false;
 
     // ─── Public API ────────────────────────────────────────────
 
     init(masterKey: string): void {
+        // Skip if already initialized with the same key
+        if (this.initialized && this.masterKey === masterKey && !this.disposed) {
+            return;
+        }
+
+        console.log('[SyncScheduler] Initializing with master key');
         this.masterKey = masterKey;
         this.disposed = false;
-        SyncScheduler.instance = this;
+        this.initialized = true;
+
+        // Cleanup existing listeners if re-initializing
+        this.appStateUnsubscribe?.();
+        this.netInfoUnsubscribe?.();
 
         const adapters = getPlatformAdapters();
 
@@ -50,7 +74,7 @@ export class SyncScheduler {
 
     /** Called on every note content change — resets the debounce timer */
     notifyContentChange(): void {
-        if (this.disposed) return;
+        if (this.disposed || !this.initialized) return;
 
         // Reset the 10 s debounce
         this.clearDebounce();
@@ -75,13 +99,13 @@ export class SyncScheduler {
      * changes, and repaints the UI.
      */
     async forceSync(): Promise<void> {
-        if (this.disposed) return;
+        if (this.disposed || !this.initialized) return;
 
         console.log('[SyncScheduler] Force sync requested');
         this.clearAllTimers();
 
         // Execute pull then push sequentially
-        await this.executeSyncPull();
+        const pulled = await this.executeSyncPull();
 
         let state = useSyncStore.getState();
         if (state.syncError) throw new Error(state.syncError);
@@ -94,6 +118,7 @@ export class SyncScheduler {
 
     dispose(): void {
         this.disposed = true;
+        this.initialized = false;
         this.clearAllTimers();
 
         this.appStateUnsubscribe?.();
@@ -101,10 +126,6 @@ export class SyncScheduler {
 
         this.netInfoUnsubscribe?.();
         this.netInfoUnsubscribe = null;
-
-        if (SyncScheduler.instance === this) {
-            SyncScheduler.instance = null;
-        }
     }
 
     // ─── Internals ─────────────────────────────────────────────
@@ -112,11 +133,14 @@ export class SyncScheduler {
     private handleAppStateChange = (isActive: boolean): void => {
         if (this.disposed) return;
 
-        // Flush immediately when going to background/inactive
+        // Flush immediately ONLY when going to background/inactive
+        // and if there's a pending change (debounce timer is active)
         if (!isActive) {
-            console.log('[SyncScheduler] App going to background — flushing changes');
-            this.clearAllTimers();
-            this.executeSyncPush();
+            if (this.debounceTimer) {
+                console.log('[SyncScheduler] App going to background with pending changes — flushing');
+                this.clearAllTimers();
+                this.executeSyncPush();
+            }
         }
     };
 
@@ -141,72 +165,38 @@ export class SyncScheduler {
     /**
      * Execute a sync push with overlap prevention and offline guard.
      */
-    private async executeSyncPush(): Promise<void> {
-        if (this.disposed) return;
+    private async executeSyncPush(): Promise<boolean> {
+        if (this.disposed) return false;
 
-        const store = useSyncStore.getState();
-
-        // Overlap lock
-        if (store.isSyncing) {
-            console.log('[SyncScheduler] Push skipped — sync already in-flight');
-            return;
-        }
-
-        // Offline guard
-        if (!store.isOnline) {
-            return;
-        }
-
-        store.setSyncing(true);
         try {
-            await syncPush(this.masterKey);
-            store.setLastSyncAt(new Date());
-
-            // Re-init stores so UI reflects pushed state
-            this.reinitStores();
-
-            console.log('[SyncScheduler] Push complete');
+            const success = await syncPush(this.masterKey);
+            if (success) {
+                console.log('[SyncScheduler] Push success — reinitializing stores');
+                await this.reinitStores();
+            }
+            return success;
         } catch (err) {
-            const msg = err instanceof Error ? err.message : 'Unknown sync error';
-            console.error('[SyncScheduler] Push failed:', msg);
-            store.setSyncError(msg);
-        } finally {
-            useSyncStore.getState().setSyncing(false);
+            console.error('[SyncScheduler] Push failed');
+            return false;
         }
     }
 
     /**
      * Execute a sync pull with overlap prevention and offline guard.
      */
-    private async executeSyncPull(): Promise<void> {
-        if (this.disposed) return;
+    private async executeSyncPull(): Promise<boolean> {
+        if (this.disposed) return false;
 
-        const store = useSyncStore.getState();
-
-        if (store.isSyncing) {
-            console.log('[SyncScheduler] Pull skipped — sync already in-flight');
-            return;
-        }
-
-        if (!store.isOnline) {
-            return; // Silent skip for pull — no toast needed
-        }
-
-        store.setSyncing(true);
         try {
-            await syncPull(this.masterKey);
-            store.setLastSyncAt(new Date());
-
-            // Re-init stores so UI reflects pulled data
-            this.reinitStores();
-
-            console.log('[SyncScheduler] Pull complete');
+            const success = await syncPull(this.masterKey);
+            if (success) {
+                console.log('[SyncScheduler] Pull success — reinitializing stores');
+                await this.reinitStores();
+            }
+            return success;
         } catch (err) {
-            const msg = err instanceof Error ? err.message : 'Unknown sync error';
-            console.error('[SyncScheduler] Pull failed:', msg);
-            store.setSyncError(msg);
-        } finally {
-            useSyncStore.getState().setSyncing(false);
+            console.error('[SyncScheduler] Pull failed');
+            return false;
         }
     }
 
@@ -264,3 +254,4 @@ export class SyncScheduler {
         }
     }
 }
+

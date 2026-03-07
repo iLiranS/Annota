@@ -24,6 +24,7 @@ export function NoteFloatingActions({
     onRevert,
 }: NoteFloatingActionsProps) {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
 
     return (
         <div className={cn(
@@ -60,7 +61,10 @@ export function NoteFloatingActions({
                     isMenuOpen ? "opacity-100 translate-x-0" : "opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0"
                 )}>
                     <TooltipProvider delayDuration={0}>
-                        <Tooltip>
+                        <Tooltip
+                            open={activeTooltip === 'search'}
+                            onOpenChange={(o) => setActiveTooltip(o ? 'search' : null)}
+                        >
                             <TooltipTrigger asChild>
                                 <Button
                                     variant="ghost"
@@ -79,7 +83,10 @@ export function NoteFloatingActions({
 
                         <div className="w-px h-4 bg-white/10 mx-0.5 shrink-0" />
 
-                        <Tooltip>
+                        <Tooltip
+                            open={activeTooltip === 'sidebar'}
+                            onOpenChange={(o) => setActiveTooltip(o ? 'sidebar' : null)}
+                        >
                             <TooltipTrigger asChild>
                                 <Button
                                     variant="ghost"
@@ -96,7 +103,10 @@ export function NoteFloatingActions({
                             <TooltipContent side="top" sideOffset={12} className="text-[10px] font-medium">Toggle Notes Sidebar</TooltipContent>
                         </Tooltip>
 
-                        <Tooltip>
+                        <Tooltip
+                            open={activeTooltip === 'fullscreen'}
+                            onOpenChange={(o) => setActiveTooltip(o ? 'fullscreen' : null)}
+                        >
                             <TooltipTrigger asChild>
                                 <Button
                                     variant="ghost"
@@ -115,7 +125,10 @@ export function NoteFloatingActions({
                             </TooltipContent>
                         </Tooltip>
 
-                        <Tooltip open={isMenuOpen ? false : undefined}>
+                        <Tooltip
+                            open={activeTooltip === 'more' && !isMenuOpen}
+                            onOpenChange={(o) => setActiveTooltip(o ? 'more' : null)}
+                        >
                             <TooltipTrigger asChild>
                                 <div className="shrink-0">
                                     <NoteActionsMenu

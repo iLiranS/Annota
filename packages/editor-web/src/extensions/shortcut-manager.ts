@@ -22,18 +22,14 @@ export const ShortcutManager = Extension.create({
             'Mod-9': () => this.editor.commands.toggleTaskList(),
 
             // --- Custom Commands ---
-            'Mod-.': () => {
-                if (this.editor.isActive('details')) {
-                    return this.editor.commands.unsetDetails();
-                }
-                return this.editor.commands.setDetails();
-            },
+            'Mod-.': () => (this.editor.commands as any).toggleDetails(),
             'Mod-Shift-m': () => {
                 return this.editor.commands.insertContent({
                     type: 'inlineMath',
                     attrs: { latex: '' }
                 });
             },
+
 
             // --- Reset Color ---
             'Mod-Shift-n': () => this.editor.commands.unsetColor(),

@@ -1,6 +1,7 @@
 import { Session, User } from '@supabase/supabase-js';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
+import { areAdaptersInitialized } from '../adapters';
 import { authApi } from '../api/auth.api';
 import { userApi } from '../api/user.api';
 import { userService } from '../services/user.service';
@@ -59,9 +60,19 @@ export const useUserStore = create<UserState>()(
             checkMasterKey: async () => {
                 const state = get();
                 if (!state.user) return false;
-                const key = await getMasterKey(state.user.id);
-                set({ hasMasterKey: !!key });
-                return !!key;
+
+                if (!areAdaptersInitialized()) {
+                    return false;
+                }
+
+                try {
+                    const key = await getMasterKey(state.user.id);
+                    set({ hasMasterKey: !!key });
+                    return !!key;
+                } catch (e) {
+                    console.warn('[user.store] checkMasterKey failed (bootstrapping?):', e);
+                    return false;
+                }
             },
 
             setSession: (session) =>

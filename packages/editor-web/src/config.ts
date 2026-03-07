@@ -50,6 +50,16 @@ export const getExtensions = (options: {
         StarterKit.configure({
             heading: false,
             codeBlock: false,
+            // @ts-ignore - Some versions of StarterKit might include these
+            link: false,
+            // @ts-ignore - Some versions of StarterKit might include these
+            underline: false,
+            dropcursor: {
+                color: 'var(--accent-color)',
+                width: 2,
+            },
+            // @ts-ignore - Type mismatch between packages
+            gapcursor: true,
         }),
         ShortcutManager,
         CustomHeading.configure({ levels: [1, 2, 3, 4, 5, 6] }),
@@ -122,6 +132,11 @@ export const getEditorProps = (callbacks: {
     handleScrollToSelection: () => {
         callbacks.onScroll?.();
         return true; // prevent default tiptap scrolling
+    },
+    handleDOMEvents: {
+        drop: () => false,
+        dragover: () => false,
+        dragstart: () => false,
     },
     transformPastedHTML(html: string) {
         // Strip font-family from inline styles so pasted content

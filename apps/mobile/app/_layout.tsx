@@ -278,7 +278,7 @@ export default function RootLayout() {
       const key = await getMasterKey(session.user.id);
       if (!key || cancelled) return;
 
-      const scheduler = new SyncScheduler();
+      const scheduler = SyncScheduler.getInstance();
       schedulerRef.current = scheduler;
       scheduler.init(key);
     });

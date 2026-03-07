@@ -73,18 +73,18 @@ export function createDesktopAdapters(): PlatformAdapters {
     },
     appState: {
       subscribe: (onChange) => {
-        const emitState = () => onChange(!document.hidden && document.hasFocus());
+        // Emit a boolean, and only check if the window is truly hidden
+        const emitState = () => onChange(!document.hidden);
+
         const visibility = () => emitState();
-        const focus = () => emitState();
-        const blur = () => emitState();
 
         document.addEventListener('visibilitychange', visibility);
-        window.addEventListener('focus', focus);
-        window.addEventListener('blur', blur);
+
+        // Fire immediately to set the initial state!
+        emitState();
+
         return () => {
           document.removeEventListener('visibilitychange', visibility);
-          window.removeEventListener('focus', focus);
-          window.removeEventListener('blur', blur);
         };
       },
     },
