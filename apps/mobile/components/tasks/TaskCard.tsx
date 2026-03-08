@@ -99,7 +99,7 @@ export function CompactTaskCard({ task, onToggle, onPress, hideFolder }: TaskCar
             {/* Folder Badge */}
             {linkedFolder && !hideFolder && (
                 <View style={[styles.inlineBadge, { backgroundColor: linkedFolder.color + '10', borderColor: 'transparent', paddingHorizontal: 4, marginLeft: 4, gap: 3 }]}>
-                    <Ionicons name="folder" size={8} color={linkedFolder.color || colors.primary} />
+                    <Ionicons name={linkedFolder.icon as any} size={8} color={linkedFolder.color || colors.primary} />
                     <ThemedText numberOfLines={1} style={[styles.inlineBadgeText, { color: linkedFolder.color || colors.primary, fontSize: 9 }]}>
                         {linkedFolder.name}
                     </ThemedText>
@@ -207,7 +207,7 @@ export function TaskCard({ task, onToggle, onPress, hideFolder }: TaskCardProps)
 
                     {linkedFolder && !hideFolder && (
                         <View style={[styles.inlineBadge, { backgroundColor: linkedFolder.color + '15', borderColor: linkedFolder.color + '30' }]}>
-                            <Ionicons name="folder" size={10} color={linkedFolder.color || colors.primary} />
+                            <Ionicons name={linkedFolder.icon as any} size={10} color={linkedFolder.color || colors.primary} />
                             <ThemedText numberOfLines={1} style={[styles.inlineBadgeText, { color: linkedFolder.color || colors.primary }]}>
                                 {linkedFolder.name}
                             </ThemedText>

@@ -21,6 +21,7 @@ export interface TipTapEditorRef {
     setContent: (content: string) => void;
     focus: () => void;
     blur: () => void;
+    onCommand: (cmd: string, params?: Record<string, unknown>) => void;
     // Search methods
     search: (term: string) => void;
     searchNext: () => void;
@@ -46,6 +47,10 @@ export interface TipTapEditorProps {
     editable?: boolean;
     /** Callback for when a block link is copied */
     onCopyBlockLink?: (blockId: string) => void;
+    /** Callback for opening a block-specific menu (e.g. details, code block) */
+    onOpenBlockMenu?: (e: MouseEvent, resolve: () => { pos: number; message: Record<string, unknown> } | null) => void;
+    /** Callback for opening an image-specific menu */
+    onOpenImageMenu?: (e: MouseEvent, resolve: () => { pos: number; message: Record<string, unknown> } | null) => void;
     /** Render prop for customizing the toolbar and its popup menus */
     renderToolbar?: (props: ToolbarRenderProps) => React.ReactNode;
     /** Render prop for full-screen image gallery and zoom */

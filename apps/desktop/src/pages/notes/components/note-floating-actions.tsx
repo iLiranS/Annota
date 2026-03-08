@@ -26,6 +26,11 @@ export function NoteFloatingActions({
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
 
+    const isMac = typeof window !== 'undefined' && (/Mac|iPod|iPhone|iPad/.test(navigator.platform) || /Mac/.test(navigator.userAgent));
+    const MOD = isMac ? '⌘' : 'Ctrl';
+
+    const SHIFT = isMac ? '⇧' : 'Shift';
+
     return (
         <div className={cn(
             "group",
@@ -78,10 +83,13 @@ export function NoteFloatingActions({
                                     <Search className="h-4 w-4" />
                                 </Button>
                             </TooltipTrigger>
-                            <TooltipContent side="top" sideOffset={12} className="text-[10px] font-medium">Search in note</TooltipContent>
+                            <TooltipContent side="bottom" sideOffset={12} className="text-[10px] font-medium">
+                                Search
+                                <span className="ml-2 text-[10px] opacity-60 bg-white/10 px-1 rounded-sm border border-white/10"> {MOD + ' + ' + SHIFT + ' + F'}</span>
+                            </TooltipContent>
                         </Tooltip>
 
-                        <div className="w-px h-4 bg-white/10 mx-0.5 shrink-0" />
+
 
                         <Tooltip
                             open={activeTooltip === 'sidebar'}
@@ -100,7 +108,7 @@ export function NoteFloatingActions({
                                     <SidebarClose className={cn("h-4 w-4 transition-colors", isNoteSidebarOpen ? "text-primary" : "text-muted-foreground")} />
                                 </Button>
                             </TooltipTrigger>
-                            <TooltipContent side="top" sideOffset={12} className="text-[10px] font-medium">Toggle Notes Sidebar</TooltipContent>
+                            <TooltipContent side="bottom" sideOffset={12} className="text-[10px] font-medium">Toggle Notes Sidebar</TooltipContent>
                         </Tooltip>
 
                         <Tooltip
@@ -120,8 +128,9 @@ export function NoteFloatingActions({
                                     {isNoteSidebarOpen ? <Maximize2 className="h-3.5 w-3.5" /> : <Minimize2 className="h-3.5 w-3.5" />}
                                 </Button>
                             </TooltipTrigger>
-                            <TooltipContent side="top" sideOffset={12} className="text-[10px] font-medium">
+                            <TooltipContent side="bottom" sideOffset={12} className="text-[10px] font-medium">
                                 {isNoteSidebarOpen ? "Focus Mode" : "Exit Focus Mode"}
+                                <span className="ml-2 text-[10px] opacity-60 bg-white/10 px-1 rounded-sm border border-white/10">{MOD + ' + ' + SHIFT + ' + D'}</span>
                             </TooltipContent>
                         </Tooltip>
 

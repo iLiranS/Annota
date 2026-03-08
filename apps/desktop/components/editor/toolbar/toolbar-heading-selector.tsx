@@ -29,14 +29,18 @@ export function HeadingSelector({ editorState, sendCommand, onOpenChange, isMenu
                     editorState.isHeading5 ? 'H5' :
                         editorState.isHeading6 ? 'H6' : 'T';
 
+    const isMac = typeof window !== 'undefined' && (/Mac|iPod|iPhone|iPad/.test(navigator.platform) || /Mac/.test(navigator.userAgent));
+    const MOD = isMac ? '⌘' : 'Ctrl';
+
     const items = (
         <>
             <DropdownMenuItem onClick={() => sendCommand('setParagraph')}>
                 Paragraph
             </DropdownMenuItem>
             {[1, 2, 3, 4, 5, 6].map((level) => (
-                <DropdownMenuItem key={level} onClick={() => sendCommand('toggleHeading', { level })}>
+                <DropdownMenuItem key={level} onClick={() => sendCommand('toggleHeading', { level })} className="gap-4">
                     Heading {level}
+                    <span className="ml-auto text-[10px] opacity-50">{MOD}{level}</span>
                 </DropdownMenuItem>
             ))}
         </>

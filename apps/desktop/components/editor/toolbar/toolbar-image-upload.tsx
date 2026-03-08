@@ -27,6 +27,7 @@ export function ToolbarImageUpload({ onInsertImage, onOpenChange, isMenu }: Tool
     const [isLoading, setIsLoading] = useState(false);
     const [url, setUrl] = useState('');
     const [tab, setTab] = useState<'upload' | 'url'>('upload');
+    const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleOpenChange = (val: boolean) => {
@@ -39,7 +40,7 @@ export function ToolbarImageUpload({ onInsertImage, onOpenChange, isMenu }: Tool
         }
     };
 
-    const handleUrlSubmit = async () => {
+    const handleUrlSubmit = useCallback(async () => {
         if (!url) return;
         setIsLoading(true);
         try {
@@ -50,9 +51,9 @@ export function ToolbarImageUpload({ onInsertImage, onOpenChange, isMenu }: Tool
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [url, onInsertImage, handleOpenChange]);
 
-    const processFile = async (file: File) => {
+    const processFile = useCallback(async (file: File) => {
         setIsLoading(true);
         try {
             const adapters = getPlatformAdapters();
@@ -78,19 +79,67 @@ export function ToolbarImageUpload({ onInsertImage, onOpenChange, isMenu }: Tool
             setIsLoading(false);
             if (fileInputRef.current) fileInputRef.current.value = '';
         }
-    };
+    }, [onInsertImage, handleOpenChange]);
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) await processFile(file);
     };
 
+    const handleDragEnter = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(true);
+    }, []);
+
+    const handleDragLeave = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        // Only set to false if we leave the container, not just its children
+        if (e.currentTarget === e.target) {
+            setIsDragging(false);
+        }
+    }, []);
+
+    const handleDragOver = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.dataTransfer) {
+            e.dataTransfer.dropEffect = "copy"; // Critical for macOS Finder drag
+        }
+        setIsDragging(true);
+    }, []);
+
     const handleDrop = useCallback(async (e: React.DragEvent) => {
         e.preventDefault();
-        const file = e.dataTransfer.files?.[0];
-        if (!file || !file.type.startsWith('image/')) return;
-        await processFile(file);
-    }, []);
+        e.stopPropagation();
+        setIsDragging(false);
+
+        // 1. Try files (local drag and drop) - Use items for better macOS compatibility
+        let file: File | null = null;
+        if (e.dataTransfer.items?.length) {
+            const item = e.dataTransfer.items[0];
+            if (item.kind === "file") {
+                file = item.getAsFile();
+            }
+        }
+
+        if (!file && e.dataTransfer.files?.length) {
+            file = e.dataTransfer.files[0];
+        }
+
+        if (file && file.type.startsWith('image/')) {
+            await processFile(file);
+            return;
+        }
+
+        // 2. Try URL (dragging from browser)
+        const droppedUrl = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain');
+        if (droppedUrl && (droppedUrl.startsWith('http') || droppedUrl.startsWith('data:image/'))) {
+            setTab('url');
+            setUrl(droppedUrl);
+        }
+    }, [processFile]);
 
     const trigger = isMenu ? (
         <DropdownMenuItem onSelect={(e) => e.preventDefault()} onClick={() => setOpen(true)} className="gap-2">
@@ -115,7 +164,9 @@ export function ToolbarImageUpload({ onInsertImage, onOpenChange, isMenu }: Tool
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>
             {trigger}
-            <DialogContent className="sm:max-w-[400px] p-0 overflow-hidden border-none bg-background shadow-2xl">
+            <DialogContent
+                className="sm:max-w-[400px] p-0 overflow-hidden border-none bg-background shadow-2xl"
+            >
                 <DialogHeader className="p-4 pb-2 border-b border-border/50">
                     <DialogTitle className="text-lg font-semibold flex items-center gap-2">
                         <ImageIcon className="h-5 w-5 text-primary" />
@@ -150,11 +201,14 @@ export function ToolbarImageUpload({ onInsertImage, onOpenChange, isMenu }: Tool
                     {tab === 'upload' ? (
                         <div
                             className={cn(
-                                "group relative flex flex-col items-center justify-center border-2 border-dashed border-muted/50 rounded-xl p-8 hover:border-primary/50 hover:bg-primary/5 transition-all cursor-pointer",
+                                "group relative flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-8 transition-all cursor-pointer",
+                                isDragging ? "border-primary bg-primary/10" : "border-muted/50 hover:border-primary/50 hover:bg-primary/5",
                                 isLoading && "pointer-events-none opacity-80"
                             )}
                             onClick={() => fileInputRef.current?.click()}
-                            onDragOver={(e) => e.preventDefault()}
+                            onDragEnter={handleDragEnter}
+                            onDragOver={handleDragOver}
+                            onDragLeave={handleDragLeave}
                             onDrop={handleDrop}
                         >
                             <input
@@ -214,6 +268,16 @@ export function ToolbarImageUpload({ onInsertImage, onOpenChange, isMenu }: Tool
                         </div>
                     )}
                 </div>
+
+                {isDragging && (
+                    <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-primary/10 backdrop-blur-[2px] border-2 border-primary border-dashed rounded-xl m-2 pointer-events-none transition-all">
+                        <div className="h-16 w-16 rounded-full bg-primary/20 flex items-center justify-center mb-4 animate-bounce">
+                            <Upload className="h-8 w-8 text-primary" />
+                        </div>
+                        <p className="text-lg font-bold text-primary">Drop to Upload</p>
+                        <p className="text-sm text-primary/70">Image files or URLs</p>
+                    </div>
+                )}
             </DialogContent>
         </Dialog>
     );

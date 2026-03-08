@@ -116,6 +116,12 @@ function notifySearchResults(results: { from: number; to: number }[], currentInd
 export const SearchExtension = Extension.create({
     name: 'search',
 
+    addOptions() {
+        return {
+            onResults: (results: { count: number; currentIndex: number }) => { },
+        };
+    },
+
     addCommands() {
         return {
             search:
@@ -135,7 +141,11 @@ export const SearchExtension = Extension.create({
                             dispatch(tr);
                         }
 
-                        // Notify RN of results
+                        // Notify
+                        this.options.onResults({
+                            count: results.length,
+                            currentIndex: results.length > 0 ? currentIndex : -1,
+                        });
                         notifySearchResults(results, currentIndex);
 
                         // Scroll to first match
@@ -166,7 +176,11 @@ export const SearchExtension = Extension.create({
                             dispatch(tr);
                         }
 
-                        // Notify RN of new index
+                        // Notify
+                        this.options.onResults({
+                            count: results.length,
+                            currentIndex: results.length > 0 ? newIndex : -1,
+                        });
                         notifySearchResults(results, newIndex);
 
                         // Scroll to match
@@ -195,7 +209,11 @@ export const SearchExtension = Extension.create({
                             dispatch(tr);
                         }
 
-                        // Notify RN of new index
+                        // Notify
+                        this.options.onResults({
+                            count: results.length,
+                            currentIndex: results.length > 0 ? newIndex : -1,
+                        });
                         notifySearchResults(results, newIndex);
 
                         // Scroll to match
@@ -217,7 +235,8 @@ export const SearchExtension = Extension.create({
                             dispatch(tr);
                         }
 
-                        // Notify RN
+                        // Notify
+                        this.options.onResults({ count: 0, currentIndex: -1 });
                         notifySearchResults([], -1);
 
                         return true;
@@ -226,6 +245,7 @@ export const SearchExtension = Extension.create({
     },
 
     addProseMirrorPlugins() {
+        const extension = this;
         return [
             new Plugin({
                 key: searchPluginKey,
@@ -260,6 +280,10 @@ export const SearchExtension = Extension.create({
                             const decorations = createDecorations(newState.doc, results, newIndex);
 
                             // Notify RN of updated results
+                            extension.options.onResults({
+                                count: results.length,
+                                currentIndex: results.length > 0 ? newIndex : -1,
+                            });
                             notifySearchResults(results, newIndex);
 
                             return {

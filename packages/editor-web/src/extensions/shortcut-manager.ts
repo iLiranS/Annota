@@ -8,6 +8,14 @@ export const ShortcutManager = Extension.create({
 
     addKeyboardShortcuts() {
         const shortcuts: Record<string, () => boolean> = {
+            // --- Formatting ---
+            'Mod-b': () => this.editor.commands.toggleBold(),
+            'Mod-i': () => this.editor.commands.toggleItalic(),
+            'Mod-u': () => this.editor.commands.toggleUnderline(),
+            'Mod-Shift-x': () => this.editor.commands.toggleStrike(),
+            'Mod-e': () => this.editor.commands.toggleCode(),
+            'Mod-Alt-c': () => this.editor.commands.toggleCodeBlock(),
+
             // --- Headings ---
             'Mod-1': () => this.editor.commands.toggleHeading({ level: 1 }),
             'Mod-2': () => this.editor.commands.toggleHeading({ level: 2 }),
@@ -22,11 +30,15 @@ export const ShortcutManager = Extension.create({
             'Mod-9': () => this.editor.commands.toggleTaskList(),
 
             // --- Custom Commands ---
+            'Mod-Shift-b': () => this.editor.commands.toggleBlockquote(),
             'Mod-.': () => (this.editor.commands as any).toggleDetails(),
             'Mod-Shift-m': () => {
+                const { from, to } = this.editor.state.selection;
+                const text = this.editor.state.doc.textBetween(from, to, ' ');
+
                 return this.editor.commands.insertContent({
                     type: 'inlineMath',
-                    attrs: { latex: '' }
+                    attrs: { latex: text }
                 });
             },
 
@@ -35,7 +47,7 @@ export const ShortcutManager = Extension.create({
             'Mod-Shift-n': () => this.editor.commands.unsetColor(),
         };
 
-        // --- Colors (Mod-Shift-[1-0]) ---
+        // --- Colors (Alt-[1-0]) ---
         // Mapping: 1=Orange, 2=Red, 3=Yellow, 4=Green, 5=Teal, 6=Blue, 7=Purple, 8=Gray, 9=Pink, 0=Brown
         COLOR_PALETTE.forEach((color, index) => {
             const key = (index + 1) % 10; // 0-9 keys

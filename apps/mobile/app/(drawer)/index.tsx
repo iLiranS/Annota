@@ -1,12 +1,13 @@
 import Calendar from '@/components/calendar';
 import RecentNotesList from '@/components/notes/recent-notes-list';
+import NotesSearchModal from '@/components/search/notes-search-modal';
 import TaskList from '@/components/tasks/task-list';
 import ThemedText from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { HapticPressable } from '@/components/ui/haptic-pressable';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { useUserStore as useAuthStore, useNotesStore, useSettingsStore, useTasksStore, type Task } from '@annota/core';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DrawerNavigationProp } from '@react-navigation/drawer';
 import { useNavigation, useRouter } from 'expo-router';
@@ -53,10 +54,11 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
 
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [isSearchVisible, setIsSearchVisible] = useState(false);
 
   // Use Zustand stores
   const { tasks, loadTasks } = useTasksStore();
-  const { createNote } = useNotesStore();
+  const { createNote, folders } = useNotesStore();
 
   // Guest display name
   useEffect(() => {
@@ -175,6 +177,14 @@ export default function HomeScreen() {
     router.push({ pathname: '/Notes/[id]', params: { id: newNote.id, source: 'new' } });
   }, [createNote, router]);
 
+  const handleFolderPress = useCallback((folderId: string) => {
+    router.push({ pathname: '/Notes', params: { folderId } });
+  }, [router]);
+
+  const handleNotePress = useCallback((noteId: string) => {
+    router.push({ pathname: '/Notes/[id]', params: { id: noteId } });
+  }, [router]);
+
   return (
     <ThemedView style={[styles.container, { paddingTop: insets.top + 10 }]}>
       {/* Header */}
@@ -194,6 +204,16 @@ export default function HomeScreen() {
             {greeting}, <ThemedText style={[styles.userName, { color: colors.primary }]}>{displayName}</ThemedText>
           </ThemedText>
         </View>
+        <HapticPressable
+          onPress={() => setIsSearchVisible(true)}
+          style={({ pressed }) => ({
+            opacity: pressed ? 0.7 : 1,
+            padding: 4,
+            marginRight: -4,
+          })}
+        >
+          <Ionicons name="search" size={24} color={colors.text} />
+        </HapticPressable>
       </View>
 
       {/* Calendar */}
@@ -306,11 +326,18 @@ export default function HomeScreen() {
 
       {/* Bottom Spacing */}
       <View style={{ height: insets.bottom + 20 }} />
-    </ThemedView>
 
+      {/* Search Modal */}
+      <NotesSearchModal
+        visible={isSearchVisible}
+        onClose={() => setIsSearchVisible(false)}
+        onFolderPress={handleFolderPress}
+        onNotePress={handleNotePress}
+        allFolders={folders}
+      />
+    </ThemedView>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -379,3 +406,4 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
+

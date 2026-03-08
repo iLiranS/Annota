@@ -87,6 +87,7 @@ export const CustomImage = Image.extend<any>({
         return {
             ...this.parent?.(),
             onImageSelected: null as ((data: { images: any[], currentIndex: number }) => void) | null,
+            onOpenImageMenu: null as ((e: MouseEvent, resolve: () => any) => void) | null,
         };
     },
     addAttributes() {
@@ -221,6 +222,7 @@ export const CustomImage = Image.extend<any>({
             const menuBtn = createBlockMenuButton({
                 className: 'image-menu-btn',
                 iconSize: 'small',
+                onClick: this.options.onOpenImageMenu,
                 onResolve: () => {
                     if (typeof getPos !== 'function') return null;
                     const currentPos = getPos();

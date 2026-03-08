@@ -13,23 +13,33 @@ import {
 } from '@/components/ui/popover';
 import type { ToolbarRenderProps } from '@annota/tiptap-editor';
 import { Sigma } from 'lucide-react';
-import { useState } from 'react';
+import React, { useState } from 'react';
 
 interface MathPopoverProps {
     sendCommand: ToolbarRenderProps['sendCommand'];
     activeColor?: string;
     onOpenChange?: (open: boolean) => void;
     isMenu?: boolean;
+    visible?: boolean;
+    currentLatex?: string | null;
 }
 
-export function MathPopover({ sendCommand, onOpenChange, isMenu, }: MathPopoverProps) {
-    const [latex, setLatex] = useState('');
-    const [open, setOpen] = useState(false);
+export function MathPopover({ sendCommand, onOpenChange, isMenu, visible, currentLatex }: MathPopoverProps) {
+    const [latex, setLatex] = useState(currentLatex || '');
+    const [open, setOpen] = useState(visible || false);
+
+    React.useEffect(() => {
+        if (visible !== undefined) setOpen(visible);
+    }, [visible]);
+
+    React.useEffect(() => {
+        if (currentLatex !== undefined && currentLatex !== null) setLatex(currentLatex);
+    }, [currentLatex]);
 
     const handleOpenChange = (val: boolean) => {
         setOpen(val);
         onOpenChange?.(val);
-        if (val) setLatex('');
+        if (val && !currentLatex) setLatex('');
     };
 
     const handleInsert = (value: string) => {

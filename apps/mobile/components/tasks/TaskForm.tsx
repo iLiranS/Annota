@@ -554,7 +554,7 @@ export default function TaskForm({
                     >
                         {linkedFolder ? (
                             <View style={styles.selectedNote}>
-                                <Ionicons name="folder" size={18} color={linkedFolder.color || colors.primary} />
+                                <Ionicons name={linkedFolder.icon as any} size={18} color={linkedFolder.color || colors.primary} />
                                 <ThemedText style={styles.selectedNoteText} numberOfLines={1}>
                                     {linkedFolder.name}
                                 </ThemedText>

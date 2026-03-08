@@ -34,10 +34,27 @@ export function useAppTheme(): AppTheme {
 
     const isDark = themeMode === 'system' ? systemIsDark : themeMode === 'dark';
 
-    // Keep the <html> class in sync so Tailwind dark: and shadcn vars work.
+    // Keep the <html> class and CSS variables in sync so Tailwind and shadcn vars work.
     useEffect(() => {
-        document.documentElement.classList.toggle('dark', isDark);
-    }, [isDark]);
+        const root = document.documentElement;
+
+        root.classList.toggle("dark", isDark);
+
+        root.style.setProperty("--accent", accentColor + "65");
+        document.documentElement.style.setProperty("--accent", accentColor + "65");
+
+        // subtle background tint
+        root.style.setProperty(
+            "--accent-soft",
+            `color-mix(in oklch, ${accentColor} 12%, var(--background))`
+        );
+
+        root.style.setProperty(
+            "--accent-soft-hover",
+            `color-mix(in oklch, ${accentColor} 18%, var(--background))`
+        );
+
+    }, [isDark, accentColor]);
 
     return useMemo(() => {
         const palette = Colors[isDark ? 'dark' : 'light'];

@@ -46,6 +46,9 @@ export const getExtensions = (options: {
     editorOrigin?: string;
     onMathSelected?: (latex: string, isBlock: boolean, pos: number) => void;
     onImageSelected?: (data: { images: any[], currentIndex: number }) => void;
+    onSearchResults?: (count: number, currentIndex: number) => void;
+    onOpenBlockMenu?: (e: MouseEvent, resolve: () => any) => void;
+    onOpenImageMenu?: (e: MouseEvent, resolve: () => any) => void;
 }) => [
         StarterKit.configure({
             heading: false,
@@ -90,7 +93,8 @@ export const getExtensions = (options: {
         CustomImage.configure({
             inline: false,
             allowBase64: true,
-            onImageSelected: options.onImageSelected
+            onImageSelected: options.onImageSelected,
+            onOpenImageMenu: options.onOpenImageMenu,
         }),
         Table.configure({ resizable: true, HTMLAttributes: { class: 'editor-table' } }),
         TableRow,
@@ -98,11 +102,15 @@ export const getExtensions = (options: {
         CustomTableHeader,
         TaskList,
         TaskItem.configure({ nested: true }),
-        CustomCodeBlock,
+        CustomCodeBlock.configure({
+            onOpenBlockMenu: options.onOpenBlockMenu,
+        }),
         // @ts-ignore - Type mismatch due to tiptap version difference between packages
         Details,
         // @ts-ignore - Type mismatch due to tiptap version difference between packages
-        DetailsSummary,
+        DetailsSummary.configure({
+            onOpenBlockMenu: options.onOpenBlockMenu,
+        }),
         // @ts-ignore - Type mismatch due to tiptap version difference between packages
         DetailsContent,
         Mathematics.configure({
@@ -121,7 +129,11 @@ export const getExtensions = (options: {
                 }
             }
         }),
-        SearchExtension,
+        SearchExtension.configure({
+            onResults: (data: any) => {
+                options.onSearchResults?.(data.count, data.currentIndex);
+            }
+        }),
     ];
 
 export const getEditorProps = (callbacks: {

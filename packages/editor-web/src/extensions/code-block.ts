@@ -35,7 +35,13 @@ export const CODE_LANGUAGES = [
 ];
 
 // Custom CodeBlock with native interaction
-export const CustomCodeBlock = CodeBlockLowlight.extend({
+export const CustomCodeBlock = CodeBlockLowlight.extend<any>({
+    addOptions() {
+        return {
+            ...this.parent?.(),
+            onOpenBlockMenu: null,
+        };
+    },
     addNodeView() {
         return ({ node, editor, getPos }) => {
             // Container wrapper
@@ -91,17 +97,30 @@ export const CustomCodeBlock = CodeBlockLowlight.extend({
                 e.preventDefault();
                 e.stopPropagation();
 
-                if (typeof getPos === 'function') {
+                const onResolve = () => {
+                    if (typeof getPos !== 'function') return null;
                     const pos = getPos();
-                    if (typeof pos !== 'number') return;
+                    if (typeof pos !== 'number') return null;
 
-                    // Send message to RN
-                    sendMessage({
-                        type: 'openBlockMenu',
-                        blockType: 'codeBlock',
-                        language: node.attrs.language,
-                        pos
-                    });
+                    return {
+                        pos,
+                        message: {
+                            type: 'openBlockMenu',
+                            blockType: 'codeBlock',
+                            language: node.attrs.language,
+                            pos
+                        }
+                    };
+                };
+
+                if (this.options.onOpenBlockMenu) {
+                    this.options.onOpenBlockMenu(e, onResolve);
+                    return;
+                }
+
+                const result = onResolve();
+                if (result) {
+                    sendMessage(result.message);
                 }
             };
 

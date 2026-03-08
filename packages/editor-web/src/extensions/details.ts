@@ -246,7 +246,13 @@ export const Details = TiptapDetails.extend({
     },
 });
 
-export const DetailsSummary = TiptapDetailsSummary.extend({
+export const DetailsSummary = TiptapDetailsSummary.extend<any>({
+    addOptions() {
+        return {
+            ...this.parent?.(),
+            onOpenBlockMenu: null,
+        };
+    },
     addNodeView() {
         return ({ HTMLAttributes, getPos, editor }: { node: any, HTMLAttributes: Record<string, any>, getPos: any, editor: any }) => {
             const dom = document.createElement('div');
@@ -263,6 +269,7 @@ export const DetailsSummary = TiptapDetailsSummary.extend({
             // Menu button — shared three-dot utility
             const menuBtn = createBlockMenuButton({
                 className: 'details-menu-btn',
+                onClick: this.options.onOpenBlockMenu,
                 onResolve: () => {
                     if (typeof getPos !== 'function') return null;
                     const pos = getPos();

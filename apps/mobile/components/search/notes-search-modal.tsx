@@ -1,12 +1,13 @@
 import FolderCard from '@/components/folders/folder-card';
 import NoteCard from '@/components/notes/note-card';
 import ThemedText from '@/components/themed-text';
-import { Folder, NoteMetadata, useNotesStore } from '@annota/core';
-import { useSettingsStore } from '@annota/core';
+import { Folder, NoteMetadata, Task, useNotesStore, useSearchStore, useSettingsStore } from '@annota/core';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
-import { useCallback, useMemo, useState } from 'react';
+import { useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo } from 'react';
 import {
+    ActivityIndicator,
     FlatList,
     Modal,
     Pressable,
@@ -20,6 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 type ListItem =
     | { type: 'folder'; data: Folder }
     | { type: 'note'; data: NoteMetadata }
+    | { type: 'task'; data: Task }
     | { type: 'section-header'; title: string };
 
 interface NotesSearchModalProps {
@@ -30,9 +32,6 @@ interface NotesSearchModalProps {
     onFolderLongPress?: (folder: Folder) => void;
     onNoteLongPress?: (note: NoteMetadata) => void;
     allFolders: Folder[];
-    allNotes: NoteMetadata[];
-    browseFolders: Folder[];
-    browseNotes: NoteMetadata[];
 }
 
 export default function NotesSearchModal({
@@ -40,64 +39,70 @@ export default function NotesSearchModal({
     onClose,
     onFolderPress,
     onNotePress,
-
     onFolderLongPress,
     onNoteLongPress,
     allFolders,
-    allNotes,
-    browseFolders,
-    browseNotes,
 }: NotesSearchModalProps) {
     const { colors } = useTheme();
     const insets = useSafeAreaInsets();
+    const router = useRouter();
     const { updateNoteMetadata, deleteNote } = useNotesStore();
     const { general } = useSettingsStore();
-    const isCompact = general.compactMode;
 
-    const [searchQuery, setSearchQuery] = useState('');
-    const [searchScope, setSearchScope] = useState<'current' | 'all'>('current');
+    const {
+        searchQuery,
+        isSearching,
+        dbResults,
+        setSearchQuery,
+        resetSearch
+    } = useSearchStore();
 
-    // Filter data based on search query and scope
+    // Reset search when opening/closing
+    useEffect(() => {
+        if (visible) {
+            resetSearch();
+        }
+    }, [visible, resetSearch]);
+
+    // Local folder filtering
     const filteredFolders = useMemo(() => {
         if (!searchQuery.trim()) return [];
         const query = searchQuery.toLowerCase();
-        const source = searchScope === 'all' ? allFolders : browseFolders;
-        return source.filter((f) =>
+        return allFolders.filter((f) =>
             !f.isDeleted
             && !f.isSystem
             && f.name.toLowerCase().includes(query));
-    }, [allFolders, browseFolders, searchQuery, searchScope]);
-
-    const filteredNotes = useMemo(() => {
-        if (!searchQuery.trim()) return [];
-        const query = searchQuery.toLowerCase();
-        const source = searchScope === 'all' ? allNotes : browseNotes;
-        return source.filter(
-            (n) => !n.isDeleted &&
-                n.title.toLowerCase().includes(query) ||
-                n.preview.toLowerCase().includes(query)
-        );
-    }, [allNotes, browseNotes, searchQuery, searchScope]);
+    }, [allFolders, searchQuery]);
 
     const searchData = useMemo((): ListItem[] => {
         if (!searchQuery.trim()) return [];
         const items: ListItem[] = [];
-        if (filteredNotes.length > 0) {
+
+        const notes = dbResults.filter(r => r.type === 'note');
+        const tasks = dbResults.filter(r => r.type === 'task');
+
+        if (notes.length > 0) {
             items.push({ type: 'section-header', title: 'Notes' });
-            filteredNotes.forEach((n) => items.push({ type: 'note', data: n }));
+            notes.forEach((n) => items.push({ type: 'note', data: n.data }));
         }
+
+        if (tasks.length > 0) {
+            items.push({ type: 'section-header', title: 'Tasks' });
+            tasks.forEach((t) => items.push({ type: 'task', data: t.data }));
+        }
+
         if (filteredFolders.length > 0) {
             items.push({ type: 'section-header', title: 'Folders' });
             filteredFolders.forEach((f) => items.push({ type: 'folder', data: f }));
         }
 
         return items;
-    }, [filteredFolders, filteredNotes, searchQuery]);
+    }, [filteredFolders, dbResults, searchQuery]);
 
     const handleClose = useCallback(() => {
-        setSearchQuery('');
+        resetSearch();
         onClose();
-    }, [onClose]);
+    }, [onClose, resetSearch]);
 
     const handleFolderPress = useCallback(
         (folderId: string) => {
@@ -113,6 +118,14 @@ export default function NotesSearchModal({
             onNotePress(noteId);
         },
         [handleClose, onNotePress]
+    );
+
+    const handleTaskPress = useCallback(
+        (taskId: string) => {
+            handleClose();
+            router.push(`/Tasks/${taskId}`);
+        },
+        [handleClose, router]
     );
 
     const handleTogglePin = useCallback(
@@ -139,7 +152,10 @@ export default function NotesSearchModal({
     const renderItem = useCallback(
         ({ item, index }: { item: ListItem; index: number }) => {
             if (item.type === 'section-header') {
-                const iconName = item.title === 'Folders' ? 'folder' : 'document-text';
+                let iconName: any = 'document-text';
+                if (item.title === 'Folders') iconName = 'folder';
+                if (item.title === 'Tasks') iconName = 'checkbox';
+
                 return (
                     <View style={styles.sectionHeaderRow}>
                         <Ionicons name={iconName} size={14} color={colors.text + '50'} />
@@ -203,9 +219,58 @@ export default function NotesSearchModal({
                 );
             }
 
+            if (item.type === 'task') {
+                const task = item.data;
+                const folder = allFolders.find((f) => f.id === task.folderId);
+                const isFirstTask = index === 0 || searchData[index - 1].type !== 'task';
+                const isLastTask = index === searchData.length - 1 || searchData[index + 1].type !== 'task';
+
+                return (
+                    <Pressable
+                        onPress={() => handleTaskPress(task.id)}
+                        style={({ pressed }) => [
+                            styles.taskCard,
+                            { backgroundColor: colors.card, borderColor: colors.border },
+                            isFirstTask && styles.roundTop,
+                            isLastTask && styles.roundBottom,
+                            pressed && { backgroundColor: colors.border + '50' }
+                        ]}
+                    >
+                        <View style={styles.taskIconWrapper}>
+                            <Ionicons
+                                name={task.completed ? "checkmark-circle" : "checkbox-outline"}
+                                size={20}
+                                color={task.completed ? "#10b981" : colors.primary}
+                            />
+                        </View>
+                        <View style={styles.taskContent}>
+                            <Text style={[
+                                styles.taskTitle,
+                                { color: colors.text },
+                                task.completed && styles.taskCompleted
+                            ]}>
+                                {task.title}
+                            </Text>
+                            <View style={styles.taskFooter}>
+                                <View style={[styles.folderInfo, { backgroundColor: folder?.color + '10' || colors.background + '10' }]}>
+                                    <Ionicons
+                                        name={folder ? (folder.icon as any) : 'home'}
+                                        size={10}
+                                        color={folder?.color || colors.text + '80'}
+                                    />
+                                    <Text style={[styles.folderName, { color: folder?.color || colors.text + '80' }]}>
+                                        {folder ? folder.name : 'Notes'}
+                                    </Text>
+                                </View>
+                            </View>
+                        </View>
+                    </Pressable>
+                );
+            }
+
             return null;
         },
-        [colors, handleFolderPress, handleNotePress, onFolderLongPress, onNoteLongPress, allFolders, handleDeleteNote, handleTogglePin, handleToggleQuickAccess, searchData]
+        [colors, handleFolderPress, handleNotePress, handleTaskPress, onFolderLongPress, onNoteLongPress, allFolders, handleDeleteNote, handleTogglePin, handleToggleQuickAccess, searchData]
     );
 
     const getItemKey = (item: ListItem, index: number): string => {
@@ -234,70 +299,56 @@ export default function NotesSearchModal({
                     ]}
                 >
                     <View style={styles.searchInputWrapper}>
-                        <Ionicons
-                            name="search"
-                            size={18}
-                            color={colors.text}
-                            style={styles.searchIcon}
-                        />
+                        {isSearching ? (
+                            <ActivityIndicator size="small" color={colors.primary} style={styles.searchIcon} />
+                        ) : (
+                            <Ionicons
+                                name="search"
+                                size={18}
+                                color={colors.text}
+                                style={styles.searchIcon}
+                            />
+                        )}
                         <TextInput
                             style={[styles.searchInput, { color: colors.text }]}
-                            placeholder={searchScope === 'all' ? "Search in all folders..." : "Search in this folder..."}
+                            placeholder="Search in all folders..."
                             placeholderTextColor={'#888'}
                             value={searchQuery}
-                            onChangeText={setSearchQuery}
+                            onChangeText={(text) => setSearchQuery(text, null)}
                             autoFocus
                         />
                         {searchQuery.length > 0 && (
-                            <Pressable onPress={() => setSearchQuery('')}>
+                            <Pressable onPress={() => setSearchQuery('', null)}>
                                 <Ionicons name="close-circle" size={18} color={colors.text} />
                             </Pressable>
                         )}
                     </View>
 
-                    {/* Search Scope Toggle */}
-                    <View style={[styles.scopeToggle, { backgroundColor: colors.background }]}>
-                        <Pressable
-                            style={[
-                                styles.scopeButton,
-                                searchScope === 'current' && { backgroundColor: colors.primary }
-                            ]}
-                            onPress={() => setSearchScope('current')}
-                        >
-                            <Text style={[
-                                styles.scopeText,
-                                { color: searchScope === 'current' ? '#FFFFFF' : colors.text }
-                            ]}>Current Folder</Text>
-                        </Pressable>
-                        <Pressable
-                            style={[
-                                styles.scopeButton,
-                                searchScope === 'all' && { backgroundColor: colors.primary }
-                            ]}
-                            onPress={() => setSearchScope('all')}
-                        >
-                            <Text style={[
-                                styles.scopeText,
-                                { color: searchScope === 'all' ? '#FFFFFF' : colors.text }
-                            ]}>All Folders</Text>
-                        </Pressable>
-                    </View>
-
                     {/* Search Results List */}
                     {searchQuery.length > 0 && (
-                        <FlatList style={{ gap: 8 }}
+                        <FlatList
                             data={searchData}
                             keyExtractor={getItemKey}
                             renderItem={renderItem}
                             contentContainerStyle={styles.searchListContent}
-
                             keyboardShouldPersistTaps="handled"
                             ListEmptyComponent={
-                                <Text style={[styles.searchHint, { color: colors.text }]}>
-                                    No results found
-                                </Text>
+                                !isSearching ? (
+                                    <Text style={[styles.searchHint, { color: colors.text }]}>
+                                        No results found
+                                    </Text>
+                                ) : null
                             }
                         />
+                    )}
+
+                    {!searchQuery && (
+                        <View style={styles.emptyContainer}>
+                            <Ionicons name="sparkles-outline" size={40} color={colors.primary} style={{ opacity: 0.2, marginBottom: 12 }} />
+                            <Text style={[styles.emptyText, { color: colors.text, opacity: 0.4 }]}>
+                                Search Notes, Tasks & Folders
+                            </Text>
+                        </View>
                     )}
                 </View>
             </View>
@@ -325,6 +376,9 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+        borderBottomColor: 'rgba(0,0,0,0.1)',
+        paddingBottom: 8,
     },
     searchIcon: {
         opacity: 0.6,
@@ -335,33 +389,14 @@ const styles = StyleSheet.create({
         paddingVertical: 8,
     },
     searchHint: {
-        marginTop: 20,
+        marginTop: 40,
         fontSize: 14,
         textAlign: 'center',
         opacity: 0.6,
     },
-    scopeToggle: {
-        flexDirection: 'row',
-        marginTop: 12,
-        marginBottom: 8,
-        borderRadius: 8,
-        padding: 2,
-        overflow: 'hidden',
-    },
-    scopeButton: {
-        flex: 1,
-        paddingVertical: 6,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderRadius: 6,
-    },
-    scopeText: {
-        fontSize: 13,
-        fontWeight: '500',
-    },
     searchListContent: {
         paddingTop: 4,
-        paddingBottom: 10,
+        paddingBottom: 20,
     },
     sectionHeaderRow: {
         flexDirection: 'row',
@@ -395,8 +430,52 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         gap: 8,
     },
-    preview: {
-        flex: 1,
-        fontSize: 14,
+    taskCard: {
+        flexDirection: 'row',
+        padding: 12,
+        borderWidth: StyleSheet.hairlineWidth,
+        marginBottom: -StyleSheet.hairlineWidth,
+        alignItems: 'center',
+        gap: 12,
     },
+    roundTop: {
+        borderTopLeftRadius: 12,
+        borderTopRightRadius: 12,
+    },
+    roundBottom: {
+        borderBottomLeftRadius: 12,
+        borderBottomRightRadius: 12,
+        marginBottom: 0,
+    },
+    taskIconWrapper: {
+        width: 24,
+        height: 24,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    taskContent: {
+        flex: 1,
+        gap: 4,
+    },
+    taskTitle: {
+        fontSize: 15,
+        fontWeight: '600',
+    },
+    taskCompleted: {
+        textDecorationLine: 'line-through',
+        opacity: 0.5,
+    },
+    taskFooter: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    emptyContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 60,
+    },
+    emptyText: {
+        fontSize: 13,
+        fontWeight: '600',
+    }
 });

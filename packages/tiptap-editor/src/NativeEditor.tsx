@@ -4,7 +4,7 @@ import { getEditorProps, getEditorState, getExtensions, resolveFontFamily } from
 import '@annota/editor-web/styles.css';
 import { EditorContent, useEditor } from '@tiptap/react';
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useState } from 'react';
-import { EditorState, ImageInfo, initialEditorState, TipTapEditorProps, TipTapEditorRef } from './types';
+import { EditorState, ImageInfo, initialEditorState, PopupType, TipTapEditorProps, TipTapEditorRef } from './types';
 
 /** Extract data-image-id values from HTML string */
 function extractImageIds(html: string): string[] {
@@ -32,6 +32,8 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
         renderImageGallery,
         isDark: propIsDark,
         colors: propColors,
+        onOpenBlockMenu,
+        onOpenImageMenu,
     }, ref) => {
         const colors = propColors || { primary: '#007AFF', background: '#FFFFFF', text: '#000000' };
         const dark = propIsDark ?? false;
@@ -41,21 +43,30 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
         const [isGalleryVisible, setIsGalleryVisible] = useState(false);
         const [galleryImages, setGalleryImages] = useState<ImageInfo[]>([]);
         const [galleryCurrentIndex, setGalleryCurrentIndex] = useState(0);
+        const [activePopup, setActivePopup] = useState<PopupType>(null);
+        const [currentLatex, setCurrentLatex] = useState<string | null>(null);
+
         const containerRef = React.useRef<HTMLDivElement>(null);
         const isHydrating = React.useRef(false);
 
         const extensions = React.useMemo(() => getExtensions({
             placeholder,
             onMathSelected: (latex, isBlock, pos) => {
-                // Logic to handle math selection if needed for specifically for desktop UI
+                setCurrentLatex(latex);
+                setActivePopup('math');
             },
             onImageSelected: (data) => {
                 setGalleryImages(data.images);
                 setGalleryCurrentIndex(data.currentIndex);
                 setIsGalleryVisible(true);
                 onGalleryVisibilityChange?.(true);
-            }
-        }) as any, [placeholder]);
+            },
+            onSearchResults: (count, currentIndex) => {
+                onSearchResults?.(count, currentIndex);
+            },
+            onOpenBlockMenu,
+            onOpenImageMenu,
+        }) as any, [placeholder, onSearchResults, onOpenBlockMenu, onOpenImageMenu]);
 
         const editorProps = React.useMemo(() => getEditorProps({
             direction: editorSettings.direction,
@@ -189,6 +200,67 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                     break;
                 case 'focus': editor.commands.focus(); break;
                 case 'blur': editor.commands.blur(); break;
+                case 'updateAttributes':
+                    c.updateAttributes(params.type, params.attrs).run();
+                    break;
+                case 'updateImage':
+                    if (params.pos !== undefined) {
+                        const { pos, ...attrs } = params;
+                        const node = editor.state.doc.nodeAt(pos);
+                        if (node) {
+                            editor.view.dispatch(editor.state.tr.setNodeMarkup(pos, undefined, { ...node.attrs, ...attrs }));
+                        }
+                    } else {
+                        c.updateAttributes('image', params).run();
+                    }
+                    break;
+                case 'deleteImage':
+                case 'deleteSelection':
+                    if (params.pos !== undefined) {
+                        editor.commands.deleteRange({ from: params.pos, to: params.pos + (editor.state.doc.nodeAt(params.pos)?.nodeSize || 1) });
+                    } else {
+                        editor.commands.deleteSelection();
+                    }
+                    break;
+                case 'setDetailsBackground':
+                    if (params.pos !== undefined) {
+                        const node = editor.state.doc.nodeAt(params.pos);
+                        if (node) {
+                            editor.view.dispatch(editor.state.tr.setNodeMarkup(params.pos, undefined, { ...node.attrs, backgroundColor: params.color }));
+                        }
+                    } else {
+                        c.updateAttributes('details', { backgroundColor: params.color }).run();
+                    }
+                    break;
+                case 'setCodeBlockLanguage':
+                    if (params.pos !== undefined) {
+                        const node = editor.state.doc.nodeAt(params.pos);
+                        if (node) {
+                            editor.view.dispatch(editor.state.tr.setNodeMarkup(params.pos, undefined, { ...node.attrs, language: params.language }));
+                        }
+                    } else {
+                        c.updateAttributes('codeBlock', { language: params.language }).run();
+                    }
+                    break;
+                case 'copyToClipboard':
+                    if (params.pos !== undefined) {
+                        const node = editor.state.doc.nodeAt(params.pos);
+                        if (node) {
+                            const text = node.textContent || "";
+                            window.navigator.clipboard.writeText(text);
+                        }
+                    } else {
+                        const { from, to } = editor.state.selection;
+                        const text = editor.state.doc.textBetween(from, to, "\n");
+                        window.navigator.clipboard.writeText(text);
+                    }
+                    break;
+                case 'onCommand':
+                    // This is for generic command execution
+                    if (params.command && (editor.commands as any)[params.command]) {
+                        (editor.commands as any)[params.command](params.args).run();
+                    }
+                    break;
             }
         }, [editor]);
 
@@ -197,10 +269,11 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
             setContent: (content: string) => editor?.commands.setContent(content),
             focus: () => editor?.commands.focus(),
             blur: () => editor?.commands.blur(),
-            search: (term: string) => (editor?.commands as any).setSearchTerm(term),
-            searchNext: () => (editor?.commands as any).goToNextSearchResult(),
-            searchPrev: () => (editor?.commands as any).goToPrevSearchResult(),
-            clearSearch: () => (editor?.commands as any).clearSearchTerm(),
+            onCommand: (cmd, params) => sendCommand(cmd as any, params),
+            search: (term: string) => (editor?.commands as any).search(term),
+            searchNext: () => (editor?.commands as any).searchNext(),
+            searchPrev: () => (editor?.commands as any).searchPrev(),
+            clearSearch: () => (editor?.commands as any).clearSearch(),
             scrollToElement: (id: string) => {
                 const el = document.getElementById(id);
                 if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -263,13 +336,16 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                     onCommand: sendCommand,
                     toolbarHeight: 0,
                     onDismissKeyboard: () => { },
-                    activePopup: null,
-                    onActivePopupChange: () => { },
-                    onPopupStateChange: () => { },
+                    activePopup,
+                    onActivePopupChange: setActivePopup,
+                    onPopupStateChange: (isOpen) => { if (!isOpen) setActivePopup(null); },
                     onInsertImage: handleInsertImage,
-                    currentLatex: null,
+                    currentLatex,
                     blockData: null,
-                    onInsertMath: () => { }
+                    onInsertMath: () => {
+                        setCurrentLatex(null);
+                        setActivePopup('math');
+                    }
                 })}
 
                 <div className="editor-scroller" style={{

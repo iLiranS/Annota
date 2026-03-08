@@ -113,7 +113,7 @@ export default function TaskItem({ task, onPress, showDate = false }: TaskItemPr
                             styles.folderBadge,
                             { backgroundColor: (linkedFolder.color || colors.primary) + '15' }
                         ]}>
-                            <Ionicons name="folder" size={10} color={linkedFolder.color || colors.primary} />
+                            <Ionicons name={linkedFolder.icon as any} size={10} color={linkedFolder.color || colors.primary} />
                             <ThemedText style={[styles.folderLabel, { color: linkedFolder.color || colors.primary }]}>
                                 {linkedFolder.name}
                             </ThemedText>

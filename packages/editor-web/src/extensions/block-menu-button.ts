@@ -16,6 +16,11 @@ export interface BlockMenuButtonOptions {
      * Return `null` to skip sending a message.
      */
     onResolve: () => { pos: number; message: Record<string, unknown> } | null;
+    /**
+     * Optional direct click handler. If provided, the standard bridge message logic is skipped
+     * and this callback is responsible for handling the menu.
+     */
+    onClick?: (e: MouseEvent, resolve: () => { pos: number; message: Record<string, unknown> } | null) => void;
 }
 
 /**
@@ -28,7 +33,7 @@ export interface BlockMenuButtonOptions {
  * - Sending the bridge message to React Native
  */
 export function createBlockMenuButton(options: BlockMenuButtonOptions): HTMLButtonElement {
-    const { className, iconSize = 'normal', onResolve } = options;
+    const { className, iconSize = 'normal', onResolve, onClick } = options;
 
     const btn = document.createElement('button');
     btn.className = className;
@@ -38,6 +43,11 @@ export function createBlockMenuButton(options: BlockMenuButtonOptions): HTMLButt
     btn.onclick = (e) => {
         e.preventDefault();
         e.stopPropagation();
+
+        if (onClick) {
+            onClick(e, onResolve);
+            return;
+        }
 
         const result = onResolve();
         if (!result) return;

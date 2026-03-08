@@ -1,12 +1,15 @@
+import { BlockMenu } from "@/components/editor/BlockMenu";
 import { DesktopToolbar } from "@/components/editor/DesktopToolbar";
 import { ImageGallery } from "@/components/notes/image-gallery";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { generateTitle, TRASH_FOLDER_ID, useNotesStore } from "@annota/core";
 import TipTapEditor, { TipTapEditorRef } from "@annota/tiptap-editor";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { FileText, Loader2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { toast } from "sonner";
 import { NoteFloatingActions } from "./components/note-floating-actions";
 import { NoteSearch } from "./components/note-search";
 
@@ -30,6 +33,105 @@ export default function NoteEditor() {
     const [searchTerm, setSearchTerm] = useState('');
     const [searchResultCount, setSearchResultCount] = useState(0);
     const [currentSearchIndex, setCurrentSearchIndex] = useState(-1);
+
+    // Block Menu state
+    const [activeBlockMenu, setActiveBlockMenu] = useState<{
+        type: "image" | "details" | "codeBlock";
+        data: any;
+        anchorRect: DOMRect;
+        onResolve: () => any;
+    } | null>(null);
+
+    const handleOpenBlockMenu = useCallback((e: MouseEvent, resolve: () => any) => {
+        const result = resolve();
+        if (!result) return;
+
+        setActiveBlockMenu({
+            type: result.message.blockType || "details",
+            data: result.message,
+            anchorRect: (e.target as HTMLElement).getBoundingClientRect(),
+            onResolve: resolve,
+        });
+    }, []);
+
+    const handleOpenImageMenu = useCallback((e: MouseEvent, resolve: () => any) => {
+        const result = resolve();
+        if (!result) return;
+
+        setActiveBlockMenu({
+            type: "image",
+            data: result.message,
+            anchorRect: (e.target as HTMLElement).getBoundingClientRect(),
+            onResolve: resolve,
+        });
+    }, []);
+
+    const handleBlockAction = useCallback(async (action: string, params?: any) => {
+        if (!activeBlockMenu || !editorRef.current) return;
+
+        const { data, type } = activeBlockMenu;
+
+        switch (action) {
+            case "resize":
+                editorRef.current.onCommand("updateImage", { pos: data.position, width: params.width });
+                break;
+            case "copy":
+                if (type === "image") {
+                    const src = data.src || "";
+                    await writeText(src);
+                    toast.success("Image URI copied to clipboard");
+                } else if (type === "codeBlock") {
+                    editorRef.current.onCommand("copyToClipboard", { pos: data.pos });
+                    toast.success("Code copied to clipboard");
+                }
+                break;
+            case "delete":
+                if (type === "image") {
+                    editorRef.current.onCommand("deleteImage", { pos: data.position });
+                } else {
+                    editorRef.current.onCommand("deleteSelection", { pos: data.pos });
+                }
+                toast.success("Block deleted");
+                break;
+            case "background":
+                editorRef.current.onCommand("setDetailsBackground", { pos: data.pos, color: params.color });
+                break;
+            case "copyLink":
+                const id = data.id || (data.attrs && data.attrs.id);
+                if (id) {
+                    const link = `annota://note/${noteId}?blockId=${id}`;
+                    await writeText(link);
+                    toast.success("Block link copied to clipboard");
+                } else {
+                    toast.error("Block link not available");
+                }
+                break;
+            case "language":
+                editorRef.current.onCommand("setCodeBlockLanguage", { pos: data.pos, language: params.language });
+                break;
+            case "download":
+                if (type === "image" && data.src) {
+                    try {
+                        const response = await fetch(data.src);
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        // Use imageId as filename if available
+                        a.download = data.imageId ? `${data.imageId}.webp` : 'image_download';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        window.URL.revokeObjectURL(url);
+                        toast.success("Saved to downloads");
+                    } catch (err) {
+                        console.error("Download failed:", err);
+                        toast.error("Failed to download image");
+                    }
+                }
+                break;
+        }
+    }, [activeBlockMenu, noteId]);
 
     const toggleMainSidebar = useCallback((open?: boolean) => {
         window.dispatchEvent(new CustomEvent('annota-toggle-main-sidebar', {
@@ -86,14 +188,19 @@ export default function NoteEditor() {
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
+            if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "f") {
                 e.preventDefault();
                 handleOpenSearch();
             }
+            if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "d") {
+                e.preventDefault();
+                toggleFullScreen();
+            }
         };
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [handleOpenSearch]);
+
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [handleOpenSearch, toggleFullScreen]);
 
     useEffect(() => {
         if (!noteId) return;
@@ -193,6 +300,8 @@ export default function NoteEditor() {
                         placeholder="Start typing..."
                         renderToolbar={(props) => <DesktopToolbar {...props} />}
                         renderImageGallery={(props) => <ImageGallery {...props} />}
+                        onOpenBlockMenu={handleOpenBlockMenu}
+                        onOpenImageMenu={handleOpenImageMenu}
                         isDark={isDark}
                         colors={{
                             primary: colors.primary,
@@ -204,6 +313,16 @@ export default function NoteEditor() {
                     <div className="flex h-full w-full items-center justify-center">
                         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                     </div>
+                )}
+                {activeBlockMenu && (
+                    <BlockMenu
+                        open={!!activeBlockMenu}
+                        onOpenChange={(open) => !open && setActiveBlockMenu(null)}
+                        anchorRect={activeBlockMenu.anchorRect}
+                        type={activeBlockMenu.type}
+                        data={activeBlockMenu.data}
+                        onAction={handleBlockAction}
+                    />
                 )}
             </div>
         </div>

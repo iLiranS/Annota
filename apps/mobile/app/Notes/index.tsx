@@ -447,9 +447,6 @@ export default function NotesList() {
                 onFolderLongPress={handleFolderLongPress}
                 onNoteLongPress={handleNoteLongPress}
                 allFolders={folders}
-                allNotes={notes}
-                browseFolders={browseFolders}
-                browseNotes={browseNotes}
             />
         </View>
     );
