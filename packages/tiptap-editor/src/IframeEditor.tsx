@@ -226,11 +226,7 @@ export const IframeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                             (async () => {
                                 try {
                                     const base64Data = data.base64.replace(/^data:image\/\w+;base64,/, "");
-                                    const binaryString = atob(base64Data);
-                                    const rawBytes = new Uint8Array(binaryString.length);
-                                    for (let i = 0; i < binaryString.length; i++) {
-                                        rawBytes[i] = binaryString.charCodeAt(i);
-                                    }
+                                    const rawBytes = Buffer.from(base64Data, 'base64');
 
                                     const adapters = getPlatformAdapters();
                                     const cacheDir = await adapters.fileSystem.ensureDir('cache');
@@ -240,11 +236,16 @@ export const IframeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                                     const sep = cacheDir.includes('\\') ? '\\' : '/';
                                     const tempPath = `${cacheDir}${cacheDir.endsWith(sep) ? '' : sep}${tempFilename}`;
 
-                                    await adapters.fileSystem.writeBytes(tempPath, rawBytes);
+                                    await adapters.fileSystem.writeBytes(tempPath, new Uint8Array(rawBytes));
                                     const processed = await NoteImageService.processAndInsertImage(noteId, tempPath);
-                                    sendCommand('replaceImageId', { oldId: data.imageId, newId: processed.imageId });
+
                                     const imageMap = await NoteImageService.resolveImageSources([processed.imageId]);
-                                    sendCommand('resolveImages', { imageMap });
+                                    sendCommand('replaceImageId', {
+                                        oldId: data.imageId,
+                                        newId: processed.imageId,
+                                        src: imageMap[processed.imageId]
+                                    });
+
                                     await adapters.fileSystem.deleteFile(tempPath).catch(() => { });
                                 } catch (err) {
                                     console.error('Failed to handle pasted image on desktop:', err);
@@ -295,15 +296,19 @@ export const IframeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
             try {
                 if (source === 'url' && value) {
                     const processed = await NoteImageService.processRemoteImage(noteId, value);
-                    sendCommand('insertLocalImage', { imageId: processed.imageId });
                     const imageMap = await NoteImageService.resolveImageSources([processed.imageId]);
-                    sendCommand('resolveImages', { imageMap });
+                    sendCommand('insertLocalImage', {
+                        imageId: processed.imageId,
+                        src: imageMap[processed.imageId]
+                    });
                     return true;
                 } else if (source === 'library' && value) {
                     const processed = await NoteImageService.processAndInsertImage(noteId, value);
-                    sendCommand('insertLocalImage', { imageId: processed.imageId });
                     const imageMap = await NoteImageService.resolveImageSources([processed.imageId]);
-                    sendCommand('resolveImages', { imageMap });
+                    sendCommand('insertLocalImage', {
+                        imageId: processed.imageId,
+                        src: imageMap[processed.imageId]
+                    });
                     return true;
                 }
                 return false;

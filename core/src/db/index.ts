@@ -17,6 +17,10 @@ export async function vacuumDatabase(): Promise<void> {
     await dbClient.vacuumDatabase();
 }
 
+export async function purgeGuestTombstones(): Promise<void> {
+    await dbClient.purgeGuestTombstones();
+}
+
 export async function resetMasterKey(userId: string): Promise<void> {
     await dbClient.resetMasterKey(userId);
 }

@@ -1,9 +1,9 @@
 import { eq, inArray, sql } from 'drizzle-orm';
+import { getDb, purgeGuestTombstones } from '../db';
 import * as foldersRepo from '../db/repositories/folders.repository';
 import * as notesRepo from '../db/repositories/notes.repository';
 import type { Folder, FolderInsert } from '../db/schema';
 import * as schema from '../db/schema';
-import { getDb } from '../stores/db.store';
 import { generateFolder } from '../utils/folders';
 import { NoteImageService } from './images';
 
@@ -161,6 +161,9 @@ export const FolderService = {
                 await notesRepo.permanentlyDeleteDeletedNotes(tx);
                 await foldersRepo.deleteDeletedFolders(tx);
             });
+
+            // For guest users, physically delete the tombstones right away
+            await purgeGuestTombstones();
         } catch (err) {
             console.error('Failed to empty trash:', err);
             return false;

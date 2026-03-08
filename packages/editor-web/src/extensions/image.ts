@@ -88,6 +88,8 @@ export const CustomImage = Image.extend<any>({
             ...this.parent?.(),
             onImageSelected: null as ((data: { images: any[], currentIndex: number }) => void) | null,
             onOpenImageMenu: null as ((e: MouseEvent, resolve: () => any) => void) | null,
+            onImagePasted: null as ((data: { base64: string, imageId: string }) => void) | null,
+            onResolveImageIds: null as ((data: { imageIds: string[] }) => void) | null,
         };
     },
     addAttributes() {
@@ -136,6 +138,24 @@ export const CustomImage = Image.extend<any>({
 
                 if (hasChanges && dispatch) {
                     tr.setMeta('resolveImages', true);
+                    dispatch(tr);
+                }
+                return hasChanges;
+            },
+            replaceImageId: ({ oldId, newId, src }: { oldId: string, newId: string, src?: string }) => ({ tr, state, dispatch }: { tr: Transaction, state: EditorState, dispatch?: (tr: Transaction) => void }) => {
+                let hasChanges = false;
+                state.doc.descendants((node: PMNode, pos: number) => {
+                    if (node.type.name === 'image' && node.attrs.imageId === oldId) {
+                        tr.setNodeMarkup(pos, undefined, {
+                            ...node.attrs,
+                            imageId: newId,
+                            src: src || node.attrs.src,
+                        });
+                        hasChanges = true;
+                    }
+                });
+
+                if (hasChanges && dispatch) {
                     dispatch(tr);
                 }
                 return hasChanges;
@@ -266,6 +286,7 @@ export const CustomImage = Image.extend<any>({
         }) as NodeViewRenderer;
     },
     addProseMirrorPlugins() {
+        const options = this.options;
         return [
             new Plugin({
                 props: {
@@ -307,7 +328,11 @@ export const CustomImage = Image.extend<any>({
                             const node = schema.nodes.image.create({ src: '', imageId: internalImageId });
                             const transaction = view.state.tr.replaceSelectionWith(node);
                             view.dispatch(transaction);
-                            sendMessage({ type: 'resolveImageIds', imageIds: [internalImageId] });
+                            if (options.onResolveImageIds) {
+                                options.onResolveImageIds({ imageIds: [internalImageId] });
+                            } else {
+                                sendMessage({ type: 'resolveImageIds', imageIds: [internalImageId] });
+                            }
                             return true;
                         }
 
@@ -328,7 +353,11 @@ export const CustomImage = Image.extend<any>({
                                         });
                                         const transaction = view.state.tr.replaceSelectionWith(node);
                                         view.dispatch(transaction);
-                                        sendMessage({ type: 'imagePasted', base64, imageId: tempId });
+                                        if (options.onImagePasted) {
+                                            options.onImagePasted({ base64, imageId: tempId });
+                                        } else {
+                                            sendMessage({ type: 'imagePasted', base64, imageId: tempId });
+                                        }
                                     }
                                 };
                                 reader.readAsDataURL(file);
@@ -346,7 +375,11 @@ export const CustomImage = Image.extend<any>({
                             const node = schema.nodes.image.create({ src: '', imageId: internalImageId });
                             const transaction = view.state.tr.replaceSelectionWith(node);
                             view.dispatch(transaction);
-                            sendMessage({ type: 'resolveImageIds', imageIds: [internalImageId] });
+                            if (options.onResolveImageIds) {
+                                options.onResolveImageIds({ imageIds: [internalImageId] });
+                            } else {
+                                sendMessage({ type: 'resolveImageIds', imageIds: [internalImageId] });
+                            }
                             return true;
                         }
 
@@ -356,7 +389,11 @@ export const CustomImage = Image.extend<any>({
                             const node = schema.nodes.image.create({ src: trimmed, imageId: tempId });
                             const transaction = view.state.tr.replaceSelectionWith(node);
                             view.dispatch(transaction);
-                            sendMessage({ type: 'imagePasted', base64: trimmed, imageId: tempId });
+                            if (options.onImagePasted) {
+                                options.onImagePasted({ base64: trimmed, imageId: tempId });
+                            } else {
+                                sendMessage({ type: 'imagePasted', base64: trimmed, imageId: tempId });
+                            }
                             return true;
                         }
 

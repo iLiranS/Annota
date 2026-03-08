@@ -69,7 +69,7 @@ export default function TrashPage() {
             : "Trash";
 
     return (
-        <div className="flex h-full w-full flex-col bg-background">
+        <div className="flex h-full w-full flex-col bg-background overflow-y-auto ">
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b">
                 <div className="flex items-center gap-4">
@@ -126,7 +126,7 @@ export default function TrashPage() {
                             </p>
                         </div>
                     ) : (
-                        <div className="space-y-8">
+                        <div className="space-y-8 ">
                             {/* Folders Section */}
                             {deletedFolders.length > 0 && (
                                 <section>

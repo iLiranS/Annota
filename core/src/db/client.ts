@@ -1,4 +1,6 @@
+import { eq, inArray } from 'drizzle-orm';
 import { getStorageEngine } from '../stores/config';
+import { getDb } from './runtime';
 import * as schema from './schema';
 import { seedSystemData } from './seed';
 import type { DbType } from './types';
@@ -226,6 +228,74 @@ export async function vacuumDatabase(): Promise<void> {
     } else {
       console.error('Database vacuum failed with unexpected error:', error);
     }
+  }
+}
+
+/**
+ * Hard deletes all items marked with isPermDeleted=true, only for guest users.
+ * Guest users don't sync, so they don't need to keep tombstones.
+ */
+export async function purgeGuestTombstones(): Promise<void> {
+  try {
+    const { useDbStore } = await import('../stores/db.store');
+    const isGuest = useDbStore.getState().isGuest;
+    if (!isGuest) return;
+
+    const drizzleDb = getDb();
+
+    await drizzleDb.transaction(async (tx: any) => {
+      // 1. Get IDs of notes to purge for cascading cleanup
+      const purgedNotes = await tx.select({ id: schema.noteMetadata.id })
+        .from(schema.noteMetadata)
+        .where(eq(schema.noteMetadata.isPermDeleted, true))
+        .all();
+
+      // Convert results to flat array of strings
+      const noteIds = purgedNotes.map((n: any) => n.id);
+
+      if (noteIds.length > 0) {
+        // A. Content cleanup
+        await tx.delete(schema.noteContent)
+          .where(inArray(schema.noteContent.id, noteIds))
+          .run();
+
+        // B. Version history cleanup
+        const versions = await tx.select({ id: schema.noteVersions.id })
+          .from(schema.noteVersions)
+          .where(inArray(schema.noteVersions.noteId, noteIds))
+          .all();
+
+        const versionIds = versions.map((v: any) => v.id);
+
+        if (versionIds.length > 0) {
+          await tx.delete(schema.versionImages)
+            .where(inArray(schema.versionImages.versionId, versionIds))
+            .run();
+          await tx.delete(schema.noteVersions)
+            .where(inArray(schema.noteVersions.id, versionIds))
+            .run();
+        }
+
+        // C. Final Note Metadata cleanup
+        await tx.delete(schema.noteMetadata)
+          .where(inArray(schema.noteMetadata.id, noteIds))
+          .run();
+      }
+
+      // 2. Folders cleanup
+      await tx.delete(schema.folders)
+        .where(eq(schema.folders.isPermDeleted, true))
+        .run();
+
+      // 3. Tasks cleanup
+      await tx.delete(schema.tasks)
+        .where(eq(schema.tasks.isPermDeleted, true))
+        .run();
+    });
+
+    console.log('[Maintenance] Guest tombstones purged');
+  } catch (error) {
+    console.error('[Maintenance] Purge failed:', error);
   }
 }
 

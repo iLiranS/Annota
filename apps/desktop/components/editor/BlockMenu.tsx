@@ -133,6 +133,10 @@ export function BlockMenu({
                             <Link className="mr-2 h-4 w-4" />
                             <span>Copy Link</span>
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAction("copy")}>
+                            <Copy className="mr-2 h-4 w-4" />
+                            <span>Copy Content</span>
+                        </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                             onClick={() => handleAction("delete")}

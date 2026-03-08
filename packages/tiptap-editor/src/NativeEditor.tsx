@@ -1,8 +1,9 @@
 import { useSettingsStore } from '@annota/core';
-import { NoteImageService } from '@annota/core/platform';
+import { getPlatformAdapters, NoteImageService } from '@annota/core/platform';
 import { getEditorProps, getEditorState, getExtensions, resolveFontFamily } from '@annota/editor-web/config';
 import '@annota/editor-web/styles.css';
 import { EditorContent, useEditor } from '@tiptap/react';
+import { Buffer } from 'buffer';
 import 'highlight.js/styles/atom-one-dark.css';
 import 'katex/dist/katex.min.css';
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useState } from 'react';
@@ -18,6 +19,29 @@ function extractImageIds(html: string): string[] {
     }
     return ids;
 }
+
+const getByteSize = (str: string) => {
+    try {
+        return new Blob([str]).size;
+    } catch (e) {
+        return new TextEncoder().encode(str).length;
+    }
+};
+
+/**
+ * Strip heavy inline src payloads (base64 data URIs) from images that carry
+ * a data-image-id attribute before checking byte size.
+ */
+const getStorableByteSize = (html: string): number => {
+    if (!html) return 0;
+    const stripped = html.replace(/<img\b[^>]*>/gi, (imgTag) => {
+        if (!/data-image-id\s*=\s*["'][^"']+["']/i.test(imgTag)) return imgTag;
+        return imgTag
+            .replace(/\s+src\s*=\s*(["']).*?\1/gi, ' src=""')
+            .replace(/\s+src\s*=\s*[^\s>]+/gi, ' src=""');
+    });
+    return getByteSize(stripped);
+};
 
 export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
     ({
@@ -50,6 +74,8 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
 
         const containerRef = React.useRef<HTMLDivElement>(null);
         const isHydrating = React.useRef(false);
+        const editorRef = React.useRef<any>(null);
+        const lastValidContentRef = React.useRef(initialContent);
 
         const extensions = React.useMemo(() => getExtensions({
             placeholder,
@@ -69,7 +95,52 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
             },
             onOpenBlockMenu,
             onOpenImageMenu,
-        }) as any, [placeholder, onSearchResults, onOpenBlockMenu, onOpenImageMenu]);
+            onResolveImageIds: (data) => {
+                if (data.imageIds.length > 0) {
+                    NoteImageService.resolveImageSources(data.imageIds).then((imageMap) => {
+                        if (Object.keys(imageMap).length > 0) {
+                            isHydrating.current = true;
+                            (editorRef.current?.commands as any).resolveImages({ imageMap });
+                            isHydrating.current = false;
+                        }
+                    });
+                }
+            },
+            onImagePasted: (data) => {
+                if (!noteId || !editorRef.current) return;
+                (async () => {
+                    try {
+                        const base64Data = data.base64.replace(/^data:image\/\w+;base64,/, "");
+                        const rawBytes = Buffer.from(base64Data, 'base64');
+
+                        const adapters = getPlatformAdapters();
+                        const cacheDir = await adapters.fileSystem.ensureDir('cache');
+                        const mimeMatch = data.base64.match(/^data:(image\/\w+);base64,/);
+                        const ext = (mimeMatch ? mimeMatch[1] : 'image/png').split('/').pop() || 'png';
+                        const tempFilename = `pasted-${Date.now()}.${ext}`;
+                        const sep = cacheDir.includes('\\') ? '\\' : '/';
+                        const tempPath = `${cacheDir}${cacheDir.endsWith(sep) ? '' : sep}${tempFilename}`;
+
+                        await adapters.fileSystem.writeBytes(tempPath, new Uint8Array(rawBytes));
+                        const processed = await NoteImageService.processAndInsertImage(noteId, tempPath);
+
+                        const imageMap = await NoteImageService.resolveImageSources([processed.imageId]);
+
+                        // Atomic update to prevent placeholder flash
+                        // We do NOT set isHydrating here because we WANT this change to persist (new imageId)
+                        (editorRef.current.commands as any).replaceImageId({
+                            oldId: data.imageId,
+                            newId: processed.imageId,
+                            src: imageMap[processed.imageId]
+                        });
+
+                        await adapters.fileSystem.deleteFile(tempPath).catch(() => { });
+                    } catch (err) {
+                        console.error('Failed to handle pasted image in NativeEditor:', err);
+                    }
+                })();
+            }
+        }) as any, [placeholder, onSearchResults, onOpenBlockMenu, onOpenImageMenu, noteId]);
 
         const editorProps = React.useMemo(() => getEditorProps({
             direction: editorSettings.direction,
@@ -86,6 +157,7 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
             extensions,
             editorProps,
             onCreate: ({ editor }) => {
+                editorRef.current = editor;
                 if (autofocus) {
                     editor.commands.focus();
                 }
@@ -93,7 +165,23 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
             },
             onUpdate: ({ editor }) => {
                 if (isHydrating.current) return;
-                onContentChange?.(editor.getHTML());
+
+                const html = editor.getHTML();
+                const currentSize = getStorableByteSize(html);
+                const previousSize = getStorableByteSize(lastValidContentRef.current);
+
+                if (currentSize >= 145000 && currentSize > previousSize) {
+                    // For now use a standard alert as web-view based editor might not have directToast access
+                    console.log('Note Limit Reached: Note size is too large. Please shorten it or avoid pasting large uncompressed images.');
+
+                    isHydrating.current = true;
+                    editor.commands.setContent(lastValidContentRef.current, { emitUpdate: false });
+                    isHydrating.current = false;
+                    return;
+                }
+
+                lastValidContentRef.current = html;
+                onContentChange?.(html);
                 setEditorState(getEditorState(editor) as EditorState);
             },
             onSelectionUpdate: ({ editor }) => {
@@ -134,6 +222,9 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                 if (currentHtml !== initialContent) {
                     editor.commands.setContent(initialContent, { emitUpdate: false });
                 }
+
+                // Update baseline for size validation
+                lastValidContentRef.current = initialContent;
 
                 const imageIds = extractImageIds(initialContent || '');
                 if (imageIds.length > 0) {
@@ -271,6 +362,22 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                         window.navigator.clipboard.writeText(text);
                     }
                     break;
+                case 'copyDetailsContent':
+                    if (params.pos !== undefined) {
+                        const node = editor.state.doc.nodeAt(params.pos);
+                        if (node && node.type.name === 'details') {
+                            let textToCopy = "";
+                            node.forEach((child) => {
+                                if (child.type.name === 'detailsContent') {
+                                    textToCopy = child.textContent;
+                                }
+                            });
+                            // Fallback to whole node text if Content node not found
+                            if (!textToCopy) textToCopy = node.textContent;
+                            window.navigator.clipboard.writeText(textToCopy);
+                        }
+                    }
+                    break;
                 case 'onCommand':
                     // This is for generic command execution
                     if (params.command && (editor.commands as any)[params.command]) {
@@ -301,27 +408,31 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
             try {
                 if (source === 'url' && value) {
                     const processed = await NoteImageService.processRemoteImage(noteId, value);
-                    // This triggers onUpdate (good, parent saves image ID)
-                    editor.chain().focus().insertContent({ type: 'image', attrs: { imageId: processed.imageId } }).run();
-
                     const imageMap = await NoteImageService.resolveImageSources([processed.imageId]);
-                    if (imageMap && Object.keys(imageMap).length > 0) {
-                        isHydrating.current = true;
-                        (editor.commands as any).resolveImages({ imageMap });
-                        isHydrating.current = false;
-                    }
+
+                    // Atomic insert to avoid flashing placeholders
+                    // We WANT this change to trigger onUpdate (for persistence)
+                    editor.chain().focus().insertContent({
+                        type: 'image',
+                        attrs: {
+                            imageId: processed.imageId,
+                            src: imageMap[processed.imageId] || ''
+                        }
+                    }).run();
                     return true;
                 } else if (source === 'library' && value) {
                     const processed = await NoteImageService.processAndInsertImage(noteId, value);
-                    // This triggers onUpdate
-                    editor.chain().focus().insertContent({ type: 'image', attrs: { imageId: processed.imageId } }).run();
-
                     const imageMap = await NoteImageService.resolveImageSources([processed.imageId]);
-                    if (imageMap && Object.keys(imageMap).length > 0) {
-                        isHydrating.current = true;
-                        (editor.commands as any).resolveImages({ imageMap });
-                        isHydrating.current = false;
-                    }
+
+                    // Atomic insert to avoid flashing placeholders
+                    // We WANT this change to trigger onUpdate (for persistence)
+                    editor.chain().focus().insertContent({
+                        type: 'image',
+                        attrs: {
+                            imageId: processed.imageId,
+                            src: imageMap[processed.imageId] || ''
+                        }
+                    }).run();
                     return true;
                 }
                 return false;

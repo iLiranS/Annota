@@ -49,6 +49,8 @@ export const getExtensions = (options: {
     onSearchResults?: (count: number, currentIndex: number) => void;
     onOpenBlockMenu?: (e: MouseEvent, resolve: () => any) => void;
     onOpenImageMenu?: (e: MouseEvent, resolve: () => any) => void;
+    onImagePasted?: (data: { base64: string, imageId: string }) => void;
+    onResolveImageIds?: (data: { imageIds: string[] }) => void;
 }) => [
         StarterKit.configure({
             heading: false,
@@ -95,6 +97,8 @@ export const getExtensions = (options: {
             allowBase64: true,
             onImageSelected: options.onImageSelected,
             onOpenImageMenu: options.onOpenImageMenu,
+            onImagePasted: options.onImagePasted,
+            onResolveImageIds: options.onResolveImageIds,
         }),
         Table.configure({ resizable: true, HTMLAttributes: { class: 'editor-table' } }),
         TableRow,

@@ -83,6 +83,9 @@ export default function NoteEditor() {
                 } else if (type === "codeBlock") {
                     editorRef.current.onCommand("copyToClipboard", { pos: data.pos });
                     toast.success("Code copied to clipboard");
+                } else if (type === "details") {
+                    editorRef.current.onCommand("copyDetailsContent", { pos: data.pos });
+                    toast.success("Details content copied to clipboard");
                 }
                 break;
             case "delete":
