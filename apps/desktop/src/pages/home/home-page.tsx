@@ -1,148 +1,78 @@
-import { useNotesStore, useSettingsStore, useTasksStore, useUserStore } from "@annota/core";
-
-import { NoteListItem } from '@/components/notes/note-list-item';
-import { Ionicons } from "@/components/ui/ionicons";
-import { useAppTheme } from "@/hooks/use-app-theme";
-import { useMemo } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import DesktopTaskCard from "./components/desktop-task-card";
+import { useState } from "react";
+import { GreetingHeader } from "./components/greeting-header";
+import { HomeCalendar } from "./components/home-calendar";
+import { QuickStatsWidget } from "./components/quick-stats-widget";
+import { RecentNotesGrid } from "./components/recent-notes-grid";
+import { TasksOnboarding } from "./components/tasks-onboarding";
+import WeeklyInsights from "./components/weekly-insights";
 
 export default function HomePage() {
-    const navigate = useNavigate();
-    const location = useLocation();
-    const { colors } = useAppTheme();
-
-    // User Data
-    const session = useUserStore((state) => state.session);
-    const globalDisplayName = useUserStore((state) => state.displayName);
-    const fallbackName = session?.user?.user_metadata?.display_name || session?.user?.user_metadata?.full_name || session?.user?.user_metadata?.name || "Guest";
-    const displayName = globalDisplayName || fallbackName;
-
-    const greeting = useMemo(() => {
-        const hour = new Date().getHours();
-        if (hour >= 5 && hour < 12) return 'Good Morning';
-        if (hour >= 12 && hour < 18) return 'Good Afternoon';
-        return 'Good Evening';
-    }, []);
-
-    // Stores
-    const { editor } = useSettingsStore();
-    const { tasks } = useTasksStore();
-    const { notes, deleteNote } = useNotesStore();
-
-    // Notes Data
-    const recentNotes = useMemo(() => {
-        return [...notes]
-            .filter((n) => !n.isDeleted)
-            .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
-            .slice(0, 10); // Show top 10 recent
-    }, [notes]);
-
-    // Tasks Data
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(today.getDate() + 1);
-
-    const todayTasks = useMemo(() => {
-        return tasks.filter((task) => {
-            const taskDate = new Date(task.deadline);
-            return (
-                taskDate.getDate() === today.getDate() &&
-                taskDate.getMonth() === today.getMonth() &&
-                taskDate.getFullYear() === today.getFullYear()
-            );
-        }).sort((a, b) => {
-            // Uncompleted first
-            if (a.completed !== b.completed) return a.completed ? 1 : -1;
-            return a.deadline.getTime() - b.deadline.getTime();
-        });
-    }, [tasks, today]);
-
-    // Handlers
-    const handleNotePress = (id: string, folderId: string | null) => {
-        navigate(`/notes/${folderId || 'root'}/${id}`);
-    };
-
-    const handleTaskPress = (id: string) => {
-        navigate(`/task/${id}`, { state: { background: location } });
-    };
-
-    const handleTaskToggle = (id: string) => {
-        const task = tasks.find(t => t.id === id);
-        if (task) {
-            useTasksStore.getState().updateTask(id, { completed: !task.completed });
-        }
-    };
-
-    const handleTaskDelete = (id: string) => {
-        useTasksStore.getState().deleteTask(id);
-    };
+    const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
     return (
-        <div className="flex h-full flex-col overflow-y-auto bg-background p-8">
-            {/* Header Greeting */}
-            <header className="mb-10">
-                <h1 className="text-3xl font-light tracking-tight text-foreground" style={{ fontFamily: editor.fontFamily }}>
-                    {greeting}, <span style={{ color: colors.primary }} className="font-semibold">{displayName}</span>
-                </h1>
-                <p className="mt-2 text-sm text-muted-foreground">
-                    {today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-                </p>
-            </header>
+        // 1. Root container is strictly screen height. No overflow here.
+        <div className="flex h-full flex-col overflow-hidden bg-background max-w-7xl mx-auto">
 
-            <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-                {/* Left Column: Notes (Takes up more space) */}
-                <div className="lg:col-span-8 flex flex-col gap-4">
-                    <div className="flex items-center gap-2 mb-2">
-                        <Ionicons name="document-text-outline" color={colors.primary} />
-                        <h2 className="text-lg font-semibold text-foreground/90">Recent Notes</h2>
-                    </div>
-                    {recentNotes.length > 0 ? (
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            {recentNotes.map((note) => (
-                                <NoteListItem
-                                    key={note.id}
-                                    note={note}
-                                    onClick={() => handleNotePress(note.id, note.folderId)}
-                                    onDelete={() => deleteNote(note.id)}
-                                    showTimestamp={true}
-                                    showDescription={true}
-                                />
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="flex h-32 items-center justify-center rounded-xl border border-dashed border-border/60 bg-muted/20">
-                            <p className="text-sm text-muted-foreground">No recent notes</p>
-                        </div>
-                    )}
+            {/* Top Section - Compact Header */}
+            {/* 2. Added shrink-0 so the header never compresses */}
+            <div className="flex items-center justify-between px-8 py-4 border-b border-border/10 bg-card/5 backdrop-blur-xl z-10 shrink-0">
+                <div className="">
+                    <GreetingHeader />
                 </div>
-
-                {/* Right Column: Tasks Focus */}
-                <div className="lg:col-span-4 flex flex-col gap-4">
-                    <div className="flex items-center gap-2 mb-2">
-                        <Ionicons name="checkbox-outline" color={colors.primary} />
-                        <h2 className="text-lg font-semibold text-foreground/90">Today's Tasks</h2>
-                    </div>
-                    {todayTasks.length > 0 ? (
-                        <div className="flex flex-col gap-2">
-                            {todayTasks.map((task) => (
-                                <DesktopTaskCard
-                                    key={task.id}
-                                    task={task}
-                                    onPress={() => handleTaskPress(task.id)}
-                                    onToggle={() => handleTaskToggle(task.id)}
-                                    onDelete={() => handleTaskDelete(task.id)}
-                                />
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="flex h-32 items-center justify-center rounded-xl border border-dashed border-border/60 bg-muted/20">
-                            <p className="text-sm text-muted-foreground">No tasks for today</p>
-                        </div>
-                    )}
+                <div className="flex justify-end">
+                    <QuickStatsWidget />
                 </div>
             </div>
+
+            {/* Main Content Area - Scrollable when needed */}
+            {/* 3. Page scrolling happens HERE now, giving the flexbox a boundary */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-8 pt-4">
+
+                {/* 4. On desktop, we use a grid to enforce a strict height constraint so the inner scrollbars activate. On mobile, it flows naturally. */}
+                <div className="mx-auto flex flex-col lg:grid lg:grid-rows-[auto_1fr] gap-6 lg:h-full lg:min-h-[600px]">
+
+                    {/* Row 1: Insights & Calendar */}
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 shrink-0">
+                        <div className="lg:col-span-7">
+                            <WeeklyInsights />
+                        </div>
+                        <div className="lg:col-span-5">
+                            <HomeCalendar
+                                selectedDate={selectedDate}
+                                onDateSelect={setSelectedDate}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Row 2: Recent Notes & Tasks */}
+                    {/* 5. The parent grid hands this row exactly the remaining space. `lg:min-h-0` stops it from overflowing that space. */}
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:min-h-0">
+                        <div className="lg:col-span-7 flex flex-col lg:min-h-0">
+                            <RecentNotesGrid />
+                        </div>
+                        <div className="lg:col-span-5 flex flex-col lg:min-h-0">
+                            <TasksOnboarding selectedDate={selectedDate} />
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <style>{`
+                .custom-scrollbar::-webkit-scrollbar {
+                    width: 6px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-track {
+                    background: transparent;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb {
+                    background: rgba(0,0,0,0.1);
+                    border-radius: 10px;
+                }
+                .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+                    background: rgba(255,255,255,0.1);
+                }
+            `}</style>
         </div>
     );
 }

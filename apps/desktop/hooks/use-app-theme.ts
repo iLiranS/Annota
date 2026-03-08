@@ -41,6 +41,7 @@ export function useAppTheme(): AppTheme {
         root.classList.toggle("dark", isDark);
 
         root.style.setProperty("--accent", accentColor + "65");
+        root.style.setProperty("--accent-full", accentColor);
         document.documentElement.style.setProperty("--accent", accentColor + "65");
 
         // subtle background tint
