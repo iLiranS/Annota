@@ -118,6 +118,7 @@ export const SearchExtension = Extension.create({
 
     addOptions() {
         return {
+            //@ts-ignore
             onResults: (results: { count: number; currentIndex: number }) => { },
         };
     },

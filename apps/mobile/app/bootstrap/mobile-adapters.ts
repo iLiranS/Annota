@@ -88,18 +88,18 @@ export function createMobileAdapters(): PlatformAdapters {
                 const parentPath = scope === 'images' ? Paths.document : Paths.cache;
                 const dir = new Directory(parentPath, scope);
                 if (!dir.exists) {
-                    dir.create();
+                    await dir.create();
                 }
                 return dir.uri;
             },
             copyFile: async (from: string, to: string) => {
                 const sourceFile = new ExpoFile(from);
                 const destFile = new ExpoFile(to);
-                sourceFile.copy(destFile);
+                await sourceFile.copy(destFile);
             },
             deleteFile: async (path: string) => {
                 const file = new ExpoFile(path);
-                if (file.exists) file.delete();
+                if (file.exists) await file.delete();
             },
             readBase64: async (path: string) => {
                 const file = new ExpoFile(path);
@@ -111,21 +111,22 @@ export function createMobileAdapters(): PlatformAdapters {
             },
             writeBytes: async (path: string, bytes: Uint8Array) => {
                 const file = new ExpoFile(path);
-                file.create({ overwrite: true });
-                file.write(bytes);
+                await file.create({ overwrite: true });
+                await file.write(bytes);
             },
             getSize: async (path: string) => {
                 const file = new ExpoFile(path);
-                return file.size;
+                return await file.size;
             },
             downloadToTemp: async (url: string) => {
                 const tempDir = new Directory(Paths.cache, 'downloads');
-                if (!tempDir.exists) tempDir.create();
+                if (!tempDir.exists) await tempDir.create();
 
                 const downloaded = await ExpoFile.downloadFileAsync(url, tempDir);
+
                 return {
                     path: downloaded.uri,
-                    cleanup: async () => { try { downloaded.delete(); } catch { } }
+                    cleanup: async () => { try { await downloaded.delete(); } catch { } }
                 };
             },
             toImageUrl: async (path: string) => {

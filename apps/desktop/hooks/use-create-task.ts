@@ -7,12 +7,13 @@ export function useCreateTask() {
     const location = useLocation();
     const createTaskStore = useTasksStore((s) => s.createTask);
 
-    const createAndNavigate = useCallback(async () => {
+    const createAndNavigate = useCallback(async (options?: { deadline?: Date; folderId?: string }) => {
         try {
             const task = await createTaskStore({
                 title: "Untitled Task",
                 description: "",
-                deadline: new Date(new Date().getTime() + 60 * 60 * 1000), // 1 hour from now
+                deadline: options?.deadline || new Date(new Date().getTime() + 60 * 60 * 1000), // 1 hour from now
+                folderId: options?.folderId,
                 completed: false,
                 isWholeDay: false,
                 links: "[]",

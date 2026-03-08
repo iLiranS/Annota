@@ -113,7 +113,7 @@ export function AppSidebar() {
             </SidebarHeader>
 
             {/* ── Content ──────────────────────────────────── */}
-            <SidebarContent className="min-w-0 overflow-x-hidden pt-2">
+            <SidebarContent className="min-w-0 overflow-x-hidden pt-2 ">
                 {/* Navigation group */}
                 <SidebarGroup>
                     <SidebarGroupContent>

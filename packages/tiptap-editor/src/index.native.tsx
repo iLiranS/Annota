@@ -3,6 +3,7 @@ import { NoteImageService } from '@annota/core/platform';
 import editorHtml from '@annota/editor-web/dist/editor-html';
 import { useKeyboard } from '@react-native-community/hooks';
 import { useTheme } from '@react-navigation/native';
+import { Buffer } from 'buffer';
 import * as ExpoClipboard from 'expo-clipboard';
 import { Directory, File as ExpoFile, Paths } from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
@@ -215,6 +216,7 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
                 clearSearch: () => {
                     sendCommand('clearSearch');
                 },
+                onCommand: sendCommand,
                 scrollToElement: (id: string) => {
                     sendCommand('scrollToElement', { id });
                 },
@@ -319,28 +321,25 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
 
                                         stage = 'createTempDir';
                                         const tempDir = new Directory(Paths.cache, 'pasted');
-                                        tempDir.create({ idempotent: true, intermediates: true });
+                                        await tempDir.create({ idempotent: true, intermediates: true });
 
                                         stage = 'writeTempFile';
                                         const tempFile = new ExpoFile(tempDir, `pasted-${Date.now()}.${parsed.extension}`);
-                                        tempFile.create({ overwrite: true, intermediates: true });
+                                        await tempFile.create({ overwrite: true, intermediates: true });
 
-                                        // Manual conversion of base64 to Uint8Array for safety
-                                        const binaryString = atob(parsed.base64);
-                                        const rawBytes = new Uint8Array(binaryString.length);
-                                        for (let i = 0; i < binaryString.length; i++) {
-                                            rawBytes[i] = binaryString.charCodeAt(i);
-                                        }
-                                        tempFile.write(rawBytes);
+                                        // Manual conversion of base64 to Uint8Array using Buffer for cross-platform compatibility
+                                        const rawBytes = Buffer.from(parsed.base64, 'base64');
+                                        await tempFile.write(rawBytes);
 
                                         stage = 'processImage';
                                         const processed = await NoteImageService.processAndInsertImage(noteId, tempFile.uri);
-                                        stage = 'replaceImageId';
-                                        sendCommand('replaceImageId', { oldId: data.imageId, newId: processed.imageId });
-
-                                        stage = 'resolveImages';
+                                        stage = 'atomicUpdate';
                                         const imageMap = await NoteImageService.resolveImageSources([processed.imageId]);
-                                        sendCommand('resolveImages', { imageMap });
+                                        sendCommand('replaceImageId', {
+                                            oldId: data.imageId,
+                                            newId: processed.imageId,
+                                            src: imageMap[processed.imageId]
+                                        });
                                     } catch (err) {
                                         console.error(`Failed to process pasted image at stage: ${stage}`, err);
                                     }
@@ -598,18 +597,23 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
                 } else if (source === 'url' && value) {
                     // Download and process remote URL
                     const processed = await NoteImageService.processRemoteImage(noteId, value);
-                    // Insert into editor and resolve
-                    sendCommand('insertLocalImage', { imageId: processed.imageId });
+                    // Resolve BEFORE insertion for atomic display
                     const imageMap = await NoteImageService.resolveImageSources([processed.imageId]);
-                    sendCommand('resolveImages', { imageMap });
+                    sendCommand('insertLocalImage', {
+                        imageId: processed.imageId,
+                        src: imageMap[processed.imageId]
+                    });
                     return true;
                 }
 
                 if (imageUri) {
                     const processed = await NoteImageService.processAndInsertImage(noteId, imageUri);
-                    sendCommand('insertLocalImage', { imageId: processed.imageId });
+                    // Resolve BEFORE insertion for atomic display
                     const imageMap = await NoteImageService.resolveImageSources([processed.imageId]);
-                    sendCommand('resolveImages', { imageMap });
+                    sendCommand('insertLocalImage', {
+                        imageId: processed.imageId,
+                        src: imageMap[processed.imageId]
+                    });
                     return true;
                 }
                 return false;

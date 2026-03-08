@@ -2,7 +2,7 @@ import { SearchRepository } from '../db/repositories/search.repository';
 import { safeGetAll } from '../db/utils';
 
 export type UnifiedSearchResult = {
-    type: 'note' | 'task';
+    type: 'note' | 'task' | 'folder';
     id: string;
     title: string;
     subtitle?: string; // Maps to note.preview or task.description
@@ -17,17 +17,16 @@ export const SearchService = {
 
         const folderFilter = scope === 'current' ? currentFolderId : null;
 
-        // Run both queries concurrently
-        const [notesRaw, tasksRaw] = await Promise.all([
+        // Run all queries concurrently
+        const [notesRaw, tasksRaw, foldersRaw] = await Promise.all([
             SearchRepository.searchNotes(query, folderFilter),
-            SearchRepository.searchTasks(query, folderFilter)
+            SearchRepository.searchTasks(query, folderFilter),
+            SearchRepository.searchFolders(query)
         ]);
 
         const safeNotes = safeGetAll<any>(notesRaw);
         const safeTasks = safeGetAll<any>(tasksRaw);
-
-        // Wait, safeGetAll in core/src/db/utils.ts handles the quirks.
-        // Let's use it correctly.
+        const safeFolders = safeGetAll<any>(foldersRaw);
 
         const normalizedNotes: UnifiedSearchResult[] = safeNotes.map(n => ({
             type: 'note',
@@ -49,8 +48,17 @@ export const SearchService = {
             data: t
         }));
 
+        const normalizedFolders: UnifiedSearchResult[] = safeFolders.map(f => ({
+            type: 'folder',
+            id: f.id,
+            title: f.name,
+            score: f.score,
+            updatedAt: f.updatedAt,
+            data: f
+        }));
+
         // Combine and sort globally by score (primary) and updatedAt (secondary)
-        return [...normalizedNotes, ...normalizedTasks].sort((a, b) => {
+        return [...normalizedNotes, ...normalizedTasks, ...normalizedFolders].sort((a, b) => {
             if (b.score !== a.score) {
                 return b.score - a.score;
             }

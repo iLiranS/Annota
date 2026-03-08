@@ -105,7 +105,7 @@ export class SyncScheduler {
         this.clearAllTimers();
 
         // Execute pull then push sequentially
-        const pulled = await this.executeSyncPull();
+        await this.executeSyncPull();
 
         let state = useSyncStore.getState();
         if (state.syncError) throw new Error(state.syncError);

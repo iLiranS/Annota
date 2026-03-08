@@ -33,12 +33,13 @@ export function MathPopover({ sendCommand, onOpenChange, isMenu, visible, curren
     }, [visible]);
 
     React.useEffect(() => {
-        if (currentLatex !== undefined && currentLatex !== null) setLatex(currentLatex);
+        setLatex(currentLatex || '');
     }, [currentLatex]);
 
     const handleOpenChange = (val: boolean) => {
         setOpen(val);
         onOpenChange?.(val);
+        // If opening and no currentLatex, we're likely adding a new formula, so ensure it's empty
         if (val && !currentLatex) setLatex('');
     };
 

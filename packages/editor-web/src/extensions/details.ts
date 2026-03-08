@@ -226,7 +226,7 @@ export const Details = TiptapDetails.extend({
                     },
             toggleDetails:
                 () =>
-                    ({ commands, state }: { commands: any; state: any }) => {
+                    ({ commands }: { commands: any }) => {
                         if (this.editor.isActive('details')) {
                             return commands.unsetDetails();
                         }

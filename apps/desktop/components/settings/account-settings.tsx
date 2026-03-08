@@ -10,7 +10,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { cn } from "@/lib/utils";
 import { useUserStore } from "@annota/core";
 import { getMasterKey } from "@annota/core/platform";
 import { useEffect, useState } from "react";
@@ -18,45 +17,7 @@ import { Ionicons } from "../ui/ionicons";
 
 const GUEST_DISPLAY_NAME_KEY = 'guest_display_name';
 
-interface SettingItemProps {
-    label: string;
-    description?: string;
-    icon: React.ReactNode;
-    iconBg: string;
-    action?: React.ReactNode;
-    onClick?: () => void;
-    value?: React.ReactNode;
-    danger?: boolean;
-}
-
-function SettingItem({ label, description, icon, iconBg, action, onClick, value, danger }: SettingItemProps) {
-    return (
-        <div
-            onClick={onClick}
-            className={cn(
-                "group flex items-center justify-between p-3 rounded-xl transition-all duration-200",
-                onClick ? "cursor-pointer hover:bg-accent/50" : ""
-            )}
-        >
-            <div className="flex items-center gap-3">
-                <div className={cn(
-                    "flex h-9 w-9 items-center justify-center rounded-lg text-white shadow-sm transition-transform group-hover:scale-105",
-                    iconBg
-                )}>
-                    {icon}
-                </div>
-                <div className="flex flex-col">
-                    <span className={cn("text-sm font-medium", danger ? "text-destructive" : "text-foreground")}>{label}</span>
-                    {description && <span className="text-xs text-muted-foreground">{description}</span>}
-                </div>
-            </div>
-            <div className="flex items-center gap-2">
-                {value && <div className="text-sm text-muted-foreground mr-1">{value}</div>}
-                {action}
-            </div>
-        </div>
-    );
-}
+import { SettingItem } from "./setting-item";
 
 function RoleBadge({ role }: { role: string | null }) {
     if (!role) return <span className="text-xs text-muted-foreground italic">Fetching...</span>;

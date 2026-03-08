@@ -5,6 +5,7 @@ import {
     scrollCursorIntoView,
     setupEditor
 } from './editor-core';
+import './extensions/details';
 import { hexToRgba } from './utils';
 
 function copyImageAtPosition(pos: number): boolean {
@@ -172,9 +173,12 @@ export function setupCommands() {
                 break;
             case 'unsetLink': c.unsetLink().run(); break;
             case 'setHighlight':
-                let color = params?.color;
-                if (color && color.startsWith('#') && color.length === 7) color += '4D';
-                c.setHighlight({ color }).run();
+                if (params?.color) {
+                    let hlColor = params.color;
+                    // Reduce opacity from 30% (4D) to 25% (40)
+                    if (hlColor.startsWith('#') && hlColor.length === 7) hlColor += '40';
+                    c.setHighlight({ color: hlColor }).run();
+                }
                 break;
             case 'unsetHighlight': c.unsetHighlight().run(); break;
             case 'setColor': c.setColor(params?.color).run(); break;
@@ -186,9 +190,15 @@ export function setupCommands() {
                 if (params?.src) c.setImage({ src: params.src }).run();
                 break;
             case 'insertLocalImage':
-                // Insert image node with imageId (no src yet — will be resolved)
+                // Insert image node with imageId and optional initial src (for atomic insertion)
                 if (params?.imageId) {
-                    c.setImage({ src: '', imageId: params.imageId } as any).run();
+                    e.chain().focus().insertContent({
+                        type: 'image',
+                        attrs: {
+                            imageId: params.imageId,
+                            src: params.src || ''
+                        }
+                    }).run();
                 }
                 break;
             case 'resolveImages':
@@ -208,7 +218,8 @@ export function setupCommands() {
                         if (node.type.name === 'image' && node.attrs.imageId === params.oldId) {
                             tr.setNodeMarkup(pos, undefined, {
                                 ...node.attrs,
-                                imageId: params.newId
+                                imageId: params.newId,
+                                src: params.src || node.attrs.src
                             });
                             hasChanges = true;
                         }
@@ -278,7 +289,7 @@ export function setupCommands() {
                 if (params?.color) {
                     // Add alpha for lower opacity (similar to highlight)
                     let bgColor = params.color;
-                    if (bgColor.startsWith('#') && bgColor.length === 7) bgColor += '4D'; // ~30% opacity
+                    if (bgColor.startsWith('#') && bgColor.length === 7) bgColor += '40'; // ~25% opacity
                     e.chain().focus().setCellAttribute('backgroundColor', bgColor).run();
                 }
                 break;
@@ -327,7 +338,7 @@ export function setupCommands() {
                     let bgColor = params.color;
                     // Use hexToRgba for 15% opacity (approx 0.15)
                     if (bgColor.startsWith('#')) {
-                        bgColor = hexToRgba(bgColor, 0.3);
+                        bgColor = hexToRgba(bgColor, 0.15);
                     }
 
                     // Try to use the stored block position from the menu to find the details node
@@ -347,11 +358,11 @@ export function setupCommands() {
                                 .run();
                         } else {
                             // Fallback: focus and use updateAttributes
-                            e.chain().focus().setDetailsBackground(bgColor).run();
+                            e.chain().focus().updateAttributes('details', { backgroundColor: bgColor }).run();
                         }
                     } else {
                         // Fallback: focus and use updateAttributes
-                        e.chain().focus().setDetailsBackground(bgColor).run();
+                        e.chain().focus().updateAttributes('details', { backgroundColor: bgColor }).run();
                     }
 
                     // Force immediate DOM update to prevent lag if NodeView doesn't re-render immediately
@@ -387,10 +398,10 @@ export function setupCommands() {
                             })
                             .run();
                     } else {
-                        e.chain().focus().unsetDetailsBackground().run();
+                        e.chain().focus().updateAttributes('details', { backgroundColor: null }).run();
                     }
                 } else {
-                    e.chain().focus().unsetDetailsBackground().run();
+                    e.chain().focus().updateAttributes('details', { backgroundColor: null }).run();
                 }
                 break;
             }

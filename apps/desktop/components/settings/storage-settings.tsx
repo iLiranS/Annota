@@ -25,48 +25,7 @@ import { toast } from "sonner";
 
 import { Ionicons } from "../ui/ionicons";
 
-interface SettingItemProps {
-    label: string;
-    description?: string;
-    icon: React.ReactNode;
-    iconBg: string;
-    action?: React.ReactNode;
-    onClick?: () => void;
-    value?: React.ReactNode;
-    danger?: boolean;
-    loading?: boolean;
-}
-
-function SettingItem({ label, description, icon, iconBg, action, onClick, value, danger, loading }: SettingItemProps) {
-    return (
-        <div
-            onClick={loading ? undefined : onClick}
-            className={cn(
-                "group flex items-center justify-between p-3 rounded-xl transition-all duration-200",
-                onClick && !loading ? "cursor-pointer hover:bg-accent/50" : "",
-                loading ? "opacity-60" : ""
-            )}
-        >
-            <div className="flex items-center gap-3">
-                <div className={cn(
-                    "flex h-9 w-9 items-center justify-center rounded-lg text-white shadow-sm transition-transform",
-                    !loading && "group-hover:scale-105",
-                    iconBg
-                )}>
-                    {loading ? <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" /> : icon}
-                </div>
-                <div className="flex flex-col">
-                    <span className={cn("text-sm font-medium", danger ? "text-destructive" : "text-foreground")}>{label}</span>
-                    {description && <span className="text-xs text-muted-foreground">{description}</span>}
-                </div>
-            </div>
-            <div className="flex items-center gap-2">
-                {value !== undefined && <div className="text-sm font-medium text-foreground mr-1">{value}</div>}
-                {action}
-            </div>
-        </div>
-    );
-}
+import { SettingItem } from "./setting-item";
 
 function formatBytes(bytes: number, decimals = 2) {
     if (!+bytes) return '0 Bytes';

@@ -123,6 +123,7 @@ export const IframeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                 },
                 focus: () => sendCommand('focus'),
                 blur: () => sendCommand('blur'),
+                onCommand: (cmd: string, params?: Record<string, unknown>) => sendCommand(cmd, params),
                 search: (term: string) => sendCommand('search', { term }),
                 searchNext: () => sendCommand('searchNext'),
                 searchPrev: () => sendCommand('searchPrev'),

@@ -1,7 +1,16 @@
+import {
+    ContextMenu,
+    ContextMenuContent,
+    ContextMenuItem,
+    ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useCreateTask } from "@/hooks/use-create-task";
 import { useSettingsStore, useTasksStore } from "@annota/core";
-import { ChevronLeft, ChevronRight, Newspaper } from "lucide-react";
+import { ChevronLeft, ChevronRight, Newspaper, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
+
+
 
 export type StartOfWeek = 'sunday' | 'monday';
 
@@ -41,6 +50,8 @@ export function HomeCalendar({
     const { tasks } = useTasksStore();
     const { startOfWeek } = useSettingsStore((s) => s.general);
     const { colors } = useAppTheme();
+    const { createAndNavigate } = useCreateTask();
+
 
     const month = current.getMonth();
     const year = current.getFullYear();
@@ -112,22 +123,32 @@ export function HomeCalendar({
                         const isToday = date.toDateString() === todayString;
 
                         return (
-                            <button
-                                key={i}
-                                onClick={() => onDateSelect(date)}
-                                className={`h-9 rounded-lg text-xs transition relative flex flex-col items-center justify-center
-                                    ${isSelected
-                                        ? "bg-accent text-accent-foreground"
-                                        : "hover:bg-accent/50"}
-                                    ${!isSelected && isToday ? "border border-accent" : ""}
-                                `}
-                            >
-                                <span>{date.getDate()}</span>
-                                {!isSelected && taskDatesSet.has(date.toDateString()) && (
-                                    <div className="absolute bottom-0.5 w-1 h-1 rounded-full bg-accent-foreground/40" />
-                                )}
-                            </button>
+                            <ContextMenu key={i}>
+                                <ContextMenuTrigger asChild>
+                                    <button
+                                        onClick={() => onDateSelect(date)}
+                                        className={`h-9 w-full rounded-lg text-xs transition relative flex flex-col items-center justify-center
+                                            ${isSelected
+                                                ? "bg-accent text-accent-foreground"
+                                                : "hover:bg-accent/50"}
+                                            ${!isSelected && isToday ? "border border-accent" : ""}
+                                        `}
+                                    >
+                                        <span>{date.getDate()}</span>
+                                        {!isSelected && taskDatesSet.has(date.toDateString()) && (
+                                            <div className="absolute bottom-0.5 w-1 h-1 rounded-full bg-accent-foreground/40" />
+                                        )}
+                                    </button>
+                                </ContextMenuTrigger>
+                                <ContextMenuContent>
+                                    <ContextMenuItem onClick={() => createAndNavigate({ deadline: date })}>
+                                        <Plus className="mr-2 h-4 w-4" />
+                                        <span>Create Task</span>
+                                    </ContextMenuItem>
+                                </ContextMenuContent>
+                            </ContextMenu>
                         );
+
                     })}
                 </div>
             </div>

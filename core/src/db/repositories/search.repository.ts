@@ -73,5 +73,31 @@ export const SearchRepository = {
             .where(and(...conditions, sql`score > 0`))
             .orderBy(desc(sql`score`), desc(schema.tasks.updatedAt))
             .all();
+    },
+
+    async searchFolders(query: string) {
+        const searchTerm = `%${query}%`;
+        const conditions = [
+            eq(schema.folders.isDeleted, false),
+            eq(schema.folders.isSystem, false)
+        ];
+
+        return getDb().select({
+            id: schema.folders.id,
+            name: schema.folders.name,
+            color: schema.folders.color,
+            icon: schema.folders.icon,
+            updatedAt: schema.folders.updatedAt,
+            score: sql<number>`
+                CASE 
+                    WHEN LOWER(${schema.folders.name}) LIKE LOWER(${searchTerm}) THEN 3
+                    ELSE 0 
+                END
+            `.as('score')
+        })
+            .from(schema.folders)
+            .where(and(...conditions, sql`score > 0`))
+            .orderBy(desc(sql`score`), desc(schema.folders.updatedAt))
+            .all();
     }
 };

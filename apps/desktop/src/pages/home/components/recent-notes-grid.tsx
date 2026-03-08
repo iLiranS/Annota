@@ -48,6 +48,7 @@ export function RecentNotesGrid() {
                                 onDelete={() => deleteNote(note.id)}
                                 showTimestamp
                                 showDescription
+                                className='border cursor-pointer'
                             />
                         ))}
                     </div>

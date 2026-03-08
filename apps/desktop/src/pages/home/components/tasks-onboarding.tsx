@@ -1,6 +1,9 @@
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useCreateTask } from "@/hooks/use-create-task";
 import { useTasksStore } from "@annota/core";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Plus } from "lucide-react";
+
+
 import { useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import DesktopTaskCard from "./desktop-task-card";
@@ -14,6 +17,8 @@ export function TasksOnboarding({ selectedDate }: TasksOnboardingProps) {
     const { colors } = useAppTheme();
     const navigate = useNavigate();
     const location = useLocation();
+    const { createAndNavigate } = useCreateTask();
+
 
     const filteredTasks = useMemo(() => {
         return tasks.filter((task) => {
@@ -56,9 +61,18 @@ export function TasksOnboarding({ selectedDate }: TasksOnboardingProps) {
 
     return (
         <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-2 px-1">
-                <CheckCircle2 size={18} style={{ color: colors.primary }} />
-                <h2 className="text-sm font-semibold text-foreground/80 uppercase tracking-widest">{dateLabel}</h2>
+            <div className="flex items-center justify-between px-1">
+                <div className="flex items-center gap-2">
+                    <CheckCircle2 size={18} style={{ color: colors.primary }} />
+                    <h2 className="text-sm font-semibold text-foreground/80 uppercase tracking-widest">{dateLabel}</h2>
+                </div>
+                <button
+                    onClick={() => createAndNavigate({ deadline: selectedDate })}
+                    className="h-7 w-7 flex items-center justify-center rounded-lg hover:bg-accent transition text-muted-foreground hover:text-foreground"
+                    title="Create new task"
+                >
+                    <Plus size={16} />
+                </button>
             </div>
 
             <div className="flex-1 flex flex-col gap-2 overflow-y-auto pr-1 custom-scrollbar min-h-0">

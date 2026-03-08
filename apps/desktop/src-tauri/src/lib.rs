@@ -1,21 +1,27 @@
+use std::fs; // Changed from std::fs::File
 use std::io::{Read, Write};
 use std::net::TcpListener;
 use tauri::{Emitter, Window};
-use image::{imageops::FilterType};
-use std::fs::File;
+use image::imageops::FilterType;
+use webp::Encoder;
 
 #[tauri::command]
 async fn compress_image_native(
     source_path: String,
     output_path: String,
     max_dimension: u32,
-    mut quality: u8,
+    quality: u8,
 ) -> Result<(u32, u32), String> {
-    let img = image::open(&source_path)
-        .map_err(|e| format!("Failed to open image: {}", e))?;
+    
+    // Read the file and let the `image` crate guess the format from the bytes
+    let img = image::ImageReader::open(&source_path)
+        .map_err(|e| format!("Failed to open file: {}", e))?
+        .with_guessed_format()
+        .map_err(|e| format!("Failed to guess format from bin file: {}", e))?
+        .decode()
+        .map_err(|e| format!("Failed to decode image: {}", e))?;
 
-    // Speed Optimization: Changed Lanczos3 to Triangle (Bilinear). 
-    // It is significantly faster and perfect for downscaling.
+    // Downscale if necessary
     let resized = if img.width() > max_dimension || img.height() > max_dimension {
         img.resize(max_dimension, max_dimension, FilterType::Triangle)
     } else {
@@ -25,18 +31,20 @@ async fn compress_image_native(
     let out_width = resized.width();
     let out_height = resized.height();
 
-    let mut out_file = File::create(&output_path)
-        .map_err(|e| format!("Failed to create output: {}", e))?;
+    // Create the WebP encoder
+    let encoder: Encoder = Encoder::from_image(&resized)
+        .map_err(|e| format!("Failed to create WebP encoder: {:?}", e))?;
 
-    // Size Optimization: Mobile compression is usually more aggressive.
-    // If your frontend passes 80, we bump it down slightly on desktop to match mobile sizes.
-    if quality > 60 {
-        quality -= 15; 
-    }
+    // Encode
+    let webp_memory = if quality == 100 {
+        encoder.encode_lossless()
+    } else {
+        encoder.encode(quality as f32)
+    };
 
-    let mut encoder = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut out_file, quality);
-    encoder.encode_image(&resized)
-        .map_err(|e| format!("Failed to compress: {}", e))?;
+    // Save directly to disk
+    fs::write(&output_path, &*webp_memory)
+        .map_err(|e| format!("Failed to save WebP to disk: {}", e))?;
 
     Ok((out_width, out_height))
 }

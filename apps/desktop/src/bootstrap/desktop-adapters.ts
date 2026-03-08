@@ -2,6 +2,7 @@ import type { PlatformAdapters } from '@annota/core/platform';
 import { invoke } from '@tauri-apps/api/core';
 import { appCacheDir, appDataDir, join } from '@tauri-apps/api/path';
 import { copyFile, mkdir, readFile, remove, stat, writeFile } from '@tauri-apps/plugin-fs';
+import { fetch } from '@tauri-apps/plugin-http';
 import { Store } from '@tauri-apps/plugin-store';
 import { encode as encodeArrayBuffer } from 'base64-arraybuffer';
 
@@ -198,24 +199,44 @@ export function createDesktopAdapters(): PlatformAdapters {
         return typeof info.size === 'number' ? info.size : 0;
       },
       downloadToTemp: async (url) => {
+        const MAX_SIZE = 5 * 1024 * 1024; // 5MB limit
         const tempDir = await ensureScopedDir('cache');
         const path = await join(tempDir, makeTempFilename('bin'));
-        const response = await fetch(url);
-        if (!response.ok) {
-          throw new Error(`Failed to download file: ${response.status}`);
-        }
-        const bytes = new Uint8Array(await response.arrayBuffer());
-        await writeFileBytes(path, bytes);
-        return {
-          path,
-          cleanup: async () => {
-            try {
-              await remove(path);
-            } catch {
-              // ignore cleanup errors
-            }
-          },
+
+        const cleanup = async () => {
+          try { await remove(path); } catch { }
         };
+
+        try {
+          const response = await fetch(url);
+          if (!response.ok) {
+            throw new Error(`Failed to download file: ${response.status}`);
+          }
+
+          const contentLength = response.headers.get("content-length");
+          if (contentLength && Number(contentLength) > MAX_SIZE) {
+            throw new Error("Image too large");
+          }
+
+          const contentType = response.headers.get("content-type");
+          if (!contentType?.startsWith("image/")) {
+            throw new Error("URL does not point to an image");
+          }
+
+          const bytes = new Uint8Array(await response.arrayBuffer());
+          if (bytes.length > MAX_SIZE) {
+            throw new Error("Image too large");
+          }
+
+          await writeFileBytes(path, bytes);
+          return {
+            path,
+            cleanup
+          };
+        } catch (error) {
+          await cleanup();
+          throw error;
+        }
       },
       toImageUrl: async (path: string) => {
         try {
@@ -245,14 +266,13 @@ export function createDesktopAdapters(): PlatformAdapters {
       }
     },
     image: {
-      resizeAndCompress: async (sourcePath, opts) => {
+      resizeAndCompress: async (sourcePath: string, opts: any) => {
         try {
           const cacheDir = await ensureScopedDir('cache');
-          // We are outputting to JPEG as it matches native mobile behavior best
-          const outPath = await join(cacheDir, makeTempFilename('jpg'));
 
-          // Tauri expects a u8 integer for quality (1-100). 
-          // If your frontend passes 0.8, convert it to 80.
+          const outPath = await join(cacheDir, makeTempFilename('webp'));
+
+          // Tauri expects a u8 integer for quality (1-100).
           const normalizedQuality = opts.quality <= 1 ? Math.round(opts.quality * 100) : opts.quality;
 
           // Call the Rust backend!

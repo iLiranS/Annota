@@ -14,46 +14,7 @@ import {
     Trash2
 } from "lucide-react";
 
-interface SettingItemProps {
-    label: string;
-    description?: string;
-    icon: React.ReactNode;
-    iconBg: string;
-    action?: React.ReactNode;
-    onClick?: () => void;
-    value?: React.ReactNode;
-    active?: boolean;
-}
-
-function SettingItem({ label, description, icon, iconBg, action, onClick, value, active }: SettingItemProps) {
-    return (
-        <div
-            onClick={onClick}
-            className={cn(
-                "group flex items-center justify-between p-3 rounded-xl transition-all duration-200",
-                onClick ? "cursor-pointer hover:bg-accent/50" : "",
-                active ? "bg-accent/30" : ""
-            )}
-        >
-            <div className="flex items-center gap-3">
-                <div className={cn(
-                    "flex h-9 w-9 items-center justify-center rounded-lg text-white shadow-sm transition-transform group-hover:scale-105",
-                    iconBg
-                )}>
-                    {icon}
-                </div>
-                <div className="flex flex-col text-left">
-                    <span className="text-sm font-medium text-foreground">{label}</span>
-                    {description && <span className="text-xs text-muted-foreground">{description}</span>}
-                </div>
-            </div>
-            <div className="flex items-center gap-2">
-                {value && <div className="text-sm text-muted-foreground mr-1">{value}</div>}
-                {action}
-            </div>
-        </div>
-    );
-}
+import { SettingItem } from "./setting-item";
 
 const Toggle = ({ enabled }: { enabled: boolean }) => (
     <div className={cn(

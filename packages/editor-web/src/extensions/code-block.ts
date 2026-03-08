@@ -54,7 +54,7 @@ export const CustomCodeBlock = CodeBlockLowlight.extend<any>({
 
             // Code element for content
             const code = document.createElement('code');
-            code.className = `language-${node.attrs.language || 'plaintext'}`;
+            code.className = `hljs language-${node.attrs.language || 'plaintext'}`;
             pre.appendChild(code);
 
             // === HEADER BAR (language left, copy right) ===
@@ -156,7 +156,7 @@ export const CustomCodeBlock = CodeBlockLowlight.extend<any>({
                     const lang = updatedNode.attrs.language || 'plaintext';
 
                     pre.setAttribute('data-language', lang);
-                    code.className = `language-${lang}`;
+                    code.className = `hljs language-${lang}`;
                     const updatedLang = CODE_LANGUAGES.find(l => l.value === lang) || CODE_LANGUAGES[0];
                     langButton.textContent = updatedLang.label;
                     return true;

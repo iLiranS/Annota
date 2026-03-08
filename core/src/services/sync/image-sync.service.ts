@@ -1,4 +1,5 @@
 import { encode } from 'base64-arraybuffer';
+import { Buffer } from 'buffer';
 import { getPlatformAdapters } from '../../adapters';
 import { storageApi } from '../../api/storage.api';
 import * as ImagesRepo from '../../db/repositories/images.repository';
@@ -206,13 +207,9 @@ class ImageSyncService {
             } else {
                 // Legacy format: decrypted bytes are a base64-encoded string
                 const base64String = new TextDecoder().decode(decryptedBytes);
-                const binaryString = atob(base64String);
-                const rawBytes = new Uint8Array(binaryString.length);
-                for (let i = 0; i < binaryString.length; i++) {
-                    rawBytes[i] = binaryString.charCodeAt(i);
-                }
+                const rawBytes = Buffer.from(base64String, 'base64');
                 fileExt = 'jpg';
-                fileBytes = rawBytes;
+                fileBytes = new Uint8Array(rawBytes);
             }
 
             // Write to disk

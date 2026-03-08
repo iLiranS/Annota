@@ -5,7 +5,7 @@ import { useAppTheme } from "@/hooks/use-app-theme";
 import { cn } from "@/lib/utils";
 import { Folder, NoteMetadata, Task, useNotesStore, useSearchStore } from "@annota/core";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { FolderListItem } from "../notes/folder-list-item";
 import { NoteListItem } from "../notes/note-list-item";
 import { Ionicons } from "../ui/ionicons";
@@ -18,8 +18,6 @@ interface NotesSearchModalProps {
 export function NotesSearchModal({ open, onOpenChange }: NotesSearchModalProps) {
     const { colors } = useAppTheme();
     const navigate = useNavigate();
-    const location = useLocation();
-    const [searchParams] = useSearchParams();
     const { folders, getFolderById } = useNotesStore();
     const {
         searchQuery,

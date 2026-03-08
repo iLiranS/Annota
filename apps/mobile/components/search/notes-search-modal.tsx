@@ -64,15 +64,7 @@ export default function NotesSearchModal({
         }
     }, [visible, resetSearch]);
 
-    // Local folder filtering
-    const filteredFolders = useMemo(() => {
-        if (!searchQuery.trim()) return [];
-        const query = searchQuery.toLowerCase();
-        return allFolders.filter((f) =>
-            !f.isDeleted
-            && !f.isSystem
-            && f.name.toLowerCase().includes(query));
-    }, [allFolders, searchQuery]);
+
 
     const searchData = useMemo((): ListItem[] => {
         if (!searchQuery.trim()) return [];
@@ -80,6 +72,7 @@ export default function NotesSearchModal({
 
         const notes = dbResults.filter(r => r.type === 'note');
         const tasks = dbResults.filter(r => r.type === 'task');
+        const folders = dbResults.filter(r => r.type === 'folder');
 
         if (notes.length > 0) {
             items.push({ type: 'section-header', title: 'Notes' });
@@ -91,13 +84,13 @@ export default function NotesSearchModal({
             tasks.forEach((t) => items.push({ type: 'task', data: t.data }));
         }
 
-        if (filteredFolders.length > 0) {
+        if (folders.length > 0) {
             items.push({ type: 'section-header', title: 'Folders' });
-            filteredFolders.forEach((f) => items.push({ type: 'folder', data: f }));
+            folders.forEach((f) => items.push({ type: 'folder', data: f.data }));
         }
 
         return items;
-    }, [filteredFolders, dbResults, searchQuery]);
+    }, [dbResults, searchQuery]);
 
     const handleClose = useCallback(() => {
         resetSearch();

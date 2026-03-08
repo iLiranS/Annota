@@ -8,7 +8,6 @@ import {
     DropdownMenuSubTrigger,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useAppTheme } from "@/hooks/use-app-theme";
 import { cn } from "@/lib/utils";
 import { COLOR_PALETTE } from "@annota/core/constants/colors";
 import {
@@ -42,7 +41,7 @@ export function BlockMenu({
     data,
     onAction,
 }: BlockMenuProps) {
-    const { colors } = useAppTheme();
+
 
     if (!anchorRect) return null;
 

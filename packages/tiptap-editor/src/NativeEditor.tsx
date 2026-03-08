@@ -3,6 +3,8 @@ import { NoteImageService } from '@annota/core/platform';
 import { getEditorProps, getEditorState, getExtensions, resolveFontFamily } from '@annota/editor-web/config';
 import '@annota/editor-web/styles.css';
 import { EditorContent, useEditor } from '@tiptap/react';
+import 'highlight.js/styles/atom-one-dark.css';
+import 'katex/dist/katex.min.css';
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useState } from 'react';
 import { EditorState, ImageInfo, initialEditorState, PopupType, TipTapEditorProps, TipTapEditorRef } from './types';
 
@@ -51,6 +53,7 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
 
         const extensions = React.useMemo(() => getExtensions({
             placeholder,
+            //@ts-ignore
             onMathSelected: (latex, isBlock, pos) => {
                 setCurrentLatex(latex);
                 setActivePopup('math');
@@ -170,7 +173,14 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                 case 'setParagraph': c.setParagraph().run(); break;
                 case 'setColor': c.setColor(params.color as string).run(); break;
                 case 'unsetColor': c.unsetColor().run(); break;
-                case 'setHighlight': c.setHighlight({ color: params.color as string }).run(); break;
+                case 'setHighlight':
+                    if (params.color) {
+                        let highlightColor = params.color as string;
+                        // Reduce opacity to 25% (40 in hex) - previous 15% was a bit too light
+                        if (highlightColor.startsWith('#') && highlightColor.length === 7) highlightColor += '40';
+                        c.setHighlight({ color: highlightColor }).run();
+                    }
+                    break;
                 case 'unsetHighlight': c.unsetHighlight().run(); break;
                 case 'insertTable': c.insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(); break;
                 case 'addColumnBefore': c.addColumnBefore().run(); break;
@@ -223,13 +233,19 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                     }
                     break;
                 case 'setDetailsBackground':
-                    if (params.pos !== undefined) {
-                        const node = editor.state.doc.nodeAt(params.pos);
-                        if (node) {
-                            editor.view.dispatch(editor.state.tr.setNodeMarkup(params.pos, undefined, { ...node.attrs, backgroundColor: params.color }));
+                    if (params.color) {
+                        let bgColor = params.color as string;
+                        // Reduce opacity to 15% (26 in hex) for details background
+                        if (bgColor.startsWith('#') && bgColor.length === 7) bgColor += '26';
+
+                        if (params.pos !== undefined) {
+                            const node = editor.state.doc.nodeAt(params.pos);
+                            if (node) {
+                                editor.view.dispatch(editor.state.tr.setNodeMarkup(params.pos, undefined, { ...node.attrs, backgroundColor: bgColor }));
+                            }
+                        } else {
+                            c.updateAttributes('details', { backgroundColor: bgColor }).run();
                         }
-                    } else {
-                        c.updateAttributes('details', { backgroundColor: params.color }).run();
                     }
                     break;
                 case 'setCodeBlockLanguage':

@@ -26,6 +26,16 @@
     "core:window:default",
     "core:window:allow-start-dragging",
     "clipboard-manager:allow-read-text",
-    "clipboard-manager:allow-write-text"
+    "clipboard-manager:allow-write-text",
+    "http:allow-fetch",
+    {
+      "identifier": "http:default",
+      "allow": [
+        {
+          "url": "https://*"
+        }
+      ],
+      "deny": []
+    }
   ]
 }

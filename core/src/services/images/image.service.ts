@@ -1,9 +1,11 @@
+import { Buffer } from 'buffer';
 import { getPlatformAdapters } from '../../adapters';
 
 // ============ CONSTANTS ============
 
 const MAX_DIMENSION = 1500;
 const WEBP_QUALITY = 0.8;
+export const MAX_IMAGE_SIZE = 20 * 1024 * 1024; // 20MB
 
 // ============ DIRECTORY MANAGEMENT ============
 
@@ -19,8 +21,14 @@ export async function getImagesDirectory(): Promise<string> {
 export async function resolveLocalUri(storedPath: string): Promise<string> {
     if (!storedPath) return '';
 
-    // If it's already an absolute file URI or path, extract the filename.
-    // If it's just a filename (no slashes), we'll use it as is.
+    // If it's already an absolute file URI or path, return it as is.
+    // This is CRITICAL for temp files (downloads/camera) to not be re-rooted
+    // to the images directory before they are actually saved there.
+    if (storedPath.startsWith('/') || storedPath.startsWith('file://')) {
+        return storedPath;
+    }
+
+    // Otherwise, assume it's a filename relative to the persistent images directory.
     let filename = storedPath;
     if (storedPath.includes('/') || storedPath.includes('\\')) {
         filename = storedPath.split(/[/\\]/).pop() || storedPath;
@@ -82,12 +90,39 @@ export async function readAsBase64DataUri(localPath: string): Promise<string> {
 }
 
 /**
+ * Validates a URL for security.
+ */
+export function validateUrl(url: string) {
+    if (!url) throw new Error("URL is required");
+    const parsed = new URL(url);
+
+    if (parsed.protocol !== "https:") {
+        throw new Error("Only HTTPS images are allowed");
+    }
+}
+
+/**
  * Download a remote image to a temporary file.
  * Returns the URI and a cleanup function.
  */
 export async function downloadRemoteImage(url: string): Promise<{ uri: string; cleanup: () => Promise<void> }> {
+    validateUrl(url);
+
     const result = await getPlatformAdapters().fileSystem.downloadToTemp(url);
-    return { uri: result.path, cleanup: result.cleanup };
+
+    try {
+        // Double check size after download as a final safety measure
+        // We use result.path directly as it's absolute
+        const size = await getFileSize(result.path);
+        if (size > MAX_IMAGE_SIZE) {
+            throw new Error("Image too large");
+        }
+        return { uri: result.path, cleanup: result.cleanup };
+    } catch (e) {
+        // Ensure we clean up if something goes wrong after download
+        await result.cleanup();
+        throw e;
+    }
 }
 
 /** Delete an image file from local storage */
@@ -139,11 +174,7 @@ export async function saveImageToGallery(imageId?: string, base64Uri?: string): 
             const separator = tempDir.endsWith('/') ? '' : '/';
             localUri = `${tempDir}${separator}download-${Date.now()}.jpg`;
 
-            const binaryString = atob(base64Data);
-            const rawBytes = new Uint8Array(binaryString.length);
-            for (let i = 0; i < binaryString.length; i++) {
-                rawBytes[i] = binaryString.charCodeAt(i);
-            }
+            const rawBytes = Buffer.from(base64Data, 'base64');
             await getPlatformAdapters().fileSystem.writeBytes(localUri, rawBytes);
         }
 

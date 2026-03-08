@@ -23,7 +23,7 @@ export function ImageInput({ onSubmit, onPickFromLibrary, onTakePhoto, onClose, 
         formState: { errors, isValid },
         reset
     } = useForm<ImageInputData>({
-        resolver: zodResolver(imageInputSchema),
+        resolver: zodResolver(imageInputSchema as any),
         defaultValues: {
             url: ''
         },

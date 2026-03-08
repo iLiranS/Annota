@@ -196,7 +196,7 @@ export default function TasksPage() {
                         className={`h-9 gap-2 rounded-full px-4 font-bold shadow-sm 
                             shadow-primary/20 transition-all hover:shadow-primary/30 hover:shadow-md active:scale-95 text-xs uppercase tracking-wider `}
                         style={{ backgroundColor: colors.primary }}
-                        onClick={createAndNavigate}
+                        onClick={() => createAndNavigate()}
                     >
                         <Plus className="h-4 w-4 stroke-3" />
                         New Task
