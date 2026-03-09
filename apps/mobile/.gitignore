@@ -4,4 +4,11 @@
 
 expo-env.d.ts
 # @end expo-cli
-ios
+
+/ios
+/android
+node_modules
+.expo
+.expo-shared
+dist
+build
