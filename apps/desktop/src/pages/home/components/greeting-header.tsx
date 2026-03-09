@@ -1,6 +1,6 @@
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useSettingsStore, useUserStore } from "@annota/core";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 export function GreetingHeader() {
     const { colors } = useAppTheme();
@@ -8,9 +8,8 @@ export function GreetingHeader() {
 
     // User Data
     const session = useUserStore((state) => state.session);
-    const globalDisplayName = useUserStore((state) => state.displayName);
-    const fallbackName = session?.user?.user_metadata?.display_name || session?.user?.user_metadata?.full_name || session?.user?.user_metadata?.name || "Guest";
-    const displayName = globalDisplayName || fallbackName;
+    const getDisplayName = useUserStore((state) => state.getDisplayName);
+    const [displayName, setDisplayName] = useState<string>("");
 
     const greeting = useMemo(() => {
         const hour = new Date().getHours();
@@ -18,6 +17,22 @@ export function GreetingHeader() {
         if (hour >= 12 && hour < 18) return 'Good Afternoon';
         return 'Good Evening';
     }, []);
+
+    useEffect(() => {
+        const loadDisplayName = async () => {
+            if (!session?.user) {
+                const savedName = localStorage.getItem("guest_display_name")
+                setDisplayName(savedName || "Guest")
+            }
+            else {
+
+                const displayName = await getDisplayName();
+                const fallbackName = session?.user?.user_metadata?.display_name || session?.user?.user_metadata?.full_name || session?.user?.user_metadata?.name || "Guest";
+                setDisplayName(displayName || fallbackName);
+            }
+        }
+        loadDisplayName();
+    }, [getDisplayName]);
 
     return (
         <div className="flex flex-col justify-center py-2 px-1 ">

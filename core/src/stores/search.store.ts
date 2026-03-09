@@ -10,6 +10,7 @@ interface SearchState {
     setSearchScope: (scope: 'all' | 'current') => void;
     performSearch: (currentFolderId: string | null) => Promise<void>;
     resetSearch: () => void;
+    reset: () => void;
 }
 
 let searchTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -62,5 +63,9 @@ export const useSearchStore = create<SearchState>((set, get) => ({
     resetSearch: () => {
         if (searchTimeout) clearTimeout(searchTimeout);
         set({ searchQuery: '', searchScope: 'all', dbResults: [], isSearching: false });
+    },
+
+    reset: () => {
+        get().resetSearch();
     }
 }));

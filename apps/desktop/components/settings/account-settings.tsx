@@ -77,7 +77,7 @@ export function AccountSettings() {
                     useUserStore.getState().getDisplayName()
                 ]);
                 setUserRole(role);
-                setDisplayName(name || session.user?.user_metadata?.display_name || "Annota User");
+                setDisplayName(name || session.user?.user_metadata?.display_name || "Guest");
             };
             fetchData();
         } else {

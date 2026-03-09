@@ -63,6 +63,9 @@ interface NotesState {
 
     // Daily Notes
     getOrCreateDailyNote: () => Promise<string>;
+
+    // Reset store
+    reset: () => void;
 }
 
 export const useNotesStore = create<NotesState>((set, get) => ({
@@ -570,5 +573,12 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         return sortFolders(filtered, sortType);
     },
 
-
+    reset: () => {
+        set({
+            notes: [],
+            folders: [],
+            rootSettings: { sortType: 'UPDATED_LAST' },
+            isInitialized: false,
+        });
+    },
 }));

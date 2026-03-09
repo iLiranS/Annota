@@ -15,6 +15,7 @@ import { GeneralSettings } from "./general-settings";
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
@@ -73,6 +74,7 @@ export default function SettingsDialog() {
     return (
         <Dialog open onOpenChange={(open) => !open && handleClose()}>
             <DialogContent className="max-w-4xl h-[75vh] min-h-[500px] w-[90vw] gap-0 overflow-hidden p-0 shadow-2xl flex flex-col">
+                <DialogDescription className="sr-only">Settings</DialogDescription>
                 <DialogHeader className="px-6 pt-5 pb-0 shrink-0">
                     <DialogTitle className="text-lg">Settings</DialogTitle>
                 </DialogHeader>

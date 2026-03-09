@@ -50,7 +50,11 @@ import {
   setStorageEngine,
   useUserStore as useAuthStore,
   useDbStore,
-  useSettingsStore
+  useNotesStore,
+  useSearchStore,
+  useSettingsStore,
+  useSyncStore,
+  useTasksStore
 } from '@annota/core';
 import { SyncScheduler, getMasterKey, initPlatformAdapters } from '@annota/core/platform';
 import { createMobileAdapters } from './bootstrap/mobile-adapters';
@@ -197,6 +201,11 @@ export default function RootLayout() {
           setSession(session);
         } else if (event === 'SIGNED_OUT') {
           setSession(null);
+          // Clear stores immediately to prevent ghosting of previous user's data
+          useNotesStore.getState().reset();
+          useTasksStore.getState().reset();
+          useSearchStore.getState().reset();
+          useSyncStore.getState().reset();
         } else if (!useAuthStore.getState().initialized) {
           useAuthStore.setState({ initialized: true });
         }

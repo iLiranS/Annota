@@ -37,7 +37,7 @@ export function RecentNotesGrid() {
                     <div
                         className="grid grid-cols-2 gap-3"
                         style={{
-                            gridAutoRows: "minmax(80px, 1fr)",
+                            gridAutoRows: "minmax(55px, 1fr)",
                         }}
                     >
                         {recentNotes.map((note) => (
@@ -47,7 +47,7 @@ export function RecentNotesGrid() {
                                 onClick={() => handleNotePress(note.id, note.folderId)}
                                 onDelete={() => deleteNote(note.id)}
                                 showTimestamp
-                                showDescription
+                                showDescription={true}
                                 className='border cursor-pointer'
                             />
                         ))}

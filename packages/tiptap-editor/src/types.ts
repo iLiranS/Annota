@@ -47,8 +47,10 @@ export interface TipTapEditorProps {
     editable?: boolean;
     /** Callback for when a block link is copied */
     onCopyBlockLink?: (blockId: string) => void;
-    /** Callback for opening a block-specific menu (e.g. details, code block) */
+    /** Callback for opening a block-specific menu (e.g. details, code block, table) */
     onOpenBlockMenu?: (e: MouseEvent, resolve: () => { pos: number; message: Record<string, unknown> } | null) => void;
+    /** Callback for opening a table-specific menu */
+    onOpenTableMenu?: (e: MouseEvent, resolve: () => { pos: number; message: Record<string, unknown> } | null) => void;
     /** Callback for opening an image-specific menu */
     onOpenImageMenu?: (e: MouseEvent, resolve: () => { pos: number; message: Record<string, unknown> } | null) => void;
     /** Callback for when the code block language selector is clicked */

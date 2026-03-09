@@ -28,6 +28,9 @@ interface TasksState {
     getPendingTasks: () => Task[];
     getCompletedTasks: () => Task[];
     getTaskDatesInMonth: (year: number, month: number, pendingOnly?: boolean) => Set<number>;
+
+    // Reset store
+    reset: () => void;
 }
 
 export const useTasksStore = create<TasksState>((set, get) => ({
@@ -169,5 +172,11 @@ export const useTasksStore = create<TasksState>((set, get) => ({
             }
         });
         return dates;
+    },
+
+    reset: () => {
+        set({
+            tasks: [],
+        });
     },
 }));

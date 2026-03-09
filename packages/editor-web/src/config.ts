@@ -9,6 +9,7 @@ import { TaskList } from '@tiptap/extension-task-list';
 import { FontFamily, TextStyle } from '@tiptap/extension-text-style';
 import { Underline } from '@tiptap/extension-underline';
 import { Youtube } from '@tiptap/extension-youtube';
+import { CellSelection } from '@tiptap/pm/tables';
 import { StarterKit } from '@tiptap/starter-kit';
 
 import { Mathematics } from '@tiptap/extension-mathematics';
@@ -49,6 +50,7 @@ export const getExtensions = (options: {
     onSearchResults?: (count: number, currentIndex: number) => void;
     onOpenBlockMenu?: (e: MouseEvent, resolve: () => any) => void;
     onOpenImageMenu?: (e: MouseEvent, resolve: () => any) => void;
+    onOpenTableMenu?: (e: MouseEvent, resolve: () => any) => void;
     onCodeBlockSelected?: (e: MouseEvent, resolve: () => any) => void;
     onImagePasted?: (data: { base64: string, imageId?: string, src?: string }) => void;
     onResolveImageIds?: (data: { imageIds: string[] }) => void;
@@ -146,6 +148,7 @@ export const getExtensions = (options: {
 
 export const getEditorProps = (callbacks: {
     onScroll?: () => void;
+    onContextMenu?: (view: any, event: MouseEvent) => boolean;
     direction?: string;
 }) => ({
     attributes: { dir: callbacks.direction || 'auto' },
@@ -157,6 +160,24 @@ export const getEditorProps = (callbacks: {
         drop: () => false,
         dragover: () => false,
         dragstart: () => false,
+        mousedown: (view: any, event: MouseEvent) => {
+            // Check if the mouse event is a right-click (button 2)
+            if (event.button === 2) {
+                const { state } = view;
+
+                // Check if the current selection is a multiple cell selection
+                if (state.selection instanceof CellSelection || (state.selection as any).constructor.name === 'CellSelection') {
+                    // Return true to tell Tiptap we handled this event.
+                    // This stops Tiptap from resetting the selection to a single cell,
+                    // but still allows the 'contextmenu' event to bubble up.
+                    return true;
+                }
+            }
+            return false;
+        },
+        contextmenu: (view: any, event: MouseEvent) => {
+            return callbacks.onContextMenu?.(view, event) || false;
+        },
     },
     transformPastedHTML(html: string) {
         // Strip font-family from inline styles so pasted content
@@ -218,6 +239,8 @@ export const getEditorState = (editor: any) => {
         canDeleteRow: isInTable && e.can().deleteRow(),
         canDeleteColumn: isInTable && e.can().deleteColumn(),
         canDeleteTable: isInTable && e.can().deleteTable(),
+        canMergeCells: isInTable && e.can().mergeCells(),
+        canSplitCell: isInTable && e.can().splitCell(),
         isImage: e.isActive('image'),
         imageAttrs: e.isActive('image') ? imageAttrs : null,
         isDetails: e.isActive('details'),

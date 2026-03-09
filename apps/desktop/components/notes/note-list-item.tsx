@@ -34,7 +34,7 @@ export function NoteListItem({
     note,
     onClick,
     onDelete,
-    showDescription = true,
+    showDescription = false,
     showTimestamp = false,
     className,
     suffix,
@@ -46,7 +46,7 @@ export function NoteListItem({
 }: NoteListItemProps) {
     const { updateNoteMetadata } = useNotesStore();
     const { general } = useSettingsStore();
-    const isCompact = general.compactMode;
+    const isCompact = !showDescription && general.compactMode;
 
     const [isLocationPickerOpen, setIsLocationPickerOpen] = useState(false);
 

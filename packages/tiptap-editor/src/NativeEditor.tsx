@@ -2,6 +2,8 @@ import { useSettingsStore } from '@annota/core';
 import { getPlatformAdapters, NoteImageService } from '@annota/core/platform';
 import { getEditorProps, getEditorState, getExtensions, resolveFontFamily } from '@annota/editor-web/config';
 import '@annota/editor-web/styles.css';
+import { TextSelection } from '@tiptap/pm/state';
+import { CellSelection } from '@tiptap/pm/tables';
 import { EditorContent, useEditor } from '@tiptap/react';
 import { Buffer } from 'buffer';
 import 'highlight.js/styles/atom-one-dark.css';
@@ -60,6 +62,7 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
         colors: propColors,
         onOpenBlockMenu,
         onOpenImageMenu,
+        onOpenTableMenu,
         onCodeBlockSelected,
     }, ref) => {
         const colors = propColors || { primary: '#007AFF', background: '#FFFFFF', text: '#000000' };
@@ -96,6 +99,7 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
             },
             onOpenBlockMenu,
             onOpenImageMenu,
+            onOpenTableMenu,
             onCodeBlockSelected,
             onResolveImageIds: (data) => {
                 if (data.imageIds.length > 0) {
@@ -160,15 +164,90 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                 })();
             },
             defaultCodeLanguage: editorSettings.defaultCodeLanguage,
-        }) as any, [placeholder, onSearchResults, onOpenBlockMenu, onOpenImageMenu, onCodeBlockSelected, noteId, editorSettings.defaultCodeLanguage]);
+        }) as any, [placeholder, onSearchResults, onOpenBlockMenu, onOpenImageMenu, onOpenTableMenu, onCodeBlockSelected, noteId, editorSettings.defaultCodeLanguage]);
 
         const editorProps = React.useMemo(() => getEditorProps({
             direction: editorSettings.direction,
             onScroll: () => {
                 // In native desktop, we might not need to report cursor pos via bridge
                 // but we can if the toolbar needs it.
+            },
+            onContextMenu: (view, event) => {
+                if (!onOpenTableMenu) return false;
+
+                const { state, dispatch } = view;
+
+                // Find the position where user right-clicked
+                const pos = view.posAtDOM(event.target as Node, 0);
+                if (pos === null) return false;
+
+                const $pos = state.doc.resolve(pos);
+
+                // Check if cursor is inside a table
+                let isInTable = false;
+                let tableNodePos = -1;
+                let cellNodePos = -1;
+
+                for (let d = $pos.depth; d > 0; d--) {
+                    const node = $pos.node(d);
+                    if (node.type.name === 'table') {
+                        isInTable = true;
+                        tableNodePos = $pos.before(d);
+                    }
+                    if (node.type.name === 'tableCell' || node.type.name === 'tableHeader') {
+                        cellNodePos = $pos.before(d);
+                    }
+                }
+
+                if (isInTable) {
+                    event.preventDefault();
+
+                    // If the click happened in a different cell than current selection,
+                    // move selection to the clicked cell, unless we're in a multi-cell selection
+                    const { selection } = state;
+                    let shouldSetSelection = true;
+
+                    // Robust check for CellSelection
+                    const isCellSelection = (selection instanceof CellSelection) || (selection as any).constructor.name === 'CellSelection';
+
+                    if (isCellSelection) {
+                        const cellSelection = selection as CellSelection;
+                        let cellInSelection = false;
+                        cellSelection.forEachCell((_node: any, cellPos: number) => {
+                            if (cellPos === cellNodePos) cellInSelection = true;
+                        });
+                        if (cellInSelection) shouldSetSelection = false;
+                    } else {
+                        const isSelectionInClickedCell = selection.$from.depth >= $pos.depth &&
+                            selection.$from.before($pos.depth) === cellNodePos;
+                        if (isSelectionInClickedCell) shouldSetSelection = false;
+                    }
+
+                    if (shouldSetSelection) {
+                        dispatch(state.tr.setSelection(TextSelection.create(state.doc, pos)));
+                    }
+
+                    const tableNode = state.doc.nodeAt(tableNodePos);
+                    const cellNode = state.doc.nodeAt(cellNodePos);
+
+                    onOpenTableMenu(event, () => ({
+                        pos: tableNodePos,
+                        message: {
+                            type: 'openBlockMenu',
+                            blockType: 'table',
+                            pos: tableNodePos,
+                            cellPos: cellNodePos,
+                            backgroundColor: cellNode?.attrs.backgroundColor,
+                            canMergeCells: editorRef.current?.can().mergeCells() || false,
+                            canSplitCell: editorRef.current?.can().splitCell() || false,
+                        }
+                    }));
+                    return true;
+                }
+
+                return false;
             }
-        }), [editorSettings.direction]);
+        }), [editorSettings.direction, onOpenTableMenu]);
 
         const editor = useEditor({
             editable,
@@ -312,6 +391,19 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                 case 'addRowAfter': c.addRowAfter().run(); break;
                 case 'deleteRow': c.deleteRow().run(); break;
                 case 'deleteTable': c.deleteTable().run(); break;
+                case 'mergeCells': c.mergeCells().run(); break;
+                case 'splitCell': c.splitCell().run(); break;
+                case 'setCellBackground':
+                    if (params.color) {
+                        let bgColor = params.color as string;
+                        // Reduce opacity to 25% (40 in hex) for table cells
+                        if (bgColor.startsWith('#') && bgColor.length === 7) bgColor += '40';
+                        c.setCellAttribute('backgroundColor', bgColor).run();
+                    }
+                    break;
+                case 'unsetCellBackground':
+                    c.setCellAttribute('backgroundColor', null).run();
+                    break;
                 case 'setLink': c.setLink({ href: params.href as string }).run(); break;
                 case 'unsetLink': c.unsetLink().run(); break;
                 case 'setMath': c.insertContent({ type: 'inlineMath', attrs: { latex: params.latex } }).run(); break;

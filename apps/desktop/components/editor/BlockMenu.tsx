@@ -6,7 +6,7 @@ import {
     DropdownMenuSub,
     DropdownMenuSubContent,
     DropdownMenuSubTrigger,
-    DropdownMenuTrigger,
+    DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { COLOR_PALETTE } from "@annota/core/constants/colors";
@@ -15,12 +15,16 @@ import {
 } from "@annota/editor-web/extensions";
 import {
     Check,
+    Columns,
     Copy,
     Download,
     Languages,
     Link,
     Maximize,
+    Merge,
     Palette,
+    Rows,
+    Split,
     Trash2
 } from "lucide-react";
 
@@ -28,7 +32,7 @@ export interface BlockMenuProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     anchorRect: DOMRect | null;
-    type: "image" | "details" | "codeBlock";
+    type: "image" | "details" | "codeBlock" | "table";
     data: any;
     onAction: (action: string, params?: any) => void;
 }
@@ -179,6 +183,104 @@ export function BlockMenu({
                         >
                             <Trash2 className="mr-2 h-4 w-4" />
                             <span>Delete</span>
+                        </DropdownMenuItem>
+                    </>
+                )}
+
+                {type === "table" && (
+                    <>
+                        <DropdownMenuSub>
+                            <DropdownMenuSubTrigger>
+                                <Palette className="mr-2 h-4 w-4" />
+                                <span>Cell Background</span>
+                            </DropdownMenuSubTrigger>
+                            <DropdownMenuSubContent className="p-2 grid grid-cols-5 gap-1 min-w-[200px]">
+                                <button
+                                    className="h-6 w-6 rounded-full border border-border flex items-center justify-center hover:scale-110 transition-transform"
+                                    style={{ backgroundColor: 'transparent' }}
+                                    onClick={() => handleAction("background", { color: null })}
+                                    title="None"
+                                >
+                                    {!data.backgroundColor && <Check className="h-3 w-3 text-foreground" />}
+                                </button>
+                                {COLOR_PALETTE.map((color) => (
+                                    <button
+                                        key={color.value}
+                                        className="h-6 w-6 rounded-full border border-black/10 flex items-center justify-center hover:scale-110 transition-transform"
+                                        style={{ backgroundColor: color.value }}
+                                        onClick={() => handleAction("background", { color: color.value })}
+                                        title={color.name}
+                                    >
+                                        {data.backgroundColor === color.value && <Check className="h-3 w-3 text-white shadow-sm" />}
+                                    </button>
+                                ))}
+                            </DropdownMenuSubContent>
+                        </DropdownMenuSub>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuSub>
+                            <DropdownMenuSubTrigger>
+                                <Rows className="mr-2 h-4 w-4" />
+                                <span>Row Actions</span>
+                            </DropdownMenuSubTrigger>
+                            <DropdownMenuSubContent>
+                                <DropdownMenuItem onClick={() => handleAction("addRowBefore")}>
+                                    <span>Add Row Above</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleAction("addRowAfter")}>
+                                    <span>Add Row Below</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                    onClick={() => handleAction("deleteRow")}
+                                    className="text-destructive focus:text-destructive"
+                                >
+                                    <span>Delete Row</span>
+                                </DropdownMenuItem>
+                            </DropdownMenuSubContent>
+                        </DropdownMenuSub>
+
+                        <DropdownMenuSub>
+                            <DropdownMenuSubTrigger>
+                                <Columns className="mr-2 h-4 w-4" />
+                                <span>Column Actions</span>
+                            </DropdownMenuSubTrigger>
+                            <DropdownMenuSubContent>
+                                <DropdownMenuItem onClick={() => handleAction("addColumnBefore")}>
+                                    <span>Add Column Left</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleAction("addColumnAfter")}>
+                                    <span>Add Column Right</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                    onClick={() => handleAction("deleteColumn")}
+                                    className="text-destructive focus:text-destructive"
+                                >
+                                    <span>Delete Column</span>
+                                </DropdownMenuItem>
+                            </DropdownMenuSubContent>
+                        </DropdownMenuSub>
+
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                            onClick={() => handleAction("mergeCells")}
+                            disabled={!data.canMergeCells}
+                        >
+                            <Merge className="mr-2 h-4 w-4" />
+                            <span>Merge Cells</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            onClick={() => handleAction("splitCell")}
+                            disabled={!data.canSplitCell}
+                        >
+                            <Split className="mr-2 h-4 w-4" />
+                            <span>Split Cell</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                            onClick={() => handleAction("delete")}
+                            className="text-destructive focus:text-destructive"
+                        >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            <span>Delete Table</span>
                         </DropdownMenuItem>
                     </>
                 )}

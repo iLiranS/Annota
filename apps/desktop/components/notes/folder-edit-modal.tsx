@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogFooter,
     DialogHeader,
     DialogTitle,
@@ -130,6 +131,7 @@ export function FolderEditModal({
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-md p-0 overflow-hidden flex flex-col max-h-[85vh]">
+                <DialogDescription className="sr-only">Folder Edit</DialogDescription>
                 <DialogHeader className="px-6 py-3 border-b">
                     <DialogTitle className="text-base font-bold">
                         {isCreateMode ? 'New Folder' : 'Edit Folder'}

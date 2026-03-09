@@ -22,6 +22,7 @@ import { Calendar } from "@/components/ui/calendar";
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
@@ -184,6 +185,7 @@ export default function TaskDetailDialog() {
     return (
         <Dialog open onOpenChange={(open) => !open && handleClose()}>
             <DialogContent className="max-w-xl h-[85vh] w-[90vw] gap-0 overflow-hidden p-0 shadow-2xl flex flex-col">
+                <DialogDescription className="sr-only">Task Details</DialogDescription>
                 <DialogHeader className="px-6 pt-5 pb-4 shrink-0 border-b">
                     <DialogTitle className="text-lg flex items-center gap-2">
                         <CheckCircle2 className="h-5 w-5" style={{ color: colors.primary }} />

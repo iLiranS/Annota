@@ -36,7 +36,7 @@ export default function NoteEditor() {
 
     // Block Menu state
     const [activeBlockMenu, setActiveBlockMenu] = useState<{
-        type: "image" | "details" | "codeBlock";
+        type: "image" | "details" | "codeBlock" | "table";
         data: any;
         anchorRect: DOMRect;
         onResolve: () => any;
@@ -78,6 +78,18 @@ export default function NoteEditor() {
         });
     }, []);
 
+    const handleOpenTableMenu = useCallback((e: MouseEvent, resolve: () => any) => {
+        const result = resolve();
+        if (!result) return;
+
+        setActiveBlockMenu({
+            type: "table",
+            data: result.message,
+            anchorRect: (e.target as HTMLElement).getBoundingClientRect(),
+            onResolve: resolve,
+        });
+    }, []);
+
     const handleBlockAction = useCallback(async (action: string, params?: any) => {
         if (!activeBlockMenu || !editorRef.current) return;
 
@@ -102,13 +114,47 @@ export default function NoteEditor() {
             case "delete":
                 if (type === "image") {
                     editorRef.current.onCommand("deleteImage", { pos: data.position });
+                } else if (type === "table") {
+                    editorRef.current.onCommand("deleteTable", {});
                 } else {
                     editorRef.current.onCommand("deleteSelection", { pos: data.pos });
                 }
                 toast.success("Block deleted");
                 break;
             case "background":
-                editorRef.current.onCommand("setDetailsBackground", { pos: data.pos, color: params.color });
+                if (type === "details") {
+                    editorRef.current.onCommand("setDetailsBackground", { pos: data.pos, color: params.color });
+                } else if (type === "table") {
+                    if (params.color) {
+                        editorRef.current.onCommand("setCellBackground", { color: params.color });
+                    } else {
+                        editorRef.current.onCommand("unsetCellBackground", {});
+                    }
+                }
+                break;
+            case "addRowBefore":
+                editorRef.current.onCommand("addRowBefore", {});
+                break;
+            case "addRowAfter":
+                editorRef.current.onCommand("addRowAfter", {});
+                break;
+            case "addColumnBefore":
+                editorRef.current.onCommand("addColumnBefore", {});
+                break;
+            case "addColumnAfter":
+                editorRef.current.onCommand("addColumnAfter", {});
+                break;
+            case "deleteRow":
+                editorRef.current.onCommand("deleteRow", {});
+                break;
+            case "deleteColumn":
+                editorRef.current.onCommand("deleteColumn", {});
+                break;
+            case "mergeCells":
+                editorRef.current.onCommand("mergeCells", {});
+                break;
+            case "splitCell":
+                editorRef.current.onCommand("splitCell", {});
                 break;
             case "copyLink":
                 const id = data.id || (data.attrs && data.attrs.id);
@@ -315,6 +361,7 @@ export default function NoteEditor() {
                         renderImageGallery={(props) => <ImageGallery {...props} />}
                         onOpenBlockMenu={handleOpenBlockMenu}
                         onOpenImageMenu={handleOpenImageMenu}
+                        onOpenTableMenu={handleOpenTableMenu}
                         onCodeBlockSelected={handleCodeBlockSelected}
                         isDark={isDark}
                         colors={{

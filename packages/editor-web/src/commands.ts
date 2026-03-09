@@ -285,6 +285,8 @@ export function setupCommands() {
             case 'deleteRow': c.deleteRow().run(); break;
             case 'deleteColumn': c.deleteColumn().run(); break;
             case 'deleteTable': c.deleteTable().run(); break;
+            case 'mergeCells': c.mergeCells().run(); break;
+            case 'splitCell': c.splitCell().run(); break;
             case 'setCellBackground':
                 if (params?.color) {
                     // Add alpha for lower opacity (similar to highlight)

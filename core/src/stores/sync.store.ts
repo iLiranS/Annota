@@ -23,6 +23,7 @@ interface SyncState {
     setAesKey: (mnemonic: string | null, key: Buffer | null) => void;
     clearAesKey: () => void;
     forceSync: () => Promise<void>;
+    reset: () => void;
 }
 
 export const useSyncStore = create<SyncState>((set, get) => ({
@@ -52,5 +53,15 @@ export const useSyncStore = create<SyncState>((set, get) => ({
             console.warn('[SyncStore] SyncScheduler instance not available for forceSync');
             throw new Error("Sync service is not initialized");
         }
+    },
+
+    reset: () => {
+        set({
+            isSyncing: false,
+            lastSyncAt: null,
+            syncError: null,
+            aesKey: null,
+            activeMnemonic: null,
+        });
     },
 }));

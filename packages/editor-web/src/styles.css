@@ -609,6 +609,11 @@
     overflow-x: auto;
     margin: 16px 0;
     -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+
+.ProseMirror .tableWrapper::-webkit-scrollbar {
+    display: none;
 }
 
 .ProseMirror table {
@@ -641,10 +646,15 @@
 }
 
 .ProseMirror .selectedCell {
-    /* accent + alpha */
-    background-color: rgba(0, 122, 255, 0.15);
+    /* Overlay selection color over any cell background color using inset box-shadow */
+    background-color: rgba(0, 122, 255, 0.1) !important;
+    box-shadow: inset 0 0 0 1000px rgba(0, 122, 255, 0.25) !important;
+    /* Use a double outline effect to make selection stand out even more */
+    outline: 2px solid var(--accent-color);
+    outline-offset: -2px;
 }
 
+/* Stabilize borders during resizing and ensure clear resize handle */
 .ProseMirror .column-resize-handle {
     position: absolute;
     right: -2px;
@@ -653,6 +663,14 @@
     width: 4px;
     background-color: var(--accent-color);
     pointer-events: none;
+    /* Ensure the handle stays on top of cell borders */
+    z-index: 20;
+}
+
+/* Ensure that all cells keep their border color when the table is marked as resizing */
+.ProseMirror .resizing td,
+.ProseMirror .resizing th {
+    border-color: var(--border-color) !important;
 }
 
 

@@ -3,7 +3,9 @@ import {
   authApi,
   setStorageEngine,
   useNotesStore,
+  useSearchStore,
   useSettingsStore,
+  useSyncStore,
   useTasksStore,
   useUserStore
 } from "@annota/core";
@@ -70,47 +72,70 @@ function App() {
       setBootstrapError(null);
 
       try {
-        // Keep deterministic ordering: storage -> adapters -> db.
+        // 1. Keep deterministic ordering: storage -> adapters -> db.
         setStorageEngine(createDesktopStorageEngine());
 
-        // Rehydrate persisted stores manually since skipHydration is true
+        // Rehydrate persisted stores manually
         await useUserStore.persist.rehydrate();
         await useSettingsStore.persist.rehydrate();
 
         initPlatformAdapters(createDesktopAdapters());
 
-        let activeUserId: string | null = null;
+        // 2. Optimistically grab the persisted user ID FIRST
+        let activeUserId: string | null = useUserStore.getState().user?.id ?? null;
+
+        // 3. Attempt session restore with a safety timeout
         try {
-          const { data } = await authApi.getSession();
-          if (data.session) {
+          const sessionPromise = authApi.getSession();
+          // 3-second timeout: if the network is a black hole, we move on.
+          const timeoutPromise = new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("Network timeout")), 3000)
+          );
+
+          // Race the session fetch against the timeout
+          const { data } = await Promise.race([sessionPromise, timeoutPromise]) as any;
+
+          if (data?.session) {
             setSession(data.session);
             activeUserId = data.session.user.id;
           }
         } catch (error) {
           console.warn(
-            "[DesktopBootstrap] Session restore failed (offline likely):",
+            "[DesktopBootstrap] Session restore delayed/failed (offline likely). Falling back to local user state.",
             error,
           );
+          // We gracefully catch this. activeUserId still holds the persisted ID!
         }
 
-        if (!activeUserId)
-          activeUserId = useUserStore.getState().user?.id ?? null;
-
-        // Initialise (or switch to) the per-user SQLite database.
+        // 4. Initialise (or switch to) the per-user SQLite database.
         await initDesktopSqlite(activeUserId);
 
-        await Promise.all([
-          useNotesStore.getState().initApp(),
-          useTasksStore.getState().loadTasks(),
-        ]);
+        // 5. Wrap store initialization in a timeout in case they try to network-sync and hang.
+        try {
+          const storesPromise = Promise.all([
+            useNotesStore.getState().initApp(),
+            useTasksStore.getState().loadTasks(),
+          ]);
+          const storesTimeoutPromise = new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("Stores init timeout")), 5000)
+          );
+
+          await Promise.race([storesPromise, storesTimeoutPromise]);
+        } catch (error) {
+          console.warn(
+            "[DesktopBootstrap] Stores sync timed out/failed. Proceeding with local DB data.",
+            error
+          );
+          // Don't throw here! We want the app to finish booting so the user can access local SQLite data.
+        }
 
         if (!cancelled) {
           setBootstrapState("ready");
         }
       } catch (error) {
+        // Real local crashes (e.g., SQLite failing to mount) will still end up here
         if (cancelled) return;
-        const message =
-          error instanceof Error ? error.message : String(error);
+        const message = error instanceof Error ? error.message : String(error);
         setBootstrapError(message);
         setBootstrapState("error");
       }
@@ -202,6 +227,11 @@ function App() {
         }
       } else if (event === "SIGNED_OUT") {
         setSession(null);
+        // Clear stores immediately to prevent ghosting of previous user's data
+        useNotesStore.getState().reset();
+        useTasksStore.getState().reset();
+        useSearchStore.getState().reset();
+        useSyncStore.getState().reset();
         // Re-bootstrap so the next login starts with a fresh DB context.
         setRunId((v) => v + 1);
       }
