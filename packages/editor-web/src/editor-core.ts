@@ -108,7 +108,8 @@ export function setupEditor(options: any) {
         fontFamily = 'system',
         fontSize = 16,
         lineSpacing = 1.5,
-        noteWidth = 0
+        noteWidth = 0,
+        defaultCodeLanguage = null
     } = options;
 
     // Set CSS variables for theme
@@ -173,6 +174,14 @@ export function setupEditor(options: any) {
             })
         });
 
+        // Update code block default language if changed
+        const extension = window.editor.extensionManager.extensions.find((e: any) => e.name === 'codeBlock');
+        if (extension) {
+            (window.editor as any).setOptions('codeBlock', {
+                defaultLanguage: defaultCodeLanguage
+            });
+        }
+
         return;
     }
 
@@ -202,7 +211,8 @@ export function setupEditor(options: any) {
                         }
                         sendMessage({ type: 'mathSelected', latex, isBlock });
                     }
-                }
+                },
+                defaultCodeLanguage
             }),
             content: content,
             autofocus: autofocus, // Pass directly

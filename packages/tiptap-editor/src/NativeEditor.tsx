@@ -60,6 +60,7 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
         colors: propColors,
         onOpenBlockMenu,
         onOpenImageMenu,
+        onCodeBlockSelected,
     }, ref) => {
         const colors = propColors || { primary: '#007AFF', background: '#FFFFFF', text: '#000000' };
         const dark = propIsDark ?? false;
@@ -95,6 +96,7 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
             },
             onOpenBlockMenu,
             onOpenImageMenu,
+            onCodeBlockSelected,
             onResolveImageIds: (data) => {
                 if (data.imageIds.length > 0) {
                     NoteImageService.resolveImageSources(data.imageIds).then((imageMap) => {
@@ -108,6 +110,23 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
             },
             onImagePasted: (data) => {
                 if (!noteId || !editorRef.current) return;
+
+                // 1. THE MAGIC CHECK: Is this an internal image we already know about?
+                // We check if imageId exists and doesn't start with 'temp-'
+                if (data.imageId && !data.imageId.startsWith('temp-')) {
+                    console.log("[NativeEditor] Internal image pasted, skipping re-upload:", data.imageId);
+                    // Just insert it directly into TipTap using the existing ID and Src
+                    (editorRef.current.chain() as any).focus().insertContent({
+                        type: 'image',
+                        attrs: {
+                            src: data.src || '',
+                            imageId: data.imageId
+                        }
+                    }).run();
+                    return; // Stop here! Don't call NoteImageService at all.
+                }
+
+                // 2. Otherwise, it's a truly new external paste (or a temp one from internal path)
                 (async () => {
                     try {
                         const base64Data = data.base64.replace(/^data:image\/\w+;base64,/, "");
@@ -139,8 +158,9 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                         console.error('Failed to handle pasted image in NativeEditor:', err);
                     }
                 })();
-            }
-        }) as any, [placeholder, onSearchResults, onOpenBlockMenu, onOpenImageMenu, noteId]);
+            },
+            defaultCodeLanguage: editorSettings.defaultCodeLanguage,
+        }) as any, [placeholder, onSearchResults, onOpenBlockMenu, onOpenImageMenu, onCodeBlockSelected, noteId, editorSettings.defaultCodeLanguage]);
 
         const editorProps = React.useMemo(() => getEditorProps({
             direction: editorSettings.direction,
@@ -215,6 +235,15 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
             root.style.setProperty('--editor-font-family', resolvedFont);
         }, [colors, dark, editorSettings]);
 
+        // Sync default code language
+        useEffect(() => {
+            if (editor && !editor.isDestroyed) {
+                (editor as any).setOptions('codeBlock', {
+                    defaultLanguage: editorSettings.defaultCodeLanguage
+                });
+            }
+        }, [editor, editorSettings.defaultCodeLanguage]);
+
         // Handle content updates (e.g. version history)
         useEffect(() => {
             if (editor && initialContent !== undefined) {
@@ -255,7 +284,9 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                 case 'toggleOrderedList': c.toggleOrderedList().run(); break;
                 case 'toggleTaskList': c.toggleTaskList().run(); break;
                 case 'toggleDetails': c.toggleDetails().run(); break;
-                case 'toggleCodeBlock': c.toggleCodeBlock().run(); break;
+                case 'toggleCodeBlock':
+                    c.toggleCodeBlock({ language: editorSettings.defaultCodeLanguage }).run();
+                    break;
                 case 'sinkListItem': c.sinkListItem('listItem').run(); break;
                 case 'liftListItem': c.liftListItem('listItem').run(); break;
                 case 'undo': c.undo().run(); break;

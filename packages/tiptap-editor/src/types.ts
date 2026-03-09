@@ -51,6 +51,8 @@ export interface TipTapEditorProps {
     onOpenBlockMenu?: (e: MouseEvent, resolve: () => { pos: number; message: Record<string, unknown> } | null) => void;
     /** Callback for opening an image-specific menu */
     onOpenImageMenu?: (e: MouseEvent, resolve: () => { pos: number; message: Record<string, unknown> } | null) => void;
+    /** Callback for when the code block language selector is clicked */
+    onCodeBlockSelected?: (e: MouseEvent, resolve: () => { pos: number; message: Record<string, unknown> } | null) => void;
     /** Render prop for customizing the toolbar and its popup menus */
     renderToolbar?: (props: ToolbarRenderProps) => React.ReactNode;
     /** Render prop for full-screen image gallery and zoom */

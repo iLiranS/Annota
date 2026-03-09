@@ -1,8 +1,8 @@
 import { useTheme } from '@react-navigation/native';
-import * as ExpoClipboard from 'expo-clipboard';
 import React, { useState } from 'react';
 import { Keyboard, ScrollView, StyleSheet, View } from 'react-native';
 
+import { copyImageToClipboardMobile } from '@/utils/clipboard';
 import { HeadingLevel } from '@annota/core';
 import { ImageService } from '@annota/core/platform';
 import type { PopupType, ToolbarRenderProps } from '@annota/tiptap-editor';
@@ -491,15 +491,13 @@ export function EditorToolbar({
                                 })();
                                 break;
                             case 'copy':
-                                if (blockData.imageId) {
-                                    ExpoClipboard.setStringAsync(`[[ImageID:${blockData.imageId}]]`);
-                                }
+                                copyImageToClipboardMobile(blockData.src, blockData.imageId);
                                 onCommand('copyImage', { pos: blockData.position });
                                 closePopup();
                                 break;
                             case 'cut':
+                                copyImageToClipboardMobile(blockData.src, blockData.imageId);
                                 if (blockData.imageId) {
-                                    ExpoClipboard.setStringAsync(`[[ImageID:${blockData.imageId}]]`);
                                     onCommand('deleteImage', { pos: blockData.position });
                                 } else {
                                     onCommand('cutImage', { pos: blockData.position });

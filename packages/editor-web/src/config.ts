@@ -49,8 +49,10 @@ export const getExtensions = (options: {
     onSearchResults?: (count: number, currentIndex: number) => void;
     onOpenBlockMenu?: (e: MouseEvent, resolve: () => any) => void;
     onOpenImageMenu?: (e: MouseEvent, resolve: () => any) => void;
-    onImagePasted?: (data: { base64: string, imageId: string }) => void;
+    onCodeBlockSelected?: (e: MouseEvent, resolve: () => any) => void;
+    onImagePasted?: (data: { base64: string, imageId?: string, src?: string }) => void;
     onResolveImageIds?: (data: { imageIds: string[] }) => void;
+    defaultCodeLanguage?: string | null;
 }) => [
         StarterKit.configure({
             heading: false,
@@ -108,6 +110,8 @@ export const getExtensions = (options: {
         TaskItem.configure({ nested: true }),
         CustomCodeBlock.configure({
             onOpenBlockMenu: options.onOpenBlockMenu,
+            onCodeBlockSelected: options.onCodeBlockSelected,
+            defaultLanguage: options.defaultCodeLanguage,
         }),
         // @ts-ignore - Type mismatch due to tiptap version difference between packages
         Details,

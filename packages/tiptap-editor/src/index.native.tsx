@@ -314,6 +314,24 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
                         case 'imagePasted':
                             if (noteId && data.base64 && data.imageId) {
                                 (async () => {
+                                    // 1. Mobile "Magic Check": reused cached ID from internal copy
+                                    const cachedId = (global as any).lastCopiedMobileImageId;
+                                    if (cachedId) {
+                                        console.log("[NativeEditor] Internal mobile copy detected, skipping upload:", cachedId);
+                                        // Reset immediately so it doesn't leak to external pastes
+                                        (global as any).lastCopiedMobileImageId = null;
+
+                                        // We still need a local URL for the WebView to render,
+                                        // so resolve the existing ID.
+                                        const imageMap = await NoteImageService.resolveImageSources([cachedId]);
+                                        sendCommand('replaceImageId', {
+                                            oldId: data.imageId,
+                                            newId: cachedId,
+                                            src: imageMap[cachedId]
+                                        });
+                                        return;
+                                    }
+
                                     let stage = 'parse';
                                     try {
                                         const parsed = parsePastedImageData(data.base64);

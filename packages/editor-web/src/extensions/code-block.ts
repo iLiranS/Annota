@@ -40,6 +40,7 @@ export const CustomCodeBlock = CodeBlockLowlight.extend<any>({
         return {
             ...this.parent?.(),
             onOpenBlockMenu: null,
+            onCodeBlockSelected: null,
         };
     },
     addNodeView() {
@@ -72,18 +73,33 @@ export const CustomCodeBlock = CodeBlockLowlight.extend<any>({
             langButton.onclick = (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                if (typeof getPos === 'function') {
+
+                const onResolve = () => {
+                    if (typeof getPos !== 'function') return null;
                     const pos = getPos();
-                    if (typeof pos !== 'number') return;
+                    if (typeof pos !== 'number') return null;
 
                     // Force selection of the code block
                     editor.chain().focus().setNodeSelection(pos).run();
-                    // Send message to RN to open native language selector
-                    sendMessage({
-                        type: 'codeBlockSelected',
-                        language: node.attrs.language,
-                        pos
-                    });
+
+                    return {
+                        pos,
+                        message: {
+                            type: 'codeBlockSelected',
+                            language: node.attrs.language,
+                            pos
+                        }
+                    };
+                };
+
+                if (this.options.onCodeBlockSelected) {
+                    this.options.onCodeBlockSelected(e, onResolve);
+                    return;
+                }
+
+                const result = onResolve();
+                if (result) {
+                    sendMessage(result.message);
                 }
             };
 

@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/collapsible";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubButton, SidebarMenuSubItem, SidebarRail, SidebarSeparator, useSidebar } from "@/components/ui/sidebar";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useCreateTask } from "@/hooks/use-create-task";
 import { useEffect } from "react";
 import { ConfirmDialog } from "../custom-ui/confirm-dialog";
 import { FolderEditModal } from "../notes/folder-edit-modal";
@@ -34,10 +35,13 @@ export function AppSidebar() {
     const isGuest = useUserStore((s) => s.isGuest);
     const showOfflineBanner = !isOnline && !isGuest;
 
+    const { createAndNavigate: createTask } = useCreateTask();
+
     const [retryCooldown, setRetryCooldown] = useState(false);
     const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [folderToDelete, setFolderToDelete] = useState<Folder | null>(null);
+    const [newFolderParentId, setNewFolderParentId] = useState<string | null>(null);
 
     const handleRetry = useCallback(() => {
         if (retryCooldown) return;
@@ -60,6 +64,13 @@ export function AppSidebar() {
 
     const handleEditFolder = useCallback((folder: Folder) => {
         setEditingFolder(folder);
+        setNewFolderParentId(null);
+        setIsEditModalOpen(true);
+    }, []);
+
+    const handleCreateSubFolder = useCallback((parentFolder: Folder) => {
+        setEditingFolder(null); // Create mode
+        setNewFolderParentId(parentFolder.id); // Parent folder is the one clicked
         setIsEditModalOpen(true);
     }, []);
 
@@ -68,6 +79,10 @@ export function AppSidebar() {
         await deleteFolder(folderToDelete.id);
         setFolderToDelete(null);
     }, [deleteFolder, folderToDelete]);
+
+    const handleCreateTask = useCallback((folder: Folder) => {
+        createTask({ folderId: folder.id });
+    }, [createTask]);
 
     // Non-system top-level folders
     const topLevelFolders = useMemo(() => {
@@ -237,6 +252,8 @@ export function AppSidebar() {
                                     }
                                     onEdit={handleEditFolder}
                                     onDelete={setFolderToDelete}
+                                    onCreateSubFolder={handleCreateSubFolder}
+                                    onCreateTask={handleCreateTask}
                                 />
                             ))}
                         </SidebarMenu>
@@ -291,6 +308,7 @@ export function AppSidebar() {
                 open={isEditModalOpen}
                 onOpenChange={setIsEditModalOpen}
                 folder={editingFolder}
+                defaultParentId={newFolderParentId}
             />
 
             <ConfirmDialog
@@ -312,9 +330,11 @@ interface FolderTreeItemProps {
     onNavigate: (folderId: string) => void;
     onEdit: (folder: Folder) => void;
     onDelete: (folder: Folder) => void;
+    onCreateSubFolder: (parentFolder: Folder) => void;
+    onCreateTask: (folder: Folder) => void;
 }
 
-function FolderTreeItem({ folder, allFolders, onNavigate, onEdit, onDelete }: FolderTreeItemProps) {
+function FolderTreeItem({ folder, allFolders, onNavigate, onEdit, onDelete, onCreateSubFolder, onCreateTask }: FolderTreeItemProps) {
     const children = allFolders.filter(
         (f) => f.parentId === folder.id && !f.isSystem,
     );
@@ -328,6 +348,8 @@ function FolderTreeItem({ folder, allFolders, onNavigate, onEdit, onDelete }: Fo
                     folder={folder}
                     onEdit={onEdit}
                     onDelete={onDelete}
+                    onCreateSubFolder={onCreateSubFolder}
+                    onCreateTask={onCreateTask}
                     className="group/item"
                 >
                     <SidebarMenuButton onClick={() => onNavigate(folder.id)}>
@@ -346,6 +368,8 @@ function FolderTreeItem({ folder, allFolders, onNavigate, onEdit, onDelete }: Fo
                     folder={folder}
                     onEdit={onEdit}
                     onDelete={onDelete}
+                    onCreateSubFolder={onCreateSubFolder}
+                    onCreateTask={onCreateTask}
                     className="group/item"
                 >
                     <SidebarMenuButton onClick={() => onNavigate(folder.id)}>
@@ -376,6 +400,8 @@ function FolderTreeItem({ folder, allFolders, onNavigate, onEdit, onDelete }: Fo
                                     onNavigate={onNavigate}
                                     onEdit={onEdit}
                                     onDelete={onDelete}
+                                    onCreateSubFolder={onCreateSubFolder}
+                                    onCreateTask={onCreateTask}
                                 />
                             );
                         }
@@ -386,6 +412,8 @@ function FolderTreeItem({ folder, allFolders, onNavigate, onEdit, onDelete }: Fo
                                     folder={child}
                                     onEdit={onEdit}
                                     onDelete={onDelete}
+                                    onCreateSubFolder={onCreateSubFolder}
+                                    onCreateTask={onCreateTask}
                                     className="group/item "
                                 >
                                     <SidebarMenuSubButton onClick={() => onNavigate(child.id)}>

@@ -17,6 +17,13 @@ export async function getImageById(imageId: string, tx: DbOrTx = getDb()): Promi
     return safeResult;
 }
 
+export async function getImageByLocalPath(localPath: string, tx: DbOrTx = getDb()): Promise<ImageRecord | null> {
+    const result = await tx.select().from(images).where(eq(images.localPath, localPath)).get();
+    const safeResult = safeGet<ImageRecord>(result);
+    if (!safeResult || !safeResult.id) return null;
+    return safeResult;
+}
+
 export async function getImageByHash(hash: string, tx: DbOrTx = getDb()): Promise<ImageRecord | null> {
     const result = await tx.select().from(images).where(eq(images.hash, hash)).get();
     const safeResult = safeGet<ImageRecord>(result);

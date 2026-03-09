@@ -10,11 +10,13 @@ import {
     AlignLeft,
     Check,
     ChevronRight,
+    Languages,
     Maximize2,
     TextCursor,
     Type
 } from "lucide-react";
 
+import { CODE_LANGUAGES } from "@annota/editor-web/extensions";
 import { SettingItem } from "./setting-item";
 
 interface SliderItemProps {
@@ -163,6 +165,41 @@ export function EditorSettings() {
                         onClick={toggleDirection}
                         action={<ChevronRight size={16} className="text-muted-foreground" />}
                     />
+                </div>
+            </section>
+
+            {/* Code Section */}
+            <section className="space-y-3">
+                <h4 className="text-[11px] font-bold text-muted-foreground tracking-wider uppercase px-1">
+                    Code Blocks
+                </h4>
+                <div className="bg-card border rounded-2xl overflow-hidden shadow-sm divide-y">
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <button className="w-full cursor-pointer">
+                                <SettingItem
+                                    label="Default Language"
+                                    description="Language applied to new code blocks"
+                                    icon={<Languages size={18} />}
+                                    iconBg="bg-rose-500"
+                                    value={CODE_LANGUAGES.find(l => l.value === editor.defaultCodeLanguage)?.label || 'Auto'}
+                                    action={<ChevronRight size={16} className="text-muted-foreground" />}
+                                />
+                            </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56 max-h-80 overflow-y-auto">
+                            {CODE_LANGUAGES.map((lang) => (
+                                <DropdownMenuItem
+                                    key={lang.value || 'auto'}
+                                    onClick={() => updateEditorSettings({ defaultCodeLanguage: lang.value })}
+                                    className="flex items-center justify-between"
+                                >
+                                    <span>{lang.label}</span>
+                                    {editor.defaultCodeLanguage === lang.value && <Check size={14} className="text-primary" />}
+                                </DropdownMenuItem>
+                            ))}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
             </section>
 

@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { NoteMetadata } from "@annota/core";
+import { NoteMetadata, useSettingsStore } from "@annota/core";
 import { ChevronLeft, Maximize2, Minimize2, Search, SidebarClose } from "lucide-react";
 import { useState } from "react";
 import { NoteActionsMenu } from "./note-actions-menu";
@@ -25,6 +25,7 @@ export function NoteFloatingActions({
 }: NoteFloatingActionsProps) {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
+    const { editor: { direction } } = useSettingsStore()
 
     const isMac = typeof window !== 'undefined' && (/Mac|iPod|iPhone|iPad/.test(navigator.platform) || /Mac/.test(navigator.userAgent));
     const MOD = isMac ? '⌘' : 'Ctrl';
@@ -34,7 +35,7 @@ export function NoteFloatingActions({
     return (
         <div className={cn(
             "group",
-            "absolute top-4 right-6",
+            "absolute top-4 ",
             "flex items-center",
             "p-1",
             "rounded-2xl",
@@ -51,13 +52,14 @@ export function NoteFloatingActions({
             "dark:border-white/10",
             "dark:ring-white/5",
             "dark:shadow-[0_18px_40px_rgba(0,0,0,0.6)]",
-            isMenuOpen ? "w-[210px]" : "w-11 hover:w-[210px]"
+            isMenuOpen ? "w-[210px]" : "w-11 hover:w-[210px]",
+            direction === "rtl" ? "left-6" : "right-6"
         )}>
             <div className="flex items-center gap-1 w-full flex-nowrap">
                 <div className="flex items-center justify-center min-w-[34px] h-[34px] shrink-0">
                     <ChevronLeft className={cn(
                         "h-4 w-4 transition-transform duration-500 text-muted-foreground/70 group-hover:text-primary",
-                        isMenuOpen ? "rotate-180 text-primary" : "group-hover:rotate-180"
+                        isMenuOpen ? "rotate-180" : "group-hover:rotate-180",
                     )} />
                 </div>
 

@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Ionicons } from "@/components/ui/ionicons";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useCreateTask } from "@/hooks/use-create-task";
 
 import {
     SidebarContent,
@@ -40,7 +41,7 @@ interface NotesSidebarProps {
 export function NotesSidebar({ className }: NotesSidebarProps) {
     const navigate = useNavigate();
     const { folderId: routeFolderId, noteId: routeNoteId } = useParams();
-    const [searchParams, setSearchParams] = useSearchParams();
+    const [searchParams] = useSearchParams();
     const { colors } = useAppTheme();
 
     const {
@@ -56,6 +57,8 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
         setFolderSortType,
     } = useNotesStore();
 
+    const { createAndNavigate: createTask } = useCreateTask();
+
     // Location awareness: prioritize folderId from route path over search params
     const currentFolderId = useMemo(() => {
         if (routeFolderId && routeFolderId !== "root") return routeFolderId;
@@ -65,6 +68,7 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
     const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [folderToDelete, setFolderToDelete] = useState<Folder | null>(null);
+    const [newFolderParentId, setNewFolderParentId] = useState<string | null>(null);
 
     const currentFolder = currentFolderId
         ? getFolderById(currentFolderId)
@@ -93,7 +97,7 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
     }, [browseNotes]);
 
     const handleFolderPress = (folderId: string) => {
-        setSearchParams({ folderId });
+        navigate(`/notes?folderId=${folderId}`);
     };
 
     const handleNotePress = (note: NoteMetadata) => {
@@ -108,11 +112,19 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
 
     const handleEditFolder = useCallback((folder: Folder) => {
         setEditingFolder(folder);
+        setNewFolderParentId(null);
         setIsEditModalOpen(true);
     }, []);
 
     const handleCreateFolder = useCallback(() => {
         setEditingFolder(null); // Create mode
+        setNewFolderParentId(null); // Use current directory as default
+        setIsEditModalOpen(true);
+    }, []);
+
+    const handleCreateSubFolder = useCallback((parentFolder: Folder) => {
+        setEditingFolder(null); // Create mode
+        setNewFolderParentId(parentFolder.id); // Parent folder is the one clicked
         setIsEditModalOpen(true);
     }, []);
 
@@ -121,6 +133,10 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
         await deleteFolder(folderToDelete.id);
         setFolderToDelete(null);
     }, [deleteFolder, folderToDelete]);
+
+    const handleCreateTask = useCallback((folder: Folder) => {
+        createTask({ folderId: folder.id });
+    }, [createTask]);
 
     const headerTitle = currentFolder ? currentFolder.name : "Notes";
     const { open } = useSidebar();
@@ -196,6 +212,8 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
                                             folder={folder}
                                             onEdit={handleEditFolder}
                                             onDelete={setFolderToDelete}
+                                            onCreateSubFolder={handleCreateSubFolder}
+                                            onCreateTask={handleCreateTask}
                                             onClick={() => handleFolderPress(folder.id)}
                                             isActive={currentFolderId === folder.id}
                                         />
@@ -281,7 +299,7 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
                 open={isEditModalOpen}
                 onOpenChange={setIsEditModalOpen}
                 folder={editingFolder}
-                defaultParentId={currentFolderId}
+                defaultParentId={newFolderParentId || currentFolderId}
             />
 
             <ConfirmDialog

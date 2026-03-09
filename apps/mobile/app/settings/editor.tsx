@@ -2,6 +2,7 @@ import DummySlider from '@/components/settings/dummy-slider';
 import SettingItem from '@/components/settings/setting-item';
 import { useSettingsStore } from '@annota/core';
 import { getEditorFontLabel } from '@annota/core/constants/editor-fonts';
+import { CODE_LANGUAGES } from '@annota/editor-web';
 import { useTheme } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import React from 'react';
@@ -68,6 +69,19 @@ export default function EditorSettings() {
                 <Text style={[styles.helperText, { color: colors.text + '60' }]}>
                     Tap to cycle between Auto, LTR, and RTL.
                 </Text>
+            </View>
+
+            <View style={styles.section}>
+                <Text style={[styles.sectionHeader, { color: colors.text + '80' }]}>CODE BLOCKS</Text>
+                <View style={[styles.card, { backgroundColor: colors.card }]}>
+                    <SettingItem
+                        label="Default Language"
+                        type="link"
+                        value={CODE_LANGUAGES.find(l => l.value === editor.defaultCodeLanguage)?.label || 'Auto'}
+                        onPress={() => router.push('/settings/code-language')}
+                        icon="code-slash-outline"
+                    />
+                </View>
             </View>
 
             <View style={styles.section}>

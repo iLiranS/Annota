@@ -15,6 +15,8 @@ interface FolderListItemProps extends React.ButtonHTMLAttributes<HTMLButtonEleme
     folder: Folder;
     onEdit: (folder: Folder) => void;
     onDelete?: (folder: Folder) => void;
+    onCreateSubFolder?: (parentFolder: Folder) => void;
+    onCreateTask?: (folder: Folder) => void;
     asChild?: boolean;
     isActive?: boolean;
 }
@@ -62,6 +64,8 @@ export function FolderListItem({
     onClick,
     onEdit,
     onDelete,
+    onCreateSubFolder,
+    onCreateTask,
     className,
     asChild = false,
     isActive,
@@ -97,6 +101,20 @@ export function FolderListItem({
                     <Ionicons name="create-outline" size={16} />
                     <span>Edit Folder</span>
                 </ContextMenuItem>
+
+                {onCreateSubFolder && (
+                    <ContextMenuItem onClick={() => onCreateSubFolder(folder)} className="gap-2">
+                        <Ionicons name="add-circle-outline" size={16} />
+                        <span>New Sub Folder</span>
+                    </ContextMenuItem>
+                )}
+
+                {onCreateTask && (
+                    <ContextMenuItem onClick={() => onCreateTask(folder)} className="gap-2">
+                        <Ionicons name="checkmark-circle-outline" size={16} />
+                        <span>New Task</span>
+                    </ContextMenuItem>
+                )}
 
                 {onDelete && (
                     <>

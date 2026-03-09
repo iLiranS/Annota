@@ -49,7 +49,7 @@ function setImageClipboardPayload(event: ClipboardEvent, imageId: string | null,
 
     if (normalizedSrc) {
         const safeSrc = escapeHtmlAttr(normalizedSrc);
-        const safeId = normalizedId ? ` data-note-image-id="${escapeHtmlAttr(normalizedId)}"` : '';
+        const safeId = normalizedId ? ` data-image-id="${escapeHtmlAttr(normalizedId)}"` : '';
         event.clipboardData.setData('text/html', `<img src="${safeSrc}" alt="[Image]"${safeId} />`);
 
         // Best-effort: also attach a real image item for external paste targets
@@ -78,7 +78,7 @@ function getCopiedImageId(clipboardData: DataTransfer | null | undefined): strin
     // Fallback when custom MIME types are stripped but HTML remains.
     const html = clipboardData.getData('text/html');
     if (!html) return null;
-    const match = html.match(/data-note-image-id=["']([^"']+)["']/i);
+    const match = html.match(/data-image-id=["']([^"']+)["']/i);
     return match?.[1]?.trim() || null;
 }
 
@@ -88,7 +88,7 @@ export const CustomImage = Image.extend<any>({
             ...this.parent?.(),
             onImageSelected: null as ((data: { images: any[], currentIndex: number }) => void) | null,
             onOpenImageMenu: null as ((e: MouseEvent, resolve: () => any) => void) | null,
-            onImagePasted: null as ((data: { base64: string, imageId: string }) => void) | null,
+            onImagePasted: null as ((data: { base64: string, imageId: string, src?: string }) => void) | null,
             onResolveImageIds: null as ((data: { imageIds: string[] }) => void) | null,
         };
     },
@@ -325,7 +325,18 @@ export const CustomImage = Image.extend<any>({
                         // 1. Internal copy/paste path: reuse existing imageId (no re-upload).
                         const internalImageId = getCopiedImageId(event.clipboardData);
                         if (internalImageId) {
-                            const node = schema.nodes.image.create({ src: '', imageId: internalImageId });
+                            const html = event.clipboardData?.getData('text/html');
+                            const srcMatch = html?.match(/src=["']([^"']+)["']/i);
+                            const src = srcMatch?.[1] || '';
+
+                            if (options.onImagePasted) {
+                                // Important: We pass the found ID and Source to onImagePasted
+                                // so NativeEditor can do the "Magic Check" and insert it directly.
+                                options.onImagePasted({ base64: '', imageId: internalImageId, src });
+                                return true;
+                            }
+
+                            const node = schema.nodes.image.create({ src, imageId: internalImageId });
                             const transaction = view.state.tr.replaceSelectionWith(node);
                             view.dispatch(transaction);
                             if (options.onResolveImageIds) {

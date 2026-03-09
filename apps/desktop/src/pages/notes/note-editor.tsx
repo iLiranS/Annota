@@ -3,9 +3,9 @@ import { DesktopToolbar } from "@/components/editor/DesktopToolbar";
 import { ImageGallery } from "@/components/notes/image-gallery";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { copyImageToClipboard, writeText } from "@/lib/clipboard";
 import { generateTitle, TRASH_FOLDER_ID, useNotesStore } from "@annota/core";
 import TipTapEditor, { TipTapEditorRef } from "@annota/tiptap-editor";
-import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { FileText, Loader2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -54,6 +54,18 @@ export default function NoteEditor() {
         });
     }, []);
 
+    const handleCodeBlockSelected = useCallback((e: MouseEvent, resolve: () => any) => {
+        const result = resolve();
+        if (!result) return;
+
+        setActiveBlockMenu({
+            type: "codeBlock",
+            data: result.message,
+            anchorRect: (e.target as HTMLElement).getBoundingClientRect(),
+            onResolve: resolve,
+        });
+    }, []);
+
     const handleOpenImageMenu = useCallback((e: MouseEvent, resolve: () => any) => {
         const result = resolve();
         if (!result) return;
@@ -78,8 +90,7 @@ export default function NoteEditor() {
             case "copy":
                 if (type === "image") {
                     const src = data.src || "";
-                    await writeText(src);
-                    toast.success("Image URI copied to clipboard");
+                    copyImageToClipboard(src, data.imageId);
                 } else if (type === "codeBlock") {
                     editorRef.current.onCommand("copyToClipboard", { pos: data.pos });
                     toast.success("Code copied to clipboard");
@@ -249,7 +260,6 @@ export default function NoteEditor() {
     }, [noteId, getNoteContent]);
     const handleContentChange = useCallback((html: string) => {
         if (!noteId) return;
-        console.log("[NoteEditor] Content changed", html);
 
         const title = generateTitle(html);
         updateNoteContent(noteId, html);
@@ -305,6 +315,7 @@ export default function NoteEditor() {
                         renderImageGallery={(props) => <ImageGallery {...props} />}
                         onOpenBlockMenu={handleOpenBlockMenu}
                         onOpenImageMenu={handleOpenImageMenu}
+                        onCodeBlockSelected={handleCodeBlockSelected}
                         isDark={isDark}
                         colors={{
                             primary: colors.primary,

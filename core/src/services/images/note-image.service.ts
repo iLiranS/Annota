@@ -29,19 +29,34 @@ export async function processAndInsertImage(
     _noteId: string,
     sourceUri: string,
 ): Promise<ProcessedImage> {
-    // 1. Resize and compress
-    const resized = await resizeAndCompress(sourceUri);
 
-    // 2. Compute hash of resized image
-    const hash = await computeHash(resized.uri);
+    // 0. FAST PATH: Check if this is an internal app URI we've already processed
+    if (!sourceUri.startsWith('data:')) {
+        // Extract the filename from the URI (e.g., "asset://.../1234abcd.webp" -> "1234abcd.webp")
+        const filename = sourceUri.split(/[\/\\]/).pop();
 
-    // 3. Check for duplicate
+        if (filename) {
+            // Check if this filename already exists in the database
+            const existingByPath = await ImagesRepo.getImageByLocalPath(filename);
+            if (existingByPath) {
+                console.log('Image already exists (matched by localPath):', existingByPath.id);
+                return { imageId: existingByPath.id, isNew: false };
+            }
+        }
+    }
+
+    // 1. Compute hash of the ORIGINAL source image first
+    const hash = await computeHash(sourceUri);
+
+    // 2. Check for duplicate early!
     const existing = await ImagesRepo.getImageByHash(hash);
     if (existing) {
         console.log('Image already exists:', existing.id);
-        // Reuse existing image, return ID (Linkage happens in updateNoteContent)
         return { imageId: existing.id, isNew: false };
     }
+
+    // 3. ONLY Resize and compress if it's a brand new image
+    const resized = await resizeAndCompress(sourceUri);
 
     // 4. Generate new ID and save file
     const imageId = Buffer.from(getPlatformAdapters().crypto.randomBytes(16)).toString('hex');
@@ -51,11 +66,11 @@ export async function processAndInsertImage(
     // 5. Get file size
     const size = await getFileSize(fullPath);
 
-    // 6. Insert into DB
+    // 6. Insert into DB (using the original source hash)
     await ImagesRepo.insertImage({
         id: imageId,
-        hash,
-        localPath: filename, // Store only the filename
+        hash, // This hash is now truly universal across platforms
+        localPath: filename,
         mimeType: 'image/webp',
         size: size ?? null,
         width: resized.width,
@@ -64,7 +79,6 @@ export async function processAndInsertImage(
         createdAt: new Date(),
     });
 
-    // 7. Return info (Linkage happens in updateNoteContent)
     return { imageId, isNew: true };
 }
 

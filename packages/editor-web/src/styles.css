@@ -354,7 +354,7 @@
 
 .ProseMirror pre {
     background-color: var(--code-block-bg);
-    padding: 16px;
+    padding: 24px 12px 12px 12px;
     border-radius: 12px;
     overflow-x: auto;
     margin: 12px 0;
@@ -362,6 +362,8 @@
     font-size: calc(var(--editor-font-size) * 0.8125);
     line-height: 1.6;
     position: relative;
+    direction: ltr !important;
+    unicode-bidi: isolate !important;
 }
 
 .ProseMirror pre code {
@@ -375,12 +377,12 @@
 .code-block-wrapper {
     position: relative;
     margin: 12px 0;
+    direction: ltr !important;
+    unicode-bidi: isolate !important;
 }
 
 .code-block-wrapper pre {
     margin: 0;
-    border-top-left-radius: 0;
-    border-top-right-radius: 0;
 }
 
 /* Header bar for code block */
@@ -388,51 +390,49 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 8px 12px;
-    background-color: var(--code-block-bg);
-    border-top-left-radius: 12px;
-    border-top-right-radius: 12px;
-    border-bottom: 1px solid var(--border-color);
-    position: relative;
+    padding: 4px 8px;
+    background-color: transparent;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
     z-index: 10;
+    pointer-events: none;
 }
 
 /* Language selector button (LEFT) */
 .code-lang-select {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 5px 10px;
-    border-radius: 6px;
-    background: var(--code-bg);
+    gap: 4px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(128, 128, 128, 0.08);
     border: none;
     font-family: 'JetBrains Mono', 'SF Mono', Monaco, Consolas, monospace;
-    font-size: 11px;
-    font-weight: 600;
+    font-size: 8px;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     color: var(--text-color);
     cursor: pointer;
-    transition: background-color 0.15s ease, color 0.15s ease;
+    transition: all 0.15s ease;
     user-select: none;
-    -webkit-user-select: none;
-    touch-action: manipulation;
-    -webkit-touch-callout: none;
+    opacity: 0.5;
+    pointer-events: auto;
 }
 
-.code-lang-select:hover,
-.code-lang-select:active {
-    background: var(--accent-color);
-    color: white;
+.code-lang-select:hover {
+    opacity: 0.8;
 }
 
 .code-lang-select::after {
     content: '';
     width: 0;
     height: 0;
-    border-left: 4px solid transparent;
-    border-right: 4px solid transparent;
-    border-top: 4px solid currentColor;
+    border-left: 3px solid transparent;
+    border-right: 3px solid transparent;
+    border-top: 3px solid currentColor;
 }
 
 
@@ -442,26 +442,26 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
-    border-radius: 6px;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
     background: transparent;
     border: none;
     color: var(--text-color);
     cursor: pointer;
-    transition: background-color 0.15s ease, color 0.15s ease;
+    transition: opacity 0.15s ease;
     user-select: none;
-    opacity: 0.6;
+    opacity: 0.25;
+    pointer-events: auto;
 }
 
-.code-menu-btn:hover,
-.code-menu-btn:active {
-    background: var(--code-bg);
-    color: var(--text-color);
-    opacity: 1;
+.code-menu-btn:hover {
+    opacity: 0.7;
 }
 
 .code-menu-btn svg {
+    width: 16px;
+    height: 16px;
     flex-shrink: 0;
 }
 
@@ -495,14 +495,17 @@
 }
 
 /* Math / Katex Styles */
-.math-node {
+.math-node,
+[data-type="math"],
+.katex,
+.katex-display {
     display: inline-block;
     padding: 0 4px;
     border-radius: 4px;
     cursor: pointer;
-    unicode-bidi: isolate;
-    direction: ltr;
-    /* Force LTR for math */
+    unicode-bidi: isolate !important;
+    direction: ltr !important;
+    text-align: left !important;
 }
 
 .math-node.ProseMirror-selectednode {

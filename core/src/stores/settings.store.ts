@@ -16,6 +16,7 @@ export interface EditorSettings {
     fontFamily: EditorFontId | string;
     floatingNoteHeader: boolean;
     noteWidth: number; // pixels, 0 for full width
+    defaultCodeLanguage: string | null;
 }
 
 export interface GeneralSettings {
@@ -56,6 +57,7 @@ const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
     fontFamily: 'system',
     floatingNoteHeader: true,
     noteWidth: 800,
+    defaultCodeLanguage: null,
 };
 
 const DEFAULT_GENERAL_SETTINGS: GeneralSettings = {
