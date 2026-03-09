@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { GreetingHeader } from "./components/greeting-header";
 import { HomeCalendar } from "./components/home-calendar";
+import { PersonalMomentum } from "./components/personal-momentum";
 import { QuickStatsWidget } from "./components/quick-stats-widget";
 import { RecentNotesGrid } from "./components/recent-notes-grid";
 import { TasksOnboarding } from "./components/tasks-onboarding";
@@ -24,33 +25,32 @@ export default function HomePage() {
                 </div>
             </div>
 
-            {/* Main Content Area - Scrollable when needed */}
-            {/* 3. Page scrolling happens HERE now, giving the flexbox a boundary */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-8 pt-4">
+            {/* Main Content Area - Total dash height is constrained to viewport */}
+            <div className="flex-1 flex flex-col overflow-hidden p-8 pt-2">
+                <div className="mx-auto flex-1 w-full flex flex-col lg:grid lg:grid-cols-[3fr_2fr] gap-10 min-h-0 overflow-hidden">
 
-                {/* 4. On desktop, we use a grid to enforce a strict height constraint so the inner scrollbars activate. On mobile, it flows naturally. */}
-                <div className="mx-auto flex flex-col lg:grid lg:grid-rows-[auto_1fr] gap-6 lg:h-full lg:min-h-[600px]">
-
-                    {/* Row 1: Insights & Calendar */}
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 shrink-0">
-                        <div className="lg:col-span-7">
+                    {/* Column 1: Insights & Notes - Scrollable independently if content exceeds viewport */}
+                    <div className="flex flex-col gap-4 overflow-y-auto custom-scrollbar pr-2 min-h-0">
+                        <div className="shrink-0">
                             <WeeklyInsights />
                         </div>
-                        <div className="lg:col-span-5">
+                        <div className="shrink-0">
+                            <RecentNotesGrid />
+                        </div>
+                        <div className="shrink-0 pb-6">
+                            <PersonalMomentum />
+                        </div>
+                    </div>
+
+                    {/* Column 2: Calendar & Tasks - Tasks scroll internally to match Column 1's bottom area */}
+                    <div className="flex flex-col gap-4 min-h-0 overflow-hidden">
+                        <div className="shrink-0">
                             <HomeCalendar
                                 selectedDate={selectedDate}
                                 onDateSelect={setSelectedDate}
                             />
                         </div>
-                    </div>
-
-                    {/* Row 2: Recent Notes & Tasks */}
-                    {/* 5. The parent grid hands this row exactly the remaining space. `lg:min-h-0` stops it from overflowing that space. */}
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:min-h-0">
-                        <div className="lg:col-span-7 flex flex-col lg:min-h-0">
-                            <RecentNotesGrid />
-                        </div>
-                        <div className="lg:col-span-5 flex flex-col lg:min-h-0">
+                        <div className="flex-1 min-h-0">
                             <TasksOnboarding selectedDate={selectedDate} />
                         </div>
                     </div>

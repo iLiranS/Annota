@@ -7,8 +7,8 @@ import {
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useCreateTask } from "@/hooks/use-create-task";
 import { useSettingsStore, useTasksStore } from "@annota/core";
-import { ChevronLeft, ChevronRight, Newspaper, Plus } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Newspaper, Plus } from "lucide-react";
+import { useMemo } from "react";
 
 
 
@@ -17,22 +17,16 @@ export type StartOfWeek = 'sunday' | 'monday';
 const MONDAY_DAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
 const SUNDAY_DAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
-function getDays(month: number, year: number, startOfWeek: StartOfWeek = 'monday') {
-    const first = new Date(year, month, 1);
-    const last = new Date(year, month + 1, 0);
-
-    // Calculate offset based on whether the week starts on Sunday or Monday
-    const startOffset = startOfWeek === 'sunday'
-        ? first.getDay()
-        : (first.getDay() + 6) % 7;
-
-    const total = last.getDate();
+function getWeeklyDays(selectedDate: Date, startOfWeek: StartOfWeek = 'monday') {
+    const date = new Date(selectedDate);
+    const day = date.getDay();
+    const diff = date.getDate() - day + (startOfWeek === 'monday' ? (day === 0 ? -6 : 1) : 0);
+    const start = new Date(date.setDate(diff));
 
     const arr = [];
-
-    for (let i = 0; i < startOffset; i++) arr.push(null);
-    for (let d = 1; d <= total; d++) arr.push(new Date(year, month, d));
-
+    for (let i = 0; i < 7; i++) {
+        arr.push(new Date(start.getFullYear(), start.getMonth(), start.getDate() + i));
+    }
     return arr;
 }
 
@@ -43,21 +37,13 @@ export function HomeCalendar({
     selectedDate: Date;
     onDateSelect: (date: Date) => void;
 }) {
-    const [current, setCurrent] = useState(
-        new Date(selectedDate.getFullYear(), selectedDate.getMonth())
-    );
-
     const { tasks } = useTasksStore();
     const { startOfWeek } = useSettingsStore((s) => s.general);
     const { colors } = useAppTheme();
     const { createAndNavigate } = useCreateTask();
 
-
-    const month = current.getMonth();
-    const year = current.getFullYear();
-
-    // Pass startOfWeek to getDays to calculate padding correctly
-    const dates = getDays(month, year, startOfWeek);
+    // Get only the days for the current week
+    const dates = getWeeklyDays(selectedDate, startOfWeek);
 
     // Select the correct header array
     const displayDays = startOfWeek === 'sunday' ? SUNDAY_DAYS : MONDAY_DAYS;
@@ -74,41 +60,17 @@ export function HomeCalendar({
         return set;
     }, [tasks]);
 
-    const changeMonth = (dir: number) =>
-        setCurrent(new Date(year, month + dir, 1));
-
     return (
-        <div className="flex flex-col gap-4 h-full">
+        <div className="flex flex-col gap-4">
             <div className="flex items-center gap-2 shrink-0">
                 <Newspaper size={18} color={colors.primary} />
                 <h2 className="text-sm font-semibold text-foreground/80 uppercase tracking-widest">
-                    Monthly Schedule
+                    Weekly Schedule
                 </h2>
             </div>
-            <div className="rounded-2xl border border-border/40 bg-card/30 p-4 backdrop-blur-md">
-                {/* header */}
-                <div className="flex items-center justify-between mb-3">
-                    <button
-                        onClick={() => changeMonth(-1)}
-                        className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-accent"
-                    >
-                        <ChevronLeft size={16} />
-                    </button>
-
-                    <div className="text-sm font-medium">
-                        {current.toLocaleString("en-US", { month: "long" })} {year}
-                    </div>
-
-                    <button
-                        onClick={() => changeMonth(1)}
-                        className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-accent"
-                    >
-                        <ChevronRight size={16} />
-                    </button>
-                </div>
-
+            <div className="rounded-2xl border border-border/40 bg-card/30 p-2 text-center backdrop-blur-md">
                 {/* weekdays */}
-                <div className="grid grid-cols-7 text-xs text-muted-foreground mb-1">
+                <div className="grid grid-cols-7 text-[10px] font-medium text-muted-foreground mb-1 uppercase tracking-tighter">
                     {displayDays.map((d) => (
                         <div key={d} className="text-center">{d}</div>
                     ))}
@@ -117,8 +79,6 @@ export function HomeCalendar({
                 {/* days */}
                 <div className="grid grid-cols-7 gap-1">
                     {dates.map((date, i) => {
-                        if (!date) return <div key={i} />;
-
                         const isSelected = date.toDateString() === selectedDate.toDateString();
                         const isToday = date.toDateString() === todayString;
 
@@ -127,16 +87,16 @@ export function HomeCalendar({
                                 <ContextMenuTrigger asChild>
                                     <button
                                         onClick={() => onDateSelect(date)}
-                                        className={`h-9 w-full rounded-lg text-xs transition relative flex flex-col items-center justify-center
+                                        className={`h-8 w-full rounded-lg text-xs transition relative flex flex-col items-center justify-center
                                             ${isSelected
                                                 ? "bg-accent text-accent-foreground"
                                                 : "hover:bg-accent/50"}
                                             ${!isSelected && isToday ? "border border-accent" : ""}
                                         `}
                                     >
-                                        <span>{date.getDate()}</span>
+                                        <span className="font-medium">{date.getDate()}</span>
                                         {!isSelected && taskDatesSet.has(date.toDateString()) && (
-                                            <div className="absolute bottom-0.5 w-1 h-1 rounded-full bg-accent-foreground/40" />
+                                            <div className="absolute bottom-1 w-1 h-1 rounded-full bg-accent-foreground/40" />
                                         )}
                                     </button>
                                 </ContextMenuTrigger>
@@ -148,7 +108,6 @@ export function HomeCalendar({
                                 </ContextMenuContent>
                             </ContextMenu>
                         );
-
                     })}
                 </div>
             </div>

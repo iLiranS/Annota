@@ -227,7 +227,7 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                         dispatch(state.tr.setSelection(TextSelection.create(state.doc, pos)));
                     }
 
-                    const tableNode = state.doc.nodeAt(tableNodePos);
+                    // const tableNode = state.doc.nodeAt(tableNodePos);
                     const cellNode = state.doc.nodeAt(cellNodePos);
 
                     onOpenTableMenu(event, () => ({

@@ -12,9 +12,9 @@ export function RecentNotesGrid() {
 
     const recentNotes = useMemo(() => {
         return [...notes]
-            .slice(0, 6)
             .filter((n) => !n.isDeleted)
-            .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+            .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+            .slice(0, 4);
     }, [notes]);
 
     const handleNotePress = (id: string, folderId: string | null) => {
@@ -23,7 +23,7 @@ export function RecentNotesGrid() {
 
     return (
         // Added lg: prefix to overflow-hidden
-        <div className="flex flex-col gap-4 h-full lg:overflow-hidden">
+        <div className="flex flex-col gap-4">
             <div className="flex items-center gap-2 shrink-0">
                 <FileText size={18} style={{ color: colors.primary }} />
                 <h2 className="text-sm font-semibold text-foreground/80 uppercase tracking-widest">
@@ -31,8 +31,7 @@ export function RecentNotesGrid() {
                 </h2>
             </div>
 
-            {/* Added lg: prefixes to flex-1 and overflow-y-auto */}
-            <div className="lg:flex-1 lg:overflow-y-auto custom-scrollbar pr-2 min-h-0">
+            <div className="min-h-0">
                 {recentNotes.length > 0 ? (
                     <div
                         className="grid grid-cols-2 gap-3"

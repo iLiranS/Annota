@@ -106,70 +106,105 @@ export default function WeeklyInsights() {
                 </h2>
             </div>
 
-            {/* Changed to a 2x2 Grid */}
-            <div className="flex-1 grid grid-cols-2 grid-rows-2 gap-4">
+            {/* Changed to a 2x2 grid to fit in the new column layout */}
+            <div className="flex-1 grid grid-cols-2 gap-3">
 
                 {/* 1. Tasks Insight Card */}
-                <div className="bg-card rounded-2xl p-5 border border-border/40 flex flex-col justify-between shadow-sm">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-green-500/15 rounded-lg text-green-500">
-                            <CheckCircle2 size={20} />
+                <div className="group bg-card hover:bg-card/80 transition-all duration-300 rounded-2xl p-4 border border-border/40 grid grid-cols-[1fr_auto] grid-rows-[auto_auto] gap-x-4 gap-y-1 shadow-sm items-center relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-green-500/5 blur-3xl rounded-full -mr-12 -mt-12 group-hover:bg-green-500/10 transition-colors" />
+
+                    <div className="flex items-center gap-2 row-start-1 col-start-1">
+                        <div className="p-1.5 bg-green-500/15 rounded-lg text-green-500 shrink-0 shadow-inner">
+                            <CheckCircle2 size={16} />
                         </div>
-                        <p className="text-sm font-medium text-muted-foreground">Tasks Done</p>
+                        <p className="text-[11px] font-bold text-foreground/70 uppercase tracking-widest">Tasks Done</p>
                     </div>
 
-                    <div className="mt-4">
-                        <span className="text-3xl font-bold">{stats.tasks.completed}</span>
+                    <div className="row-start-2 col-start-1">
+                        <p className="text-[10px] text-muted-foreground/60 font-medium italic">Keeping the momentum up.</p>
+                    </div>
+
+                    <div className="row-start-1 col-start-2 text-right">
+                        <span className="text-2xl font-black tracking-tighter text-foreground/90">{stats.tasks.completed}</span>
+                    </div>
+
+                    <div className="row-start-2 col-start-2 text-right">
                         <TrendIndicator value={stats.tasks.trend} label="vs last week" />
                     </div>
                 </div>
 
                 {/* 2. Notes Insight Card */}
-                <div className="bg-card rounded-2xl p-5 border border-border/40 flex flex-col justify-between shadow-sm">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-blue-500/15 rounded-lg text-blue-500">
-                            <FileText size={20} />
+                <div className="group bg-card hover:bg-card/80 transition-all duration-300 rounded-2xl p-4 border border-border/40 grid grid-cols-[1fr_auto] grid-rows-[auto_auto] gap-x-4 gap-y-1 shadow-sm items-center relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 blur-3xl rounded-full -mr-12 -mt-12 group-hover:bg-blue-500/10 transition-colors" />
+
+                    <div className="flex items-center gap-2 row-start-1 col-start-1">
+                        <div className="p-1.5 bg-blue-500/15 rounded-lg text-blue-500 shrink-0 shadow-inner">
+                            <FileText size={16} />
                         </div>
-                        <p className="text-sm font-medium text-muted-foreground">Notes Created</p>
+                        <p className="text-[11px] font-bold text-foreground/70 uppercase tracking-widest">New Notes</p>
                     </div>
 
-                    <div className="mt-4">
-                        <span className="text-3xl font-bold">{stats.notes.current}</span>
+                    <div className="row-start-2 col-start-1">
+                        <p className="text-[10px] text-muted-foreground/60 font-medium italic">New thoughts, new ideas.</p>
+                    </div>
+
+                    <div className="row-start-1 col-start-2 text-right">
+                        <span className="text-2xl font-black tracking-tighter text-foreground/90">{stats.notes.current}</span>
+                    </div>
+
+                    <div className="row-start-2 col-start-2 text-right">
                         <TrendIndicator value={stats.notes.trend} label="vs last week" />
                     </div>
                 </div>
 
                 {/* 3. Topics Explored Insight Card */}
-                <div className="bg-card rounded-2xl p-5 border border-border/40 flex flex-col justify-between shadow-sm">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-purple-500/10 rounded-lg text-purple-500">
-                            <Compass size={20} />
+                <div className="group bg-card hover:bg-card/80 transition-all duration-300 rounded-2xl p-4 border border-border/40 grid grid-cols-[1fr_auto] grid-rows-[auto_auto] gap-x-4 gap-y-1 shadow-sm items-center relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 blur-3xl rounded-full -mr-12 -mt-12 group-hover:bg-purple-500/10 transition-colors" />
+
+                    <div className="flex items-center gap-2 row-start-1 col-start-1">
+                        <div className="p-1.5 bg-purple-500/10 rounded-lg text-purple-500 shrink-0 shadow-inner">
+                            <Compass size={16} />
                         </div>
-                        <p className="text-sm font-medium text-muted-foreground">Topics Explored</p>
+                        <p className="text-[11px] font-bold text-foreground/70 uppercase tracking-widest">Topics</p>
                     </div>
 
-                    <div className="mt-4">
-                        <span className="text-3xl font-bold">{stats.topics.current}</span>
+                    <div className="row-start-2 col-start-1">
+                        <p className="text-[10px] text-muted-foreground/60 font-medium italic">Exploring new folders.</p>
+                    </div>
+
+                    <div className="row-start-1 col-start-2 text-right">
+                        <span className="text-2xl font-black tracking-tighter text-foreground/90">{stats.topics.current}</span>
+                    </div>
+
+                    <div className="row-start-2 col-start-2 text-right">
                         <TrendIndicator value={stats.topics.trend} label="vs last week" />
                     </div>
                 </div>
 
                 {/* 4. Task On-Time Rate Card */}
-                <div className="bg-card rounded-2xl p-5 border border-border/40 flex flex-col justify-between shadow-sm">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-amber-500/10 rounded-lg text-amber-500">
-                            <Target size={20} />
+                <div className="group bg-card hover:bg-card/80 transition-all duration-300 rounded-2xl p-4 border border-border/40 grid grid-cols-[1fr_auto] grid-rows-[auto_auto] gap-x-4 gap-y-1 shadow-sm items-center relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 blur-3xl rounded-full -mr-12 -mt-12 group-hover:bg-amber-500/10 transition-colors" />
+
+                    <div className="flex items-center gap-2 row-start-1 col-start-1">
+                        <div className="p-1.5 bg-amber-500/10 rounded-lg text-amber-500 shrink-0 shadow-inner">
+                            <Target size={16} />
                         </div>
-                        <p className="text-sm font-medium text-muted-foreground">On-Time Rate</p>
+                        <p className="text-[11px] font-bold text-foreground/70 uppercase tracking-widest">On Time</p>
                     </div>
 
-                    <div className="mt-4">
-                        <div className="flex items-baseline gap-1">
-                            <span className="text-3xl font-bold">{stats.punctuality.current}</span>
-                            <span className="text-xl font-bold text-muted-foreground">%</span>
+                    <div className="row-start-2 col-start-1">
+                        <p className="text-[10px] text-muted-foreground/60 font-medium italic">Mastering the schedule.</p>
+                    </div>
+
+                    <div className="row-start-1 col-start-2 text-right">
+                        <div className="flex items-baseline justify-end gap-0.5 ">
+                            <span className="text-2xl font-black tracking-tighter text-foreground/90">{stats.punctuality.current}</span>
+                            <span className="text-xs font-black text-muted-foreground/70">%</span>
                         </div>
-                        {/* Custom label so the trend shows "% vs last week" */}
-                        <TrendIndicator value={stats.punctuality.trend} label="% vs last week" />
+                    </div>
+
+                    <div className="row-start-2 col-start-2 text-right">
+                        <TrendIndicator value={stats.punctuality.trend} label="% vs week" />
                     </div>
                 </div>
 
@@ -180,16 +215,16 @@ export default function WeeklyInsights() {
 
 // Small helper component for the trend arrows
 function TrendIndicator({ value, label }: { value: number; label: string }) {
-    if (value === 0) return <p className="text-xs text-muted-foreground mt-2">Same as last week</p>;
+    if (value === 0) return null; // Removed "Same as last week" to save even more space
 
     const isPositive = value > 0;
     const colorClass = isPositive ? "text-emerald-500" : "text-rose-500";
     const Icon = isPositive ? TrendingUp : TrendingDown;
 
     return (
-        <div className={`flex items-center gap-1 mt-2 text-xs font-medium ${colorClass}`}>
-            <Icon size={14} />
-            <span>{Math.abs(value)} {label}</span>
+        <div className={`flex items-center justify-end gap-0.5 text-[9px] font-medium ${colorClass}`}>
+            <Icon size={10} />
+            <span className="whitespace-nowrap">{Math.abs(value)} {label}</span>
         </div>
     );
 }
