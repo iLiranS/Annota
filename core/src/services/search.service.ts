@@ -2,13 +2,15 @@ import { SearchRepository } from '../db/repositories/search.repository';
 import { safeGetAll } from '../db/utils';
 
 export type UnifiedSearchResult = {
-    type: 'note' | 'task' | 'folder';
+    type: 'note' | 'task' | 'folder' | 'action';
     id: string;
     title: string;
     subtitle?: string; // Maps to note.preview or task.description
     score: number;
     updatedAt: Date;
     data: any; // Original metadata object
+    actionType?: 'create_note' | 'create_task';
+    folderId?: string;
 };
 
 export const SearchService = {
@@ -58,11 +60,57 @@ export const SearchService = {
         }));
 
         // Combine and sort globally by score (primary) and updatedAt (secondary)
-        return [...normalizedNotes, ...normalizedTasks, ...normalizedFolders].sort((a, b) => {
+        let combined = [...normalizedNotes, ...normalizedTasks, ...normalizedFolders].sort((a, b) => {
             if (b.score !== a.score) {
                 return b.score - a.score;
             }
             return b.updatedAt.getTime() - a.updatedAt.getTime();
         });
+
+        const highRankFolderIds = new Set(
+            combined
+                .filter(item => item.type === 'folder' && item.score >= 3)
+                .map(f => f.id)
+        );
+
+        // Suppress lower-score items that belong to highly-ranked folders
+        combined = combined.filter(item => {
+            if ((item.type === 'note' || item.type === 'task') && item.data.folderId) {
+                if (highRankFolderIds.has(item.data.folderId) && item.score < 4) {
+                    return false;
+                }
+            }
+            return true;
+        });
+
+        // Inject actions dynamically into the combined array after each folder
+        const finalResults: UnifiedSearchResult[] = [];
+        for (const item of combined) {
+            finalResults.push(item);
+            if (item.type === 'folder') {
+                finalResults.push({
+                    type: 'action',
+                    id: `action-note-${item.id}`,
+                    title: `Create Note in ${item.title}`,
+                    score: item.score,
+                    updatedAt: item.updatedAt,
+                    data: null,
+                    actionType: 'create_note',
+                    folderId: item.id
+                });
+                finalResults.push({
+                    type: 'action',
+                    id: `action-task-${item.id}`,
+                    title: `Create Task in ${item.title}`,
+                    score: item.score,
+                    updatedAt: item.updatedAt,
+                    data: null,
+                    actionType: 'create_task',
+                    folderId: item.id
+                });
+            }
+        }
+
+        return finalResults;
     }
 };

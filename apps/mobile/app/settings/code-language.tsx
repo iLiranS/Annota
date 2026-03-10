@@ -1,5 +1,5 @@
 import { useSettingsStore } from '@annota/core';
-import { CODE_LANGUAGES } from '@annota/editor-web/extensions';
+import { CODE_LANGUAGES } from '@annota/core/constants/editor-code-languages';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
 import React from 'react';

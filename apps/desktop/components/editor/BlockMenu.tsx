@@ -10,9 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { COLOR_PALETTE } from "@annota/core/constants/colors";
-import {
-    CODE_LANGUAGES
-} from "@annota/editor-web/extensions";
+import { CODE_LANGUAGES } from "@annota/core/constants/editor-code-languages";
 import {
     Check,
     Columns,
@@ -112,25 +110,20 @@ export function BlockMenu({
                                 <span>Background Color</span>
                             </DropdownMenuSubTrigger>
                             <DropdownMenuSubContent className="p-2 grid grid-cols-5 gap-1 min-w-[200px]">
-                                <button
-                                    className="h-6 w-6 rounded-full border border-border flex items-center justify-center hover:scale-110 transition-transform"
-                                    style={{ backgroundColor: 'transparent' }}
-                                    onClick={() => handleAction("background", { color: null })}
-                                    title="None"
-                                >
-                                    {!data.backgroundColor && <Check className="h-3 w-3 text-foreground" />}
-                                </button>
-                                {COLOR_PALETTE.map((color) => (
-                                    <button
-                                        key={color.value}
-                                        className="h-6 w-6 rounded-full border border-black/10 flex items-center justify-center hover:scale-110 transition-transform"
-                                        style={{ backgroundColor: color.value }}
-                                        onClick={() => handleAction("background", { color: color.value })}
-                                        title={color.name}
-                                    >
-                                        {data.backgroundColor?.toLowerCase().startsWith(color.value.toLowerCase()) && <Check className="h-3 w-3 text-white shadow-sm" />}
-                                    </button>
-                                ))}
+                                {COLOR_PALETTE.map((color) => {
+                                    const isActive = data.backgroundColor?.toLowerCase().startsWith(color.value.toLowerCase());
+                                    return (
+                                        <button
+                                            key={color.value}
+                                            className="h-6 w-6 rounded-full border border-black/10 flex items-center justify-center hover:scale-110 transition-transform"
+                                            style={{ backgroundColor: color.value }}
+                                            onClick={() => handleAction("background", { color: isActive ? null : color.value })}
+                                            title={color.name}
+                                        >
+                                            {isActive && <Check className="h-3 w-3 text-white shadow-sm" />}
+                                        </button>
+                                    );
+                                })}
                             </DropdownMenuSubContent>
                         </DropdownMenuSub>
                         <DropdownMenuItem onClick={() => handleAction("copyLink")}>
@@ -195,25 +188,20 @@ export function BlockMenu({
                                 <span>Cell Background</span>
                             </DropdownMenuSubTrigger>
                             <DropdownMenuSubContent className="p-2 grid grid-cols-5 gap-1 min-w-[200px]">
-                                <button
-                                    className="h-6 w-6 rounded-full border border-border flex items-center justify-center hover:scale-110 transition-transform"
-                                    style={{ backgroundColor: 'transparent' }}
-                                    onClick={() => handleAction("background", { color: null })}
-                                    title="None"
-                                >
-                                    {!data.backgroundColor && <Check className="h-3 w-3 text-foreground" />}
-                                </button>
-                                {COLOR_PALETTE.map((color) => (
-                                    <button
-                                        key={color.value}
-                                        className="h-6 w-6 rounded-full border border-black/10 flex items-center justify-center hover:scale-110 transition-transform"
-                                        style={{ backgroundColor: color.value }}
-                                        onClick={() => handleAction("background", { color: color.value })}
-                                        title={color.name}
-                                    >
-                                        {data.backgroundColor?.toLowerCase().startsWith(color.value.toLowerCase()) && <Check className="h-3 w-3 text-white shadow-sm" />}
-                                    </button>
-                                ))}
+                                {COLOR_PALETTE.map((color) => {
+                                    const isActive = data.backgroundColor?.toLowerCase().startsWith(color.value.toLowerCase());
+                                    return (
+                                        <button
+                                            key={color.value}
+                                            className="h-6 w-6 rounded-full border border-black/10 flex items-center justify-center hover:scale-110 transition-transform"
+                                            style={{ backgroundColor: color.value }}
+                                            onClick={() => handleAction("background", { color: isActive ? null : color.value })}
+                                            title={color.name}
+                                        >
+                                            {isActive && <Check className="h-3 w-3 text-white shadow-sm" />}
+                                        </button>
+                                    );
+                                })}
                             </DropdownMenuSubContent>
                         </DropdownMenuSub>
                         <DropdownMenuSeparator />

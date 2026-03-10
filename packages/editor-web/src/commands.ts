@@ -2,6 +2,7 @@ import { sendMessage, showError } from './bridge';
 import { getEditorState } from './config';
 import {
     applyFontFamily,
+    currentDefaultCodeLanguage,
     scrollCursorIntoView,
     setupEditor
 } from './editor-core';
@@ -143,7 +144,7 @@ export function setupCommands() {
             case 'sinkListItem': c.sinkListItem('listItem').run(); break;
             case 'liftListItem': c.liftListItem('listItem').run(); break;
             case 'toggleBlockquote': c.toggleBlockquote().run(); break;
-            case 'toggleCodeBlock': c.toggleCodeBlock().run(); break;
+            case 'toggleCodeBlock': c.toggleCodeBlock({ language: currentDefaultCodeLanguage ?? 'javascript' }).run(); break;
             case 'toggleHeading': c.toggleHeading({ level: params?.level || 1 }).run(); break;
             case 'setParagraph': c.setParagraph().run(); break;
             case 'setContent':

@@ -245,6 +245,7 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
                                 fontSize: editorSettings.fontSize,
                                 lineSpacing: editorSettings.lineSpacing,
                                 editable,
+                                defaultCodeLanguage: editorSettings.defaultCodeLanguage,
                             });
                             // Resolve any local images in the initial content
                             const imageIds = extractImageIds(initialContent);
@@ -515,9 +516,10 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
                     fontFamily: editorSettings.fontFamily,
                     fontSize: editorSettings.fontSize,
                     lineSpacing: editorSettings.lineSpacing,
+                    defaultCodeLanguage: editorSettings.defaultCodeLanguage,
                 });
             }
-        }, [dark, colors, isReady, sendCommand, contentPaddingTop, editorSettings.direction, editorSettings.fontFamily, editorSettings.fontSize, editorSettings.lineSpacing]);
+        }, [dark, colors, isReady, sendCommand, contentPaddingTop, editorSettings.direction, editorSettings.fontFamily, editorSettings.fontSize, editorSettings.lineSpacing, editorSettings.defaultCodeLanguage]);
 
         useEffect(() => {
             if (isReady) {

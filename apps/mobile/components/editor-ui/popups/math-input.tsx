@@ -16,7 +16,8 @@ export function MathInput({ currentLatex, onSubmit, onClose }: MathInputProps) {
     const inputRef = useRef<TextInput>(null);
 
     useEffect(() => {
-        // Focus input when opened
+        // Focus input when opened - only when there is no given input
+        if (currentLatex) return
         setTimeout(() => inputRef.current?.focus(), 200);
     }, []);
 

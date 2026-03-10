@@ -4,13 +4,13 @@ import NotesSearchModal from '@/components/search/notes-search-modal';
 import TaskList from '@/components/tasks/task-list';
 import ThemedText from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { HapticPressable } from '@/components/ui/haptic-pressable';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { useUserStore as useAuthStore, useNotesStore, useSettingsStore, useTasksStore, type Task } from '@annota/core';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DrawerNavigationProp } from '@react-navigation/drawer';
 import { useNavigation, useRouter } from 'expo-router';
+import Drawer from 'expo-router/drawer';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, LayoutChangeEvent, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -186,38 +186,67 @@ export default function HomeScreen() {
   }, [router]);
 
   return (
-    <ThemedView style={[styles.container, { paddingTop: insets.top + 10 }]}>
-      {/* Header */}
-      <View style={[styles.header, { paddingHorizontal: 20 }]}>
-        <HapticPressable
-          onPress={() => navigation.openDrawer()}
-          style={({ pressed }) => ({
-            opacity: pressed ? 0.7 : 1,
-            padding: 4,
-            marginLeft: -4,
-          })}
-        >
-          <Ionicons name="menu-outline" size={28} color={colors.text} />
-        </HapticPressable>
-        <View style={styles.greetingContainer}>
-          <ThemedText style={[styles.greetingText, { fontFamily: editor.fontFamily }]}>
-            {greeting}, <ThemedText style={[styles.userName, { color: colors.primary }]}>{displayName}</ThemedText>
-          </ThemedText>
-        </View>
-        <HapticPressable
-          onPress={() => setIsSearchVisible(true)}
-          style={({ pressed }) => ({
-            opacity: pressed ? 0.7 : 1,
-            padding: 4,
-            marginRight: -4,
-          })}
-        >
-          <Ionicons name="search" size={24} color={colors.text} />
-        </HapticPressable>
-      </View>
+    <ThemedView style={styles.container}>
+      <Drawer.Screen
+        options={{
+          headerShown: true,
+          headerTitle: () => (
+            <View style={styles.headerTitleContainer}>
+              <ThemedText style={[styles.greetingText, { fontFamily: editor.fontFamily }]}>
+                {greeting}, <ThemedText style={[styles.userName, { color: colors.primary }]}>{displayName}</ThemedText>
+              </ThemedText>
+            </View>
+          ),
+          headerLeft: () => (
+            <Pressable
+              onPress={() => {
+                navigation.openDrawer();
+              }}
+              hitSlop={8}
+              style={({ pressed }) => [
+                styles.headerButton,
+                {
+                  padding: 8, // Ensure there's padding so the background is visible around the icon
+                  borderRadius: 8, // iOS native buttons usually have rounded corners for the background
+                  backgroundColor: pressed ? 'rgba(150, 150, 150, 0.2)' : 'transparent', // Native grey highlight
+                  transform: [{ scale: pressed ? 0.96 : 1 }], // Native slight zoom
+                  opacity: pressed ? 0.8 : 1,
+                }
+              ]}
+            >
+              <Ionicons name="menu-outline" size={24} color={colors.primary} />
+            </Pressable>
+          ),
+          headerRight: () => (
+            <Pressable
+              onPress={() => {
+                // Trigger your haptic feedback here if needed
+                setIsSearchVisible(true);
+              }}
+              hitSlop={8}
+              style={({ pressed }) => [
+                styles.headerButton,
+                {
+                  padding: 8, // Ensure there's padding so the background is visible around the icon
+                  borderRadius: 8, // iOS native buttons usually have rounded corners for the background
+                  backgroundColor: pressed ? 'rgba(150, 150, 150, 0.2)' : 'transparent', // Native grey highlight
+                  transform: [{ scale: pressed ? 0.96 : 1 }], // Native slight zoom
+                  opacity: pressed ? 0.8 : 1,
+                }
+              ]}
+            >
+              <Ionicons name="search" size={24} color={colors.primary} />
+            </Pressable>
+          ),
+          headerStyle: {
+            backgroundColor: colors.background,
+          },
+          headerShadowVisible: false,
+        }}
+      />
 
       {/* Calendar */}
-      <View style={{ paddingHorizontal: 20 }}>
+      <View style={{ paddingHorizontal: 20, marginTop: 20 }}>
         <Calendar selectedDate={selectedDate} onDateSelect={handleDateSelect} />
       </View>
 
@@ -362,6 +391,17 @@ const styles = StyleSheet.create({
   },
   userName: {
     fontWeight: '700',
+  },
+  headerTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: -10, // Adjust for native header layout
+  },
+  headerButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   tabContainer: {
     flexDirection: 'row',

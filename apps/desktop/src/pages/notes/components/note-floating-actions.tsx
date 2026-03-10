@@ -149,7 +149,7 @@ export function NoteFloatingActions({
                                     />
                                 </div>
                             </TooltipTrigger>
-                            <TooltipContent side="top" sideOffset={12} className="text-[10px] font-medium">More Actions</TooltipContent>
+                            <TooltipContent side="bottom" sideOffset={12} className="text-[10px] font-medium">More Actions</TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
                 </div>

@@ -1,8 +1,8 @@
 import DummySlider from '@/components/settings/dummy-slider';
 import SettingItem from '@/components/settings/setting-item';
 import { useSettingsStore } from '@annota/core';
+import { CODE_LANGUAGES } from '@annota/core/constants/editor-code-languages';
 import { getEditorFontLabel } from '@annota/core/constants/editor-fonts';
-import { CODE_LANGUAGES } from '@annota/editor-web';
 import { useTheme } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import React from 'react';

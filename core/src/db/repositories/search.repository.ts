@@ -4,6 +4,8 @@ import * as schema from '../schema';
 
 export const SearchRepository = {
     async searchNotes(query: string, folderId: string | null = null) {
+        const exactMatch = query;
+        const startsWithMatch = `${query}%`;
         const searchTerm = `%${query}%`;
 
         // Base conditions: not deleted and not permanently deleted
@@ -26,8 +28,10 @@ export const SearchRepository = {
             updatedAt: schema.noteMetadata.updatedAt,
             score: sql<number>`
                 CASE 
+                    WHEN LOWER(${schema.noteMetadata.title}) = LOWER(${exactMatch}) THEN 5
+                    WHEN LOWER(${schema.noteMetadata.title}) LIKE LOWER(${startsWithMatch}) THEN 4
                     WHEN LOWER(${schema.noteMetadata.title}) LIKE LOWER(${searchTerm}) THEN 3
-                    WHEN LOWER(${schema.noteMetadata.preview}) LIKE LOWER(${searchTerm}) THEN 2
+                    WHEN LOWER(${schema.noteMetadata.preview}) LIKE LOWER(${searchTerm}) THEN 1
                     WHEN LOWER(${schema.noteContent.content}) LIKE LOWER(${searchTerm}) THEN 1
                     ELSE 0 
                 END
@@ -41,9 +45,12 @@ export const SearchRepository = {
     },
 
     async searchTasks(query: string, folderId: string | null = null) {
+        const exactMatch = query;
+        const startsWithMatch = `${query}%`;
         const searchTerm = `%${query}%`;
 
         const conditions = [
+            eq(schema.tasks.completed, false),
             eq(schema.tasks.isPermDeleted, false)
         ];
 
@@ -62,8 +69,10 @@ export const SearchRepository = {
             // Prioritization logic: Title (3) > Description (2) > Links/Other (1)
             score: sql<number>`
                 CASE 
+                    WHEN LOWER(${schema.tasks.title}) = LOWER(${exactMatch}) THEN 5
+                    WHEN LOWER(${schema.tasks.title}) LIKE LOWER(${startsWithMatch}) THEN 4
                     WHEN LOWER(${schema.tasks.title}) LIKE LOWER(${searchTerm}) THEN 3
-                    WHEN LOWER(${schema.tasks.description}) LIKE LOWER(${searchTerm}) THEN 2
+                    WHEN LOWER(${schema.tasks.description}) LIKE LOWER(${searchTerm}) THEN 1
                     WHEN LOWER(${schema.tasks.links}) LIKE LOWER(${searchTerm}) THEN 1
                     ELSE 0 
                 END
@@ -76,6 +85,8 @@ export const SearchRepository = {
     },
 
     async searchFolders(query: string) {
+        const exactMatch = query;
+        const startsWithMatch = `${query}%`;
         const searchTerm = `%${query}%`;
         const conditions = [
             eq(schema.folders.isDeleted, false),
@@ -90,6 +101,8 @@ export const SearchRepository = {
             updatedAt: schema.folders.updatedAt,
             score: sql<number>`
                 CASE 
+                    WHEN LOWER(${schema.folders.name}) = LOWER(${exactMatch}) THEN 5
+                    WHEN LOWER(${schema.folders.name}) LIKE LOWER(${startsWithMatch}) THEN 4
                     WHEN LOWER(${schema.folders.name}) LIKE LOWER(${searchTerm}) THEN 3
                     ELSE 0 
                 END

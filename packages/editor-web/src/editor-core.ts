@@ -15,6 +15,7 @@ export const editorEl = document.getElementById('editor-content')!;
 
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 let currentFontFamily: string | null = null;
+export let currentDefaultCodeLanguage: string | null = null;
 let hasAppliedFontToContent = false;
 
 /**
@@ -177,6 +178,7 @@ export function setupEditor(options: any) {
         // Update code block default language if changed
         const extension = window.editor.extensionManager.extensions.find((e: any) => e.name === 'codeBlock');
         if (extension) {
+            currentDefaultCodeLanguage = defaultCodeLanguage;
             (window.editor as any).setOptions('codeBlock', {
                 defaultLanguage: defaultCodeLanguage
             });
@@ -189,6 +191,7 @@ export function setupEditor(options: any) {
     editorEl.classList.remove('hidden');
 
     try {
+        currentDefaultCodeLanguage = defaultCodeLanguage;
         window.editor = new Editor({
             editable: options.editable !== undefined ? options.editable : true,
             // Disable TipTap's built-in TextDirection extension entirely.

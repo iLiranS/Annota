@@ -398,7 +398,7 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
             if (!editor) return;
 
             // Map legacy string commands to Tiptap commands
-            const c = editor.chain().focus() as any;
+            const c = editor.chain().focus() as any
 
             switch (command) {
                 case 'toggleBold': c.toggleBold().run(); break;
@@ -412,7 +412,7 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                 case 'toggleTaskList': c.toggleTaskList().run(); break;
                 case 'toggleDetails': c.toggleDetails().run(); break;
                 case 'toggleCodeBlock':
-                    c.toggleCodeBlock({ language: editorSettings.defaultCodeLanguage }).run();
+                    c.toggleCodeBlock({ language: editorSettings.defaultCodeLanguage || 'javascript' }).run();
                     break;
                 case 'sinkListItem': c.sinkListItem('listItem').run(); break;
                 case 'liftListItem': c.liftListItem('listItem').run(); break;

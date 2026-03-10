@@ -2,9 +2,11 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useCreateNote } from "@/hooks/use-create-note";
+import { useCreateTask } from "@/hooks/use-create-task";
 import { cn } from "@/lib/utils";
 import { Folder, NoteMetadata, Task, useNotesStore, useSearchStore } from "@annota/core";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FolderListItem } from "../notes/folder-list-item";
 import { NoteListItem } from "../notes/note-list-item";
@@ -18,7 +20,7 @@ interface NotesSearchModalProps {
 export function NotesSearchModal({ open, onOpenChange }: NotesSearchModalProps) {
     const { colors } = useAppTheme();
     const navigate = useNavigate();
-    const { folders, getFolderById } = useNotesStore();
+    const { getFolderById } = useNotesStore();
     const {
         searchQuery,
         isSearching,
@@ -27,22 +29,13 @@ export function NotesSearchModal({ open, onOpenChange }: NotesSearchModalProps) 
         resetSearch
     } = useSearchStore();
 
+    const { createAndNavigate: createNoteAndNavigate } = useCreateNote();
+    const { createAndNavigate: createTaskAndNavigate } = useCreateTask();
+
     const [selectedIndex, setSelectedIndex] = useState(0);
     const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-    // Local folder filtering (Folders are still in-memory and lightweight)
-    const filteredFolders = useMemo(() => {
-        if (!searchQuery.trim()) return [];
-        const query = searchQuery.toLowerCase();
-        let source = folders.filter(f => !f.isDeleted && !f.isSystem);
-
-        return source.filter(f => f.name.toLowerCase().includes(query));
-    }, [folders, searchQuery]);
-
-    const results = useMemo(() => [
-        ...dbResults,
-        ...filteredFolders.map(f => ({ type: "folder" as const, id: f.id, title: f.name, score: 0, updatedAt: f.updatedAt, data: f }))
-    ], [dbResults, filteredFolders]);
+    const results = dbResults;
 
     // Reset search when opening
     useEffect(() => {
@@ -57,7 +50,7 @@ export function NotesSearchModal({ open, onOpenChange }: NotesSearchModalProps) 
     useEffect(() => {
         setSelectedIndex(0);
         itemRefs.current = [];
-    }, [dbResults, filteredFolders]);
+    }, [results]);
 
     // Scroll selected item into view
     useEffect(() => {
@@ -88,6 +81,15 @@ export function NotesSearchModal({ open, onOpenChange }: NotesSearchModalProps) 
         handleClose();
     };
 
+    const onActionClick = (actionType: 'create_note' | 'create_task', folderId?: string) => {
+        if (actionType === 'create_note') {
+            createNoteAndNavigate(folderId);
+        } else if (actionType === 'create_task') {
+            createTaskAndNavigate({ folderId });
+        }
+        handleClose();
+    };
+
     // Keyboard navigation
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -103,7 +105,8 @@ export function NotesSearchModal({ open, onOpenChange }: NotesSearchModalProps) 
                 const item = results[selectedIndex];
                 if (item.type === "note") onNoteClick(item.data);
                 else if (item.type === "task") onTaskClick(item.data);
-                else onFolderClick(item.data);
+                else if (item.type === "folder") onFolderClick(item.data);
+                else if (item.type === "action") onActionClick(item.actionType!, item.folderId);
             }
         };
         window.addEventListener("keydown", handleKeyDown);
@@ -153,100 +156,75 @@ export function NotesSearchModal({ open, onOpenChange }: NotesSearchModalProps) 
                     <div className="p-4 space-y-4">
                         {results.length > 0 && (
                             <div className="space-y-4">
-                                {dbResults.length > 0 && (
-                                    <div className="space-y-1">
-                                        <div className="px-3 py-1 text-[9px] font-black uppercase tracking-[0.15em] opacity-40 flex items-center gap-2">
-                                            <Ionicons name="apps" size={10} />
-                                            <span>Search Results</span>
-                                        </div>
-                                        <div className="grid gap-1">
-                                            {dbResults.map((result, i) => {
-                                                const isSelected = selectedIndex === i;
-                                                return (
-                                                    <div
-                                                        key={result.id}
-                                                        ref={el => { itemRefs.current[i] = el; }}
-                                                        className="relative group/result"
-                                                        onMouseEnter={() => setSelectedIndex(i)}
-                                                    >
-                                                        {result.type === 'note' ? (
-                                                            <NoteListItem
-                                                                note={result.data}
-                                                                onClick={() => onNoteClick(result.data)}
-                                                                isActive={isSelected}
-                                                                showTimestamp
-                                                                suffix={(
-                                                                    <FolderBadge folderId={result.data.folderId} />
-                                                                )}
-                                                                className="border border-transparent"
-                                                                style={isSelected ? {
-                                                                    backgroundColor: `${colors.primary}25`,
-                                                                    borderColor: `${colors.primary}40`,
-                                                                    boxShadow: `inset 0 0 20px -10px ${colors.primary}40`
-                                                                } : undefined}
-                                                            />
-                                                        ) : (
-                                                            <div
-                                                                onClick={() => onTaskClick(result.data)}
-                                                                className={cn(
-                                                                    "flex items-center gap-3 px-3 py-2 rounded-xl border border-transparent transition-all cursor-pointer",
-                                                                    isSelected ? "bg-background shadow-sm border-border/50" : "hover:bg-background/50"
-                                                                )}
-                                                                style={isSelected ? {
-                                                                    backgroundColor: `${colors.primary}25`,
-                                                                    borderColor: `${colors.primary}40`,
-                                                                    boxShadow: `inset 0 0 20px -10px ${colors.primary}40`
-                                                                } : undefined}
-                                                            >
-                                                                <div className={cn(
-                                                                    "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
-                                                                    result.data.completed ? "bg-green-500/10 text-green-500" : "bg-primary/10 text-primary"
-                                                                )}>
-                                                                    <Ionicons name={result.data.completed ? "checkmark-circle" : "checkbox-outline"} size={18} />
-                                                                </div>
-                                                                <div className="flex-1 min-w-0">
-                                                                    <div className="flex items-center gap-2">
-                                                                        <span className={cn("text-sm font-bold truncate", result.data.completed && "line-through opacity-50")}>
-                                                                            {result.title}
-                                                                        </span>
-                                                                        <span className="text-[10px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded bg-muted/50 text-muted-foreground">Task</span>
-                                                                    </div>
-                                                                    {result.subtitle && (
-                                                                        <p className="text-[11px] text-muted-foreground truncate opacity-60 font-medium">
-                                                                            {result.subtitle}
-                                                                        </p>
-                                                                    )}
-                                                                </div>
-                                                                <FolderBadge folderId={result.data.folderId} />
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
+                                <div className="space-y-1">
+                                    <div className="px-3 py-1 text-[9px] font-black uppercase tracking-[0.15em] opacity-40 flex items-center gap-2">
+                                        <Ionicons name="apps" size={10} />
+                                        <span>Search Results</span>
                                     </div>
-                                )}
-
-                                {filteredFolders.length > 0 && (
-                                    <div className="space-y-1">
-                                        <div className="px-3 py-1 text-[9px] font-black uppercase tracking-[0.15em] opacity-40 flex items-center gap-2">
-                                            <Ionicons name="folder" size={10} />
-                                            <span>Folders</span>
-                                        </div>
-                                        <div className="grid gap-1">
-                                            {filteredFolders.map((folder, i) => {
-                                                const globalIndex = dbResults.length + i;
-                                                const isSelected = selectedIndex === globalIndex;
-                                                return (
-                                                    <div
-                                                        key={folder.id}
-                                                        ref={el => { itemRefs.current[globalIndex] = el; }}
-                                                        className="relative group/result"
-                                                        onMouseEnter={() => setSelectedIndex(globalIndex)}
-                                                    >
+                                    <div className="grid gap-1">
+                                        {results.map((result, i) => {
+                                            const isSelected = selectedIndex === i;
+                                            return (
+                                                <div
+                                                    key={result.id}
+                                                    ref={el => { itemRefs.current[i] = el; }}
+                                                    className="relative group/result"
+                                                    onMouseEnter={() => setSelectedIndex(i)}
+                                                >
+                                                    {result.type === 'note' ? (
+                                                        <NoteListItem
+                                                            note={result.data}
+                                                            onClick={() => onNoteClick(result.data)}
+                                                            isActive={isSelected}
+                                                            showTimestamp
+                                                            suffix={(
+                                                                <FolderBadge folderId={result.data.folderId} />
+                                                            )}
+                                                            className="border border-transparent"
+                                                            style={isSelected ? {
+                                                                backgroundColor: `${colors.primary}25`,
+                                                                borderColor: `${colors.primary}40`,
+                                                                boxShadow: `inset 0 0 20px -10px ${colors.primary}40`
+                                                            } : undefined}
+                                                        />
+                                                    ) : result.type === 'task' ? (
+                                                        <div
+                                                            onClick={() => onTaskClick(result.data)}
+                                                            className={cn(
+                                                                "flex items-center gap-3 px-3 py-2 rounded-xl border border-transparent transition-all cursor-pointer",
+                                                                isSelected ? "bg-background shadow-sm border-border/50" : "hover:bg-background/50"
+                                                            )}
+                                                            style={isSelected ? {
+                                                                backgroundColor: `${colors.primary}25`,
+                                                                borderColor: `${colors.primary}40`,
+                                                                boxShadow: `inset 0 0 20px -10px ${colors.primary}40`
+                                                            } : undefined}
+                                                        >
+                                                            <div className={cn(
+                                                                "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
+                                                                result.data.completed ? "bg-green-500/10 text-green-500" : "bg-primary/10 text-primary"
+                                                            )}>
+                                                                <Ionicons name={result.data.completed ? "checkmark-circle" : "checkbox-outline"} size={18} />
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className={cn("text-sm font-bold truncate", result.data.completed && "line-through opacity-50")}>
+                                                                        {result.title}
+                                                                    </span>
+                                                                    <span className="text-[10px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded bg-muted/50 text-muted-foreground">Task</span>
+                                                                </div>
+                                                                {result.subtitle && (
+                                                                    <p className="text-[11px] text-muted-foreground truncate opacity-60 font-medium">
+                                                                        {result.subtitle}
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                            <FolderBadge folderId={result.data.folderId} />
+                                                        </div>
+                                                    ) : result.type === 'folder' ? (
                                                         <FolderListItem
-                                                            folder={folder}
-                                                            onClick={() => onFolderClick(folder)}
+                                                            folder={result.data}
+                                                            onClick={() => onFolderClick(result.data)}
                                                             onEdit={() => { }}
                                                             isActive={isSelected}
                                                             className="border border-transparent"
@@ -256,16 +234,37 @@ export function NotesSearchModal({ open, onOpenChange }: NotesSearchModalProps) 
                                                                 boxShadow: `inset 0 0 20px -10px ${colors.primary}40`
                                                             } : undefined}
                                                         />
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
+                                                    ) : result.type === 'action' ? (
+                                                        <div
+                                                            onClick={() => onActionClick(result.actionType!, result.folderId)}
+                                                            className={cn(
+                                                                "flex items-center gap-3 px-3 py-2 rounded-xl border border-transparent transition-all cursor-pointer",
+                                                                isSelected ? "bg-background shadow-sm border-border/50" : "hover:bg-background/50"
+                                                            )}
+                                                            style={isSelected ? {
+                                                                backgroundColor: `${colors.primary}15`,
+                                                                borderColor: `${colors.primary}30`,
+                                                                boxShadow: `inset 0 0 20px -10px ${colors.primary}20`
+                                                            } : undefined}
+                                                        >
+                                                            <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-primary/10 text-primary">
+                                                                <Ionicons name={result.actionType === 'create_note' ? 'document-text-outline' : 'checkbox-outline'} size={18} />
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <span className="text-sm font-bold truncate text-primary">{result.title}</span>
+                                                            </div>
+
+                                                        </div>
+                                                    ) : null}
+                                                </div>
+                                            );
+                                        })}
                                     </div>
-                                )}
+                                </div>
                             </div>
                         )}
 
-                        {searchQuery && !isSearching && dbResults.length === 0 && filteredFolders.length === 0 && (
+                        {searchQuery && !isSearching && results.length === 0 && (
                             <div className="flex flex-col items-center justify-center py-20 text-center">
                                 <div className="p-4 rounded-full bg-muted/40 mb-4 ring-1 ring-border/50">
                                     <Ionicons name="search-outline" size={32} className="text-muted-foreground/20" />

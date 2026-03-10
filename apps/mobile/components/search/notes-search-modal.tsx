@@ -1,7 +1,7 @@
 import FolderCard from '@/components/folders/folder-card';
 import NoteCard from '@/components/notes/note-card';
 import ThemedText from '@/components/themed-text';
-import { Folder, NoteMetadata, Task, useNotesStore, useSearchStore, useSettingsStore } from '@annota/core';
+import { Folder, NoteMetadata, useNotesStore, useSearchStore, useSettingsStore } from '@annota/core';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
@@ -18,11 +18,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-type ListItem =
-    | { type: 'folder'; data: Folder }
-    | { type: 'note'; data: NoteMetadata }
-    | { type: 'task'; data: Task }
-    | { type: 'section-header'; title: string };
+type ListItem = any;
 
 interface NotesSearchModalProps {
     visible: boolean;
@@ -46,7 +42,7 @@ export default function NotesSearchModal({
     const { colors } = useTheme();
     const insets = useSafeAreaInsets();
     const router = useRouter();
-    const { updateNoteMetadata, deleteNote } = useNotesStore();
+    const { updateNoteMetadata, deleteNote, createNote } = useNotesStore();
     const { general } = useSettingsStore();
 
     const {
@@ -66,30 +62,9 @@ export default function NotesSearchModal({
 
 
 
-    const searchData = useMemo((): ListItem[] => {
+    const searchData = useMemo(() => {
         if (!searchQuery.trim()) return [];
-        const items: ListItem[] = [];
-
-        const notes = dbResults.filter(r => r.type === 'note');
-        const tasks = dbResults.filter(r => r.type === 'task');
-        const folders = dbResults.filter(r => r.type === 'folder');
-
-        if (notes.length > 0) {
-            items.push({ type: 'section-header', title: 'Notes' });
-            notes.forEach((n) => items.push({ type: 'note', data: n.data }));
-        }
-
-        if (tasks.length > 0) {
-            items.push({ type: 'section-header', title: 'Tasks' });
-            tasks.forEach((t) => items.push({ type: 'task', data: t.data }));
-        }
-
-        if (folders.length > 0) {
-            items.push({ type: 'section-header', title: 'Folders' });
-            folders.forEach((f) => items.push({ type: 'folder', data: f.data }));
-        }
-
-        return items;
+        return dbResults;
     }, [dbResults, searchQuery]);
 
     const handleClose = useCallback(() => {
@@ -148,7 +123,6 @@ export default function NotesSearchModal({
                 let iconName: any = 'document-text';
                 if (item.title === 'Folders') iconName = 'folder';
                 if (item.title === 'Tasks') iconName = 'checkbox';
-
                 return (
                     <View style={styles.sectionHeaderRow}>
                         <Ionicons name={iconName} size={14} color={colors.text + '50'} />
@@ -261,14 +235,57 @@ export default function NotesSearchModal({
                 );
             }
 
+            if (item.type === 'action') {
+                const action = item;
+                const isFirstAction = index === 0 || searchData[index - 1].type !== 'action';
+                const isLastAction = index === searchData.length - 1 || searchData[index + 1].type !== 'action';
+
+                return (
+                    <Pressable
+                        onPress={async () => {
+                            handleClose();
+                            if (action.actionType === 'create_note') {
+                                const newNote = await createNote({ folderId: action.folderId });
+                                router.push({ pathname: '/Notes/[id]', params: { id: newNote.id, source: 'new' } });
+                            } else if (action.actionType === 'create_task') {
+                                router.push({ pathname: '/Tasks/new', params: { folderId: action.folderId } });
+                            }
+                        }}
+                        style={({ pressed }) => [
+                            styles.taskCard,
+                            { backgroundColor: colors.card, borderColor: colors.border },
+                            isFirstAction && styles.roundTop,
+                            isLastAction && styles.roundBottom,
+                            pressed && { backgroundColor: colors.border + '50' }
+                        ]}
+                    >
+                        <View style={styles.taskIconWrapper}>
+                            <Ionicons
+                                name={action.actionType === 'create_note' ? "document-text-outline" : "checkbox-outline"}
+                                size={20}
+                                color={colors.primary}
+                            />
+                        </View>
+                        <View style={styles.taskContent}>
+                            <Text style={[
+                                styles.taskTitle,
+                                { color: colors.text }
+                            ]}>
+                                {action.title}
+                            </Text>
+                        </View>
+                    </Pressable>
+                );
+            }
+
             return null;
         },
-        [colors, handleFolderPress, handleNotePress, handleTaskPress, onFolderLongPress, onNoteLongPress, allFolders, handleDeleteNote, handleTogglePin, handleToggleQuickAccess, searchData]
+        [colors, handleFolderPress, handleNotePress, handleTaskPress, onFolderLongPress, onNoteLongPress, allFolders, handleDeleteNote, handleTogglePin, handleToggleQuickAccess, searchData, createNote, router, handleClose]
     );
 
-    const getItemKey = (item: ListItem, index: number): string => {
+    const getItemKey = (item: any, index: number): string => {
         if (item.type === 'section-header') return `header-${item.title}`;
-        return item.data.id;
+        return item.id;
     };
 
     return (

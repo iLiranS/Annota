@@ -16,7 +16,7 @@ import {
     Type
 } from "lucide-react";
 
-import { CODE_LANGUAGES } from "@annota/editor-web/extensions";
+import { CODE_LANGUAGES } from "@annota/core/constants/editor-code-languages";
 import { SettingItem } from "./setting-item";
 
 interface SliderItemProps {

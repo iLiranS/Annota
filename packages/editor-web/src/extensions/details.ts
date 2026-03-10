@@ -306,9 +306,17 @@ export const DetailsSummary = TiptapDetailsSummary.extend<any>({
                 }
             };
 
-            toggleBtn.addEventListener('mousedown', handleToggle);
-            toggleBtn.addEventListener('touchstart', handleToggle, { passive: false });
+            toggleBtn.addEventListener('mousedown', (e) => {
+                // Prevent ProseMirror focus loss
+                e.preventDefault();
+            });
             toggleBtn.addEventListener('click', handleToggle);
+            // Handle touch explicitly if needed, but click works best on mobile webviews.
+            toggleBtn.addEventListener('touchend', (e) => {
+                // Quick trigger for mobile
+                e.preventDefault();
+                handleToggle(e);
+            });
 
             // Menu button — shared three-dot utility
             const menuBtn = createBlockMenuButton({
