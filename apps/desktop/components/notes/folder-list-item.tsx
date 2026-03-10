@@ -90,6 +90,7 @@ export function FolderListItem({
                     className={cn(
                         !asChild && "flex w-full group/item items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-accent",
                         isActive && "bg-accent",
+                        "active:scale-95",
                         className
                     )}
                     {...(props as any)}

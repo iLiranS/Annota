@@ -221,7 +221,7 @@ export const Details = TiptapDetails.extend({
                         return commands.insertContent({
                             type: this.name,
                             content: [
-                                { type: 'detailsSummary', content: [{ type: 'text', text: 'Summary' }] },
+                                { type: 'detailsSummary', content: [{ type: 'heading', attrs: { level: 3 } }] },
                                 { type: 'detailsContent', content: contentToWrap },
                             ],
                         });
@@ -249,6 +249,7 @@ export const Details = TiptapDetails.extend({
 });
 
 export const DetailsSummary = TiptapDetailsSummary.extend<any>({
+    content: 'block+',
     addOptions() {
         return {
             ...this.parent?.(),
@@ -267,6 +268,47 @@ export const DetailsSummary = TiptapDetailsSummary.extend<any>({
             const content = document.createElement('div');
             content.className = 'details-summary-content';
             content.style.flex = '1';
+            content.style.minWidth = '0';
+
+            // Create a dedicated toggle button
+            const toggleBtn = document.createElement('div');
+            toggleBtn.className = 'details-toggle';
+            toggleBtn.setAttribute('contenteditable', 'false');
+
+            const arrow = document.createElement('span');
+            arrow.className = 'details-arrow';
+            arrow.innerHTML = '▶';
+            toggleBtn.appendChild(arrow);
+
+            const handleToggle = (e: Event) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                if (typeof getPos !== 'function') return;
+                const pos = getPos();
+                if (typeof pos !== 'number') return;
+
+                const { state, view } = editor;
+
+                // Find parent details node
+                const $pos = state.doc.resolve(pos);
+                const parentNode = $pos.parent;
+                const parentPos = $pos.before($pos.depth);
+
+                if (parentNode.type.name === 'details') {
+                    const isOpen = parentNode.attrs.open;
+                    view.dispatch(
+                        state.tr.setNodeMarkup(parentPos, undefined, {
+                            ...parentNode.attrs,
+                            open: !isOpen
+                        })
+                    );
+                }
+            };
+
+            toggleBtn.addEventListener('mousedown', handleToggle);
+            toggleBtn.addEventListener('touchstart', handleToggle, { passive: false });
+            toggleBtn.addEventListener('click', handleToggle);
 
             // Menu button — shared three-dot utility
             const menuBtn = createBlockMenuButton({
@@ -297,38 +339,7 @@ export const DetailsSummary = TiptapDetailsSummary.extend<any>({
                 },
             });
 
-            // ID is now generated via ProseMirror plugin!
-
-            // Toggle open state on click
-            dom.onclick = (e) => {
-                // If clicking the menu button, don't toggle
-                if (menuBtn.contains(e.target as Node)) return;
-
-                e.preventDefault();
-                e.stopPropagation();
-
-                if (typeof getPos !== 'function') return;
-                const pos = getPos();
-                if (typeof pos !== 'number') return;
-
-                const { state, view } = editor;
-
-                // Find parent details node
-                const $pos = state.doc.resolve(pos);
-                const parentNode = $pos.parent;
-                const parentPos = $pos.before($pos.depth);
-
-                if (parentNode.type.name === 'details') {
-                    const isOpen = parentNode.attrs.open;
-                    view.dispatch(
-                        state.tr.setNodeMarkup(parentPos, undefined, {
-                            ...parentNode.attrs,
-                            open: !isOpen
-                        })
-                    );
-                }
-            };
-
+            dom.appendChild(toggleBtn);
             dom.appendChild(content);
             dom.appendChild(menuBtn);
 
@@ -336,8 +347,15 @@ export const DetailsSummary = TiptapDetailsSummary.extend<any>({
                 dom,
                 contentDOM: content,
                 ignoreMutation: (mutation) => {
-                    return mutation.target === menuBtn || menuBtn.contains(mutation.target as Node);
+                    const target = mutation.target as Node;
+                    if (!target) return false;
+                    return target === menuBtn || menuBtn.contains(target) || target === toggleBtn || toggleBtn.contains(target);
                 },
+                stopEvent: (e: Event) => {
+                    const target = e.target as Node;
+                    if (!target) return false;
+                    return target === menuBtn || menuBtn.contains(target) || target === toggleBtn || toggleBtn.contains(target);
+                }
             };
         };
     },

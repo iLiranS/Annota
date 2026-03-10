@@ -145,6 +145,7 @@ export function setupCommands() {
             case 'toggleBlockquote': c.toggleBlockquote().run(); break;
             case 'toggleCodeBlock': c.toggleCodeBlock().run(); break;
             case 'toggleHeading': c.toggleHeading({ level: params?.level || 1 }).run(); break;
+            case 'setParagraph': c.setParagraph().run(); break;
             case 'setContent':
                 // Only set content if actually different or forcing update?
                 // Actually, RN controls this. If it sends setContent, we set it.

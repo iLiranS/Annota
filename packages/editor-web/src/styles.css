@@ -232,6 +232,11 @@
     text-align: start;
 }
 
+.ProseMirror li::marker {
+    color: var(--accent-color);
+}
+
+
 .ProseMirror li p {
     margin: 0;
     unicode-bidi: plaintext;
@@ -709,6 +714,22 @@
     transition: background-color 0.15s ease;
 }
 
+/* Summary Content alignment and placeholder */
+.details-summary-content {
+    position: relative;
+    outline: none;
+}
+
+.ProseMirror .details-summary-content>*:first-child,
+.ProseMirror [data-type="detailsSummary"] .details-summary-content>*:first-child {
+    margin-top: 0;
+}
+
+.ProseMirror .details-summary-content>*:last-child,
+.ProseMirror [data-type="detailsSummary"] .details-summary-content>*:last-child {
+    margin-bottom: 0;
+}
+
 .details-menu-btn {
     display: flex;
     align-items: center;
@@ -736,35 +757,30 @@
 }
 
 /* Arrow indicator - clickable toggle button on the left */
-.ProseMirror .details-summary::before,
-.ProseMirror [data-type="detailsSummary"]::before {
-    content: '▶';
-    font-size: 10px;
-    color: var(--text-color);
-    opacity: 0.5;
-    transition: transform 0.2s ease, opacity 0.15s ease;
-    flex-shrink: 0;
-    cursor: pointer;
-    /* Make arrow area 40px wide to match JS detection */
+.details-toggle {
+    width: 44px;
+    align-self: stretch;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 100%;
-    min-height: 24px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background-color 0.15s ease;
+    user-select: none;
 }
 
-/* Arrow hover state */
-.ProseMirror .details-summary::before:hover,
-.ProseMirror [data-type="detailsSummary"]::before:hover {
-    opacity: 0.8;
+.details-arrow {
+    font-size: 10px;
+    color: var(--text-color);
+    opacity: 0.5;
+    transition: transform 0.2s ease;
+    display: inline-block;
+    pointer-events: none;
 }
 
 /* Arrow rotates when open */
-.ProseMirror [data-type="details"][data-open="true"] .details-summary::before,
-.ProseMirror [data-type="details"][data-open="true"] [data-type="detailsSummary"]::before,
-.ProseMirror [data-type="details"][open] .details-summary::before,
-.ProseMirror [data-type="details"][open] [data-type="detailsSummary"]::before {
+.ProseMirror [data-type="details"][data-open="true"] .details-arrow,
+.ProseMirror [data-type="details"][open] .details-arrow {
     transform: rotate(90deg);
 }
 

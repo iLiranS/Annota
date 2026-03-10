@@ -75,6 +75,7 @@ export function NoteListItem({
                             !asChild && "group/note flex w-full flex-col gap-0.5 rounded-lg px-3 py-2 text-left transition-all hover:bg-accent/50",
                             !asChild && isCompact ? "py-1.5" : "py-2",
                             isActive && "bg-accent",
+                            "active:scale-95",
                             className
                         )}
                         style={style}
