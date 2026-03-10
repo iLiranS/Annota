@@ -47,11 +47,11 @@ export function NoteFloatingActions({
             "backdrop-blur-2xl",
             "border border-white/20",
             "ring-1 ring-white/10",
-            "shadow-[0_14px_30px_rgba(15,23,42,0.35)]",
+            "shadow-[0_7px_10px_rgba(15,23,42,0.35)]",
             "dark:bg-linear-to-r dark:from-stone-900/70 dark:via-stone-900/40 dark:to-stone-900/70",
             "dark:border-white/10",
             "dark:ring-white/5",
-            "dark:shadow-[0_18px_40px_rgba(0,0,0,0.6)]",
+            "dark:shadow-[0_7px_10px_rgba(0,0,0,0.6)]",
             isMenuOpen ? "w-[210px]" : "w-11 hover:w-[210px]",
             direction === "rtl" ? "left-6" : "right-6"
         )}>

@@ -60,7 +60,7 @@ export function TasksOnboarding({ selectedDate }: TasksOnboardingProps) {
     }, [selectedDate]);
 
     return (
-        <div className="flex flex-col gap-4 h-full">
+        <div className="flex flex-col gap-4 lg:h-full">
             <div className="flex items-center justify-between px-1 shrink-0">
                 <div className="flex items-center gap-2">
                     <CheckCircle2 size={18} style={{ color: colors.primary }} />
@@ -75,7 +75,7 @@ export function TasksOnboarding({ selectedDate }: TasksOnboardingProps) {
                 </button>
             </div>
 
-            <div className="flex-1 flex flex-col gap-2 overflow-y-auto pr-1 custom-scrollbar min-h-0 pb-4">
+            <div className="lg:flex-1 flex flex-col gap-2 lg:overflow-y-auto pr-1 custom-scrollbar lg:min-h-0 pb-4">
                 {filteredTasks.length > 0 ? (
                     filteredTasks.map((task) => (
                         <DesktopTaskCard

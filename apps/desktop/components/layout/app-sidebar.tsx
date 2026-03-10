@@ -16,8 +16,15 @@ import {
     CollapsibleContent,
     CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+    ContextMenu,
+    ContextMenuContent,
+    ContextMenuItem,
+    ContextMenuTrigger
+} from "@/components/ui/context-menu";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubButton, SidebarMenuSubItem, SidebarRail, SidebarSeparator, useSidebar } from "@/components/ui/sidebar";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useCreateNote } from "@/hooks/use-create-note";
 import { useCreateTask } from "@/hooks/use-create-task";
 import { useEffect } from "react";
 import { ConfirmDialog } from "../custom-ui/confirm-dialog";
@@ -34,8 +41,8 @@ export function AppSidebar() {
     const isOnline = useSyncStore((s) => s.isOnline);
     const isGuest = useUserStore((s) => s.isGuest);
     const showOfflineBanner = !isOnline && !isGuest;
-
     const { createAndNavigate: createTask } = useCreateTask();
+    const { createAndNavigate: createNote } = useCreateNote();
 
     const [retryCooldown, setRetryCooldown] = useState(false);
     const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
@@ -83,6 +90,14 @@ export function AppSidebar() {
     const handleCreateTask = useCallback((folder: Folder) => {
         createTask({ folderId: folder.id });
     }, [createTask]);
+    const handleCreateNote = useCallback((folder: Folder) => {
+        createNote(folder.id);
+    }, [createNote]);
+    const handleCreateTopLevelFolder = useCallback(() => {
+        setEditingFolder(null);
+        setNewFolderParentId(null);
+        setIsEditModalOpen(true);
+    }, []);
 
     // Non-system top-level folders
     const topLevelFolders = useMemo(() => {
@@ -228,17 +243,35 @@ export function AppSidebar() {
                     <SidebarGroupContent>
                         <SidebarMenu>
                             <SidebarMenuItem>
-                                <SidebarMenuButton
-                                    isActive={
-                                        isActive("/notes") &&
-                                        !location.pathname.includes(DAILY_NOTES_FOLDER_ID)
-                                    }
-                                    onClick={() => navigate("/notes")}
-                                    tooltip="All Notes"
-                                >
-                                    <Ionicons name="documents" color={colors.primary} size={18} className="text-primary" />
-                                    <span>All Notes</span>
-                                </SidebarMenuButton>
+                                <ContextMenu>
+                                    <ContextMenuTrigger asChild>
+                                        <SidebarMenuButton
+                                            isActive={
+                                                isActive("/notes") &&
+                                                !location.pathname.includes(DAILY_NOTES_FOLDER_ID)
+                                            }
+                                            onClick={() => navigate("/notes")}
+                                            tooltip="All Notes"
+                                        >
+                                            <Ionicons name="documents" color={colors.primary} size={18} className="text-primary" />
+                                            <span>All Notes</span>
+                                        </SidebarMenuButton>
+                                    </ContextMenuTrigger>
+                                    <ContextMenuContent className="w-48">
+                                        <ContextMenuItem className="gap-2" onClick={() => createNote()}>
+                                            <Ionicons name="document-outline" size={16} />
+                                            <span>New Note</span>
+                                        </ContextMenuItem>
+                                        <ContextMenuItem className="gap-2" onClick={handleCreateTopLevelFolder}>
+                                            <Ionicons name="folder-outline" size={16} />
+                                            <span>New Folder</span>
+                                        </ContextMenuItem>
+                                        <ContextMenuItem className="gap-2" onClick={() => createTask()}>
+                                            <Ionicons name="checkmark-circle-outline" size={16} />
+                                            <span>New Task</span>
+                                        </ContextMenuItem>
+                                    </ContextMenuContent>
+                                </ContextMenu>
                             </SidebarMenuItem>
 
                             {/* Folder tree */}
@@ -254,6 +287,7 @@ export function AppSidebar() {
                                     onDelete={setFolderToDelete}
                                     onCreateSubFolder={handleCreateSubFolder}
                                     onCreateTask={handleCreateTask}
+                                    onCreateNote={handleCreateNote}
                                 />
                             ))}
                         </SidebarMenu>
@@ -332,9 +366,10 @@ interface FolderTreeItemProps {
     onDelete: (folder: Folder) => void;
     onCreateSubFolder: (parentFolder: Folder) => void;
     onCreateTask: (folder: Folder) => void;
+    onCreateNote: (folder: Folder) => void;
 }
 
-function FolderTreeItem({ folder, allFolders, onNavigate, onEdit, onDelete, onCreateSubFolder, onCreateTask }: FolderTreeItemProps) {
+function FolderTreeItem({ folder, allFolders, onNavigate, onEdit, onDelete, onCreateSubFolder, onCreateTask, onCreateNote }: FolderTreeItemProps) {
     const children = allFolders.filter(
         (f) => f.parentId === folder.id && !f.isSystem,
     );
@@ -350,6 +385,7 @@ function FolderTreeItem({ folder, allFolders, onNavigate, onEdit, onDelete, onCr
                     onDelete={onDelete}
                     onCreateSubFolder={onCreateSubFolder}
                     onCreateTask={onCreateTask}
+                    onCreateNote={onCreateNote}
                     className="group/item"
                 >
                     <SidebarMenuButton onClick={() => onNavigate(folder.id)}>
@@ -370,6 +406,7 @@ function FolderTreeItem({ folder, allFolders, onNavigate, onEdit, onDelete, onCr
                     onDelete={onDelete}
                     onCreateSubFolder={onCreateSubFolder}
                     onCreateTask={onCreateTask}
+                    onCreateNote={onCreateNote}
                     className="group/item"
                 >
                     <SidebarMenuButton onClick={() => onNavigate(folder.id)}>
@@ -402,6 +439,7 @@ function FolderTreeItem({ folder, allFolders, onNavigate, onEdit, onDelete, onCr
                                     onDelete={onDelete}
                                     onCreateSubFolder={onCreateSubFolder}
                                     onCreateTask={onCreateTask}
+                                    onCreateNote={onCreateNote}
                                 />
                             );
                         }
@@ -414,6 +452,7 @@ function FolderTreeItem({ folder, allFolders, onNavigate, onEdit, onDelete, onCr
                                     onDelete={onDelete}
                                     onCreateSubFolder={onCreateSubFolder}
                                     onCreateTask={onCreateTask}
+                                    onCreateNote={onCreateNote}
                                     className="group/item "
                                 >
                                     <SidebarMenuSubButton onClick={() => onNavigate(child.id)}>

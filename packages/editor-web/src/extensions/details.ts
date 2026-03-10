@@ -23,6 +23,8 @@ declare module '@tiptap/core' {
 
 // Extend Details with custom rendering and parsing
 export const Details = TiptapDetails.extend({
+    draggable: false,
+
     // Disable the built-in NodeView that renders the toggle button
     addNodeView() {
         return null as any;
@@ -287,7 +289,7 @@ export const DetailsSummary = TiptapDetailsSummary.extend<any>({
                         message: {
                             type: 'openBlockMenu',
                             blockType: 'details',
-                            currentColor: parentDetails?.attrs.backgroundColor,
+                            backgroundColor: parentDetails?.attrs.backgroundColor,
                             id: parentDetails?.attrs.id || HTMLAttributes.id,
                             pos: targetPos,
                         },

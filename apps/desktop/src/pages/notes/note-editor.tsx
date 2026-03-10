@@ -105,10 +105,10 @@ export default function NoteEditor() {
                     copyImageToClipboard(src, data.imageId);
                 } else if (type === "codeBlock") {
                     editorRef.current.onCommand("copyToClipboard", { pos: data.pos });
-                    toast.success("Code copied to clipboard");
+                    toast.success("Code copied to clipboard", { duration: 1000 });
                 } else if (type === "details") {
                     editorRef.current.onCommand("copyDetailsContent", { pos: data.pos });
-                    toast.success("Details content copied to clipboard");
+                    toast.success("Details content copied to clipboard", { duration: 1000 });
                 }
                 break;
             case "delete":
@@ -119,7 +119,7 @@ export default function NoteEditor() {
                 } else {
                     editorRef.current.onCommand("deleteSelection", { pos: data.pos });
                 }
-                toast.success("Block deleted");
+                toast.success("Block deleted", { duration: 1000 });
                 break;
             case "background":
                 if (type === "details") {
@@ -161,9 +161,9 @@ export default function NoteEditor() {
                 if (id) {
                     const link = `annota://note/${noteId}?blockId=${id}`;
                     await writeText(link);
-                    toast.success("Block link copied to clipboard");
+                    toast.success("Block link copied to clipboard", { duration: 1000 });
                 } else {
-                    toast.error("Block link not available");
+                    toast.error("Block link not available", { duration: 1000 });
                 }
                 break;
             case "language":
@@ -183,10 +183,10 @@ export default function NoteEditor() {
                         a.click();
                         document.body.removeChild(a);
                         window.URL.revokeObjectURL(url);
-                        toast.success("Saved to downloads");
+                        toast.success("Saved to downloads", { duration: 1000 });
                     } catch (err) {
                         console.error("Download failed:", err);
-                        toast.error("Failed to download image");
+                        toast.error("Failed to download image", { duration: 1000 });
                     }
                 }
                 break;
@@ -315,7 +315,7 @@ export default function NoteEditor() {
 
     if (!note) {
         return (
-            <div className="flex h-full flex-col items-center justify-center gap-4 p-8">
+            <div className="flex h-full bg-background dark:bg-card/50 flex-col items-center justify-center gap-4 p-8">
                 <FileText className="h-16 w-16 text-border" />
                 <h2 className="text-xl font-bold tracking-tight">Note not found</h2>
             </div>
@@ -323,7 +323,7 @@ export default function NoteEditor() {
     }
 
     return (
-        <div className="flex h-full flex-col w-full min-h-0 relative">
+        <div className="flex h-full bg-background dark:bg-card/50 flex-col w-full min-h-0 relative">
             {/* Floating Action Buttons */}
             <NoteFloatingActions
                 onToggleSearch={() => setIsSearching(prev => !prev)}

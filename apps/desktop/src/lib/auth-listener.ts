@@ -10,7 +10,7 @@ export async function initDeepLinkListener(
         const unlisten = await onOpenUrl(async (urls) => {
             for (const url of urls) {
                 // Handle Auth Callback
-                if (url.startsWith("annota://login-callback") || url.startsWith("annota-desktop://login-callback")) {
+                if (url.startsWith("annota://login-callback")) {
                     try {
                         const urlObj = new URL(url);
                         const params = new URLSearchParams(urlObj.search || urlObj.hash.replace(/^#/, ''));

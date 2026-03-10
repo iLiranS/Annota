@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Annota Desktop",
+  "productName": "Annota",
   "version": "0.1.0",
   "identifier": "com.annota.desktop",
   "build": {
@@ -43,7 +43,7 @@
     "deep-link": {
       "desktop": {
         "schemes": [
-          "annota-desktop"
+          "annota"
         ]
       }
     }

@@ -32,15 +32,7 @@ export const ShortcutManager = Extension.create({
             // --- Custom Commands ---
             'Mod-Shift-b': () => this.editor.commands.toggleBlockquote(),
             'Mod-.': () => (this.editor.commands as any).toggleDetails(),
-            'Mod-Shift-m': () => {
-                const { from, to } = this.editor.state.selection;
-                const text = this.editor.state.doc.textBetween(from, to, ' ');
-
-                return this.editor.commands.insertContent({
-                    type: 'inlineMath',
-                    attrs: { latex: text }
-                });
-            },
+            // Mod-Shift-m (Math) is handled by the desktop/mobile host to trigger the math dialog
 
 
             // --- Reset Color ---

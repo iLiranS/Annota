@@ -1,11 +1,9 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useAppTheme } from "@/hooks/use-app-theme";
 import { useNotesStore, useTasksStore } from "@annota/core";
-import { Flame, Sparkles, Target } from "lucide-react";
+import { Flame, Target } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 export function PersonalMomentum() {
-    const { colors } = useAppTheme();
     const { notes } = useNotesStore();
     const { tasks } = useTasksStore();
 
@@ -61,59 +59,51 @@ export function PersonalMomentum() {
 
 
     return (
-        <div className="flex flex-col gap-2 h-full">
-            <div className="flex items-center gap-2 shrink-0">
-                <Sparkles size={18} color={colors.primary} />
-                <h2 className="text-sm font-semibold text-foreground/80 uppercase tracking-widest">
-                    Personal Momentum
-                </h2>
-            </div>
 
-            <div className="flex-1 bg-card rounded-2xl p-4 border border-border/40 shadow-sm relative overflow-hidden group flex flex-col gap-3 transition-colors duration-500">
+        <div className="lg:flex-1 bg-card rounded-2xl p-4 border border-border/40 shadow-sm relative overflow-hidden group flex flex-col gap-3 transition-colors duration-500">
 
 
-                {/* Section 1: Daily Focus */}
-                <div className="relative z-10 space-y-1">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5 text-primary/60">
-                            <Target size={12} />
-                            <span className="text-[9px] font-bold uppercase tracking-widest">Daily Focus</span>
-                        </div>
-                        <p className="text-[9px] font-bold uppercase tracking-widest">{today}</p>
+            {/* Section 1: Daily Focus */}
+            <div className="relative z-10 space-y-1">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-primary/60">
+                        <Target size={12} />
+                        <span className="text-[9px] font-bold uppercase tracking-widest">Daily Focus</span>
                     </div>
-                    <input
-                        value={focus}
-                        onChange={(e) => setFocus(e.target.value)}
-                        placeholder="Daily goal?"
-                        className="bg-transparent border-none text-sm font-bold placeholder:text-muted-foreground/20 focus:outline-none w-full tracking-tight"
-                    />
+                    <p className="text-[9px] font-bold uppercase tracking-widest">{today}</p>
                 </div>
-
-                {/* Section 2: Activity Visualizer */}
-
-
-                <div className="flex items-end justify-between h-8 gap-1 px-1">
-                    {activityData.map((count, i) => (
-                        <Tooltip key={i}>
-                            <TooltipTrigger asChild>
-                                <div
-                                    className="flex-1 bg-primary/10 rounded-t-[2px] transition-all relative cursor-default hover:bg-primary/20"
-                                    style={{ height: `${(count / maxActivity) * 100}%`, minHeight: '3px' }}
-                                />
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p className="text-[10px] font-medium">{count} actions</p>
-                            </TooltipContent>
-                        </Tooltip>
-                    ))}
-                </div>
-
-                <div className="flex self-end items-center gap-0.5  text-orange-500">
-                    <Flame size={10} fill="currentColor" />
-                    <span className="text-[9px] font-black italic">Activity</span>
-                </div>
+                <input
+                    value={focus}
+                    onChange={(e) => setFocus(e.target.value)}
+                    placeholder="Daily goal?"
+                    className="bg-transparent border-none text-sm font-bold placeholder:text-muted-foreground/20 focus:outline-none w-full tracking-tight"
+                />
             </div>
 
+            {/* Section 2: Activity Visualizer */}
+
+
+            <div className="flex items-end justify-between h-8 gap-1 px-1">
+                {activityData.map((count, i) => (
+                    <Tooltip key={i}>
+                        <TooltipTrigger asChild>
+                            <div
+                                className="flex-1 bg-primary/10 rounded-t-[2px] transition-all relative cursor-default hover:bg-primary/20"
+                                style={{ height: `${(count / maxActivity) * 100}%`, minHeight: '3px' }}
+                            />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p className="text-[10px] font-medium">{count} actions</p>
+                        </TooltipContent>
+                    </Tooltip>
+                ))}
+            </div>
+
+            <div className="flex self-end items-center gap-0.5  text-orange-500">
+                <Flame size={10} fill="currentColor" />
+                <span className="text-[9px] font-black italic">Activity</span>
+            </div>
         </div>
+
     );
 }

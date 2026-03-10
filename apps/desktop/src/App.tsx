@@ -1,4 +1,5 @@
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useDailyCleanup } from "@/hooks/use-daily-cleanup";
 import {
   authApi,
   setStorageEngine,
@@ -50,6 +51,8 @@ type BootstrapState = "booting" | "ready" | "error";
 
 function App() {
   useAppTheme();
+  useDailyCleanup();
+
   const [bootstrapState, setBootstrapState] =
     useState<BootstrapState>("booting");
   const bootstrapStateRef = useRef<BootstrapState>(bootstrapState);
@@ -83,6 +86,12 @@ function App() {
 
         // 2. Optimistically grab the persisted user ID FIRST
         let activeUserId: string | null = useUserStore.getState().user?.id ?? null;
+
+        // Populate master key early so offline mode doesn't redirect to /auth/master-key
+        // since authApi.onAuthStateChange might not provide a session when offline.
+        if (activeUserId) {
+          await useUserStore.getState().checkMasterKey();
+        }
 
         // 3. Attempt session restore with a safety timeout
         try {
@@ -150,6 +159,90 @@ function App() {
 
   const navigate = useNavigate();
   const [pendingDeepLink, setPendingDeepLink] = useState<string | null>(null);
+
+  // Auth and Deep Link listeners
+  useEffect(() => {
+    let unlistenDeepLink: (() => void) | undefined;
+
+    const handleDeepLink = (url: string) => {
+      try {
+        const parsedUrl = new URL(url);
+        // Parse 'annota://note/123?elementId=456'
+        if (parsedUrl.host === "note") {
+          if (bootstrapStateRef.current !== "ready") {
+            setPendingDeepLink(url);
+            return;
+          }
+
+          const noteId = parsedUrl.pathname.replace("/", "");
+          const elementId = parsedUrl.searchParams.get("elementId");
+
+          // Try to find the note to get its folderId for the route
+          const note = useNotesStore.getState().notes.find((n) => n.id === noteId);
+          if (note) {
+            let routePath = `/notes/${note.folderId}/${noteId}`;
+            if (elementId) {
+              routePath += `?elementId=${elementId}`;
+            }
+            navigate(routePath);
+          } else {
+            console.warn("[DeepLink] Note not found in store, can't route yet:", noteId);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to handle deep link:", err);
+      }
+    };
+
+    // 1. Listen for external OS-level links
+    initDeepLinkListener(handleDeepLink).then((unlisten) => {
+      unlistenDeepLink = unlisten;
+    });
+
+    // 2. NEW: Listen for internal link clicks inside the WebView
+    const handleGlobalClick = (e: MouseEvent) => {
+      // Find if the click originated from inside an <a> tag
+      const anchor = (e.target as Element).closest("a");
+      if (!anchor) return;
+
+      const href = anchor.getAttribute("href");
+      // If it's an internal app link, stop the webview from navigating natively
+      if (href && href.startsWith("annota://")) {
+        e.preventDefault();
+        handleDeepLink(href);
+      }
+    };
+
+    // Attach the event listener to the document
+    document.addEventListener("click", handleGlobalClick);
+
+    const subscription = authApi.onAuthStateChange((event, newSession) => {
+      const prevUserId = useUserStore.getState().user?.id ?? null;
+
+      if (newSession) {
+        setSession(newSession);
+        useUserStore.getState().checkMasterKey();
+
+        if (newSession.user.id !== prevUserId) {
+          setRunId((v) => v + 1);
+        }
+      } else if (event === "SIGNED_OUT") {
+        setSession(null);
+        useNotesStore.getState().reset();
+        useTasksStore.getState().reset();
+        useSearchStore.getState().reset();
+        useSyncStore.getState().reset();
+        setRunId((v) => v + 1);
+      }
+    });
+
+    return () => {
+      if (unlistenDeepLink) unlistenDeepLink();
+      subscription.unsubscribe();
+      // Clean up the click listener when unmounting
+      document.removeEventListener("click", handleGlobalClick);
+    };
+  }, [setSession, navigate]);
 
   // Handle pending deep link once ready
   useEffect(() => {

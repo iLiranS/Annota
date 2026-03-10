@@ -128,7 +128,7 @@ export function BlockMenu({
                                         onClick={() => handleAction("background", { color: color.value })}
                                         title={color.name}
                                     >
-                                        {data.backgroundColor === color.value && <Check className="h-3 w-3 text-white shadow-sm" />}
+                                        {data.backgroundColor?.toLowerCase().startsWith(color.value.toLowerCase()) && <Check className="h-3 w-3 text-white shadow-sm" />}
                                     </button>
                                 ))}
                             </DropdownMenuSubContent>
@@ -211,7 +211,7 @@ export function BlockMenu({
                                         onClick={() => handleAction("background", { color: color.value })}
                                         title={color.name}
                                     >
-                                        {data.backgroundColor === color.value && <Check className="h-3 w-3 text-white shadow-sm" />}
+                                        {data.backgroundColor?.toLowerCase().startsWith(color.value.toLowerCase()) && <Check className="h-3 w-3 text-white shadow-sm" />}
                                     </button>
                                 ))}
                             </DropdownMenuSubContent>

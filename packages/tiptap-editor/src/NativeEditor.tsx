@@ -284,6 +284,17 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                 setEditorState(getEditorState(editor) as EditorState);
             },
             onSelectionUpdate: ({ editor }) => {
+                const { selection } = editor.state;
+                let latex = '';
+
+                // Identify if current selection is relevant for Math Dialog
+                if ((selection as any).node?.type.name === 'inlineMath') {
+                    latex = (selection as any).node.attrs.latex;
+                } else if (!selection.empty) {
+                    latex = editor.state.doc.textBetween(selection.from, selection.to, ' ');
+                }
+
+                setCurrentLatex(latex || null);
                 setEditorState(getEditorState(editor) as EditorState);
             },
             onTransaction: ({ editor }) => {
@@ -298,8 +309,12 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
             const root = containerRef.current;
             if (!root) return;
 
-            root.style.setProperty('--bg-color', colors.background);
-            root.style.setProperty('--text-color', colors.text);
+            // Desktop polish: use a transparent background in dark mode to inherit from the parent container (which has bg-card/50)
+            const finalBg = dark ? 'transparent' : colors.background;
+            const finalTextColor = dark ? 'rgba(255, 255, 255, 0.85)' : colors.text;
+
+            root.style.setProperty('--bg-color', finalBg);
+            root.style.setProperty('--text-color', finalTextColor);
             root.style.setProperty('--accent-color', colors.primary);
             root.style.setProperty('--placeholder-color', dark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)');
             root.style.setProperty('--code-bg', dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)');
@@ -313,6 +328,39 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
             const resolvedFont = resolveFontFamily(editorSettings.fontFamily);
             root.style.setProperty('--editor-font-family', resolvedFont);
         }, [colors, dark, editorSettings]);
+
+        // Keyboard Shortcuts
+        useEffect(() => {
+            const handleKeyDown = (e: KeyboardEvent) => {
+                const isMod = e.metaKey || e.ctrlKey;
+                const isShift = e.shiftKey;
+                const key = e.key.toLowerCase();
+
+                if (isMod && isShift && key === 'm') {
+                    if (!editor) return;
+                    e.preventDefault();
+
+                    const { selection } = editor.state;
+                    let latex = '';
+
+                    // Robust check for NodeSelection
+                    if ((selection as any).node?.type.name === 'inlineMath') {
+                        latex = (selection as any).node.attrs.latex;
+                    } else {
+                        // Otherwise use selected text
+                        latex = editor.state.doc.textBetween(selection.from, selection.to, ' ');
+                    }
+
+                    setCurrentLatex(latex || null);
+                    requestAnimationFrame(() => {
+                        setActivePopup('math');
+                    });
+                }
+            };
+
+            window.addEventListener('keydown', handleKeyDown);
+            return () => window.removeEventListener('keydown', handleKeyDown);
+        }, [editor]);
 
         // Sync default code language
         useEffect(() => {
@@ -394,12 +442,12 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                 case 'mergeCells': c.mergeCells().run(); break;
                 case 'splitCell': c.splitCell().run(); break;
                 case 'setCellBackground':
-                    if (params.color) {
-                        let bgColor = params.color as string;
+                    let cellBgColor = params.color as string | null;
+                    if (cellBgColor) {
                         // Reduce opacity to 25% (40 in hex) for table cells
-                        if (bgColor.startsWith('#') && bgColor.length === 7) bgColor += '40';
-                        c.setCellAttribute('backgroundColor', bgColor).run();
+                        if (cellBgColor.startsWith('#') && cellBgColor.length === 7) cellBgColor += '40';
                     }
+                    c.setCellAttribute('backgroundColor', cellBgColor).run();
                     break;
                 case 'unsetCellBackground':
                     c.setCellAttribute('backgroundColor', null).run();
@@ -447,19 +495,19 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                     }
                     break;
                 case 'setDetailsBackground':
-                    if (params.color) {
-                        let bgColor = params.color as string;
+                    let bgColor = params.color as string | null;
+                    if (bgColor) {
                         // Reduce opacity to 15% (26 in hex) for details background
                         if (bgColor.startsWith('#') && bgColor.length === 7) bgColor += '26';
+                    }
 
-                        if (params.pos !== undefined) {
-                            const node = editor.state.doc.nodeAt(params.pos);
-                            if (node) {
-                                editor.view.dispatch(editor.state.tr.setNodeMarkup(params.pos, undefined, { ...node.attrs, backgroundColor: bgColor }));
-                            }
-                        } else {
-                            c.updateAttributes('details', { backgroundColor: bgColor }).run();
+                    if (params.pos !== undefined) {
+                        const node = editor.state.doc.nodeAt(params.pos);
+                        if (node) {
+                            editor.view.dispatch(editor.state.tr.setNodeMarkup(params.pos, undefined, { ...node.attrs, backgroundColor: bgColor }));
                         }
+                    } else {
+                        c.updateAttributes('details', { backgroundColor: bgColor }).run();
                     }
                     break;
                 case 'setCodeBlockLanguage':
@@ -576,8 +624,8 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                     height: '100%',
                     width: '100%',
                     position: 'relative',
-                    backgroundColor: colors.background,
-                    color: colors.text
+                    backgroundColor: 'var(--bg-color)',
+                    color: 'var(--text-color)'
                 }}
             >
                 {renderToolbar?.({

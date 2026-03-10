@@ -12,7 +12,7 @@ export default function HomePage() {
 
     return (
         // 1. Root container is strictly screen height. No overflow here.
-        <div className="flex h-full flex-col overflow-hidden bg-background max-w-7xl mx-auto">
+        <div className="flex h-full flex-col lg:overflow-hidden bg-background max-w-7xl mx-auto">
 
             {/* Top Section - Compact Header */}
             {/* 2. Added shrink-0 so the header never compresses */}
@@ -26,31 +26,29 @@ export default function HomePage() {
             </div>
 
             {/* Main Content Area - Total dash height is constrained to viewport */}
-            <div className="flex-1 flex flex-col overflow-hidden p-8 pt-2">
-                <div className="mx-auto flex-1 w-full flex flex-col lg:grid lg:grid-cols-[3fr_2fr] gap-10 min-h-0 overflow-hidden">
+            <div className="flex-1 flex flex-col lg:overflow-hidden p-8 pt-2 overflow-y-auto custom-scrollbar">
+                <div className="mx-auto flex-1 w-full flex flex-col lg:grid lg:grid-cols-[3fr_2fr] gap-10 lg:min-h-0 lg:overflow-hidden">
 
                     {/* Column 1: Insights & Notes - Scrollable independently if content exceeds viewport */}
-                    <div className="flex flex-col gap-4 overflow-y-auto custom-scrollbar pr-2 min-h-0">
-                        <div className="shrink-0">
+                    <div className="flex flex-col gap-4 lg:pr-2 lg:min-h-0">
+                        <div className="shrink-0 flex flex-col gap-4">
                             <WeeklyInsights />
+                            <PersonalMomentum />
                         </div>
                         <div className="shrink-0">
                             <RecentNotesGrid />
                         </div>
-                        <div className="shrink-0 pb-6">
-                            <PersonalMomentum />
-                        </div>
                     </div>
 
                     {/* Column 2: Calendar & Tasks - Tasks scroll internally to match Column 1's bottom area */}
-                    <div className="flex flex-col gap-4 min-h-0 overflow-hidden">
+                    <div className="flex flex-col gap-4 lg:min-h-0 lg:overflow-hidden">
                         <div className="shrink-0">
                             <HomeCalendar
                                 selectedDate={selectedDate}
                                 onDateSelect={setSelectedDate}
                             />
                         </div>
-                        <div className="flex-1 min-h-0">
+                        <div className="lg:flex-1 lg:min-h-0">
                             <TasksOnboarding selectedDate={selectedDate} />
                         </div>
                     </div>

@@ -23,6 +23,7 @@ import {
     Outdent,
     Quote,
     Redo,
+    Sigma,
     SquareCode,
     Strikethrough,
     Table as TableIcon,
@@ -189,8 +190,30 @@ export function DesktopToolbar({
             id: 'math',
             label: 'Math Formula',
             shortcut: `${MOD}${SHIFT}M`,
-            render: <MathPopover key="math" sendCommand={sendCommand} activeColor={colors.primary} onOpenChange={(open) => { handleOpenChange(open); if (!open && activePopup === 'math') onActivePopupChange(null); }} visible={activePopup === 'math'} currentLatex={currentLatex} />,
-            dropdownRender: <MathPopover key="math-dropdown" sendCommand={sendCommand} activeColor={colors.primary} onOpenChange={(open) => { handleOpenChange(open); if (!open && activePopup === 'math') onActivePopupChange(null); }} visible={activePopup === 'math'} currentLatex={currentLatex} isMenu />
+            render: (
+                <Button
+                    key="math"
+                    variant="ghost"
+                    size="icon"
+                    className={cn(
+                        "h-9 w-9 shrink-0 hover:bg-accent/50 transition-colors",
+                        activePopup === 'math' && "text-primary bg-primary/10"
+                    )}
+                    onClick={() => onActivePopupChange(activePopup === 'math' ? null : 'math')}
+                >
+                    <Sigma className="h-5 w-5" />
+                </Button>
+            ),
+            dropdownRender: (
+                <DropdownMenuItem
+                    key="math-dropdown"
+                    onClick={(e) => { e.preventDefault(); onActivePopupChange('math'); }}
+                    className={cn("gap-2 cursor-pointer", activePopup === 'math' && "text-primary")}
+                >
+                    <Sigma className="h-4 w-4" />
+                    <span>Math Formula</span>
+                </DropdownMenuItem>
+            )
         },
         {
             id: 'link',
@@ -368,6 +391,18 @@ export function DesktopToolbar({
                     </div>
                 </div>
             </div>
+
+            {/* Global Math Dialog - Rendered once to avoid conflicts */}
+            <MathPopover
+                sendCommand={sendCommand}
+                activeColor={colors.primary}
+                onOpenChange={(open) => {
+                    handleOpenChange(open);
+                    if (!open && activePopup === 'math') onActivePopupChange(null);
+                }}
+                visible={activePopup === 'math'}
+                currentLatex={currentLatex}
+            />
         </TooltipProvider>
     );
 }

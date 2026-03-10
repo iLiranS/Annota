@@ -28,7 +28,7 @@ export default function LoginPage() {
         try {
             const redirectUrl = import.meta.env.DEV
                 ? "http://localhost:8484/"
-                : "annota-desktop://login-callback";
+                : "annota://login-callback";
 
             const { data, error } = await authApi.signInWithOAuth(
                 provider,

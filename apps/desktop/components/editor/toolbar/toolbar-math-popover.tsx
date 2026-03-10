@@ -1,19 +1,33 @@
 import { Button } from '@/components/ui/button';
 import {
-    DropdownMenuPortal,
-    DropdownMenuSub,
-    DropdownMenuSubContent,
-    DropdownMenuSubTrigger
-} from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from '@/components/ui/popover';
+    Dialog,
+    DialogContent,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import type { ToolbarRenderProps } from '@annota/tiptap-editor';
+import katex from 'katex';
+import 'katex/dist/katex.min.css';
 import { Sigma } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+
+import { cn } from '@/lib/utils';
+
+// Simple styled textarea to match UI input
+const Textarea = React.forwardRef<HTMLTextAreaElement, React.TextareaHTMLAttributes<HTMLTextAreaElement>>(
+    ({ className, ...props }, ref) => (
+        <textarea
+            ref={ref}
+            className={cn(
+                "flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
+                className
+            )}
+            {...props}
+        />
+    )
+);
+Textarea.displayName = "Textarea";
 
 interface MathPopoverProps {
     sendCommand: ToolbarRenderProps['sendCommand'];
@@ -24,22 +38,40 @@ interface MathPopoverProps {
     currentLatex?: string | null;
 }
 
-export function MathPopover({ sendCommand, onOpenChange, isMenu, visible, currentLatex }: MathPopoverProps) {
+export function MathPopover({ sendCommand, onOpenChange, visible, currentLatex }: MathPopoverProps) {
     const [latex, setLatex] = useState(currentLatex || '');
-    const [open, setOpen] = useState(visible || false);
+    const [internalOpen, setInternalOpen] = useState(false);
+    const previewRef = useRef<HTMLDivElement>(null);
 
-    React.useEffect(() => {
-        if (visible !== undefined) setOpen(visible);
-    }, [visible]);
+    // Controlled opening if visible prop is provided
+    const open = visible !== undefined ? visible : internalOpen;
 
-    React.useEffect(() => {
-        setLatex(currentLatex || '');
-    }, [currentLatex]);
+    useEffect(() => {
+        if (!open) {
+            setLatex(currentLatex || '');
+        }
+    }, [currentLatex, open]);
+
+    useEffect(() => {
+        if (previewRef.current && latex) {
+            try {
+                katex.render(latex, previewRef.current, {
+                    throwOnError: false,
+                    displayMode: true,
+                });
+            } catch (err) {
+                console.error('KaTeX rendering error:', err);
+            }
+        } else if (previewRef.current) {
+            previewRef.current.innerHTML = '';
+        }
+    }, [latex, open, previewRef.current]);
 
     const handleOpenChange = (val: boolean) => {
-        setOpen(val);
+        if (visible === undefined) {
+            setInternalOpen(val);
+        }
         onOpenChange?.(val);
-        // If opening and no currentLatex, we're likely adding a new formula, so ensure it's empty
         if (val && !currentLatex) setLatex('');
     };
 
@@ -52,55 +84,82 @@ export function MathPopover({ sendCommand, onOpenChange, isMenu, visible, curren
     };
 
     const content = (
-        <div className="flex flex-col gap-3 p-1">
-            <div className="space-y-1 px-1">
-                <h4 className="text-sm font-medium leading-none">Math Formula</h4>
-                <p className="text-xs text-muted-foreground">Enter LaTeX</p>
+        <div className="flex flex-col h-full">
+            <DialogHeader className="px-0 text-left mb-2 shrink-0">
+                <DialogTitle className="text-xl font-bold">Math Formula</DialogTitle>
+            </DialogHeader>
+
+            <div className="flex-1 overflow-y-auto  pr-2 -mr-2">
+                <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-70">LaTeX Input</label>
+                    <Textarea
+                        className="text-sm font-mono bg-muted/30 border-input focus-visible:ring-0 focus:ring-0 outline-none resize-none scroll-area"
+                        placeholder="e = mc^2"
+                        value={latex}
+                        onChange={(e) => setLatex(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                                e.preventDefault();
+                                handleInsert(latex);
+                            }
+                        }}
+                        style={{ resize: "none", height: 160 }}
+                        autoFocus
+                    />
+                </div>
+
+                <div className="space-y-2 ">
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-70">Preview</label>
+                    <div
+                        className=" h-[140px] overflow-y-auto flex  rounded-xl border bg-muted/10 px-2 transition-all  shadow-inner overflow-hidden"
+                        style={{ fontSize: '1rem' }}
+                    >
+                        <div
+                            className={cn(
+                                "flex flex-col select-none  gap-2 opacity-40 w-full justify-center items-center animate-in fade-in duration-200",
+                                latex ? "hidden" : "flex"
+                            )}
+                        >
+                            <Sigma className="h-10 w-10 stroke-[1.5]" />
+                            <span className="text-[11px] font-medium italic">Preview will appear here</span>
+                        </div>
+                        <div
+                            ref={previewRef}
+                            className={cn(
+                                "w-full overflow-x-auto select-none  custom-scrollbar",
+                                !latex && "hidden"
+                            )}
+                        />
+                    </div>
+                </div>
             </div>
-            <div className="flex gap-2">
-                <Input
-                    className="h-8 text-xs font-mono"
-                    placeholder="e = mc^2"
-                    value={latex}
-                    onChange={(e) => setLatex(e.target.value)}
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleInsert(latex);
-                    }}
-                    autoFocus
-                />
-                <Button size="sm" className="h-8 px-3 text-xs" onClick={() => handleInsert(latex)}>
-                    Insert
+
+            <DialogFooter className="mt-6 pt-4 border-t shrink-0 flex items-center sm:justify-between">
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleOpenChange(false)}
+                    className="text-xs hover:bg-destructive/10 hover:text-destructive transition-colors rounded-full"
+                >
+                    Cancel
                 </Button>
-            </div>
+                <Button
+                    size="sm"
+                    className="px-8 h-10 rounded-full shadow-lg shadow-primary/20 font-semibold"
+                    onClick={() => handleInsert(latex)}
+                    disabled={!latex}
+                >
+                    {currentLatex ? 'Update Formula' : 'Insert Formula'}
+                </Button>
+            </DialogFooter>
         </div>
     );
 
-    if (isMenu) {
-        return (
-            <DropdownMenuSub open={open} onOpenChange={handleOpenChange}>
-                <DropdownMenuSubTrigger className="gap-2">
-                    <Sigma className="h-4 w-4" />
-                    <span>Math Formula</span>
-                </DropdownMenuSubTrigger>
-                <DropdownMenuPortal>
-                    <DropdownMenuSubContent className="w-80 p-3 mr-2">
-                        {content}
-                    </DropdownMenuSubContent>
-                </DropdownMenuPortal>
-            </DropdownMenuSub>
-        );
-    }
-
     return (
-        <Popover open={open} onOpenChange={handleOpenChange}>
-            <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0">
-                    <Sigma className="h-5 w-5" />
-                </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-80 p-3" align="start">
+        <Dialog open={open} onOpenChange={handleOpenChange}>
+            <DialogContent aria-describedby={undefined} className="sm:max-w-[700px]  p-4 gap-0 shadow-2xl border-primary/10 rounded-2xl flex flex-col overflow-hidden outline-none">
                 {content}
-            </PopoverContent>
-        </Popover>
+            </DialogContent>
+        </Dialog>
     );
 }

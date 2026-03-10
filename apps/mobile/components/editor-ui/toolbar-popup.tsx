@@ -13,11 +13,6 @@ import { CodeLanguageSelector } from './popups/code-language-selector';
 import { ColorSelector } from './popups/color-selector';
 import { HeadingSelector } from './popups/heading-selector';
 
-import { ImageInput } from './popups/image-input';
-import { LinkInput } from './popups/link-input';
-import { MathInput } from './popups/math-input';
-import { TableActions } from './popups/table-actions';
-import { YouTubeInput } from './popups/youtube-input';
 import {
     BlockMenuPopupProps,
     CodeLanguagePopupProps,
@@ -32,6 +27,11 @@ import {
     ToolbarPopupProps,
     YouTubePopupProps
 } from '@annota/tiptap-editor';
+import { ImageInput } from './popups/image-input';
+import { LinkInput } from './popups/link-input';
+import { MathInput } from './popups/math-input';
+import { TableActions } from './popups/table-actions';
+import { YouTubeInput } from './popups/youtube-input';
 
 // ============================================================================
 // Block Action Menu (Modular)
@@ -329,7 +329,7 @@ export function ToolbarPopup(props: ToolbarPopupProps) {
 
 
     return (
-        <Modal visible={visible} transparent animationType='fade' onRequestClose={onClose}>
+        <Modal visible={visible} transparent animationType='fade' onRequestClose={onClose} supportedOrientations={['portrait', 'landscape', 'landscape-left', 'landscape-right']}>
             <TouchableWithoutFeedback onPress={onClose}>
                 <View style={styles.overlay}>
                     <TouchableWithoutFeedback>
@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
         padding: 16,
         width: '100%',
 
-        maxWidth: 320,
+        maxWidth: 400,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
