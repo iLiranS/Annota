@@ -693,3 +693,34 @@ export async function getNotesCount(tx: DbOrTx = getDb()): Promise<number> {
     const safeResult = safeGet<{ count: number }>(result);
     return safeResult?.count ?? 0;
 }
+
+/**
+ * Remove a tag ID from every note's JSON `tags` array.
+ * Marks affected notes as dirty so changes will sync.
+ */
+export async function removeTagFromAllNotes(tagId: string, tx: DbOrTx = getDb()): Promise<void> {
+    // Find all notes whose tags JSON contains this tag ID
+    const allNotes = await tx.select({ id: schema.noteMetadata.id, tags: schema.noteMetadata.tags })
+        .from(schema.noteMetadata)
+        .all();
+
+    const safeNotes = safeGetAll<{ id: string; tags: string }>(allNotes);
+    const now = new Date();
+
+    for (const note of safeNotes) {
+        let tagsArray: string[];
+        try {
+            tagsArray = JSON.parse(note.tags);
+        } catch {
+            continue;
+        }
+
+        if (!tagsArray.includes(tagId)) continue;
+
+        const updatedTags = tagsArray.filter(id => id !== tagId);
+        await tx.update(schema.noteMetadata)
+            .set({ tags: JSON.stringify(updatedTags), isDirty: true, updatedAt: now })
+            .where(eq(schema.noteMetadata.id, note.id))
+            .run();
+    }
+}

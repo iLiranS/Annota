@@ -176,7 +176,7 @@ export class SyncScheduler {
             }
             return success;
         } catch (err) {
-            console.error('[SyncScheduler] Push failed');
+            console.error('[SyncScheduler] Push failed', err);
             return false;
         }
     }

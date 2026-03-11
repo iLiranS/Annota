@@ -215,7 +215,9 @@ export function setupEditor(options: any) {
                         sendMessage({ type: 'mathSelected', latex, isBlock });
                     }
                 },
-                defaultCodeLanguage
+                defaultCodeLanguage,
+                onSlashCommand: options.onSlashCommand,
+                onTagCommand: options.onTagCommand,
             }),
             content: content,
             autofocus: autofocus, // Pass directly

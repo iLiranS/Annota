@@ -5,6 +5,7 @@ import {
     useSyncStore,
     useUserStore,
     type Folder,
+    type Tag,
 } from "@annota/core";
 import { useCallback, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -29,6 +30,7 @@ import { useCreateTask } from "@/hooks/use-create-task";
 import { useEffect } from "react";
 import { ConfirmDialog } from "../custom-ui/confirm-dialog";
 import { FolderEditModal } from "../notes/folder-edit-modal";
+import { TagEditModal } from "../tags/tag-edit-modal";
 import { Ionicons } from "../ui/ionicons";
 
 export function AppSidebar() {
@@ -37,7 +39,7 @@ export function AppSidebar() {
     const { colors } = useAppTheme();
     const { toggleSidebar, setOpen } = useSidebar();
 
-    const { folders, notes, deleteFolder } = useNotesStore();
+    const { folders, notes, tags, deleteFolder, deleteTag } = useNotesStore();
     const isOnline = useSyncStore((s) => s.isOnline);
     const isGuest = useUserStore((s) => s.isGuest);
     const showOfflineBanner = !isOnline && !isGuest;
@@ -52,6 +54,8 @@ export function AppSidebar() {
     const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [folderToDelete, setFolderToDelete] = useState<Folder | null>(null);
+    const [editingTag, setEditingTag] = useState<Tag | null>(null);
+    const [isTagEditModalOpen, setIsTagEditModalOpen] = useState(false);
     const [newFolderParentId, setNewFolderParentId] = useState<string | null>(null);
 
     const handleRetry = useCallback(() => {
@@ -122,6 +126,7 @@ export function AppSidebar() {
         () => folders.find((f) => f.id === DAILY_NOTES_FOLDER_ID),
         [folders],
     );
+
 
     // Active path helper
     const isActive = (path: string) => location.pathname.startsWith(path);
@@ -249,12 +254,14 @@ export function AppSidebar() {
 
                 <SidebarSeparator />
 
+
+
                 {/* Notes & Folders */}
                 <SidebarGroup>
                     <SidebarGroupLabel>Notes</SidebarGroupLabel>
                     <SidebarGroupContent>
                         <SidebarMenu>
-                            <SidebarMenuItem>
+                            <SidebarMenuItem key="all-notes">
                                 <ContextMenu>
                                     <ContextMenuTrigger asChild>
                                         <SidebarMenuButton
@@ -305,7 +312,74 @@ export function AppSidebar() {
                         </SidebarMenu>
                     </SidebarGroupContent>
                 </SidebarGroup>
+
+
+                {/* Tags */}
+                <Collapsible
+                    className="group/tags"
+                    defaultOpen={true}
+                >
+                    <SidebarGroup>
+                        <SidebarGroupLabel asChild>
+                            <CollapsibleTrigger className="flex w-full items-center gap-2">
+                                <Ionicons name="pricetag" size={16} className="text-pink-500" />
+                                <span className="flex-1 text-left">Tags</span>
+                                <Ionicons name="chevron-forward" size={14} className="transition-transform group-data-[state=open]/tags:rotate-90" />
+                            </CollapsibleTrigger>
+                        </SidebarGroupLabel>
+                        <CollapsibleContent>
+                            <SidebarGroupContent>
+                                <SidebarMenu>
+                                    {tags.length === 0 ? (
+                                        <SidebarMenuItem key="no-tags">
+                                            <p className="px-3 py-2 text-xs italic text-muted-foreground">
+                                                No tags yet
+                                            </p>
+                                        </SidebarMenuItem>
+                                    ) : (
+                                        tags.map((tag) => (
+                                            <SidebarMenuItem key={tag.id}>
+                                                <ContextMenu>
+                                                    <ContextMenuTrigger asChild>
+                                                        <SidebarMenuButton
+                                                            onClick={() => navigate(`/notes?tagId=${tag.id}`)}
+                                                            isActive={isActive("/notes") && location.search.includes(`tagId=${tag.id}`)}
+                                                            className="text-sm"
+                                                        >
+                                                            <Ionicons className="ml-1" color={tag.color} name="ellipse" size={16} />
+                                                            <span className="truncate">{tag.name}</span>
+                                                        </SidebarMenuButton>
+                                                    </ContextMenuTrigger>
+                                                    <ContextMenuContent className="w-48">
+                                                        <ContextMenuItem
+                                                            className="gap-2"
+                                                            onClick={() => {
+                                                                setEditingTag(tag);
+                                                                setIsTagEditModalOpen(true);
+                                                            }}
+                                                        >
+                                                            <Ionicons name="pencil-outline" size={16} />
+                                                            <span>Update Tag</span>
+                                                        </ContextMenuItem>
+                                                        <ContextMenuItem
+                                                            className="gap-2 text-destructive focus:text-destructive"
+                                                            onClick={() => deleteTag(tag.id)}
+                                                        >
+                                                            <Ionicons name="trash-outline" size={16} />
+                                                            <span>Delete Tag</span>
+                                                        </ContextMenuItem>
+                                                    </ContextMenuContent>
+                                                </ContextMenu>
+                                            </SidebarMenuItem>
+                                        ))
+                                    )}
+                                </SidebarMenu>
+                            </SidebarGroupContent>
+                        </CollapsibleContent>
+                    </SidebarGroup>
+                </Collapsible>
             </SidebarContent>
+
 
             {/* ── Footer ───────────────────────────────────── */}
             <SidebarFooter className="gap-2 px-3 pb-3">
@@ -326,7 +400,7 @@ export function AppSidebar() {
                 )}
 
                 <SidebarMenu>
-                    <SidebarMenuItem>
+                    <SidebarMenuItem key="trash">
                         <SidebarMenuButton
                             onClick={() => navigate("/notes/trash")}
                             tooltip="Trash"
@@ -335,7 +409,7 @@ export function AppSidebar() {
                             <span>Trash</span>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
-                    <SidebarMenuItem>
+                    <SidebarMenuItem key="settings">
                         <SidebarMenuButton
                             onClick={() => navigate("/settings", { state: { background: location } })}
                             tooltip="Settings"
@@ -355,6 +429,12 @@ export function AppSidebar() {
                 onOpenChange={setIsEditModalOpen}
                 folder={editingFolder}
                 defaultParentId={newFolderParentId}
+            />
+
+            <TagEditModal
+                open={isTagEditModalOpen}
+                onOpenChange={setIsTagEditModalOpen}
+                tag={editingTag}
             />
 
             <ConfirmDialog

@@ -21,7 +21,9 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FolderEditModal from '../folder-edit-modal';
+import TagEditModal from '../tag-edit-modal';
 import { HapticPressable } from '../ui/haptic-pressable';
+import type { Tag } from '@annota/core/db/repositories/tags.repository';
 
 
 
@@ -167,10 +169,12 @@ export default function Sidebar(props: DrawerContentComponentProps) {
     const insets = useSafeAreaInsets();
     const router = useRouter();
 
-    const { folders, notes, getFoldersInFolder } = useNotesStore();
+    const { folders, notes, tags, getFoldersInFolder } = useNotesStore();
     const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
     const [isQuickAccessExpanded, setIsQuickAccessExpanded] = useState(false);
+    const [isTagsExpanded, setIsTagsExpanded] = useState(true);
     const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
+    const [editingTag, setEditingTag] = useState<Tag | null>(null);
 
     // Offline / sync state
     const isOnline = useSyncStore(s => s.isOnline);
@@ -180,6 +184,10 @@ export default function Sidebar(props: DrawerContentComponentProps) {
 
     const quickAccessChevronStyle = useAnimatedStyle(() => ({
         transform: [{ rotate: withTiming(isQuickAccessExpanded ? '90deg' : '0deg', { duration: 300, easing: Easing.bezier(0.4, 0, 0.2, 1) }) }]
+    }));
+
+    const tagsChevronStyle = useAnimatedStyle(() => ({
+        transform: [{ rotate: withTiming(isTagsExpanded ? '90deg' : '0deg', { duration: 300, easing: Easing.bezier(0.4, 0, 0.2, 1) }) }]
     }));
 
     const handleRetry = useCallback(() => {
@@ -214,6 +222,11 @@ export default function Sidebar(props: DrawerContentComponentProps) {
 
     const navigateToDailyNotes = () => {
         navigateToNotes(DAILY_NOTES_FOLDER_ID);
+    };
+
+    const navigateToTag = (tagId: string) => {
+        closeDrawer();
+        router.push({ pathname: '/Notes', params: { tagId } });
     };
 
     const navigateToTasks = () => {
@@ -397,7 +410,6 @@ export default function Sidebar(props: DrawerContentComponentProps) {
                         iconColor={colors.primary}
                         onPress={() => navigateToNotes()}
                     />
-
                     <View style={styles.folderContainer}>
                         {topLevelFolders.map((folder) => {
                             const nested = folders.filter(f => f.parentId === folder.id && !f.isSystem);
@@ -419,8 +431,72 @@ export default function Sidebar(props: DrawerContentComponentProps) {
                             );
                         })}
                     </View>
+
+                    {/* Tags Toggle */}
+                    <Animated.View layout={LinearTransition.duration(350).easing(Easing.bezier(0.4, 0, 0.2, 1))}>
+                        <Pressable
+                            onPress={() => setIsTagsExpanded(!isTagsExpanded)}
+                            style={[
+                                styles.sidebarItem,
+                            ]}
+                        >
+                            <Ionicons
+                                name={'pricetag'}
+                                size={22}
+                                color={"#EC4899"} // Pink 500
+                            />
+                            <Text style={[
+                                styles.sidebarItemText,
+                                { color: colors.text, flex: 1 }
+                            ]}>
+                                Tags
+                            </Text>
+                            <Animated.View style={tagsChevronStyle}>
+                                <Ionicons
+                                    name="chevron-forward"
+                                    size={16}
+                                    color={colors.text}
+                                />
+                            </Animated.View>
+                        </Pressable>
+                    </Animated.View>
+
+                    {/* Tags List */}
+                    {isTagsExpanded && (
+                        <Animated.View
+                            entering={FadeIn.duration(250)}
+                            exiting={FadeOut.duration(200)}
+                            layout={LinearTransition.duration(350).easing(Easing.bezier(0.4, 0, 0.2, 1))}
+                            style={styles.quickAccessList}
+                        >
+                            {tags.length === 0 ? (
+                                <Text style={[styles.emptyText, { color: colors.text + '80' }]}>
+                                    No tags yet
+                                </Text>
+                            ) : (
+                                tags.map(tag => (
+                                    <HapticPressable
+                                        key={tag.id}
+                                        onPress={() => navigateToTag(tag.id)}
+                                        onLongPress={() => setEditingTag(tag)}
+                                        style={({ pressed }) => [
+                                            styles.quickAccessItem,
+                                            pressed && { opacity: 0.7 }
+                                        ]}
+                                    >
+                                        <Ionicons name="ellipse" size={12} color={tag.color} />
+                                        <Text style={[styles.quickAccessText, { color: colors.text }]} numberOfLines={1}>
+                                            {tag.name}
+                                        </Text>
+                                    </HapticPressable>
+                                ))
+                            )}
+                        </Animated.View>
+                    )}
                 </View>
             </DrawerContentScrollView>
+
+
 
             {/* Footer Section */}
             <View style={[styles.footer, { paddingBottom: insets.bottom + 16, borderTopColor: colors.border }]}>
@@ -467,6 +543,13 @@ export default function Sidebar(props: DrawerContentComponentProps) {
                 visible={editingFolder !== null}
                 folder={editingFolder}
                 onClose={() => setEditingFolder(null)}
+            />
+
+            {/* Tag Edit Modal */}
+            <TagEditModal
+                visible={editingTag !== null}
+                tag={editingTag}
+                onClose={() => setEditingTag(null)}
             />
         </View>
     );

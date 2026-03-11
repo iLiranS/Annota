@@ -47,6 +47,7 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
     const {
         notes,
         folders,
+        tags,
         createNote,
         getNotesInFolder,
         getFoldersInFolder,
@@ -59,11 +60,14 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
 
     const { createAndNavigate: createTask } = useCreateTask();
 
+    const tagId = searchParams.get("tagId");
+
     // Location awareness: prioritize folderId from route path over search params
     const currentFolderId = useMemo(() => {
+        if (tagId) return undefined;
         if (routeFolderId && routeFolderId !== "root") return routeFolderId;
         return searchParams.get("folderId") || undefined;
-    }, [routeFolderId, searchParams]);
+    }, [routeFolderId, searchParams, tagId]);
 
     const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -77,17 +81,28 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
 
     // Browsing data
     const browseFolders = useMemo(() => {
+        if (tagId) return [];
         const list = getFoldersInFolder(currentFolderId ?? null);
         return sortFolders(
             list.filter((f) => !f.isSystem),
             currentSortType,
         ) as Folder[];
-    }, [folders, currentFolderId, currentSortType]);
+    }, [folders, currentFolderId, currentSortType, tagId]);
 
     const browseNotes = useMemo(() => {
+        if (tagId) {
+            const list = notes.filter(n => {
+                if (!n.tags) return false;
+                try {
+                    const tagIds = JSON.parse(n.tags) as string[];
+                    return tagIds.includes(tagId);
+                } catch { return false; }
+            });
+            return sortNotes(list, currentSortType);
+        }
         const list = getNotesInFolder(currentFolderId ?? null);
         return sortNotes(list, currentSortType);
-    }, [notes, currentFolderId, currentSortType]);
+    }, [notes, currentFolderId, currentSortType, tagId]);
 
     const { pinnedNotes, unpinnedNotes } = useMemo(() => {
         return {
@@ -138,7 +153,8 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
         createTask({ folderId: folder.id });
     }, [createTask]);
 
-    const headerTitle = currentFolder ? currentFolder.name : "Notes";
+    const currentTag = useMemo(() => tags.find(t => t.id === tagId), [tags, tagId]);
+    const headerTitle = tagId ? (currentTag?.name ?? "Tag") : (currentFolder ? currentFolder.name : "Notes");
     const { open } = useSidebar();
 
     return (
@@ -155,9 +171,14 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
                 <TooltipProvider>
                     <div className="flex items-center justify-between gap-1 w-full">
                         <div className="flex items-center gap-2 overflow-hidden flex-1">
-                            <div style={{ backgroundColor: (currentFolder?.color || colors.primary) + "30" }} className="flex h-6 w-6 shrink-0 items-center justify-center rounded transition-colors shadow-sm">
-                                <Ionicons name={currentFolder ? currentFolder.icon : "documents"} color={currentFolder?.color || colors.primary} size={16} />
-                            </div>
+                            {tagId && currentTag ? (
+                                <Ionicons name="ellipse" color={currentTag.color} size={16} />
+
+                            ) : (
+                                <div style={{ backgroundColor: (currentFolder?.color || colors.primary) + "30" }} className="flex h-6 w-6 shrink-0 items-center justify-center rounded transition-colors shadow-sm">
+                                    <Ionicons name={currentFolder ? currentFolder.icon : "documents"} color={currentFolder?.color || colors.primary} size={16} />
+                                </div>
+                            )}
                             <h2 className="text-sm font-bold tracking-tight truncate">{headerTitle}</h2>
                         </div>
                         <div className="flex items-center gap-0.5 shrink-0">

@@ -73,6 +73,13 @@ export const tags = sqliteTable('tags', {
     id: text('id').primaryKey(),
     name: text('name').notNull(),
     color: text('color').notNull(),
+    isDeleted: integer('is_deleted', { mode: 'boolean' }).notNull().default(false),
+    deletedAt: integer('deleted_at', { mode: 'timestamp' }),
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+    isDirty: integer('is_dirty', { mode: 'boolean' }).notNull().default(false),
+    lastSyncedAt: integer('last_synced_at', { mode: 'timestamp' }),
+    isPermDeleted: integer('is_perm_deleted', { mode: 'boolean' }).notNull().default(false),
 });
 
 

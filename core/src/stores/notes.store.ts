@@ -1,14 +1,16 @@
 import { create } from 'zustand';
 import { purgeGuestTombstones, vacuumDatabase } from '../db';
-import type { Folder, FolderInsert, NoteMetadata } from '../db/schema';
+import type { Folder, FolderInsert, NoteMetadata, Tag } from '../db/schema';
 import { DAILY_NOTES_FOLDER_ID, FolderService, TRASH_FOLDER_ID } from '../services/folders.service';
 import { NoteService } from '../services/notes.service';
+import { TagService } from '../services/tags.service';
 import { SyncScheduler } from '../sync/sync-scheduler';
 import { SortType, sortFolders, sortNotes } from '../utils/sorts';
+import { generateRandomHexColor } from '../utils/tags';
 
 // Re-export types for convenience
 export { DAILY_NOTES_FOLDER_ID, TRASH_FOLDER_ID };
-export type { Folder, NoteMetadata };
+export type { Folder, NoteMetadata, Tag };
 
 // Root folder sorting preference (stored separately since root has no folder entity)
 interface RootSettings {
@@ -19,6 +21,7 @@ interface NotesState {
     // Data (All cached in memory - "Aggressive Caching")
     notes: NoteMetadata[];
     folders: Folder[];
+    tags: Tag[];
     rootSettings: RootSettings;
     isInitialized: boolean;
 
@@ -32,6 +35,12 @@ interface NotesState {
     permanentlyDeleteNote: (noteId: string) => Promise<void>;
     restoreNote: (noteId: string, targetFolderId?: string | null) => Promise<void>;
     getNoteById: (noteId: string) => NoteMetadata | undefined;
+
+    // Tag operations
+    addTagToNote: (noteId: string, tag: { id?: string, name: string, color?: string }) => Promise<void>;
+    removeTagFromNote: (noteId: string, tagId: string) => Promise<void>;
+    updateTag: (tagId: string, updates: Partial<Omit<Tag, 'id'>>) => Promise<void>;
+    deleteTag: (tagId: string) => Promise<void>;
 
     // Content operations (lazy loaded)
     getNoteContent: (noteId: string) => Promise<string>;
@@ -72,6 +81,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     // Initial state (empty, will be populated from DB)
     notes: [],
     folders: [],
+    tags: [],
     rootSettings: { sortType: 'UPDATED_LAST' },
     isInitialized: false,
 
@@ -94,6 +104,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         // 2. Now it is completely safe to open read cursors
         const allFolders = await FolderService.getFoldersInFolder(null, true);
         const allNotes = await NoteService.getNotesInFolder(null, true);
+        const allTags = await TagService.getAllTags();
 
         // Recursively load all folders
         const loadAllFolders = async (): Promise<Folder[]> => {
@@ -145,7 +156,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         allFetchedNotes.forEach((note) => uniqueNotesMap.set(note.id, note));
         const notes = Array.from(uniqueNotesMap.values());
 
-        set({ folders, notes, isInitialized: true });
+        set({ folders, notes, tags: allTags, isInitialized: true });
 
         if (!wasInitialized) {
             console.log(`[Store] Initialized with ${folders.length} folders and ${notes.length} notes.`);
@@ -223,6 +234,66 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
     getNoteById: (noteId) => {
         return get().notes.find(n => n.id === noteId);
+    },
+
+    // ============ TAG OPERATIONS ============
+
+    addTagToNote: async (noteId, tag) => {
+        const color = tag.color ?? generateRandomHexColor();
+        const result = await NoteService.addTag(noteId, { ...tag, color });
+        if (result) {
+            const { note: updatedNote, tag: persistedTag } = result;
+            set(state => {
+                const isNewTag = !state.tags.find(t => t.id === persistedTag.id);
+                const newTags = isNewTag ? [...state.tags, persistedTag] : state.tags;
+                return {
+                    notes: state.notes.map(n => n.id === noteId ? updatedNote : n),
+                    tags: newTags
+                };
+            });
+            SyncScheduler.instance?.notifyContentChange();
+        }
+    },
+
+    removeTagFromNote: async (noteId, tagId) => {
+        const updatedNote = await NoteService.removeTag(noteId, tagId);
+        if (updatedNote) {
+            set(state => ({
+                notes: state.notes.map(n => n.id === noteId ? updatedNote : n)
+            }));
+            SyncScheduler.instance?.notifyContentChange();
+        }
+    },
+
+    updateTag: async (tagId, updates) => {
+        const updatedTag = await TagService.update(tagId, updates);
+        set(state => ({
+            tags: state.tags.map(t => t.id === tagId ? updatedTag : t)
+        }));
+        SyncScheduler.instance?.notifyContentChange();
+    },
+
+    deleteTag: async (tagId) => {
+        // 1. Cascade: remove tag from notes in DB + soft-delete the tag (marks dirty for sync)
+        await TagService.delete(tagId);
+
+        // 2. Update in-memory state immediately (remove tag from store + clean notes)
+        set(state => {
+            const newTags = state.tags.filter(t => t.id !== tagId);
+            const newNotes = state.notes.map(note => {
+                const tagIds = JSON.parse(note.tags || '[]') as string[];
+                if (tagIds.includes(tagId)) {
+                    const updatedTagIds = tagIds.filter(id => id !== tagId);
+                    return { ...note, tags: JSON.stringify(updatedTagIds) };
+                }
+                return note;
+            });
+            return { tags: newTags, notes: newNotes };
+        });
+
+        // 3. Trigger sync push so the dirty deleted tag reaches Supabase.
+        //    The scheduler handles the actual push + local tombstone cleanup.
+        SyncScheduler.instance?.notifyContentChange();
     },
 
     // ============ CONTENT OPERATIONS ============
@@ -577,6 +648,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         set({
             notes: [],
             folders: [],
+            tags: [],
             rootSettings: { sortType: 'UPDATED_LAST' },
             isInitialized: false,
         });

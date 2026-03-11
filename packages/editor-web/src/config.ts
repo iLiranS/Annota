@@ -24,7 +24,8 @@ import {
     DetailsSummary,
     SearchExtension,
     ShortcutManager,
-    SlashCommandExtension
+    SlashCommandExtension,
+    TagCommandExtension
 } from './extensions';
 
 export const WEB_FONT_FAMILIES: Record<string, string> = {
@@ -57,6 +58,7 @@ export const getExtensions = (options: {
     onResolveImageIds?: (data: { imageIds: string[] }) => void;
     defaultCodeLanguage?: string | null;
     onSlashCommand?: (data: any) => void;
+    onTagCommand?: (data: any) => void;
 }) => [
         StarterKit.configure({
             heading: false,
@@ -148,6 +150,9 @@ export const getExtensions = (options: {
         }),
         SlashCommandExtension.configure({
             onSlashCommand: options.onSlashCommand,
+        }),
+        TagCommandExtension.configure({
+            onTagCommand: options.onTagCommand,
         }),
     ];
 

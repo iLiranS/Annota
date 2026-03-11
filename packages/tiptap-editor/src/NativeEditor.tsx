@@ -58,6 +58,7 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
         editable = true,
         noteId,
         renderToolbar,
+        renderHeader,
         renderImageGallery,
         isDark: propIsDark,
         colors: propColors,
@@ -66,6 +67,7 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
         onOpenTableMenu,
         onCodeBlockSelected,
         onSlashCommand,
+        onTagCommand,
     }, ref) => {
         const colors = propColors || { primary: '#007AFF', background: '#FFFFFF', text: '#000000' };
         const dark = propIsDark ?? false;
@@ -167,7 +169,8 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
             },
             defaultCodeLanguage: editorSettings.defaultCodeLanguage,
             onSlashCommand: onSlashCommand ? (data: any) => onSlashCommand(data) : undefined,
-        }) as any, [placeholder, onSearchResults, onOpenBlockMenu, onOpenImageMenu, onOpenTableMenu, onCodeBlockSelected, noteId, editorSettings.defaultCodeLanguage, onSlashCommand]);
+            onTagCommand: onTagCommand ? (data: any) => onTagCommand(data) : undefined,
+        }) as any, [placeholder, onSearchResults, onOpenBlockMenu, onOpenImageMenu, onOpenTableMenu, onCodeBlockSelected, noteId, editorSettings.defaultCodeLanguage, onSlashCommand, onTagCommand]);
 
         const editorProps = React.useMemo(() => getEditorProps({
             direction: editorSettings.direction,
@@ -584,8 +587,10 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                     <div style={{
                         maxWidth: 'var(--editor-max-width)',
                         margin: '0 auto',
-                        height: '100%'
+                        height: '100%',
+                        position: 'relative'
                     }}>
+                        {renderHeader?.()}
                         <EditorContent editor={editor} style={{ height: '100%', outline: 'none' }} />
                     </div>
                 </div>

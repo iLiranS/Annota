@@ -84,7 +84,7 @@ export default function NotesList() {
     const router = useRouter();
     const { colors } = useTheme();
     const insets = useSafeAreaInsets();
-    const params = useLocalSearchParams<{ folderId?: string, source?: string }>();
+    const params = useLocalSearchParams<{ folderId?: string, tagId?: string, source?: string }>();
 
 
 
@@ -107,6 +107,7 @@ export default function NotesList() {
     const isCompact = general.compactMode;
 
     const currentFolderId = params.folderId ?? null;
+    const tagId = params.tagId ?? null;
     const currentFolder = currentFolderId ? getFolderById(currentFolderId) : null;
     const currentSortType = getSortType(currentFolderId);
 
@@ -134,16 +135,27 @@ export default function NotesList() {
 
     // Browsing Data (Current Folder) - sorted
     const browseFolders = useMemo(() => {
+        if (tagId) return [];
         const folderList = getFoldersInFolder(currentFolderId);
         const sorted = sortFolders(folderList, currentSortType);
         const regularFolders = sorted.filter(f => !f.isSystem);
         return regularFolders as Folder[];
-    }, [folders, currentFolderId, currentSortType]);
+    }, [folders, currentFolderId, currentSortType, tagId]);
 
     const browseNotes = useMemo(() => {
+        if (tagId) {
+            const list = notes.filter(n => {
+                if (!n.tags) return false;
+                try {
+                    const tagIds = JSON.parse(n.tags) as string[];
+                    return tagIds.includes(tagId);
+                } catch { return false; }
+            });
+            return sortNotes(list, currentSortType);
+        }
         const noteList = getNotesInFolder(currentFolderId);
         return sortNotes(noteList, currentSortType);
-    }, [notes, currentFolderId, currentSortType]);
+    }, [notes, currentFolderId, currentSortType, tagId]);
 
     // Split notes into pinned and unpinned
     const { pinnedNotes, unpinnedNotes } = useMemo(() => {
@@ -267,7 +279,9 @@ export default function NotesList() {
         []
     );
 
-    const headerTitle = currentFolder ? currentFolder.name : 'Notes';
+    const { tags } = useNotesStore();
+    const currentTag = useMemo(() => tags.find(t => t.id === tagId), [tags, tagId]);
+    const headerTitle = tagId ? (currentTag?.name ?? 'Tag') : (currentFolder ? currentFolder.name : 'Notes');
 
     const renderItem = ({ item, index }: { item: ListItem, index: number }) => {
         if (item.type === 'section-header') {
@@ -369,16 +383,16 @@ export default function NotesList() {
                 itemLayoutAnimation={LinearTransition.duration(300).easing(Easing.bezier(0.4, 0, 0.2, 1))}
                 ListEmptyComponent={
                     <View style={styles.emptyContainer}>
-                        <Ionicons
-                            name="folder-open-outline"
-                            size={48}
-                            color={colors.border}
-                        />
+                        {tagId ? (
+                            <Ionicons name="pricetag-outline" size={48} color={colors.border} />
+                        ) : (
+                            <Ionicons name="folder-open-outline" size={48} color={colors.border} />
+                        )}
                         <Text style={[styles.emptyText, { color: colors.text }]}>
-                            This folder is empty
+                            {tagId ? 'No notes with this tag' : 'This folder is empty'}
                         </Text>
                         <Text style={[styles.emptyHint, { color: colors.border }]}>
-                            Create a note or folder to get started
+                            {tagId ? 'Tag some notes to see them here' : 'Create a note or folder to get started'}
                         </Text>
                     </View>
                 }

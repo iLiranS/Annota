@@ -55,12 +55,16 @@ export interface TipTapEditorProps {
     onOpenImageMenu?: (e: MouseEvent, resolve: () => { pos: number; message: Record<string, unknown> } | null) => void;
     /** Callback for slash command state changes */
     onSlashCommand?: (data: { active: boolean; query?: string; range?: { from: number; to: number }; clientRect?: any }) => void;
+    /** Callback for tag command state changes */
+    onTagCommand?: (data: { active: boolean; query?: string; range?: { from: number; to: number }; clientRect?: any }) => void;
     /** Render prop for customizing the slash command menu */
     renderSlashCommandMenu?: () => React.ReactNode;
     /** Callback for when the code block language selector is clicked */
     onCodeBlockSelected?: (e: MouseEvent, resolve: () => { pos: number; message: Record<string, unknown> } | null) => void;
     /** Render prop for customizing the toolbar and its popup menus */
     renderToolbar?: (props: ToolbarRenderProps) => React.ReactNode;
+    /** Render prop for content to appear above the editor within the scroll container */
+    renderHeader?: () => React.ReactNode;
     /** Render prop for full-screen image gallery and zoom */
     renderImageGallery?: (props: {
         images: ImageInfo[];

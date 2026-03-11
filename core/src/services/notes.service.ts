@@ -4,6 +4,7 @@ import type { NoteMetadata } from '../db/schema';
 import { insertNoteMetadataSchema } from '../db/validators/notes';
 import { generateNoteMetadata, generatePreview, generateTitle } from '../utils/notes';
 import * as NoteImageService from './images/note-image.service';
+import { TagService } from './tags.service';
 
 export const NoteService = {
     // 0. Getters
@@ -112,5 +113,72 @@ export const NoteService = {
 
     deleteAllVersionsExceptLatest: async (noteId: string) => {
         await notesRepo.deleteAllNoteVersionsExceptLatest(noteId);
+    },
+
+    // 8. Tags
+    addTag: async (noteId: string, tag: { id?: string, name: string, color: string }) => {
+        const metadata = await notesRepo.getNoteMetadataById(noteId);
+        if (!metadata) return null;
+
+        const normalizedName = tag.name.trim();
+        if (!normalizedName) return null;
+
+        let existingTag = tag.id ? await TagService.getTagById(tag.id) : null;
+
+        // Ensure existingTag is an actual object with an id, not an empty array
+        if (!existingTag?.id) {
+            existingTag = await TagService.getTagByName(normalizedName);
+        }
+
+        // Again, explicitly check for the id
+        if (!existingTag?.id) {
+            existingTag = await TagService.create({
+                ...tag,
+                name: normalizedName,
+                // Make sure to use Date.now() if Tauri is still complaining about Date objects!
+                createdAt: new Date(),
+                updatedAt: new Date(),
+            });
+        }
+
+        const tagId = existingTag.id;
+        if (!tagId) return null; // Ultimate safety check
+
+        let tagsArray: string[] = [];
+        try {
+            tagsArray = JSON.parse(metadata.tags);
+            if (!Array.isArray(tagsArray)) tagsArray = [];
+        } catch {
+            tagsArray = [];
+        }
+
+        if (!tagsArray.includes(tagId)) {
+            tagsArray.push(tagId);
+            const updatedNote = await notesRepo.updateNoteMetadata(noteId, {
+                tags: JSON.stringify(tagsArray),
+                isDirty: true
+            });
+            return updatedNote ? { note: updatedNote, tag: existingTag } : null;
+        }
+
+        return { note: metadata, tag: existingTag };
+    },
+
+    removeTag: async (noteId: string, tagId: string) => {
+        const metadata = await notesRepo.getNoteMetadataById(noteId);
+        if (!metadata) return null;
+
+        let tagsArray: string[] = [];
+        try {
+            tagsArray = JSON.parse(metadata.tags);
+        } catch {
+            tagsArray = [];
+        }
+
+        if (tagsArray.includes(tagId)) {
+            tagsArray = tagsArray.filter(id => id !== tagId);
+            return await notesRepo.updateNoteMetadata(noteId, { tags: JSON.stringify(tagsArray), isDirty: true });
+        }
+        return metadata;
     }
 };

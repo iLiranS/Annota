@@ -44,7 +44,7 @@ export function NoteListItem({
     children,
     ...props
 }: NoteListItemProps) {
-    const { updateNoteMetadata } = useNotesStore();
+    const { updateNoteMetadata, tags } = useNotesStore();
     const { general } = useSettingsStore();
     const isCompact = !showDescription && general.compactMode;
 
@@ -87,13 +87,39 @@ export function NoteListItem({
                             <>
                                 <div className="flex w-full items-center justify-between gap-2.5">
                                     <div className="flex min-w-0 items-center gap-2">
-
                                         <p className={cn(
                                             "truncate text-sm font-medium transition-colors",
                                             isActive ? "text-primary" : "text-foreground/90 group-hover/note:text-primary"
                                         )}>
                                             {note.title || "Untitled Note"}
                                         </p>
+
+                                        {(() => {
+                                            if (!note.tags || note.tags === '[]') return null;
+                                            try {
+                                                const tagIds: string[] = JSON.parse(note.tags);
+                                                if (tagIds.length === 0) return null;
+                                                const noteTags = tagIds.map(id => tags.find(t => t.id === id)).filter(Boolean) as any[];
+                                                if (noteTags.length === 0) return null;
+                                                return (
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {noteTags.map(t => (
+                                                            <span
+                                                                key={t.id}
+                                                                className="px-1.5 py-0.5 rounded-sm text-[9px] font-medium border whitespace-nowrap"
+                                                                style={{
+                                                                    backgroundColor: `${t.color}1A`,
+                                                                    color: t.color,
+                                                                    borderColor: `${t.color}40`
+                                                                }}
+                                                            >
+                                                                {t.name}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                );
+                                            } catch { return null; }
+                                        })()}
                                     </div>
 
                                     <div className="flex items-center gap-2 shrink-0">
@@ -107,7 +133,7 @@ export function NoteListItem({
                                 </div>
 
                                 {!isCompact && showDescription && note.preview && (
-                                    <p className="line-clamp-1 w-full  text-[11px] text-muted-foreground/50 leading-tight">
+                                    <p className="line-clamp-1 w-full text-[11px] text-muted-foreground/50 leading-tight mt-1">
                                         {note.preview}
                                     </p>
                                 )}

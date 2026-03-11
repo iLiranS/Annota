@@ -3,7 +3,7 @@ import ThemedText from '@/components/themed-text';
 import ThemedPressable from '@/components/ui/themed-pressable';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { formatRelativeDate } from '@/utils/date-formatter';
-import { NoteMetadata, useSettingsStore } from '@annota/core';
+import { NoteMetadata, useNotesStore, useSettingsStore } from '@annota/core';
 import { StyleSheet, View } from 'react-native';
 
 interface NoteCardProps {
@@ -37,11 +37,18 @@ export default function NoteCard({
 }: NoteCardProps) {
     const { colors, dark } = useAppTheme();
     const { general } = useSettingsStore();
+    const { tags } = useNotesStore();
     const isCompact = general.compactMode;
     const shouldShowTimestamp = showTimestamp ?? !isCompact;
 
     const showTopBorder = !isFirst;
     const showBottomBorder = !isLast;
+
+    let appliedTagIds: string[] = [];
+    try {
+        if (note.tags) appliedTagIds = JSON.parse(note.tags);
+    } catch { }
+    const appliedTags = appliedTagIds.map(id => tags.find(t => t.id === id)).filter(Boolean) as any[];
 
     const CardContent = (
         <ThemedPressable
@@ -61,16 +68,37 @@ export default function NoteCard({
             )}
 
             <View style={styles.contentContainer}>
-                <View style={styles.mainRow}>
-                    <ThemedText style={styles.title} numberOfLines={1}>
-                        {note.title || 'Untitled Note'}
-                    </ThemedText>
+                <View style={[styles.mainRow, isCompact && { alignItems: 'center' }]}>
+                    <View style={styles.titleWrapper}>
+                        <ThemedText style={[styles.title, { flex: 0, flexShrink: 1 }]} numberOfLines={1}>
+                            {note.title || 'Untitled Note'}
+                        </ThemedText>
+                        {isCompact && appliedTags.length > 0 && (
+                            <View style={[styles.tagsContainer, { marginTop: 0, flexWrap: 'nowrap' }]}>
+                                {appliedTags.slice(0, 3).map(tag => (
+                                    <View key={tag.id} style={[styles.tagBadge, { backgroundColor: `${tag.color}15`, borderColor: `${tag.color}40` }]}>
+                                        <ThemedText style={[styles.tagBadgeText, { color: tag.color }]}>{tag.name}</ThemedText>
+                                    </View>
+                                ))}
+                            </View>
+                        )}
+                    </View>
                     {shouldShowTimestamp && (
                         <ThemedText style={[styles.timestamp, { color: colors.text + '50' }]}>
                             {formatRelativeDate(note.updatedAt)}
                         </ThemedText>
                     )}
                 </View>
+
+                {!isCompact && appliedTags.length > 0 && (
+                    <View style={styles.tagsContainer}>
+                        {appliedTags.map(tag => (
+                            <View key={tag.id} style={[styles.tagBadge, { backgroundColor: `${tag.color}15`, borderColor: `${tag.color}40` }]}>
+                                <ThemedText style={[styles.tagBadgeText, { color: tag.color }]}>{tag.name}</ThemedText>
+                            </View>
+                        ))}
+                    </View>
+                )}
 
                 {(description && showDescription) ? (
                     <View style={styles.descriptionContainer}>{description}</View>
@@ -157,10 +185,16 @@ const styles = StyleSheet.create({
         alignItems: 'baseline',
         gap: 12,
     },
+    titleWrapper: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        overflow: 'hidden',
+    },
     title: {
         fontSize: 17,
         fontWeight: '600',
-        flex: 1,
     },
     timestampRow: {
         flexDirection: 'row',
@@ -176,5 +210,21 @@ const styles = StyleSheet.create({
         fontSize: 14,
         marginTop: 4,
         lineHeight: 18,
+    },
+    tagsContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 6,
+        marginTop: 6,
+    },
+    tagBadge: {
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 4,
+        borderWidth: StyleSheet.hairlineWidth,
+    },
+    tagBadgeText: {
+        fontSize: 10,
+        fontWeight: '600',
     },
 });

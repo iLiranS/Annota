@@ -6,7 +6,7 @@
 export function safeGet<T>(row: unknown): T | null {
     if (!row) return null;
     const record = Array.isArray(row) ? row[0] : row;
-    if (record && typeof record === 'object') {
+    if (record && typeof record === 'object' && Object.keys(record as object).length > 0) {
         return record as T;
     }
     return null;
@@ -20,3 +20,4 @@ export function safeGetAll<T>(rows: unknown): T[] {
         return record as T;
     });
 }
+

@@ -5,6 +5,7 @@ export type SyncPayload = {
     folders: any[];
     tasks: any[];
     notes: any[];
+    tags: any[];
 };
 
 export const syncApi = {
@@ -23,6 +24,11 @@ export const syncApi = {
     /** Upsert encrypted tasks */
     upsertTasks: async (tasks: any[]) => {
         return await supabase.from('encrypted_tasks').upsert(tasks);
+    },
+
+    /** Upsert encrypted tags */
+    upsertTags: async (tags: any[]) => {
+        return await supabase.from('encrypted_tags').upsert(tags);
     },
 
     /** Upsert encrypted notes */

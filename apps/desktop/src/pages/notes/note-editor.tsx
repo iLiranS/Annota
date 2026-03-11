@@ -1,4 +1,6 @@
 import { BlockMenu } from "@/components/editor/BlockMenu";
+import { DesktopSlashCommandMenu } from "@/components/editor/DesktopSlashCommandMenu";
+import { DesktopTagCommandMenu } from "@/components/editor/DesktopTagCommandMenu";
 import { DesktopToolbar } from "@/components/editor/DesktopToolbar";
 import { ImageGallery } from "@/components/notes/image-gallery";
 import { useSidebar } from "@/components/ui/sidebar";
@@ -12,7 +14,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { NoteFloatingActions } from "./components/note-floating-actions";
 import { NoteSearch } from "./components/note-search";
-import { DesktopSlashCommandMenu } from "@/components/editor/DesktopSlashCommandMenu";
+import { NoteTags } from "./components/note-tags";
 
 export default function NoteEditor() {
     const navigate = useNavigate();
@@ -37,6 +39,7 @@ export default function NoteEditor() {
 
     // Slash commands state
     const [slashCommandState, setSlashCommandState] = useState<{ active: boolean; query?: string; range?: { from: number; to: number }; clientRect?: any }>({ active: false });
+    const [tagCommandState, setTagCommandState] = useState<{ active: boolean; query?: string; range?: { from: number; to: number }; clientRect?: any }>({ active: false });
 
     // Block Menu state
     const [activeBlockMenu, setActiveBlockMenu] = useState<{
@@ -352,6 +355,7 @@ export default function NoteEditor() {
                     onNext={handleSearchNext}
                     onPrev={handleSearchPrev}
                 />
+
                 {initialContent !== null ? (
                     <TipTapEditor
                         ref={editorRef}
@@ -360,7 +364,14 @@ export default function NoteEditor() {
                         onSearchResults={handleSearchResults}
                         editable={true}
                         noteId={noteId}
+                        contentPaddingTop={60}
                         placeholder="Start typing..."
+                        renderHeader={() => (
+                            <NoteTags
+                                noteId={noteId ?? ''}
+                                className="absolute top-4 left-0 right-0 z-10 flex flex-wrap gap-1.5 max-w-full"
+                            />
+                        )}
                         renderToolbar={(props) => <DesktopToolbar {...props} />}
                         renderImageGallery={(props) => <ImageGallery {...props} />}
                         onOpenBlockMenu={handleOpenBlockMenu}
@@ -368,6 +379,7 @@ export default function NoteEditor() {
                         onOpenTableMenu={handleOpenTableMenu}
                         onCodeBlockSelected={handleCodeBlockSelected}
                         onSlashCommand={setSlashCommandState}
+                        onTagCommand={setTagCommandState}
                         isDark={isDark}
                         colors={{
                             primary: colors.primary,
@@ -390,7 +402,7 @@ export default function NoteEditor() {
                         onAction={handleBlockAction}
                     />
                 )}
-                
+
                 {slashCommandState.active && slashCommandState.range && slashCommandState.clientRect && (
                     <DesktopSlashCommandMenu
                         query={slashCommandState.query || ''}
@@ -400,7 +412,18 @@ export default function NoteEditor() {
                         onClose={() => setSlashCommandState({ active: false })}
                     />
                 )}
-                
+
+                {noteId && tagCommandState.active && tagCommandState.range && tagCommandState.clientRect && (
+                    <DesktopTagCommandMenu
+                        noteId={noteId}
+                        query={tagCommandState.query || ''}
+                        range={tagCommandState.range}
+                        clientRect={tagCommandState.clientRect}
+                        sendCommand={(cmd, params) => editorRef.current?.onCommand(cmd, params)}
+                        onClose={() => setTagCommandState({ active: false })}
+                    />
+                )}
+
             </div>
         </div>
     );

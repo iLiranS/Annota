@@ -1,5 +1,7 @@
 import { ImageGallery } from '@/components/editor-ui/image-gallery';
+import { NoteTags } from '@/components/editor-ui/note-tags';
 import { SlashCommandMenu } from '@/components/editor-ui/slash-command-menu';
+import { TagCommandMenu } from '@/components/editor-ui/tag-command-menu';
 import { EditorToolbar } from '@/components/editor-ui/toolbar';
 import NoteHeaderMenu from '@/components/notes/note-header-menu';
 import { SearchOverlay } from '@/components/notes/search-overlay';
@@ -10,7 +12,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
 import * as ExpoClipboard from 'expo-clipboard';
 import { Stack, useFocusEffect, useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -56,9 +58,17 @@ export default function NoteEditor() {
 
     // Gallery visibility — hide header when gallery is open
     const [isGalleryOpen, setIsGalleryOpen] = useState(false);
-    
+
     // Slash commands state
     const [slashCommandState, setSlashCommandState] = useState<{ active: boolean; query?: string; range?: { from: number; to: number } }>({ active: false });
+    const [tagCommandState, setTagCommandState] = useState<{ active: boolean; query?: string; range?: { from: number; to: number } }>({ active: false });
+
+    const appliedTagIds = useMemo(() => {
+        if (!currentNote || !currentNote.tags) return [];
+        try { return JSON.parse(currentNote.tags) as string[]; } catch { return []; }
+    }, [currentNote?.tags]);
+
+
 
     const pendingScrollElementIdRef = useRef<string | null>(null);
     const shouldAutofocus = source === 'new' && (!content || content === '<p></p>');
@@ -376,23 +386,50 @@ export default function NoteEditor() {
                         onContentChange={handleContentChange}
                         onSearchResults={handleSearchResults}
                         onSlashCommand={setSlashCommandState}
+                        onTagCommand={setTagCommandState}
                         contentPaddingTop={editor.floatingNoteHeader ? insets.top + 44 : 0}
                         placeholder="Start typing your note..."
                         autofocus={shouldAutofocus}
                         onGalleryVisibilityChange={setIsGalleryOpen}
                         onCopyBlockLink={handleCopyBlockLink}
+                        renderHeader={() => appliedTagIds.length > 0 ? (
+                            <View style={{ position: 'relative', zIndex: 10 }}>
+                                <NoteTags
+                                    noteId={id}
+                                    style={{ 
+                                        position: 'absolute', 
+                                        top: editor.floatingNoteHeader ? insets.top + 44 : 0, 
+                                        left: 0, 
+                                        right: 0 
+                                    }}
+                                />
+                            </View>
+                        ) : null}
                         renderToolbar={(props: ToolbarRenderProps) => <EditorToolbar {...props} />}
                         renderImageGallery={(props: any) => <ImageGallery {...props} />}
                         renderSlashCommandMenu={() => {
-                            if (!slashCommandState.active || !slashCommandState.range) return null;
-                            return (
-                                <SlashCommandMenu
-                                    query={slashCommandState.query || ''}
-                                    range={slashCommandState.range}
-                                    sendCommand={(cmd, params) => editorRef.current?.onCommand(cmd, params)}
-                                    onClose={() => setSlashCommandState({ active: false })}
-                                />
-                            );
+                            if (tagCommandState.active && tagCommandState.range) {
+                                return (
+                                    <TagCommandMenu
+                                        noteId={id}
+                                        query={tagCommandState.query || ''}
+                                        range={tagCommandState.range}
+                                        sendCommand={(cmd, params) => editorRef.current?.onCommand(cmd, params)}
+                                        onClose={() => setTagCommandState({ active: false })}
+                                    />
+                                );
+                            }
+                            if (slashCommandState.active && slashCommandState.range) {
+                                return (
+                                    <SlashCommandMenu
+                                        query={slashCommandState.query || ''}
+                                        range={slashCommandState.range}
+                                        sendCommand={(cmd, params) => editorRef.current?.onCommand(cmd, params)}
+                                        onClose={() => setSlashCommandState({ active: false })}
+                                    />
+                                );
+                            }
+                            return null;
                         }}
                     />
                 </View>

@@ -7,3 +7,4 @@ export * from './search-extension';
 export * from './shortcut-manager';
 export * from './table';
 export * from './slash-command';
+export * from './tag-command';

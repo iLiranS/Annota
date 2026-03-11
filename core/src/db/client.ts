@@ -75,7 +75,14 @@ export const CREATE_TABLES_SQL = `
   CREATE TABLE IF NOT EXISTS tags (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
-    color TEXT NOT NULL
+    color TEXT NOT NULL,
+    is_deleted INTEGER NOT NULL DEFAULT 0,
+    deleted_at INTEGER,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    is_dirty INTEGER NOT NULL DEFAULT 0,
+    last_synced_at INTEGER,
+    is_perm_deleted INTEGER NOT NULL DEFAULT 0
   );
     CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
@@ -119,7 +126,24 @@ export async function initDatabase(nativeDb: { execAsync: (sql: string) => Promi
 
     // Run migrations for existing databases
     try {
-      // migrations here - I deleted for now as no need
+      const migrations = [
+        'ALTER TABLE tags ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0;',
+        'ALTER TABLE tags ADD COLUMN deleted_at INTEGER;',
+        'ALTER TABLE tags ADD COLUMN created_at INTEGER NOT NULL DEFAULT 0;',
+        'ALTER TABLE tags ADD COLUMN updated_at INTEGER NOT NULL DEFAULT 0;',
+        'ALTER TABLE tags ADD COLUMN is_dirty INTEGER NOT NULL DEFAULT 0;',
+        'ALTER TABLE tags ADD COLUMN last_synced_at INTEGER;',
+        'ALTER TABLE tags ADD COLUMN is_perm_deleted INTEGER NOT NULL DEFAULT 0;'
+      ];
+
+      for (const query of migrations) {
+        try {
+          await nativeDb.execAsync(query);
+        } catch (e) {
+          // Ignore errors for columns that already exist
+        }
+      }
+      console.log('Tags migration completed successfully');
     } catch (migrationError) {
       console.log('Migration check/run completed or not needed:', migrationError);
     }

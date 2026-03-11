@@ -81,8 +81,10 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
         noteId,
         onCopyBlockLink,
         onSlashCommand,
+        onTagCommand,
         renderSlashCommandMenu,
         renderToolbar,
+        renderHeader,
         renderImageGallery
     }, ref) => {
         const { colors, dark } = useTheme();
@@ -454,6 +456,9 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
                         case 'slashCommand':
                             onSlashCommand?.(data);
                             break;
+                        case 'tagCommand':
+                            onTagCommand?.(data);
+                            break;
                         case 'openLink':
                             if (data.href) {
                                 // Link taps should never leave the editor focused / keyboard open.
@@ -710,6 +715,7 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
                         scrollHeight.current = e.nativeEvent.layout.height;
                     }}
                 >
+                    {renderHeader?.()}
                     <WebView
                         allowFileAccess
                         ref={webViewRef}

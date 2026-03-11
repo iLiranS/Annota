@@ -19,6 +19,11 @@ import {
     getDirtyTasks,
     upsertSyncedTask,
 } from '../db/repositories/tasks.repository';
+import {
+    clearDirtyTags,
+    getDirtyTags,
+    upsertSyncedTag,
+} from '../db/repositories/tags.repository';
 import * as schema from '../db/schema';
 import { StorageService } from '../services/storage.service';
 import { imageSyncService } from '../services/sync/image-sync.service';
@@ -80,6 +85,39 @@ export async function performSyncPush(masterKey: string) {
         const aliveFolders = dirtyFolders.filter((f: any) => !f.isPermDeleted);
         if (aliveFolders.length > 0) {
             await clearDirtyFolders(aliveFolders.map((f: any) => f.id));
+        }
+    };
+
+    const pushTags = async () => {
+        const dirtyTags = await getDirtyTags();
+        if (dirtyTags.length === 0) return;
+
+        const payloadTags = await Promise.all(dirtyTags.map(async (tag) => {
+            const isTombstone = tag.isPermDeleted;
+            const { encryptedData, nonce } = await encryptPayload(JSON.stringify(tag), masterKey);
+            return {
+                id: tag.id,
+                user_id: userId,
+                updated_at: now.toISOString(),
+                is_deleted: isTombstone || false,
+                encrypted_data: encryptedData,
+                nonce: nonce,
+            };
+        }));
+
+        const { error } = await syncApi.upsertTags(payloadTags);
+        if (error) throw error;
+
+        const tombstones = dirtyTags.filter((t: any) => t.isPermDeleted);
+        if (tombstones.length > 0) {
+            const tombstoneIds = tombstones.map((t: any) => t.id);
+            await db.delete(schema.tags).where(inArray(schema.tags.id, tombstoneIds));
+            didDeleteTombstones = true;
+        }
+
+        const aliveTags = dirtyTags.filter((t: any) => !t.isPermDeleted);
+        if (aliveTags.length > 0) {
+            await clearDirtyTags(aliveTags.map((t: any) => t.id));
         }
     };
 
@@ -161,6 +199,7 @@ export async function performSyncPush(masterKey: string) {
     };
 
     await pushFolders();
+    await pushTags();
     await pushTasks();
     await pushNotes();
 
@@ -206,6 +245,7 @@ export async function performSyncPull(masterKey: string) {
     if (error) throw error;
 
     const cloudFolders = data.folders || [];
+    const cloudTags = data.tags || [];
     const cloudTasks = data.tasks || [];
     const cloudNotes = data.notes || [];
 
@@ -272,6 +312,40 @@ export async function performSyncPull(masterKey: string) {
             await db.transaction(async (tx: any) => {
                 if (deletedIds.length > 0) await tx.delete(schema.tasks).where(inArray(schema.tasks.id, deletedIds));
                 for (const t of parsedTasks) await upsertSyncedTask(t, tx);
+            });
+            if (deletedIds.length > 0) didDeleteTombstones = true;
+            await new Promise(resolve => setTimeout(resolve, 0));
+        }
+    }
+
+    // Pull Tags
+    if (cloudTags.length > 0) {
+        for (let i = 0; i < cloudTags.length; i += 15) {
+            const chunk = cloudTags.slice(i, i + 15);
+            const deletedIds: string[] = [];
+            const parsedTags: any[] = [];
+
+            for (const row of chunk) {
+                try {
+                    if (row.is_deleted) {
+                        deletedIds.push(row.id);
+                        continue;
+                    }
+                    const decryptedJson = await decryptPayload(row.encrypted_data, row.nonce, masterKey);
+                    const tagData = JSON.parse(decryptedJson);
+                    tagData.createdAt = new Date(tagData.createdAt);
+                    tagData.updatedAt = new Date(tagData.updatedAt);
+                    tagData.deletedAt = tagData.deletedAt ? new Date(tagData.deletedAt) : null;
+                    tagData.isDirty = false;
+                    parsedTags.push(tagData);
+                } catch (e) {
+                    console.error("Failed to decrypt tag", row.id, e);
+                }
+            }
+
+            await db.transaction(async (tx: any) => {
+                if (deletedIds.length > 0) await tx.delete(schema.tags).where(inArray(schema.tags.id, deletedIds));
+                for (const t of parsedTags) await upsertSyncedTag(t, tx);
             });
             if (deletedIds.length > 0) didDeleteTombstones = true;
             await new Promise(resolve => setTimeout(resolve, 0));
@@ -398,4 +472,3 @@ export async function syncPull(masterKey: string): Promise<boolean> {
         store.setSyncing(false);
     }
 }
-
