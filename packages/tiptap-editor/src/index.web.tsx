@@ -17,4 +17,4 @@ TipTapEditor.displayName = 'TipTapEditor';
 export default TipTapEditor;
 export type { TipTapEditorProps, TipTapEditorRef, ToolbarRenderProps } from './types';
 export { TipTapEditor };
-
+export * from './slash-commands-config';

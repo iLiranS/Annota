@@ -1,5 +1,6 @@
 import { useSettingsStore } from '@annota/core';
 import { getPlatformAdapters, NoteImageService } from '@annota/core/platform';
+import { dispatchEditorCommand } from '@annota/editor-web/command-dispatcher';
 import { getEditorProps, getEditorState, getExtensions, resolveFontFamily } from '@annota/editor-web/config';
 import '@annota/editor-web/styles.css';
 import { TextSelection } from '@tiptap/pm/state';
@@ -64,6 +65,7 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
         onOpenImageMenu,
         onOpenTableMenu,
         onCodeBlockSelected,
+        onSlashCommand,
     }, ref) => {
         const colors = propColors || { primary: '#007AFF', background: '#FFFFFF', text: '#000000' };
         const dark = propIsDark ?? false;
@@ -164,7 +166,8 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                 })();
             },
             defaultCodeLanguage: editorSettings.defaultCodeLanguage,
-        }) as any, [placeholder, onSearchResults, onOpenBlockMenu, onOpenImageMenu, onOpenTableMenu, onCodeBlockSelected, noteId, editorSettings.defaultCodeLanguage]);
+            onSlashCommand: onSlashCommand ? (data: any) => onSlashCommand(data) : undefined,
+        }) as any, [placeholder, onSearchResults, onOpenBlockMenu, onOpenImageMenu, onOpenTableMenu, onCodeBlockSelected, noteId, editorSettings.defaultCodeLanguage, onSlashCommand]);
 
         const editorProps = React.useMemo(() => getEditorProps({
             direction: editorSettings.direction,
@@ -397,109 +400,33 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
         const sendCommand = useCallback((command: string, params: Record<string, any> = {}) => {
             if (!editor) return;
 
-            // Map legacy string commands to Tiptap commands
-            const c = editor.chain().focus() as any
+            if (dispatchEditorCommand(editor, command, params)) {
+                return;
+            }
 
             switch (command) {
-                case 'toggleBold': c.toggleBold().run(); break;
-                case 'toggleItalic': c.toggleItalic().run(); break;
-                case 'toggleUnderline': c.toggleUnderline().run(); break;
-                case 'toggleStrike': c.toggleStrike().run(); break;
-                case 'toggleCode': c.toggleCode().run(); break;
-                case 'toggleBlockquote': c.toggleBlockquote().run(); break;
-                case 'toggleBulletList': c.toggleBulletList().run(); break;
-                case 'toggleOrderedList': c.toggleOrderedList().run(); break;
-                case 'toggleTaskList': c.toggleTaskList().run(); break;
-                case 'toggleDetails': c.toggleDetails().run(); break;
-                case 'toggleCodeBlock':
-                    c.toggleCodeBlock({ language: editorSettings.defaultCodeLanguage || 'javascript' }).run();
+                case 'setContent':
+                    editor.commands.setContent(params?.content as string);
                     break;
-                case 'sinkListItem': c.sinkListItem('listItem').run(); break;
-                case 'liftListItem': c.liftListItem('listItem').run(); break;
-                case 'undo': c.undo().run(); break;
-                case 'redo': c.redo().run(); break;
-                case 'setHeading': c.toggleHeading({ level: params.level as any }).run(); break;
-                case 'setParagraph': c.setParagraph().run(); break;
-                case 'setColor': c.setColor(params.color as string).run(); break;
-                case 'unsetColor': c.unsetColor().run(); break;
-                case 'setHighlight':
-                    if (params.color) {
-                        let highlightColor = params.color as string;
-                        // Reduce opacity to 25% (40 in hex) - previous 15% was a bit too light
-                        if (highlightColor.startsWith('#') && highlightColor.length === 7) highlightColor += '40';
-                        c.setHighlight({ color: highlightColor }).run();
-                    }
+                case 'focus':
+                    editor.commands.focus();
                     break;
-                case 'unsetHighlight': c.unsetHighlight().run(); break;
-                case 'insertTable': c.insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(); break;
-                case 'addColumnBefore': c.addColumnBefore().run(); break;
-                case 'addColumnAfter': c.addColumnAfter().run(); break;
-                case 'deleteColumn': c.deleteColumn().run(); break;
-                case 'addRowBefore': c.addRowBefore().run(); break;
-                case 'addRowAfter': c.addRowAfter().run(); break;
-                case 'deleteRow': c.deleteRow().run(); break;
-                case 'deleteTable': c.deleteTable().run(); break;
-                case 'mergeCells': c.mergeCells().run(); break;
-                case 'splitCell': c.splitCell().run(); break;
-                case 'setCellBackground':
-                    let cellBgColor = params.color as string | null;
-                    if (cellBgColor) {
-                        // Reduce opacity to 25% (40 in hex) for table cells
-                        if (cellBgColor.startsWith('#') && cellBgColor.length === 7) cellBgColor += '40';
-                    }
-                    c.setCellAttribute('backgroundColor', cellBgColor).run();
+                case 'blur':
+                    editor.commands.blur();
                     break;
-                case 'unsetCellBackground':
-                    c.setCellAttribute('backgroundColor', null).run();
-                    break;
-                case 'setLink': c.setLink({ href: params.href as string }).run(); break;
-                case 'unsetLink': c.unsetLink().run(); break;
-                case 'setMath': c.insertContent({ type: 'inlineMath', attrs: { latex: params.latex } }).run(); break;
-                case 'setYoutubeVideo': c.setYoutubeVideo({ src: params.src as string }).run(); break;
-                case 'insertImage': c.setImage({ src: params.src as string }).run(); break;
                 case 'insertLocalImage':
-                    if (params.imageId) {
-                        c.insertContent({ type: 'image', attrs: { imageId: params.imageId } }).run();
+                    if (params?.imageId) {
+                        editor.chain().insertContent({ type: 'image', attrs: { imageId: params.imageId } }).focus().run();
                     }
                     break;
                 case 'resolveImages':
-                    if (params.imageMap) {
+                    if (params?.imageMap) {
                         (editor.commands as any).resolveImages({ imageMap: params.imageMap });
                     }
                     break;
-                case 'setContent':
-                    editor.commands.setContent(params.content as string);
-                    break;
-                case 'focus': editor.commands.focus(); break;
-                case 'blur': editor.commands.blur(); break;
-                case 'updateAttributes':
-                    c.updateAttributes(params.type, params.attrs).run();
-                    break;
-                case 'updateImage':
-                    if (params.pos !== undefined) {
-                        const { pos, ...attrs } = params;
-                        const node = editor.state.doc.nodeAt(pos);
-                        if (node) {
-                            editor.view.dispatch(editor.state.tr.setNodeMarkup(pos, undefined, { ...node.attrs, ...attrs }));
-                        }
-                    } else {
-                        c.updateAttributes('image', params).run();
-                    }
-                    break;
-                case 'deleteImage':
-                case 'deleteSelection':
-                    if (params.pos !== undefined) {
-                        editor.commands.deleteRange({ from: params.pos, to: params.pos + (editor.state.doc.nodeAt(params.pos)?.nodeSize || 1) });
-                    } else {
-                        editor.commands.deleteSelection();
-                    }
-                    break;
-                case 'setDetailsBackground':
+                case 'setDetailsBackground': {
                     let bgColor = params.color as string | null;
-                    if (bgColor) {
-                        // Reduce opacity to 15% (26 in hex) for details background
-                        if (bgColor.startsWith('#') && bgColor.length === 7) bgColor += '26';
-                    }
+                    if (bgColor && bgColor.startsWith('#') && bgColor.length === 7) bgColor += '26';
 
                     if (params.pos !== undefined) {
                         const node = editor.state.doc.nodeAt(params.pos);
@@ -507,53 +434,54 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                             editor.view.dispatch(editor.state.tr.setNodeMarkup(params.pos, undefined, { ...node.attrs, backgroundColor: bgColor }));
                         }
                     } else {
-                        c.updateAttributes('details', { backgroundColor: bgColor }).run();
+                        editor.chain().updateAttributes('details', { backgroundColor: bgColor }).focus().run();
                     }
                     break;
-                case 'setCodeBlockLanguage':
-                    if (params.pos !== undefined) {
-                        const node = editor.state.doc.nodeAt(params.pos);
-                        if (node) {
-                            editor.view.dispatch(editor.state.tr.setNodeMarkup(params.pos, undefined, { ...node.attrs, language: params.language }));
-                        }
-                    } else {
-                        c.updateAttributes('codeBlock', { language: params.language }).run();
-                    }
-                    break;
+                }
                 case 'copyToClipboard':
-                    if (params.pos !== undefined) {
+                    if (params?.pos !== undefined) {
                         const node = editor.state.doc.nodeAt(params.pos);
                         if (node) {
-                            const text = node.textContent || "";
+                            const text = node.textContent || '';
                             window.navigator.clipboard.writeText(text);
                         }
                     } else {
                         const { from, to } = editor.state.selection;
-                        const text = editor.state.doc.textBetween(from, to, "\n");
+                        const text = editor.state.doc.textBetween(from, to, '\n');
                         window.navigator.clipboard.writeText(text);
                     }
                     break;
                 case 'copyDetailsContent':
-                    if (params.pos !== undefined) {
+                    if (params?.pos !== undefined) {
                         const node = editor.state.doc.nodeAt(params.pos);
                         if (node && node.type.name === 'details') {
-                            let textToCopy = "";
+                            let textToCopy = '';
                             node.forEach((child) => {
                                 if (child.type.name === 'detailsContent') {
                                     textToCopy = child.textContent;
                                 }
                             });
-                            // Fallback to whole node text if Content node not found
                             if (!textToCopy) textToCopy = node.textContent;
                             window.navigator.clipboard.writeText(textToCopy);
                         }
                     }
                     break;
                 case 'onCommand':
-                    // This is for generic command execution
-                    if (params.command && (editor.commands as any)[params.command]) {
-                        (editor.commands as any)[params.command](params.args).run();
+                    if (params?.command && params.command !== 'onCommand') {
+                        sendCommand(params.command, params.args ?? {});
                     }
+                    break;
+                case 'openMathModal':
+                    setActivePopup('math');
+                    break;
+                case 'openImageModal':
+                    setActivePopup('image');
+                    break;
+                case 'openLinkModal':
+                    setActivePopup('link');
+                    break;
+                case 'openYoutubeModal':
+                    setActivePopup('youtube');
                     break;
             }
         }, [editor]);

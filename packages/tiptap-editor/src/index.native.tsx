@@ -80,6 +80,8 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
         editable = true,
         noteId,
         onCopyBlockLink,
+        onSlashCommand,
+        renderSlashCommandMenu,
         renderToolbar,
         renderImageGallery
     }, ref) => {
@@ -167,6 +169,27 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
 
         const sendCommand = useCallback(
             (command: string, params: Record<string, unknown> = {}) => {
+                // Handle UI commands locally instead of injecting into WebView
+                switch (command) {
+                    case 'openMathModal':
+                        setCurrentLatex(null);
+                        setActivePopup('math');
+                        setIsPopupOpen(true);
+                        return;
+                    case 'openImageModal':
+                        setActivePopup('image');
+                        setIsPopupOpen(true);
+                        return;
+                    case 'openLinkModal':
+                        setActivePopup('link');
+                        setIsPopupOpen(true);
+                        return;
+                    case 'openYoutubeModal':
+                        setActivePopup('youtube');
+                        setIsPopupOpen(true);
+                        return;
+                }
+
                 if (!webViewRef.current) return;
 
                 if (!isReadyRef.current && command !== 'setOptions') {
@@ -428,6 +451,9 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
                                 onCopyBlockLink(data.id);
                             }
                             break;
+                        case 'slashCommand':
+                            onSlashCommand?.(data);
+                            break;
                         case 'openLink':
                             if (data.href) {
                                 // Link taps should never leave the editor focused / keyboard open.
@@ -503,6 +529,7 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
                 sendCommand,
                 flushQueuedCommands,
                 scrollToCursor,
+                onSlashCommand
             ]
         );
 
@@ -777,6 +804,25 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
                         })}
                     </View>
                 )}
+                
+                {/* Render Slash Command Menu Above Toolbar/Keyboard */}
+                {renderSlashCommandMenu && (isKeyboardVisible || isPopupOpen) && !isGalleryVisible && (
+                    <View
+                        style={[
+                            styles.toolbarContainer,
+                            {
+                                bottom: keyboardHeight + toolbarHeight - 2, // Position exactly above the toolbar
+                                backgroundColor: 'transparent',
+                                borderTopWidth: 0,
+                                paddingLeft: isIPhoneLandscape ? insets.left : 0,
+                                paddingRight: isIPhoneLandscape ? insets.right : 0,
+                            },
+                        ]}
+                        pointerEvents="box-none"
+                    >
+                        {renderSlashCommandMenu()}
+                    </View>
+                )}
 
 
                 {/* Full Screen Image Gallery — conditionally rendered by the host app via render props */}
@@ -825,4 +871,4 @@ const styles = StyleSheet.create({
 export default TipTapEditor;
 export type { TipTapEditorProps, TipTapEditorRef } from './types';
 export { TipTapEditor };
-
+export * from './slash-commands-config';

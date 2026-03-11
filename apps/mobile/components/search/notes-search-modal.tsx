@@ -321,7 +321,7 @@ export default function NotesSearchModal({
                         )}
                         <TextInput
                             style={[styles.searchInput, { color: colors.text }]}
-                            placeholder="Search in all folders..."
+                            placeholder="Search anything..."
                             placeholderTextColor={'#888'}
                             value={searchQuery}
                             onChangeText={(text) => setSearchQuery(text, null)}

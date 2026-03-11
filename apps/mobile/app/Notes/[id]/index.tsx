@@ -1,4 +1,5 @@
 import { ImageGallery } from '@/components/editor-ui/image-gallery';
+import { SlashCommandMenu } from '@/components/editor-ui/slash-command-menu';
 import { EditorToolbar } from '@/components/editor-ui/toolbar';
 import NoteHeaderMenu from '@/components/notes/note-header-menu';
 import { SearchOverlay } from '@/components/notes/search-overlay';
@@ -55,6 +56,10 @@ export default function NoteEditor() {
 
     // Gallery visibility — hide header when gallery is open
     const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+    
+    // Slash commands state
+    const [slashCommandState, setSlashCommandState] = useState<{ active: boolean; query?: string; range?: { from: number; to: number } }>({ active: false });
+
     const pendingScrollElementIdRef = useRef<string | null>(null);
     const shouldAutofocus = source === 'new' && (!content || content === '<p></p>');
 
@@ -370,6 +375,7 @@ export default function NoteEditor() {
                         initialContent={content ?? ''}
                         onContentChange={handleContentChange}
                         onSearchResults={handleSearchResults}
+                        onSlashCommand={setSlashCommandState}
                         contentPaddingTop={editor.floatingNoteHeader ? insets.top + 44 : 0}
                         placeholder="Start typing your note..."
                         autofocus={shouldAutofocus}
@@ -377,6 +383,17 @@ export default function NoteEditor() {
                         onCopyBlockLink={handleCopyBlockLink}
                         renderToolbar={(props: ToolbarRenderProps) => <EditorToolbar {...props} />}
                         renderImageGallery={(props: any) => <ImageGallery {...props} />}
+                        renderSlashCommandMenu={() => {
+                            if (!slashCommandState.active || !slashCommandState.range) return null;
+                            return (
+                                <SlashCommandMenu
+                                    query={slashCommandState.query || ''}
+                                    range={slashCommandState.range}
+                                    sendCommand={(cmd, params) => editorRef.current?.onCommand(cmd, params)}
+                                    onClose={() => setSlashCommandState({ active: false })}
+                                />
+                            );
+                        }}
                     />
                 </View>
             )}

@@ -1,8 +1,9 @@
 import { useSettingsStore } from '@annota/core';
 import { getPlatformAdapters, NoteImageService } from '@annota/core/platform';
 import editorHtml from '@annota/editor-web/dist/editor-html';
+import { Buffer } from 'buffer';
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { EditorState, ImageInfo, initialEditorState, TipTapEditorProps, TipTapEditorRef } from './types';
+import { EditorState, ImageInfo, initialEditorState, PopupType, TipTapEditorProps, TipTapEditorRef } from './types';
 
 /** Extract data-image-id values from HTML string */
 function extractImageIds(html: string): string[] {
@@ -28,6 +29,7 @@ export const IframeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
         noteId,
         renderToolbar,
         renderImageGallery,
+        onSlashCommand,
         isDark: propIsDark,
         colors: propColors,
     }, ref) => {
@@ -41,6 +43,9 @@ export const IframeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
         const [isGalleryVisible, setIsGalleryVisible] = useState(false);
         const [galleryImages, setGalleryImages] = useState<ImageInfo[]>([]);
         const [galleryCurrentIndex, setGalleryCurrentIndex] = useState(0);
+        const [activePopup, setActivePopup] = useState<PopupType>(null);
+        const [currentLatex, setCurrentLatex] = useState<string | null>(null);
+        const [tempBlockData, setTempBlockData] = useState<any>(null);
         const isReadyRef = useRef(false);
         const queuedCommandsRef = useRef<Array<{ command: string; params: Record<string, unknown> }>>([]);
         const contentResolverRef = useRef<((html: string) => void) | null>(null);
@@ -91,6 +96,23 @@ export const IframeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
 
         const sendCommand = useCallback(
             (command: string, params: Record<string, unknown> = {}) => {
+                // Handle UI commands locally
+                switch (command) {
+                    case 'openMathModal':
+                        setCurrentLatex(null);
+                        setActivePopup('math');
+                        return;
+                    case 'openImageModal':
+                        setActivePopup('image');
+                        return;
+                    case 'openLinkModal':
+                        setActivePopup('link');
+                        return;
+                    case 'openYoutubeModal':
+                        setActivePopup('youtube');
+                        return;
+                }
+
                 if (!iframeRef.current) return;
 
                 if (!isReadyRef.current && command !== 'setOptions') {
@@ -100,7 +122,7 @@ export const IframeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
 
                 injectCommand(command, params);
             },
-            [injectCommand]
+            [injectCommand, isReadyRef, queuedCommandsRef]
         );
 
         useImperativeHandle(
@@ -130,7 +152,7 @@ export const IframeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                 clearSearch: () => sendCommand('clearSearch'),
                 scrollToElement: (id: string) => sendCommand('scrollToElement', { id }),
             }),
-            [sendCommand]
+            [sendCommand, contentResolverRef]
         );
 
         const handleMessage = useCallback((event: MessageEvent) => {
@@ -253,9 +275,23 @@ export const IframeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                             })();
                         }
                         break;
+                    case 'slashCommand':
+                        onSlashCommand?.(data);
+                        break;
+                    case 'mathSelected':
+                        setCurrentLatex(data.latex);
+                        setActivePopup('math');
+                        break;
+                    case 'openBlockMenu':
+                    case 'openImageMenu':
+                    case 'openTableMenu':
+                    case 'codeBlockSelected':
+                        setTempBlockData(data);
+                        setActivePopup(data.type === 'codeBlockSelected' ? 'codeLanguage' : (data.type === 'openImageMenu' ? 'imageMenu' : 'blockMenu'));
+                        break;
                 }
             } catch (e) { /* ignore */ }
-        }, [dark, colors, initialContent, placeholder, autofocus, contentPaddingTop, editorSettings, editable, sendCommand, flushQueuedCommands, onContentChange, noteId]);
+        }, [dark, colors, initialContent, placeholder, autofocus, contentPaddingTop, editorSettings, editable, sendCommand, flushQueuedCommands, onContentChange, noteId, onSlashCommand, contentResolverRef, setActivePopup, setCurrentLatex, setTempBlockData, setIsReady]);
 
         useEffect(() => {
             if (isReady) {
@@ -326,13 +362,16 @@ export const IframeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                     onCommand: sendCommand,
                     toolbarHeight: 0,
                     onDismissKeyboard: () => { },
-                    activePopup: null,
-                    onActivePopupChange: () => { },
-                    onPopupStateChange: () => { },
+                    activePopup,
+                    onActivePopupChange: setActivePopup,
+                    onPopupStateChange: (isOpen) => { if (!isOpen) setActivePopup(null); },
                     onInsertImage: handleInsertImage,
-                    currentLatex: null,
-                    blockData: null,
-                    onInsertMath: () => { }
+                    currentLatex,
+                    blockData: tempBlockData,
+                    onInsertMath: () => {
+                        setCurrentLatex(null);
+                        setActivePopup('math');
+                    }
                 })}
 
                 <iframe

@@ -9,7 +9,7 @@ import {
 import type { ToolbarRenderProps } from '@annota/tiptap-editor';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
-import { Sigma } from 'lucide-react';
+import { Functions as Sigma } from '@mui/icons-material';
 import React, { useEffect, useRef, useState } from 'react';
 
 import { cn } from '@/lib/utils';

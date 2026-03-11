@@ -1,4 +1,5 @@
 import { Extension } from '@tiptap/core';
+import { dispatchEditorCommand } from '../command-dispatcher';
 import { COLOR_PALETTE } from '../../../../core/constants/colors';
 
 export const ShortcutManager = Extension.create({
@@ -36,7 +37,7 @@ export const ShortcutManager = Extension.create({
 
 
             // --- Reset Color ---
-            'Mod-Shift-n': () => this.editor.commands.unsetColor(),
+            'Mod-Shift-n': () => dispatchEditorCommand(this.editor, 'unsetColor'),
         };
 
         // --- Colors (Alt-[1-0]) ---
@@ -46,9 +47,9 @@ export const ShortcutManager = Extension.create({
             const colorKey = `Alt-${key}`;
             shortcuts[colorKey] = () => {
                 if (this.editor.isActive('textStyle', { color: color.value })) {
-                    return this.editor.commands.unsetColor();
+                    return dispatchEditorCommand(this.editor, 'unsetColor');
                 }
-                return this.editor.commands.setColor(color.value);
+                return dispatchEditorCommand(this.editor, 'setColor', { color: color.value });
             };
 
             // --- Highlights (Mod-Alt-[1-0]) ---

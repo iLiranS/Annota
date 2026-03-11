@@ -9,6 +9,7 @@ export default function NewTaskScreen() {
     const router = useRouter();
     const { colors } = useTheme();
     const { date: dateParam } = useLocalSearchParams<{ date?: string }>()
+    const { folderId: folderIdParam } = useLocalSearchParams<{ folderId?: string }>()
     const date = dateParam ? new Date(dateParam) : new Date();
 
     // Get createTask from store
@@ -51,7 +52,7 @@ export default function NewTaskScreen() {
                 }}
             />
 
-            <TaskForm initialDate={date} onSubmit={handleCreate} submitLabel="Create Task" />
+            <TaskForm initialValues={{ folderId: folderIdParam }} initialDate={date} onSubmit={handleCreate} submitLabel="Create Task" />
         </View>
     );
 }

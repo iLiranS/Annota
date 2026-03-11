@@ -13,17 +13,28 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { getPlatformAdapters } from '@annota/core/platform';
 import { join } from '@tauri-apps/api/path';
-import { Image as ImageIcon, Link as LinkIcon, Loader2, Upload } from 'lucide-react';
+import {
+    CloudUpload as Upload,
+    Image as ImageIcon,
+    Link as LinkIcon,
+    Autorenew as Loader2
+} from '@mui/icons-material';
 import React, { useCallback, useRef, useState } from 'react';
 
 interface ToolbarImageUploadProps {
     onInsertImage: (source: 'url' | 'library', value?: string) => Promise<boolean>;
     onOpenChange?: (open: boolean) => void;
     isMenu?: boolean;
+    visible?: boolean;
+    onClose?: () => void;
 }
 
-export function ToolbarImageUpload({ onInsertImage, onOpenChange, isMenu }: ToolbarImageUploadProps) {
+export function ToolbarImageUpload({ onInsertImage, onOpenChange, isMenu, visible, onClose }: ToolbarImageUploadProps) {
     const [open, setOpen] = useState(false);
+    
+    // Sync with visible prop if provided
+    const isControlled = visible !== undefined;
+    const isVisible = isControlled ? visible : open;
     const [isLoading, setIsLoading] = useState(false);
     const [url, setUrl] = useState('');
     const [tab, setTab] = useState<'upload' | 'url'>('upload');
@@ -31,8 +42,14 @@ export function ToolbarImageUpload({ onInsertImage, onOpenChange, isMenu }: Tool
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleOpenChange = (val: boolean) => {
-        setOpen(val);
-        onOpenChange?.(val);
+        if (isControlled) {
+            if (!val) onClose?.();
+            onOpenChange?.(val);
+        } else {
+            setOpen(val);
+            onOpenChange?.(val);
+        }
+        
         if (!val) {
             setUrl('');
             setIsLoading(false);
@@ -143,7 +160,7 @@ export function ToolbarImageUpload({ onInsertImage, onOpenChange, isMenu }: Tool
 
     const trigger = isMenu ? (
         <DropdownMenuItem onSelect={(e) => e.preventDefault()} onClick={() => setOpen(true)} className="gap-2">
-            <ImageIcon className="h-4 w-4" />
+            <ImageIcon sx={{ fontSize: 16 }} />
             <span>Image</span>
         </DropdownMenuItem>
     ) : (
@@ -156,20 +173,23 @@ export function ToolbarImageUpload({ onInsertImage, onOpenChange, isMenu }: Tool
                     borderRadius: '8px'
                 }}
             >
-                <ImageIcon className="h-5 w-5" />
+                <ImageIcon sx={{ fontSize: 18 }} />
             </Button>
         </DialogTrigger>
     );
 
     return (
-        <Dialog open={open} onOpenChange={handleOpenChange}>
-            {trigger}
+        <Dialog open={isVisible} onOpenChange={handleOpenChange}>
+            {!isControlled && trigger}
             <DialogContent
                 className="sm:max-w-[400px] p-0 overflow-hidden border-none bg-background shadow-2xl"
+                onPointerDownOutside={(e) => {
+                    if (isControlled) e.preventDefault();
+                }}
             >
                 <DialogHeader className="p-4 pb-2 border-b border-border/50">
                     <DialogTitle className="text-lg font-semibold flex items-center gap-2">
-                        <ImageIcon className="h-5 w-5 text-primary" />
+                        <ImageIcon sx={{ fontSize: 18 }} className="text-primary" />
                         Insert Image
                     </DialogTitle>
                 </DialogHeader>

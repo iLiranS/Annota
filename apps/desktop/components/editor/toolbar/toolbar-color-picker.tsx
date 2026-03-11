@@ -12,12 +12,11 @@ import {
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { COLOR_PALETTE } from '@annota/core/constants/colors';
-import { LucideIcon } from 'lucide-react';
-import { useState } from 'react';
+import React, { useState } from 'react';
 
 interface ColorPickerProps {
     title: string;
-    icon: LucideIcon;
+    icon: React.ComponentType<any>;
     currentColor: string | null;
     onSelect: (color: string) => void;
     onClear: () => void;
@@ -78,7 +77,7 @@ export function ColorPicker({
         return (
             <DropdownMenuSub open={open} onOpenChange={handleOpenChange}>
                 <DropdownMenuSubTrigger className="gap-2">
-                    <Icon className="h-4 w-4" style={{ color: currentColor || undefined }} />
+                    <Icon sx={{ fontSize: 16 }} style={{ color: currentColor || undefined }} />
                     <span>{title}</span>
                 </DropdownMenuSubTrigger>
                 <DropdownMenuPortal>
@@ -104,7 +103,7 @@ export function ColorPicker({
                         borderRadius: currentColor ? '8px' : undefined
                     }}
                 >
-                    <Icon className="h-5 w-5" />
+                    <Icon sx={{ fontSize: 18 }} />
                 </Button>
             </PopoverTrigger>
             <PopoverContent className="w-48 p-2" align="start">

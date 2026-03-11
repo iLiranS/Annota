@@ -209,7 +209,6 @@
     font-weight: 600;
     margin: 10px 0 4px 0;
     line-height: 1.4;
-    color: var(--placeholder-color);
     unicode-bidi: plaintext;
     text-align: start;
 }
@@ -398,7 +397,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 4px 8px;
+    padding: 10px 10px;
     background-color: transparent;
     position: absolute;
     top: 0;
@@ -415,10 +414,10 @@
     gap: 4px;
     padding: 2px 6px;
     border-radius: 4px;
-    background: rgba(128, 128, 128, 0.08);
+    background: color-mix(in srgb, var(--text-color) 15%, transparent);
     border: none;
     font-family: 'JetBrains Mono', 'SF Mono', Monaco, Consolas, monospace;
-    font-size: 8px;
+    font-size: 10px;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -434,14 +433,6 @@
     opacity: 0.8;
 }
 
-.code-lang-select::after {
-    content: '';
-    width: 0;
-    height: 0;
-    border-left: 3px solid transparent;
-    border-right: 3px solid transparent;
-    border-top: 3px solid currentColor;
-}
 
 
 
@@ -468,8 +459,8 @@
 }
 
 .code-menu-btn svg {
-    width: 16px;
-    height: 16px;
+    width: 20px;
+    height: 20px;
     flex-shrink: 0;
 }
 

@@ -8,29 +8,29 @@ import { useAppTheme } from '@/hooks/use-app-theme';
 import { cn } from '@/lib/utils';
 import type { ToolbarRenderProps } from '@annota/tiptap-editor';
 import {
-    Baseline,
-    Bold,
-    CheckSquare,
+    FormatColorText as Baseline,
+    FormatBold as Bold,
+    CheckBox as CheckSquare,
     Code,
-    FileInput,
-    Highlighter,
-    Indent,
-    Italic,
+    PostAdd as FileInput,
+    BorderColor as Highlighter,
+    FormatIndentIncrease as Indent,
+    FormatItalic as Italic,
     Link as LinkIcon,
-    List,
-    ListOrdered,
-    MoreHorizontal,
-    Outdent,
-    Quote,
+    FormatListBulleted as List,
+    FormatListNumbered as ListOrdered,
+    MoreHoriz as MoreHorizontal,
+    FormatIndentDecrease as Outdent,
+    FormatQuote as Quote,
     Redo,
-    Sigma,
-    SquareCode,
-    Strikethrough,
-    Table as TableIcon,
-    Underline,
+    Functions as Sigma,
+    Terminal as SquareCode,
+    StrikethroughS as Strikethrough,
+    TableChart as TableIcon,
+    FormatUnderlined as Underline,
     Undo,
-    Youtube
-} from 'lucide-react';
+    SmartDisplay as Youtube
+} from '@mui/icons-material';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '../ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
@@ -87,29 +87,29 @@ export function DesktopToolbar({
             id: 'bold',
             label: 'Bold',
             shortcut: `${MOD}B`,
-            render: <Button key="bold" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleBold')} style={activeStyle(editorState.isBold)}><Bold className="h-5 w-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="bold-dropdown" onClick={() => sendCommand('toggleBold')} className={cn("gap-2", editorState.isBold && "text-primary")}><Bold className="h-4 w-4" /> Bold <span className="ml-auto text-[10px] opacity-50">{MOD}B</span></DropdownMenuItem>
+            render: <Button key="bold" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleBold')} style={activeStyle(editorState.isBold)}><Bold sx={{ fontSize: 18 }} /></Button>,
+            dropdownRender: <DropdownMenuItem key="bold-dropdown" onClick={() => sendCommand('toggleBold')} className={cn("gap-2", editorState.isBold && "text-primary")}><Bold sx={{ fontSize: 16 }} /> Bold <span className="ml-auto text-[10px] opacity-50">{MOD}B</span></DropdownMenuItem>
         },
         {
             id: 'italic',
             label: 'Italic',
             shortcut: `${MOD}I`,
-            render: <Button key="italic" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleItalic')} style={activeStyle(editorState.isItalic)}><Italic className="h-5 w-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="italic-dropdown" onClick={() => sendCommand('toggleItalic')} className={cn("gap-2", editorState.isItalic && "text-primary")}><Italic className="h-4 w-4" /> Italic <span className="ml-auto text-[10px] opacity-50">{MOD}I</span></DropdownMenuItem>
+            render: <Button key="italic" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleItalic')} style={activeStyle(editorState.isItalic)}><Italic sx={{ fontSize: 18 }} /></Button>,
+            dropdownRender: <DropdownMenuItem key="italic-dropdown" onClick={() => sendCommand('toggleItalic')} className={cn("gap-2", editorState.isItalic && "text-primary")}><Italic sx={{ fontSize: 16 }} /> Italic <span className="ml-auto text-[10px] opacity-50">{MOD}I</span></DropdownMenuItem>
         },
         {
             id: 'underline',
             label: 'Underline',
             shortcut: `${MOD}U`,
-            render: <Button key="underline" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleUnderline')} style={activeStyle(editorState.isUnderline)}><Underline className="h-5 w-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="underline-dropdown" onClick={() => sendCommand('toggleUnderline')} className={cn("gap-2", editorState.isUnderline && "text-primary")}><Underline className="h-4 w-4" /> Underline <span className="ml-auto text-[10px] opacity-50">{MOD}U</span></DropdownMenuItem>
+            render: <Button key="underline" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleUnderline')} style={activeStyle(editorState.isUnderline)}><Underline sx={{ fontSize: 18 }} /></Button>,
+            dropdownRender: <DropdownMenuItem key="underline-dropdown" onClick={() => sendCommand('toggleUnderline')} className={cn("gap-2", editorState.isUnderline && "text-primary")}><Underline sx={{ fontSize: 16 }} /> Underline <span className="ml-auto text-[10px] opacity-50">{MOD}U</span></DropdownMenuItem>
         },
         {
             id: 'strike',
             label: 'Strikethrough',
             shortcut: `${MOD}${SHIFT}X`,
-            render: <Button key="strike" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleStrike')} style={activeStyle(editorState.isStrike)}><Strikethrough className="h-5 w-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="strike-dropdown" onClick={() => sendCommand('toggleStrike')} className={cn("gap-2", editorState.isStrike && "text-primary")}><Strikethrough className="h-4 w-4" /> Strikethrough <span className="ml-auto text-[10px] opacity-50">{MOD}${SHIFT}X</span></DropdownMenuItem>
+            render: <Button key="strike" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleStrike')} style={activeStyle(editorState.isStrike)}><Strikethrough sx={{ fontSize: 18 }} /></Button>,
+            dropdownRender: <DropdownMenuItem key="strike-dropdown" onClick={() => sendCommand('toggleStrike')} className={cn("gap-2", editorState.isStrike && "text-primary")}><Strikethrough sx={{ fontSize: 16 }} /> Strikethrough <span className="ml-auto text-[10px] opacity-50">{MOD}${SHIFT}X</span></DropdownMenuItem>
         },
         {
             id: 'textColor',
@@ -129,62 +129,62 @@ export function DesktopToolbar({
             id: 'bulletList',
             label: 'Bullet List',
             shortcut: `${MOD}7`,
-            render: <Button key="bulletList" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleBulletList')} style={activeStyle(editorState.isBulletList)}><List className="h-5 w-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="bulletList-dropdown" onClick={() => sendCommand('toggleBulletList')} className={cn("gap-2", editorState.isBulletList && "text-primary")}><List className="h-4 w-4" /> Bullet List <span className="ml-auto text-[10px] opacity-50">{MOD}7</span></DropdownMenuItem>
+            render: <Button key="bulletList" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleBulletList')} style={activeStyle(editorState.isBulletList)}><List sx={{ fontSize: 18 }} /></Button>,
+            dropdownRender: <DropdownMenuItem key="bulletList-dropdown" onClick={() => sendCommand('toggleBulletList')} className={cn("gap-2", editorState.isBulletList && "text-primary")}><List sx={{ fontSize: 16 }} /> Bullet List <span className="ml-auto text-[10px] opacity-50">{MOD}7</span></DropdownMenuItem>
         },
         {
             id: 'orderedList',
             label: 'Numbered List',
             shortcut: `${MOD}8`,
-            render: <Button key="orderedList" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleOrderedList')} style={activeStyle(editorState.isOrderedList)}><ListOrdered className="h-5 w-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="orderedList-dropdown" onClick={() => sendCommand('toggleOrderedList')} className={cn("gap-2", editorState.isOrderedList && "text-primary")}><ListOrdered className="h-4 w-4" /> Numbered List <span className="ml-auto text-[10px] opacity-50">{MOD}8</span></DropdownMenuItem>
+            render: <Button key="orderedList" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleOrderedList')} style={activeStyle(editorState.isOrderedList)}><ListOrdered sx={{ fontSize: 18 }} /></Button>,
+            dropdownRender: <DropdownMenuItem key="orderedList-dropdown" onClick={() => sendCommand('toggleOrderedList')} className={cn("gap-2", editorState.isOrderedList && "text-primary")}><ListOrdered sx={{ fontSize: 16 }} /> Numbered List <span className="ml-auto text-[10px] opacity-50">{MOD}8</span></DropdownMenuItem>
         },
         {
             id: 'taskList',
             label: 'Task List',
             shortcut: `${MOD}9`,
-            render: <Button key="taskList" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleTaskList')} style={activeStyle(editorState.isTaskList)}><CheckSquare className="h-5 w-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="taskList-dropdown" onClick={() => sendCommand('toggleTaskList')} className={cn("gap-2", editorState.isTaskList && "text-primary")}><CheckSquare className="h-4 w-4" /> Task List <span className="ml-auto text-[10px] opacity-50">{MOD}9</span></DropdownMenuItem>
+            render: <Button key="taskList" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleTaskList')} style={activeStyle(editorState.isTaskList)}><CheckSquare sx={{ fontSize: 18 }} /></Button>,
+            dropdownRender: <DropdownMenuItem key="taskList-dropdown" onClick={() => sendCommand('toggleTaskList')} className={cn("gap-2", editorState.isTaskList && "text-primary")}><CheckSquare sx={{ fontSize: 16 }} /> Task List <span className="ml-auto text-[10px] opacity-50">{MOD}9</span></DropdownMenuItem>
         },
         {
             id: 'outdent',
             label: 'Outdent',
-            render: <Button key="outdent" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('liftListItem')} disabled={!editorState.canLiftListItem}><Outdent className="h-5 w-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="outdent-dropdown" onClick={() => sendCommand('liftListItem')} disabled={!editorState.canLiftListItem} className="gap-2"><Outdent className="h-4 w-4" /> Outdent</DropdownMenuItem>
+            render: <Button key="outdent" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('liftListItem')} disabled={!editorState.canLiftListItem}><Outdent sx={{ fontSize: 18 }} /></Button>,
+            dropdownRender: <DropdownMenuItem key="outdent-dropdown" onClick={() => sendCommand('liftListItem')} disabled={!editorState.canLiftListItem} className="gap-2"><Outdent sx={{ fontSize: 16 }} /> Outdent</DropdownMenuItem>
         },
         {
             id: 'indent',
             label: 'Indent',
-            render: <Button key="indent" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('sinkListItem')} disabled={!editorState.canSinkListItem}><Indent className="h-5 w-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="indent-dropdown" onClick={() => sendCommand('sinkListItem')} disabled={!editorState.canSinkListItem} className="gap-2"><Indent className="h-4 w-4" /> Indent</DropdownMenuItem>
+            render: <Button key="indent" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('sinkListItem')} disabled={!editorState.canSinkListItem}><Indent sx={{ fontSize: 18 }} /></Button>,
+            dropdownRender: <DropdownMenuItem key="indent-dropdown" onClick={() => sendCommand('sinkListItem')} disabled={!editorState.canSinkListItem} className="gap-2"><Indent sx={{ fontSize: 16 }} /> Indent</DropdownMenuItem>
         },
         {
             id: 'code',
             label: 'Inline Code',
             shortcut: `${MOD}E`,
-            render: <Button key="code" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleCode')} style={activeStyle(editorState.isCode)}><Code className="h-5 w-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="code-dropdown" onClick={() => sendCommand('toggleCode')} className={cn("gap-2", editorState.isCode && "text-primary")}><Code className="h-4 w-4" /> Inline Code <span className="ml-auto text-[10px] opacity-50">{MOD}E</span></DropdownMenuItem>
+            render: <Button key="code" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleCode')} style={activeStyle(editorState.isCode)}><Code sx={{ fontSize: 18 }} /></Button>,
+            dropdownRender: <DropdownMenuItem key="code-dropdown" onClick={() => sendCommand('toggleCode')} className={cn("gap-2", editorState.isCode && "text-primary")}><Code sx={{ fontSize: 16 }} /> Inline Code <span className="ml-auto text-[10px] opacity-50">{MOD}E</span></DropdownMenuItem>
         },
         {
             id: 'codeBlock',
             label: 'Code Block',
             shortcut: `${MOD}${ALT}C`,
-            render: <Button key="codeBlock" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleCodeBlock')} style={activeStyle(editorState.isCodeBlock)}><SquareCode className="h-5 w-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="codeBlock-dropdown" onClick={() => sendCommand('toggleCodeBlock')} className={cn("gap-2", editorState.isCodeBlock && "text-primary")}><SquareCode className="h-4 w-4" /> Code Block <span className="ml-auto text-[10px] opacity-50">{MOD}${ALT}C</span></DropdownMenuItem>
+            render: <Button key="codeBlock" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleCodeBlock')} style={activeStyle(editorState.isCodeBlock)}><SquareCode sx={{ fontSize: 18 }} /></Button>,
+            dropdownRender: <DropdownMenuItem key="codeBlock-dropdown" onClick={() => sendCommand('toggleCodeBlock')} className={cn("gap-2", editorState.isCodeBlock && "text-primary")}><SquareCode sx={{ fontSize: 16 }} /> Code Block <span className="ml-auto text-[10px] opacity-50">{MOD}${ALT}C</span></DropdownMenuItem>
         },
         {
             id: 'quote',
             label: 'Quote',
             shortcut: `${MOD}${SHIFT}B`,
-            render: <Button key="quote" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleBlockquote')} style={activeStyle(editorState.isBlockquote)}><Quote className="h-5 w-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="quote-dropdown" onClick={() => sendCommand('toggleBlockquote')} className={cn("gap-2", editorState.isBlockquote && "text-primary")}><Quote className="h-4 w-4" /> Quote <span className="ml-auto text-[10px] opacity-50">{MOD}${SHIFT}B</span></DropdownMenuItem>
+            render: <Button key="quote" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleBlockquote')} style={activeStyle(editorState.isBlockquote)}><Quote sx={{ fontSize: 18 }} /></Button>,
+            dropdownRender: <DropdownMenuItem key="quote-dropdown" onClick={() => sendCommand('toggleBlockquote')} className={cn("gap-2", editorState.isBlockquote && "text-primary")}><Quote sx={{ fontSize: 16 }} /> Quote <span className="ml-auto text-[10px] opacity-50">{MOD}${SHIFT}B</span></DropdownMenuItem>
         },
         {
             id: 'details',
             label: 'Collapsible',
             shortcut: `${MOD}.`,
-            render: <Button key="details" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleDetails')} style={activeStyle(editorState.isDetails)}><FileInput className="h-5 w-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="details-dropdown" onClick={() => sendCommand('toggleDetails')} className={cn("gap-2", editorState.isDetails && "text-primary")}><FileInput className="h-4 w-4" /> Details <span className="ml-auto text-[10px] opacity-50">{MOD}.</span></DropdownMenuItem>
+            render: <Button key="details" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleDetails')} style={activeStyle(editorState.isDetails)}><FileInput sx={{ fontSize: 18 }} /></Button>,
+            dropdownRender: <DropdownMenuItem key="details-dropdown" onClick={() => sendCommand('toggleDetails')} className={cn("gap-2", editorState.isDetails && "text-primary")}><FileInput sx={{ fontSize: 16 }} /> Details <span className="ml-auto text-[10px] opacity-50">{MOD}.</span></DropdownMenuItem>
         },
         {
             id: 'math',
@@ -201,7 +201,7 @@ export function DesktopToolbar({
                     )}
                     onClick={() => onActivePopupChange(activePopup === 'math' ? null : 'math')}
                 >
-                    <Sigma className="h-5 w-5" />
+                    <Sigma sx={{ fontSize: 20 }} />
                 </Button>
             ),
             dropdownRender: (
@@ -210,7 +210,7 @@ export function DesktopToolbar({
                     onClick={(e) => { e.preventDefault(); onActivePopupChange('math'); }}
                     className={cn("gap-2 cursor-pointer", activePopup === 'math' && "text-primary")}
                 >
-                    <Sigma className="h-4 w-4" />
+                    <Sigma sx={{ fontSize: 16 }} />
                     <span>Math Formula</span>
                 </DropdownMenuItem>
             )
@@ -218,20 +218,51 @@ export function DesktopToolbar({
         {
             id: 'link',
             label: 'Link',
-            render: <LinkPopover key="link" title="Insert Link" icon={LinkIcon} placeholder="https://example.com" isActive={editorState.isLink} initialValue={editorState.linkHref ?? ''} saveLabel="Save" activeColor={colors.primary} onSave={(href) => sendCommand('setLink', { href })} onRemove={() => sendCommand('unsetLink')} onOpenChange={handleOpenChange} />,
-            dropdownRender: <LinkPopover key="link-dropdown" title="Insert Link" icon={LinkIcon} placeholder="https://example.com" isActive={editorState.isLink} initialValue={editorState.linkHref ?? ''} saveLabel="Save" activeColor={colors.primary} onSave={(href) => sendCommand('setLink', { href })} onRemove={() => sendCommand('unsetLink')} onOpenChange={handleOpenChange} isMenu />
+            render: (
+                <LinkPopover
+                    key="link"
+                    title="Insert Link"
+                    icon={LinkIcon}
+                    placeholder="https://example.com"
+                    isActive={editorState.isLink}
+                    initialValue={editorState.linkHref || ''}
+                    selectedText={editorState.selectedText}
+                    saveLabel="Save"
+                    activeColor={colors.primary}
+                    onSave={(href, title) => sendCommand('setLink', { href, title })}
+                    onRemove={() => sendCommand('unsetLink')}
+                    onOpenChange={handleOpenChange}
+                />
+            ),
+            dropdownRender: (
+                <LinkPopover
+                    key="link-dropdown"
+                    title="Insert Link"
+                    icon={LinkIcon}
+                    placeholder="https://example.com"
+                    isActive={editorState.isLink}
+                    initialValue={editorState.linkHref || ''}
+                    selectedText={editorState.selectedText}
+                    saveLabel="Save"
+                    activeColor={colors.primary}
+                    onSave={(href, title) => sendCommand('setLink', { href, title })}
+                    onRemove={() => sendCommand('unsetLink')}
+                    onOpenChange={handleOpenChange}
+                    isMenu
+                />
+            )
         },
         {
             id: 'youtube',
             label: 'YouTube',
-            render: <LinkPopover key="youtube" title="YouTube Video" description="Enter a YouTube video URL" icon={Youtube} placeholder="https://youtube.com/watch?v=..." saveLabel="Insert" onSave={(src) => sendCommand('setYoutubeVideo', { src })} onOpenChange={handleOpenChange} />,
-            dropdownRender: <LinkPopover key="youtube-dropdown" title="YouTube Video" description="Enter a YouTube video URL" icon={Youtube} placeholder="https://youtube.com/watch?v=..." saveLabel="Insert" onSave={(src) => sendCommand('setYoutubeVideo', { src })} onOpenChange={handleOpenChange} isMenu />
+            render: <LinkPopover key="youtube" title="YouTube Video" description="Enter a YouTube video URL" icon={Youtube} placeholder="https://youtube.com/watch?v=..." saveLabel="Insert" onSave={(href) => sendCommand('setYoutubeVideo', { src: href })} onOpenChange={handleOpenChange} hideTitle />,
+            dropdownRender: <LinkPopover key="youtube-dropdown" title="YouTube Video" description="Enter a YouTube video URL" icon={Youtube} placeholder="https://youtube.com/watch?v=..." saveLabel="Insert" onSave={(href) => sendCommand('setYoutubeVideo', { src: href })} onOpenChange={handleOpenChange} isMenu hideTitle />
         },
         {
             id: 'table',
             label: 'Table',
-            render: <Button key="table" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => { if (!editorState.isInTable) sendCommand('insertTable', { rows: 3, cols: 3, withHeaderRow: true }); }} style={activeStyle(editorState.isInTable)}><TableIcon className="h-5 w-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="table-dropdown" onClick={() => { if (!editorState.isInTable) sendCommand('insertTable', { rows: 3, cols: 3, withHeaderRow: true }); }} className={cn("gap-2", editorState.isInTable && "text-primary")}><TableIcon className="h-4 w-4" /> Table</DropdownMenuItem>
+            render: <Button key="table" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => { if (!editorState.isInTable) sendCommand('insertTable', { rows: 3, cols: 3, withHeaderRow: true }); }} style={activeStyle(editorState.isInTable)}><TableIcon sx={{ fontSize: 18 }} /></Button>,
+            dropdownRender: <DropdownMenuItem key="table-dropdown" onClick={() => { if (!editorState.isInTable) sendCommand('insertTable', { rows: 3, cols: 3, withHeaderRow: true }); }} className={cn("gap-2", editorState.isInTable && "text-primary")}><TableIcon sx={{ fontSize: 16 }} /> Table</DropdownMenuItem>
         },
         {
             id: 'image',
@@ -346,7 +377,7 @@ export function DesktopToolbar({
                             <DropdownMenu onOpenChange={handleOpenChange} modal={false}>
                                 <DropdownMenuTrigger asChild>
                                     <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0">
-                                        <MoreHorizontal className="h-5 w-5" />
+                                        <MoreHorizontal sx={{ fontSize: 18 }} />
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="w-56">
@@ -365,7 +396,7 @@ export function DesktopToolbar({
                         >
                             <TooltipTrigger asChild>
                                 <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('undo')} disabled={!editorState.canUndo}>
-                                    <Undo className="h-5 w-5" />
+                                    <Undo sx={{ fontSize: 18 }} />
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent side="top" sideOffset={12}>
@@ -380,7 +411,7 @@ export function DesktopToolbar({
                         >
                             <TooltipTrigger asChild>
                                 <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('redo')} disabled={!editorState.canRedo}>
-                                    <Redo className="h-5 w-5" />
+                                    <Redo sx={{ fontSize: 18 }} />
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent side="top" sideOffset={12}>
@@ -392,7 +423,7 @@ export function DesktopToolbar({
                 </div>
             </div>
 
-            {/* Global Math Dialog - Rendered once to avoid conflicts */}
+            {/* Global Math Dialog */}
             <MathPopover
                 sendCommand={sendCommand}
                 activeColor={colors.primary}
@@ -402,6 +433,51 @@ export function DesktopToolbar({
                 }}
                 visible={activePopup === 'math'}
                 currentLatex={currentLatex}
+            />
+
+            {/* Global Link Popover */}
+            <LinkPopover
+                title="Insert Link"
+                icon={LinkIcon}
+                placeholder="https://example.com"
+                isActive={editorState.isLink}
+                initialValue={editorState.linkHref || ''}
+                selectedText={editorState.selectedText}
+                saveLabel="Save"
+                activeColor={colors.primary}
+                onSave={(href, title) => {
+                    sendCommand('setLink', { href, title });
+                    onActivePopupChange(null);
+                }}
+                onRemove={() => {
+                    sendCommand('unsetLink');
+                    onActivePopupChange(null);
+                }}
+                visible={activePopup === 'link'}
+                onClose={() => onActivePopupChange(null)}
+            />
+
+            {/* Global YouTube Popover */}
+            <LinkPopover
+                title="YouTube Video"
+                description="Enter a YouTube video URL"
+                icon={Youtube}
+                placeholder="https://youtube.com/watch?v=..."
+                saveLabel="Insert"
+                onSave={(href) => {
+                    sendCommand('setYoutubeVideo', { src: href });
+                    onActivePopupChange(null);
+                }}
+                visible={activePopup === 'youtube'}
+                onClose={() => onActivePopupChange(null)}
+                hideTitle
+            />
+
+            {/* Global Image Modal */}
+            <ToolbarImageUpload
+                onInsertImage={onInsertImage}
+                visible={activePopup === 'image'}
+                onClose={() => onActivePopupChange(null)}
             />
         </TooltipProvider>
     );

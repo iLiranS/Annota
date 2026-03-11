@@ -9,10 +9,13 @@ import { useUserStore as useAuthStore, useNotesStore, useSettingsStore, useTasks
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DrawerNavigationProp } from '@react-navigation/drawer';
+import * as Haptics from 'expo-haptics';
 import { useNavigation, useRouter } from 'expo-router';
 import Drawer from 'expo-router/drawer';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, LayoutChangeEvent, Pressable, StyleSheet, View } from 'react-native';
+import { Animated, LayoutChangeEvent, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { runOnJS } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GUEST_DISPLAY_NAME_KEY } from '../settings/account';
 
@@ -55,6 +58,34 @@ export default function HomeScreen() {
 
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isSearchVisible, setIsSearchVisible] = useState(false);
+  const { height: screenHeight } = useWindowDimensions();
+  const hasTriggeredGesture = useRef(false);
+  const startY = useRef(0);
+
+  const panGesture = useMemo(() =>
+    Gesture.Pan()
+      .enabled(!isSearchVisible)
+      .onBegin((e) => {
+        startY.current = e.y;
+        hasTriggeredGesture.current = false;
+      })
+      .onUpdate((e) => {
+        if (hasTriggeredGesture.current) return;
+
+        // Check if started in the middle-ish vertical area (avoiding edges)
+        const isFromCenter = startY.current > screenHeight * 0.15 && startY.current < screenHeight * 0.8;
+
+        // Trigger search on meaningful swipe down
+        if (isFromCenter && e.translationY > 60 && e.velocityY > 500) {
+          hasTriggeredGesture.current = true;
+          runOnJS(setIsSearchVisible)(true);
+          runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Medium);
+        }
+      })
+      .activeOffsetY(10) // Small threshold to distinguish from simple taps
+      .shouldCancelWhenOutside(true),
+    [isSearchVisible, screenHeight]
+  );
 
   // Use Zustand stores
   const { tasks, loadTasks } = useTasksStore();
@@ -186,185 +217,187 @@ export default function HomeScreen() {
   }, [router]);
 
   return (
-    <ThemedView style={styles.container}>
-      <Drawer.Screen
-        options={{
-          headerShown: true,
-          headerTitle: () => (
-            <View style={styles.headerTitleContainer}>
-              <ThemedText style={[styles.greetingText, { fontFamily: editor.fontFamily }]}>
-                {greeting}, <ThemedText style={[styles.userName, { color: colors.primary }]}>{displayName}</ThemedText>
-              </ThemedText>
-            </View>
-          ),
-          headerLeft: () => (
-            <Pressable
-              onPress={() => {
-                navigation.openDrawer();
-              }}
-              hitSlop={8}
-              style={({ pressed }) => [
-                styles.headerButton,
-                {
-                  padding: 8, // Ensure there's padding so the background is visible around the icon
-                  borderRadius: 8, // iOS native buttons usually have rounded corners for the background
-                  backgroundColor: pressed ? 'rgba(150, 150, 150, 0.2)' : 'transparent', // Native grey highlight
-                  transform: [{ scale: pressed ? 0.96 : 1 }], // Native slight zoom
-                  opacity: pressed ? 0.8 : 1,
-                }
-              ]}
-            >
-              <Ionicons name="menu-outline" size={24} color={colors.primary} />
-            </Pressable>
-          ),
-          headerRight: () => (
-            <Pressable
-              onPress={() => {
-                // Trigger your haptic feedback here if needed
-                setIsSearchVisible(true);
-              }}
-              hitSlop={8}
-              style={({ pressed }) => [
-                styles.headerButton,
-                {
-                  padding: 8, // Ensure there's padding so the background is visible around the icon
-                  borderRadius: 8, // iOS native buttons usually have rounded corners for the background
-                  backgroundColor: pressed ? 'rgba(150, 150, 150, 0.2)' : 'transparent', // Native grey highlight
-                  transform: [{ scale: pressed ? 0.96 : 1 }], // Native slight zoom
-                  opacity: pressed ? 0.8 : 1,
-                }
-              ]}
-            >
-              <Ionicons name="search" size={24} color={colors.primary} />
-            </Pressable>
-          ),
-          headerStyle: {
-            backgroundColor: colors.background,
-          },
-          headerShadowVisible: false,
-        }}
-      />
-
-      {/* Calendar */}
-      <View style={{ paddingHorizontal: 20, marginTop: 20 }}>
-        <Calendar selectedDate={selectedDate} onDateSelect={handleDateSelect} />
-      </View>
-
-      {/* Content Section */}
-      <View style={styles.contentSection}>
-        {isToday ? (
-          <>
-            {/* Tab Switcher */}
-            <View style={{ paddingHorizontal: 20 }}>
-              <View
-                style={[styles.tabContainer, { backgroundColor: colors.card }]}
-                onLayout={onTabContainerLayout}
+    <GestureDetector gesture={panGesture}>
+      <ThemedView style={styles.container}>
+        <Drawer.Screen
+          options={{
+            headerShown: true,
+            headerTitle: () => (
+              <View style={styles.headerTitleContainer}>
+                <ThemedText style={[styles.greetingText, { fontFamily: editor.fontFamily }]}>
+                  {greeting}, <ThemedText style={[styles.userName, { color: colors.primary }]}>{displayName}</ThemedText>
+                </ThemedText>
+              </View>
+            ),
+            headerLeft: () => (
+              <Pressable
+                onPress={() => {
+                  navigation.openDrawer();
+                }}
+                hitSlop={8}
+                style={({ pressed }) => [
+                  styles.headerButton,
+                  {
+                    padding: 8, // Ensure there's padding so the background is visible around the icon
+                    borderRadius: 8, // iOS native buttons usually have rounded corners for the background
+                    backgroundColor: pressed ? 'rgba(150, 150, 150, 0.2)' : 'transparent', // Native grey highlight
+                    transform: [{ scale: pressed ? 0.96 : 1 }], // Native slight zoom
+                    opacity: pressed ? 0.8 : 1,
+                  }
+                ]}
               >
-                <Animated.View
-                  style={[
-                    styles.tabIndicator,
-                    {
-                      backgroundColor: colors.primary + '80',
-                      shadowColor: colors.primary,
-                      width: tabWidth,
-                      transform: [
-                        {
-                          translateX: slideAnim.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [0, tabWidth + 4],
-                          }),
-                        },
-                      ],
-                    },
-                  ]}
-                />
-                <Pressable
-                  onPress={() => setActiveTab('tasks')}
-                  style={styles.tab}
+                <Ionicons name="menu-outline" size={24} color={colors.primary} />
+              </Pressable>
+            ),
+            headerRight: () => (
+              <Pressable
+                onPress={() => {
+                  // Trigger your haptic feedback here if needed
+                  setIsSearchVisible(true);
+                }}
+                hitSlop={8}
+                style={({ pressed }) => [
+                  styles.headerButton,
+                  {
+                    padding: 8, // Ensure there's padding so the background is visible around the icon
+                    borderRadius: 8, // iOS native buttons usually have rounded corners for the background
+                    backgroundColor: pressed ? 'rgba(150, 150, 150, 0.2)' : 'transparent', // Native grey highlight
+                    transform: [{ scale: pressed ? 0.96 : 1 }], // Native slight zoom
+                    opacity: pressed ? 0.8 : 1,
+                  }
+                ]}
+              >
+                <Ionicons name="search" size={24} color={colors.primary} />
+              </Pressable>
+            ),
+            headerStyle: {
+              backgroundColor: colors.background,
+            },
+            headerShadowVisible: false,
+          }}
+        />
+
+        {/* Calendar */}
+        <View style={{ paddingHorizontal: 20, marginTop: 20 }}>
+          <Calendar selectedDate={selectedDate} onDateSelect={handleDateSelect} />
+        </View>
+
+        {/* Content Section */}
+        <View style={styles.contentSection}>
+          {isToday ? (
+            <>
+              {/* Tab Switcher */}
+              <View style={{ paddingHorizontal: 20 }}>
+                <View
+                  style={[styles.tabContainer, { backgroundColor: colors.card }]}
+                  onLayout={onTabContainerLayout}
                 >
-                  <Ionicons
-                    name="checkbox-outline"
-                    size={20}
+                  <Animated.View
                     style={[
-                      styles.tabIcon,
-                      { left: 12 },
-                      { color: activeTab === 'tasks' ? '#FFFFFF' : colors.text },
-                      { opacity: activeTab === 'tasks' ? 1 : 0.5 }
+                      styles.tabIndicator,
+                      {
+                        backgroundColor: colors.primary + '80',
+                        shadowColor: colors.primary,
+                        width: tabWidth,
+                        transform: [
+                          {
+                            translateX: slideAnim.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [0, tabWidth + 4],
+                            }),
+                          },
+                        ],
+                      },
                     ]}
                   />
-                  <ThemedText
-                    style={[
-                      styles.tabText,
-                      activeTab === 'tasks' && styles.activeTabText
-                    ]}
+                  <Pressable
+                    onPress={() => setActiveTab('tasks')}
+                    style={styles.tab}
                   >
-                    Tasks
-                  </ThemedText>
-                </Pressable>
-                <Pressable
-                  onPress={() => setActiveTab('notes')}
-                  style={styles.tab}
-                >
-                  <ThemedText
-                    style={[
-                      styles.tabText,
-                      activeTab === 'notes' && styles.activeTabText
-                    ]}
+                    <Ionicons
+                      name="checkbox-outline"
+                      size={20}
+                      style={[
+                        styles.tabIcon,
+                        { left: 12 },
+                        { color: activeTab === 'tasks' ? '#FFFFFF' : colors.text },
+                        { opacity: activeTab === 'tasks' ? 1 : 0.5 }
+                      ]}
+                    />
+                    <ThemedText
+                      style={[
+                        styles.tabText,
+                        activeTab === 'tasks' && styles.activeTabText
+                      ]}
+                    >
+                      Tasks
+                    </ThemedText>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => setActiveTab('notes')}
+                    style={styles.tab}
                   >
-                    Recent Notes
-                  </ThemedText>
-                  <Ionicons
-                    name="document-text-outline"
-                    size={20}
-                    style={[
-                      styles.tabIcon,
-                      { right: 12 },
-                      { color: activeTab === 'notes' ? '#FFFFFF' : colors.text },
-                      { opacity: activeTab === 'notes' ? 1 : 0.5 }
-                    ]}
-                  />
-                </Pressable>
+                    <ThemedText
+                      style={[
+                        styles.tabText,
+                        activeTab === 'notes' && styles.activeTabText
+                      ]}
+                    >
+                      Recent Notes
+                    </ThemedText>
+                    <Ionicons
+                      name="document-text-outline"
+                      size={20}
+                      style={[
+                        styles.tabIcon,
+                        { right: 12 },
+                        { color: activeTab === 'notes' ? '#FFFFFF' : colors.text },
+                        { opacity: activeTab === 'notes' ? 1 : 0.5 }
+                      ]}
+                    />
+                  </Pressable>
+                </View>
               </View>
+
+              {activeTab === 'tasks' ? (
+                <View style={[styles.tabContentInner, { paddingHorizontal: 20 }]}>
+                  <TaskList
+                    tasks={tasksForSelectedDate}
+                    selectedDate={selectedDate}
+                    onTaskPress={handleTaskPress}
+                    showComingUp={true}
+                    upcomingTasks={upcomingTasks}
+                  />
+                </View>
+              ) : (
+                <RecentNotesList onCreateNote={handleCreateNote} />
+              )}
+            </>
+          ) : (
+            <View style={[styles.tabContentInner, { paddingHorizontal: 20 }]}>
+              <TaskList
+                tasks={tasksForSelectedDate}
+                selectedDate={selectedDate}
+                onTaskPress={handleTaskPress}
+                showComingUp={false}
+              />
             </View>
+          )}
+        </View>
 
-            {activeTab === 'tasks' ? (
-              <View style={[styles.tabContentInner, { paddingHorizontal: 20 }]}>
-                <TaskList
-                  tasks={tasksForSelectedDate}
-                  selectedDate={selectedDate}
-                  onTaskPress={handleTaskPress}
-                  showComingUp={true}
-                  upcomingTasks={upcomingTasks}
-                />
-              </View>
-            ) : (
-              <RecentNotesList onCreateNote={handleCreateNote} />
-            )}
-          </>
-        ) : (
-          <View style={[styles.tabContentInner, { paddingHorizontal: 20 }]}>
-            <TaskList
-              tasks={tasksForSelectedDate}
-              selectedDate={selectedDate}
-              onTaskPress={handleTaskPress}
-              showComingUp={false}
-            />
-          </View>
-        )}
-      </View>
+        {/* Bottom Spacing */}
+        <View style={{ height: insets.bottom + 20 }} />
 
-      {/* Bottom Spacing */}
-      <View style={{ height: insets.bottom + 20 }} />
-
-      {/* Search Modal */}
-      <NotesSearchModal
-        visible={isSearchVisible}
-        onClose={() => setIsSearchVisible(false)}
-        onFolderPress={handleFolderPress}
-        onNotePress={handleNotePress}
-        allFolders={folders}
-      />
-    </ThemedView>
+        {/* Search Modal */}
+        <NotesSearchModal
+          visible={isSearchVisible}
+          onClose={() => setIsSearchVisible(false)}
+          onFolderPress={handleFolderPress}
+          onNotePress={handleNotePress}
+          allFolders={folders}
+        />
+      </ThemedView>
+    </GestureDetector>
   );
 }
 const styles = StyleSheet.create({
@@ -394,7 +427,7 @@ const styles = StyleSheet.create({
   },
   headerTitleContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginLeft: -10, // Adjust for native header layout
   },
   headerButton: {

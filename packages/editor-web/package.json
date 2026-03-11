@@ -7,6 +7,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./config": "./src/config.ts",
+    "./command-dispatcher": "./src/command-dispatcher.ts",
     "./extensions": "./src/extensions/index.ts",
     "./styles.css": "./src/styles.css",
     "./dist/editor-html": "./dist/editor-html.ts"
@@ -38,6 +39,7 @@
     "@tiptap/extension-underline": "^3.18.0",
     "@tiptap/extension-youtube": "^3.18.0",
     "@tiptap/starter-kit": "^3.18.0",
+    "@tiptap/suggestion": "^3.20.1",
     "highlight.js": "^11.9.0",
     "katex": "^0.16.27",
     "lowlight": "^3.1.0"

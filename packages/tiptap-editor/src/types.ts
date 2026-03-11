@@ -53,6 +53,10 @@ export interface TipTapEditorProps {
     onOpenTableMenu?: (e: MouseEvent, resolve: () => { pos: number; message: Record<string, unknown> } | null) => void;
     /** Callback for opening an image-specific menu */
     onOpenImageMenu?: (e: MouseEvent, resolve: () => { pos: number; message: Record<string, unknown> } | null) => void;
+    /** Callback for slash command state changes */
+    onSlashCommand?: (data: { active: boolean; query?: string; range?: { from: number; to: number }; clientRect?: any }) => void;
+    /** Render prop for customizing the slash command menu */
+    renderSlashCommandMenu?: () => React.ReactNode;
     /** Callback for when the code block language selector is clicked */
     onCodeBlockSelected?: (e: MouseEvent, resolve: () => { pos: number; message: Record<string, unknown> } | null) => void;
     /** Render prop for customizing the toolbar and its popup menus */
@@ -222,7 +226,12 @@ export type EditorCommand =
     | 'toggleDetails'
     | 'setDetailsBackground'
     | 'unsetDetailsBackground'
-    | 'scrollToElement';
+    | 'scrollToElement'
+    // Modal commands
+    | 'openMathModal'
+    | 'openImageModal'
+    | 'openLinkModal'
+    | 'openYoutubeModal';
 
 // ============================================================================
 // Popup Types

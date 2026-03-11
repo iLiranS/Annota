@@ -10,12 +10,14 @@
     "frontendDist": "../dist"
   },
   "app": {
+    "macOSPrivateApi": true,
     "windows": [
       {
-        "width": 1200,
-        "height": 800,
+        "width": 1280,
+        "height": 720,
         "title": "",
         "hiddenTitle": true,
+        "transparent": true,
         "decorations": true,
         "titleBarStyle": "Overlay",
         "dragDropEnabled": false

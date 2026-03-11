@@ -1,13 +1,12 @@
 import { sendMessage, showError } from './bridge';
+import { dispatchEditorCommand } from './command-dispatcher';
 import { getEditorState } from './config';
 import {
     applyFontFamily,
-    currentDefaultCodeLanguage,
     scrollCursorIntoView,
     setupEditor
 } from './editor-core';
 import './extensions/details';
-import { hexToRgba } from './utils';
 
 function copyImageAtPosition(pos: number): boolean {
     if (!window.editor) return false;
@@ -102,97 +101,39 @@ export function setupCommands() {
 
         const e = window.editor;
 
-        // Handle commands that shouldn't trigger a focus chain immediately
-        if (command === 'setFontFamily') {
-            applyFontFamily(params?.fontFamily);
-            return;
-        }
-
-        if (command === 'setKeyboardHeight') {
-            if (params?.height && params.height > 0) {
-                // Keyboard is opening
-                scrollCursorIntoView();
-            } else {
-                // Keyboard is closing - just update state, don't force blur
-                // The blur happens naturally when user taps outside
-
+        if (dispatchEditorCommand(e, command, params)) {
+            if (command !== 'getContent') {
+                setTimeout(() => sendMessage({ type: 'state', state: getEditorState(window.editor) }), 50);
             }
             return;
         }
-
-        if (command === 'blur') {
-            e.commands.blur();
-            if (e.view && e.view.dom instanceof HTMLElement) {
-                e.view.dom.blur();
-            }
-            document.getElementById('editor-content')?.blur();
-            return;
-        }
-
-        const c = e.chain().focus();
-
 
         switch (command) {
-            case 'toggleBold': c.toggleBold().run(); break;
-            case 'toggleItalic': c.toggleItalic().run(); break;
-            case 'toggleUnderline': c.toggleUnderline().run(); break;
-            case 'toggleStrike': c.toggleStrike().run(); break;
-            case 'toggleCode': c.toggleCode().run(); break;
-            case 'toggleBulletList': c.toggleBulletList().run(); break;
-            case 'toggleOrderedList': c.toggleOrderedList().run(); break;
-            case 'toggleTaskList': c.toggleTaskList().run(); break;
-            case 'sinkListItem': c.sinkListItem('listItem').run(); break;
-            case 'liftListItem': c.liftListItem('listItem').run(); break;
-            case 'toggleBlockquote': c.toggleBlockquote().run(); break;
-            case 'toggleCodeBlock': c.toggleCodeBlock({ language: currentDefaultCodeLanguage ?? 'javascript' }).run(); break;
-            case 'toggleHeading': c.toggleHeading({ level: params?.level || 1 }).run(); break;
-            case 'setParagraph': c.setParagraph().run(); break;
+            case 'setFontFamily':
+                applyFontFamily(params?.fontFamily);
+                return;
+            case 'setKeyboardHeight':
+                if (params?.height && params.height > 0) {
+                    scrollCursorIntoView();
+                }
+                return;
+            case 'blur':
+                e.commands.blur();
+                if (e.view && e.view.dom instanceof HTMLElement) {
+                    e.view.dom.blur();
+                }
+                document.getElementById('editor-content')?.blur();
+                return;
+            case 'focus':
+                e.commands.focus('end');
+                break;
             case 'setContent':
-                // Only set content if actually different or forcing update?
-                // Actually, RN controls this. If it sends setContent, we set it.
                 e.commands.setContent(params?.content);
                 break;
             case 'getContent':
                 sendMessage({ type: 'contentResponse', html: e.getHTML() });
-                break;
-            case 'focus':
-                e.commands.focus('end');
-                break;
-            case 'undo': c.undo().run(); break;
-            case 'redo': c.redo().run(); break;
-            case 'setLink':
-                if (params?.href) {
-                    if (params.title && e.state.selection.empty) {
-                        c.insertContent({
-                            type: 'text',
-                            text: params.title,
-                            marks: [{ type: 'link', attrs: { href: params.href } }]
-                        }).run();
-                    } else {
-                        c.setLink({ href: params.href }).run();
-                    }
-                }
-                break;
-            case 'unsetLink': c.unsetLink().run(); break;
-            case 'setHighlight':
-                if (params?.color) {
-                    let hlColor = params.color;
-                    // Reduce opacity from 30% (4D) to 25% (40)
-                    if (hlColor.startsWith('#') && hlColor.length === 7) hlColor += '40';
-                    c.setHighlight({ color: hlColor }).run();
-                }
-                break;
-            case 'unsetHighlight': c.unsetHighlight().run(); break;
-            case 'setColor': c.setColor(params?.color).run(); break;
-            case 'unsetColor': c.unsetColor().run(); break;
-            case 'setYoutubeVideo':
-                if (params?.src) c.setYoutubeVideo({ src: params.src }).run();
-                break;
-            case 'setImage':
-                if (params?.src) c.setImage({ src: params.src }).run();
-                break;
+                return;
             case 'insertLocalImage':
-                // Insert image node with imageId and optional initial src (for atomic insertion)
                 if (params?.imageId) {
                     e.chain().focus().insertContent({
                         type: 'image',
@@ -204,13 +145,9 @@ export function setupCommands() {
                 }
                 break;
             case 'resolveImages':
-                // Inject base64 data URIs for imageId-based images
                 if (params?.imageMap) {
                     window.resolveImages?.(params.imageMap);
                 }
-                break;
-            case 'updateImage':
-                window.updateImage?.(params);
                 break;
             case 'replaceImageId':
                 if (params?.oldId && params?.newId) {
@@ -231,13 +168,6 @@ export function setupCommands() {
                     }
                 }
                 break;
-            case 'deleteImage':
-                if (typeof params?.pos === 'number') {
-                    e.chain().setNodeSelection(params.pos).deleteSelection().run();
-                } else if (e.isActive('image')) {
-                    c.deleteSelection().run();
-                }
-                break;
             case 'cutImage': {
                 const cutPos = params?.pos as number | undefined;
                 if (typeof cutPos === 'number') {
@@ -254,162 +184,24 @@ export function setupCommands() {
                 }
                 break;
             }
-            case 'deleteSelection':
-                if (typeof params?.pos === 'number') {
-                    e.chain().focus().setNodeSelection(params.pos).deleteSelection().run();
-                } else {
-                    e.chain().focus().deleteSelection().run();
-                }
-                break;
             case 'copyToClipboard':
-                // Use native web copy to preserve block structure (Rich Text/HTML)
                 if (typeof params?.pos === 'number') {
                     e.chain().focus().setNodeSelection(params.pos).run();
                 } else {
                     e.chain().focus().run();
                 }
                 document.execCommand('copy');
-                // Optional: Unselect after copy if desired, but standard behavior usually keeps selection.
-                // Given the user request to avoid visual selection *during menu*, selecting now is inevitable for copy.
                 break;
             case 'copyBlockLink':
                 if (params?.id) {
                     sendMessage({ type: 'copyBlockLink', id: params.id });
                 }
                 break;
-            case 'insertTable':
-                c.insertTable({ rows: params?.rows || 3, cols: params?.cols || 3, withHeaderRow: params?.withHeaderRow !== false }).run();
-                break;
-            case 'addRowBefore': c.addRowBefore().run(); break;
-            case 'addRowAfter': c.addRowAfter().run(); break;
-            case 'addColumnBefore': c.addColumnBefore().run(); break;
-            case 'addColumnAfter': c.addColumnAfter().run(); break;
-            case 'deleteRow': c.deleteRow().run(); break;
-            case 'deleteColumn': c.deleteColumn().run(); break;
-            case 'deleteTable': c.deleteTable().run(); break;
-            case 'mergeCells': c.mergeCells().run(); break;
-            case 'splitCell': c.splitCell().run(); break;
-            case 'setCellBackground':
-                if (params?.color) {
-                    // Add alpha for lower opacity (similar to highlight)
-                    let bgColor = params.color;
-                    if (bgColor.startsWith('#') && bgColor.length === 7) bgColor += '40'; // ~25% opacity
-                    e.chain().focus().setCellAttribute('backgroundColor', bgColor).run();
-                }
-                break;
-            case 'unsetCellBackground':
-                e.chain().focus().setCellAttribute('backgroundColor', null).run();
-                break;
-            case 'setCodeBlockLanguage':
-                if (params?.language) c.updateAttributes('codeBlock', { language: params.language }).run();
-                break;
             case 'selectImageAtPosition':
-                // Don't use focus() here - we're just selecting for gallery navigation
-                // Focus would trigger the keyboard
                 if (typeof params?.position === 'number') {
                     e.chain().setNodeSelection(params.position).run();
                 }
                 break;
-            case 'setMath':
-                if (params?.latex) {
-                    const { selection } = e.state;
-                    const isMathNode = 'node' in selection && selection.node &&
-                        // @ts-ignore
-                        ['inlineMath', 'blockMath'].includes(selection.node.type.name);
-
-                    if (isMathNode && selection.node) {
-                        // @ts-ignore
-                        c.updateAttributes(selection.node.type.name, { latex: params.latex }).run();
-                    } else {
-                        // Insert new inline math
-                        c.insertContent({
-                            type: 'inlineMath',
-                            attrs: { latex: params.latex }
-                        }).run();
-                    }
-                }
-                break;
-            case 'toggleDetails':
-                // Check if we're in a details node
-                if (e.isActive('details')) {
-                    e.chain().focus().unsetDetails().run();
-                } else {
-                    e.chain().focus().setDetails().run();
-                }
-                break;
-            case 'setDetailsBackground': {
-                if (params?.color) {
-                    let bgColor = params.color;
-                    // Use hexToRgba for 15% opacity (approx 0.15)
-                    if (bgColor.startsWith('#')) {
-                        bgColor = hexToRgba(bgColor, 0.15);
-                    }
-
-                    // Try to use the stored block position from the menu to find the details node
-                    const detailsPos = window._lastBlockMenuPos;
-                    if (typeof detailsPos === 'number') {
-                        const detailsNode = e.state.doc.nodeAt(detailsPos);
-                        if (detailsNode?.type.name === 'details') {
-                            // Directly set the attribute on the node using its position
-                            e.chain()
-                                .command(({ tr }: any) => {
-                                    tr.setNodeMarkup(detailsPos, undefined, {
-                                        ...detailsNode.attrs,
-                                        backgroundColor: bgColor,
-                                    });
-                                    return true;
-                                })
-                                .run();
-                        } else {
-                            // Fallback: focus and use updateAttributes
-                            e.chain().focus().updateAttributes('details', { backgroundColor: bgColor }).run();
-                        }
-                    } else {
-                        // Fallback: focus and use updateAttributes
-                        e.chain().focus().updateAttributes('details', { backgroundColor: bgColor }).run();
-                    }
-
-                    // Force immediate DOM update to prevent lag if NodeView doesn't re-render immediately
-                    setTimeout(() => {
-                        try {
-                            const domNode = typeof detailsPos === 'number'
-                                ? e.view.nodeDOM(detailsPos) as HTMLElement | null
-                                : null;
-                            const detailsEl = domNode?.closest?.('[data-type="details"]') as HTMLElement
-                                ?? domNode;
-                            if (detailsEl && detailsEl.getAttribute('data-type') === 'details') {
-                                detailsEl.style.backgroundColor = bgColor;
-                            }
-                        } catch (err) {
-                            console.warn('Failed to force update details background:', err);
-                        }
-                    }, 0);
-                }
-                break;
-            }
-            case 'unsetDetailsBackground': {
-                const unsetPos = window._lastBlockMenuPos;
-                if (typeof unsetPos === 'number') {
-                    const detailsNode = e.state.doc.nodeAt(unsetPos);
-                    if (detailsNode?.type.name === 'details') {
-                        e.chain()
-                            .command(({ tr }: any) => {
-                                tr.setNodeMarkup(unsetPos, undefined, {
-                                    ...detailsNode.attrs,
-                                    backgroundColor: null,
-                                });
-                                return true;
-                            })
-                            .run();
-                    } else {
-                        e.chain().focus().updateAttributes('details', { backgroundColor: null }).run();
-                    }
-                } else {
-                    e.chain().focus().updateAttributes('details', { backgroundColor: null }).run();
-                }
-                break;
-            }
-            // Search commands
             case 'search':
                 e.commands.search(params?.term || '');
                 break;
@@ -427,7 +219,7 @@ export function setupCommands() {
                     const didScroll = scrollToElementById(e, params.id);
                     if (!didScroll) {
                         let attempt = 0;
-                        const maxAttempts = 180; // ~3s max wait for slow doc mount/hydration
+                        const maxAttempts = 180;
                         const tryScroll = () => {
                             attempt += 1;
                             if (scrollToElementById(e, params.id)) {
@@ -437,8 +229,6 @@ export function setupCommands() {
                                 requestAnimationFrame(tryScroll);
                                 return;
                             }
-
-                            // Element doesn't exist (or no longer exists): fall back to note top.
                             scrollToTopOfNote(e);
                         };
                         requestAnimationFrame(tryScroll);

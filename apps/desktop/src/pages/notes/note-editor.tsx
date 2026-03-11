@@ -12,6 +12,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { NoteFloatingActions } from "./components/note-floating-actions";
 import { NoteSearch } from "./components/note-search";
+import { DesktopSlashCommandMenu } from "@/components/editor/DesktopSlashCommandMenu";
 
 export default function NoteEditor() {
     const navigate = useNavigate();
@@ -33,6 +34,9 @@ export default function NoteEditor() {
     const [searchTerm, setSearchTerm] = useState('');
     const [searchResultCount, setSearchResultCount] = useState(0);
     const [currentSearchIndex, setCurrentSearchIndex] = useState(-1);
+
+    // Slash commands state
+    const [slashCommandState, setSlashCommandState] = useState<{ active: boolean; query?: string; range?: { from: number; to: number }; clientRect?: any }>({ active: false });
 
     // Block Menu state
     const [activeBlockMenu, setActiveBlockMenu] = useState<{
@@ -363,6 +367,7 @@ export default function NoteEditor() {
                         onOpenImageMenu={handleOpenImageMenu}
                         onOpenTableMenu={handleOpenTableMenu}
                         onCodeBlockSelected={handleCodeBlockSelected}
+                        onSlashCommand={setSlashCommandState}
                         isDark={isDark}
                         colors={{
                             primary: colors.primary,
@@ -385,6 +390,17 @@ export default function NoteEditor() {
                         onAction={handleBlockAction}
                     />
                 )}
+                
+                {slashCommandState.active && slashCommandState.range && slashCommandState.clientRect && (
+                    <DesktopSlashCommandMenu
+                        query={slashCommandState.query || ''}
+                        range={slashCommandState.range}
+                        clientRect={slashCommandState.clientRect}
+                        sendCommand={(cmd, params) => editorRef.current?.onCommand(cmd, params)}
+                        onClose={() => setSlashCommandState({ active: false })}
+                    />
+                )}
+                
             </div>
         </div>
     );

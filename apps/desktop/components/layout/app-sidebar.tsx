@@ -45,6 +45,10 @@ export function AppSidebar() {
     const { createAndNavigate: createNote } = useCreateNote();
 
     const [retryCooldown, setRetryCooldown] = useState(false);
+    const [isQuickAccessOpen, setIsQuickAccessOpen] = useState(() => {
+        const saved = localStorage.getItem("sidebar_quick_access_open");
+        return saved !== null ? saved === "true" : true;
+    });
     const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [folderToDelete, setFolderToDelete] = useState<Folder | null>(null);
@@ -56,6 +60,10 @@ export function AppSidebar() {
         useSyncStore.getState().forceSync().catch(console.error);
         setTimeout(() => setRetryCooldown(false), 10_000);
     }, [retryCooldown]);
+
+    useEffect(() => {
+        localStorage.setItem("sidebar_quick_access_open", String(isQuickAccessOpen));
+    }, [isQuickAccessOpen]);
 
     useEffect(() => {
         const handleToggle = (e: any) => {
@@ -195,7 +203,11 @@ export function AppSidebar() {
                 </SidebarGroup>
 
                 {/* Quick Access */}
-                <Collapsible className="group/quick-access">
+                <Collapsible
+                    className="group/quick-access"
+                    open={isQuickAccessOpen}
+                    onOpenChange={setIsQuickAccessOpen}
+                >
                     <SidebarGroup>
                         <SidebarGroupLabel asChild>
                             <CollapsibleTrigger className="flex w-full items-center gap-2">

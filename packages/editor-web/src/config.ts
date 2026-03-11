@@ -23,7 +23,8 @@ import {
     DetailsContent,
     DetailsSummary,
     SearchExtension,
-    ShortcutManager
+    ShortcutManager,
+    SlashCommandExtension
 } from './extensions';
 
 export const WEB_FONT_FAMILIES: Record<string, string> = {
@@ -55,6 +56,7 @@ export const getExtensions = (options: {
     onImagePasted?: (data: { base64: string, imageId?: string, src?: string }) => void;
     onResolveImageIds?: (data: { imageIds: string[] }) => void;
     defaultCodeLanguage?: string | null;
+    onSlashCommand?: (data: any) => void;
 }) => [
         StarterKit.configure({
             heading: false,
@@ -143,6 +145,9 @@ export const getExtensions = (options: {
             onResults: (data: any) => {
                 options.onSearchResults?.(data.count, data.currentIndex);
             }
+        }),
+        SlashCommandExtension.configure({
+            onSlashCommand: options.onSlashCommand,
         }),
     ];
 
