@@ -9,7 +9,7 @@ import {
 import type { ToolbarRenderProps } from '@annota/tiptap-editor';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
-import { Functions as Sigma } from '@mui/icons-material';
+import { Sigma } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 
 import { cn } from '@/lib/utils';
@@ -42,7 +42,6 @@ export function MathPopover({ sendCommand, onOpenChange, visible, currentLatex }
     const [latex, setLatex] = useState(currentLatex || '');
     const [internalOpen, setInternalOpen] = useState(false);
     const previewRef = useRef<HTMLDivElement>(null);
-
     // Controlled opening if visible prop is provided
     const open = visible !== undefined ? visible : internalOpen;
 

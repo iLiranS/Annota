@@ -11,7 +11,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import type { EditorState, ToolbarRenderProps } from '@annota/tiptap-editor';
-import { KeyboardArrowDown as ChevronDown } from '@mui/icons-material';
+import { ChevronDown } from 'lucide-react';
 
 interface HeadingSelectorProps {
     editorState: EditorState;
@@ -77,7 +77,7 @@ export function HeadingSelector({ editorState, sendCommand, onOpenChange, isMenu
                     }}
                 >
                     {currentHeadingLabel}
-                    <ChevronDown sx={{ fontSize: 16 }} className="opacity-50" />
+                    <ChevronDown className="w-4 h-4 opacity-50" />
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuPortal>

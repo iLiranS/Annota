@@ -1,33 +1,31 @@
+import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { getFilteredCommands, SharedSlashCommand } from '@annota/tiptap-editor';
 import {
-    Add as Plus,
-    CheckBox as CheckSquare,
+    Baseline,
+    Bold,
+    CheckSquare,
     ChevronLeft,
     ChevronRight,
     Code,
-    FormatBold as Bold,
-    FormatColorText as Baseline,
-    FormatIndentDecrease as Outdent,
-    FormatIndentIncrease as Indent,
-    FormatItalic as Italic,
-    FormatListBulleted as List,
-    FormatListNumbered as ListOrdered,
-    FormatQuote as Quote,
-    FormatSize as Type,
-    FormatUnderlined as Underline,
-    Functions as Sigma,
+    FilePlus as FileInput,
     Image,
+    Italic,
     Link,
-    MoreHoriz as MoreHorizontal,
-    SmartDisplay as Youtube,
-    PostAdd as FileInput,
-    StrikethroughS as Strikethrough,
-    TableChart as Table,
+    List,
+    ListOrdered,
+    Layout as MessageSquare,
+    Plus,
+    Quote,
+    Sigma,
     Terminal as SquareCode,
-    Widgets as MessageSquare
-} from '@mui/icons-material';
+    Strikethrough,
+    Table,
+    Type,
+    Underline,
+    Youtube
+} from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 const DesktopIconMap: Record<string, any> = {
@@ -76,10 +74,6 @@ export function DesktopSlashCommandMenu({
     const [selectedIndex, setSelectedIndex] = useState(0);
     const containerRef = useRef<HTMLDivElement>(null);
 
-    // Compute coordinate offset by directly checking the layout container
-    const scrollerRect = typeof document !== 'undefined' 
-        ? document.querySelector('.editor-scroller')?.getBoundingClientRect() 
-        : { top: 0, left: 0 };
 
     const displayItems = useMemo(() => {
         return getFilteredCommands(query, activeFolder);
@@ -148,66 +142,79 @@ export function DesktopSlashCommandMenu({
 
     if (!clientRect) return null;
 
-    // Calculate position relative to the editor scroller container
-    const top = clientRect.bottom + 8 - (scrollerRect?.top ?? 0);
-    const left = clientRect.left - (scrollerRect?.left ?? 0);
-
     return (
-        <div
-            ref={containerRef}
-            className="absolute z-100 overflow-hidden w-56 rounded-xl border bg-popover text-popover-foreground shadow-md outline-none"
-            style={{ top, left }}
-        >
-            <ScrollArea className="h-full max-h-[300px] p-1">
-                <div className="flex flex-col gap-1">
-                    {activeFolder && (
-                        <button
-                            type="button"
-                            className={cn(
-                                "relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors",
-                                selectedIndex === -1 ? "bg-accent text-accent-foreground" : "hover:bg-accent/50"
+        <Popover open={true}>
+            <PopoverAnchor
+                style={{
+                    position: 'fixed',
+                    top: clientRect.top,
+                    left: clientRect.left,
+                    width: clientRect.width,
+                    height: clientRect.height,
+                    pointerEvents: 'none',
+                }}
+            />
+            <PopoverContent
+                side="bottom"
+                align="start"
+                sideOffset={8}
+                onOpenAutoFocus={(e) => e.preventDefault()}
+                onCloseAutoFocus={(e) => e.preventDefault()}
+                className="z-100 overflow-hidden w-56 p-0 border rounded-xl shadow-md"
+            >
+                <div ref={containerRef} className="flex flex-col bg-popover text-popover-foreground">
+                    <ScrollArea className="h-full max-h-[300px] p-1">
+                        <div className="flex flex-col gap-1">
+                            {activeFolder && (
+                                <button
+                                    type="button"
+                                    className={cn(
+                                        "relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors",
+                                        selectedIndex === -1 ? "bg-accent text-accent-foreground" : "hover:bg-accent/50"
+                                    )}
+                                    onClick={() => {
+                                        setActiveFolder(null);
+                                        setSelectedIndex(0);
+                                    }}
+                                    onMouseEnter={() => setSelectedIndex(-1)}
+                                >
+                                    <ChevronLeft className="w-5 h-5 mr-2" />
+                                    <span>Back</span>
+                                </button>
                             )}
-                            onClick={() => {
-                                setActiveFolder(null);
-                                setSelectedIndex(0);
-                            }}
-                            onMouseEnter={() => setSelectedIndex(-1)}
-                        >
-                            <ChevronLeft sx={{ fontSize: 16, mr: 1 }} />
-                            <span>Back</span>
-                        </button>
-                    )}
 
-                    {displayItems.length === 0 && (
-                        <div className="px-2 py-4 text-center text-sm text-muted-foreground">
-                            No results found
+                            {displayItems.length === 0 && (
+                                <div className="px-2 py-4 text-center text-sm text-muted-foreground">
+                                    No results found
+                                </div>
+                            )}
+
+                            {displayItems.map((item, index) => {
+                                const isSelected = index === selectedIndex;
+                                const Icon = DesktopIconMap[item.iconKey] || Type;
+                                return (
+                                    <button
+                                        key={item.id}
+                                        type="button"
+                                        className={cn(
+                                            "relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1 text-sm outline-none transition-colors",
+                                            isSelected ? "bg-accent text-accent-foreground" : "hover:bg-accent/50"
+                                        )}
+                                        onClick={() => handleSelect(item)}
+                                        onMouseEnter={() => setSelectedIndex(index)}
+                                    >
+                                        <Icon className="w-5 h-5 mr-2 shrink-0" />
+                                        <span className="flex-1 text-left line-clamp-1">{item.title}</span>
+                                        {item.children && (
+                                            <ChevronRight className="w-3.5 h-3.5 ml-auto opacity-50" />
+                                        )}
+                                    </button>
+                                );
+                            })}
                         </div>
-                    )}
-
-                    {displayItems.map((item, index) => {
-                        const isSelected = index === selectedIndex;
-                        const Icon = DesktopIconMap[item.iconKey] || Type;
-                        return (
-                            <button
-                                key={item.id}
-                                type="button"
-                                className={cn(
-                                    "relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1 text-sm outline-none transition-colors",
-                                    isSelected ? "bg-accent text-accent-foreground" : "hover:bg-accent/50"
-                                )}
-                                onClick={() => handleSelect(item)}
-                                onMouseEnter={() => setSelectedIndex(index)}
-                            >
-                                <Icon sx={{ fontSize: 16, mr: 1, flexShrink: 0 }} />
-                                <span className="flex-1 text-left line-clamp-1">{item.title}</span>
-                                {item.children && (
-                                    <ChevronRight sx={{ fontSize: 14 }} className="ml-auto opacity-50" />
-                                )}
-                            </button>
-                        );
-                    })}
+                    </ScrollArea>
                 </div>
-            </ScrollArea>
-        </div>
+            </PopoverContent>
+        </Popover>
     );
 }

@@ -136,7 +136,7 @@ export function LinkPopover({
                 <DialogContent aria-describedby={undefined} className="sm:max-w-[380px] p-0 overflow-hidden border-none bg-background shadow-2xl">
                     <DialogHeader className="p-4 pb-2 border-b border-border/50">
                         <DialogTitle className="text-lg font-semibold flex items-center gap-2">
-                            <Icon sx={{ fontSize: 18 }} className="text-primary" />
+                            <Icon className="w-5 h-5 text-primary" />
                             {title}
                         </DialogTitle>
                         {description && <p className="text-xs text-muted-foreground px-1">{description}</p>}
@@ -154,7 +154,7 @@ export function LinkPopover({
         return (
             <DropdownMenuSub open={isVisible} onOpenChange={handleOpenChange}>
                 <DropdownMenuSubTrigger className="gap-2">
-                    <Icon sx={{ fontSize: 16 }} style={{ color: isActive ? activeColor : undefined }} />
+                    <Icon className="w-4 h-4" style={{ color: isActive ? activeColor : undefined }} />
                     <span>{title}</span>
                 </DropdownMenuSubTrigger>
                 <DropdownMenuPortal>
@@ -186,7 +186,7 @@ export function LinkPopover({
                         borderRadius: isActive ? '8px' : undefined
                     }}
                 >
-                    <Icon sx={{ fontSize: 18 }} />
+                    <Icon className="w-5 h-5" />
                 </Button>
             </PopoverTrigger>
             <PopoverContent className="w-80 p-3" align="start">

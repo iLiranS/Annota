@@ -119,6 +119,7 @@ export type FolderInsert = typeof folders.$inferInsert;
 export type Task = typeof tasks.$inferSelect;
 export type TaskInsert = typeof tasks.$inferInsert;
 export type Tag = typeof tags.$inferSelect;
+export type TagInsert = typeof tags.$inferInsert;
 export type ImageRecord = typeof images.$inferSelect;
 export type ImageInsert = typeof images.$inferInsert;
 

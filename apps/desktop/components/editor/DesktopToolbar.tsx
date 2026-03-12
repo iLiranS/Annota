@@ -8,29 +8,29 @@ import { useAppTheme } from '@/hooks/use-app-theme';
 import { cn } from '@/lib/utils';
 import type { ToolbarRenderProps } from '@annota/tiptap-editor';
 import {
-    FormatColorText as Baseline,
-    FormatBold as Bold,
-    CheckBox as CheckSquare,
+    Baseline,
+    Bold,
+    CheckSquare,
     Code,
-    PostAdd as FileInput,
-    BorderColor as Highlighter,
-    FormatIndentIncrease as Indent,
-    FormatItalic as Italic,
+    FilePlus as FileInput,
+    Highlighter,
+    Indent,
+    Italic,
     Link as LinkIcon,
-    FormatListBulleted as List,
-    FormatListNumbered as ListOrdered,
-    MoreHoriz as MoreHorizontal,
-    FormatIndentDecrease as Outdent,
-    FormatQuote as Quote,
-    Redo,
-    Functions as Sigma,
+    List,
+    ListOrdered,
+    MoreHorizontal,
+    Outdent,
+    Quote,
+    Redo2 as Redo,
+    Sigma,
     Terminal as SquareCode,
-    StrikethroughS as Strikethrough,
-    TableChart as TableIcon,
-    FormatUnderlined as Underline,
-    Undo,
-    SmartDisplay as Youtube
-} from '@mui/icons-material';
+    Strikethrough,
+    Table as TableIcon,
+    Underline,
+    Undo2 as Undo,
+    Youtube
+} from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '../ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
@@ -48,11 +48,6 @@ type ToolbarItem = {
     dropdownRender: React.ReactNode;
 }
 
-const isMac = typeof window !== 'undefined' && (/Mac|iPod|iPhone|iPad/.test(navigator.platform) || /Mac/.test(navigator.userAgent));
-const MOD = isMac ? '⌘' : 'Ctrl';
-const ALT = isMac ? '⌥' : 'Alt';
-const SHIFT = isMac ? '⇧' : 'Shift';
-
 export function DesktopToolbar({
     editorState,
     sendCommand,
@@ -63,12 +58,24 @@ export function DesktopToolbar({
 }: ToolbarRenderProps) {
     const { colors } = useAppTheme();
     const containerRef = useRef<HTMLDivElement>(null);
+    const rowRef = useRef<HTMLDivElement>(null);
     const [visibleCount, setVisibleCount] = useState(15);
+
+    // Fix Hydration Mismatch for OS Shortcuts
+    const [isMac, setIsMac] = useState(false);
+    useEffect(() => {
+        setIsMac(/Mac|iPod|iPhone|iPad/.test(navigator.platform) || /Mac/.test(navigator.userAgent));
+    }, []);
+
+    const MOD = isMac ? '⌘' : 'Ctrl';
+    const ALT = isMac ? '⌥' : 'Alt';
+    const SHIFT = isMac ? '⇧' : 'Shift';
 
     const [openMenusCount, setOpenMenusCount] = useState(0);
     const handleOpenChange = useCallback((open: boolean) => {
         setOpenMenusCount(prev => open ? prev + 1 : Math.max(0, prev - 1));
     }, []);
+    const isPopupOpen = openMenusCount > 0 || activePopup !== null;
 
     const activeStyle = useCallback((active: boolean) => ({
         color: active ? colors.primary : undefined,
@@ -87,29 +94,29 @@ export function DesktopToolbar({
             id: 'bold',
             label: 'Bold',
             shortcut: `${MOD}B`,
-            render: <Button key="bold" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleBold')} style={activeStyle(editorState.isBold)}><Bold sx={{ fontSize: 18 }} /></Button>,
-            dropdownRender: <DropdownMenuItem key="bold-dropdown" onClick={() => sendCommand('toggleBold')} className={cn("gap-2", editorState.isBold && "text-primary")}><Bold sx={{ fontSize: 16 }} /> Bold <span className="ml-auto text-[10px] opacity-50">{MOD}B</span></DropdownMenuItem>
+            render: <Button key="bold" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleBold')} style={activeStyle(editorState.isBold)}><Bold className="w-5 h-5" /></Button>,
+            dropdownRender: <DropdownMenuItem key="bold-dropdown" onClick={() => sendCommand('toggleBold')} className={cn("gap-2", editorState.isBold && "text-primary")}><Bold className="w-4 h-4" /> Bold <span className="ml-auto text-[10px] opacity-50">{MOD}B</span></DropdownMenuItem>
         },
         {
             id: 'italic',
             label: 'Italic',
             shortcut: `${MOD}I`,
-            render: <Button key="italic" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleItalic')} style={activeStyle(editorState.isItalic)}><Italic sx={{ fontSize: 18 }} /></Button>,
-            dropdownRender: <DropdownMenuItem key="italic-dropdown" onClick={() => sendCommand('toggleItalic')} className={cn("gap-2", editorState.isItalic && "text-primary")}><Italic sx={{ fontSize: 16 }} /> Italic <span className="ml-auto text-[10px] opacity-50">{MOD}I</span></DropdownMenuItem>
+            render: <Button key="italic" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleItalic')} style={activeStyle(editorState.isItalic)}><Italic className="w-5 h-5" /></Button>,
+            dropdownRender: <DropdownMenuItem key="italic-dropdown" onClick={() => sendCommand('toggleItalic')} className={cn("gap-2", editorState.isItalic && "text-primary")}><Italic className="w-4 h-4" /> Italic <span className="ml-auto text-[10px] opacity-50">{MOD}I</span></DropdownMenuItem>
         },
         {
             id: 'underline',
             label: 'Underline',
             shortcut: `${MOD}U`,
-            render: <Button key="underline" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleUnderline')} style={activeStyle(editorState.isUnderline)}><Underline sx={{ fontSize: 18 }} /></Button>,
-            dropdownRender: <DropdownMenuItem key="underline-dropdown" onClick={() => sendCommand('toggleUnderline')} className={cn("gap-2", editorState.isUnderline && "text-primary")}><Underline sx={{ fontSize: 16 }} /> Underline <span className="ml-auto text-[10px] opacity-50">{MOD}U</span></DropdownMenuItem>
+            render: <Button key="underline" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleUnderline')} style={activeStyle(editorState.isUnderline)}><Underline className="w-5 h-5" /></Button>,
+            dropdownRender: <DropdownMenuItem key="underline-dropdown" onClick={() => sendCommand('toggleUnderline')} className={cn("gap-2", editorState.isUnderline && "text-primary")}><Underline className="w-4 h-4" /> Underline <span className="ml-auto text-[10px] opacity-50">{MOD}U</span></DropdownMenuItem>
         },
         {
             id: 'strike',
             label: 'Strikethrough',
             shortcut: `${MOD}${SHIFT}X`,
-            render: <Button key="strike" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleStrike')} style={activeStyle(editorState.isStrike)}><Strikethrough sx={{ fontSize: 18 }} /></Button>,
-            dropdownRender: <DropdownMenuItem key="strike-dropdown" onClick={() => sendCommand('toggleStrike')} className={cn("gap-2", editorState.isStrike && "text-primary")}><Strikethrough sx={{ fontSize: 16 }} /> Strikethrough <span className="ml-auto text-[10px] opacity-50">{MOD}${SHIFT}X</span></DropdownMenuItem>
+            render: <Button key="strike" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleStrike')} style={activeStyle(editorState.isStrike)}><Strikethrough className="w-5 h-5" /></Button>,
+            dropdownRender: <DropdownMenuItem key="strike-dropdown" onClick={() => sendCommand('toggleStrike')} className={cn("gap-2", editorState.isStrike && "text-primary")}><Strikethrough className="w-4 h-4" /> Strikethrough <span className="ml-auto text-[10px] opacity-50">{MOD}${SHIFT}X</span></DropdownMenuItem>
         },
         {
             id: 'textColor',
@@ -129,62 +136,62 @@ export function DesktopToolbar({
             id: 'bulletList',
             label: 'Bullet List',
             shortcut: `${MOD}7`,
-            render: <Button key="bulletList" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleBulletList')} style={activeStyle(editorState.isBulletList)}><List sx={{ fontSize: 18 }} /></Button>,
-            dropdownRender: <DropdownMenuItem key="bulletList-dropdown" onClick={() => sendCommand('toggleBulletList')} className={cn("gap-2", editorState.isBulletList && "text-primary")}><List sx={{ fontSize: 16 }} /> Bullet List <span className="ml-auto text-[10px] opacity-50">{MOD}7</span></DropdownMenuItem>
+            render: <Button key="bulletList" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleBulletList')} style={activeStyle(editorState.isBulletList)}><List className="w-5 h-5" /></Button>,
+            dropdownRender: <DropdownMenuItem key="bulletList-dropdown" onClick={() => sendCommand('toggleBulletList')} className={cn("gap-2", editorState.isBulletList && "text-primary")}><List className="w-4 h-4" /> Bullet List <span className="ml-auto text-[10px] opacity-50">{MOD}7</span></DropdownMenuItem>
         },
         {
             id: 'orderedList',
             label: 'Numbered List',
             shortcut: `${MOD}8`,
-            render: <Button key="orderedList" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleOrderedList')} style={activeStyle(editorState.isOrderedList)}><ListOrdered sx={{ fontSize: 18 }} /></Button>,
-            dropdownRender: <DropdownMenuItem key="orderedList-dropdown" onClick={() => sendCommand('toggleOrderedList')} className={cn("gap-2", editorState.isOrderedList && "text-primary")}><ListOrdered sx={{ fontSize: 16 }} /> Numbered List <span className="ml-auto text-[10px] opacity-50">{MOD}8</span></DropdownMenuItem>
+            render: <Button key="orderedList" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleOrderedList')} style={activeStyle(editorState.isOrderedList)}><ListOrdered className="w-5 h-5" /></Button>,
+            dropdownRender: <DropdownMenuItem key="orderedList-dropdown" onClick={() => sendCommand('toggleOrderedList')} className={cn("gap-2", editorState.isOrderedList && "text-primary")}><ListOrdered className="w-4 h-4" /> Numbered List <span className="ml-auto text-[10px] opacity-50">{MOD}8</span></DropdownMenuItem>
         },
         {
             id: 'taskList',
             label: 'Task List',
             shortcut: `${MOD}9`,
-            render: <Button key="taskList" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleTaskList')} style={activeStyle(editorState.isTaskList)}><CheckSquare sx={{ fontSize: 18 }} /></Button>,
-            dropdownRender: <DropdownMenuItem key="taskList-dropdown" onClick={() => sendCommand('toggleTaskList')} className={cn("gap-2", editorState.isTaskList && "text-primary")}><CheckSquare sx={{ fontSize: 16 }} /> Task List <span className="ml-auto text-[10px] opacity-50">{MOD}9</span></DropdownMenuItem>
+            render: <Button key="taskList" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleTaskList')} style={activeStyle(editorState.isTaskList)}><CheckSquare className="w-5 h-5" /></Button>,
+            dropdownRender: <DropdownMenuItem key="taskList-dropdown" onClick={() => sendCommand('toggleTaskList')} className={cn("gap-2", editorState.isTaskList && "text-primary")}><CheckSquare className="w-4 h-4" /> Task List <span className="ml-auto text-[10px] opacity-50">{MOD}9</span></DropdownMenuItem>
         },
         {
             id: 'outdent',
             label: 'Outdent',
-            render: <Button key="outdent" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('liftListItem')} disabled={!editorState.canLiftListItem}><Outdent sx={{ fontSize: 18 }} /></Button>,
-            dropdownRender: <DropdownMenuItem key="outdent-dropdown" onClick={() => sendCommand('liftListItem')} disabled={!editorState.canLiftListItem} className="gap-2"><Outdent sx={{ fontSize: 16 }} /> Outdent</DropdownMenuItem>
+            render: <Button key="outdent" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('liftListItem')} disabled={!editorState.canLiftListItem}><Outdent className="w-5 h-5" /></Button>,
+            dropdownRender: <DropdownMenuItem key="outdent-dropdown" onClick={() => sendCommand('liftListItem')} disabled={!editorState.canLiftListItem} className="gap-2"><Outdent className="w-4 h-4" /> Outdent</DropdownMenuItem>
         },
         {
             id: 'indent',
             label: 'Indent',
-            render: <Button key="indent" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('sinkListItem')} disabled={!editorState.canSinkListItem}><Indent sx={{ fontSize: 18 }} /></Button>,
-            dropdownRender: <DropdownMenuItem key="indent-dropdown" onClick={() => sendCommand('sinkListItem')} disabled={!editorState.canSinkListItem} className="gap-2"><Indent sx={{ fontSize: 16 }} /> Indent</DropdownMenuItem>
+            render: <Button key="indent" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('sinkListItem')} disabled={!editorState.canSinkListItem}><Indent className="w-5 h-5" /></Button>,
+            dropdownRender: <DropdownMenuItem key="indent-dropdown" onClick={() => sendCommand('sinkListItem')} disabled={!editorState.canSinkListItem} className="gap-2"><Indent className="w-4 h-4" /> Indent</DropdownMenuItem>
         },
         {
             id: 'code',
             label: 'Inline Code',
             shortcut: `${MOD}E`,
-            render: <Button key="code" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleCode')} style={activeStyle(editorState.isCode)}><Code sx={{ fontSize: 18 }} /></Button>,
-            dropdownRender: <DropdownMenuItem key="code-dropdown" onClick={() => sendCommand('toggleCode')} className={cn("gap-2", editorState.isCode && "text-primary")}><Code sx={{ fontSize: 16 }} /> Inline Code <span className="ml-auto text-[10px] opacity-50">{MOD}E</span></DropdownMenuItem>
+            render: <Button key="code" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleCode')} style={activeStyle(editorState.isCode)}><Code className="w-5 h-5" /></Button>,
+            dropdownRender: <DropdownMenuItem key="code-dropdown" onClick={() => sendCommand('toggleCode')} className={cn("gap-2", editorState.isCode && "text-primary")}><Code className="w-4 h-4" /> Inline Code <span className="ml-auto text-[10px] opacity-50">{MOD}E</span></DropdownMenuItem>
         },
         {
             id: 'codeBlock',
             label: 'Code Block',
             shortcut: `${MOD}${ALT}C`,
-            render: <Button key="codeBlock" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleCodeBlock')} style={activeStyle(editorState.isCodeBlock)}><SquareCode sx={{ fontSize: 18 }} /></Button>,
-            dropdownRender: <DropdownMenuItem key="codeBlock-dropdown" onClick={() => sendCommand('toggleCodeBlock')} className={cn("gap-2", editorState.isCodeBlock && "text-primary")}><SquareCode sx={{ fontSize: 16 }} /> Code Block <span className="ml-auto text-[10px] opacity-50">{MOD}${ALT}C</span></DropdownMenuItem>
+            render: <Button key="codeBlock" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleCodeBlock')} style={activeStyle(editorState.isCodeBlock)}><SquareCode className="w-5 h-5" /></Button>,
+            dropdownRender: <DropdownMenuItem key="codeBlock-dropdown" onClick={() => sendCommand('toggleCodeBlock')} className={cn("gap-2", editorState.isCodeBlock && "text-primary")}><SquareCode className="w-4 h-4" /> Code Block <span className="ml-auto text-[10px] opacity-50">{MOD}${ALT}C</span></DropdownMenuItem>
         },
         {
             id: 'quote',
             label: 'Quote',
             shortcut: `${MOD}${SHIFT}B`,
-            render: <Button key="quote" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleBlockquote')} style={activeStyle(editorState.isBlockquote)}><Quote sx={{ fontSize: 18 }} /></Button>,
-            dropdownRender: <DropdownMenuItem key="quote-dropdown" onClick={() => sendCommand('toggleBlockquote')} className={cn("gap-2", editorState.isBlockquote && "text-primary")}><Quote sx={{ fontSize: 16 }} /> Quote <span className="ml-auto text-[10px] opacity-50">{MOD}${SHIFT}B</span></DropdownMenuItem>
+            render: <Button key="quote" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleBlockquote')} style={activeStyle(editorState.isBlockquote)}><Quote className="w-5 h-5" /></Button>,
+            dropdownRender: <DropdownMenuItem key="quote-dropdown" onClick={() => sendCommand('toggleBlockquote')} className={cn("gap-2", editorState.isBlockquote && "text-primary")}><Quote className="w-4 h-4" /> Quote <span className="ml-auto text-[10px] opacity-50">{MOD}${SHIFT}B</span></DropdownMenuItem>
         },
         {
             id: 'details',
             label: 'Collapsible',
             shortcut: `${MOD}.`,
-            render: <Button key="details" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleDetails')} style={activeStyle(editorState.isDetails)}><FileInput sx={{ fontSize: 18 }} /></Button>,
-            dropdownRender: <DropdownMenuItem key="details-dropdown" onClick={() => sendCommand('toggleDetails')} className={cn("gap-2", editorState.isDetails && "text-primary")}><FileInput sx={{ fontSize: 16 }} /> Details <span className="ml-auto text-[10px] opacity-50">{MOD}.</span></DropdownMenuItem>
+            render: <Button key="details" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleDetails')} style={activeStyle(editorState.isDetails)}><FileInput className="w-5 h-5" /></Button>,
+            dropdownRender: <DropdownMenuItem key="details-dropdown" onClick={() => sendCommand('toggleDetails')} className={cn("gap-2", editorState.isDetails && "text-primary")}><FileInput className="w-4 h-4" /> Details <span className="ml-auto text-[10px] opacity-50">{MOD}.</span></DropdownMenuItem>
         },
         {
             id: 'math',
@@ -199,18 +206,22 @@ export function DesktopToolbar({
                         "h-9 w-9 shrink-0 hover:bg-accent/50 transition-colors",
                         activePopup === 'math' && "text-primary bg-primary/10"
                     )}
-                    onClick={() => onActivePopupChange(activePopup === 'math' ? null : 'math')}
+                    onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onActivePopupChange(activePopup === 'math' ? null : 'math');
+                    }}
                 >
-                    <Sigma sx={{ fontSize: 20 }} />
+                    <Sigma className="w-5 h-5" />
                 </Button>
             ),
             dropdownRender: (
                 <DropdownMenuItem
                     key="math-dropdown"
-                    onClick={(e) => { e.preventDefault(); onActivePopupChange('math'); }}
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); onActivePopupChange('math'); }}
                     className={cn("gap-2 cursor-pointer", activePopup === 'math' && "text-primary")}
                 >
-                    <Sigma sx={{ fontSize: 16 }} />
+                    <Sigma className="w-4 h-4" />
                     <span>Math Formula</span>
                 </DropdownMenuItem>
             )
@@ -261,8 +272,8 @@ export function DesktopToolbar({
         {
             id: 'table',
             label: 'Table',
-            render: <Button key="table" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => { if (!editorState.isInTable) sendCommand('insertTable', { rows: 3, cols: 3, withHeaderRow: true }); }} style={activeStyle(editorState.isInTable)}><TableIcon sx={{ fontSize: 18 }} /></Button>,
-            dropdownRender: <DropdownMenuItem key="table-dropdown" onClick={() => { if (!editorState.isInTable) sendCommand('insertTable', { rows: 3, cols: 3, withHeaderRow: true }); }} className={cn("gap-2", editorState.isInTable && "text-primary")}><TableIcon sx={{ fontSize: 16 }} /> Table</DropdownMenuItem>
+            render: <Button key="table" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => { if (!editorState.isInTable) sendCommand('insertTable', { rows: 3, cols: 3, withHeaderRow: true }); }} style={activeStyle(editorState.isInTable)}><TableIcon className="w-5 h-5" /></Button>,
+            dropdownRender: <DropdownMenuItem key="table-dropdown" onClick={() => { if (!editorState.isInTable) sendCommand('insertTable', { rows: 3, cols: 3, withHeaderRow: true }); }} className={cn("gap-2", editorState.isInTable && "text-primary")}><TableIcon className="w-4 h-4" /> Table</DropdownMenuItem>
         },
         {
             id: 'image',
@@ -270,53 +281,95 @@ export function DesktopToolbar({
             render: <ToolbarImageUpload key="image" onInsertImage={onInsertImage} onOpenChange={handleOpenChange} />,
             dropdownRender: <ToolbarImageUpload key="image-dropdown" onInsertImage={onInsertImage} onOpenChange={handleOpenChange} isMenu />
         }
-    ], [editorState, sendCommand, colors.primary, activeStyle, handleOpenChange, onInsertImage]);
-
+    ], [editorState, sendCommand, colors.primary, activeStyle, handleOpenChange, onInsertImage, activePopup, onActivePopupChange, MOD, ALT, SHIFT]);
 
     const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
     const [resetKey, setResetKey] = useState(0);
 
-    useEffect(() => {
-        const observer = new ResizeObserver((entries) => {
-            const width = entries[0].contentRect.width;
-            if (width < 200) return;
+    const itemsLength = items.length;
+    const recomputeVisibleCount = useCallback(() => {
+        const rowEl = rowRef.current;
+        if (!rowEl) return;
 
-            const HEADING_WIDTH = 52;
-            const ITEM_WIDTH = 36;
-            const GAP = 2; // gap-0.5 is 2px
-            const PADDING = 12; // horizontal padding + safe area
-            const RIGHT_FIXED_WIDTH = 74; // Undo (36) + Redo (36) + Gap (2)
-            const OVERFLOW_WIDTH = 38; // More button (36) + Gap (2)
+        const rowStyles = getComputedStyle(rowEl);
+        const rowGapRaw = rowStyles.columnGap || rowStyles.gap || '0';
+        const rowGap = Number.parseFloat(rowGapRaw) || 0;
+        const paddingLeft = Number.parseFloat(rowStyles.paddingLeft || '0') || 0;
+        const paddingRight = Number.parseFloat(rowStyles.paddingRight || '0') || 0;
+        const rowContentWidth = rowEl.clientWidth - paddingLeft - paddingRight;
+        if (rowContentWidth <= 0) return;
 
-            // Check if all items fit without overflow button
-            let totalAllWidth = 0;
-            for (let i = 0; i < items.length; i++) {
-                const w = items[i].id === 'heading' ? HEADING_WIDTH : ITEM_WIDTH;
-                totalAllWidth += (i === 0 ? w : w + GAP);
-            }
+        const HEADING_WIDTH = 52; // w-13
+        const ITEM_WIDTH = 36; // w-9
+        const ITEM_GAP = 2; // gap-0.5
+        const RIGHT_GROUP_WIDTH = 74; // undo + redo + gap
+        const RIGHT_GROUP_WITH_OVERFLOW = 112; // overflow + undo + redo + gaps
+        const ROW_GAP_COUNT = 2; // items->spacer, spacer->right group
 
-            if (totalAllWidth + RIGHT_FIXED_WIDTH + PADDING <= width) {
-                setVisibleCount(items.length);
+        const itemsWidthFor = (count: number) => {
+            if (count <= 0) return 0;
+            const rest = Math.max(0, count - 1);
+            return HEADING_WIDTH + rest * ITEM_WIDTH + rest * ITEM_GAP;
+        };
+
+        const availableNoOverflow = rowContentWidth - ROW_GAP_COUNT * rowGap - RIGHT_GROUP_WIDTH;
+        if (itemsWidthFor(itemsLength) <= availableNoOverflow) {
+            setVisibleCount(itemsLength);
+            return;
+        }
+
+        const availableWithOverflow = rowContentWidth - ROW_GAP_COUNT * rowGap - RIGHT_GROUP_WITH_OVERFLOW;
+        if (availableWithOverflow <= HEADING_WIDTH) {
+            setVisibleCount(1);
+            return;
+        }
+
+        let count = 1;
+        for (let i = 1; i <= itemsLength; i++) {
+            if (itemsWidthFor(i) <= availableWithOverflow) {
+                count = i;
             } else {
-                // Not all fit, need overflow button
-                let currentWidth = 0;
-                let count = 0;
-                const availableForItems = width - PADDING - RIGHT_FIXED_WIDTH - OVERFLOW_WIDTH;
-
-                for (let i = 0; i < items.length; i++) {
-                    const w = items[i].id === 'heading' ? HEADING_WIDTH : ITEM_WIDTH;
-                    const needed = (i === 0 ? w : w + GAP);
-                    if (currentWidth + needed > availableForItems) break;
-                    currentWidth += needed;
-                    count++;
-                }
-                setVisibleCount(Math.max(1, count));
+                break;
             }
+        }
+
+        setVisibleCount(Math.max(1, Math.min(itemsLength, count)));
+    }, [itemsLength]);
+
+    useEffect(() => {
+        const observer = new ResizeObserver(() => {
+            recomputeVisibleCount();
         });
 
         if (containerRef.current) observer.observe(containerRef.current);
         return () => observer.disconnect();
-    }, [items, containerRef]);
+    }, [recomputeVisibleCount]);
+
+    useEffect(() => {
+        recomputeVisibleCount();
+    }, [recomputeVisibleCount, itemsLength, visibleCount]);
+
+    useEffect(() => {
+        const handleVisibility = () => {
+            if (document.visibilityState === 'visible') {
+                requestAnimationFrame(recomputeVisibleCount);
+            }
+        };
+
+        const handleFocus = () => {
+            requestAnimationFrame(recomputeVisibleCount);
+        };
+
+        window.addEventListener('resize', handleFocus);
+        window.addEventListener('focus', handleFocus);
+        document.addEventListener('visibilitychange', handleVisibility);
+
+        return () => {
+            window.removeEventListener('resize', handleFocus);
+            window.removeEventListener('focus', handleFocus);
+            document.removeEventListener('visibilitychange', handleVisibility);
+        };
+    }, [recomputeVisibleCount]);
 
     const visibleItems = items.slice(0, visibleCount);
     const overflowItems = items.slice(visibleCount);
@@ -327,7 +380,7 @@ export function DesktopToolbar({
                 ref={containerRef}
                 onMouseLeave={() => {
                     setActiveTooltip(null);
-                    if (openMenusCount === 0) setResetKey(prev => prev + 1);
+                    if (!isPopupOpen) setResetKey(prev => prev + 1);
                 }}
                 className="
                             absolute bottom-6 left-1/2 -translate-x-1/2
@@ -349,26 +402,26 @@ export function DesktopToolbar({
                             dark:shadow-[0_18px_40px_rgba(0,0,0,0.6)]
                             "
             >
-                <div className="flex items-center gap-0.5 w-full px-1">
-                    {visibleItems.map((item) => (
-                        <Tooltip
-                            key={item.id}
-                            open={openMenusCount === 0 && activeTooltip === item.id}
-                            onOpenChange={(open) => setActiveTooltip(open ? item.id : null)}
-                        >
-                            <TooltipTrigger asChild>
-                                <div className="flex shrink-0">
+                <div ref={rowRef} className="flex items-center gap-0.5 w-full px-1">
+                    <div className="flex items-center gap-0.5">
+                        {visibleItems.map((item) => (
+                            <Tooltip
+                                key={item.id}
+                                open={!isPopupOpen && activeTooltip === item.id}
+                                onOpenChange={(open) => setActiveTooltip(open ? item.id : null)}
+                            >
+                                <TooltipTrigger asChild>
                                     {item.render}
-                                </div>
-                            </TooltipTrigger>
-                            <TooltipContent side="top" sideOffset={12}>
-                                {item.label}
-                                {item.shortcut && (
-                                    <span className="ml-2 text-[10px] opacity-60 bg-white/10 px-1 rounded-sm border border-white/10">{item.shortcut}</span>
-                                )}
-                            </TooltipContent>
-                        </Tooltip>
-                    ))}
+                                </TooltipTrigger>
+                                <TooltipContent side="top" sideOffset={12}>
+                                    {item.label}
+                                    {item.shortcut && (
+                                        <span className="ml-2 text-[10px] opacity-60 bg-white/10 px-1 rounded-sm border border-white/10">{item.shortcut}</span>
+                                    )}
+                                </TooltipContent>
+                            </Tooltip>
+                        ))}
+                    </div>
 
                     <div className="flex-1" />
 
@@ -377,7 +430,7 @@ export function DesktopToolbar({
                             <DropdownMenu onOpenChange={handleOpenChange} modal={false}>
                                 <DropdownMenuTrigger asChild>
                                     <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0">
-                                        <MoreHorizontal sx={{ fontSize: 18 }} />
+                                        <MoreHorizontal className="w-5 h-5" />
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="w-56">
@@ -391,12 +444,12 @@ export function DesktopToolbar({
                         )}
 
                         <Tooltip
-                            open={openMenusCount === 0 && activeTooltip === 'undo'}
+                            open={!isPopupOpen && activeTooltip === 'undo'}
                             onOpenChange={(open) => setActiveTooltip(open ? 'undo' : null)}
                         >
                             <TooltipTrigger asChild>
                                 <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('undo')} disabled={!editorState.canUndo}>
-                                    <Undo sx={{ fontSize: 18 }} />
+                                    <Undo className="w-5 h-5" />
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent side="top" sideOffset={12}>
@@ -406,12 +459,12 @@ export function DesktopToolbar({
                         </Tooltip>
 
                         <Tooltip
-                            open={openMenusCount === 0 && activeTooltip === 'redo'}
+                            open={!isPopupOpen && activeTooltip === 'redo'}
                             onOpenChange={(open) => setActiveTooltip(open ? 'redo' : null)}
                         >
                             <TooltipTrigger asChild>
                                 <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('redo')} disabled={!editorState.canRedo}>
-                                    <Redo sx={{ fontSize: 18 }} />
+                                    <Redo className="w-5 h-5" />
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent side="top" sideOffset={12}>

@@ -1,6 +1,12 @@
 import { eq, inArray } from 'drizzle-orm';
 import { getStorageEngine } from '../stores/config';
-import { getDb } from './runtime';
+import { getDb, getExpoDb, useDbStore } from '../stores/db.store';
+import { useNotesStore } from '../stores/notes.store';
+import { useSyncStore } from '../stores/sync.store';
+import { useTasksStore } from '../stores/tasks.store';
+import { useUserStore } from '../stores/user.store';
+import { SyncScheduler } from '../sync/sync-scheduler';
+import { removeMasterKey } from '../utils/crypto';
 import * as schema from './schema';
 import { seedSystemData } from './seed';
 import type { DbType } from './types';
@@ -160,14 +166,14 @@ export async function initDatabase(nativeDb: { execAsync: (sql: string) => Promi
 
 // Reset everything (DB, Storage, Files) - USE WITH CAUTION
 export async function resetAll(): Promise<void> {
-  const { getExpoDb, getDb, useDbStore } = await import('../stores/db.store');
+
   const nativeDb = getExpoDb() as { execAsync: (sql: string) => Promise<void> };
   const drizzleDb = getDb();
   const userId = useDbStore.getState().currentUserId;
 
   try {
     // 1. Stop background sync activity to prevent "database is locked" errors
-    const { SyncScheduler } = await import('../sync/sync-scheduler');
+
     SyncScheduler.instance?.dispose();
 
     // Yield the event loop to allow pending SQLite promises to finish executing
@@ -175,11 +181,9 @@ export async function resetAll(): Promise<void> {
 
     // Sign out user and clear auth stores BEFORE clearing storage
     // If we clear storage first, the Supabase client may fail to sign out properly
-    const { useUserStore } = await import('../stores/user.store');
     await useUserStore.getState().signOut();
 
     // Reset sync store states explicitly
-    const { useSyncStore } = await import('../stores/sync.store');
     useSyncStore.getState().setLastSyncAt(new Date(0));
     useSyncStore.getState().clearAesKey();
 
@@ -221,8 +225,6 @@ export async function resetAll(): Promise<void> {
     await initDatabase(nativeDb, drizzleDb);
 
     // Re-init stores so UI reflects the wiped database
-    const { useNotesStore } = await import('../stores/notes.store');
-    const { useTasksStore } = await import('../stores/tasks.store');
     await useNotesStore.getState().initApp();
     await useTasksStore.getState().loadTasks();
   } catch (error) {
@@ -234,7 +236,6 @@ export async function resetAll(): Promise<void> {
 // Reclaim unused space and optimize database performance
 export async function vacuumDatabase(): Promise<void> {
   try {
-    const { getExpoDb } = await import('../stores/db.store');
     const nativeDb = getExpoDb() as { execAsync: (sql: string) => Promise<void> };
 
     await nativeDb.execAsync('VACUUM;');
@@ -261,7 +262,6 @@ export async function vacuumDatabase(): Promise<void> {
  */
 export async function purgeGuestTombstones(): Promise<void> {
   try {
-    const { useDbStore } = await import('../stores/db.store');
     const isGuest = useDbStore.getState().isGuest;
     if (!isGuest) return;
 
@@ -328,7 +328,6 @@ export { schema };
 
 // Remove master key from secure storage
 export async function resetMasterKey(userId: string): Promise<void> {
-  const { removeMasterKey } = await import('../utils/crypto');
   try {
     if (userId) {
       await removeMasterKey(userId);

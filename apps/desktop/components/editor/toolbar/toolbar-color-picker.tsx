@@ -77,7 +77,7 @@ export function ColorPicker({
         return (
             <DropdownMenuSub open={open} onOpenChange={handleOpenChange}>
                 <DropdownMenuSubTrigger className="gap-2">
-                    <Icon sx={{ fontSize: 16 }} style={{ color: currentColor || undefined }} />
+                    <Icon className="w-4 h-4" style={{ color: currentColor || undefined }} />
                     <span>{title}</span>
                 </DropdownMenuSubTrigger>
                 <DropdownMenuPortal>
@@ -103,7 +103,7 @@ export function ColorPicker({
                         borderRadius: currentColor ? '8px' : undefined
                     }}
                 >
-                    <Icon sx={{ fontSize: 18 }} />
+                    <Icon className="w-5 h-5" />
                 </Button>
             </PopoverTrigger>
             <PopoverContent className="w-48 p-2" align="start">

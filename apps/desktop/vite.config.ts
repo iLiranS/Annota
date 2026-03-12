@@ -61,5 +61,8 @@ export default defineConfig(async ({ mode }) => {
         ignored: ["**/src-tauri/**"],
       },
     },
+    build: {
+      chunkSizeWarningLimit: 2000,
+    }
   };
 });

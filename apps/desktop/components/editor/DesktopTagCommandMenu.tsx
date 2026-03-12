@@ -1,7 +1,8 @@
+import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { useNotesStore } from '@annota/core';
-import { Check, Add as Plus, LocalOffer as TagIcon } from '@mui/icons-material';
+import { Check, Plus, Tag as TagIcon } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 interface DesktopTagCommandMenuProps {
@@ -36,9 +37,6 @@ export function DesktopTagCommandMenu({
     const [selectedIndex, setSelectedIndex] = useState(0);
     const containerRef = useRef<HTMLDivElement>(null);
 
-    const scrollerRect = typeof document !== 'undefined'
-        ? document.querySelector('.editor-scroller')?.getBoundingClientRect()
-        : { top: 0, left: 0 };
 
     const normalizedQuery = query.toLowerCase().trim();
 
@@ -111,50 +109,64 @@ export function DesktopTagCommandMenu({
 
     if (!clientRect) return null;
 
-    const top = clientRect.bottom + 8 - (scrollerRect?.top ?? 0);
-    const left = clientRect.left - (scrollerRect?.left ?? 0);
-
     return (
-        <div
-            ref={containerRef}
-            className="absolute z-100 overflow-hidden w-56 rounded-xl border bg-popover text-popover-foreground shadow-md outline-none"
-            style={{ top, left }}
-        >
-            <ScrollArea className="h-full max-h-[300px] p-1">
-                <div className="flex flex-col gap-1">
-                    {items.length === 0 && (
-                        <div className="px-2 py-4 text-center text-sm text-muted-foreground">
-                            No tags found
-                        </div>
-                    )}
+        <Popover open={true}>
+            <PopoverAnchor
+                style={{
+                    position: 'fixed',
+                    top: clientRect.top,
+                    left: clientRect.left,
+                    width: clientRect.width,
+                    height: clientRect.height,
+                    pointerEvents: 'none',
+                }}
+            />
+            <PopoverContent
+                side="bottom"
+                align="start"
+                sideOffset={8}
+                onOpenAutoFocus={(e) => e.preventDefault()}
+                onCloseAutoFocus={(e) => e.preventDefault()}
+                className="z-100 overflow-hidden w-56 p-0 border rounded-xl shadow-md"
+            >
+                <div ref={containerRef} className="flex flex-col bg-popover text-popover-foreground">
+                    <ScrollArea className="h-full max-h-[300px] p-1">
+                        <div className="flex flex-col gap-1">
+                            {items.length === 0 && (
+                                <div className="px-2 py-4 text-center text-sm text-muted-foreground">
+                                    No tags found
+                                </div>
+                            )}
 
-                    {items.map((item, index) => {
-                        const isSelected = index === selectedIndex;
-                        const Icon = item.type === 'create' ? Plus : TagIcon;
-                        return (
-                            <button
-                                key={item.type === 'create' ? 'create' : item.tag.id}
-                                type="button"
-                                className={cn(
-                                    "relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1 text-sm outline-none transition-colors",
-                                    isSelected ? "bg-accent text-accent-foreground" : "hover:bg-accent/50",
-                                    item.isApplied && "opacity-60"
-                                )}
-                                onClick={() => handleSelect(item)}
-                                onMouseEnter={() => setSelectedIndex(index)}
-                            >
-                                <Icon sx={{ fontSize: 16, mr: 1, flexShrink: 0, color: item.tag ? item.tag.color : undefined }} />
-                                <span className={cn("flex-1 text-left line-clamp-1", item.isApplied && "line-through")}>
-                                    {item.title}
-                                </span>
-                                {item.isApplied && (
-                                    <Check sx={{ fontSize: 14 }} className="ml-auto opacity-50" />
-                                )}
-                            </button>
-                        );
-                    })}
+                            {items.map((item, index) => {
+                                const isSelected = index === selectedIndex;
+                                const Icon = item.type === 'create' ? Plus : TagIcon;
+                                return (
+                                    <button
+                                        key={item.type === 'create' ? 'create' : item.tag.id}
+                                        type="button"
+                                        className={cn(
+                                            "relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1 text-sm outline-none transition-colors",
+                                            isSelected ? "bg-accent text-accent-foreground" : "hover:bg-accent/50",
+                                            item.isApplied && "opacity-60"
+                                        )}
+                                        onClick={() => handleSelect(item)}
+                                        onMouseEnter={() => setSelectedIndex(index)}
+                                    >
+                                        <Icon className="w-5 h-5 mr-2 shrink-0" style={{ color: item.tag?.color }} />
+                                        <span className={cn("flex-1 text-left line-clamp-1", item.isApplied && "line-through")}>
+                                            {item.title}
+                                        </span>
+                                        {item.isApplied && (
+                                            <Check className="w-3.5 h-3.5 ml-auto opacity-50" />
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </ScrollArea>
                 </div>
-            </ScrollArea>
-        </div>
+            </PopoverContent>
+        </Popover>
     );
 }

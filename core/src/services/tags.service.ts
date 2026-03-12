@@ -1,6 +1,7 @@
-import type { Tag, TagCreateInput } from '../db/repositories/tags.repository';
-import * as tagsRepo from '../db/repositories/tags.repository';
 import { removeTagFromAllNotes } from '../db/repositories/notes.repository';
+import type { TagCreateInput } from '../db/repositories/tags.repository';
+import * as tagsRepo from '../db/repositories/tags.repository';
+import type { Tag } from '../db/schema';
 
 export const TagService = {
     getAllTags: async (): Promise<Tag[]> => {

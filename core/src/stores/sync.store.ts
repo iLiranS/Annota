@@ -1,5 +1,6 @@
 import { Buffer } from 'buffer';
 import { create } from 'zustand';
+import { SyncScheduler } from '../sync/sync-scheduler';
 
 interface SyncState {
     /** Lock to prevent overlapping push/pull operations */
@@ -41,7 +42,6 @@ export const useSyncStore = create<SyncState>((set, get) => ({
     setAesKey: (activeMnemonic, aesKey) => set({ activeMnemonic, aesKey }),
     clearAesKey: () => set({ activeMnemonic: null, aesKey: null }),
     forceSync: async () => {
-        const { SyncScheduler } = await import('../sync/sync-scheduler');
         if (SyncScheduler.instance) {
             const state = get();
             if (!state.isOnline) {

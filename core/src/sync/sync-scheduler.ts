@@ -1,5 +1,7 @@
 import { getPlatformAdapters, type Unsubscribe } from '../adapters';
+import { useNotesStore } from '../stores/notes.store';
 import { useSyncStore } from '../stores/sync.store';
+import { useTasksStore } from '../stores/tasks.store';
 import { syncPull, syncPush } from './sync-service';
 
 const DEBOUNCE_MS = 10_000;       // 10 seconds of idle → push
@@ -206,10 +208,6 @@ export class SyncScheduler {
      */
     private async reinitStores(): Promise<void> {
         try {
-            const [{ useNotesStore }, { useTasksStore }] = await Promise.all([
-                import('../stores/notes.store'),
-                import('../stores/tasks.store'),
-            ]);
             await Promise.all([
                 useNotesStore.getState().initApp(),
                 useTasksStore.getState().loadTasks(),

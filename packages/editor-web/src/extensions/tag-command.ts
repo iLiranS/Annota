@@ -1,6 +1,6 @@
 import { Extension } from '@tiptap/core';
-import Suggestion from '@tiptap/suggestion';
 import { PluginKey } from '@tiptap/pm/state';
+import Suggestion from '@tiptap/suggestion';
 import { sendMessage } from '../bridge';
 
 export interface TagCommandOptions {
@@ -28,6 +28,7 @@ export const TagCommandExtension = Extension.create<TagCommandOptions>({
                 command: () => {
                     // Executed natively, no web-side logic needed
                 },
+                //@ts-ignore
                 items: ({ query }) => {
                     return ['tag-command-active'];
                 },

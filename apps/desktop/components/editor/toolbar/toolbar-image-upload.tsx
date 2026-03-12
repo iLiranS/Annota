@@ -14,11 +14,11 @@ import { cn } from '@/lib/utils';
 import { getPlatformAdapters } from '@annota/core/platform';
 import { join } from '@tauri-apps/api/path';
 import {
-    CloudUpload as Upload,
+    UploadCloud as Upload,
     Image as ImageIcon,
     Link as LinkIcon,
-    Autorenew as Loader2
-} from '@mui/icons-material';
+    Loader2
+} from 'lucide-react';
 import React, { useCallback, useRef, useState } from 'react';
 
 interface ToolbarImageUploadProps {
@@ -160,7 +160,7 @@ export function ToolbarImageUpload({ onInsertImage, onOpenChange, isMenu, visibl
 
     const trigger = isMenu ? (
         <DropdownMenuItem onSelect={(e) => e.preventDefault()} onClick={() => setOpen(true)} className="gap-2">
-            <ImageIcon sx={{ fontSize: 16 }} />
+            <ImageIcon className="w-4 h-4" />
             <span>Image</span>
         </DropdownMenuItem>
     ) : (
@@ -173,7 +173,7 @@ export function ToolbarImageUpload({ onInsertImage, onOpenChange, isMenu, visibl
                     borderRadius: '8px'
                 }}
             >
-                <ImageIcon sx={{ fontSize: 18 }} />
+                <ImageIcon className="w-5 h-5" />
             </Button>
         </DialogTrigger>
     );
@@ -189,7 +189,7 @@ export function ToolbarImageUpload({ onInsertImage, onOpenChange, isMenu, visibl
             >
                 <DialogHeader className="p-4 pb-2 border-b border-border/50">
                     <DialogTitle className="text-lg font-semibold flex items-center gap-2">
-                        <ImageIcon sx={{ fontSize: 18 }} className="text-primary" />
+                        <ImageIcon className="w-5 h-5 text-primary" />
                         Insert Image
                     </DialogTitle>
                 </DialogHeader>

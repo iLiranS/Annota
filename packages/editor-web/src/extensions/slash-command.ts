@@ -26,6 +26,7 @@ export const SlashCommandExtension = Extension.create<SlashCommandOptions>({
                 command: () => {
                     // Executed natively, no web-side logic needed
                 },
+                //@ts-ignore
                 items: ({ query }) => {
                     // Tiptap Suggestion cancels the process if items is empty.
                     // We must return a dummy item so it proceeds and triggers our render hooks.

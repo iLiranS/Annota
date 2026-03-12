@@ -1,12 +1,11 @@
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { getDb } from '../../stores/db.store';
 import { generateId } from '../../utils/id';
+import type { Tag, TagInsert } from '../schema';
 import * as schema from '../schema';
 import type { DbOrTx } from '../types';
 import { safeGet, safeGetAll } from '../utils';
 
-export type Tag = typeof schema.tags.$inferSelect;
-export type TagInsert = typeof schema.tags.$inferInsert;
 export type TagCreateInput = Omit<TagInsert, 'id' | 'createdAt' | 'updatedAt' | 'isDirty'> & {
     id?: string;
     createdAt?: Date;
