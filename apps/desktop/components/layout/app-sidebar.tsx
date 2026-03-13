@@ -339,7 +339,7 @@ export function AppSidebar() {
                             <CollapsibleTrigger className="flex w-full items-center gap-2">
                                 <Ionicons name="pricetag" size={16} className="text-pink-500" />
                                 <span className="flex-1 text-start">Tags</span>
-                                <Ionicons name="chevron-forward" size={14} className="transition-transform group-data-[state=open]/tags:rotate-90" />
+                                <Ionicons name="chevron-forward" size={14} className={`transition-transform group-data-[state=open]/tags:rotate-90 ${general.appDirection === 'rtl' ? 'rotate-180' : ''}`} />
                             </CollapsibleTrigger>
                         </SidebarGroupLabel>
                         <CollapsibleContent>

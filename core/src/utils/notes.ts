@@ -5,6 +5,22 @@ import { generateId } from './id';
 export const MAX_TITLE_LENGTH = 50;
 export const MAX_PREVIEW_LENGTH = 100;
 
+function formatDateCustom(date: Date) {
+    // Get the full month name (e.g., "March")
+    // Using 'en-US' locale ensures English month names,
+    // aligning with your language preference.
+    const month = date.toLocaleString('en-US', { month: 'long' });
+
+    // Get the day of the month (e.g., 3, 13)
+    const day = date.getDate();
+
+    // Get the full year (e.g., 2026)
+    const year = date.getFullYear();
+
+    // Combine them into the desired string format
+    return `${month} ${day} ${year}`;
+}
+
 /**
  * Generates a title from HTML content, ensuring it doesn't exceed the max length.
  * Strips HTML tags and takes the first line or a default "Untitled Note".
@@ -59,7 +75,7 @@ export function generateNoteMetadata(data: Partial<NoteMetadataInsert>): NoteMet
     return {
         id,
         folderId,
-        title: data?.title ?? 'Untitled Note',
+        title: folderId === 'system-daily-notes' ? formatDateCustom(now) : data?.title ?? 'Untitled Note',
         preview: data?.preview ?? '',
         createdAt: now,
         updatedAt: now,

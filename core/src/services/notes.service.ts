@@ -22,6 +22,12 @@ export const NoteService = {
 
     // 1. Create
     create: async (data: Partial<NoteMetadata>): Promise<NoteMetadata> => {
+        if (data.folderId === 'system-daily-notes') {
+            const existing = await notesRepo.getNoteByFolderAndDate('system-daily-notes', new Date());
+            if (existing) {
+                return existing;
+            }
+        }
         const metadata = generateNoteMetadata(data);
         return await notesRepo.createNoteMetadata(metadata);
     },

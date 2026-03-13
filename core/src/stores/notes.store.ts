@@ -70,8 +70,6 @@ interface NotesState {
     getNotesInFolder: (folderId: string | null, includeDeleted?: boolean) => NoteMetadata[];
     getFoldersInFolder: (parentId: string | null, includeDeleted?: boolean) => Folder[];
 
-    // Daily Notes
-    getOrCreateDailyNote: () => Promise<string>;
 
     // Reset store
     reset: () => void;
@@ -172,9 +170,13 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         const newNote = await NoteService.create(data);
 
         // 2. Manual State Mutation (update local cache)
-        set(state => ({
-            notes: [...state.notes, newNote]
-        }));
+        set(state => {
+            const exists = state.notes.some(n => n.id === newNote.id);
+            if (exists) return state;
+            return {
+                notes: [...state.notes, newNote]
+            };
+        });
 
         SyncScheduler.instance?.notifyContentChange();
         return newNote;
@@ -492,34 +494,6 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
     // ============ DAILY NOTES ============
 
-    getOrCreateDailyNote: async () => {
-        const now = new Date();
-        const dd = String(now.getDate()).padStart(2, '0');
-        const mm = String(now.getMonth() + 1).padStart(2, '0');
-        const yyyy = now.getFullYear();
-        const todayTitle = `${dd}-${mm}-${yyyy}`;
-
-        const { notes, createNote } = get();
-
-        // Find existing note for today
-        const existingNote = notes.find(n =>
-            n.folderId === DAILY_NOTES_FOLDER_ID &&
-            n.title === todayTitle &&
-            !n.isDeleted
-        );
-
-        if (existingNote) {
-            return existingNote.id;
-        }
-
-        // Create new daily note
-        const newNote = await createNote({
-            folderId: DAILY_NOTES_FOLDER_ID,
-            title: todayTitle
-        });
-
-        return newNote.id;
-    },
 
     // ============ SORTING & GETTERS ============
 

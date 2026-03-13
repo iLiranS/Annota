@@ -12,7 +12,7 @@ export default function HomePage() {
 
     return (
         // 1. Root container is strictly screen height. No overflow here.
-        <div className="flex h-full flex-col lg:overflow-hidden bg-background max-w-7xl mx-auto">
+        <div dir="ltr" className="flex h-full flex-col lg:overflow-hidden bg-background max-w-7xl mx-auto">
 
             {/* Top Section - Compact Header */}
             {/* 2. Added shrink-0 so the header never compresses */}

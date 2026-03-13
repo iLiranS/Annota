@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, isNull, lte, sql } from 'drizzle-orm';
 import { deleteImageFile } from '../../services/images/image.service';
 import { getDb } from '../../stores/db.store';
 import { generateId } from '../../utils/id';
@@ -202,6 +202,29 @@ export async function getNotesInFolder(folderId: string | null, includeDeleted =
         )
         .all();
     return safeGetAll<NoteMetadata>(result3);
+}
+
+export async function getNoteByFolderAndDate(folderId: string, date: Date): Promise<NoteMetadata | null> {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const result = await getDb()
+        .select()
+        .from(schema.noteMetadata)
+        .where(
+            and(
+                eq(schema.noteMetadata.folderId, folderId),
+                gte(schema.noteMetadata.createdAt, startOfDay),
+                lte(schema.noteMetadata.createdAt, endOfDay),
+                eq(schema.noteMetadata.isDeleted, false),
+                eq(schema.noteMetadata.isPermDeleted, false)
+            )
+        )
+        .get();
+
+    return safeGet<NoteMetadata>(result);
 }
 
 export async function getNoteMetadataById(noteId: string): Promise<NoteMetadata | null> {

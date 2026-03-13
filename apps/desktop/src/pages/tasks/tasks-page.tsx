@@ -179,7 +179,7 @@ export default function TasksPage() {
     };
 
     return (
-        <div className="flex h-full flex-col bg-background/50">
+        <div dir="ltr" className="flex h-full flex-col bg-background/50">
             {/* Header */}
             <header className="flex flex-col gap-4 border-b bg-background/50 px-6 py-6 backdrop-blur-xl">
                 <div className="flex items-center justify-between">

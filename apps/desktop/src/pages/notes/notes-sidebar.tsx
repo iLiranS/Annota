@@ -32,6 +32,7 @@ import {
     SidebarMenuItem,
     useSidebar
 } from "@/components/ui/sidebar";
+import { useCreateNote } from "@/hooks/use-create-note";
 import { cn } from "@/lib/utils";
 import { FolderPlus, SquarePen } from "lucide-react";
 import { useParams } from "react-router-dom";
@@ -51,7 +52,6 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
         notes,
         folders,
         tags,
-        createNote,
         getNotesInFolder,
         getFoldersInFolder,
         getFolderById,
@@ -62,6 +62,7 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
     } = useNotesStore();
 
     const { createAndNavigate: createTask } = useCreateTask();
+    const { createAndNavigate: createNote } = useCreateNote();
 
     const tagId = searchParams.get("tagId");
 
@@ -124,8 +125,7 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
     };
 
     const handleCreateNote = async () => {
-        const newNote = await createNote({ folderId: currentFolderId ?? "" });
-        navigate(`/notes/${currentFolderId || "root"}/${newNote.id}`);
+        await createNote(currentFolderId ?? "");
     };
 
     const handleEditFolder = useCallback((folder: Folder) => {
@@ -212,33 +212,36 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
                             <h2 className="text-sm font-bold tracking-tight truncate">{headerTitle}</h2>
                         </div>
                         <div className="flex items-center gap-0.5 shrink-0">
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-8 w-8 shrink-0 text-muted-foreground/60 hover:text-primary hover:bg-primary/10 transition-colors"
-                                        onClick={handleCreateFolder}
-                                    >
-                                        <FolderPlus className="h-5 w-5" />
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent side="bottom" className="text-[10px] font-bold">New Folder</TooltipContent>
-                            </Tooltip>
-
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-8 w-8 shrink-0 text-muted-foreground/60 hover:text-primary hover:bg-primary/10 transition-colors"
-                                        onClick={handleCreateNote}
-                                    >
-                                        <SquarePen className="h-5 w-5" />
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent side="bottom" className="text-[10px] font-bold">New Note</TooltipContent>
-                            </Tooltip>
+                            {!isDaily && !isTrash && (
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 shrink-0 text-muted-foreground/60 hover:text-primary hover:bg-primary/10 transition-colors"
+                                            onClick={handleCreateFolder}
+                                        >
+                                            <FolderPlus className="h-5 w-5" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom" className="text-[10px] font-bold">New Folder</TooltipContent>
+                                </Tooltip>
+                            )}
+                            {!isTrash && (
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 shrink-0 text-muted-foreground/60 hover:text-primary hover:bg-primary/10 transition-colors"
+                                            onClick={handleCreateNote}
+                                        >
+                                            <SquarePen className="h-5 w-5" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom" className="text-[10px] font-bold">New Note</TooltipContent>
+                                </Tooltip>
+                            )}
                         </div>
                     </div>
                 </TooltipProvider>
@@ -293,6 +296,7 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
                                             onDelete={() => deleteNote(note.id)}
                                             onClick={() => handleNotePress(note)}
                                             isActive={routeNoteId === note.id}
+                                            isInList
                                         />
                                     </SidebarMenuItem>
                                 ))}
@@ -319,6 +323,7 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
                                             onDelete={() => deleteNote(note.id)}
                                             onClick={() => handleNotePress(note)}
                                             isActive={routeNoteId === note.id}
+                                            isInList
                                         />
                                     </SidebarMenuItem>
                                 ))}

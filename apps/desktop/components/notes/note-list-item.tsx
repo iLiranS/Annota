@@ -28,6 +28,7 @@ interface NoteListItemProps extends React.ButtonHTMLAttributes<HTMLButtonElement
     isActive?: boolean;
     asChild?: boolean;
     children?: React.ReactNode;
+    isInList?: boolean;
 }
 
 export function NoteListItem({
@@ -42,6 +43,7 @@ export function NoteListItem({
     style,
     asChild,
     children,
+    isInList,
     ...props
 }: NoteListItemProps) {
     const { updateNoteMetadata, tags } = useNotesStore();
@@ -75,7 +77,7 @@ export function NoteListItem({
                             !asChild && "group/note flex w-full flex-col gap-0.5 rounded-lg px-3 py-2 text-left transition-all hover:bg-accent/50",
                             !asChild && isCompact ? "py-1.5" : "py-2",
                             isActive && "bg-accent",
-                            "active:scale-95",
+                            "active:scale-95 relative",
                             className
                         )}
                         style={style}
@@ -93,33 +95,6 @@ export function NoteListItem({
                                         )}>
                                             {note.title || "Untitled Note"}
                                         </p>
-
-                                        {(() => {
-                                            if (!note.tags || note.tags === '[]') return null;
-                                            try {
-                                                const tagIds: string[] = JSON.parse(note.tags);
-                                                if (tagIds.length === 0) return null;
-                                                const noteTags = tagIds.map(id => tags.find(t => t.id === id)).filter(Boolean) as any[];
-                                                if (noteTags.length === 0) return null;
-                                                return (
-                                                    <div className="flex flex-wrap gap-1">
-                                                        {noteTags.map(t => (
-                                                            <span
-                                                                key={t.id}
-                                                                className="px-1.5 py-0.5 rounded-sm text-[9px] font-medium border whitespace-nowrap"
-                                                                style={{
-                                                                    backgroundColor: `${t.color}1A`,
-                                                                    color: t.color,
-                                                                    borderColor: `${t.color}40`
-                                                                }}
-                                                            >
-                                                                {t.name}
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                );
-                                            } catch { return null; }
-                                        })()}
                                     </div>
 
                                     <div className="flex items-center gap-2 shrink-0">
@@ -137,8 +112,38 @@ export function NoteListItem({
                                         {note.preview}
                                     </p>
                                 )}
+
+                                {(() => {
+                                    if (!note.tags || note.tags === '[]') return null;
+                                    try {
+                                        const tagIds: string[] = JSON.parse(note.tags);
+                                        if (tagIds.length === 0) return null;
+                                        const noteTags = tagIds.map(id => tags.find(t => t.id === id)).filter(Boolean) as any[];
+                                        if (noteTags.length === 0) return null;
+                                        return (
+                                            <div className="flex gap-1 mt-1 overflow-hidden">
+                                                {noteTags.map(t => (
+                                                    <span
+                                                        key={t.id}
+                                                        title={t.name}
+                                                        className="px-1.5 py-0.5 rounded text-[9px] font-medium border truncate min-w-[40px] max-w-fit flex-1"
+                                                        style={{
+                                                            backgroundColor: `${t.color}1A`,
+                                                            color: t.color,
+                                                            borderColor: `${t.color}40`
+                                                        }}
+                                                    >
+                                                        {t.name}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        );
+                                    } catch { return null; }
+                                })()}
                             </>
                         )}
+                        {isInList && <div className=" h-px absolute bottom-0 w-9/10 mx-auto bg-muted-foreground/15" />}
+
                     </Comp>
                 </ContextMenuTrigger>
 
@@ -181,6 +186,7 @@ export function NoteListItem({
                         </ContextMenuItem>
                     )}
                 </ContextMenuContent>
+
             </ContextMenu>
 
             {isLocationPickerOpen && (
@@ -191,6 +197,7 @@ export function NoteListItem({
                     onSelect={handleMoveNote}
                 />
             )}
+
         </>
     );
 }

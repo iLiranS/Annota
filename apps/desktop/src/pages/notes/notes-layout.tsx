@@ -12,7 +12,7 @@ export default function NotesLayout() {
             dir={general.appDirection}
         >
             <NotesSidebar />
-            <SidebarInset className="flex-1 overflow-auto bg-transparent">
+            <SidebarInset className="flex-1 overflow-auto bg-transparent" dir="ltr">
                 <Outlet />
             </SidebarInset>
         </SidebarProvider>

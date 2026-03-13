@@ -9,7 +9,6 @@ import { AppSidebar } from "./app-sidebar";
  */
 export default function AppShell() {
     const { general } = useSettingsStore();
-
     return (
         <SidebarProvider
             className="h-svh"
@@ -18,7 +17,7 @@ export default function AppShell() {
             <AppSidebar />
             <div className="flex flex-1 flex-col overflow-hidden">
                 <MainNavbar />
-                <main className="flex-1 overflow-hidden">
+                <main className="flex-1 overflow-hidden" dir="ltr">
                     <Outlet />
                 </main>
             </div>
