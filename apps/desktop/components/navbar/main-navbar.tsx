@@ -93,9 +93,9 @@ export function MainNavbar() {
             {/* Left Section: Sidebar Toggle & Search */}
             <div className="flex items-center gap-3">
                 <div className="flex items-center gap-1">
-                    <SidebarTrigger className="h-6 w-6 transition-transform active:scale-95 hover:bg-sidebar-accent" />
+                    <SidebarTrigger className="h-6 w-6 transition-transform active:scale-95 hover:bg-sidebar-accent text-foreground/50" />
 
-                    <div className="flex items-center gap-0">
+                    <div className={`flex items-center gap-0 ${general.appDirection === 'ltr' ? 'flex-row' : 'flex-row-reverse'}`}>
                         <Button
                             variant="ghost"
                             size="icon"

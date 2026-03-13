@@ -83,34 +83,6 @@ export const SearchService = {
             return true;
         });
 
-        // Inject actions dynamically into the combined array after each folder
-        const finalResults: UnifiedSearchResult[] = [];
-        for (const item of combined) {
-            finalResults.push(item);
-            if (item.type === 'folder') {
-                finalResults.push({
-                    type: 'action',
-                    id: `action-note-${item.id}`,
-                    title: `Create Note in ${item.title}`,
-                    score: item.score,
-                    updatedAt: item.updatedAt,
-                    data: null,
-                    actionType: 'create_note',
-                    folderId: item.id
-                });
-                finalResults.push({
-                    type: 'action',
-                    id: `action-task-${item.id}`,
-                    title: `Create Task in ${item.title}`,
-                    score: item.score,
-                    updatedAt: item.updatedAt,
-                    data: null,
-                    actionType: 'create_task',
-                    folderId: item.id
-                });
-            }
-        }
-
-        return finalResults;
+        return combined;
     }
 };

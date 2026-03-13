@@ -82,13 +82,13 @@ export default function TrashPage() {
                             <Ionicons name="chevron-back" size={20} />
                         </Button>
                     )}
-                    <div>
+                    <div className="flex items-center gap-2">
+                        <div className="p-2 rounded bg-red-500/10">
+                            <Ionicons color='red' name="trash" size={20} />
+                        </div>
                         <h1 className="text-2xl font-bold tracking-tight">
                             {headerTitle}
                         </h1>
-                        <p className="text-sm text-muted-foreground">
-                            Deleted items will be permanently removed after 30 days.
-                        </p>
                     </div>
                 </div>
 

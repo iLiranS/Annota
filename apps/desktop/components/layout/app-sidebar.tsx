@@ -243,7 +243,7 @@ export function AppSidebar() {
                                         </p>
                                     ) : (
                                         quickAccessNotes.map((note) => (
-                                            <SidebarMenuItem className="pl-2" key={note.id}>
+                                            <SidebarMenuItem className={general.appDirection === 'ltr' ? 'pl-1' : 'pr-1'} key={note.id}>
                                                 <SidebarMenuButton
                                                     onClick={() => {
                                                         const folderId = note.folderId || "root";
@@ -337,7 +337,7 @@ export function AppSidebar() {
                     <SidebarGroup>
                         <SidebarGroupLabel asChild>
                             <CollapsibleTrigger className="flex w-full items-center gap-2">
-                                <Ionicons name="pricetag" size={16} className="text-pink-500" />
+                                <Ionicons name="pricetag" size={16} className="text-accent-full" />
                                 <span className="flex-1 text-start">Tags</span>
                                 <Ionicons name="chevron-forward" size={14} className={`transition-transform group-data-[state=open]/tags:rotate-90 ${general.appDirection === 'rtl' ? 'rotate-180' : ''}`} />
                             </CollapsibleTrigger>
@@ -361,7 +361,7 @@ export function AppSidebar() {
                                                             isActive={isActive("/notes") && location.search.includes(`tagId=${tag.id}`)}
                                                             className="text-sm"
                                                         >
-                                                            <Ionicons className="ml-1" color={tag.color} name="ellipse" size={16} />
+                                                            <Ionicons className={general.appDirection === 'ltr' ? 'pl-1' : 'pr-1'} color={tag.color} name="ellipse" size={16} />
                                                             <span className="truncate">{tag.name}</span>
                                                         </SidebarMenuButton>
                                                     </ContextMenuTrigger>

@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FolderListItem } from "../notes/folder-list-item";
 import { NoteListItem } from "../notes/note-list-item";
+import { Button } from "../ui/button";
 import { Ionicons } from "../ui/ionicons";
 
 interface NotesSearchModalProps {
@@ -106,7 +107,6 @@ export function NotesSearchModal({ open, onOpenChange }: NotesSearchModalProps) 
                 if (item.type === "note") onNoteClick(item.data);
                 else if (item.type === "task") onTaskClick(item.data);
                 else if (item.type === "folder") onFolderClick(item.data);
-                else if (item.type === "action") onActionClick(item.actionType!, item.folderId);
             }
         };
         window.addEventListener("keydown", handleKeyDown);
@@ -222,38 +222,43 @@ export function NotesSearchModal({ open, onOpenChange }: NotesSearchModalProps) 
                                                             <FolderBadge folderId={result.data.folderId} />
                                                         </div>
                                                     ) : result.type === 'folder' ? (
-                                                        <FolderListItem
-                                                            folder={result.data}
-                                                            onClick={() => onFolderClick(result.data)}
-                                                            onEdit={() => { }}
-                                                            isActive={isSelected}
-                                                            className="border border-transparent"
-                                                            style={isSelected ? {
-                                                                backgroundColor: `${colors.primary}25`,
-                                                                borderColor: `${colors.primary}40`,
-                                                                boxShadow: `inset 0 0 20px -10px ${colors.primary}40`
-                                                            } : undefined}
-                                                        />
-                                                    ) : result.type === 'action' ? (
-                                                        <div
-                                                            onClick={() => onActionClick(result.actionType!, result.folderId)}
-                                                            className={cn(
-                                                                "flex items-center gap-3 px-3 py-2 rounded-xl border border-transparent transition-all cursor-pointer",
-                                                                isSelected ? "bg-background shadow-sm border-border/50" : "hover:bg-background/50"
-                                                            )}
-                                                            style={isSelected ? {
-                                                                backgroundColor: `${colors.primary}15`,
-                                                                borderColor: `${colors.primary}30`,
-                                                                boxShadow: `inset 0 0 20px -10px ${colors.primary}20`
-                                                            } : undefined}
-                                                        >
-                                                            <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-primary/10 text-primary">
-                                                                <Ionicons name={result.actionType === 'create_note' ? 'document-text-outline' : 'checkbox-outline'} size={18} />
+                                                        <div className="flex items-center gap-2 group/folder-row">
+                                                            <FolderListItem
+                                                                folder={result.data}
+                                                                onClick={() => onFolderClick(result.data)}
+                                                                onEdit={() => { }}
+                                                                isActive={isSelected}
+                                                                className="flex-1 border border-transparent"
+                                                                style={isSelected ? {
+                                                                    backgroundColor: `${colors.primary}25`,
+                                                                    borderColor: `${colors.primary}40`,
+                                                                    boxShadow: `inset 0 0 20px -10px ${colors.primary}40`
+                                                                } : undefined}
+                                                            />
+                                                            <div className="flex items-center gap-1 pr-2">
+                                                                <Button
+                                                                    size="icon"
+                                                                    variant="ghost"
+                                                                    className="h-8 w-8 rounded-full hover:bg-primary/10 text-primary shrink-0"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        onActionClick('create_note', result.id);
+                                                                    }}
+                                                                >
+                                                                    <Ionicons name="document-text-outline" size={16} />
+                                                                </Button>
+                                                                <Button
+                                                                    size="icon"
+                                                                    variant="ghost"
+                                                                    className="h-8 w-8 rounded-full hover:bg-primary/10 text-primary shrink-0"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        onActionClick('create_task', result.id);
+                                                                    }}
+                                                                >
+                                                                    <Ionicons name="checkbox-outline" size={16} />
+                                                                </Button>
                                                             </div>
-                                                            <div className="flex-1 min-w-0">
-                                                                <span className="text-sm font-bold truncate text-primary">{result.title}</span>
-                                                            </div>
-
                                                         </div>
                                                     ) : null}
                                                 </div>

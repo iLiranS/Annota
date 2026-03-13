@@ -107,8 +107,8 @@ export function NoteListItem({
                                     </div>
                                 </div>
 
-                                {!isCompact && showDescription && note.preview && (
-                                    <p className="line-clamp-1 w-full text-[11px] text-muted-foreground/50 leading-tight mt-1">
+                                {!isCompact && note.preview && (
+                                    <p className={`line-clamp-1 w-full text-[11px] text-muted-foreground/50 leading-tight ${general.appDirection === 'ltr' ? 'text-left' : 'text-right'}`}>
                                         {note.preview}
                                     </p>
                                 )}

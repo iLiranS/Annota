@@ -138,14 +138,37 @@ export default function NotesSearchModal({
                 const isLastFolder = index === searchData.length - 1 || searchData[index + 1].type !== 'folder';
 
                 return (
-                    <FolderCard
-                        folder={item.data}
-                        onPress={() => handleFolderPress(item.data.id)}
-                        onLongPress={onFolderLongPress ? () => onFolderLongPress(item.data) : undefined}
-                        swipeable={!item.data.isSystem}
-                        isFirst={isFirstFolder}
-                        isLast={isLastFolder}
-                    />
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <View style={{ flex: 1 }}>
+                            <FolderCard
+                                folder={item.data}
+                                onPress={() => handleFolderPress(item.data.id)}
+                                onLongPress={onFolderLongPress ? () => onFolderLongPress(item.data) : undefined}
+                                swipeable={!item.data.isSystem}
+                                isFirst={isFirstFolder}
+                                isLast={isLastFolder}
+                            />
+                        </View>
+                        <View style={{ flexDirection: 'row', gap: 12, paddingHorizontal: 12 }}>
+                            <Pressable
+                                onPress={async () => {
+                                    handleClose();
+                                    const newNote = await createNote({ folderId: item.data.id });
+                                    router.push({ pathname: '/Notes/[id]', params: { id: newNote.id, source: 'new' } });
+                                }}
+                            >
+                                <Ionicons name="document-text-outline" size={22} color={colors.primary} />
+                            </Pressable>
+                            <Pressable
+                                onPress={() => {
+                                    handleClose();
+                                    router.push({ pathname: '/Tasks/new', params: { folderId: item.data.id } });
+                                }}
+                            >
+                                <Ionicons name="checkbox-outline" size={22} color={colors.primary} />
+                            </Pressable>
+                        </View>
+                    </View>
                 );
             }
 
@@ -230,49 +253,6 @@ export default function NotesSearchModal({
                                     </Text>
                                 </View>
                             </View>
-                        </View>
-                    </Pressable>
-                );
-            }
-
-            if (item.type === 'action') {
-                const action = item;
-                const isFirstAction = index === 0 || searchData[index - 1].type !== 'action';
-                const isLastAction = index === searchData.length - 1 || searchData[index + 1].type !== 'action';
-
-                return (
-                    <Pressable
-                        onPress={async () => {
-                            handleClose();
-                            if (action.actionType === 'create_note') {
-                                const newNote = await createNote({ folderId: action.folderId });
-                                router.push({ pathname: '/Notes/[id]', params: { id: newNote.id, source: 'new' } });
-                            } else if (action.actionType === 'create_task') {
-                                router.push({ pathname: '/Tasks/new', params: { folderId: action.folderId } });
-                            }
-                        }}
-                        style={({ pressed }) => [
-                            styles.taskCard,
-                            { backgroundColor: colors.card, borderColor: colors.border },
-                            isFirstAction && styles.roundTop,
-                            isLastAction && styles.roundBottom,
-                            pressed && { backgroundColor: colors.border + '50' }
-                        ]}
-                    >
-                        <View style={styles.taskIconWrapper}>
-                            <Ionicons
-                                name={action.actionType === 'create_note' ? "document-text-outline" : "checkbox-outline"}
-                                size={20}
-                                color={colors.primary}
-                            />
-                        </View>
-                        <View style={styles.taskContent}>
-                            <Text style={[
-                                styles.taskTitle,
-                                { color: colors.text }
-                            ]}>
-                                {action.title}
-                            </Text>
                         </View>
                     </Pressable>
                 );
