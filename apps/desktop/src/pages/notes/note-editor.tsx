@@ -41,6 +41,16 @@ export default function NoteEditor() {
     const [slashCommandState, setSlashCommandState] = useState<{ active: boolean; query?: string; range?: { from: number; to: number }; clientRect?: any }>({ active: false });
     const [tagCommandState, setTagCommandState] = useState<{ active: boolean; query?: string; range?: { from: number; to: number }; clientRect?: any }>({ active: false });
 
+    const isEmptyContent = (html: string) => {
+        const normalized = html
+            .replace(/&nbsp;/gi, '')
+            .replace(/\s/g, '')
+            .toLowerCase();
+        return normalized === '' || normalized === '<p></p>' || normalized === '<p><br></p>';
+    };
+
+    const shouldAutofocus = initialContent !== null && isEmptyContent(initialContent);
+
     // Block Menu state
     const [activeBlockMenu, setActiveBlockMenu] = useState<{
         type: "image" | "details" | "codeBlock" | "table";
@@ -362,6 +372,7 @@ export default function NoteEditor() {
                         initialContent={initialContent}
                         onContentChange={handleContentChange}
                         onSearchResults={handleSearchResults}
+                        autofocus={shouldAutofocus}
                         editable={true}
                         noteId={noteId}
                         contentPaddingTop={60}

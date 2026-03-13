@@ -85,8 +85,20 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
         const editorRef = React.useRef<any>(null);
         const lastValidContentRef = React.useRef(initialContent);
 
+        const editorOrigin = React.useMemo(() => {
+            if (typeof window === 'undefined') return undefined;
+            const origin = window.location?.origin;
+            if (!origin || origin === 'null') return undefined;
+            if (origin.startsWith('http://') || origin.startsWith('https://')) {
+                return origin;
+            }
+            // For non-http(s) origins (tauri/asset/file), omit origin to avoid mismatch errors.
+            return undefined;
+        }, []);
+
         const extensions = React.useMemo(() => getExtensions({
             placeholder,
+            editorOrigin,
             //@ts-ignore
             onMathSelected: (latex, isBlock, pos) => {
                 setCurrentLatex(latex);
@@ -170,7 +182,7 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
             defaultCodeLanguage: editorSettings.defaultCodeLanguage,
             onSlashCommand: onSlashCommand ? (data: any) => onSlashCommand(data) : undefined,
             onTagCommand: onTagCommand ? (data: any) => onTagCommand(data) : undefined,
-        }) as any, [placeholder, onSearchResults, onOpenBlockMenu, onOpenImageMenu, onOpenTableMenu, onCodeBlockSelected, noteId, editorSettings.defaultCodeLanguage, onSlashCommand, onTagCommand]);
+        }) as any, [placeholder, editorOrigin, onSearchResults, onOpenBlockMenu, onOpenImageMenu, onOpenTableMenu, onCodeBlockSelected, noteId, editorSettings.defaultCodeLanguage, onSlashCommand, onTagCommand]);
 
         const editorProps = React.useMemo(() => getEditorProps({
             direction: editorSettings.direction,
@@ -263,7 +275,18 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
             editorProps,
             onCreate: ({ editor }) => {
                 editorRef.current = editor;
-                if (autofocus) {
+                if (editor.isEmpty && editable) {
+                    const chain = editor.chain();
+                    if (autofocus) {
+                        chain.focus();
+                    }
+                    chain
+                        //@ts-ignore
+                        .toggleHeading({ level: 2 })
+                        .insertContentAt(editor.state.doc.content.size, '<p></p>')
+                        .setTextSelection(1)
+                        .run();
+                } else if (autofocus) {
                     editor.commands.focus();
                 }
                 setEditorState(getEditorState(editor) as EditorState);
@@ -402,7 +425,7 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
         }, [editor, initialContent]);
         const sendCommand = useCallback((command: string, params: Record<string, any> = {}) => {
             if (!editor) return;
-
+            //@ts-ignore
             if (dispatchEditorCommand(editor, command, params)) {
                 return;
             }

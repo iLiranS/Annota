@@ -110,12 +110,12 @@ export function MathPopover({ sendCommand, onOpenChange, visible, currentLatex }
                 <div className="space-y-2 ">
                     <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-70">Preview</label>
                     <div
-                        className=" h-[140px] overflow-y-auto flex  rounded-xl border bg-muted/10 px-2 transition-all  shadow-inner overflow-hidden"
+                        className=" h-[140px] overflow-y-auto custom-scrollbar  rounded-xl border bg-muted/10 px-2 transition-all  shadow-inner"
                         style={{ fontSize: '1rem' }}
                     >
                         <div
                             className={cn(
-                                "flex flex-col select-none  gap-2 opacity-40 w-full justify-center items-center animate-in fade-in duration-200",
+                                "flex flex-col select-none  gap-2 opacity-40 w-full h-full justify-center items-center animate-in fade-in duration-200",
                                 latex ? "hidden" : "flex"
                             )}
                         >
@@ -125,7 +125,7 @@ export function MathPopover({ sendCommand, onOpenChange, visible, currentLatex }
                         <div
                             ref={previewRef}
                             className={cn(
-                                "w-full overflow-x-auto select-none  custom-scrollbar",
+                                "w-fit self-start",
                                 !latex && "hidden"
                             )}
                         />

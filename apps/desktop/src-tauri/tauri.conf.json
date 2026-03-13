@@ -24,7 +24,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; img-src 'self' asset: http://asset.localhost data: blob: https:; tauri: 'unsafe-inline' 'unsafe-eval'; connect-src 'self' tauri: https://*.supabase.co wss://*.supabase.co;",
+      "csp": "default-src 'self'; img-src 'self' asset: http://asset.localhost data: blob: https:; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com; child-src 'self' https://www.youtube.com https://www.youtube-nocookie.com; tauri: 'unsafe-inline' 'unsafe-eval'; connect-src 'self' tauri: https://*.supabase.co wss://*.supabase.co;",
       "assetProtocol": {
         "enable": true,
         "scope": [

@@ -1,3 +1,5 @@
+import { Editor } from "@tiptap/core";
+
 function getDefaultCodeLanguage(editor: any): string {
     try {
         const ext = editor?.extensionManager?.extensions?.find((e: any) => e.name === 'codeBlock');
@@ -14,7 +16,7 @@ function hasParams(params: any): boolean {
     return Object.keys(params).length > 0;
 }
 
-export function dispatchEditorCommand(editor: any, command: string, params: Record<string, any> = {}): boolean {
+export function dispatchEditorCommand(editor: Editor, command: string, params: Record<string, any> = {}): boolean {
     if (!editor) return false;
 
     const chain = editor.chain() as any;
@@ -83,7 +85,9 @@ export function dispatchEditorCommand(editor: any, command: string, params: Reco
             if (!selection.empty) {
                 chain.unsetMark('textStyle').run();
             } else {
-                chain.unsetColor().run();
+                // for some reason this fixed all issues...
+                chain.unsetMark('textStyle').run();
+
             }
             view?.focus?.();
             return true;
@@ -92,12 +96,20 @@ export function dispatchEditorCommand(editor: any, command: string, params: Reco
             if (!params?.latex) return true;
             const { selection } = editor.state;
             const isMathNode = 'node' in selection && selection.node &&
+                //@ts-ignore
                 ['inlineMath', 'blockMath'].includes(selection.node.type.name);
 
             if (isMathNode && selection.node) {
+                //@ts-ignore
                 chain.updateAttributes(selection.node.type.name, { latex: params.latex }).focus().run();
             } else {
-                chain.insertContent({ type: 'inlineMath', attrs: { latex: params.latex } }).focus().run();
+                chain
+                    .insertContent([
+                        { type: 'inlineMath', attrs: { latex: params.latex } },
+                        { type: 'text', text: ' ' },
+                    ])
+                    .focus()
+                    .run();
             }
             return true;
         }

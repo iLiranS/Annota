@@ -3,7 +3,9 @@ import {
     sortNotes,
     useNotesStore,
     type Folder,
-    type NoteMetadata
+    type NoteMetadata,
+    TRASH_FOLDER_ID,
+    DAILY_NOTES_FOLDER_ID
 } from "@annota/core";
 import { useCallback, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -95,7 +97,7 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
                 if (!n.tags) return false;
                 try {
                     const tagIds = JSON.parse(n.tags) as string[];
-                    return tagIds.includes(tagId);
+                    return tagIds.includes(tagId) && !n.isDeleted && !n.isPermDeleted;
                 } catch { return false; }
             });
             return sortNotes(list, currentSortType);
@@ -154,7 +156,31 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
     }, [createTask]);
 
     const currentTag = useMemo(() => tags.find(t => t.id === tagId), [tags, tagId]);
-    const headerTitle = tagId ? (currentTag?.name ?? "Tag") : (currentFolder ? currentFolder.name : "Notes");
+
+    const isTrash = currentFolderId === TRASH_FOLDER_ID;
+    const isDaily = currentFolderId === DAILY_NOTES_FOLDER_ID;
+
+    const headerTitle = useMemo(() => {
+        if (tagId) return currentTag?.name ?? "Tag";
+        if (isTrash) return "Trash";
+        if (isDaily) return "Daily Notes";
+        return currentFolder ? currentFolder.name : "Notes";
+    }, [tagId, currentTag, isTrash, isDaily, currentFolder]);
+
+    const headerIcon = useMemo(() => {
+        if (tagId && currentTag) return "ellipse";
+        if (isTrash) return "trash";
+        if (isDaily) return "calendar";
+        return currentFolder ? currentFolder.icon : "documents";
+    }, [tagId, currentTag, isTrash, isDaily, currentFolder]);
+
+    const headerColor = useMemo(() => {
+        if (tagId && currentTag) return currentTag.color;
+        if (isTrash) return "#EF4444";
+        if (isDaily) return "#8B5CF6";
+        return currentFolder?.color || colors.primary;
+    }, [tagId, currentTag, isTrash, isDaily, currentFolder, colors.primary]);
+
     const { open } = useSidebar();
 
     return (
@@ -172,11 +198,11 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
                     <div className="flex items-center justify-between gap-1 w-full">
                         <div className="flex items-center gap-2 overflow-hidden flex-1">
                             {tagId && currentTag ? (
-                                <Ionicons name="ellipse" color={currentTag.color} size={16} />
+                                <Ionicons name={headerIcon} color={headerColor} size={16} />
 
                             ) : (
-                                <div style={{ backgroundColor: (currentFolder?.color || colors.primary) + "30" }} className="flex h-6 w-6 shrink-0 items-center justify-center rounded transition-colors shadow-sm">
-                                    <Ionicons name={currentFolder ? currentFolder.icon : "documents"} color={currentFolder?.color || colors.primary} size={16} />
+                                <div style={{ backgroundColor: headerColor + "30" }} className="flex h-6 w-6 shrink-0 items-center justify-center rounded transition-colors shadow-sm">
+                                    <Ionicons name={headerIcon} color={headerColor} size={16} />
                                 </div>
                             )}
                             <h2 className="text-sm font-bold tracking-tight truncate">{headerTitle}</h2>

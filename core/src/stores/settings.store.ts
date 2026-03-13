@@ -56,7 +56,7 @@ const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
     paragraphSpacing: 16,
     fontFamily: 'system',
     floatingNoteHeader: true,
-    noteWidth: 800,
+    noteWidth: 900,
     defaultCodeLanguage: null,
 };
 

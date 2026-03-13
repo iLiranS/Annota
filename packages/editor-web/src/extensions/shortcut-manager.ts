@@ -1,6 +1,6 @@
 import { Extension } from '@tiptap/core';
-import { dispatchEditorCommand } from '../command-dispatcher';
 import { COLOR_PALETTE } from '../../../../core/constants/colors';
+import { dispatchEditorCommand } from '../command-dispatcher';
 
 export const ShortcutManager = Extension.create({
     name: 'shortcutManager',
@@ -37,14 +37,14 @@ export const ShortcutManager = Extension.create({
 
 
             // --- Reset Color ---
-            'Mod-Shift-n': () => dispatchEditorCommand(this.editor, 'unsetColor'),
+            'Mod-Shift-n': () => this.editor.commands.unsetColor(),
         };
 
         // --- Colors (Alt-[1-0]) ---
         // Mapping: 1=Orange, 2=Red, 3=Yellow, 4=Green, 5=Teal, 6=Blue, 7=Purple, 8=Gray, 9=Pink, 0=Brown
         COLOR_PALETTE.forEach((color, index) => {
             const key = (index + 1) % 10; // 0-9 keys
-            const colorKey = `Alt-${key}`;
+            const colorKey = `Mod-Alt-${key}`;
             shortcuts[colorKey] = () => {
                 if (this.editor.isActive('textStyle', { color: color.value })) {
                     return dispatchEditorCommand(this.editor, 'unsetColor');
@@ -53,7 +53,7 @@ export const ShortcutManager = Extension.create({
             };
 
             // --- Highlights (Mod-Alt-[1-0]) ---
-            const highlightKey = `Mod-Alt-${key}`;
+            const highlightKey = `Mod-Alt-Shift-${key}`;
             shortcuts[highlightKey] = () => {
                 let highlightColor = color.value;
                 if (highlightColor.startsWith('#') && highlightColor.length === 7) {

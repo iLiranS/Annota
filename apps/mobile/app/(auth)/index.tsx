@@ -171,6 +171,25 @@ export default function LoginScreen() {
                         <Text style={[styles.guestButtonText, { color: theme.colors.text }]}>Continue Offline (Guest)</Text>
                     </HapticPressable>
                 </Animated.View>
+
+                <Animated.View entering={FadeInDown.delay(900).duration(600)} style={styles.footer}>
+                    <Text style={[styles.termsText, { color: theme.colors.text + '60' }]}>
+                        By using Annota, you agree to our{' '}
+                        <Text
+                            style={styles.link}
+                            onPress={() => WebBrowser.openBrowserAsync('https://annota.io/terms')}
+                        >
+                            Terms of Service
+                        </Text>
+                        {' '}and{' '}
+                        <Text
+                            style={styles.link}
+                            onPress={() => WebBrowser.openBrowserAsync('https://annota.io/privacy')}
+                        >
+                            Privacy Policy
+                        </Text>.
+                    </Text>
+                </Animated.View>
             </View>
         </View>
     );
@@ -256,5 +275,19 @@ const styles = StyleSheet.create({
     guestButtonText: {
         fontWeight: '700',
         fontSize: 16,
+    },
+    footer: {
+        marginTop: 32,
+        alignItems: 'center',
+    },
+    termsText: {
+        fontSize: 12,
+        textAlign: 'center',
+        lineHeight: 18,
+        paddingHorizontal: 20,
+    },
+    link: {
+        textDecorationLine: 'underline',
+        fontWeight: '600',
     },
 });

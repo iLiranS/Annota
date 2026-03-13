@@ -160,11 +160,11 @@ export function DesktopSlashCommandMenu({
                 sideOffset={8}
                 onOpenAutoFocus={(e) => e.preventDefault()}
                 onCloseAutoFocus={(e) => e.preventDefault()}
-                className="z-100 overflow-hidden w-56 p-0 border rounded-xl shadow-md"
+                className="z-50 overflow-hidden w-56 p-0 border rounded-xl shadow-md"
             >
                 <div ref={containerRef} className="flex flex-col bg-popover text-popover-foreground">
-                    <ScrollArea className="h-full max-h-[300px] p-1">
-                        <div className="flex flex-col gap-1">
+                    <ScrollArea type="auto" className="max-h-[300px]">
+                        <div className="flex flex-col gap-1 p-1">
                             {activeFolder && (
                                 <button
                                     type="button"

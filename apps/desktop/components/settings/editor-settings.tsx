@@ -2,10 +2,12 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
+    DropdownMenuSeparator,
     DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { EDITOR_FONTS, useSettingsStore } from "@annota/core";
+import { invoke } from "@tauri-apps/api/core";
 import {
     AlignLeft,
     Check,
@@ -15,6 +17,7 @@ import {
     TextCursor,
     Type
 } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import { CODE_LANGUAGES } from "@annota/core/constants/editor-code-languages";
 import { SettingItem } from "./setting-item";
@@ -63,6 +66,22 @@ function SliderItem({ label, value, min, max, step, displayValue, onChange, icon
 
 export function EditorSettings() {
     const { editor, updateEditorSettings } = useSettingsStore();
+    const [systemFonts, setSystemFonts] = useState<string[]>([]);
+
+    useEffect(() => {
+        const fetchFonts = async () => {
+            try {
+                const fonts = await invoke<string[]>('get_system_fonts');
+                // Filter out fonts that are already in EDITOR_FONTS or duplicated
+                const existingFamilies = new Set(EDITOR_FONTS.map(f => f.fontFamily.toLowerCase()));
+                const filtered = fonts.filter(f => !existingFamilies.has(f.toLowerCase()));
+                setSystemFonts(filtered.sort());
+            } catch (error) {
+                console.error('Failed to fetch system fonts:', error);
+            }
+        };
+        fetchFonts();
+    }, []);
 
     const directionLabels: Record<string, string> = {
         'ltr': 'Left to Right',
@@ -88,6 +107,12 @@ export function EditorSettings() {
     const getNoteWidthDisplay = () => {
         if (editor.noteWidth === 0) return "Full Width";
         return `${editor.noteWidth}px`;
+    };
+
+    const getCurrentFontLabel = () => {
+        const builtIn = EDITOR_FONTS.find(f => f.id === editor.fontFamily);
+        if (builtIn) return builtIn.label;
+        return editor.fontFamily; // It's a system font name
     };
 
     return (
@@ -131,18 +156,18 @@ export function EditorSettings() {
                 <div className="bg-card border rounded-2xl overflow-hidden shadow-sm divide-y">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <button className="w-full cursor-pointer">
+                            <button className="w-full cursor-pointer text-left">
                                 <SettingItem
                                     label="Font Family"
                                     description="Choose the editor font"
                                     icon={<TextCursor size={18} />}
                                     iconBg="bg-violet-500"
-                                    value={EDITOR_FONTS.find(f => f.id === editor.fontFamily)?.label || editor.fontFamily}
+                                    value={getCurrentFontLabel()}
                                     action={<ChevronRight size={16} className="text-muted-foreground" />}
                                 />
                             </button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-56">
+                        <DropdownMenuContent align="end" className="w-64 max-h-80 overflow-y-auto">
                             {EDITOR_FONTS.map((font) => (
                                 <DropdownMenuItem
                                     key={font.id}
@@ -153,6 +178,25 @@ export function EditorSettings() {
                                     {editor.fontFamily === font.id && <Check size={14} className="text-primary" />}
                                 </DropdownMenuItem>
                             ))}
+
+                            {systemFonts.length > 0 && (
+                                <>
+                                    <DropdownMenuSeparator />
+                                    <div className="px-2 py-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                                        System Fonts
+                                    </div>
+                                    {systemFonts.map((fontName) => (
+                                        <DropdownMenuItem
+                                            key={fontName}
+                                            onClick={() => updateEditorSettings({ fontFamily: fontName })}
+                                            className="flex items-center justify-between"
+                                        >
+                                            <span style={{ fontFamily: fontName }} className="truncate pr-4">{fontName}</span>
+                                            {editor.fontFamily === fontName && <Check size={14} className="text-primary" />}
+                                        </DropdownMenuItem>
+                                    ))}
+                                </>
+                            )}
                         </DropdownMenuContent>
                     </DropdownMenu>
 

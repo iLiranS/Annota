@@ -4,6 +4,15 @@ use std::net::TcpListener;
 use tauri::{Emitter, Window};
 use image::imageops::FilterType;
 use webp::Encoder;
+use font_kit::source::SystemSource;
+
+#[tauri::command]
+fn get_system_fonts() -> Vec<String> {
+    let source = SystemSource::new();
+    let mut fonts = source.all_families().unwrap_or_default();
+    fonts.sort(); // alphabetical order
+    fonts
+}
 
 #[tauri::command]
 async fn compress_image_native(
@@ -97,7 +106,7 @@ async fn start_auth_listener(window: Window) -> Result<(), String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![start_auth_listener, compress_image_native])
+        .invoke_handler(tauri::generate_handler![start_auth_listener, compress_image_native,get_system_fonts])
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_fs::init())

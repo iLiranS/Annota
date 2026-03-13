@@ -148,7 +148,7 @@ export default function NotesList() {
                 if (!n.tags) return false;
                 try {
                     const tagIds = JSON.parse(n.tags) as string[];
-                    return tagIds.includes(tagId);
+                    return tagIds.includes(tagId) && !n.isDeleted && !n.isPermDeleted;
                 } catch { return false; }
             });
             return sortNotes(list, currentSortType);

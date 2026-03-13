@@ -41,7 +41,14 @@ export const WEB_FONT_FAMILIES: Record<string, string> = {
 export function resolveFontFamily(value?: string) {
     if (!value) return WEB_FONT_FAMILIES.system;
     const key = value.toLowerCase();
-    return WEB_FONT_FAMILIES[key] ?? value;
+    const resolved = WEB_FONT_FAMILIES[key];
+    if (resolved) return resolved;
+
+    // If it's a custom font name with spaces, wrap in quotes for CSS safety
+    if (value.includes(' ') && !value.startsWith("'") && !value.startsWith('"')) {
+        return `'${value}'`;
+    }
+    return value;
 }
 
 export const getExtensions = (options: {

@@ -69,6 +69,9 @@
     font-size: var(--editor-font-size);
     line-height: var(--editor-line-height);
     -webkit-text-size-adjust: 100%;
+    white-space: pre-wrap;
+    /* Required for ProseMirror cursor and space handling */
+    word-break: break-word;
 }
 
 /* Custom Scrollbar */
@@ -104,6 +107,7 @@
     min-height: 100vh;
     position: relative;
     overflow-x: hidden;
+    container-type: inline-size;
 }
 
 #loading {
@@ -137,6 +141,9 @@
     padding-top: var(--editor-padding-top);
     padding-bottom: 200px;
     -webkit-user-drag: auto;
+    white-space: pre-wrap;
+    /* Essential for correct cursor placement */
+    caret-color: var(--accent-color);
     /* Safe bottom margin inside editor */
 }
 
@@ -211,6 +218,16 @@
     line-height: 1.4;
     unicode-bidi: plaintext;
     text-align: start;
+}
+
+/* 
+ * Fix for phantom line breaks after inline math nodes.
+ */
+.ProseMirror [data-type*="ath"]+br.ProseMirror-trailingBreak,
+.ProseMirror [data-type*="math"]+br.ProseMirror-trailingBreak,
+.ProseMirror [data-type="math"]+br.ProseMirror-trailingBreak {
+    display: none !important;
+    content: "" !important;
 }
 
 .ProseMirror ul {
@@ -493,23 +510,87 @@
     outline: none;
 }
 
-/* Math / Katex Styles */
-.math-node,
+/* Math / KaTeX Styles */
+/* Tiptap mathematics uses data-type="inline-math"/"block-math" + .tiptap-mathematics-render */
 [data-type="math"],
-.katex,
-.katex-display {
-    display: inline-block;
-    padding: 0 4px;
+[data-type="inlineMath"],
+[data-type="inline-math"],
+.tiptap-mathematics-render[data-type="inline-math"],
+.math-node {
+    display: inline-flex;
+    align-items: center;
+    position: relative;
+    vertical-align: middle;
+    /* Better baseline alignment */
+    padding: 0;
+    margin: 0 03px;
     border-radius: 4px;
-    cursor: pointer;
-    unicode-bidi: isolate !important;
-    direction: ltr !important;
-    text-align: left !important;
+    cursor: pointer !important;
+    line-height: 1;
+    pointer-events: auto;
+    white-space: nowrap;
+    user-select: none;
+    max-width: 100%;
 }
 
-.math-node.ProseMirror-selectednode {
-    outline: 2px solid var(--accent-color);
-    background-color: var(--code-bg);
+[data-type="math"] .katex,
+[data-type="inlineMath"] .katex,
+[data-type="inline-math"] .katex,
+[data-type="blockMath"] .katex,
+[data-type="block-math"] .katex,
+.tiptap-mathematics-render .katex,
+.math-node .katex {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 4px;
+    max-width: 100%;
+    line-height: 1;
+    font-size: clamp(0.7em, 3cqw, 1.1em);
+}
+
+[data-type="blockMath"],
+[data-type="block-math"],
+.tiptap-mathematics-render[data-type="block-math"],
+.katex-display {
+    display: block !important;
+    text-align: center;
+    width: 100%;
+    max-width: 100%;
+}
+
+/* 
+ * CRITICAL: KaTeX internals must NOT inherit pre-wrap 
+ * Also disable user-select and pointer-events on KAtex itself 
+ * so the browser handles the node as a single atom during navigation/clicks.
+ */
+.katex {
+    white-space: nowrap !important;
+    user-select: none !important;
+    pointer-events: none !important;
+}
+
+.katex * {
+    white-space: nowrap !important;
+}
+
+.math-node.ProseMirror-selectednode,
+[data-type="inlineMath"].ProseMirror-selectednode,
+[data-type="inline-math"].ProseMirror-selectednode,
+[data-type="blockMath"].ProseMirror-selectednode,
+[data-type="block-math"].ProseMirror-selectednode,
+.tiptap-mathematics-render.ProseMirror-selectednode {
+    outline: 2px solid var(--accent-color) !important;
+    background-color: var(--code-bg) !important;
+    box-shadow: 0 0 0 1px var(--accent-color);
+}
+
+.math-node.ProseMirror-selectednode .katex,
+[data-type="inlineMath"].ProseMirror-selectednode .katex,
+[data-type="inline-math"].ProseMirror-selectednode .katex,
+[data-type="blockMath"].ProseMirror-selectednode .katex,
+[data-type="block-math"].ProseMirror-selectednode .katex,
+.tiptap-mathematics-render.ProseMirror-selectednode .katex {
+    background-color: transparent !important;
 }
 
 .math-error {

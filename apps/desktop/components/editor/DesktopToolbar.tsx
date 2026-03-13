@@ -121,14 +121,14 @@ export function DesktopToolbar({
         {
             id: 'textColor',
             label: 'Text Color',
-            shortcut: `${ALT}[0-9]`,
+            shortcut: `${MOD}${ALT}[0-9]`,
             render: <ColorPicker key="textColor" title="Text Color" label="Color" icon={Baseline} currentColor={editorState.textColor} onSelect={(color) => sendCommand('setColor', { color })} onClear={() => sendCommand('unsetColor')} onOpenChange={handleOpenChange} activeColor={colors.primary} />,
             dropdownRender: <ColorPicker key="textColor-dropdown" title="Text Color" label="Color" icon={Baseline} currentColor={editorState.textColor} onSelect={(color) => sendCommand('setColor', { color })} onClear={() => sendCommand('unsetColor')} onOpenChange={handleOpenChange} activeColor={colors.primary} isMenu />
         },
         {
             id: 'highlight',
             label: 'Highlight',
-            shortcut: `${ALT}${SHIFT}[0-9]`,
+            shortcut: `${ALT}${MOD}${SHIFT}[0-9]`,
             render: <ColorPicker key="highlight" title="Highlight" label="Highlight" icon={Highlighter} currentColor={editorState.highlightColor} onSelect={(color) => sendCommand('setHighlight', { color })} onClear={() => sendCommand('unsetHighlight')} onOpenChange={handleOpenChange} activeColor={colors.primary} />,
             dropdownRender: <ColorPicker key="highlight-dropdown" title="Highlight" label="Highlight" icon={Highlighter} currentColor={editorState.highlightColor} onSelect={(color) => sendCommand('setHighlight', { color })} onClear={() => sendCommand('unsetHighlight')} onOpenChange={handleOpenChange} activeColor={colors.primary} isMenu />
         },

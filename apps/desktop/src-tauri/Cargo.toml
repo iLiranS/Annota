@@ -31,4 +31,5 @@ image = "0.25"
 tauri-plugin-clipboard-manager = "2.3.2"
 webp = "0.3.1"
 tauri-plugin-window-state = "2.4.1"
+font-kit = "0.14.3"
 

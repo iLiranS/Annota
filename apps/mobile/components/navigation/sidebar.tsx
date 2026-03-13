@@ -1,4 +1,5 @@
 import { useAppTheme } from '@/hooks/use-app-theme';
+import type { Tag } from '@annota/core';
 import { DAILY_NOTES_FOLDER_ID, useUserStore as useAuthStore, useNotesStore, useSyncStore, type Folder } from '@annota/core';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { DrawerContentComponentProps, DrawerContentScrollView } from '@react-navigation/drawer';
@@ -23,7 +24,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FolderEditModal from '../folder-edit-modal';
 import TagEditModal from '../tag-edit-modal';
 import { HapticPressable } from '../ui/haptic-pressable';
-import type { Tag } from '@annota/core/db/repositories/tags.repository';
 
 
 

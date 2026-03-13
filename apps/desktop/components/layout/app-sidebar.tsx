@@ -131,6 +131,10 @@ export function AppSidebar() {
     // Active path helper
     const isActive = (path: string) => location.pathname.startsWith(path);
 
+    const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+    const queryFolderId = queryParams.get("folderId");
+    const queryTagId = queryParams.get("tagId");
+
     return (
         <Sidebar collapsible="offcanvas" className="border-sidebar-border select-none">
             {/* ── Header ───────────────────────────────────── */}
@@ -186,8 +190,9 @@ export function AppSidebar() {
                             <SidebarMenuItem>
                                 <SidebarMenuButton
                                     isActive={
-                                        isActive("/notes") &&
-                                        location.pathname.includes(DAILY_NOTES_FOLDER_ID)
+                                        (isActive("/notes") &&
+                                            location.pathname.includes(DAILY_NOTES_FOLDER_ID)) ||
+                                        queryFolderId === DAILY_NOTES_FOLDER_ID
                                     }
                                     onClick={() =>
                                         navigate(`/notes?folderId=${DAILY_NOTES_FOLDER_ID}`)
@@ -266,8 +271,9 @@ export function AppSidebar() {
                                     <ContextMenuTrigger asChild>
                                         <SidebarMenuButton
                                             isActive={
-                                                isActive("/notes") &&
-                                                !location.pathname.includes(DAILY_NOTES_FOLDER_ID)
+                                                location.pathname === "/notes" &&
+                                                !queryFolderId &&
+                                                !queryTagId
                                             }
                                             onClick={() => navigate("/notes")}
                                             tooltip="All Notes"

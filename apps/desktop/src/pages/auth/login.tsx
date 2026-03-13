@@ -167,6 +167,23 @@ export default function LoginPage() {
                 >
                     Continue Offline (Guest)
                 </Button>
+
+                <p className="mt-2 text-center text-[10px] leading-relaxed text-muted-foreground/60 px-4">
+                    By using Annota, you agree to our{" "}
+                    <button 
+                        onClick={() => openUrl("https://annota.io/terms")}
+                        className="underline hover:text-foreground transition-colors"
+                    >
+                        Terms of Service
+                    </button>
+                    {" "}and{" "}
+                    <button 
+                        onClick={() => openUrl("https://annota.io/privacy")}
+                        className="underline hover:text-foreground transition-colors"
+                    >
+                        Privacy Policy
+                    </button>.
+                </p>
             </CardContent>
         </Card>
     );

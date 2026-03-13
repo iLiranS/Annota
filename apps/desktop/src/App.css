@@ -10,6 +10,16 @@ body {
   overflow: hidden;
 }
 
+[data-radix-scroll-area-viewport]::-webkit-scrollbar {
+  display: none;
+}
+
+[data-radix-scroll-area-viewport] {
+  scrollbar-width: none;
+  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE/Edge */
+}
 
 
 :root {
