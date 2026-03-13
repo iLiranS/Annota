@@ -378,12 +378,21 @@ export const IframeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                     }
                 })}
 
-                <iframe
-                    ref={iframeRef}
-                    style={{ flex: 1, border: 'none', width: '100%', height: '100%', backgroundColor: 'transparent', minHeight: 0 }}
-                    sandbox="allow-scripts allow-same-origin allow-popups"
-                    title="TipTap Editor"
-                />
+                <div className="editor-scroller" style={{
+                    flex: 1,
+                    overflowY: 'auto',
+                    width: '100%',
+                    paddingLeft: '24px',
+                    paddingRight: '24px'
+                }}>
+                    <div style={{
+                        maxWidth: editorSettings.noteWidth > 0 ? `${editorSettings.noteWidth}px` : '100%',
+                        margin: '0 auto',
+                        height: '100%',
+                        position: 'relative'
+                    }}>
+                    </div>
+                </div>
 
                 {renderImageGallery?.({
                     images: galleryImages,

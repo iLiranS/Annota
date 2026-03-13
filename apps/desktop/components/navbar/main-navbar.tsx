@@ -1,11 +1,11 @@
 import { Button } from "@/components/ui/button"
-import { SidebarTrigger } from "@/components/ui/sidebar"
+import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { useAppTheme } from "@/hooks/use-app-theme"
 import { useCreateNote } from "@/hooks/use-create-note"
 import { useCreateTask } from "@/hooks/use-create-task"
 import { cn } from "@/lib/utils"
-import { useSyncStore, useUserStore } from "@annota/core"
+import { useSettingsStore, useSyncStore, useUserStore } from "@annota/core"
 import { useEffect, useRef, useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { NotesSearchModal } from "../search/notes-search-modal"
@@ -22,6 +22,9 @@ export function MainNavbar() {
     const location = useLocation();
     const { isSyncing } = useSyncStore()
     const { session } = useUserStore();
+    const { general } = useSettingsStore();
+    const { open } = useSidebar();
+
     const [canSync, setCanSync] = useState(true);
     const [canGoBack, setCanGoBack] = useState(false);
     const [canGoForward, setCanGoForward] = useState(false);
@@ -79,9 +82,12 @@ export function MainNavbar() {
     return (
         <header
             data-tauri-drag-region
+            dir={general.appDirection}
             className={cn(
                 "flex h-10 w-full shrink-0 rotate-0 items-center justify-between border-b border-sidebar-border bg-sidebar/70 px-3 backdrop-blur-xl",
-                "select-none transition-all duration-200 ease-in-out pr-20"
+                "select-none transition-all duration-200 ease-in-out",
+                general.appDirection === 'ltr' && 'pr-20',
+                general.appDirection === 'rtl' && !open && 'pr-20',
             )}
         >
             {/* Left Section: Sidebar Toggle & Search */}

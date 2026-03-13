@@ -7,6 +7,7 @@ import {
 import { cn } from "@/lib/utils";
 import { AutoClearTasksDays, useSettingsStore } from "@annota/core";
 import {
+    ArrowRightLeft,
     Calendar,
     Check,
     ChevronRight,
@@ -116,6 +117,18 @@ export function GeneralSettings() {
                         iconBg="bg-emerald-500"
                         onClick={() => updateGeneralSettings({ compactMode: !general.compactMode })}
                         action={<Toggle enabled={general.compactMode} />}
+                    />
+                    <div className="h-1 bg-border/50 mx-4" />
+                    <SettingItem
+                        label="App Direction"
+                        description="Switch between LTR and RTL layout"
+                        icon={<ArrowRightLeft size={18} />}
+                        iconBg="bg-purple-500"
+                        value={general.appDirection === 'rtl' ? 'RTL' : 'LTR'}
+                        onClick={() => updateGeneralSettings({
+                            appDirection: general.appDirection === 'rtl' ? 'ltr' : 'rtl'
+                        })}
+                        action={<Toggle enabled={general.appDirection === 'rtl'} />}
                     />
                 </div>
             </section>

@@ -1,11 +1,9 @@
 import { useNotesStore } from '@annota/core';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useTheme } from '@react-navigation/native';
 import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export function NoteTags({ noteId, style }: { noteId: string; style?: any }) {
-    const { colors } = useTheme();
     const { tags, notes, removeTagFromNote } = useNotesStore();
     const note = notes.find(n => n.id === noteId);
 

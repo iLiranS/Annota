@@ -387,24 +387,24 @@ export default function NoteEditor() {
                         onSearchResults={handleSearchResults}
                         onSlashCommand={setSlashCommandState}
                         onTagCommand={setTagCommandState}
-                        contentPaddingTop={editor.floatingNoteHeader ? insets.top + 44 : 0}
+                        contentPaddingTop={0}
                         placeholder="Start typing your note..."
                         autofocus={shouldAutofocus}
                         onGalleryVisibilityChange={setIsGalleryOpen}
                         onCopyBlockLink={handleCopyBlockLink}
-                        renderHeader={() => appliedTagIds.length > 0 ? (
-                            <View style={{ position: 'relative', zIndex: 10 }}>
-                                <NoteTags
-                                    noteId={id}
-                                    style={{ 
-                                        position: 'absolute', 
-                                        top: editor.floatingNoteHeader ? insets.top + 44 : 0, 
-                                        left: 0, 
-                                        right: 0 
-                                    }}
-                                />
-                            </View>
-                        ) : null}
+                        renderHeader={() => {
+                            const hasTags = appliedTagIds.length > 0;
+                            const headerOffset = editor.floatingNoteHeader ? insets.top + 44 : 0;
+                            return (
+                                <View style={{ marginTop: headerOffset, zIndex: 10, marginBottom: -44 }}>
+                                    {hasTags && (
+                                        <NoteTags
+                                            noteId={id}
+                                        />
+                                    )}
+                                </View>
+                            );
+                        }}
                         renderToolbar={(props: ToolbarRenderProps) => <EditorToolbar {...props} />}
                         renderImageGallery={(props: any) => <ImageGallery {...props} />}
                         renderSlashCommandMenu={() => {

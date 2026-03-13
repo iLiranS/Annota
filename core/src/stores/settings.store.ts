@@ -26,6 +26,7 @@ export interface GeneralSettings {
     tasksShowDone: boolean;
     taskListShowDone: boolean;
     autoClearTasksDays: AutoClearTasksDays;
+    appDirection: 'ltr' | 'rtl';
 }
 
 export interface SettingsState {
@@ -67,6 +68,7 @@ const DEFAULT_GENERAL_SETTINGS: GeneralSettings = {
     tasksShowDone: true,
     taskListShowDone: true,
     autoClearTasksDays: 30,
+    appDirection: 'ltr',
 };
 
 export const useSettingsStore = create<SettingsState>()(

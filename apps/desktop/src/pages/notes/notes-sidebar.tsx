@@ -1,11 +1,12 @@
 import {
+    DAILY_NOTES_FOLDER_ID,
     sortFolders,
     sortNotes,
-    useNotesStore,
-    type Folder,
-    type NoteMetadata,
     TRASH_FOLDER_ID,
-    DAILY_NOTES_FOLDER_ID
+    useNotesStore,
+    useSettingsStore,
+    type Folder,
+    type NoteMetadata
 } from "@annota/core";
 import { useCallback, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -29,7 +30,6 @@ import {
     SidebarHeader,
     SidebarMenu,
     SidebarMenuItem,
-    SidebarRail,
     useSidebar
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
@@ -45,6 +45,7 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
     const { folderId: routeFolderId, noteId: routeNoteId } = useParams();
     const [searchParams] = useSearchParams();
     const { colors } = useAppTheme();
+    const { general } = useSettingsStore();
 
     const {
         notes,
@@ -186,9 +187,12 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
     return (
         <aside
             data-state={open ? "expanded" : "collapsed"}
+            dir={general.appDirection}
             className={cn(
-                "group/sidebar relative flex h-full flex-col border-r border-border bg-card/50 transition-[width,opacity] duration-300 ease-in-out",
-                !open ? "w-0 border-none opacity-0 invisible" : "w-(--sidebar-width) opacity-100 visible",
+                "group/sidebar relative flex h-full flex-col bg-card/50 transition-[width,opacity] duration-300 ease-in-out",
+                general.appDirection === 'rtl' ? "border-l" : "border-r",
+                "border-border",
+                !open ? "w-0 border-none opacity-0 invisible" : "w-[calc(var(--sidebar-width)*0.9)] opacity-100 visible",
                 className
             )}
         >
@@ -358,7 +362,6 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
                 onConfirm={handleDeleteFolder}
                 variant="destructive"
             />
-            <SidebarRail />
         </aside>
     );
 }

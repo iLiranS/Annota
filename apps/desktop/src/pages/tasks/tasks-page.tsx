@@ -255,7 +255,7 @@ export default function TasksPage() {
                         <div className="flex flex-col items-center gap-4 py-20 text-center">
                             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted/50">
                                 <Ionicons
-                                    name="list-checks-outline"
+                                    name="checkmark-circle-outline"
                                     size={24}
                                     className="h-8 w-8 text-muted-foreground/40"
                                 />

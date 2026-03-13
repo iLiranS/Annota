@@ -378,6 +378,7 @@ export function DesktopToolbar({
         <TooltipProvider key={resetKey}>
             <div
                 ref={containerRef}
+                dir='ltr'
                 onMouseLeave={() => {
                     setActiveTooltip(null);
                     if (!isPopupOpen) setResetKey(prev => prev + 1);

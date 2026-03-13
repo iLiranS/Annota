@@ -102,7 +102,7 @@
 }
 
 #editor-container {
-    padding: 16px;
+    padding: 0;
     padding-bottom: 80px;
     min-height: 100vh;
     position: relative;
@@ -140,11 +140,18 @@
     font-size: var(--editor-font-size);
     padding-top: var(--editor-padding-top);
     padding-bottom: 200px;
+    padding-left: 16px;
+    padding-right: 16px;
     -webkit-user-drag: auto;
     white-space: pre-wrap;
     /* Essential for correct cursor placement */
     caret-color: var(--accent-color);
     /* Safe bottom margin inside editor */
+}
+
+/* Remove top margin from the very first element to allow precise positioning via header/tags */
+.ProseMirror>*:first-child {
+    margin-top: 0 !important;
 }
 
 /* Visualization for where the drop will land */
