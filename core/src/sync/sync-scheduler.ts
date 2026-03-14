@@ -1,21 +1,15 @@
 import { getPlatformAdapters, type Unsubscribe } from '../adapters';
-import { useNotesStore } from '../stores/notes.store';
-import { useSyncStore } from '../stores/sync.store';
-import { useTasksStore } from '../stores/tasks.store';
 import { syncPull, syncPush } from './sync-service';
 
 const DEBOUNCE_MS = 10_000;       // 10 seconds of idle → push
 const HARD_MAX_MS = 2 * 60_000;   // 2 minutes absolute cap
 const OFFLINE_TOAST_COOLDOWN_MS = 30_000; // Don't spam offline toast
 
-/**
- * Singleton that owns all sync scheduling logic:
- * - 10 s debounce after content changes
- * - 2 min hard-max timer
- * - AppState flush on background
- * - NetInfo connectivity awareness
- * - Overlap prevention via isSyncing lock
- */
+export interface SyncDependencies {
+    reinitStores: () => Promise<void>;
+    getSyncState: () => { isOnline: boolean; syncError: string | null; setOnline: (o: boolean) => void };
+}
+
 export class SyncScheduler {
     private static _instance: SyncScheduler | null = null;
 
@@ -33,6 +27,7 @@ export class SyncScheduler {
     private constructor() { }
 
     private masterKey: string = '';
+    private deps: SyncDependencies | null = null;
     private debounceTimer: ReturnType<typeof setTimeout> | null = null;
     private hardMaxTimer: ReturnType<typeof setTimeout> | null = null;
     private appStateUnsubscribe: Unsubscribe | null = null;
@@ -43,7 +38,7 @@ export class SyncScheduler {
 
     // ─── Public API ────────────────────────────────────────────
 
-    init(masterKey: string): void {
+    init(masterKey: string, deps: SyncDependencies): void {
         // Skip if already initialized with the same key
         if (this.initialized && this.masterKey === masterKey && !this.disposed) {
             return;
@@ -51,6 +46,7 @@ export class SyncScheduler {
 
         console.log('[SyncScheduler] Initializing with master key');
         this.masterKey = masterKey;
+        this.deps = deps;
         this.disposed = false;
         this.initialized = true;
 
@@ -101,7 +97,7 @@ export class SyncScheduler {
      * changes, and repaints the UI.
      */
     async forceSync(): Promise<void> {
-        if (this.disposed || !this.initialized) return;
+        if (this.disposed || !this.initialized || !this.deps) return;
 
         console.log('[SyncScheduler] Force sync requested');
         this.clearAllTimers();
@@ -109,12 +105,12 @@ export class SyncScheduler {
         // Execute pull then push sequentially
         await this.executeSyncPull();
 
-        let state = useSyncStore.getState();
+        let state = this.deps.getSyncState();
         if (state.syncError) throw new Error(state.syncError);
 
         await this.executeSyncPush();
 
-        state = useSyncStore.getState();
+        state = this.deps.getSyncState();
         if (state.syncError) throw new Error(state.syncError);
     }
 
@@ -147,11 +143,12 @@ export class SyncScheduler {
     };
 
     private handleNetInfoChange = (isOnline: boolean): void => {
-        if (this.disposed) return;
+        if (this.disposed || !this.deps) return;
 
-        const wasOnline = useSyncStore.getState().isOnline;
+        const syncState = this.deps.getSyncState();
+        const wasOnline = syncState.isOnline;
 
-        useSyncStore.getState().setOnline(isOnline);
+        syncState.setOnline(isOnline);
 
         // Transition: offline → online → drain dirty data
         if (!wasOnline && isOnline) {
@@ -204,14 +201,11 @@ export class SyncScheduler {
 
     /**
      * Force a heavy re-init of stores so the UI repaints.
-     * Uses dynamic import() to work in both ESM (Vite/desktop) and CJS (Metro/mobile).
      */
     private async reinitStores(): Promise<void> {
+        if (!this.deps) return;
         try {
-            await Promise.all([
-                useNotesStore.getState().initApp(),
-                useTasksStore.getState().loadTasks(),
-            ]);
+            await this.deps.reinitStores();
         } catch (err) {
             console.error('[SyncScheduler] Store reinit failed:', err);
         }

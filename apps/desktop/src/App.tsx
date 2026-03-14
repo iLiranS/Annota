@@ -2,6 +2,7 @@ import { useAppTheme } from "@/hooks/use-app-theme";
 import { useDailyCleanup } from "@/hooks/use-daily-cleanup";
 import {
   authApi,
+  imageSyncService,
   setStorageEngine,
   useNotesStore,
   useSearchStore,
@@ -268,73 +269,6 @@ function App() {
     }
   }, [bootstrapState, pendingDeepLink, navigate]);
 
-  // Auth and Deep Link listeners
-  useEffect(() => {
-    let unlistenDeepLink: (() => void) | undefined;
-
-    const handleDeepLink = (url: string) => {
-      try {
-        const parsedUrl = new URL(url);
-        // Parse 'annota://note/123?elementId=456'
-        if (parsedUrl.host === "note") {
-          if (bootstrapStateRef.current !== "ready") {
-            setPendingDeepLink(url);
-            return;
-          }
-
-          const noteId = parsedUrl.pathname.replace("/", "");
-          const elementId = parsedUrl.searchParams.get("elementId");
-
-          // Try to find the note to get its folderId for the route
-          const note = useNotesStore.getState().notes.find((n) => n.id === noteId);
-          if (note) {
-            let routePath = `/notes/${note.folderId}/${noteId}`;
-            if (elementId) {
-              routePath += `?elementId=${elementId}`;
-            }
-            navigate(routePath);
-          } else {
-            console.warn("[DeepLink] Note not found in store, can't route yet:", noteId);
-          }
-        }
-      } catch (err) {
-        console.error("Failed to handle deep link:", err);
-      }
-    };
-
-    initDeepLinkListener(handleDeepLink).then((unlisten) => {
-      unlistenDeepLink = unlisten;
-    });
-
-    const subscription = authApi.onAuthStateChange((event, newSession) => {
-      const prevUserId = useUserStore.getState().user?.id ?? null;
-
-      if (newSession) {
-        setSession(newSession);
-        // Ensure AuthGuard knows whether to redirect to /auth/master-key
-        useUserStore.getState().checkMasterKey();
-
-        // Different user signed in — re-bootstrap to switch DB + reload stores.
-        if (newSession.user.id !== prevUserId) {
-          setRunId((v) => v + 1);
-        }
-      } else if (event === "SIGNED_OUT") {
-        setSession(null);
-        // Clear stores immediately to prevent ghosting of previous user's data
-        useNotesStore.getState().reset();
-        useTasksStore.getState().reset();
-        useSearchStore.getState().reset();
-        useSyncStore.getState().reset();
-        // Re-bootstrap so the next login starts with a fresh DB context.
-        setRunId((v) => v + 1);
-      }
-    });
-
-    return () => {
-      if (unlistenDeepLink) unlistenDeepLink();
-      subscription.unsubscribe();
-    };
-  }, [setSession, navigate]);
 
   // Sync Scheduler
   useEffect(() => {
@@ -346,15 +280,33 @@ function App() {
       const key = await getMasterKey(session.user.id);
       if (!key || cancelled) return;
 
-      SyncScheduler.getInstance().init(key);
+      SyncScheduler.getInstance().init(key, {
+        reinitStores: async () => {
+          await Promise.all([
+            useNotesStore.getState().initApp(),
+            useTasksStore.getState().loadTasks(),
+          ]);
+        },
+        getSyncState: () => {
+          const state = useSyncStore.getState();
+          return {
+            isOnline: state.isOnline,
+            syncError: state.syncError,
+            setOnline: state.setOnline
+          };
+        }
+      });
+
+      // 2. Kick off any pending image downloads from previous sessions
+      imageSyncService.retryPendingDownloads(key, session.user.id).catch(err => {
+        console.error('[Startup] Failed to retry pending image downloads:', err);
+      });
     };
 
     void setupScheduler();
 
     return () => {
       cancelled = true;
-      // We don't dispose here normally because we want it to persist across route changes
-      // It will only re-init if the masterKey changes or if it was disposed.
     };
   }, [session, hasMasterKey, bootstrapState]);
 

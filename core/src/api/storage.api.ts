@@ -76,15 +76,22 @@ export const storageApi = {
         return await supabase.from('image_metadata').delete().eq('url_fragment', urlFragment);
     },
 
-    /** Retrieve user's image links used for checking missing downloads */
-    getUserImageLinks: async (userId: string) => {
+    /** Retrieve user's image links used for checking missing downloads - only for updated notes */
+    getUserImageLinks: async (userId: string, noteIds: string[]) => {
+        // Fast exit if no new/updated notes were pulled
+        if (!noteIds || noteIds.length === 0) {
+            return { data: [], error: null };
+        }
+
         return await supabase
             .from('note_images')
             .select(`
-                image_id,
-                encrypted_notes!inner(user_id)
-            `)
-            .eq('encrypted_notes.user_id', userId);
+            note_id,
+            image_id,
+            user_id
+        `)
+            .eq('user_id', userId)
+            .in('note_id', noteIds); // Only get links for notes in this sync delta
     },
 
     /** Fetch encrypted metadata for a specific list of image IDs */

@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import { SortType } from '../utils/sorts';
 
@@ -103,6 +104,14 @@ export const versionImages = sqliteTable('version_images', {
 }, (t) => ({
     pk: primaryKey({ columns: [t.versionId, t.imageId] }),
 }));
+// ============ DOWNLOAD QUEUE ============
+export const imageDownloadQueue = sqliteTable('image_download_queue', {
+    imageId: text('image_id').primaryKey(), // Ensures we don't queue duplicates
+    noteId: text('note_id').notNull(),
+    nonce: text('nonce').notNull(),
+    userId: text('user_id').notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`),
+});
 // ============ SETTINGS ============
 export const settings = sqliteTable('settings', {
     key: text('key').primaryKey(),
@@ -122,4 +131,6 @@ export type Tag = typeof tags.$inferSelect;
 export type TagInsert = typeof tags.$inferInsert;
 export type ImageRecord = typeof images.$inferSelect;
 export type ImageInsert = typeof images.$inferInsert;
+export type DownloadQueueInsert = typeof imageDownloadQueue.$inferInsert;
+export type DownloadQueueRecord = typeof imageDownloadQueue.$inferSelect;
 

@@ -161,8 +161,14 @@ export const CustomImage = Image.extend<any>({
                 return hasChanges;
             },
             // Legacy/bridge support
-            insertLocalImage: ({ imageId }: { imageId: string }) => ({ chain }: { chain: any }) => {
-                return (chain() as any).insertContent(`<img data-image-id="${imageId}" />`).run();
+            insertLocalImage: ({ imageId, src }: { imageId: string, src?: string }) => ({ chain }: { chain: any }) => {
+                return (chain() as any).insertContent({
+                    type: 'image',
+                    attrs: {
+                        imageId,
+                        src: src || ''
+                    }
+                }).run();
             }
         } as any;
     },

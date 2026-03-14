@@ -133,6 +133,40 @@ export default function AccountSettingsScreen() {
         );
     };
 
+    const handleDeleteAccount = async () => {
+        Alert.alert(
+            'Delete Account',
+            'This action is irreversible. Your account and all synced data in the cloud will be permanently deleted. Your local data will remain on this device.',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Continue',
+                    style: 'destructive',
+                    onPress: async () => {
+                        const hasHardware = await LocalAuthentication.hasHardwareAsync();
+                        const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+
+                        if (hasHardware && isEnrolled) {
+                            const authResult = await LocalAuthentication.authenticateAsync({
+                                promptMessage: 'Authenticate to delete your account',
+                                cancelLabel: 'Cancel',
+                            });
+
+                            if (!authResult.success) return;
+                        }
+
+                        try {
+                            await useAuthStore.getState().deleteAccount();
+                        } catch (error) {
+                            console.error('Failed to delete account:', error);
+                            Alert.alert('Error', 'Failed to delete account. Please try again.');
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
     return (
         <ScrollView
             style={[styles.container, { backgroundColor: colors.background }]}
@@ -221,6 +255,14 @@ export default function AccountSettingsScreen() {
                             description="Authenticate to view your 12-word phrase"
                             iconColor="#FFFFFF"
                             iconBackgroundColor="#5856D6"
+                        />
+                        <SettingItem
+                            label="Delete Account"
+                            icon="trash-outline"
+                            onPress={handleDeleteAccount}
+                            description="Permanently delete account and cloud data"
+                            iconColor="#FFFFFF"
+                            iconBackgroundColor="#FF3B30"
                         />
                     </View>
                 </View>

@@ -1,4 +1,5 @@
 
+import { imageSyncService } from '@annota/core';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ThemeProvider } from '@react-navigation/native';
 import { drizzle } from 'drizzle-orm/expo-sqlite';
@@ -14,6 +15,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 import Toast, { type ToastConfig, type ToastConfigParams } from 'react-native-toast-message';
 import 'react-native-url-polyfill/auto';
+
 
 const BACKGROUND_SYNC_TASK = 'BACKGROUND_SYNC_TASK';
 
@@ -287,11 +289,31 @@ export default function RootLayout() {
       const key = await getMasterKey(session.user.id);
       if (!key || cancelled) return;
 
+      // 1. Start the main sync scheduler
       const scheduler = SyncScheduler.getInstance();
       schedulerRef.current = scheduler;
-      scheduler.init(key);
-    });
+      scheduler.init(key, {
+        reinitStores: async () => {
+          await Promise.all([
+            useNotesStore.getState().initApp(),
+            useTasksStore.getState().loadTasks(),
+          ]);
+        },
+        getSyncState: () => {
+          const state = useSyncStore.getState();
+          return {
+            isOnline: state.isOnline,
+            syncError: state.syncError,
+            setOnline: state.setOnline
+          };
+        }
+      });
 
+      // 2. Kick off any pending image downloads from previous sessions
+      imageSyncService.retryPendingDownloads(key, session.user.id).catch((err: any) => {
+        console.error('[Startup] Failed to retry pending image downloads:', err);
+      });
+    });
     return () => {
       cancelled = true;
       schedulerRef.current?.dispose();

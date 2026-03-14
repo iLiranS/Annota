@@ -33,6 +33,7 @@ type UserState = {
     updateDisplayName: (displayName: string) => Promise<void>;
     getDisplayName: () => Promise<string | null>;
     getUserRole: () => Promise<string | null>;
+    deleteAccount: () => Promise<void>;
 
     /** Tracks if the master key is present on the device */
     hasMasterKey: boolean | null;
@@ -160,6 +161,24 @@ export const useUserStore = create<UserState>()(
                 const role = await userService.getUserRole(state.user.id);
                 set({ role, roleFetched: true });
                 return role;
+            },
+            deleteAccount: async () => {
+                const { user } = get();
+                if (!user) return;
+
+                await userService.deleteAccount(user.id);
+                set({
+                    session: null,
+                    user: null,
+                    isGuest: false,
+                    keyValidator: null,
+                    keyValidatorFetched: false,
+                    role: null,
+                    roleFetched: false,
+                    displayName: null,
+                    displayNameFetched: false,
+                    hasMasterKey: null
+                });
             },
 
         }),

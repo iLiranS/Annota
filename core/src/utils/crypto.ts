@@ -1,7 +1,6 @@
 import { generateMnemonic, mnemonicToSeedSync, validateMnemonic } from 'bip39';
 import { Buffer } from 'buffer';
 import { getPlatformAdapters } from '../adapters';
-import { useSyncStore } from '../stores/sync.store';
 import './polyfill';
 
 const MASTER_KEY_PREFIX = 'annota_master_key_';
@@ -67,20 +66,19 @@ export async function hashMasterKey(mnemonic: string): Promise<string> {
 }
 
 /**
- * Derive a 256-bit AES key from the 12-word mnemonic, caching it in the sync store.
+ * Derive a 256-bit AES key from the 12-word mnemonic.
+ * This is a CPU-intensive operation (BIP39 PBKDF2). Callers should cache the result.
  */
-function getAesKeyFromMnemonic(mnemonic: string): Buffer {
-    const { aesKey, activeMnemonic, setAesKey } = useSyncStore.getState();
-
-    if (aesKey && activeMnemonic === mnemonic) {
-        return aesKey;
-    }
-
+export function deriveAesKey(mnemonic: string): Uint8Array {
     const seed = mnemonicToSeedSync(mnemonic);
-    const newAesKey = Buffer.from(seed.subarray(0, 32));
+    return new Uint8Array(seed.subarray(0, 32));
+}
 
-    setAesKey(mnemonic, newAesKey);
-    return newAesKey;
+function ensureKey(keyOrMnemonic: string | Uint8Array): Uint8Array {
+    if (typeof keyOrMnemonic === 'string') {
+        return deriveAesKey(keyOrMnemonic);
+    }
+    return keyOrMnemonic;
 }
 
 export interface EncryptedPayload {
@@ -97,9 +95,8 @@ export interface EncryptedBinaryPayload {
  * Encrypts a JSON payload using AES-256-GCM.
  * Returns the encrypted data (with authTag appended) and the random nonce.
  */
-export async function encryptPayload(jsonPayload: string, mnemonic: string): Promise<EncryptedPayload> {
-    const key = getAesKeyFromMnemonic(mnemonic);
-    const keyBytes = new Uint8Array(key);
+export async function encryptPayload(jsonPayload: string, keyOrMnemonic: string | Uint8Array): Promise<EncryptedPayload> {
+    const keyBytes = ensureKey(keyOrMnemonic);
     const plaintextBytes = new Uint8Array(Buffer.from(jsonPayload, 'utf8'));
 
     const nonceBytes = getPlatformAdapters().crypto.randomBytes(12);
@@ -123,14 +120,13 @@ export async function encryptPayload(jsonPayload: string, mnemonic: string): Pro
 /**
  * Decrypts an encrypted payload using AES-256-GCM.
  */
-export async function decryptPayload(encryptedHexWithTag: string, nonceHex: string, mnemonic: string): Promise<string> {
-    const key = getAesKeyFromMnemonic(mnemonic);
+export async function decryptPayload(encryptedHexWithTag: string, nonceHex: string, keyOrMnemonic: string | Uint8Array): Promise<string> {
+    const keyBytes = ensureKey(keyOrMnemonic);
 
     try {
         const encryptedHex = encryptedHexWithTag.slice(0, -32);
         const authTagHex = encryptedHexWithTag.slice(-32);
 
-        const keyBytes = new Uint8Array(key);
         const nonceBytes = new Uint8Array(Buffer.from(nonceHex, 'hex'));
         const ciphertextBytes = new Uint8Array(Buffer.from(encryptedHex, 'hex'));
         const authTagBytes = new Uint8Array(Buffer.from(authTagHex, 'hex'));
@@ -157,9 +153,8 @@ export async function decryptPayload(encryptedHexWithTag: string, nonceHex: stri
 /**
  * Encrypts raw image bytes using AES-256-GCM.
  */
-export async function encryptImageBytes(rawBytes: Uint8Array, mnemonic: string): Promise<EncryptedBinaryPayload> {
-    const key = getAesKeyFromMnemonic(mnemonic);
-    const keyBytes = new Uint8Array(key);
+export async function encryptImageBytes(rawBytes: Uint8Array, keyOrMnemonic: string | Uint8Array): Promise<EncryptedBinaryPayload> {
+    const keyBytes = ensureKey(keyOrMnemonic);
 
     const nonceBytes = getPlatformAdapters().crypto.randomBytes(12);
 
@@ -184,9 +179,8 @@ export async function encryptImageBytes(rawBytes: Uint8Array, mnemonic: string):
 /**
  * Decrypts raw encrypted image bytes using AES-256-GCM.
  */
-export async function decryptImageBytes(encryptedBytesWithTag: Uint8Array, nonceHex: string, mnemonic: string): Promise<Uint8Array> {
-    const key = getAesKeyFromMnemonic(mnemonic);
-    const keyBytes = new Uint8Array(key);
+export async function decryptImageBytes(encryptedBytesWithTag: Uint8Array, nonceHex: string, keyOrMnemonic: string | Uint8Array): Promise<Uint8Array> {
+    const keyBytes = ensureKey(keyOrMnemonic);
     const nonceBytes = new Uint8Array(Buffer.from(nonceHex, 'hex'));
 
     try {

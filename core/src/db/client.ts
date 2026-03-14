@@ -122,6 +122,14 @@ export const CREATE_TABLES_SQL = `
   CREATE INDEX IF NOT EXISTS idx_images_hash ON images(hash);
   CREATE INDEX IF NOT EXISTS idx_version_images_version_id ON version_images(version_id);
   CREATE INDEX IF NOT EXISTS idx_version_images_image_id ON version_images(image_id);
+  
+  CREATE TABLE IF NOT EXISTS image_download_queue (
+    image_id TEXT PRIMARY KEY,
+    note_id TEXT NOT NULL,
+    nonce TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
+  );
 `;
 
 // Initialize database (create tables and seed system data)
@@ -139,7 +147,14 @@ export async function initDatabase(nativeDb: { execAsync: (sql: string) => Promi
         'ALTER TABLE tags ADD COLUMN updated_at INTEGER NOT NULL DEFAULT 0;',
         'ALTER TABLE tags ADD COLUMN is_dirty INTEGER NOT NULL DEFAULT 0;',
         'ALTER TABLE tags ADD COLUMN last_synced_at INTEGER;',
-        'ALTER TABLE tags ADD COLUMN is_perm_deleted INTEGER NOT NULL DEFAULT 0;'
+        'ALTER TABLE tags ADD COLUMN is_perm_deleted INTEGER NOT NULL DEFAULT 0;',
+        `CREATE TABLE IF NOT EXISTS image_download_queue (
+          image_id TEXT PRIMARY KEY,
+          note_id TEXT NOT NULL,
+          nonce TEXT NOT NULL,
+          user_id TEXT NOT NULL,
+          created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
+        );`
       ];
 
       for (const query of migrations) {
@@ -149,7 +164,6 @@ export async function initDatabase(nativeDb: { execAsync: (sql: string) => Promi
           // Ignore errors for columns that already exist
         }
       }
-      console.log('Tags migration completed successfully');
     } catch (migrationError) {
       console.log('Migration check/run completed or not needed:', migrationError);
     }
@@ -213,6 +227,7 @@ export async function resetAll(): Promise<void> {
       DROP TABLE IF EXISTS tags;
       DROP TABLE IF EXISTS settings;
       DROP TABLE IF EXISTS version_images;
+      DROP TABLE IF EXISTS image_download_queue;
     `;
 
     // Disable foreign key constraints temporarily so tables can be dropped in any order

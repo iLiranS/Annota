@@ -1,7 +1,7 @@
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { getDb } from '../../stores/db.store';
-import type { ImageInsert, ImageRecord } from '../schema';
-import { images, noteVersions, versionImages } from '../schema';
+import type { DownloadQueueInsert, DownloadQueueRecord, ImageInsert, ImageRecord } from '../schema';
+import { imageDownloadQueue, images, noteVersions, versionImages } from '../schema';
 import type { DbOrTx } from '../types';
 import { safeGet, safeGetAll } from '../utils';
 
@@ -336,4 +336,28 @@ export async function revertImagesToPending(imageIds: string[], tx: DbOrTx = get
         .set({ syncStatus: 'pending' })
         .where(inArray(images.id, imageIds))
         .run();
+}
+
+// ============ DOWNLOAD QUEUE OPERATIONS ============
+
+export async function upsertDownloadQueue(items: DownloadQueueInsert[], tx: DbOrTx = getDb()): Promise<void> {
+    if (items.length === 0) return;
+
+    // Insert batch. If the imageId is already in the queue, ignore it.
+    await tx.insert(imageDownloadQueue)
+        .values(items)
+        .onConflictDoNothing()
+        .run();
+}
+
+export async function removeFromDownloadQueue(imageId: string, tx: DbOrTx = getDb()): Promise<void> {
+    await tx.delete(imageDownloadQueue)
+        .where(eq(imageDownloadQueue.imageId, imageId))
+        .run();
+}
+
+export async function getPendingDownloads(tx: DbOrTx = getDb()): Promise<DownloadQueueRecord[]> {
+    // Fetch all pending downloads to retry them
+    const result = await tx.select().from(imageDownloadQueue).all();
+    return safeGetAll<DownloadQueueRecord>(result);
 }

@@ -24,7 +24,8 @@ export const NoteService = {
     create: async (data: Partial<NoteMetadata>): Promise<NoteMetadata> => {
         if (data.folderId === 'system-daily-notes') {
             const existing = await notesRepo.getNoteByFolderAndDate('system-daily-notes', new Date());
-            if (existing) {
+            console.log("Existing daily note:", existing);
+            if (existing?.id && !existing?.isDeleted && !existing?.isPermDeleted) {
                 return existing;
             }
         }

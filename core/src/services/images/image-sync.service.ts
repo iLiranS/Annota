@@ -4,13 +4,14 @@ import { getPlatformAdapters } from '../../adapters';
 import { storageApi } from '../../api/storage.api';
 import * as ImagesRepo from '../../db/repositories/images.repository';
 import type { ImageInsert } from '../../db/schema';
-import { decryptImageBytes, encryptImageBytes } from '../../utils/crypto';
-import { resolveLocalUri } from '../images/image.service';
+import { useSyncStore } from '../../stores/sync.store';
+import { decryptImageBytes, deriveAesKey, encryptImageBytes } from '../../utils/crypto';
+import { resolveLocalUri } from './image.service';
 
 const BUCKET_NAME = 'e2e_images';
 const MAX_CONCURRENT_DOWNLOADS = 3;
 
-interface QueueItem {
+export interface QueueItem {
     imageId: string;
     noteId: string;
     nonce: string;
@@ -39,6 +40,17 @@ class ImageSyncService {
      * Push pending images linked to HEAD versions of notes up to Supabase.
      */
     async pushImages(masterKey: string, userId: string, noteIdsToRefresh: string[] = []): Promise<void> {
+        // 1. Get/Derive the AES key
+        const { aesKey, activeMnemonic, setAesKey } = useSyncStore.getState();
+        const currentKey = (aesKey && activeMnemonic === masterKey)
+            ? aesKey
+            : Buffer.from(deriveAesKey(masterKey));
+
+        // 2. Update the store if we derived a new one
+        if (activeMnemonic !== masterKey) {
+            setAesKey(masterKey, currentKey);
+        }
+
         const candidates = await ImagesRepo.getPendingImagesLinkedToLatestVersions();
 
         const notesWithPendingImages = new Set(candidates.map(c => c.noteId));
@@ -63,7 +75,7 @@ class ImageSyncService {
                     }
 
                     // 2. Encrypt raw bytes directly
-                    const { encryptedBytes, nonce } = await encryptImageBytes(rawBytes, masterKey);
+                    const { encryptedBytes, nonce } = await encryptImageBytes(rawBytes, currentKey);
 
                     // 3. Upload encrypted bytes to Storage
                     const storagePath = `${userId}/${image.id}`;
@@ -134,11 +146,38 @@ class ImageSyncService {
         }
     }
 
+    async retryPendingDownloads(masterKey: string, userId: string) {
+        const pendingItems = await ImagesRepo.getPendingDownloads();
+        if (pendingItems.length > 0) {
+            console.log(`[ImageSync] Retrying ${pendingItems.length} pending downloads...`);
+            // Re-inject the masterKey since we couldn't store it in the DB
+            const itemsToQueue: QueueItem[] = pendingItems.map(p => ({
+                ...p,
+                masterKey,
+                userId
+            }));
+            this.queueImagesForDownload(itemsToQueue);
+        }
+    }
+
     /**
      * Add images to download queue and start processing
      */
-    queueImagesForDownload(items: QueueItem[]) {
-        this.downloadQueue.push(...items);
+    async queueImagesForDownload(items: QueueItem[]) {
+        if (items.length === 0) return;
+
+        // 1. Persist intention to local DB FIRST (Safety Net)
+        // We only save the non-sensitive data needed to identify the file
+        const dbQueueItems = items.map(({ imageId, noteId, nonce, userId }) => ({
+            imageId, noteId, nonce, userId
+        }));
+        await ImagesRepo.upsertDownloadQueue(dbQueueItems);
+
+        // 2. Prevent adding duplicates to the active in-memory queue
+        const existingIds = new Set(this.downloadQueue.map(q => q.imageId));
+        const newItems = items.filter(item => !existingIds.has(item.imageId));
+
+        this.downloadQueue.push(...newItems);
         this.processQueue();
     }
 
@@ -147,29 +186,41 @@ class ImageSyncService {
         this.isDownloading = true;
 
         while (this.downloadQueue.length > 0) {
-            // Fill available slots
             const slotsAvailable = MAX_CONCURRENT_DOWNLOADS - this.activeDownloads;
-            const batch = this.downloadQueue.splice(0, slotsAvailable);
 
-            if (batch.length === 0) {
-                // Wait briefly if we are full but still have queue
+            if (slotsAvailable <= 0) {
                 await new Promise(r => setTimeout(r, 1000));
                 continue;
             }
 
+            // PEEK at the batch, do NOT remove them with splice yet!
+            // If the app crashes right here, splice would have destroyed the memory queue.
+            const batch = this.downloadQueue.slice(0, slotsAvailable);
             this.activeDownloads += batch.length;
 
             // Process batch concurrently
-            Promise.all(batch.map(item => this.downloadSingleImage(item)))
-                .finally(() => {
-                    this.activeDownloads -= batch.length;
-                });
+            await Promise.all(batch.map(async (item) => {
+                const success = await this.downloadSingleImage(item);
+
+                // Regardless of success or failure, remove from the immediate in-memory 
+                // queue so we don't get stuck in an infinite loop right now.
+                this.downloadQueue = this.downloadQueue.filter(q => q.imageId !== item.imageId);
+
+                if (success) {
+                    // If successful, remove it from the persistent local DB queue
+                    await ImagesRepo.removeFromDownloadQueue(item.imageId);
+                }
+                // If it failed, it stays in the DB queue to be picked up by 
+                // retryPendingDownloads() later.
+            }));
+
+            this.activeDownloads -= batch.length;
         }
 
         this.isDownloading = false;
     }
 
-    private async downloadSingleImage(item: QueueItem) {
+    private async downloadSingleImage(item: QueueItem): Promise<boolean> {
         try {
             const storagePath = `${item.userId}/${item.imageId}`;
 
@@ -187,8 +238,19 @@ class ImageSyncService {
             });
             const encryptedBytes = new Uint8Array(arrayBuffer);
 
+            // 1. Get/Derive the AES key
+            const { aesKey, activeMnemonic, setAesKey } = useSyncStore.getState();
+            const currentKey = (aesKey && activeMnemonic === item.masterKey)
+                ? aesKey
+                : Buffer.from(deriveAesKey(item.masterKey));
+
+            // 2. Update the store if we derived a new one
+            if (activeMnemonic !== item.masterKey) {
+                setAesKey(item.masterKey, currentKey);
+            }
+
             // Decrypt → raw bytes
-            const decryptedBytes = await decryptImageBytes(encryptedBytes, item.nonce, item.masterKey);
+            const decryptedBytes = await decryptImageBytes(encryptedBytes, item.nonce, currentKey);
 
             // Ensure images directory exists
             const imagesDir = await getPlatformAdapters().fileSystem.ensureDir('images');
@@ -239,8 +301,10 @@ class ImageSyncService {
             }
 
             console.log(`[ImageSync] Downloaded and synced image ${item.imageId} (${isRawBinary ? 'binary' : 'legacy'})`);
+            return true
         } catch (error) {
             console.error(`[ImageSync] Error downloading image ${item.imageId}`, error);
+            return false
         }
     }
 }

@@ -5,7 +5,8 @@ import * as notesRepo from '../db/repositories/notes.repository';
 import type { Folder, FolderInsert } from '../db/schema';
 import * as schema from '../db/schema';
 import { generateFolder } from '../utils/folders';
-import { NoteImageService } from './images';
+import * as NoteImageService from './images/note-image.service';
+
 
 // Re-export constants
 export { DAILY_NOTES_FOLDER_ID, TRASH_FOLDER_ID } from '../db/repositories/folders.repository';

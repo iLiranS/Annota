@@ -221,8 +221,7 @@ export async function getNoteByFolderAndDate(folderId: string, date: Date): Prom
                 eq(schema.noteMetadata.isDeleted, false),
                 eq(schema.noteMetadata.isPermDeleted, false)
             )
-        )
-        .get();
+        ).limit(1).get();
 
     return safeGet<NoteMetadata>(result);
 }

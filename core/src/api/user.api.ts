@@ -26,17 +26,32 @@ export const userApi = {
 
     /** Delete all of the user's encrypted data from the remote database (used when resetting keys) */
     wipeEncryptedData: async (userId: string) => {
-        const promises = [
-            supabase.from('encrypted_notes').delete().eq('user_id', userId),
-            supabase.from('encrypted_tasks').delete().eq('user_id', userId),
-            supabase.from('encrypted_folders').delete().eq('user_id', userId)
-        ];
+        // Calls the RPC with delete_user = false
+        const { error } = await supabase.rpc('wipe_user_data', {
+            user_id_param: userId,
+            delete_user: false
+        });
 
-        const results = await Promise.all(promises);
-
-        for (const res of results) {
-            if (res.error) throw res.error;
+        if (error) {
+            console.error('[StorageAPI] Failed to wipe encrypted data:', error);
+            throw error;
         }
+    },
+
+    deleteUserAccount: async (userId: string) => {
+        // Calls the RPC with delete_user = true
+        const { error } = await supabase.rpc('wipe_user_data', {
+            user_id_param: userId,
+            delete_user: true
+        });
+
+        if (error) {
+            console.error('[StorageAPI] Failed to delete user account:', error);
+            throw error;
+        }
+
+        // Clean up the local auth session after the database nukes the account
+        await supabase.auth.signOut();
     },
 
     /** Check if the user has any encrypted data in the cloud */

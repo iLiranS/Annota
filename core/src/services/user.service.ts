@@ -80,5 +80,8 @@ export const userService = {
     },
     getUserRole: async (userId: string) => {
         return await userApi.getUserRole(userId);
+    },
+    deleteAccount: async (userId: string) => {
+        await userApi.deleteUserAccount(userId);
     }
 };

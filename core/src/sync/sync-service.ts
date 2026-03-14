@@ -2,35 +2,18 @@ import { inArray } from 'drizzle-orm';
 import { authApi } from '../api/auth.api';
 import { storageApi } from '../api/storage.api';
 import { syncApi } from '../api/sync.api';
-import {
-    clearDirtyFolders,
-    getDirtyFolders,
-    upsertSyncedFolder,
-} from '../db/repositories/folders.repository';
+import { clearDirtyFolders, getDirtyFolders, upsertSyncedFolder, } from '../db/repositories/folders.repository';
 import { getImagesByIds } from '../db/repositories/images.repository';
-import {
-    clearDirtyNotes,
-    getDirtyNotes,
-    getNoteContent,
-    upsertSyncedNote,
-} from '../db/repositories/notes.repository';
-import {
-    clearDirtyTasks,
-    getDirtyTasks,
-    upsertSyncedTask,
-} from '../db/repositories/tasks.repository';
-import {
-    clearDirtyTags,
-    getDirtyTags,
-    upsertSyncedTag,
-} from '../db/repositories/tags.repository';
+import { clearDirtyNotes, getDirtyNotes, getNoteContent, upsertSyncedNote, } from '../db/repositories/notes.repository';
+import { clearDirtyTags, getDirtyTags, upsertSyncedTag, } from '../db/repositories/tags.repository';
+import { clearDirtyTasks, getDirtyTasks, upsertSyncedTask, } from '../db/repositories/tasks.repository';
 import * as schema from '../db/schema';
+import { imageSyncService } from '../services/images/image-sync.service';
 import { StorageService } from '../services/storage.service';
-import { imageSyncService } from '../services/sync/image-sync.service';
 import { createStorageAdapter } from '../stores/config';
 import { getDb } from '../stores/db.store';
 import { useSyncStore } from '../stores/sync.store';
-import { decryptPayload, encryptPayload } from '../utils/crypto';
+import { decryptPayload, deriveAesKey, encryptPayload } from '../utils/crypto';
 
 const getSyncTimeKey = (userId: string) => `${userId}_last_sync_time`;
 const storage = createStorageAdapter();
@@ -55,13 +38,24 @@ export async function performSyncPush(masterKey: string) {
     const now = new Date();
     let didDeleteTombstones = false;
 
+    // 1. Get/Derive the AES key
+    const { aesKey, activeMnemonic, setAesKey } = useSyncStore.getState();
+    const currentKey = (aesKey && activeMnemonic === masterKey)
+        ? aesKey
+        : Buffer.from(deriveAesKey(masterKey));
+
+    // 2. Update the store if we derived a new one
+    if (activeMnemonic !== masterKey) {
+        setAesKey(masterKey, currentKey);
+    }
+
     const pushFolders = async () => {
         const dirtyFolders = await getDirtyFolders();
         if (dirtyFolders.length === 0) return;
 
         const payloadFolders = await Promise.all(dirtyFolders.map(async (folder) => {
             const isTombstone = folder.isPermDeleted;
-            const { encryptedData, nonce } = await encryptPayload(JSON.stringify(folder), masterKey);
+            const { encryptedData, nonce } = await encryptPayload(JSON.stringify(folder), currentKey);
             return {
                 id: folder.id,
                 user_id: userId,
@@ -94,7 +88,7 @@ export async function performSyncPush(masterKey: string) {
 
         const payloadTags = await Promise.all(dirtyTags.map(async (tag) => {
             const isTombstone = tag.isPermDeleted;
-            const { encryptedData, nonce } = await encryptPayload(JSON.stringify(tag), masterKey);
+            const { encryptedData, nonce } = await encryptPayload(JSON.stringify(tag), currentKey);
             return {
                 id: tag.id,
                 user_id: userId,
@@ -127,7 +121,7 @@ export async function performSyncPush(masterKey: string) {
 
         const payloadTasks = await Promise.all(dirtyTasks.map(async (task) => {
             const isTombstone = task.isPermDeleted;
-            const { encryptedData, nonce } = await encryptPayload(JSON.stringify(task), masterKey);
+            const { encryptedData, nonce } = await encryptPayload(JSON.stringify(task), currentKey);
             return {
                 id: task.id,
                 user_id: userId,
@@ -166,7 +160,7 @@ export async function performSyncPush(masterKey: string) {
             const content = await getNoteContent(metadata.id);
             const dataToEncrypt = { ...metadata, content };
 
-            const { encryptedData, nonce } = await encryptPayload(JSON.stringify(dataToEncrypt), masterKey);
+            const { encryptedData, nonce } = await encryptPayload(JSON.stringify(dataToEncrypt), currentKey);
             return {
                 id: metadata.id,
                 user_id: userId,
@@ -239,6 +233,17 @@ export async function performSyncPull(masterKey: string) {
     const newSyncTime = new Date().toISOString();
     let didDeleteTombstones = false;
 
+    // 1. Get/Derive the AES key
+    const { aesKey, activeMnemonic, setAesKey } = useSyncStore.getState();
+    const currentKey = (aesKey && activeMnemonic === masterKey)
+        ? aesKey
+        : Buffer.from(deriveAesKey(masterKey));
+
+    // 2. Update the store if we derived a new one
+    if (activeMnemonic !== masterKey) {
+        setAesKey(masterKey, currentKey);
+    }
+
     console.log(`[Sync] Pulling changes after: ${lastSyncTime.toISOString()}`);
     const { data, error } = await syncApi.pullSyncData(lastSyncTime.toISOString());
 
@@ -262,7 +267,7 @@ export async function performSyncPull(masterKey: string) {
                         deletedIds.push(row.id);
                         continue;
                     }
-                    const decryptedJson = await decryptPayload(row.encrypted_data, row.nonce, masterKey);
+                    const decryptedJson = await decryptPayload(row.encrypted_data, row.nonce, currentKey);
                     const folderData = JSON.parse(decryptedJson);
                     folderData.createdAt = new Date(folderData.createdAt);
                     folderData.updatedAt = new Date(folderData.updatedAt);
@@ -296,7 +301,7 @@ export async function performSyncPull(masterKey: string) {
                         deletedIds.push(row.id);
                         continue;
                     }
-                    const decryptedJson = await decryptPayload(row.encrypted_data, row.nonce, masterKey);
+                    const decryptedJson = await decryptPayload(row.encrypted_data, row.nonce, currentKey);
                     const taskData = JSON.parse(decryptedJson);
                     taskData.createdAt = new Date(taskData.createdAt);
                     taskData.updatedAt = new Date(taskData.updatedAt);
@@ -331,7 +336,7 @@ export async function performSyncPull(masterKey: string) {
                         deletedIds.push(row.id);
                         continue;
                     }
-                    const decryptedJson = await decryptPayload(row.encrypted_data, row.nonce, masterKey);
+                    const decryptedJson = await decryptPayload(row.encrypted_data, row.nonce, currentKey);
                     const tagData = JSON.parse(decryptedJson);
                     tagData.createdAt = new Date(tagData.createdAt);
                     tagData.updatedAt = new Date(tagData.updatedAt);
@@ -353,6 +358,7 @@ export async function performSyncPull(masterKey: string) {
     }
 
     // Pull Notes
+    let fetchedNoteIds: string[] = [];
     if (cloudNotes.length > 0) {
         for (let i = 0; i < cloudNotes.length; i += 15) {
             const chunk = cloudNotes.slice(i, i + 15);
@@ -365,12 +371,13 @@ export async function performSyncPull(masterKey: string) {
                         deletedIds.push(row.id);
                         continue;
                     }
-                    const decryptedJson = await decryptPayload(row.encrypted_data, row.nonce, masterKey);
+                    const decryptedJson = await decryptPayload(row.encrypted_data, row.nonce, currentKey);
                     const noteFullData = JSON.parse(decryptedJson);
                     noteFullData.createdAt = new Date(noteFullData.createdAt);
                     noteFullData.updatedAt = new Date(noteFullData.updatedAt);
                     noteFullData.deletedAt = noteFullData.deletedAt ? new Date(noteFullData.deletedAt) : null;
                     noteFullData.isDirty = false;
+                    fetchedNoteIds.push(noteFullData.id);
                     parsedNotes.push(noteFullData);
                 } catch (e) {
                     console.error("Failed to decrypt note", row.id, e);
@@ -398,7 +405,7 @@ export async function performSyncPull(masterKey: string) {
     }
 
     // Background Image Pull
-    const { data: cloudLinks, error: linkError } = await storageApi.getUserImageLinks(userId);
+    const { data: cloudLinks, error: linkError } = await storageApi.getUserImageLinks(userId, fetchedNoteIds);
     if (!linkError && cloudLinks && cloudLinks.length > 0) {
         const uniqueImageIds = Array.from(new Set(cloudLinks.map(l => l.image_id as string)));
         const localImages = await getImagesByIds(uniqueImageIds);

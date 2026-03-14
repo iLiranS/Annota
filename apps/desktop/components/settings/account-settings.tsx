@@ -68,6 +68,8 @@ export function AccountSettings() {
     const [isRevealingKey, setIsRevealingKey] = useState(false);
     const [masterKey, setMasterKey] = useState<string | null>(null);
     const [copied, setCopied] = useState(false);
+    const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+    const [isPendingDelete, setIsPendingDelete] = useState(false);
 
     useEffect(() => {
         if (session) {
@@ -123,6 +125,16 @@ export function AccountSettings() {
             navigator.clipboard.writeText(masterKey);
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
+        }
+    };
+
+    const handleDeleteAccount = async () => {
+        setIsPendingDelete(true);
+        try {
+            await useUserStore.getState().deleteAccount();
+        } catch (error) {
+            console.error("Failed to delete account:", error);
+            setIsPendingDelete(false);
         }
     };
 
@@ -200,24 +212,42 @@ export function AccountSettings() {
 
             {/* Security Section */}
             {session && (
-                <section className="space-y-3">
-                    <h4 className="text-[11px] font-bold text-muted-foreground tracking-wider uppercase px-1">
-                        Security
-                    </h4>
-                    <div className="bg-card border rounded-2xl overflow-hidden shadow-sm">
-                        <SettingItem
-                            label="Reveal Master Key"
-                            description="View your 12-word fallback phrase"
-                            icon={<Ionicons name="key" size={20} />}
-                            iconBg="bg-indigo-500"
-                            onClick={handleRevealKey}
-                        />
-                    </div>
-                    <p className="px-3 text-[11px] text-muted-foreground flex gap-1.5 items-start">
-                        <Ionicons name="alert-circle" size={14} className="mt-0.5 shrink-0" />
-                        Never share your master key with anyone. It is used to decrypt your data if you lose access.
-                    </p>
-                </section>
+                <>
+                    <section className="space-y-3">
+                        <h4 className="text-[11px] font-bold text-muted-foreground tracking-wider uppercase px-1">
+                            Security
+                        </h4>
+                        <div className="bg-card border rounded-2xl overflow-hidden shadow-sm">
+                            <SettingItem
+                                label="Reveal Master Key"
+                                description="View your 12-word fallback phrase"
+                                icon={<Ionicons name="key" size={20} />}
+                                iconBg="bg-indigo-500"
+                                onClick={handleRevealKey}
+                            />
+                        </div>
+                        <p className="px-3 text-[11px] text-muted-foreground flex gap-1.5 items-start">
+                            <Ionicons name="alert-circle" size={14} className="mt-0.5 shrink-0" />
+                            Never share your master key with anyone. It is used to decrypt your data if you lose access.
+                        </p>
+                    </section>
+
+                    <section className="space-y-3">
+                        <h4 className="text-[11px] font-bold text-rose-500 tracking-wider uppercase px-1">
+                            Danger Zone
+                        </h4>
+                        <div className="bg-card border-rose-500/20 border rounded-2xl overflow-hidden shadow-sm">
+                            <SettingItem
+                                label="Delete Account"
+                                description="Permanently delete your account and all cloud data"
+                                icon={<Ionicons name="trash" size={20} />}
+                                iconBg="bg-rose-500"
+                                danger
+                                onClick={() => setIsDeletingAccount(true)}
+                            />
+                        </div>
+                    </section>
+                </>
             )}
 
             {/* Edit Name Dialog */}
@@ -291,6 +321,35 @@ export function AccountSettings() {
                     </div>
                     <DialogFooter className="sm:justify-center">
                         <Button variant="secondary" onClick={() => setIsRevealingKey(false)} className="w-full sm:w-auto px-8">Done</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Delete Account Dialog */}
+            <Dialog open={isDeletingAccount} onOpenChange={setIsDeletingAccount}>
+                <DialogContent className="sm:max-w-[400px]">
+                    <DialogHeader>
+                        <DialogTitle className="text-rose-600">Delete Account</DialogTitle>
+                        <DialogDescription>
+                            This action is permanent. All your data in the cloud will be deleted. Your local data will remain on this device.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4">
+                        <p className="text-sm text-muted-foreground">
+                            To confirm, please realize that this cannot be undone. All your encrypted notes, tasks, and folders on our servers will be wiped.
+                        </p>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsDeletingAccount(false)} disabled={isPendingDelete}>
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={handleDeleteAccount}
+                            disabled={isPendingDelete}
+                        >
+                            {isPendingDelete ? "Deleting..." : "Permanently Delete"}
+                        </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

@@ -442,7 +442,13 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                     break;
                 case 'insertLocalImage':
                     if (params?.imageId) {
-                        editor.chain().insertContent({ type: 'image', attrs: { imageId: params.imageId } }).focus().run();
+                        editor.chain().insertContent({
+                            type: 'image',
+                            attrs: {
+                                imageId: params.imageId,
+                                src: params.src || ''
+                            }
+                        }).focus().run();
                     }
                     break;
                 case 'resolveImages':

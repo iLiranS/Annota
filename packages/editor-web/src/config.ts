@@ -197,9 +197,13 @@ export const getEditorProps = (callbacks: {
         },
     },
     transformPastedHTML(html: string) {
-        // Strip font-family from inline styles so pasted content
-        // inherits the editor's configured font
-        return html.replace(/font-family\s*:[^;"']*(;|(?=["']))/gi, '');
+        // Strip theme-interfering styles from pasted HTML to ensure consistency
+        return html
+            .replace(/font-family\s*:[^;"']*(;|(?=["']))/gi, '')
+            .replace(/color\s*:[^;"']*(;|(?=["']))/gi, '')
+            .replace(/background-color\s*:[^;"']*(;|(?=["']))/gi, '')
+            .replace(/font-size\s*:[^;"']*(;|(?=["']))/gi, '')
+            .replace(/line-height\s*:[^;"']*(;|(?=["']))/gi, '');
     },
 });
 
