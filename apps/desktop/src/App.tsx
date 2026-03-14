@@ -36,10 +36,9 @@ import LostKeyPage from "./pages/auth/lost-key";
 import MasterKeyPage from "./pages/auth/master-key";
 
 // Notes pages
-import NoteEditor from "./pages/notes/note-editor";
-import NotesEmpty from "./pages/notes/notes-empty";
 import NotesLayout from "./pages/notes/notes-layout";
 import TrashPage from "./pages/notes/trash-page";
+import NotesViewManager from "./pages/notes/notes-view-manager";
 
 // Tasks pages
 import TaskDetailDialog from "./pages/tasks/task-detail-dialog";
@@ -371,8 +370,8 @@ function App() {
             {/* Notes */}
             <Route path="notes/trash" element={<TrashPage />} />
             <Route path="notes" element={<NotesLayout />}>
-              <Route index element={<NotesEmpty />} />
-              <Route path=":folderId/:noteId" element={<NoteEditor />} />
+              <Route index element={<NotesViewManager />} />
+              <Route path=":folderId/:noteId" element={<NotesViewManager />} />
             </Route>
 
             {/* Tasks */}

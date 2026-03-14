@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FolderListItem } from "../notes/folder-list-item";
 import { NoteListItem } from "../notes/note-list-item";
+import { NotePreviewModal } from "../notes/note-preview-modal";
 import { Button } from "../ui/button";
 import { Ionicons } from "../ui/ionicons";
 
@@ -34,6 +35,7 @@ export function NotesSearchModal({ open, onOpenChange }: NotesSearchModalProps) 
     const { createAndNavigate: createTaskAndNavigate } = useCreateTask();
 
     const [selectedIndex, setSelectedIndex] = useState(0);
+    const [previewNote, setPreviewNote] = useState<NoteMetadata | null>(null);
     const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
 
     const results = dbResults;
@@ -107,6 +109,9 @@ export function NotesSearchModal({ open, onOpenChange }: NotesSearchModalProps) 
                 if (item.type === "note") onNoteClick(item.data);
                 else if (item.type === "task") onTaskClick(item.data);
                 else if (item.type === "folder") onFolderClick(item.data);
+            } else if (e.key === " " && results[selectedIndex]?.type === "note") {
+                e.preventDefault();
+                setPreviewNote(results[selectedIndex].data as NoteMetadata);
             }
         };
         window.addEventListener("keydown", handleKeyDown);
@@ -301,8 +306,26 @@ export function NotesSearchModal({ open, onOpenChange }: NotesSearchModalProps) 
                             <span className="px-1 py-0.5 rounded border border-border bg-background shadow-xs text-foreground group-hover:border-primary/30">↑↓</span>
                             <span className="opacity-60">to navigate</span>
                         </div>
+                        <div className="flex items-center gap-1.5 group">
+                            <span className="px-1 py-0.5 rounded border border-border bg-background shadow-xs text-foreground group-hover:border-primary/30">Space</span>
+                            <span className="opacity-60">to preview</span>
+                        </div>
                     </div>
                 </div>
+
+                {previewNote && (
+                    <NotePreviewModal
+                        open={!!previewNote}
+                        onOpenChange={(open) => !open && setPreviewNote(null)}
+                        note={previewNote}
+                        onExpand={(note) => {
+                            const folderId = note.folderId || "root";
+                            navigate(`/notes/${folderId}/${note.id}`);
+                            setPreviewNote(null);
+                            onOpenChange(false);
+                        }}
+                    />
+                )}
             </DialogContent>
         </Dialog>
     );

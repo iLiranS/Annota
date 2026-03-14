@@ -8,7 +8,7 @@ import {
     type Folder,
     type NoteMetadata
 } from "@annota/core";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { ConfirmDialog } from "@/components/custom-ui/confirm-dialog";
@@ -66,11 +66,13 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
 
     const tagId = searchParams.get("tagId");
 
-    // Location awareness: prioritize folderId from route path over search params
+    // Location awareness: prioritize folderId from search params (browsing context) over route path (note context)
     const currentFolderId = useMemo(() => {
         if (tagId) return undefined;
+        const searchFolderId = searchParams.get("folderId");
+        if (searchFolderId) return searchFolderId;
         if (routeFolderId && routeFolderId !== "root") return routeFolderId;
-        return searchParams.get("folderId") || undefined;
+        return undefined;
     }, [routeFolderId, searchParams, tagId]);
 
     const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
@@ -82,6 +84,60 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
         ? getFolderById(currentFolderId)
         : null;
     const currentSortType = getSortType(currentFolderId ?? null);
+
+    // Resizable width
+    const [width, setWidth] = useState(() => {
+        const saved = localStorage.getItem("notes-sidebar-width");
+        return saved ? parseInt(saved, 10) : 220;
+    });
+    const [isResizing, setIsResizing] = useState(false);
+    const startXRef = useRef<number>(0);
+    const startWidthRef = useRef<number>(0);
+
+    const startResizing = useCallback((e: React.MouseEvent) => {
+        setIsResizing(true);
+        startXRef.current = e.clientX;
+        startWidthRef.current = width;
+    }, [width]);
+
+    const stopResizing = useCallback(() => {
+        setIsResizing(false);
+        localStorage.setItem("notes-sidebar-width", width.toString());
+    }, [width]);
+
+    const resize = useCallback(
+        (e: MouseEvent) => {
+            if (isResizing) {
+                const deltaX = e.clientX - startXRef.current;
+                let newWidth;
+
+                if (general.appDirection === 'rtl') {
+                    newWidth = startWidthRef.current - deltaX;
+                } else {
+                    newWidth = startWidthRef.current + deltaX;
+                }
+
+                if (newWidth > 180 && newWidth < 450) {
+                    setWidth(newWidth);
+                }
+            }
+        },
+        [isResizing, general.appDirection]
+    );
+
+    useEffect(() => {
+        if (isResizing) {
+            window.addEventListener("mousemove", resize);
+            window.addEventListener("mouseup", stopResizing);
+        } else {
+            window.removeEventListener("mousemove", resize);
+            window.removeEventListener("mouseup", stopResizing);
+        }
+        return () => {
+            window.removeEventListener("mousemove", resize);
+            window.removeEventListener("mouseup", stopResizing);
+        };
+    }, [isResizing, resize, stopResizing]);
 
     // Browsing data
     const browseFolders = useMemo(() => {
@@ -189,13 +245,25 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
             data-state={open ? "expanded" : "collapsed"}
             dir={general.appDirection}
             className={cn(
-                "group/sidebar relative flex h-full flex-col bg-card/50 transition-[width,opacity] duration-300 ease-in-out",
+                "group/sidebar relative flex h-full flex-col bg-card/50",
                 general.appDirection === 'rtl' ? "border-l" : "border-r",
-                "border-border",
-                !open ? "w-0 border-none opacity-0 invisible" : "w-[calc(var(--sidebar-width)*0.9)] opacity-100 visible",
+                "border-border select-none",
+                !open ? "w-0 border-none opacity-0 invisible" : "opacity-100 visible",
+                !isResizing && "transition-[width,opacity] duration-300 ease-in-out",
                 className
             )}
+            style={{ width: open ? `${width}px` : 0 }}
         >
+            {/* Resize Handle */}
+            {open && (
+                <div
+                    onMouseDown={startResizing}
+                    className={cn(
+                        "absolute top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-primary/30 transition-colors z-50",
+                        general.appDirection === 'rtl' ? "left-0 -translate-x-1/2" : "right-0 translate-x-1/2"
+                    )}
+                />
+            )}
             {/* Header */}
             <SidebarHeader className="h-12 border-b border-border/50 px-2 py-0 justify-center overflow-hidden">
                 <TooltipProvider>

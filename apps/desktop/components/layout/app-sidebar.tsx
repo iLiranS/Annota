@@ -25,7 +25,7 @@ import {
     ContextMenuItem,
     ContextMenuTrigger
 } from "@/components/ui/context-menu";
-import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubButton, SidebarMenuSubItem, SidebarRail, SidebarSeparator, useSidebar } from "@/components/ui/sidebar";
+import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubButton, SidebarMenuSubItem, SidebarRail, useSidebar } from "@/components/ui/sidebar";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useCreateNote } from "@/hooks/use-create-note";
 import { useCreateTask } from "@/hooks/use-create-task";
@@ -170,7 +170,7 @@ export function AppSidebar() {
             {/* ── Content ──────────────────────────────────── */}
             <SidebarContent className="min-w-0 overflow-x-hidden pt-2 ">
                 {/* Navigation group */}
-                <SidebarGroup>
+                <SidebarGroup className="pb-0">
                     <SidebarGroupContent>
                         <SidebarMenu>
                             <SidebarMenuItem>
@@ -226,7 +226,7 @@ export function AppSidebar() {
                     open={isQuickAccessOpen}
                     onOpenChange={setIsQuickAccessOpen}
                 >
-                    <SidebarGroup>
+                    <SidebarGroup className="py-0">
                         <SidebarGroupLabel asChild>
                             <CollapsibleTrigger className="flex w-full items-center gap-2">
                                 <Ionicons name="star" size={16} className="text-amber-400" />
@@ -265,13 +265,13 @@ export function AppSidebar() {
                     </SidebarGroup>
                 </Collapsible>
 
-                <SidebarSeparator />
+
 
 
 
                 {/* Notes & Folders */}
-                <SidebarGroup>
-                    <SidebarGroupLabel>Notes</SidebarGroupLabel>
+                <SidebarGroup className="pt-0">
+                    {/* Notes label removed */}
                     <SidebarGroupContent>
                         <SidebarMenu>
                             <SidebarMenuItem key="all-notes">

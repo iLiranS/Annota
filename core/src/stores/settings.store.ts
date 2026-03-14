@@ -40,12 +40,17 @@ export interface SettingsState {
     // General
     general: GeneralSettings;
 
+    // Navigation Memorization
+    lastViewedNoteId: string | null;
+    lastViewedFolderId: string | null;
+
     // Actions
     setThemeMode: (mode: ThemeMode) => void;
     setAccentColor: (color: string) => void;
 
     updateEditorSettings: (settings: Partial<EditorSettings>) => void;
     updateGeneralSettings: (settings: Partial<GeneralSettings>) => void;
+    setLastViewed: (noteId: string | null, folderId: string | null) => void;
 
     resetSettings: () => void;
 }
@@ -81,6 +86,9 @@ export const useSettingsStore = create<SettingsState>()(
             editor: DEFAULT_EDITOR_SETTINGS,
             general: DEFAULT_GENERAL_SETTINGS,
 
+            lastViewedNoteId: null,
+            lastViewedFolderId: null,
+
             // Actions
             setThemeMode: (mode) => set({ themeMode: mode }),
             setAccentColor: (color) => set({ accentColor: color }),
@@ -93,11 +101,18 @@ export const useSettingsStore = create<SettingsState>()(
                 general: { ...state.general, ...settings }
             })),
 
+            setLastViewed: (noteId, folderId) => set({
+                lastViewedNoteId: noteId,
+                lastViewedFolderId: folderId
+            }),
+
             resetSettings: () => set({
                 themeMode: 'system',
                 accentColor: '#6366F1',
                 editor: DEFAULT_EDITOR_SETTINGS,
                 general: DEFAULT_GENERAL_SETTINGS,
+                lastViewedNoteId: null,
+                lastViewedFolderId: null,
             }),
         }),
         {

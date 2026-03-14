@@ -6,7 +6,7 @@ import { ImageGallery } from "@/components/notes/image-gallery";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { copyImageToClipboard, writeText } from "@/lib/clipboard";
-import { generateTitle, TRASH_FOLDER_ID, useNotesStore } from "@annota/core";
+import { generateTitle, TRASH_FOLDER_ID, useNotesStore, useSettingsStore } from "@annota/core";
 import TipTapEditor, { TipTapEditorRef } from "@annota/tiptap-editor";
 import { FileText, Loader2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -16,13 +16,23 @@ import { NoteFloatingActions } from "./components/note-floating-actions";
 import { NoteSearch } from "./components/note-search";
 import { NoteTags } from "./components/note-tags";
 
-export default function NoteEditor() {
+interface NoteEditorProps {
+    noteId?: string;
+    folderId?: string;
+}
+
+export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId }: NoteEditorProps) {
     const navigate = useNavigate();
-    const { folderId: routeFolderId, noteId } = useParams<{ folderId: string; noteId: string }>();
+    const params = useParams<{ folderId: string; noteId: string }>();
+    
+    const noteId = propNoteId || params.noteId;
+    const routeFolderId = propFolderId || params.folderId;
+
     const notes = useNotesStore((s) => s.notes);
     const folders = useNotesStore((s) => s.folders);
     const getNoteContent = useNotesStore((s) => s.getNoteContent);
     const { updateNoteContent, updateNoteMetadata } = useNotesStore();
+    const setLastViewed = useSettingsStore((s) => s.setLastViewed);
     const note = notes.find((n) => n.id === noteId);
     const { isDark, colors } = useAppTheme();
 
@@ -310,6 +320,12 @@ export default function NoteEditor() {
             }
         }
     }, [note, noteId, routeFolderId, folders, navigate]);
+
+    useEffect(() => {
+        if (noteId) {
+            setLastViewed(noteId, routeFolderId || 'root');
+        }
+    }, [noteId, routeFolderId, setLastViewed]);
 
     useEffect(() => {
         if (!noteId) return;

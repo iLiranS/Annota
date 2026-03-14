@@ -15,6 +15,7 @@ import {
 } from "@annota/core";
 import { useCallback, useState } from "react";
 import { LocationPickerModal } from "../location-picker-modal";
+import { NotePreviewModal } from "./note-preview-modal";
 
 import { Slot } from "@radix-ui/react-slot";
 
@@ -51,6 +52,7 @@ export function NoteListItem({
     const isCompact = !showDescription && general.compactMode;
 
     const [isLocationPickerOpen, setIsLocationPickerOpen] = useState(false);
+    const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
     const handleTogglePin = useCallback(async () => {
         await updateNoteMetadata(note.id, { isPinned: !note.isPinned });
@@ -157,6 +159,13 @@ export function NoteListItem({
                     </ContextMenuItem>
 
                     <ContextMenuItem
+                        onClick={() => setIsPreviewOpen(true)}
+                    >
+                        <Ionicons name="eye-outline" size={16} />
+                        <span>Preview Note</span>
+                    </ContextMenuItem>
+
+                    <ContextMenuItem
                         onClick={handleToggleQuickAccess}
 
                     >
@@ -195,6 +204,14 @@ export function NoteListItem({
                     onOpenChange={setIsLocationPickerOpen}
                     selectedParentId={note.folderId}
                     onSelect={handleMoveNote}
+                />
+            )}
+
+            {isPreviewOpen && (
+                <NotePreviewModal
+                    open={isPreviewOpen}
+                    onOpenChange={setIsPreviewOpen}
+                    note={note}
                 />
             )}
 

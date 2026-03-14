@@ -207,7 +207,7 @@ export default function TaskDetailDialog() {
                                 {...register("title")}
                                 placeholder="Task Title"
                                 maxLength={50}
-                                className="border-none bg-muted/40  p-2 text-xl font-bold shadow-none focus-visible:ring-1 placeholder:text-muted-foreground/40"
+                                className="border-none bg-muted/40 selection:text-foreground/80  p-2 text-xl font-bold shadow-none focus-visible:ring-1 placeholder:text-muted-foreground/40"
                             />
                         </div>
 

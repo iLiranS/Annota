@@ -1,4 +1,4 @@
-export type EditorFontId = 'system' | 'serif' | 'mono' | 'poppins' | 'varela';
+export type EditorFontId = 'system' | 'serif' | 'mono' | 'poppins' | 'varela' | 'firacode';
 
 export interface EditorFontOption {
     id: EditorFontId;
@@ -8,12 +8,13 @@ export interface EditorFontOption {
 
 const systemFamily = 'System';
 const serifFamily = 'serif';
-const monoFamily = 'monospace';
+const monoFamily = 'FiraCode';
 
 export const EDITOR_FONTS: EditorFontOption[] = [
     { id: 'system', label: 'System (Default)', fontFamily: systemFamily },
     { id: 'poppins', label: 'Poppins', fontFamily: 'Poppins' },
     { id: 'varela', label: 'Varela Round', fontFamily: 'VarelaRound' },
+    { id: 'firacode', label: 'Fira Code', fontFamily: 'FiraCode' },
     { id: 'serif', label: 'Serif', fontFamily: serifFamily },
     { id: 'mono', label: 'Monospace', fontFamily: monoFamily },
 ];

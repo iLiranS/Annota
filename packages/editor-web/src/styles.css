@@ -47,6 +47,14 @@
     font-display: swap;
 }
 
+@font-face {
+    font-family: 'FiraCode';
+    src: url('./assets/fonts/FiraCode/FiraCode-VF.ttf') format('truetype');
+    font-weight: 300 700;
+    font-style: normal;
+    font-display: swap;
+}
+
 
 * {
     box-sizing: border-box;
@@ -379,8 +387,13 @@
     background-color: var(--code-bg);
     padding: 2px 6px;
     border-radius: 4px;
-    font-family: 'JetBrains Mono', 'SF Mono', Monaco, Consolas, 'Courier New', monospace;
+    font-family: 'FiraCode', 'SF Mono', Monaco, Consolas, 'Courier New', monospace;
     font-size: calc(var(--editor-font-size) * 0.8125);
+}
+
+/* Style only inline code (not inside a pre) */
+.ProseMirror :not(pre)>code {
+    color: color-mix(in srgb, var(--text-color) 65%, transparent);
 }
 
 .ProseMirror pre {
@@ -389,7 +402,7 @@
     border-radius: 12px;
     overflow-x: auto;
     margin: 12px 0;
-    font-family: 'JetBrains Mono', 'SF Mono', Monaco, Consolas, 'Courier New', monospace;
+    font-family: 'FiraCode', 'SF Mono', Monaco, Consolas, 'Courier New', monospace;
     font-size: calc(var(--editor-font-size) * 0.8125);
     line-height: 1.6;
     position: relative;
@@ -440,7 +453,7 @@
     border-radius: 4px;
     background: color-mix(in srgb, var(--text-color) 15%, transparent);
     border: none;
-    font-family: 'JetBrains Mono', 'SF Mono', Monaco, Consolas, monospace;
+    font-family: 'FiraCode', 'SF Mono', Monaco, Consolas, monospace;
     font-size: 10px;
     font-weight: 700;
     text-transform: uppercase;
