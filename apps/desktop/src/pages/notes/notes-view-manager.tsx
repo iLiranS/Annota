@@ -19,7 +19,7 @@ export default function NotesViewManager() {
 
     // 1. Priority: Explicit Note in URL
     if (routeNoteId) {
-        return <NoteEditor noteId={routeNoteId} folderId={routeFolderId} />;
+        return <NoteEditor key={routeNoteId} noteId={routeNoteId} folderId={routeFolderId} />;
     }
 
     // 2. Priority: Daily Notes Calendar
@@ -31,7 +31,7 @@ export default function NotesViewManager() {
     if (lastViewedNoteId) {
         const memorizedNote = notes.find(n => n.id === lastViewedNoteId && !n.isDeleted);
         if (memorizedNote) {
-            return <NoteEditor noteId={lastViewedNoteId} folderId={lastViewedFolderId || 'root'} />;
+            return <NoteEditor key={lastViewedNoteId} noteId={lastViewedNoteId} folderId={lastViewedFolderId || 'root'} />;
         }
     }
 

@@ -84,7 +84,7 @@ export function MainNavbar() {
             data-tauri-drag-region
             dir={general.appDirection}
             className={cn(
-                "flex h-10 w-full shrink-0 rotate-0 items-center justify-between border-b border-sidebar-border bg-sidebar/70 px-3 backdrop-blur-xl",
+                "flex h-10 w-full shrink-0 rotate-0 items-center justify-between border-b border-sidebar-border bg-sidebar px-3",
                 "select-none transition-all duration-200 ease-in-out",
                 general.appDirection === 'ltr' && 'pr-20',
                 general.appDirection === 'rtl' && !open && 'pr-20',

@@ -88,8 +88,7 @@ export function FolderListItem({
                     type="button"
                     onClick={onClick}
                     className={cn(
-                        !asChild && "flex w-full group/item items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-accent",
-                        isActive && "bg-accent",
+                        !asChild && "flex w-full group/item items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-accent/50",
                         "active:scale-95",
                         className
                     )}

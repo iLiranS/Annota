@@ -350,7 +350,7 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId 
 
     if (!note) {
         return (
-            <div className="flex h-full bg-background dark:bg-card/50 flex-col items-center justify-center gap-4 p-8">
+            <div className="flex h-full bg-note-bg flex-col items-center justify-center gap-4 p-8">
                 <FileText className="h-16 w-16 text-border" />
                 <h2 className="text-xl font-bold tracking-tight">Note not found</h2>
             </div>
@@ -358,7 +358,7 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId 
     }
 
     return (
-        <div className="flex h-full bg-background dark:bg-card/50 flex-col w-full min-h-0 relative">
+        <div className="flex h-full bg-note-bg flex-col w-full min-h-0 relative">
             {/* Floating Action Buttons */}
             <NoteFloatingActions
                 onToggleSearch={() => setIsSearching(prev => !prev)}

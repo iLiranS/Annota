@@ -337,21 +337,22 @@ export default function TaskDetailDialog() {
                                             </>
                                         )}
                                     </span>
-                                    <ChevronDown className="h-3.5 w-3.5 opacity-40" />
+                                    <div className="flex items-center gap-1">
+                                        {watchedFolderId && (
+                                            <div
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setValue("folderId", null);
+                                                    triggerUpdate();
+                                                }}
+                                                className="p-1 rounded-md hover:bg-destructive/10 text-muted-foreground/60 hover:text-destructive transition-colors"
+                                            >
+                                                <X className="h-3.5 w-3.5" />
+                                            </div>
+                                        )}
+                                        <ChevronDown className="h-3.5 w-3.5 opacity-40" />
+                                    </div>
                                 </Button>
-                                {watchedFolderId && (
-                                    <button
-                                        type="button"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setValue("folderId", null);
-                                            triggerUpdate();
-                                        }}
-                                        className="mt-1 text-[10px] text-muted-foreground hover:text-destructive flex items-center gap-1 transition-colors"
-                                    >
-                                        <X className="h-3 w-3" /> Remove Link
-                                    </button>
-                                )}
                             </div>
                         </div>
 

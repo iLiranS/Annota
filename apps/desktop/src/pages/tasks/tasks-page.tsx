@@ -9,15 +9,20 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 import { ConfirmDialog } from "@/components/custom-ui/confirm-dialog";
 import { Button } from "@/components/ui/button";
+import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger
+} from "@/components/ui/collapsible";
 import { Ionicons } from "@/components/ui/ionicons";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useCreateTask } from "@/hooks/use-create-task";
 import { cn } from "@/lib/utils";
-import { CollapsibleGroup } from "./components/collapsible-group";
+import { ChevronDown } from "lucide-react";
 import { TaskItem } from "./components/task-item";
 
-type GroupByOption = "none" | "folder" | "date";
+type GroupByOption = "folder" | "date";
 
 export default function TasksPage() {
     const navigate = useNavigate();
@@ -36,7 +41,7 @@ export default function TasksPage() {
     const showCompleted = general.tasksShowDone;
 
     // Local state
-    const [groupBy, setGroupBy] = useState<GroupByOption>("none");
+    const [groupBy, setGroupBy] = useState<GroupByOption>("date");
 
     // Load tasks on mount
     useEffect(() => {
@@ -52,11 +57,7 @@ export default function TasksPage() {
 
 
     const cycleGroupBy = useCallback(() => {
-        setGroupBy((prev) => {
-            if (prev === "none") return "folder";
-            if (prev === "folder") return "date";
-            return "none";
-        });
+        setGroupBy((prev) => (prev === "folder" ? "date" : "folder"));
     }, []);
 
     const groupedTasks = useMemo(() => {
@@ -66,7 +67,6 @@ export default function TasksPage() {
         const pendingTasks = sortedTasks.filter((t) => !t.completed);
         const completedTasks = sortedTasks.filter((t) => t.completed);
 
-        if (groupBy === "none") return null;
 
         const groups: Map<
             string,
@@ -173,7 +173,6 @@ export default function TasksPage() {
     };
 
     const getGroupByLabel = () => {
-        if (groupBy === "none") return "Group";
         if (groupBy === "folder") return "Folder";
         return "Date";
     };
@@ -209,19 +208,14 @@ export default function TasksPage() {
                         variant="secondary"
                         size="sm"
                         className={cn(
-                            "h-8 gap-2 rounded-lg border px-3 text-[11px] font-bold uppercase tracking-wider transition-all",
-                            groupBy !== "none"
-                                ? "bg-primary/10 border-primary/20 text-primary hover:bg-primary/15"
-                                : "bg-muted/50 border-transparent text-muted-foreground",
+                            "h-8 w-24 gap-2 rounded-lg border px-3 text-[11px] font-bold uppercase tracking-wider transition-all bg-primary/10 border-primary/20 text-primary hover:bg-primary/15",
                         )}
                         onClick={cycleGroupBy}
                     >
                         <Ionicons
                             name="layers-outline"
                             size={16}
-                            style={{
-                                color: groupBy !== "none" ? "var(--primary)" : "currentColor",
-                            }}
+                            className="text-primary"
                         />
                         {getGroupByLabel()}
                     </Button>
@@ -270,35 +264,48 @@ export default function TasksPage() {
                     )}
 
                     {/* Grouped or Flat Tasks */}
-                    {groupBy === "none" ? (
-                        <div className="space-y-0.5">
-                            {tasks
-                                .filter((t) => !t.completed)
-                                .sort((a, b) => a.deadline.getTime() - b.deadline.getTime())
-                                .map((task) => (
-                                    <TaskItem
-                                        key={task.id}
-                                        task={task}
-                                        onClick={() => handleTaskClick(task)}
-                                        showDate={true}
-                                    />
-                                ))}
-                        </div>
-                    ) : (
-                        <div className="space-y-4">
-                            {groupedTasks?.map((group) => (
-                                <CollapsibleGroup
-                                    key={group.id}
-                                    title={group.title}
-                                    color={group.color}
-                                    icon={group.icon}
-                                    tasks={group.tasks}
-                                    hideFolder={groupBy === "folder"}
-                                    onTaskClick={handleTaskClick}
-                                />
-                            ))}
-                        </div>
-                    )}
+                    <div className="space-y-4">
+                        {groupedTasks?.map((group) => (
+                            <Collapsible
+                                key={group.id}
+                                defaultOpen
+                                className="w-full space-y-1"
+                            >
+                                <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg px-2 py-2 text-left transition-colors hover:bg-accent/40 group">
+                                    <div className="flex items-center gap-2.5">
+                                        <div
+                                            className="flex h-6 w-6 items-center justify-center rounded-md"
+                                            style={{ backgroundColor: group.color ? `${group.color}15` : 'transparent' }}
+                                        >
+                                            <Ionicons
+                                                name={group.icon || "layers-outline"}
+                                                size={14}
+                                                style={{ color: group.color || 'currentColor' }}
+                                                className={cn(!group.color && "text-muted-foreground")}
+                                            />
+                                        </div>
+                                        <span className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground/80">
+                                            {group.title}
+                                            <span className="ml-2 text-[10px] lowercase font-medium text-muted-foreground/40">
+                                                {group.tasks.length} {group.tasks.length === 1 ? 'task' : 'tasks'}
+                                            </span>
+                                        </span>
+                                    </div>
+                                    <ChevronDown className="h-4 w-4 text-muted-foreground/30 group-data-[state=closed]:-rotate-90" />
+                                </CollapsibleTrigger>
+                                <CollapsibleContent className="space-y-0.5 px-1 py-1">
+                                    {group.tasks.map((task) => (
+                                        <TaskItem
+                                            key={task.id}
+                                            task={task}
+                                            onClick={() => handleTaskClick(task)}
+                                            hideFolder={groupBy === "folder"}
+                                        />
+                                    ))}
+                                </CollapsibleContent>
+                            </Collapsible>
+                        ))}
+                    </div>
 
                     {/* Flat Completed Section */}
                     {showCompleted && groupBy !== "folder" && tasks.some((t) => t.completed) && (

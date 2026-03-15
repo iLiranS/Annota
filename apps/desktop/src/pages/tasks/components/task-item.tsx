@@ -9,9 +9,11 @@ interface TaskItemProps {
     onClick: () => void;
     showDate?: boolean;
     hideFolder?: boolean;
+    isCompact?: boolean;
+    className?: string;
 }
 
-export function TaskItem({ task, onClick, showDate = false, hideFolder = false }: TaskItemProps) {
+export function TaskItem({ task, onClick, showDate = false, hideFolder = false, isCompact = false, className }: TaskItemProps) {
     const { toggleComplete } = useTasksStore();
     const { getFolderById } = useNotesStore();
 
@@ -72,28 +74,32 @@ export function TaskItem({ task, onClick, showDate = false, hideFolder = false }
         <button
             onClick={onClick}
             className={cn(
-                "group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-all duration-200 hover:bg-accent/50",
-                task.completed && "opacity-60"
+                "group flex w-full items-center gap-2 rounded-xl text-left transition-all duration-200 hover:bg-accent/50",
+                isCompact ? "px-2 py-1" : "px-3 py-3",
+                task.completed && "opacity-60",
+                className
             )}
         >
             {/* Completion indicator */}
             <div
                 onClick={handleToggle}
                 className={cn(
-                    "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-200",
+                    "flex shrink-0 items-center justify-center rounded-full border-2 transition-all duration-200",
+                    isCompact ? "h-4 w-4" : "h-5 w-5",
                     task.completed
                         ? "bg-primary border-primary"
                         : "border-muted-foreground/30 hover:border-primary"
                 )}
             >
-                {task.completed && <Ionicons name="checkmark" size={14} className="text-primary-foreground" />}
+                {task.completed && <Ionicons name="checkmark" size={isCompact ? 10 : 14} className="text-primary-foreground" />}
             </div>
 
             <div className="min-w-0 flex-1 space-y-0.5">
                 <div className="flex items-center gap-2">
                     <span
                         className={cn(
-                            "truncate text-sm font-semibold transition-all duration-200",
+                            "truncate font-semibold transition-all duration-200",
+                            isCompact ? "text-xs" : "text-sm",
                             task.completed && "line-through text-muted-foreground"
                         )}
                     >
@@ -119,11 +125,12 @@ export function TaskItem({ task, onClick, showDate = false, hideFolder = false }
                 </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex shrink-0 items-center gap-2">
                 {task.deadline && (
                     <div
                         className={cn(
-                            "flex items-center gap-1.5 text-xs font-medium",
+                            "flex items-center gap-1.5 font-medium",
+                            isCompact ? "text-[10px]" : "text-xs",
                             (() => {
                                 if (task.completed) return "text-muted-foreground/40";
                                 const now = new Date();
@@ -145,7 +152,7 @@ export function TaskItem({ task, onClick, showDate = false, hideFolder = false }
                         {task.isWholeDay ? formatDate(task.deadline) : (showDate ? formatDate(task.deadline) : formatTime(task.deadline))}
                     </div>
                 )}
-                <ChevronRight className="h-4 w-4 text-muted-foreground/30 transition-transform group-hover:translate-x-0.5" />
+                {!isCompact && <ChevronRight className="h-4 w-4 text-muted-foreground/30 transition-transform group-hover:translate-x-0.5" />}
             </div>
         </button>
     );

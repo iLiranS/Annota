@@ -5,6 +5,7 @@ import NoteLocationModal from '@/components/note-location-modal';
 import NoteCard from '@/components/notes/note-card';
 import OptionsMenu from '@/components/options-menu';
 import NotesSearchModal from '@/components/search/notes-search-modal';
+import { CompactTaskCard } from '@/components/tasks/TaskCard';
 import ThemedText from '@/components/themed-text';
 import { HapticPressable } from '@/components/ui/haptic-pressable';
 import {
@@ -14,6 +15,7 @@ import {
     SortType,
     useNotesStore,
     useSettingsStore,
+    useTasksStore,
     type Folder,
 } from '@annota/core';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -102,6 +104,7 @@ export default function NotesList() {
         setFolderSortType,
         updateNoteMetadata,
     } = useNotesStore();
+    const { tasks, toggleComplete } = useTasksStore();
 
     const { general } = useSettingsStore();
     const isCompact = general.compactMode;
@@ -164,6 +167,11 @@ export default function NotesList() {
         return { pinnedNotes: pinned, unpinnedNotes: unpinned };
     }, [browseNotes]);
 
+    const folderTasks = useMemo(() => {
+        if (!currentFolderId || tagId) return [];
+        return tasks.filter(t => t.folderId === currentFolderId && !t.completed);
+    }, [tasks, currentFolderId, tagId]);
+
     const browseData = useMemo((): ListItem[] => {
         const items: ListItem[] = [];
 
@@ -214,6 +222,11 @@ export default function NotesList() {
         const newNote = await createNote({ folderId: currentFolderId ?? '' });
         router.push({ pathname: '/Notes/[id]', params: { id: newNote.id, source: 'new' } });
     }, [createNote, currentFolderId, router]);
+
+    // Create new task and navigate to it
+    const handleCreateTask = useCallback(async () => {
+        router.push({ pathname: '/Tasks/new', params: { folderId: currentFolderId ?? '' } });
+    }, [currentFolderId, router]);
 
     // Change sort type
     const handleSortChange = useCallback(
@@ -379,7 +392,10 @@ export default function NotesList() {
             <Animated.FlatList
                 data={browseData}
                 keyExtractor={getItemKey}
-                contentContainerStyle={styles.listContent}
+                contentContainerStyle={[
+                    styles.listContent,
+                    { paddingBottom: folderTasks.length > 0 ? 0 : 100 }
+                ]}
                 itemLayoutAnimation={LinearTransition.duration(300).easing(Easing.bezier(0.4, 0, 0.2, 1))}
                 ListEmptyComponent={
                     <View style={styles.emptyContainer}>
@@ -398,6 +414,42 @@ export default function NotesList() {
                 }
                 renderItem={renderItem}
             />
+
+            {/* Tasks section - Fixed at bottom */}
+            {folderTasks.length > 0 && (
+                <View style={[
+                    styles.tasksContainer,
+                    {
+                        borderTopColor: colors.border,
+                        backgroundColor: colors.background,
+                    }
+                ]}>
+                    <View style={styles.tasksHeader}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
+                            <Ionicons name="checkmark-circle-outline" size={16} color={colors.text + '60'} />
+                            <ThemedText style={styles.tasksHeaderText}>Active Tasks</ThemedText>
+                        </View>
+                        <ThemedText style={{ fontSize: 10, color: colors.text + '40', fontWeight: '500' }}>
+                            {folderTasks.length}
+                        </ThemedText>
+                    </View>
+                    <Animated.ScrollView
+                        style={{ maxHeight: 150 }}
+                        contentContainerStyle={{ gap: 4, paddingBottom: 10 }}
+                        showsVerticalScrollIndicator={false}
+                    >
+                        {folderTasks.map((task) => (
+                            <CompactTaskCard
+                                key={task.id}
+                                task={task}
+                                onToggle={() => toggleComplete(task.id)}
+                                onPress={() => router.push(`/Tasks/${task.id}`)}
+                                hideFolder={true}
+                            />
+                        ))}
+                    </Animated.ScrollView>
+                </View>
+            )}
 
             {/* Bottom Footer */}
             <View style={[
@@ -422,6 +474,7 @@ export default function NotesList() {
                         <OptionsMenu
                             currentSortType={currentSortType}
                             onNewFolder={() => setIsCreatingFolder(true)}
+                            onNewTask={handleCreateTask}
                             onSortChange={handleSortChange}
                             onTrash={() => router.push('/Notes/trash')}
                             onSettings={handleSettings}
@@ -523,5 +576,25 @@ const styles = StyleSheet.create({
         alignItems: 'flex-end',
         paddingTop: 10,
         minHeight: 48,
+    },
+    tasksContainer: {
+        paddingHorizontal: 20,
+        paddingTop: 12,
+        borderTopWidth: 1,
+        maxHeight: 280,
+        paddingBottom: 110, // Account for absolute footer and FAB
+    },
+    tasksHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginBottom: 8,
+    },
+    tasksHeaderText: {
+        fontSize: 12,
+        fontWeight: '700',
+        textTransform: 'uppercase',
+        letterSpacing: 0.8,
+        opacity: 0.6,
     },
 });

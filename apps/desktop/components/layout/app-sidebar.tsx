@@ -227,9 +227,9 @@ export function AppSidebar() {
                     onOpenChange={setIsQuickAccessOpen}
                 >
                     <SidebarGroup className="py-0">
-                        <SidebarGroupLabel asChild>
+                        <SidebarGroupLabel asChild className="text-sm text-sidebar-foreground font-normal">
                             <CollapsibleTrigger className="flex w-full items-center gap-2">
-                                <Ionicons name="star" size={16} className="text-amber-400" />
+                                <Ionicons name="star" size={18} className="text-amber-400" />
                                 <span className="flex-1 text-start">Quick Access</span>
                                 <Ionicons name="chevron-forward" size={14} className="transition-transform group-data-[state=open]/quick-access:rotate-90" />
                             </CollapsibleTrigger>
@@ -335,9 +335,9 @@ export function AppSidebar() {
                     defaultOpen={true}
                 >
                     <SidebarGroup>
-                        <SidebarGroupLabel asChild>
+                        <SidebarGroupLabel asChild className="text-sm text-sidebar-foreground font-normal">
                             <CollapsibleTrigger className="flex w-full items-center gap-2">
-                                <Ionicons name="pricetag" size={16} className="text-accent-full" />
+                                <Ionicons name="pricetag" size={18} className="text-accent-full" />
                                 <span className="flex-1 text-start">Tags</span>
                                 <Ionicons name="chevron-forward" size={14} className={`transition-transform group-data-[state=open]/tags:rotate-90 ${general.appDirection === 'rtl' ? 'rotate-180' : ''}`} />
                             </CollapsibleTrigger>

@@ -1,26 +1,39 @@
 import {
     DAILY_NOTES_FOLDER_ID,
+    getSortTypeLabel,
     sortFolders,
     sortNotes,
     TRASH_FOLDER_ID,
     useNotesStore,
     useSettingsStore,
+    useTasksStore,
     type Folder,
-    type NoteMetadata
+    type NoteMetadata,
+    type SortType
 } from "@annota/core";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import { ConfirmDialog } from "@/components/custom-ui/confirm-dialog";
 import { FolderEditModal } from "@/components/notes/folder-edit-modal";
 import { FolderListItem } from '@/components/notes/folder-list-item';
 import { NoteListItem } from '@/components/notes/note-list-item';
-import { SortDropdown } from "@/components/notes/sort-dropdown";
 import { Button } from "@/components/ui/button";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuSub,
+    DropdownMenuSubContent,
+    DropdownMenuSubTrigger,
+    DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 import { Ionicons } from "@/components/ui/ionicons";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useCreateTask } from "@/hooks/use-create-task";
+import { TaskItem } from "../tasks/components/task-item";
 
 import {
     SidebarContent,
@@ -34,15 +47,25 @@ import {
 } from "@/components/ui/sidebar";
 import { useCreateNote } from "@/hooks/use-create-note";
 import { cn } from "@/lib/utils";
-import { FolderPlus, SquarePen } from "lucide-react";
+import { MoreVertical, SquarePen } from "lucide-react";
 import { useParams } from "react-router-dom";
 
 interface NotesSidebarProps {
     className?: string;
 }
 
+const SORT_OPTIONS: SortType[] = [
+    'UPDATED_LAST',
+    'UPDATED_FIRST',
+    'CREATED_LAST',
+    'CREATED_FIRST',
+    'NAME_ASC',
+    'NAME_DESC',
+];
+
 export function NotesSidebar({ className }: NotesSidebarProps) {
     const navigate = useNavigate();
+    const location = useLocation();
     const { folderId: routeFolderId, noteId: routeNoteId } = useParams();
     const [searchParams] = useSearchParams();
     const { colors } = useAppTheme();
@@ -60,9 +83,10 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
         deleteFolder,
         setFolderSortType,
     } = useNotesStore();
+    const tasks = useTasksStore((s) => s.tasks);
 
-    const { createAndNavigate: createTask } = useCreateTask();
-    const { createAndNavigate: createNote } = useCreateNote();
+    const { createAndNavigate: createAndNavigateTask } = useCreateTask();
+    const { createAndNavigate: createAndNavigateNote } = useCreateNote();
 
     const tagId = searchParams.get("tagId");
 
@@ -171,6 +195,11 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
         };
     }, [browseNotes]);
 
+    const folderTasks = useMemo(() => {
+        if (!currentFolderId) return [];
+        return tasks.filter(t => t.folderId === currentFolderId && !t.completed);
+    }, [tasks, currentFolderId]);
+
     const handleFolderPress = (folderId: string) => {
         navigate(`/notes?folderId=${folderId}`);
     };
@@ -181,7 +210,7 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
     };
 
     const handleCreateNote = async () => {
-        await createNote(currentFolderId ?? "");
+        await createAndNavigateNote(currentFolderId ?? "");
     };
 
     const handleEditFolder = useCallback((folder: Folder) => {
@@ -209,8 +238,12 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
     }, [deleteFolder, folderToDelete]);
 
     const handleCreateTask = useCallback((folder: Folder) => {
-        createTask({ folderId: folder.id });
-    }, [createTask]);
+        createAndNavigateTask({ folderId: folder.id });
+    }, [createAndNavigateTask]);
+
+    const handleCreateTaskForCurrentFolder = useCallback(() => {
+        createAndNavigateTask({ folderId: currentFolderId || undefined });
+    }, [createAndNavigateTask, currentFolderId]);
 
     const currentTag = useMemo(() => tags.find(t => t.id === tagId), [tags, tagId]);
 
@@ -245,7 +278,7 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
             data-state={open ? "expanded" : "collapsed"}
             dir={general.appDirection}
             className={cn(
-                "group/sidebar relative flex h-full flex-col bg-card/50",
+                "group/sidebar relative flex h-full flex-col bg-sidebar",
                 general.appDirection === 'rtl' ? "border-l" : "border-r",
                 "border-border select-none",
                 !open ? "w-0 border-none opacity-0 invisible" : "opacity-100 visible",
@@ -280,21 +313,6 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
                             <h2 className="text-sm font-bold tracking-tight truncate">{headerTitle}</h2>
                         </div>
                         <div className="flex items-center gap-0.5 shrink-0">
-                            {!isDaily && !isTrash && (
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8 shrink-0 text-muted-foreground/60 hover:text-primary hover:bg-primary/10 transition-colors"
-                                            onClick={handleCreateFolder}
-                                        >
-                                            <FolderPlus className="h-5 w-5" />
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="bottom" className="text-[10px] font-bold">New Folder</TooltipContent>
-                                </Tooltip>
-                            )}
                             {!isTrash && (
                                 <Tooltip>
                                     <TooltipTrigger asChild>
@@ -310,22 +328,71 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
                                     <TooltipContent side="bottom" className="text-[10px] font-bold">New Note</TooltipContent>
                                 </Tooltip>
                             )}
+                            {!isDaily && !isTrash && (
+                                <DropdownMenu>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8 shrink-0 text-muted-foreground/60 hover:text-primary hover:bg-primary/10 transition-colors"
+                                                >
+                                                    <MoreVertical className="h-5 w-5" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="bottom" className="text-[10px] font-bold">Actions</TooltipContent>
+                                    </Tooltip>
+                                    <DropdownMenuContent align="end" className="w-52">
+                                        <DropdownMenuItem onClick={handleCreateFolder} className="gap-2 cursor-pointer">
+                                            <Ionicons name="folder-outline" size={16} />
+                                            <span>New Folder</span>
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={handleCreateTaskForCurrentFolder} className="gap-2 cursor-pointer">
+                                            <Ionicons name="checkmark-circle-outline" size={16} />
+                                            <span>New Task</span>
+                                        </DropdownMenuItem>
+
+                                        <DropdownMenuSeparator />
+
+                                        <DropdownMenuSub>
+                                            <DropdownMenuSubTrigger className="gap-2 cursor-pointer">
+                                                <Ionicons name="funnel-outline" size={16} />
+                                                <span>Sort by</span>
+                                            </DropdownMenuSubTrigger>
+                                            <DropdownMenuSubContent className="w-52">
+                                                {SORT_OPTIONS.map((option) => (
+                                                    <DropdownMenuItem
+                                                        key={option}
+                                                        className={cn(
+                                                            "flex items-center justify-between cursor-pointer",
+                                                            currentSortType === option && "bg-primary/10 text-primary font-medium"
+                                                        )}
+                                                        onClick={() => setFolderSortType(currentFolderId ?? null, option)}
+                                                    >
+                                                        <span>{getSortTypeLabel(option)}</span>
+                                                        {currentSortType === option && (
+                                                            <Ionicons name="checkmark" size={14} />
+                                                        )}
+                                                    </DropdownMenuItem>
+                                                ))}
+                                            </DropdownMenuSubContent>
+                                        </DropdownMenuSub>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            )}
+
                         </div>
                     </div>
                 </TooltipProvider>
             </SidebarHeader>
 
             {/* Content */}
-            <SidebarContent className="px-2 py-2 gap-0">
+            <SidebarContent className="px-0  gap-0">
                 {/* Folders section */}
                 {browseFolders.length > 0 && (
-                    <SidebarGroup className="px-0">
-                        <SidebarGroupLabel className="px-2 h-7 mb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
-                            <div className="flex items-center gap-2">
-                                <Ionicons name="folder-outline" size={17} />
-                                <p>Folders</p>
-                            </div>
-                        </SidebarGroupLabel>
+                    <SidebarGroup className="px-0 py-0">
                         <SidebarGroupContent>
                             <SidebarMenu>
                                 {browseFolders.map((folder) => (
@@ -338,6 +405,7 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
                                             onCreateTask={handleCreateTask}
                                             onClick={() => handleFolderPress(folder.id)}
                                             isActive={currentFolderId === folder.id}
+                                            className="rounded-none"
                                         />
                                     </SidebarMenuItem>
                                 ))}
@@ -346,17 +414,16 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
                     </SidebarGroup>
                 )}
 
+                {/* Separator between Folders and Pinned/Notes */}
+                {browseFolders.length > 0 && (pinnedNotes.length > 0 || unpinnedNotes.length > 0) && (
+                    <div className="h-2 w-full bg-border/60  shrink-0" />
+                )}
+
                 {/* Pinned section */}
                 {pinnedNotes.length > 0 && (
-                    <SidebarGroup className="px-0">
-                        <SidebarGroupLabel className="px-2 h-7 mb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
-                            <div className="flex items-center gap-2">
-                                <Ionicons name="pin" size={17} />
-                                <p>Pinned</p>
-                            </div>
-                        </SidebarGroupLabel>
+                    <SidebarGroup className="px-0 py-0">
                         <SidebarGroupContent>
-                            <SidebarMenu>
+                            <SidebarMenu className="gap-0">
                                 {pinnedNotes.map((note) => (
                                     <SidebarMenuItem key={note.id}>
                                         <NoteListItem
@@ -373,17 +440,16 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
                     </SidebarGroup>
                 )}
 
+                {/* Separator between Pinned and unpinned Notes */}
+                {pinnedNotes.length > 0 && unpinnedNotes.length > 0 && (
+                    <div className="h-2 w-full bg-border/60  shrink-0" />
+                )}
+
                 {/* Notes section */}
                 {unpinnedNotes.length > 0 && (
-                    <SidebarGroup className="px-0">
-                        <SidebarGroupLabel className="px-2 h-7 mb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
-                            <div className="flex items-center gap-2">
-                                <Ionicons name="document-text-outline" size={17} />
-                                <p>Notes</p>
-                            </div>
-                        </SidebarGroupLabel>
+                    <SidebarGroup className="px-0 py-0">
                         <SidebarGroupContent>
-                            <SidebarMenu>
+                            <SidebarMenu className="gap-0">
                                 {unpinnedNotes.map((note) => (
                                     <SidebarMenuItem key={note.id}>
                                         <NoteListItem
@@ -401,8 +467,8 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
                 )}
 
                 {/* Empty state */}
-                {browseFolders.length === 0 && browseNotes.length === 0 && (
-                    <div className="flex flex-col items-center gap-2 py-12 text-muted-foreground">
+                {browseFolders.length === 0 && browseNotes.length === 0 && folderTasks.length === 0 && (
+                    <div className="flex  flex-col items-center gap-2 py-12 text-muted-foreground">
                         <Ionicons name="folder-open" size={40} className="text-border" />
                         <p className="text-sm font-medium text-center">This folder is empty</p>
                         <p className="text-xs text-center">Create a note or folder to get started</p>
@@ -410,13 +476,38 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
                 )}
             </SidebarContent>
 
-            {/* Sort Controls */}
-            <div className="mt-auto px-4 py-2 border-t border-border/10 flex items-center justify-center bg-accent/5">
-                <SortDropdown
-                    currentSortType={currentSortType}
-                    onSortChange={(type) => setFolderSortType(currentFolderId ?? null, type)}
-                />
-            </div>
+            {/* Tasks section - Fixed at bottom */}
+            {folderTasks.length > 0 && (
+                <div className="px-0 pb-2 border-t max-h-50 overflow-y-auto custom-scrollbar">
+                    <SidebarGroup className="px-0 py-0">
+                        <SidebarGroupLabel className=" h-7 mb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 w-full">
+                            <div className="flex items-center justify-between w-full">
+                                <div className="flex items-center gap-2">
+                                    <Ionicons name="checkmark-circle-outline" size={17} />
+                                    <span>Active Tasks</span>
+                                </div>
+                                <span className="font-medium lowercase text-muted-foreground/40">{folderTasks.length}</span>
+                            </div>
+                        </SidebarGroupLabel>
+                        <SidebarGroupContent>
+                            <SidebarMenu>
+                                {folderTasks.map((task) => (
+                                    <SidebarMenuItem key={task.id}>
+                                        <TaskItem
+                                            task={task}
+                                            onClick={() => navigate(`/task/${task.id}`, { state: { background: location } })}
+                                            hideFolder={true}
+                                            isCompact={true}
+                                            className="rounded-none"
+                                        />
+                                    </SidebarMenuItem>
+                                ))}
+                            </SidebarMenu>
+                        </SidebarGroupContent>
+                    </SidebarGroup>
+                </div>
+            )}
+
 
             {/* Modals */}
             <FolderEditModal

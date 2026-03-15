@@ -76,10 +76,11 @@ export function NoteListItem({
                         type="button"
                         onClick={onClick}
                         className={cn(
-                            !asChild && "group/note flex w-full flex-col gap-0.5 rounded-lg px-3 py-2 text-left transition-all hover:bg-accent/50",
-                            !asChild && isCompact ? "py-1.5" : "py-2",
-                            isActive && "bg-accent",
-                            "active:scale-95 relative",
+                            !asChild && "group/note  relative flex w-full flex-col transition-all hover:bg-accent/50",
+                            !asChild && isCompact && !isInList ? "py-1.5" : "py-2",
+                            isActive && "bg-accent/70",
+                            "relative",
+                            isInList ? "rounded-none px-1" : "px-3 py-2 rounded-lg",
                             className
                         )}
                         style={style}
@@ -110,7 +111,7 @@ export function NoteListItem({
                                 </div>
 
                                 {!isCompact && note.preview && (
-                                    <p className={`line-clamp-1 w-full text-[11px] text-muted-foreground/50 leading-tight ${general.appDirection === 'ltr' ? 'text-left' : 'text-right'}`}>
+                                    <p className={`line-clamp-1 w-full  text-[11px] text-muted-foreground/50 leading-tight ${general.appDirection === 'ltr' ? 'text-left' : 'text-right'}`}>
                                         {note.preview}
                                     </p>
                                 )}
@@ -123,7 +124,7 @@ export function NoteListItem({
                                         const noteTags = tagIds.map(id => tags.find(t => t.id === id)).filter(Boolean) as any[];
                                         if (noteTags.length === 0) return null;
                                         return (
-                                            <div className="flex gap-1 mt-1 overflow-hidden">
+                                            <div className="flex gap-1  mt-1 overflow-hidden">
                                                 {noteTags.map(t => (
                                                     <span
                                                         key={t.id}
@@ -144,7 +145,7 @@ export function NoteListItem({
                                 })()}
                             </>
                         )}
-                        {isInList && <div className=" h-px absolute bottom-0 w-9/10 mx-auto bg-muted-foreground/15" />}
+                        {isInList && <div className=" h-px absolute bottom-0 w-9/10 left-1/2 -translate-x-1/2 mx-auto bg-muted-foreground/15 " />}
 
                     </Comp>
                 </ContextMenuTrigger>
