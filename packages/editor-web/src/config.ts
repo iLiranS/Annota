@@ -25,7 +25,8 @@ import {
     SearchExtension,
     ShortcutManager,
     SlashCommandExtension,
-    TagCommandExtension
+    TagCommandExtension,
+    NoteLinkCommandExtension
 } from './extensions';
 
 export const WEB_FONT_FAMILIES: Record<string, string> = {
@@ -34,8 +35,6 @@ export const WEB_FONT_FAMILIES: Record<string, string> = {
     mono: "'FiraCode', SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
     monospace: "'FiraCode', SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
     poppins: 'Poppins',
-    varela: 'VarelaRound',
-    'varela round': 'VarelaRound',
     firacode: 'FiraCode',
     'fira code': 'FiraCode',
     'system (default)': "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
@@ -69,6 +68,7 @@ export const getExtensions = (options: {
     defaultCodeLanguage?: string | null;
     onSlashCommand?: (data: any) => void;
     onTagCommand?: (data: any) => void;
+    onNoteLinkCommand?: (data: any) => void;
 }) => [
         StarterKit.configure({
             heading: false,
@@ -163,6 +163,9 @@ export const getExtensions = (options: {
         }),
         TagCommandExtension.configure({
             onTagCommand: options.onTagCommand,
+        }),
+        NoteLinkCommandExtension.configure({
+            onNoteLinkCommand: options.onNoteLinkCommand,
         }),
     ];
 

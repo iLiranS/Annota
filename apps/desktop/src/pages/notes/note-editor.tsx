@@ -1,6 +1,7 @@
 import { BlockMenu } from "@/components/editor/BlockMenu";
 import { DesktopSlashCommandMenu } from "@/components/editor/DesktopSlashCommandMenu";
 import { DesktopTagCommandMenu } from "@/components/editor/DesktopTagCommandMenu";
+import { DesktopNoteLinkCommandMenu } from "@/components/editor/DesktopNoteLinkCommandMenu";
 import { DesktopToolbar } from "@/components/editor/DesktopToolbar";
 import { ImageGallery } from "@/components/notes/image-gallery";
 import { useSidebar } from "@/components/ui/sidebar";
@@ -50,6 +51,7 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId 
     // Slash commands state
     const [slashCommandState, setSlashCommandState] = useState<{ active: boolean; query?: string; range?: { from: number; to: number }; clientRect?: any }>({ active: false });
     const [tagCommandState, setTagCommandState] = useState<{ active: boolean; query?: string; range?: { from: number; to: number }; clientRect?: any }>({ active: false });
+    const [noteLinkCommandState, setNoteLinkCommandState] = useState<{ active: boolean; query?: string; range?: { from: number; to: number }; clientRect?: any }>({ active: false });
 
     const isEmptyContent = (html: string) => {
         const normalized = html
@@ -407,6 +409,7 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId 
                         onCodeBlockSelected={handleCodeBlockSelected}
                         onSlashCommand={setSlashCommandState}
                         onTagCommand={setTagCommandState}
+                        onNoteLinkCommand={setNoteLinkCommandState}
                         isDark={isDark}
                         colors={{
                             primary: colors.primary,
@@ -448,6 +451,16 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId 
                         clientRect={tagCommandState.clientRect}
                         sendCommand={(cmd, params) => editorRef.current?.onCommand(cmd, params)}
                         onClose={() => setTagCommandState({ active: false })}
+                    />
+                )}
+
+                {noteLinkCommandState.active && noteLinkCommandState.range && noteLinkCommandState.clientRect && (
+                    <DesktopNoteLinkCommandMenu
+                        query={noteLinkCommandState.query || ''}
+                        range={noteLinkCommandState.range}
+                        clientRect={noteLinkCommandState.clientRect}
+                        sendCommand={(cmd, params) => editorRef.current?.onCommand(cmd, params)}
+                        onClose={() => setNoteLinkCommandState({ active: false })}
                     />
                 )}
 

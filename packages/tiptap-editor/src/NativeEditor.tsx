@@ -68,6 +68,7 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
         onCodeBlockSelected,
         onSlashCommand,
         onTagCommand,
+        onNoteLinkCommand,
     }, ref) => {
         const colors = propColors || { primary: '#007AFF', background: '#FFFFFF', text: '#000000' };
         const dark = propIsDark ?? false;
@@ -182,7 +183,8 @@ export const NativeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
             defaultCodeLanguage: editorSettings.defaultCodeLanguage,
             onSlashCommand: onSlashCommand ? (data: any) => onSlashCommand(data) : undefined,
             onTagCommand: onTagCommand ? (data: any) => onTagCommand(data) : undefined,
-        }) as any, [placeholder, editorOrigin, onSearchResults, onOpenBlockMenu, onOpenImageMenu, onOpenTableMenu, onCodeBlockSelected, noteId, editorSettings.defaultCodeLanguage, onSlashCommand, onTagCommand]);
+            onNoteLinkCommand: onNoteLinkCommand ? (data: any) => onNoteLinkCommand(data) : undefined,
+        }) as any, [placeholder, editorOrigin, onSearchResults, onOpenBlockMenu, onOpenImageMenu, onOpenTableMenu, onCodeBlockSelected, noteId, editorSettings.defaultCodeLanguage, onSlashCommand, onTagCommand, onNoteLinkCommand]);
 
         const editorProps = React.useMemo(() => getEditorProps({
             direction: editorSettings.direction,

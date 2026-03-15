@@ -2,6 +2,7 @@ import { ImageGallery } from '@/components/editor-ui/image-gallery';
 import { NoteTags } from '@/components/editor-ui/note-tags';
 import { SlashCommandMenu } from '@/components/editor-ui/slash-command-menu';
 import { TagCommandMenu } from '@/components/editor-ui/tag-command-menu';
+import { NoteLinkCommandMenu } from '@/components/editor-ui/note-link-command-menu';
 import { EditorToolbar } from '@/components/editor-ui/toolbar';
 import NoteHeaderMenu from '@/components/notes/note-header-menu';
 import { SearchOverlay } from '@/components/notes/search-overlay';
@@ -62,6 +63,7 @@ export default function NoteEditor() {
     // Slash commands state
     const [slashCommandState, setSlashCommandState] = useState<{ active: boolean; query?: string; range?: { from: number; to: number } }>({ active: false });
     const [tagCommandState, setTagCommandState] = useState<{ active: boolean; query?: string; range?: { from: number; to: number } }>({ active: false });
+    const [noteLinkCommandState, setNoteLinkCommandState] = useState<{ active: boolean; query?: string; range?: { from: number; to: number } }>({ active: false });
 
     const appliedTagIds = useMemo(() => {
         if (!currentNote || !currentNote.tags) return [];
@@ -387,6 +389,7 @@ export default function NoteEditor() {
                         onSearchResults={handleSearchResults}
                         onSlashCommand={setSlashCommandState}
                         onTagCommand={setTagCommandState}
+                        onNoteLinkCommand={setNoteLinkCommandState}
                         contentPaddingTop={0}
                         placeholder="Start typing your note..."
                         autofocus={shouldAutofocus}
@@ -426,6 +429,16 @@ export default function NoteEditor() {
                                         range={slashCommandState.range}
                                         sendCommand={(cmd, params) => editorRef.current?.onCommand(cmd, params)}
                                         onClose={() => setSlashCommandState({ active: false })}
+                                    />
+                                );
+                            }
+                            if (noteLinkCommandState.active && noteLinkCommandState.range) {
+                                return (
+                                    <NoteLinkCommandMenu
+                                        query={noteLinkCommandState.query || ''}
+                                        range={noteLinkCommandState.range}
+                                        sendCommand={(cmd, params) => editorRef.current?.onCommand(cmd, params)}
+                                        onClose={() => setNoteLinkCommandState({ active: false })}
                                     />
                                 );
                             }

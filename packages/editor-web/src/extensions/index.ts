@@ -8,3 +8,4 @@ export * from './shortcut-manager';
 export * from './table';
 export * from './slash-command';
 export * from './tag-command';
+export * from './note-link-command';

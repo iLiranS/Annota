@@ -31,6 +31,7 @@ export const IframeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
         renderImageGallery,
         onSlashCommand,
         onTagCommand,
+        onNoteLinkCommand,
         isDark: propIsDark,
         colors: propColors,
     }, ref) => {
@@ -281,6 +282,9 @@ export const IframeEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                         break;
                     case 'tagCommand':
                         onTagCommand?.(data);
+                        break;
+                    case 'noteLinkCommand':
+                        onNoteLinkCommand?.(data);
                         break;
                     case 'mathSelected':
                         setCurrentLatex(data.latex);
