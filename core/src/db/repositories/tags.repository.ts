@@ -107,3 +107,12 @@ export async function deleteTag(tagId: string, tx: DbOrTx = getDb()): Promise<vo
         .where(eq(schema.tags.id, tagId))
         .run();
 }
+
+export async function getTagsCount(tx: DbOrTx = getDb()): Promise<number> {
+    const result = await tx.select({ count: sql<number>`count(*)` })
+        .from(schema.tags)
+        .where(eq(schema.tags.isPermDeleted, false))
+        .get();
+    const safeResult = safeGet<{ count: number }>(result);
+    return safeResult?.count ?? 0;
+}

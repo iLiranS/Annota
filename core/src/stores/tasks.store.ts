@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { Task, TaskInsert } from '../db/schema';
 import { TaskService } from '../services/tasks.service';
 import { SyncScheduler } from '../sync/sync-scheduler';
+import { useUserStore } from './user.store';
 
 // Re-export types
 export type { Task, TaskInsert };
@@ -14,7 +15,7 @@ interface TasksState {
     loadTasks: () => Promise<void>;
 
     // Task operations
-    createTask: (data: Partial<TaskInsert>) => Promise<Task>;
+    createTask: (data: Partial<TaskInsert>) => Promise<{ data: Task | null, error: string | null }>;
     updateTask: (taskId: string, updates: Partial<Omit<Task, 'id' | 'createdAt'>>) => Promise<void>;
     deleteTask: (taskId: string) => Promise<void>;
     toggleComplete: (taskId: string) => Promise<void>;
@@ -45,13 +46,19 @@ export const useTasksStore = create<TasksState>((set, get) => ({
 
     // Task operations
     createTask: async (data) => {
-        // Service handles ID generation and DB insertion
-        const task = await TaskService.create(data);
-        set((state) => ({
-            tasks: [...state.tasks, task],
-        }));
-        SyncScheduler.instance?.notifyContentChange();
-        return task;
+        try {
+            // Service handles ID generation and DB insertion
+            const userState = useUserStore.getState();
+            const task = await TaskService.create(data, userState.role, userState.sub_exp_date);
+            set((state) => ({
+                tasks: [...state.tasks, task],
+            }));
+            SyncScheduler.instance?.notifyContentChange();
+            return { data: task, error: null };
+        } catch (error) {
+            console.error('[Store] Failed to create task:', error);
+            return { data: null, error: error instanceof Error ? error.message : String(error) };
+        }
     },
 
     updateTask: async (taskId: string, updates) => {

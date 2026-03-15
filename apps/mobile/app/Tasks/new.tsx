@@ -4,6 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@react-navigation/native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
+import Toast from 'react-native-toast-message';
+
 
 export default function NewTaskScreen() {
     const router = useRouter();
@@ -17,7 +19,7 @@ export default function NewTaskScreen() {
 
     const handleCreate = async (values: TaskFormValues) => {
         try {
-            await createTask({
+            const { data, error } = await createTask({
                 title: values.title,
                 description: values.description ?? '',
                 deadline: values.deadline,
@@ -26,6 +28,15 @@ export default function NewTaskScreen() {
                 links: values.links,
                 isDirty: true,
             });
+
+            if (error) {
+                Toast.show({
+                    type: 'error',
+                    text1: 'Failed to create task',
+                    text2: error
+                });
+                return;
+            }
 
             router.back();
         } catch (error) {

@@ -2,9 +2,12 @@ import * as ImagesRepo from '../db/repositories/images.repository';
 import * as notesRepo from '../db/repositories/notes.repository';
 import type { NoteMetadata } from '../db/schema';
 import { insertNoteMetadataSchema } from '../db/validators/notes';
+import type { UserRole } from '../stores/user.store';
 import { generateNoteMetadata, generatePreview, generateTitle } from '../utils/notes';
+import { isPremiumUser } from '../utils/subscription';
 import * as NoteImageService from './images/note-image.service';
 import { TagService } from './tags.service';
+
 
 export const NoteService = {
     // 0. Getters
@@ -21,7 +24,19 @@ export const NoteService = {
     },
 
     // 1. Create
-    create: async (data: Partial<NoteMetadata>): Promise<NoteMetadata> => {
+    create: async (data: Partial<NoteMetadata>, userRole: UserRole, subExpDate: string | null): Promise<NoteMetadata> => {
+        const isPremium = isPremiumUser(userRole, subExpDate);
+        const limit = isPremium ? 7500 : 100;
+        console.log("Premium: ", isPremium, "Limit: ", limit);
+        console.log("User Role: ", userRole, "Sub Exp Date: ", subExpDate);
+
+        // Ask repository for current count to ensure absolute accuracy
+        const currentCount = await notesRepo.getNotesCount();
+
+        if (currentCount >= limit) {
+            throw new Error(`Limit of ${limit} notes reached.`);
+        }
+
         if (data.folderId === 'system-daily-notes') {
             const existing = await notesRepo.getNoteByFolderAndDate('system-daily-notes', new Date());
             console.log("Existing daily note:", existing);
@@ -123,7 +138,7 @@ export const NoteService = {
     },
 
     // 8. Tags
-    addTag: async (noteId: string, tag: { id?: string, name: string, color: string }) => {
+    addTag: async (noteId: string, tag: { id?: string, name: string, color: string }, userRole: UserRole, subExpDate: string | null) => {
         const metadata = await notesRepo.getNoteMetadataById(noteId);
         if (!metadata) return null;
 
@@ -145,7 +160,7 @@ export const NoteService = {
                 // Make sure to use Date.now() if Tauri is still complaining about Date objects!
                 createdAt: new Date(),
                 updatedAt: new Date(),
-            });
+            }, userRole, subExpDate);
         }
 
         const tagId = existingTag.id;

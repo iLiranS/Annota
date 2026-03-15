@@ -8,6 +8,7 @@ import { eachDayOfInterval, endOfMonth, endOfWeek, format, isToday, startOfMonth
 import { BookOpen, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 export function DailyNotesCalendar() {
     const navigate = useNavigate();
@@ -47,8 +48,14 @@ export function DailyNotesCalendar() {
             navigate(`/notes/${DAILY_NOTES_FOLDER_ID}/${existingNote.id}`);
         } else {
             if (isToday(date)) {
-                const newNote = await createNote({ folderId: DAILY_NOTES_FOLDER_ID });
-                navigate(`/notes/${DAILY_NOTES_FOLDER_ID}/${newNote.id}`);
+                const { data: newNote, error } = await createNote({ folderId: DAILY_NOTES_FOLDER_ID });
+                if (error) {
+                    toast.error(error);
+                    return;
+                }
+                if (newNote) {
+                    navigate(`/notes/${DAILY_NOTES_FOLDER_ID}/${newNote.id}`);
+                }
             }
         }
     };

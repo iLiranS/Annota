@@ -25,7 +25,7 @@ import {
     ContextMenuItem,
     ContextMenuTrigger
 } from "@/components/ui/context-menu";
-import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubButton, SidebarMenuSubItem, SidebarRail, useSidebar } from "@/components/ui/sidebar";
+import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubButton, SidebarMenuSubItem, SidebarRail, SidebarSeparator, useSidebar } from "@/components/ui/sidebar";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useCreateNote } from "@/hooks/use-create-note";
 import { useCreateTask } from "@/hooks/use-create-task";
@@ -138,6 +138,15 @@ export function AppSidebar() {
     const queryFolderId = queryParams.get("folderId");
     const queryTagId = queryParams.get("tagId");
 
+    const navigateSmart = useCallback((path: string) => {
+        if (location.pathname + location.search === path) return;
+
+        const isTargetContent = path.startsWith('/notes') && !path.startsWith('/notes/trash');
+        const isCurrentContent = location.pathname.startsWith('/notes') && !location.pathname.startsWith('/notes/trash');
+
+        navigate(path, { replace: !isTargetContent && !isCurrentContent });
+    }, [location, navigate]);
+
     return (
         <Sidebar
             collapsible="offcanvas"
@@ -176,7 +185,7 @@ export function AppSidebar() {
                             <SidebarMenuItem>
                                 <SidebarMenuButton
                                     isActive={isActive("/home") || location.pathname === "/"}
-                                    onClick={() => navigate("/home")}
+                                    onClick={() => navigateSmart("/home")}
                                     tooltip="Home"
                                 >
                                     <Ionicons name="home" size={18} className="text-indigo-500" />
@@ -187,7 +196,7 @@ export function AppSidebar() {
                             <SidebarMenuItem>
                                 <SidebarMenuButton
                                     isActive={isActive("/tasks")}
-                                    onClick={() => navigate("/tasks")}
+                                    onClick={() => navigateSmart("/tasks")}
                                     tooltip="Tasks"
                                 >
                                     <Ionicons name="checkmark-circle" size={18} className="text-emerald-500" />
@@ -203,7 +212,7 @@ export function AppSidebar() {
                                         queryFolderId === DAILY_NOTES_FOLDER_ID
                                     }
                                     onClick={() =>
-                                        navigate(`/notes?folderId=${DAILY_NOTES_FOLDER_ID}`)
+                                        navigateSmart(`/notes?folderId=${DAILY_NOTES_FOLDER_ID}`)
                                     }
                                     tooltip="Daily Notes"
                                 >
@@ -247,7 +256,7 @@ export function AppSidebar() {
                                                 <SidebarMenuButton
                                                     onClick={() => {
                                                         const folderId = note.folderId || "root";
-                                                        navigate(`/notes/${folderId}/${note.id}`);
+                                                        navigateSmart(`/notes/${folderId}/${note.id}`);
                                                     }}
                                                     className="text-sm"
                                                 >
@@ -265,9 +274,7 @@ export function AppSidebar() {
                     </SidebarGroup>
                 </Collapsible>
 
-
-
-
+                <SidebarSeparator className="opacity-80 mx-auto" />
 
                 {/* Notes & Folders */}
                 <SidebarGroup className="pt-0">
@@ -283,7 +290,7 @@ export function AppSidebar() {
                                                 !queryFolderId &&
                                                 !queryTagId
                                             }
-                                            onClick={() => navigate("/notes")}
+                                            onClick={() => navigateSmart("/notes")}
                                             tooltip="All Notes"
                                         >
                                             <Ionicons name="documents" color={colors.primary} size={18} className="text-primary" />
@@ -315,7 +322,7 @@ export function AppSidebar() {
                                     general={general}
                                     allFolders={folders}
                                     onNavigate={(folderId) =>
-                                        navigate(`/notes?folderId=${folderId}`)
+                                        navigateSmart(`/notes?folderId=${folderId}`)
                                     }
                                     onEdit={handleEditFolder}
                                     onDelete={setFolderToDelete}
@@ -331,7 +338,7 @@ export function AppSidebar() {
 
                 {/* Tags */}
                 <Collapsible
-                    className="group/tags"
+                    className="group/tags mt-auto"
                     defaultOpen={true}
                 >
                     <SidebarGroup>
@@ -344,7 +351,7 @@ export function AppSidebar() {
                         </SidebarGroupLabel>
                         <CollapsibleContent>
                             <SidebarGroupContent>
-                                <SidebarMenu>
+                                <SidebarMenu className="px-1">
                                     {tags.length === 0 ? (
                                         <SidebarMenuItem key="no-tags">
                                             <p className="px-3 py-2 text-xs italic text-muted-foreground">
@@ -357,12 +364,13 @@ export function AppSidebar() {
                                                 <ContextMenu>
                                                     <ContextMenuTrigger asChild>
                                                         <SidebarMenuButton
-                                                            onClick={() => navigate(`/notes?tagId=${tag.id}`)}
+                                                            onClick={() => navigateSmart(`/notes?tagId=${tag.id}`)}
                                                             isActive={isActive("/notes") && location.search.includes(`tagId=${tag.id}`)}
-                                                            className="text-sm"
+                                                            className="text-sm hover:bg-primary/10"
+                                                            style={{ "--primary": tag.color } as React.CSSProperties}
                                                         >
                                                             <Ionicons className={general.appDirection === 'ltr' ? 'pl-1' : 'pr-1'} color={tag.color} name="ellipse" size={16} />
-                                                            <span className="truncate">{tag.name}</span>
+                                                            <span className="truncate text-xs font-mono text-primary">{tag.name}</span>
                                                         </SidebarMenuButton>
                                                     </ContextMenuTrigger>
                                                     <ContextMenuContent className="w-48">
@@ -415,9 +423,9 @@ export function AppSidebar() {
                 )}
 
                 <SidebarMenu>
-                    <SidebarMenuItem key="trash">
+                    <SidebarMenuItem className="border-t" key="trash">
                         <SidebarMenuButton
-                            onClick={() => navigate("/notes/trash")}
+                            onClick={() => navigateSmart("/notes/trash")}
                             tooltip="Trash"
                         >
                             <Ionicons name="trash-outline" size={18} />
@@ -483,9 +491,19 @@ function FolderTreeItem({ folder, allFolders, onNavigate, onEdit, onDelete, onCr
     );
     const hasChildren = children.length > 0;
 
+    const [isOpen, setIsOpen] = useState(() => {
+        const saved = localStorage.getItem(`sidebar_folder_open_${folder.id}`);
+        return saved !== null ? saved === "true" : false;
+    });
+
+    const handleOpenChange = useCallback((open: boolean) => {
+        setIsOpen(open);
+        localStorage.setItem(`sidebar_folder_open_${folder.id}`, String(open));
+    }, [folder.id]);
+
     if (!hasChildren) {
         return (
-            <SidebarMenuItem>
+            <SidebarMenuItem className="group/folder">
                 <FolderListItem
                     asChild
                     folder={folder}
@@ -505,8 +523,8 @@ function FolderTreeItem({ folder, allFolders, onNavigate, onEdit, onDelete, onCr
     }
 
     return (
-        <Collapsible className="group/folder">
-            <SidebarMenuItem>
+        <Collapsible open={isOpen} onOpenChange={handleOpenChange}>
+            <SidebarMenuItem className="group/folder">
                 <FolderListItem
                     asChild
                     folder={folder}
@@ -524,9 +542,9 @@ function FolderTreeItem({ folder, allFolders, onNavigate, onEdit, onDelete, onCr
                 <CollapsibleTrigger asChild>
                     <button
                         type="button"
-                        className={`absolute top-1/2 -translate-y-1/2 rounded-md p-1 hover:bg-sidebar-accent ${general.appDirection === 'rtl' ? 'left-1' : 'right-1'}`}
+                        className={`group/folder-chevron absolute top-1/2 -translate-y-1/2 rounded-md p-1 hover:bg-sidebar-accent ${general.appDirection === 'rtl' ? 'left-1' : 'right-1'}`}
                     >
-                        <Ionicons name="chevron-forward" size={12} className={`transition-transform group-data-[state=open]/folder:rotate-90 ${general.appDirection === 'rtl' ? 'rotate-180' : ''}`} />
+                        <Ionicons name="chevron-forward" size={12} className={`transition-transform group-data-[state=open]/folder-chevron:rotate-90 ${general.appDirection === 'rtl' ? 'rotate-180' : ''}`} />
                     </button>
                 </CollapsibleTrigger>
             </SidebarMenuItem>

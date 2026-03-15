@@ -1,6 +1,7 @@
 import { useTasksStore } from "@annota/core";
 import { useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 export function useCreateTask() {
     const navigate = useNavigate();
@@ -9,7 +10,7 @@ export function useCreateTask() {
 
     const createAndNavigate = useCallback(async (options?: { deadline?: Date; folderId?: string }) => {
         try {
-            const task = await createTaskStore({
+            const { data: task, error } = await createTaskStore({
                 title: "Untitled Task",
                 description: "",
                 deadline: options?.deadline || new Date(new Date().getTime() + 60 * 60 * 1000), // 1 hour from now
@@ -19,13 +20,20 @@ export function useCreateTask() {
                 links: "[]",
             });
 
+            if (error) {
+                toast.error(error);
+                return null;
+            }
+
             if (task?.id) {
                 navigate(`/task/${task.id}`, { state: { background: location } });
             }
 
-            return task;
-        } catch (error) {
+            return { data: task, error: null };
+        } catch (error: any) {
+            const errorMsg = error.message || "An unexpected error occurred";
             console.error("Failed to create task:", error);
+            return { data: null, error: errorMsg };
         }
     }, [createTaskStore, navigate, location]);
 

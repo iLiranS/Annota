@@ -10,6 +10,10 @@ export const userService = {
      * - Store the new key securely on the device
      * Returns the newly generated master key mnemonic.
      */
+    getUserProfile: async (userId: string) => {
+        return await userApi.getUserProfile(userId);
+    },
+
     handleLostKey: async (userId: string): Promise<string> => {
         const newMnemonic = await generateMasterKey();
 
@@ -80,6 +84,9 @@ export const userService = {
     },
     getUserRole: async (userId: string) => {
         return await userApi.getUserRole(userId);
+    },
+    getSubscriptionExpiryDate: async (userId: string) => {
+        return await userApi.getSubscriptionExpiryDate(userId);
     },
     deleteAccount: async (userId: string) => {
         await userApi.deleteUserAccount(userId);

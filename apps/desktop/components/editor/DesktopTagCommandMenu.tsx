@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { useNotesStore } from '@annota/core';
 import { Check, Plus, Tag as TagIcon } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { toast } from 'sonner';
 
 interface DesktopTagCommandMenuProps {
     noteId: string;
@@ -70,12 +71,20 @@ export function DesktopTagCommandMenu({
             const newTag = {
                 name: query.trim(),
             };
-            await addTagToNote(noteId, newTag);
+            const { error } = await addTagToNote(noteId, newTag);
+            if (error) {
+                toast.error(error);
+                return;
+            }
         } else if (item.type === 'tag' && item.tag) {
             if (item.isApplied) {
                 await removeTagFromNote(noteId, item.tag.id);
             } else {
-                await addTagToNote(noteId, item.tag);
+                const { error } = await addTagToNote(noteId, item.tag);
+                if (error) {
+                    toast.error(error);
+                    return;
+                }
             }
         }
         onClose();

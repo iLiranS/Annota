@@ -27,6 +27,7 @@ import {
     Text,
     View
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import Animated, {
     Easing,
     FadeIn,
@@ -219,9 +220,19 @@ export default function NotesList() {
 
     // Create new note and navigate to it
     const handleCreateNote = useCallback(async () => {
-        const newNote = await createNote({ folderId: currentFolderId ?? '' });
-        router.push({ pathname: '/Notes/[id]', params: { id: newNote.id, source: 'new' } });
-    }, [createNote, currentFolderId, router]);
+        const { data: newNote, error } = await createNote({ folderId: currentFolderId ?? '', tags: tagId ? JSON.stringify([tagId]) : undefined });
+        if (error) {
+            Toast.show({
+                type: 'error',
+                text1: 'Failed to create note',
+                text2: error
+            });
+            return;
+        }
+        if (newNote) {
+            router.push({ pathname: '/Notes/[id]', params: { id: newNote.id, source: 'new' } });
+        }
+    }, [createNote, currentFolderId, router, tagId]);
 
     // Create new task and navigate to it
     const handleCreateTask = useCallback(async () => {

@@ -95,11 +95,18 @@ export const unstable_settings = {
 
 // ─── Custom Toast Config ────────────────────────────────────
 
-function StatusToast({ text1, text2 }: ToastConfigParams<any>) {
+function CustomToast({ text1, text2, type }: ToastConfigParams<any> & { type?: 'success' | 'error' | 'info' }) {
+  const isError = type === 'error';
+  const isSuccess = type === 'success';
+  
   return (
-    <View style={toastStyles.container}>
+    <View style={[
+      toastStyles.container,
+      isError && { borderLeftWidth: 4, borderLeftColor: '#ff4b4b' },
+      isSuccess && { borderLeftWidth: 4, borderLeftColor: '#10b981' }
+    ]}>
       <View style={toastStyles.textWrap}>
-        <Text style={toastStyles.title}>{text1}</Text>
+        <Text style={[toastStyles.title, isError && { color: '#ff4b4b' }]}>{text1}</Text>
         {text2 ? <Text style={toastStyles.subtitle}>{text2}</Text> : null}
       </View>
     </View>
@@ -107,8 +114,10 @@ function StatusToast({ text1, text2 }: ToastConfigParams<any>) {
 }
 
 const toastConfig: ToastConfig = {
-  offlineToast: (props: any) => <StatusToast {...props} />,
-  onlineToast: (props: any) => <StatusToast {...props} />,
+  offlineToast: (props: any) => <CustomToast {...props} />,
+  onlineToast: (props: any) => <CustomToast {...props} />,
+  error: (props: any) => <CustomToast {...props} type="error" />,
+  success: (props: any) => <CustomToast {...props} type="success" />,
 };
 
 // ─── Root Layout ─────────────────────────────────────────────
@@ -147,9 +156,11 @@ export default function RootLayout() {
 
         if (session) {
           checkMasterKey();
+          useAuthStore.getState().getUserProfile();
           await bootstrapDb(session.user.id);
         } else if (user) {
           // Offline cold start — hasMasterKey is already restored from persist
+          useAuthStore.getState().getUserProfile();
           await bootstrapDb(user.id);
         } else {
           // Fallback to guest DB for unauthenticated users (so the app can render the Auth screen)
@@ -201,6 +212,7 @@ export default function RootLayout() {
 
         if (session) {
           setSession(session);
+          useAuthStore.getState().getUserProfile();
         } else if (event === 'SIGNED_OUT') {
           setSession(null);
           // Clear stores immediately to prevent ghosting of previous user's data

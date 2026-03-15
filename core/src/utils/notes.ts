@@ -84,7 +84,7 @@ export function generateNoteMetadata(data: Partial<NoteMetadataInsert>): NoteMet
         isPinned: false,
         isQuickAccess: false,
         isDirty: true,
-        tags: '[]',
+        tags: data?.tags ?? '[]',
         originalFolderId: null,
     };
 }

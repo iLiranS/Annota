@@ -6,6 +6,10 @@ import type { Folder, FolderInsert } from '../db/schema';
 import * as schema from '../db/schema';
 import { generateFolder } from '../utils/folders';
 import * as NoteImageService from './images/note-image.service';
+import type { UserRole } from '../stores/user.store';
+import { isPremiumUser } from '../utils/subscription';
+
+
 
 
 // Re-export constants
@@ -24,7 +28,15 @@ export const FolderService = {
 
     // 1. Create
 
-    create: async (folderData: Partial<FolderInsert>): Promise<Folder> => {
+    create: async (folderData: Partial<FolderInsert>, userRole: UserRole, subExpDate: string | null): Promise<Folder> => {
+        const isPremium = isPremiumUser(userRole, subExpDate);
+        const limit = isPremium ? 2500 : 200;
+        const currentCount = await foldersRepo.getFoldersCount();
+
+        if (currentCount >= limit) {
+            throw new Error(`Limit of ${limit} folders reached.`);
+        }
+
         const folder = generateFolder(folderData);
         return await foldersRepo.createFolder(folder);
     },

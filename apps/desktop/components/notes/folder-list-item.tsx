@@ -55,7 +55,7 @@ export function FolderListItemContent({ folder, isActive }: { folder: Folder, is
                 isActive={isActive}
                 className="group-hover/folder:bg-background/50"
             />
-            <span className="truncate font-medium">{folder.name}</span>
+            <span className="truncate">{folder.name}</span>
         </>
     );
 }

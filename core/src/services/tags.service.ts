@@ -2,6 +2,10 @@ import { removeTagFromAllNotes } from '../db/repositories/notes.repository';
 import type { TagCreateInput } from '../db/repositories/tags.repository';
 import * as tagsRepo from '../db/repositories/tags.repository';
 import type { Tag } from '../db/schema';
+import type { UserRole } from '../stores/user.store';
+import { isPremiumUser } from '../utils/subscription';
+
+
 
 export const TagService = {
     getAllTags: async (): Promise<Tag[]> => {
@@ -16,7 +20,15 @@ export const TagService = {
         return await tagsRepo.getTagByName(name);
     },
 
-    create: async (data: TagCreateInput): Promise<Tag> => {
+    create: async (data: TagCreateInput, userRole: UserRole, subExpDate: string | null): Promise<Tag> => {
+        const isPremium = isPremiumUser(userRole, subExpDate);
+        const limit = isPremium ? 2500 : 100;
+        const currentCount = await tagsRepo.getTagsCount();
+
+        if (currentCount >= limit) {
+            throw new Error(`Limit of ${limit} tags reached.`);
+        }
+
         return await tagsRepo.createTag(data);
     },
 
@@ -32,5 +44,5 @@ export const TagService = {
         await removeTagFromAllNotes(tagId);
         await tagsRepo.deleteTag(tagId);
     }
-};
 
+}

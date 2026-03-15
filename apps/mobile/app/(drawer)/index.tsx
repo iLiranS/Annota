@@ -17,6 +17,7 @@ import { Animated, LayoutChangeEvent, Pressable, StyleSheet, View, useWindowDime
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 import { GUEST_DISPLAY_NAME_KEY } from '../settings/account';
 
 
@@ -204,8 +205,18 @@ export default function HomeScreen() {
   }, [router]);
 
   const handleCreateNote = useCallback(async () => {
-    const newNote = await createNote({});
-    router.push({ pathname: '/Notes/[id]', params: { id: newNote.id, source: 'new' } });
+    const { data: newNote, error } = await createNote({});
+    if (error) {
+      Toast.show({
+        type: 'error',
+        text1: 'Failed to create note',
+        text2: error
+      });
+      return;
+    }
+    if (newNote) {
+      router.push({ pathname: '/Notes/[id]', params: { id: newNote.id, source: 'new' } });
+    }
   }, [createNote, router]);
 
   const handleFolderPress = useCallback((folderId: string) => {

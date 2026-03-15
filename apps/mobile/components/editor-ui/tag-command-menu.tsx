@@ -3,6 +3,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useTheme } from '@react-navigation/native';
 import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Toast from 'react-native-toast-message';
 
 interface TagCommandMenuProps {
     noteId: string;
@@ -56,12 +57,28 @@ export function TagCommandMenu({ noteId, query, range, sendCommand, onClose }: T
             const newTag = {
                 name: query.trim(),
             };
-            await addTagToNote(noteId, newTag);
+            const { error } = await addTagToNote(noteId, newTag);
+            if (error) {
+                Toast.show({
+                    type: 'error',
+                    text1: 'Failed to add tag',
+                    text2: error
+                });
+                return;
+            }
         } else if (item.type === 'tag' && item.tag) {
             if (item.isApplied) {
                 await removeTagFromNote(noteId, item.tag.id);
             } else {
-                await addTagToNote(noteId, item.tag);
+                const { error } = await addTagToNote(noteId, item.tag);
+                if (error) {
+                    Toast.show({
+                        type: 'error',
+                        text1: 'Failed to add tag',
+                        text2: error
+                    });
+                    return;
+                }
             }
         }
 

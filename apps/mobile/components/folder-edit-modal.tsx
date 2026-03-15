@@ -14,6 +14,7 @@ import {
     TextInput,
     View,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LocationPickerModal from './location-picker-modal';
 
@@ -153,15 +154,23 @@ export default function FolderEditModal({
         return ['Notes', ...path].join(' / ');
     }, [getFolderById]);
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!name.trim()) return;
 
         if (isCreateMode) {
             // Create new folder with selected icon and color
-            createFolder({ parentId, name: name.trim(), icon, color });
+            const { error } = await createFolder({ parentId, name: name.trim(), icon, color });
+            if (error) {
+                Toast.show({
+                    type: 'error',
+                    text1: 'Failed to create folder',
+                    text2: error
+                });
+                return;
+            }
         } else {
             // Update existing folder
-            updateFolder(folder!.id, {
+            await updateFolder(folder!.id, {
                 name: name.trim(),
                 icon,
                 color,

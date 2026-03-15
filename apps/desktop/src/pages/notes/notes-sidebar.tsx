@@ -149,6 +149,15 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
         [isResizing, general.appDirection]
     );
 
+    const navigateSmart = useCallback((path: string) => {
+        if (location.pathname + location.search === path) return;
+
+        const isTargetContent = path.startsWith('/notes') && !path.startsWith('/notes/trash');
+        const isCurrentContent = location.pathname.startsWith('/notes') && !location.pathname.startsWith('/notes/trash');
+
+        navigate(path, { replace: !isTargetContent && !isCurrentContent });
+    }, [location, navigate]);
+
     useEffect(() => {
         if (isResizing) {
             window.addEventListener("mousemove", resize);
@@ -201,16 +210,18 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
     }, [tasks, currentFolderId]);
 
     const handleFolderPress = (folderId: string) => {
-        navigate(`/notes?folderId=${folderId}`);
+        const targetPath = `/notes?folderId=${folderId}`;
+        navigateSmart(targetPath);
     };
 
     const handleNotePress = (note: NoteMetadata) => {
         const folderId = note.folderId || "root";
-        navigate(`/notes/${folderId}/${note.id}`);
+        const targetPath = `/notes/${folderId}/${note.id}`;
+        navigateSmart(targetPath);
     };
 
     const handleCreateNote = async () => {
-        await createAndNavigateNote(currentFolderId ?? "");
+        await createAndNavigateNote(currentFolderId ?? "", tagId ?? undefined);
     };
 
     const handleEditFolder = useCallback((folder: Folder) => {
@@ -328,7 +339,7 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
                                     <TooltipContent side="bottom" className="text-[10px] font-bold">New Note</TooltipContent>
                                 </Tooltip>
                             )}
-                            {!isDaily && !isTrash && (
+                            {!isDaily && !isTrash && !tagId && (
                                 <DropdownMenu>
                                     <Tooltip>
                                         <TooltipTrigger asChild>

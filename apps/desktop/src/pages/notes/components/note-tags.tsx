@@ -50,9 +50,9 @@ export function NoteTags({ noteId, className }: { noteId: string, className?: st
                             e.stopPropagation();
                             removeTagFromNote(noteId, tag.id);
                         }}
-                        className="hover:bg-black/10 dark:hover:bg-white/10 rounded-full p-0.5 transition-colors cursor-pointer"
+                        className="hover:bg-black/10 dark:hover:bg-white/10 rounded p-0.5 items-center justify-center flex transition-colors cursor-pointer"
                     >
-                        <X className="w-3.5 h-3.5" />
+                        <X className="h-3.5 w-3.5" />
                     </button>
                 </Badge>
             ))}

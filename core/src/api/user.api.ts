@@ -1,6 +1,17 @@
 import { supabase } from '../supabase';
 
 export const userApi = {
+
+    getUserProfile: async (userId: string) => {
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', userId)
+            .single();
+        if (error) throw error;
+        return data;
+    },
+
     /** Fetch the user's profile to get the key_validator */
     getKeyValidator: async (userId: string) => {
         const { data, error } = await supabase
@@ -90,5 +101,14 @@ export const userApi = {
             .single();
         if (error) throw error;
         return data?.role as string | null;
+    },
+    getSubscriptionExpiryDate: async (userId: string) => {
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('sub_exp_date')
+            .eq('id', userId)
+            .single();
+        if (error) throw error;
+        return data?.sub_exp_date as string | null;
     },
 };

@@ -145,7 +145,7 @@ export function NoteListItem({
                                 })()}
                             </>
                         )}
-                        {isInList && <div className=" h-px absolute bottom-0 w-9/10 left-1/2 -translate-x-1/2 mx-auto bg-muted-foreground/15 " />}
+                        {isInList && <div className=" h-px absolute bottom-0 w-full left-0 bg-muted-foreground/15 " />}
 
                     </Comp>
                 </ContextMenuTrigger>

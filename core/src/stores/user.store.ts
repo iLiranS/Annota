@@ -8,6 +8,8 @@ import { userService } from '../services/user.service';
 import { getMasterKey } from '../utils/crypto';
 import { createStorageAdapter } from './config';
 
+export type UserRole = string | null;
+
 type UserState = {
     session: Session | null;
     user: User | null;
@@ -18,13 +20,22 @@ type UserState = {
     /** Whether fetchKeyValidator has already run for this session. */
     keyValidatorFetched: boolean;
     /** Cached user role from Supabase (non-persisted). */
-    role: string | null;
+    role: UserRole;
+    /** Cached user sub_exp_date from Supabase (non-persisted). */
+    sub_exp_date: string | null;
     /** Whether getUserRole has already run for this session. */
     roleFetched: boolean;
     /** Cached display name from Supabase (non-persisted). */
     displayName: string | null;
     /** Whether getDisplayName has already run for this session. */
     displayNameFetched: boolean;
+    /** Total storage used in bytes. */
+    storage_used_bytes: number;
+    /** Profile creation timestamp. */
+    created_at: string | null;
+    /** Profile last update timestamp. */
+    updated_at: string | null;
+    getUserProfile: () => Promise<any>;
     setSession: (session: Session | null) => void;
     setGuest: (guest: boolean) => void;
     signOut: () => Promise<void>;
@@ -32,7 +43,7 @@ type UserState = {
     fetchKeyValidator: (userId: string) => Promise<string | null>;
     updateDisplayName: (displayName: string) => Promise<void>;
     getDisplayName: () => Promise<string | null>;
-    getUserRole: () => Promise<string | null>;
+    getUserRole: () => Promise<UserRole>;
     deleteAccount: () => Promise<void>;
 
     /** Tracks if the master key is present on the device */
@@ -51,10 +62,36 @@ export const useUserStore = create<UserState>()(
             keyValidator: null,
             keyValidatorFetched: false,
             role: null,
+            sub_exp_date: null,
             roleFetched: false,
             displayName: null,
             displayNameFetched: false,
+            storage_used_bytes: 0,
+            created_at: null,
+            updated_at: null,
             hasMasterKey: null,
+
+            getUserProfile: async () => {
+                const state = get();
+                if (!state.user) return null;
+
+                const profile = await userService.getUserProfile(state.user.id);
+                if (profile) {
+                    set({
+                        displayName: profile.display_name,
+                        displayNameFetched: true,
+                        role: profile.role,
+                        roleFetched: true,
+                        keyValidator: profile.key_validator,
+                        keyValidatorFetched: true,
+                        sub_exp_date: profile.sub_exp_date,
+                        storage_used_bytes: profile.storage_used_bytes || 0,
+                        created_at: profile.created_at,
+                        updated_at: profile.updated_at,
+                    });
+                }
+                return profile;
+            },
 
             setHasMasterKey: (hasKey: boolean) => set({ hasMasterKey: hasKey }),
 
@@ -89,9 +126,13 @@ export const useUserStore = create<UserState>()(
                         displayName: isSameUser ? state.displayName : null,
                         displayNameFetched: isSameUser ? state.displayNameFetched : false,
                         role: isSameUser ? state.role : null,
+                        sub_exp_date: isSameUser ? state.sub_exp_date : null,
                         roleFetched: isSameUser ? state.roleFetched : false,
                         keyValidator: isSameUser ? state.keyValidator : null,
                         keyValidatorFetched: isSameUser ? state.keyValidatorFetched : false,
+                        storage_used_bytes: isSameUser ? state.storage_used_bytes : 0,
+                        created_at: isSameUser ? state.created_at : null,
+                        updated_at: isSameUser ? state.updated_at : null,
                         hasMasterKey: session ? state.hasMasterKey : null,
                     };
                 }),
@@ -162,6 +203,15 @@ export const useUserStore = create<UserState>()(
                 set({ role, roleFetched: true });
                 return role;
             },
+            getSubscriptionExpiryDate: async () => {
+                const state = get();
+                if (!state.user) return null;
+                if (state.sub_exp_date) return state.sub_exp_date;
+
+                const sub_exp_date = await userService.getSubscriptionExpiryDate(state.user.id);
+                set({ sub_exp_date });
+                return sub_exp_date;
+            },
             deleteAccount: async () => {
                 const { user } = get();
                 if (!user) return;
@@ -177,6 +227,9 @@ export const useUserStore = create<UserState>()(
                     roleFetched: false,
                     displayName: null,
                     displayNameFetched: false,
+                    storage_used_bytes: 0,
+                    created_at: null,
+                    updated_at: null,
                     hasMasterKey: null
                 });
             },

@@ -7,6 +7,8 @@ import { TagService } from '../services/tags.service';
 import { SyncScheduler } from '../sync/sync-scheduler';
 import { SortType, sortFolders, sortNotes } from '../utils/sorts';
 import { generateRandomHexColor } from '../utils/tags';
+import { useUserStore } from './user.store';
+
 
 // Re-export types for convenience
 export { DAILY_NOTES_FOLDER_ID, TRASH_FOLDER_ID };
@@ -29,7 +31,7 @@ interface NotesState {
     initApp: () => Promise<void>;
 
     // Note operations
-    createNote: (data: Partial<NoteMetadata>) => Promise<NoteMetadata>;
+    createNote: (data: Partial<NoteMetadata>) => Promise<{ data: NoteMetadata | null, error: string | null }>;
     updateNoteMetadata: (noteId: string, updates: Partial<Omit<NoteMetadata, 'id' | 'createdAt'>>) => Promise<void>;
     deleteNote: (noteId: string) => Promise<void>;
     permanentlyDeleteNote: (noteId: string) => Promise<void>;
@@ -37,7 +39,7 @@ interface NotesState {
     getNoteById: (noteId: string) => NoteMetadata | undefined;
 
     // Tag operations
-    addTagToNote: (noteId: string, tag: { id?: string, name: string, color?: string }) => Promise<void>;
+    addTagToNote: (noteId: string, tag: { id?: string, name: string, color?: string }) => Promise<{ error: string | null }>;
     removeTagFromNote: (noteId: string, tagId: string) => Promise<void>;
     updateTag: (tagId: string, updates: Partial<Omit<Tag, 'id'>>) => Promise<void>;
     deleteTag: (tagId: string) => Promise<void>;
@@ -52,7 +54,7 @@ interface NotesState {
     revertNote: (noteId: string, versionId: string) => Promise<void>;
 
     // Folder operations
-    createFolder: (data: Partial<FolderInsert>) => Promise<Folder>;
+    createFolder: (data: Partial<FolderInsert>) => Promise<{ data: Folder | null, error: string | null }>;
     updateFolder: (folderId: string, updates: Partial<Omit<Folder, 'id' | 'createdAt'>>) => Promise<void>;
     deleteFolder: (folderId: string) => Promise<void>;
     permanentlyDeleteFolder: (folderId: string) => Promise<void>;
@@ -166,20 +168,26 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     // ============ NOTE OPERATIONS ============
 
     createNote: async (data: Partial<NoteMetadata>) => {
-        // 1. Service Call (writes to DB)
-        const newNote = await NoteService.create(data);
+        try {
+            // 1. Service Call (writes to DB)
+            const userState = useUserStore.getState();
+            const newNote = await NoteService.create(data, userState.role, userState.sub_exp_date);
 
-        // 2. Manual State Mutation (update local cache)
-        set(state => {
-            const exists = state.notes.some(n => n.id === newNote.id);
-            if (exists) return state;
-            return {
-                notes: [...state.notes, newNote]
-            };
-        });
+            // 2. Manual State Mutation (update local cache)
+            set(state => {
+                const exists = state.notes.some(n => n.id === newNote.id);
+                if (exists) return state;
+                return {
+                    notes: [...state.notes, newNote]
+                };
+            });
 
-        SyncScheduler.instance?.notifyContentChange();
-        return newNote;
+            SyncScheduler.instance?.notifyContentChange();
+            return { data: newNote, error: null };
+        } catch (error) {
+            console.error('[Store] Failed to create note:', error);
+            return { data: null, error: error instanceof Error ? error.message : String(error) };
+        }
     },
 
     updateNoteMetadata: async (noteId, updates) => {
@@ -241,19 +249,26 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     // ============ TAG OPERATIONS ============
 
     addTagToNote: async (noteId, tag) => {
-        const color = tag.color ?? generateRandomHexColor();
-        const result = await NoteService.addTag(noteId, { ...tag, color });
-        if (result) {
-            const { note: updatedNote, tag: persistedTag } = result;
-            set(state => {
-                const isNewTag = !state.tags.find(t => t.id === persistedTag.id);
-                const newTags = isNewTag ? [...state.tags, persistedTag] : state.tags;
-                return {
-                    notes: state.notes.map(n => n.id === noteId ? updatedNote : n),
-                    tags: newTags
-                };
-            });
-            SyncScheduler.instance?.notifyContentChange();
+        try {
+            const color = tag.color ?? generateRandomHexColor();
+            const userState = useUserStore.getState();
+            const result = await NoteService.addTag(noteId, { ...tag, color }, userState.role, userState.sub_exp_date);
+            if (result) {
+                const { note: updatedNote, tag: persistedTag } = result;
+                set(state => {
+                    const isNewTag = !state.tags.find(t => t.id === persistedTag.id);
+                    const newTags = isNewTag ? [...state.tags, persistedTag] : state.tags;
+                    return {
+                        notes: state.notes.map(n => n.id === noteId ? updatedNote : n),
+                        tags: newTags
+                    };
+                });
+                SyncScheduler.instance?.notifyContentChange();
+            }
+            return { error: null };
+        } catch (error) {
+            console.error('[Store] Failed to add tag:', error);
+            return { error: error instanceof Error ? error.message : String(error) };
         }
     },
 
@@ -346,14 +361,20 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     // ============ FOLDER OPERATIONS ============
 
     createFolder: async (data: Partial<FolderInsert>) => {
-        const newFolder = await FolderService.create(data);
+        try {
+            const userState = useUserStore.getState();
+            const newFolder = await FolderService.create(data, userState.role, userState.sub_exp_date);
 
-        set(state => ({
-            folders: [...state.folders, newFolder]
-        }));
+            set(state => ({
+                folders: [...state.folders, newFolder]
+            }));
 
-        SyncScheduler.instance?.notifyContentChange();
-        return newFolder;
+            SyncScheduler.instance?.notifyContentChange();
+            return { data: newFolder, error: null };
+        } catch (error) {
+            console.error('[Store] Failed to create folder:', error);
+            return { data: null, error: error instanceof Error ? error.message : String(error) };
+        }
     },
 
     updateFolder: async (folderId, updates) => {

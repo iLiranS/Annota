@@ -17,6 +17,7 @@ import { Folder, useNotesStore } from "@annota/core";
 import { COLOR_PALETTE } from "@annota/core/constants/colors";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import * as Io5 from "react-icons/io5";
+import { toast } from "sonner";
 import { LocationPickerModal } from "../location-picker-modal";
 
 const ALL_IONICON_KEYS = Object.keys(Io5)
@@ -112,13 +113,17 @@ export function FolderEditModal({
         return parentFolder?.name ?? 'Unknown';
     }, [parentFolder]);
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!name.trim()) return;
 
         if (isCreateMode) {
-            createFolder({ parentId, name: name.trim(), icon, color });
+            const { error } = await createFolder({ parentId, name: name.trim(), icon, color });
+            if (error) {
+                toast.error(error);
+                return;
+            }
         } else {
-            updateFolder(folder!.id, {
+            await updateFolder(folder!.id, {
                 name: name.trim(),
                 icon,
                 color,

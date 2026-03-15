@@ -16,6 +16,7 @@ import {
     TextInput,
     View,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type ListItem = any;
@@ -152,9 +153,19 @@ export default function NotesSearchModal({
                         <View style={{ flexDirection: 'row', gap: 12, paddingHorizontal: 12 }}>
                             <Pressable
                                 onPress={async () => {
+                                    const { data: newNote, error } = await createNote({ folderId: item.data.id });
+                                    if (error) {
+                                        Toast.show({
+                                            type: 'error',
+                                            text1: 'Failed to create note',
+                                            text2: error
+                                        });
+                                        return;
+                                    }
                                     handleClose();
-                                    const newNote = await createNote({ folderId: item.data.id });
-                                    router.push({ pathname: '/Notes/[id]', params: { id: newNote.id, source: 'new' } });
+                                    if (newNote) {
+                                        router.push({ pathname: '/Notes/[id]', params: { id: newNote.id, source: 'new' } });
+                                    }
                                 }}
                             >
                                 <Ionicons name="document-text-outline" size={22} color={colors.primary} />

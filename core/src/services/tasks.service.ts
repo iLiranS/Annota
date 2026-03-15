@@ -1,6 +1,10 @@
 import * as tasksRepo from '../db/repositories/tasks.repository';
 import type { Task, TaskInsert } from '../db/schema';
 import { generateTask } from '../utils/tasks';
+import type { UserRole } from '../stores/user.store';
+import { isPremiumUser } from '../utils/subscription';
+
+
 
 
 
@@ -34,7 +38,15 @@ export const TaskService = {
         return await tasksRepo.getTaskDatesInMonth(year, month);
     },
 
-    create: async (data: Partial<TaskInsert>): Promise<Task> => {
+    create: async (data: Partial<TaskInsert>, userRole: UserRole, subExpDate: string | null): Promise<Task> => {
+        const isPremium = isPremiumUser(userRole, subExpDate);
+        const limit = isPremium ? 10000 : 500;
+        const currentCount = await tasksRepo.getTasksCount();
+
+        if (currentCount >= limit) {
+            throw new Error(`Limit of ${limit} tasks reached.`);
+        }
+
         const task = generateTask(data);
         return await tasksRepo.createTask(task);
     },

@@ -37,8 +37,8 @@ import MasterKeyPage from "./pages/auth/master-key";
 
 // Notes pages
 import NotesLayout from "./pages/notes/notes-layout";
-import TrashPage from "./pages/notes/trash-page";
 import NotesViewManager from "./pages/notes/notes-view-manager";
+import TrashPage from "./pages/notes/trash-page";
 
 // Tasks pages
 import TaskDetailDialog from "./pages/tasks/task-detail-dialog";
@@ -107,6 +107,8 @@ function App() {
           if (data?.session) {
             setSession(data.session);
             activeUserId = data.session.user.id;
+            // Fetch profile to sync role, sub_exp_date, etc.
+            await useUserStore.getState().getUserProfile();
           }
         } catch (error) {
           console.warn(
@@ -222,6 +224,7 @@ function App() {
       if (newSession) {
         setSession(newSession);
         useUserStore.getState().checkMasterKey();
+        useUserStore.getState().getUserProfile();
 
         if (newSession.user.id !== prevUserId) {
           setRunId((v) => v + 1);
