@@ -248,6 +248,47 @@ export async function resetAll(): Promise<void> {
   }
 }
 
+/**
+ * Completely wipes all local SQL tables.
+ * Used during account deletion to ensure no trace is left.
+ */
+export async function deleteDatabase(): Promise<void> {
+  const nativeDb = getExpoDb() as { execAsync: (sql: string) => Promise<void> };
+
+  try {
+    // 1. Stop background sync activity
+    SyncScheduler.instance?.dispose();
+    
+    // Yield to let any pending SQLite operations finish
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    // 2. Batch the drops into a single statement
+    const dropStatements = `
+      DROP TABLE IF EXISTS note_images;
+      DROP TABLE IF EXISTS images;
+      DROP TABLE IF EXISTS note_metadata;
+      DROP TABLE IF EXISTS note_content;
+      DROP TABLE IF EXISTS note_versions;
+      DROP TABLE IF EXISTS folders;
+      DROP TABLE IF EXISTS tasks;
+      DROP TABLE IF EXISTS tags;
+      DROP TABLE IF EXISTS settings;
+      DROP TABLE IF EXISTS version_images;
+      DROP TABLE IF EXISTS image_download_queue;
+    `;
+
+    // Disable foreign key constraints temporarily
+    await nativeDb.execAsync('PRAGMA foreign_keys = OFF;');
+    await nativeDb.execAsync(dropStatements);
+    await nativeDb.execAsync('PRAGMA foreign_keys = ON;');
+
+    console.log('Local database tables dropped successfully');
+  } catch (error) {
+    console.error('Delete database failed:', error);
+    throw error;
+  }
+}
+
 // Reclaim unused space and optimize database performance
 export async function vacuumDatabase(): Promise<void> {
   try {

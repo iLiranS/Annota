@@ -241,7 +241,33 @@ export const useUserStore = create<UserState>()(
                 const { user } = get();
                 if (!user) return;
 
-                await userService.deleteAccount(user.id);
+                try {
+                    // 1. Delete all associated images from filesystem
+                    // Using dynamic imports to avoid circular dependencies with db client
+                    const { getAllImagePaths } = await import('../db/repositories/images.repository');
+                    const imagePaths = await getAllImagePaths();
+                    const { getPlatformAdapters } = await import('../adapters');
+                    const platform = getPlatformAdapters();
+                    
+                    for (const path of imagePaths) {
+                        try {
+                            await platform.fileSystem.deleteFile(path);
+                        } catch (e) {
+                            console.warn(`[user.store] Failed to delete image at ${path}:`, e);
+                        }
+                    }
+
+                    // 2. Delete the local SQL database tables
+                    const { deleteDatabase } = await import('../db/client');
+                    await deleteDatabase();
+
+                    // 3. Delete the account from Supabase
+                    await userService.deleteAccount(user.id);
+                } catch (e) {
+                    console.error('[user.store] Error during account deletion cleanup:', e);
+                    // We continue to reset the store anyway to ensure the user is logged out locally
+                }
+
                 set({
                     session: null,
                     user: null,

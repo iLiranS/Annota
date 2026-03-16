@@ -45,6 +45,11 @@ export async function deleteImage(imageId: string, tx: DbOrTx = getDb()): Promis
     await tx.delete(images).where(eq(images.id, imageId)).run();
 }
 
+export async function getAllImagePaths(tx: DbOrTx = getDb()): Promise<string[]> {
+    const result = await tx.select({ localPath: images.localPath }).from(images).all();
+    return safeGetAll<{ localPath: string }>(result).map(r => r.localPath);
+}
+
 // ============ VERSION-IMAGE OPERATIONS ============
 
 /**
