@@ -1,9 +1,9 @@
+import * as Sentry from "@sentry/react";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useDailyCleanup } from "@/hooks/use-daily-cleanup";
 import {
   authApi,
   imageSyncService,
-  setStorageEngine,
   useNotesStore,
   useSearchStore,
   useSettingsStore,
@@ -14,15 +14,12 @@ import {
 import {
   SyncScheduler,
   getMasterKey,
-  initPlatformAdapters,
 } from "@annota/core/platform";
 import { Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Location, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import "./App.css";
-import { createDesktopAdapters } from "./bootstrap/desktop-adapters";
 import { initDesktopSqlite } from "./bootstrap/desktop-db";
-import { createDesktopStorageEngine } from "./bootstrap/desktop-storage";
 import { initDeepLinkListener } from "./lib/auth-listener";
 
 // Layout components
@@ -60,6 +57,21 @@ function App() {
     bootstrapStateRef.current = bootstrapState;
   }, [bootstrapState]);
 
+
+  // Prevent default browser navigation for global drag and drop
+  useEffect(() => {
+    const preventNavigation = (e: any) => {
+      e.preventDefault();
+    };
+
+    // You must prevent default on 'dragover' to allow the 'drop' event to fire
+    window.addEventListener('dragover', preventNavigation);
+    window.addEventListener('drop', preventNavigation);
+
+    // Note: If using a framework like React, remember to return a cleanup function 
+    // to remove these listeners on unmount.
+  }, [])
+
   const [bootstrapError, setBootstrapError] = useState<string | null>(null);
   const [runId, setRunId] = useState(0);
 
@@ -75,14 +87,9 @@ function App() {
       setBootstrapError(null);
 
       try {
-        // 1. Keep deterministic ordering: storage -> adapters -> db.
-        setStorageEngine(createDesktopStorageEngine());
-
-        // Rehydrate persisted stores manually
+        // 1. Rehydrate persisted stores manually (storage/adapters initialized in main.tsx)
         await useUserStore.persist.rehydrate();
         await useSettingsStore.persist.rehydrate();
-
-        initPlatformAdapters(createDesktopAdapters());
 
         // 2. Optimistically grab the persisted user ID FIRST
         let activeUserId: string | null = useUserStore.getState().user?.id ?? null;
@@ -402,4 +409,4 @@ function App() {
   );
 }
 
-export default App;
+export default Sentry.withProfiler(App);

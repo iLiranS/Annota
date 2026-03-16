@@ -170,15 +170,15 @@ export default function LoginPage() {
 
                 <p className="mt-2 text-center text-[10px] leading-relaxed text-muted-foreground/60 px-4">
                     By using Annota, you agree to our{" "}
-                    <button 
-                        onClick={() => openUrl("https://annota.io/terms")}
+                    <button
+                        onClick={() => openUrl("https://annota.online/tos")}
                         className="underline hover:text-foreground transition-colors"
                     >
                         Terms of Service
                     </button>
                     {" "}and{" "}
-                    <button 
-                        onClick={() => openUrl("https://annota.io/privacy")}
+                    <button
+                        onClick={() => openUrl("https://annota.online/privacy")}
                         className="underline hover:text-foreground transition-colors"
                     >
                         Privacy Policy

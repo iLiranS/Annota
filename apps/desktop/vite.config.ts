@@ -18,6 +18,7 @@ export default defineConfig(async ({ mode }) => {
         EXPO_PUBLIC_SUPABASE_KEY: env.VITE_SUPABASE_KEY ?? "",
         VITE_SUPABASE_URL: env.VITE_SUPABASE_URL ?? "",
         VITE_SUPABASE_KEY: env.VITE_SUPABASE_KEY ?? "",
+        REACT_APP_SENTRY_DSN: env.REACT_APP_SENTRY_DSN ?? "",
       },
     },
     resolve: {

@@ -1,8 +1,8 @@
 import * as tasksRepo from '../db/repositories/tasks.repository';
 import type { Task, TaskInsert } from '../db/schema';
-import { generateTask } from '../utils/tasks';
 import type { UserRole } from '../stores/user.store';
 import { isPremiumUser } from '../utils/subscription';
+import { generateTask } from '../utils/tasks';
 
 
 
@@ -40,7 +40,7 @@ export const TaskService = {
 
     create: async (data: Partial<TaskInsert>, userRole: UserRole, subExpDate: string | null): Promise<Task> => {
         const isPremium = isPremiumUser(userRole, subExpDate);
-        const limit = isPremium ? 10000 : 500;
+        const limit = isPremium ? 5000 : 250;
         const currentCount = await tasksRepo.getTasksCount();
 
         if (currentCount >= limit) {

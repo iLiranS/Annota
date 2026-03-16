@@ -54,6 +54,10 @@ export function AppSidebar() {
         const saved = localStorage.getItem("sidebar_quick_access_open");
         return saved !== null ? saved === "true" : true;
     });
+    const [isTagsOpen, setIsTagsOpen] = useState(() => {
+        const saved = localStorage.getItem("sidebar_tags_open");
+        return saved !== null ? saved === "true" : true;
+    });
     const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [folderToDelete, setFolderToDelete] = useState<Folder | null>(null);
@@ -71,6 +75,10 @@ export function AppSidebar() {
     useEffect(() => {
         localStorage.setItem("sidebar_quick_access_open", String(isQuickAccessOpen));
     }, [isQuickAccessOpen]);
+
+    useEffect(() => {
+        localStorage.setItem("sidebar_tags_open", String(isTagsOpen));
+    }, [isTagsOpen]);
 
     useEffect(() => {
         const handleToggle = (e: any) => {
@@ -336,10 +344,10 @@ export function AppSidebar() {
                 </SidebarGroup>
 
 
-                {/* Tags */}
                 <Collapsible
                     className="group/tags mt-auto"
-                    defaultOpen={true}
+                    open={isTagsOpen}
+                    onOpenChange={setIsTagsOpen}
                 >
                     <SidebarGroup>
                         <SidebarGroupLabel asChild className="text-sm text-sidebar-foreground font-normal">

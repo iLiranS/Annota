@@ -22,6 +22,7 @@ import {
 } from "@annota/core";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useImportNotes } from "../../hooks/use-import-notes";
 
 import { Ionicons } from "../ui/ionicons";
 
@@ -39,6 +40,7 @@ function formatBytes(bytes: number, decimals = 2) {
 export function StorageSettings() {
     const { session } = useUserStore();
     const { isSyncing } = useSyncStore();
+    const { handleImportMarkdown, isImporting } = useImportNotes();
     const [stats, setStats] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [showResetDialog, setShowResetDialog] = useState(false);
@@ -110,6 +112,24 @@ export function StorageSettings() {
 
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            {/* Import Section */}
+            <section className="space-y-3">
+                <h4 className="text-[11px] font-bold text-muted-foreground tracking-wider uppercase px-1">
+                    Import
+                </h4>
+                <div className="bg-card border rounded-2xl overflow-hidden shadow-sm">
+                    <SettingItem
+                        label="Import Markdown"
+                        description="Import up to 20 .md files at once"
+                        icon={<Ionicons name="cloud-download-outline" size={20} />}
+                        iconBg="bg-blue-600"
+                        onClick={handleImportMarkdown}
+                        loading={isImporting}
+                        action={<Ionicons name="chevron-forward" size={16} className="text-muted-foreground" />}
+                    />
+                </div>
+            </section>
+
             {/* Storage Stats Section */}
             <section className="space-y-3">
                 <div className="flex items-center justify-between px-1">

@@ -4,10 +4,10 @@ import * as foldersRepo from '../db/repositories/folders.repository';
 import * as notesRepo from '../db/repositories/notes.repository';
 import type { Folder, FolderInsert } from '../db/schema';
 import * as schema from '../db/schema';
-import { generateFolder } from '../utils/folders';
-import * as NoteImageService from './images/note-image.service';
 import type { UserRole } from '../stores/user.store';
+import { generateFolder } from '../utils/folders';
 import { isPremiumUser } from '../utils/subscription';
+import * as NoteImageService from './images/note-image.service';
 
 
 
@@ -30,7 +30,7 @@ export const FolderService = {
 
     create: async (folderData: Partial<FolderInsert>, userRole: UserRole, subExpDate: string | null): Promise<Folder> => {
         const isPremium = isPremiumUser(userRole, subExpDate);
-        const limit = isPremium ? 2500 : 200;
+        const limit = isPremium ? 2500 : 20;
         const currentCount = await foldersRepo.getFoldersCount();
 
         if (currentCount >= limit) {

@@ -177,14 +177,14 @@ export default function LoginScreen() {
                         By using Annota, you agree to our{' '}
                         <Text
                             style={styles.link}
-                            onPress={() => WebBrowser.openBrowserAsync('https://annota.io/terms')}
+                            onPress={() => WebBrowser.openBrowserAsync('https://annota.online/tos')}
                         >
                             Terms of Service
                         </Text>
                         {' '}and{' '}
                         <Text
                             style={styles.link}
-                            onPress={() => WebBrowser.openBrowserAsync('https://annota.io/privacy')}
+                            onPress={() => WebBrowser.openBrowserAsync('https://annota.online/privacy')}
                         >
                             Privacy Policy
                         </Text>.

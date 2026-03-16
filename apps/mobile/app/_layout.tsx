@@ -1,4 +1,3 @@
-
 import { imageSyncService } from '@annota/core';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ThemeProvider } from '@react-navigation/native';
@@ -60,6 +59,21 @@ import {
 } from '@annota/core';
 import { SyncScheduler, getMasterKey, initPlatformAdapters } from '@annota/core/platform';
 import { createMobileAdapters } from './bootstrap/mobile-adapters';
+import * as Sentry from '@sentry/react-native';
+
+Sentry.init({
+  dsn: 'https://218e77b048bc9d32f9dba6728c3b1193@o4511054294286336.ingest.de.sentry.io/4511054310211664',
+
+  // Adds more context data to events (IP address, cookies, user, etc.)
+  // For more information, visit: https://docs.sentry.io/platforms/react-native/data-management/data-collected/
+  sendDefaultPii: true,
+
+  // Enable Logs
+  enableLogs: true,
+
+  // uncomment the line below to enable Spotlight (https://spotlightjs.com)
+  // spotlight: __DEV__,
+});
 
 setStorageEngine(AsyncStorage);
 initPlatformAdapters(createMobileAdapters());
@@ -122,7 +136,7 @@ const toastConfig: ToastConfig = {
 
 // ─── Root Layout ─────────────────────────────────────────────
 
-export default function RootLayout() {
+export default Sentry.wrap(function RootLayout() {
   const theme = useAppTheme();
   const { initialized, session, user, isGuest, setSession, hasMasterKey, checkMasterKey } = useAuthStore();
   const dbReady = useDbStore(state => state.isReady);
@@ -395,7 +409,7 @@ export default function RootLayout() {
       <Toast config={toastConfig} />
     </GestureHandlerRootView>
   );
-}
+});
 
 const styles = StyleSheet.create({
   loadingContainer: {

@@ -22,7 +22,7 @@ export const TagService = {
 
     create: async (data: TagCreateInput, userRole: UserRole, subExpDate: string | null): Promise<Tag> => {
         const isPremium = isPremiumUser(userRole, subExpDate);
-        const limit = isPremium ? 2500 : 100;
+        const limit = isPremium ? 2500 : 20;
         const currentCount = await tagsRepo.getTagsCount();
 
         if (currentCount >= limit) {

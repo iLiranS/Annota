@@ -75,22 +75,27 @@ export const useUserStore = create<UserState>()(
                 const state = get();
                 if (!state.user) return null;
 
-                const profile = await userService.getUserProfile(state.user.id);
-                if (profile) {
-                    set({
-                        displayName: profile.display_name,
-                        displayNameFetched: true,
-                        role: profile.role,
-                        roleFetched: true,
-                        keyValidator: profile.key_validator,
-                        keyValidatorFetched: true,
-                        sub_exp_date: profile.sub_exp_date,
-                        storage_used_bytes: profile.storage_used_bytes || 0,
-                        created_at: profile.created_at,
-                        updated_at: profile.updated_at,
-                    });
+                try {
+                    const profile = await userService.getUserProfile(state.user.id);
+                    if (profile) {
+                        set({
+                            displayName: profile.display_name,
+                            displayNameFetched: true,
+                            role: profile.role,
+                            roleFetched: true,
+                            keyValidator: profile.key_validator,
+                            keyValidatorFetched: true,
+                            sub_exp_date: profile.sub_exp_date,
+                            storage_used_bytes: profile.storage_used_bytes || 0,
+                            created_at: profile.created_at,
+                            updated_at: profile.updated_at,
+                        });
+                    }
+                    return profile;
+                } catch (e) {
+                    console.warn('[user.store] getUserProfile failed (offline likely):', e);
+                    return null;
                 }
-                return profile;
             },
 
             setHasMasterKey: (hasKey: boolean) => set({ hasMasterKey: hasKey }),
@@ -156,28 +161,38 @@ export const useUserStore = create<UserState>()(
                 const state = get();
                 if (state.keyValidatorFetched) return state.keyValidator;
 
-                const validator = await userApi.getKeyValidator(userId);
-                set({ keyValidator: validator, keyValidatorFetched: true });
-                return validator;
+                try {
+                    const validator = await userApi.getKeyValidator(userId);
+                    set({ keyValidator: validator, keyValidatorFetched: true });
+                    return validator;
+                } catch (e) {
+                    console.warn('[user.store] fetchKeyValidator failed (offline likely):', e);
+                    return state.keyValidator;
+                }
             },
 
             updateDisplayName: async (displayName: string) => {
                 const { user } = get();
                 if (!user) return;
 
-                await userService.updateDisplayName(user.id, displayName);
+                try {
+                    await userService.updateDisplayName(user.id, displayName);
 
-                set((state) => ({
-                    displayName,
-                    displayNameFetched: true,
-                    user: state.user ? {
-                        ...state.user,
-                        user_metadata: {
-                            ...state.user.user_metadata,
-                            display_name: displayName,
-                        },
-                    } : null,
-                }));
+                    set((state) => ({
+                        displayName,
+                        displayNameFetched: true,
+                        user: state.user ? {
+                            ...state.user,
+                            user_metadata: {
+                                ...state.user.user_metadata,
+                                display_name: displayName,
+                            },
+                        } : null,
+                    }));
+                } catch (e) {
+                    console.error('[user.store] updateDisplayName failed:', e);
+                    throw e; // We want to throw here because this is a user action
+                }
             },
             getDisplayName: async () => {
                 const state = get();
@@ -199,18 +214,28 @@ export const useUserStore = create<UserState>()(
                 if (!state.user) return null;
                 if (state.roleFetched) return state.role;
 
-                const role = await userService.getUserRole(state.user.id);
-                set({ role, roleFetched: true });
-                return role;
+                try {
+                    const role = await userService.getUserRole(state.user.id);
+                    set({ role, roleFetched: true });
+                    return role;
+                } catch (e) {
+                    console.warn('[user.store] getUserRole failed (offline likely):', e);
+                    return state.role;
+                }
             },
             getSubscriptionExpiryDate: async () => {
                 const state = get();
                 if (!state.user) return null;
                 if (state.sub_exp_date) return state.sub_exp_date;
 
-                const sub_exp_date = await userService.getSubscriptionExpiryDate(state.user.id);
-                set({ sub_exp_date });
-                return sub_exp_date;
+                try {
+                    const sub_exp_date = await userService.getSubscriptionExpiryDate(state.user.id);
+                    set({ sub_exp_date });
+                    return sub_exp_date;
+                } catch (e) {
+                    console.warn('[user.store] getSubscriptionExpiryDate failed (offline likely):', e);
+                    return state.sub_exp_date;
+                }
             },
             deleteAccount: async () => {
                 const { user } = get();
@@ -243,7 +268,13 @@ export const useUserStore = create<UserState>()(
                 isGuest: state.isGuest,
                 displayName: state.displayName,
                 user: state.user,
-                hasMasterKey: state.hasMasterKey
+                hasMasterKey: state.hasMasterKey,
+                role: state.role,
+                sub_exp_date: state.sub_exp_date,
+                keyValidator: state.keyValidator,
+                storage_used_bytes: state.storage_used_bytes,
+                created_at: state.created_at,
+                updated_at: state.updated_at
             } as any),
             onRehydrateStorage: () => {
                 return (_state, error) => {

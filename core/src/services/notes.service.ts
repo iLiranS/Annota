@@ -7,6 +7,7 @@ import { generateNoteMetadata, generatePreview, generateTitle } from '../utils/n
 import { isPremiumUser } from '../utils/subscription';
 import * as NoteImageService from './images/note-image.service';
 import { TagService } from './tags.service';
+import { FolderService } from './folders.service';
 
 
 export const NoteService = {
@@ -27,8 +28,6 @@ export const NoteService = {
     create: async (data: Partial<NoteMetadata>, userRole: UserRole, subExpDate: string | null): Promise<NoteMetadata> => {
         const isPremium = isPremiumUser(userRole, subExpDate);
         const limit = isPremium ? 7500 : 100;
-        console.log("Premium: ", isPremium, "Limit: ", limit);
-        console.log("User Role: ", userRole, "Sub Exp Date: ", subExpDate);
 
         // Ask repository for current count to ensure absolute accuracy
         const currentCount = await notesRepo.getNotesCount();
@@ -46,6 +45,36 @@ export const NoteService = {
         }
         const metadata = generateNoteMetadata(data);
         return await notesRepo.createNoteMetadata(metadata);
+    },
+
+    createBulk: async (notes: { title: string, content: string }[], userRole: UserRole, subExpDate: string | null): Promise<{ notes: NoteMetadata[], folder: any }> => {
+        const isPremium = isPremiumUser(userRole, subExpDate);
+        const limit = isPremium ? 7500 : 100;
+
+        const currentCount = await notesRepo.getNotesCount();
+
+        if (currentCount + notes.length > limit) {
+            throw new Error(`Adding these notes would exceed your limit of ${limit} notes.`);
+        }
+
+        const dateStr = new Date().toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+        });
+
+        const importFolder = await FolderService.create({
+            name: `Imported - ${dateStr}`,
+            icon: 'folder'
+        }, userRole, subExpDate);
+
+        const notesWithMeta = notes.map(note => ({
+            metadata: generateNoteMetadata({ title: note.title, folderId: importFolder.id }),
+            content: note.content
+        }));
+
+        const result = await notesRepo.createNotesBulk(notesWithMeta);
+        return { notes: result, folder: importFolder };
     },
 
     // 2. Update Metadata

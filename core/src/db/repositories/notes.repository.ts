@@ -256,6 +256,41 @@ export async function createNoteMetadata(metadata: NoteMetadataInsert): Promise<
     });
 }
 
+export async function createNotesBulk(notes: { metadata: NoteMetadataInsert, content: string }[]): Promise<NoteMetadata[]> {
+    const MAX_CONTENT_SIZE = 145000;
+
+    return await getDb().transaction(async (tx: DbOrTx) => {
+        const result: NoteMetadata[] = [];
+
+        for (const item of notes) {
+            const byteSize = new TextEncoder().encode(item.content).length;
+            if (byteSize > MAX_CONTENT_SIZE) {
+                console.warn(`[Repo] Skipping note "${item.metadata.title}" due to size: ${byteSize} bytes`);
+                continue;
+            }
+
+            // A. Insert Metadata
+            const insertedNote = await tx.insert(schema.noteMetadata)
+                .values(item.metadata)
+                .returning()
+                .get();
+            const safeInsertedNote = safeGet<NoteMetadata>(insertedNote);
+
+            if (safeInsertedNote) {
+                // B. Insert Content
+                await tx.insert(schema.noteContent).values({
+                    id: safeInsertedNote.id,
+                    content: item.content,
+                }).run();
+
+                result.push(safeInsertedNote);
+            }
+        }
+
+        return result;
+    });
+}
+
 export async function updateNoteMetadata(noteId: string, updates: Partial<Omit<NoteMetadata, 'id' | 'createdAt'>>): Promise<NoteMetadata> {
     const noteMetadata = await getDb()
         .update(schema.noteMetadata)

@@ -29,6 +29,7 @@
     "clipboard-manager:allow-write-text",
     "clipboard-manager:allow-write-image",
     "http:allow-fetch",
+    "dialog:default",
     {
       "identifier": "http:default",
       "allow": [

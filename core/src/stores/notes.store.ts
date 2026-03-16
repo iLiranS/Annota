@@ -32,6 +32,7 @@ interface NotesState {
 
     // Note operations
     createNote: (data: Partial<NoteMetadata>) => Promise<{ data: NoteMetadata | null, error: string | null }>;
+    createNotesBulk: (notes: { title: string, content: string }[]) => Promise<{ data: NoteMetadata[], folder: Folder | null, error: string | null }>;
     updateNoteMetadata: (noteId: string, updates: Partial<Omit<NoteMetadata, 'id' | 'createdAt'>>) => Promise<void>;
     deleteNote: (noteId: string) => Promise<void>;
     permanentlyDeleteNote: (noteId: string) => Promise<void>;
@@ -187,6 +188,36 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         } catch (error) {
             console.error('[Store] Failed to create note:', error);
             return { data: null, error: error instanceof Error ? error.message : String(error) };
+        }
+    },
+
+    createNotesBulk: async (notes: { title: string, content: string }[]) => {
+        try {
+            const userState = useUserStore.getState();
+            const { notes: newNotes, folder: newFolder } = await NoteService.createBulk(notes, userState.role, userState.sub_exp_date);
+
+            if (newNotes.length > 0 || newFolder) {
+                set(state => {
+                    const existingIds = new Set(state.notes.map(n => n.id));
+                    const filteredNewNotes = newNotes.filter(n => !existingIds.has(n.id));
+                    
+                    const existingFolderIds = new Set(state.folders.map(f => f.id));
+                    const updatedFolders = newFolder && !existingFolderIds.has(newFolder.id) 
+                        ? [...state.folders, newFolder] 
+                        : state.folders;
+
+                    return {
+                        notes: [...state.notes, ...filteredNewNotes],
+                        folders: updatedFolders
+                    };
+                });
+                SyncScheduler.instance?.notifyContentChange();
+            }
+
+            return { data: newNotes, folder: newFolder, error: null };
+        } catch (error) {
+            console.error('[Store] Failed to create notes in bulk:', error);
+            return { data: [], folder: null, error: error instanceof Error ? error.message : String(error) };
         }
     },
 
