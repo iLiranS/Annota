@@ -82,6 +82,13 @@ export default function SettingsLayout() {
                     presentation: 'card',
                 }}
             />
+            <Stack.Screen
+                name="help"
+                options={{
+                    title: 'Help & Support',
+                    presentation: 'card',
+                }}
+            />
         </Stack>
     );
 }

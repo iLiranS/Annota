@@ -2,6 +2,7 @@ import {
     Brush,
     Cog,
     Database,
+    HelpCircle,
     Type,
     User,
 } from "lucide-react";
@@ -11,6 +12,7 @@ import { AccountSettings } from "./account-settings";
 import { AppearanceSettings } from "./appearance-settings";
 import { EditorSettings } from "./editor-settings";
 import { GeneralSettings } from "./general-settings";
+import { HelpSettings } from "./help-settings";
 
 import {
     Dialog,
@@ -60,6 +62,12 @@ const tabs: SettingsTab[] = [
         label: "Storage & Debug",
         icon: <Database className="h-4 w-4 text-white" />,
         iconBg: "bg-orange-500",
+    },
+    {
+        id: "help",
+        label: "Help & Support",
+        icon: <HelpCircle className="h-4 w-4 text-white" />,
+        iconBg: "bg-slate-500",
     },
 ];
 
@@ -125,6 +133,8 @@ export default function SettingsDialog() {
                             <GeneralSettings />
                         ) : activeTab === "storage" ? (
                             <StorageSettings />
+                        ) : activeTab === "help" ? (
+                            <HelpSettings />
                         ) : (
                             <p className="text-sm text-muted-foreground">
                                 Settings for {tabs.find((t) => t.id === activeTab)?.label} will

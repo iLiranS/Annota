@@ -74,6 +74,20 @@ export default function SettingsIndex() {
                 </View>
             </View>
 
+            <View style={styles.section}>
+                <Text style={[styles.sectionHeader, { color: colors.text + '80' }]}>SUPPORT</Text>
+                <View style={[styles.card, { backgroundColor: colors.card }]}>
+                    <SettingItem
+                        label="Help & Support"
+                        icon="help-circle-outline"
+                        onPress={() => router.push('/settings/help')}
+                        description="Contact us, Discord, and more"
+                        iconColor="#FFFFFF"
+                        iconBackgroundColor="#8E8E93"
+                    />
+                </View>
+            </View>
+
             <View style={styles.footer}>
                 <Text style={[styles.versionText, { color: colors.text + '40' }]}>Version 1.0.0 (Build 100)</Text>
             </View>
