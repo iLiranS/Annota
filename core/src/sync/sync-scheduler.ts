@@ -24,6 +24,14 @@ export class SyncScheduler {
         return SyncScheduler._instance;
     }
 
+    private static _syncDisabled = false;
+    public static setSyncDisabled(disabled: boolean) {
+        SyncScheduler._syncDisabled = disabled;
+    }
+    public static isSyncDisabled(): boolean {
+        return SyncScheduler._syncDisabled;
+    }
+
     private constructor() { }
 
     private masterKey: string = '';
@@ -99,6 +107,11 @@ export class SyncScheduler {
     async forceSync(): Promise<void> {
         if (this.disposed || !this.initialized || !this.deps) return;
 
+        if (SyncScheduler._syncDisabled) {
+            console.warn('[SyncScheduler] Force sync ignored: sync is disabled via remote config');
+            return;
+        }
+
         console.log('[SyncScheduler] Force sync requested');
         this.clearAllTimers();
 
@@ -167,6 +180,11 @@ export class SyncScheduler {
     private async executeSyncPush(): Promise<boolean> {
         if (this.disposed) return false;
 
+        if (SyncScheduler._syncDisabled) {
+            console.log('[SyncScheduler] Push skipped: sync is disabled via remote config');
+            return false;
+        }
+
         try {
             const success = await syncPush(this.masterKey);
             if (success) {
@@ -185,6 +203,11 @@ export class SyncScheduler {
      */
     private async executeSyncPull(): Promise<boolean> {
         if (this.disposed) return false;
+
+        if (SyncScheduler._syncDisabled) {
+            console.log('[SyncScheduler] Pull skipped: sync is disabled via remote config');
+            return false;
+        }
 
         try {
             const success = await syncPull(this.masterKey);

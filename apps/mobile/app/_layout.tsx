@@ -27,6 +27,10 @@ TaskManager.defineTask(BACKGROUND_SYNC_TASK, async () => {
     const { data: { session } } = await authApi.getSession();
     if (!session) return BackgroundTask.BackgroundTaskResult.Success;
 
+    // Fetch/Apply remote app config before running sync
+    const { appConfigService } = require('@annota/core');
+    await appConfigService.init();
+
     const key = await getMasterKey(session.user.id);
     if (!key) return BackgroundTask.BackgroundTaskResult.Success;
 
@@ -215,8 +219,12 @@ export default Sentry.wrap(function RootLayout() {
         // 1. Rehydrate stores from AsyncStorage sequentially
         await useAuthStore.persist.rehydrate();
         await useSettingsStore.persist.rehydrate();
+
+        // 1.5 Fetch/Apply remote app config (blocking sync if needed)
+        const { appConfigService } = require('@annota/core');
+        await appConfigService.init();
       } catch (err) {
-        console.error('[RootLayout] Hydration error:', err);
+        console.error('[RootLayout] Hydration/Config error:', err);
       }
 
       // 2. Hydration completes so properties like isGuest exist.

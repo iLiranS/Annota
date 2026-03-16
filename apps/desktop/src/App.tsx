@@ -91,7 +91,15 @@ function App() {
         await useUserStore.persist.rehydrate();
         await useSettingsStore.persist.rehydrate();
 
-        // 2. Optimistically grab the persisted user ID FIRST
+        // 2. Fetch/Apply remote app config (blocking sync if needed)
+        try {
+          const { appConfigService } = await import("@annota/core");
+          await appConfigService.init();
+        } catch (e) {
+          console.error("[DesktopBootstrap] Failed to init app config:", e);
+        }
+
+        // 3. Optimistically grab the persisted user ID FIRST
         let activeUserId: string | null = useUserStore.getState().user?.id ?? null;
 
         // Populate master key early so offline mode doesn't redirect to /auth/master-key
