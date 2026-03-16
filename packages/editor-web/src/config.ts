@@ -22,12 +22,32 @@ import {
     Details,
     DetailsContent,
     DetailsSummary,
+    NoteLinkCommandExtension,
     SearchExtension,
     ShortcutManager,
     SlashCommandExtension,
-    TagCommandExtension,
-    NoteLinkCommandExtension
+    TagCommandExtension
 } from './extensions';
+
+export const CustomYoutube = Youtube.extend({
+    renderHTML({ HTMLAttributes }) {
+        const originalSrc = HTMLAttributes.src as string;
+
+        // Tiptap outputs: https://www.youtube-nocookie.com/embed/VIDEO_ID?controls=...
+        // This regex specifically extracts the 11 characters immediately following "/embed/"
+        const match = originalSrc.match(/embed\/([a-zA-Z0-9_-]{11})/);
+        const videoId = match ? match[1] : '';
+
+        return [
+            'iframe',
+            {
+                ...HTMLAttributes,
+                // Append just the clean 11-character ID as the hash
+                src: `https://annota.online/embed/youtube#${videoId}`,
+            },
+        ];
+    },
+});
 
 export const WEB_FONT_FAMILIES: Record<string, string> = {
     system: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
@@ -99,11 +119,11 @@ export const getExtensions = (options: {
             types: ['textStyle'],
         }),
         Color,
-        Youtube.configure({
+        CustomYoutube.configure({
             width: 320,
             height: 180,
             nocookie: true,
-            origin: options.editorOrigin || undefined,
+            origin: 'https://annota.online',
             HTMLAttributes: {
                 referrerPolicy: 'strict-origin-when-cross-origin' as any,
                 playsinline: 'true',
