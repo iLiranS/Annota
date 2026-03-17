@@ -15,7 +15,7 @@ export default function GeneralSettings() {
     };
 
     const toggleAutoClearTasks = () => {
-        const options: AutoClearTasksDays[] = [7, 30, 90, 180];
+        const options: AutoClearTasksDays[] = [30, 60, 90, 180];
         const currentIndex = options.indexOf(general.autoClearTasksDays || 30);
         const nextIndex = (currentIndex + 1) % options.length;
         updateGeneralSettings({

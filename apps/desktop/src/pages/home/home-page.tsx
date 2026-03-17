@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { GreetingHeader } from "./components/greeting-header";
 import { HomeCalendar } from "./components/home-calendar";
-import { PersonalMomentum } from "./components/personal-momentum";
+import { ActivityInsights } from "./components/activity-insights";
 import { QuickStatsWidget } from "./components/quick-stats-widget";
 import { RecentNotesGrid } from "./components/recent-notes-grid";
 import { TasksOnboarding } from "./components/tasks-onboarding";
-import WeeklyInsights from "./components/weekly-insights";
 
 export default function HomePage() {
     const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -32,8 +31,7 @@ export default function HomePage() {
                     {/* Column 1: Insights & Notes - Scrollable independently if content exceeds viewport */}
                     <div className="flex flex-col gap-4 lg:pr-2 lg:min-h-0">
                         <div className="shrink-0 flex flex-col gap-4">
-                            <WeeklyInsights />
-                            <PersonalMomentum />
+                            <ActivityInsights />
                         </div>
                         <div className="shrink-0">
                             <RecentNotesGrid />

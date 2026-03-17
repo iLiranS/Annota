@@ -8,7 +8,6 @@ import { TaskItem } from '@tiptap/extension-task-item';
 import { TaskList } from '@tiptap/extension-task-list';
 import { FontFamily, TextStyle } from '@tiptap/extension-text-style';
 import { Underline } from '@tiptap/extension-underline';
-import { Youtube } from '@tiptap/extension-youtube';
 import { CellSelection } from '@tiptap/pm/tables';
 import { StarterKit } from '@tiptap/starter-kit';
 
@@ -28,26 +27,7 @@ import {
     SlashCommandExtension,
     TagCommandExtension
 } from './extensions';
-
-export const CustomYoutube = Youtube.extend({
-    renderHTML({ HTMLAttributes }) {
-        const originalSrc = HTMLAttributes.src as string;
-
-        // Tiptap outputs: https://www.youtube-nocookie.com/embed/VIDEO_ID?controls=...
-        // This regex specifically extracts the 11 characters immediately following "/embed/"
-        const match = originalSrc.match(/embed\/([a-zA-Z0-9_-]{11})/);
-        const videoId = match ? match[1] : '';
-
-        return [
-            'iframe',
-            {
-                ...HTMLAttributes,
-                // Append just the clean 11-character ID as the hash
-                src: `https://annota.online/embed/youtube#${videoId}`,
-            },
-        ];
-    },
-});
+import { CustomYoutube } from './extensions/custom-yotube';
 
 export const WEB_FONT_FAMILIES: Record<string, string> = {
     system: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
@@ -119,17 +99,7 @@ export const getExtensions = (options: {
             types: ['textStyle'],
         }),
         Color,
-        CustomYoutube.configure({
-            width: 320,
-            height: 180,
-            nocookie: true,
-            origin: 'https://annota.online',
-            HTMLAttributes: {
-                referrerPolicy: 'strict-origin-when-cross-origin' as any,
-                playsinline: 'true',
-                allow: 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share',
-            },
-        }),
+        CustomYoutube.configure({}),
         CustomImage.configure({
             inline: false,
             allowBase64: true,

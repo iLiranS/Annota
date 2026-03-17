@@ -43,7 +43,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
     clearAesKey: () => set({ activeMnemonic: null, aesKey: null }),
     forceSync: async () => {
         // Lazy require breaks the cycle!
-        const { SyncScheduler } = require('../sync/sync-scheduler');
+        const { SyncScheduler } = await import('../sync/sync-scheduler');
 
         if (SyncScheduler.instance) {
             const state = get();

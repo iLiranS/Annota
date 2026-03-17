@@ -436,13 +436,6 @@ export async function syncPush(masterKey: string): Promise<boolean> {
     const store = useSyncStore.getState();
     if (!store.isOnline) return false;
 
-    // Check if sync is disabled via remote config
-    const { SyncScheduler } = require('./sync-scheduler');
-    if (SyncScheduler.isSyncDisabled()) {
-        console.log('[syncPush] Skipped — sync is disabled via remote config');
-        return false;
-    }
-
     if (store.isSyncing) {
         console.log('[syncPush] Skipped — already in-flight');
         return false;
@@ -469,13 +462,6 @@ export async function syncPush(masterKey: string): Promise<boolean> {
 export async function syncPull(masterKey: string): Promise<boolean> {
     const store = useSyncStore.getState();
     if (!store.isOnline) return false;
-
-    // Check if sync is disabled via remote config
-    const { SyncScheduler } = require('./sync-scheduler');
-    if (SyncScheduler.isSyncDisabled()) {
-        console.log('[syncPull] Skipped — sync is disabled via remote config');
-        return false;
-    }
 
     if (store.isSyncing) {
         console.log('[syncPull] Skipped — already in-flight');

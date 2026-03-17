@@ -616,6 +616,13 @@
     justify-content: center;
 }
 
+.yt-embed-link:hover .yt-play-button {
+    transform: translate(-50%, -50%) scale(1.15) !important;
+    border-color: rgba(255, 255, 255, 0.6) !important;
+}
+
+
+
 .ProseMirror iframe {
     width: 100% !important;
     height: auto !important;

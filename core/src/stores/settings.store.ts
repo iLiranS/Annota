@@ -6,7 +6,7 @@ import { createStorageAdapter } from './config';
 // Types
 export type ThemeMode = 'light' | 'dark' | 'system';
 export type StartOfWeek = 'sunday' | 'monday';
-export type AutoClearTasksDays = 7 | 30 | 90 | 180;
+export type AutoClearTasksDays = 30 | 60 | 90 | 180;
 
 export interface EditorSettings {
     direction: 'ltr' | 'rtl' | 'auto';
@@ -63,6 +63,7 @@ const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
     fontFamily: 'system',
     floatingNoteHeader: true,
     noteWidth: 900,
+
     defaultCodeLanguage: null,
 };
 
@@ -72,7 +73,7 @@ const DEFAULT_GENERAL_SETTINGS: GeneralSettings = {
     hapticFeedback: true,
     tasksShowDone: true,
     taskListShowDone: true,
-    autoClearTasksDays: 30,
+    autoClearTasksDays: 60,
     appDirection: 'ltr',
 };
 
