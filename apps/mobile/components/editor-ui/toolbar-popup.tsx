@@ -26,7 +26,7 @@ import {
     TablePopupProps,
     ToolbarPopupProps,
     YouTubePopupProps
-} from '@annota/tiptap-editor';
+} from '@annota/editor-ui';
 import { ImageInput } from './popups/image-input';
 import { LinkInput } from './popups/link-input';
 import { MathInput } from './popups/math-input';

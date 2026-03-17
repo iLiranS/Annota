@@ -4,16 +4,15 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import { useNotesStore } from "@annota/core";
-import TipTapEditor from "@annota/tiptap-editor";
+import { useAppTheme } from "@/hooks/use-app-theme";
+import { NoteMetadata, useNotesStore } from "@annota/core";
+import TipTapEditor from "@annota/editor-ui";
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { NoteMetadata } from "@annota/core";
 import { useNavigate } from "react-router-dom";
-import { useAppTheme } from "@/hooks/use-app-theme";
-import { ImageGallery } from "./image-gallery";
 import { Button } from "../ui/button";
 import { Ionicons } from "../ui/ionicons";
+import { ImageGallery } from "./image-gallery";
 
 interface NotePreviewModalProps {
     open: boolean;

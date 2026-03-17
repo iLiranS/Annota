@@ -11,8 +11,8 @@
   },
   "dependencies": {
     "@annota/core": "workspace:*",
-    "@annota/editor-web": "workspace:*",
-    "@annota/tiptap-editor": "workspace:*",
+    "@annota/editor-core": "workspace:*",
+    "@annota/editor-ui": "workspace:*",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@hookform/resolvers": "^5.2.2",

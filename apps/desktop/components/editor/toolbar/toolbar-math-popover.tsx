@@ -6,7 +6,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import type { ToolbarRenderProps } from '@annota/tiptap-editor';
+import type { ToolbarRenderProps } from '@annota/editor-ui';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import { Sigma } from 'lucide-react';

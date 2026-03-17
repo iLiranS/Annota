@@ -5,7 +5,7 @@ import { Keyboard, ScrollView, StyleSheet, View } from 'react-native';
 import { copyImageToClipboardMobile } from '@/utils/clipboard';
 import { HeadingLevel } from '@annota/core';
 import { ImageService } from '@annota/core/platform';
-import type { PopupType, ToolbarRenderProps } from '@annota/tiptap-editor';
+import type { PopupType, ToolbarRenderProps } from '@annota/editor-ui';
 import { ToolbarButton } from './toolbar-button';
 import { ToolbarPopup } from './toolbar-popup';
 

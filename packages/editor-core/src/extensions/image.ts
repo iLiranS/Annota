@@ -121,7 +121,7 @@ export const CustomImage = Image.extend<any>({
     },
     addCommands() {
         return {
-            resolveImages: ({ imageMap }: { imageMap: Record<string, string> }) => ({ tr, state, dispatch }: { tr: Transaction, state: EditorState, dispatch?: (tr: Transaction) => void }) => {
+            resolveImages: ({ imageMap }: { imageMap: Record<string, string> }) => ({ tr, state, dispatch, editor }: any) => {
                 let hasChanges = false;
                 state.doc.descendants((node: PMNode, pos: number) => {
                     if (node.type.name === 'image' && node.attrs.imageId) {
@@ -138,7 +138,25 @@ export const CustomImage = Image.extend<any>({
 
                 if (hasChanges && dispatch) {
                     tr.setMeta('resolveImages', true);
+
+                    const dom = editor?.view?.dom;
+                    const wasFocused = editor?.isFocused;
+
+                    // SAFARI HACK: If the editor isn't actively focused by the user, 
+                    // temporarily disable contenteditable so Safari doesn't steal focus.
+                    if (dom && !wasFocused) {
+                        dom.contentEditable = "false";
+                        dom.blur(); // Drop any phantom focus
+                    }
+
                     dispatch(tr);
+
+                    // Restore immediately after the DOM update cycle completes
+                    if (dom && !wasFocused) {
+                        setTimeout(() => {
+                            dom.contentEditable = "true";
+                        }, 0);
+                    }
                 }
                 return hasChanges;
             },
@@ -418,6 +436,7 @@ export const CustomImage = Image.extend<any>({
                     },
                 },
             }),
+
         ];
     },
 });

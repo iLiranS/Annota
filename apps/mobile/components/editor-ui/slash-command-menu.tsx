@@ -1,4 +1,4 @@
-import { getFilteredCommands, SharedSlashCommand } from '@annota/tiptap-editor';
+import { getFilteredCommands, SharedSlashCommand } from '@annota/editor-ui';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useTheme } from '@react-navigation/native';
 import React, { useMemo, useState } from 'react';
@@ -101,7 +101,7 @@ export function SlashCommandMenu({ query, range, sendCommand, onClose }: SlashCo
 
 const styles = StyleSheet.create({
     container: {
-        height: 60,
+        height: 50,
         borderTopWidth: StyleSheet.hairlineWidth,
         justifyContent: 'center',
     },

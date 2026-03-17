@@ -1,14 +1,14 @@
 import { ImageGallery } from '@/components/editor-ui/image-gallery';
+import { NoteLinkCommandMenu } from '@/components/editor-ui/note-link-command-menu';
 import { NoteTags } from '@/components/editor-ui/note-tags';
 import { SlashCommandMenu } from '@/components/editor-ui/slash-command-menu';
 import { TagCommandMenu } from '@/components/editor-ui/tag-command-menu';
-import { NoteLinkCommandMenu } from '@/components/editor-ui/note-link-command-menu';
 import { EditorToolbar } from '@/components/editor-ui/toolbar';
 import NoteHeaderMenu from '@/components/notes/note-header-menu';
 import { SearchOverlay } from '@/components/notes/search-overlay';
 import { HapticPressable } from '@/components/ui/haptic-pressable';
 import { generateTitle, useNotesStore, useSettingsStore } from '@annota/core';
-import TipTapEditor, { TipTapEditorRef, ToolbarRenderProps } from '@annota/tiptap-editor';
+import TipTapEditor, { TipTapEditorRef, ToolbarRenderProps } from '@annota/editor-ui';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
 import * as ExpoClipboard from 'expo-clipboard';
@@ -73,7 +73,7 @@ export default function NoteEditor() {
 
 
     const pendingScrollElementIdRef = useRef<string | null>(null);
-    const shouldAutofocus = source === 'new' && (!content || content === '<p></p>');
+    const shouldAutofocus = source === 'new' || (!content || content === '<p></p>');
 
     // Load content from database on mount
     useEffect(() => {

@@ -1,14 +1,14 @@
 import { BlockMenu } from "@/components/editor/BlockMenu";
+import { DesktopNoteLinkCommandMenu } from "@/components/editor/DesktopNoteLinkCommandMenu";
 import { DesktopSlashCommandMenu } from "@/components/editor/DesktopSlashCommandMenu";
 import { DesktopTagCommandMenu } from "@/components/editor/DesktopTagCommandMenu";
-import { DesktopNoteLinkCommandMenu } from "@/components/editor/DesktopNoteLinkCommandMenu";
 import { DesktopToolbar } from "@/components/editor/DesktopToolbar";
 import { ImageGallery } from "@/components/notes/image-gallery";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { copyImageToClipboard, writeText } from "@/lib/clipboard";
 import { generateTitle, TRASH_FOLDER_ID, useNotesStore, useSettingsStore } from "@annota/core";
-import TipTapEditor, { TipTapEditorRef } from "@annota/tiptap-editor";
+import TipTapEditor, { TipTapEditorRef } from "@annota/editor-ui";
 import { FileText, Loader2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -25,7 +25,7 @@ interface NoteEditorProps {
 export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId }: NoteEditorProps) {
     const navigate = useNavigate();
     const params = useParams<{ folderId: string; noteId: string }>();
-    
+
     const noteId = propNoteId || params.noteId;
     const routeFolderId = propFolderId || params.folderId;
 

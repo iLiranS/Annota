@@ -1,7 +1,7 @@
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { getFilteredCommands, SharedSlashCommand } from '@annota/tiptap-editor';
+import { getFilteredCommands, SharedSlashCommand } from '@annota/editor-ui';
 import {
     Baseline,
     Bold,

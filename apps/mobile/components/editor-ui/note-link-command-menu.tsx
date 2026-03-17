@@ -44,10 +44,7 @@ export function NoteLinkCommandMenu({ query, range, sendCommand, onClose }: Note
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
-            <View style={styles.header}>
-                <MaterialIcons name="link" size={12} color={colors.text} style={{ opacity: 0.5, marginRight: 4 }} />
-                <Text style={[styles.headerText, { color: colors.text }]}>LINK NOTE</Text>
-            </View>
+
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
                 {displayNotes.map((note) => (
                     <TouchableOpacity
@@ -77,7 +74,7 @@ export function NoteLinkCommandMenu({ query, range, sendCommand, onClose }: Note
 
 const styles = StyleSheet.create({
     container: {
-        height: 70,
+        height: 50,
         borderTopWidth: StyleSheet.hairlineWidth,
         justifyContent: 'center',
     },

@@ -19,6 +19,40 @@ export interface ProcessedImage {
     isNew: boolean; // false if deduplicated
 }
 
+function getExtensionFromMime(base64: string): string {
+    const mimeMatch = base64.match(/^data:(image\/[a-z0-9.+-]+);base64,/i);
+    if (mimeMatch) {
+        const mime = mimeMatch[1].toLowerCase();
+        if (mime === 'image/jpeg' || mime === 'image/jpg') return 'jpg';
+        if (mime === 'image/png') return 'png';
+        if (mime === 'image/webp') return 'webp';
+        if (mime === 'image/gif') return 'gif';
+    }
+    return 'png';
+}
+
+/**
+ * Unified helper to save an image from a base64 string directly into a note.
+ * Handles temporary storage, processing (resize/hash), and DB insertion.
+ */
+export async function saveNoteImage(noteId: string, base64: string): Promise<{ id: string, url: string }> {
+    const extension = getExtensionFromMime(base64);
+    const base64Data = base64.replace(/^data:image\/\w+;base64,/, "");
+    const rawBytes = Buffer.from(base64Data, 'base64');
+    const adapters = getPlatformAdapters();
+    const cacheDir = await adapters.fileSystem.ensureDir('cache');
+    const tempPath = `${cacheDir}/pasted-${Date.now()}.${extension}`;
+    await adapters.fileSystem.writeBytes(tempPath, new Uint8Array(rawBytes));
+    
+    const processed = await processAndInsertImage(noteId, tempPath);
+    const imageMap = await resolveImageSources([processed.imageId]);
+    
+    return { 
+        id: processed.imageId, 
+        url: imageMap[processed.imageId] 
+    };
+}
+
 // ============ IMAGE PROCESSING PIPELINE ============
 
 /**

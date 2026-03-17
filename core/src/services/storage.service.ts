@@ -61,7 +61,6 @@ export const StorageService = {
             const pageCountRes = await tx.get<any>(sql`PRAGMA page_count`);
 
             // 1. Log the raw response to your desktop console to see the exact shape
-            console.log('[StorageService] Raw PRAGMA response:', { pageSizeRes, pageCountRes });
 
             if (pageSizeRes !== undefined && pageCountRes !== undefined) {
                 // 2. A helper to extract the number no matter how the driver wraps it
@@ -80,7 +79,6 @@ export const StorageService = {
                 const pageCount = extractValue(pageCountRes);
 
                 notesSize = pageSize * pageCount;
-                console.log('[StorageService] Calculated notesSize:', notesSize);
             }
         } catch (e) {
             console.error('[StorageService] Failed to get DB size:', e);

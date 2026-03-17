@@ -53,7 +53,7 @@ export function HomeCalendar({
 
     const taskDatesSet = useMemo(() => {
         const set = new Set<string>();
-        tasks.forEach((task) => {
+        tasks.filter(t => !t.completed).forEach((task) => {
             const date = new Date(task.deadline);
             set.add(date.toDateString());
         });

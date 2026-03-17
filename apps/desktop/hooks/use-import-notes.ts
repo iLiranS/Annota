@@ -1,5 +1,5 @@
-import { convertMarkdownToAnnotaHTML } from '@annota/editor-web';
 import { useNotesStore } from '@annota/core';
+import { convertMarkdownToAnnotaHTML } from '@annota/editor-core';
 import { open } from '@tauri-apps/plugin-dialog';
 import { readTextFile } from '@tauri-apps/plugin-fs';
 import { useState } from 'react';
@@ -41,13 +41,13 @@ export function useImportNotes() {
             for (const filePath of files) {
                 try {
                     const path = typeof filePath === 'string' ? filePath : (filePath as any).path;
-                    
+
                     // A. Read Markdown
                     const mdContent = await readTextFile(path);
-                    
+
                     // B. Convert to Annota HTML (for storage)
                     const contentStr = await convertMarkdownToAnnotaHTML(mdContent);
-                    
+
                     // C. Extract title from filename
                     const fileNameMatches = path.match(/([^\\\/]+)\.md$/);
                     const title = fileNameMatches ? fileNameMatches[1] : 'Untitled Note';
@@ -65,7 +65,7 @@ export function useImportNotes() {
             if (notesToSave.length > 0) {
                 // 4. Batch creation in DB and Store
                 const result = await createNotesBulk(notesToSave);
-                
+
                 if (result.error) {
                     toast.error(result.error);
                 } else if (result.data.length > 0) {

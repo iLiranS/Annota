@@ -26,8 +26,8 @@ import {
     ShortcutManager,
     SlashCommandExtension,
     TagCommandExtension
-} from './extensions';
-import { CustomYoutube } from './extensions/custom-yotube';
+} from '../extensions';
+import { CustomYoutube } from '../extensions/custom-yotube';
 
 export const WEB_FONT_FAMILIES: Record<string, string> = {
     system: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
@@ -220,6 +220,7 @@ export const getEditorState = (editor: any) => {
     const headingAttrs = e.isActive('heading') ? e.getAttributes('heading') : null;
 
     return {
+        isFocused: e.isFocused,
         isBold: e.isActive('bold'),
         isItalic: e.isActive('italic'),
         isUnderline: e.isActive('underline'),

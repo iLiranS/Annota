@@ -123,7 +123,7 @@ export function ActivityInsights() {
                 const folder = folders.find(f => f.id === fId);
                 folderCounts[fId] = {
                     count: 0,
-                    icon: folder?.icon || (fId === "root" ? "hash" : "folder")
+                    icon: folder?.icon || (fId === "root" ? "grid-outline" : "folder-outline")
                 };
             }
             folderCounts[fId].count++;
@@ -174,7 +174,7 @@ export function ActivityInsights() {
     return (
         <div className="flex flex-col lg:grid lg:grid-cols-3 gap-3 h-full">
             {/* Left Column: Combined Activity (2/3 width) */}
-            <div className="lg:col-span-2 flex flex-col gap-3">
+            <div className="lg:col-span-2 flex flex-col gap-3 min-h-0 min-w-0">
                 {/* Chart 4: Hourly Focus (New!) */}
                 <Card className="py-0 gap-0 border-border/40 bg-card/50 shadow-none flex flex-col overflow-hidden">
                     <div className="px-3 pt-3 pb-0 flex items-center justify-between">
@@ -183,7 +183,7 @@ export function ActivityInsights() {
                             <span className="text-[10px] font-bold uppercase tracking-widest text-foreground/70">Peak Hours</span>
                         </div>
                     </div>
-                    <CardContent className="flex-1 p-2 pt-0 gap-0">
+                    <CardContent className="flex-1 min-h-0 min-w-0 p-2 pt-0 gap-0">
                         <ChartContainer config={chartConfig} className="h-[80px] w-full aspect-auto">
                             <BarChart data={hourlyData} margin={{ top: 10, right: 0, left: -25, bottom: 0 }}>
                                 <XAxis
@@ -203,14 +203,14 @@ export function ActivityInsights() {
                 </Card>
 
                 {/* Chart 3: Total Activity */}
-                <Card className="py-0 gap-0 border-border/40 bg-card/50 shadow-none flex flex-col overflow-hidden flex-1">
+                <Card className="py-0 gap-0 border-border/40 bg-card/50 shadow-none flex flex-col overflow-hidden flex-1 min-h-0">
                     <div className="px-3 pt-3 pb-0 flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <Activity size={14} className="text-primary" />
                             <span className="text-[10px] font-bold uppercase tracking-widest text-foreground/70">Total Activity Trend</span>
                         </div>
                     </div>
-                    <CardContent className="flex-1 p-2 pt-0 gap-0">
+                    <CardContent className="flex-1 min-h-0 min-w-0 p-2 pt-0 gap-0">
                         <ChartContainer config={chartConfig} className="h-full min-h-[140px] w-full aspect-auto">
                             <LineChart data={activityChartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                                 <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--border)" opacity={0.15} />
@@ -240,14 +240,14 @@ export function ActivityInsights() {
             </div>
 
             {/* Right Column: Tasks and Notes (1/3 width) */}
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-3 min-h-0 min-w-0">
                 {/* Chart 1: Tasks */}
                 <Card className="border-border/40 py-0 gap-0 bg-card/50 shadow-none flex flex-col overflow-hidden">
                     <div className="px-3 pt-2 pb-0 flex items-center gap-2">
                         <CheckCircle2 size={12} className="text-green-500" />
                         <span className="text-[10px] font-bold uppercase tracking-widest text-foreground/60">Tasks On-Time</span>
                     </div>
-                    <CardContent className="p-2 pt-0">
+                    <CardContent className="p-2 pt-0 min-h-0 min-w-0">
                         <ChartContainer config={chartConfig} className="h-[80px] w-full aspect-auto">
                             <BarChart data={taskWeeksData} margin={{ top: 5, right: 0, left: -25, bottom: 0 }}>
                                 <XAxis
@@ -266,12 +266,12 @@ export function ActivityInsights() {
                 </Card>
 
                 {/* Chart 2: Notes Pie */}
-                <Card className="border-border/40 py-0 gap-0 bg-card/50 shadow-none flex flex-col flex-1 overflow-hidden">
+                <Card className="border-border/40 py-0 gap-0 bg-card/50 shadow-none flex flex-col flex-1 overflow-hidden min-h-0">
                     <div className="px-3 pt-2 pb-0 flex items-center gap-2">
                         <FileText size={12} className="text-blue-500" />
                         <span className="text-[10px] font-bold uppercase tracking-widest text-foreground/60">Topics (30 Days)</span>
                     </div>
-                    <CardContent className="flex-1 p-2 pt-0 flex flex-col items-center justify-center">
+                    <CardContent className="flex-1 min-h-0 min-w-0 p-2 pt-0 flex flex-col items-center justify-center">
                         <ChartContainer config={chartConfig} className="aspect-auto h-full min-h-36 w-full">
                             <PieChart>
                                 <Pie

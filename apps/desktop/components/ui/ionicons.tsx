@@ -17,7 +17,11 @@ export const Ionicons = ({ name, size = 24, color, className, style, ...props }:
     if (!name) return null;
 
     // Convert Ionicon v5 name (e.g. 'document-text-outline') to react-icons/io5 name (e.g. 'IoDocumentTextOutline')
-    const pascalName = name
+    let iconName = name;
+    if (name === "hash") iconName = "grid-outline";
+    if (name === "folder") iconName = "folder-outline"; // Prefer outline if just "folder" is provided
+
+    const pascalName = iconName
         .split("-")
         .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
         .join("");

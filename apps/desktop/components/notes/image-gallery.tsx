@@ -1,5 +1,5 @@
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
-import { ImageInfo } from '@annota/tiptap-editor';
+import { ImageInfo } from '@annota/editor-ui';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import React, { useCallback, useEffect, useState } from 'react';
 

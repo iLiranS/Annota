@@ -14,10 +14,10 @@ import { cn } from '@/lib/utils';
 import { getPlatformAdapters } from '@annota/core/platform';
 import { join } from '@tauri-apps/api/path';
 import {
-    UploadCloud as Upload,
     Image as ImageIcon,
     Link as LinkIcon,
-    Loader2
+    Loader2,
+    UploadCloud as Upload
 } from 'lucide-react';
 import React, { useCallback, useRef, useState } from 'react';
 
@@ -31,7 +31,7 @@ interface ToolbarImageUploadProps {
 
 export function ToolbarImageUpload({ onInsertImage, onOpenChange, isMenu, visible, onClose }: ToolbarImageUploadProps) {
     const [open, setOpen] = useState(false);
-    
+
     // Sync with visible prop if provided
     const isControlled = visible !== undefined;
     const isVisible = isControlled ? visible : open;
@@ -49,7 +49,7 @@ export function ToolbarImageUpload({ onInsertImage, onOpenChange, isMenu, visibl
             setOpen(val);
             onOpenChange?.(val);
         }
-        
+
         if (!val) {
             setUrl('');
             setIsLoading(false);
@@ -181,7 +181,7 @@ export function ToolbarImageUpload({ onInsertImage, onOpenChange, isMenu, visibl
     return (
         <Dialog open={isVisible} onOpenChange={handleOpenChange}>
             {!isControlled && trigger}
-            <DialogContent
+            <DialogContent aria-describedby={undefined}
                 className="sm:max-w-[400px] p-0 overflow-hidden border-none bg-background shadow-2xl"
                 onPointerDownOutside={(e) => {
                     if (isControlled) e.preventDefault();

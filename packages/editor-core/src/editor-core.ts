@@ -95,6 +95,30 @@ export function scrollCursorIntoView() {
     }, 50);
 }
 
+
+// Inside editor-core.ts
+const serializeCommandData = (data: any) => {
+    let rect = null;
+    try {
+        // Mobile webviews sometimes freak out when getting rects of empty text nodes
+        if (typeof data.clientRect === 'function') {
+            const domRect = data.clientRect();
+            if (domRect) {
+                rect = {
+                    top: domRect.top, bottom: domRect.bottom,
+                    left: domRect.left, right: domRect.right,
+                    width: domRect.width, height: domRect.height,
+                    x: domRect.x, y: domRect.y
+                };
+            }
+        }
+    } catch (e) {
+        console.warn("Failed to serialize clientRect", e);
+    }
+    return { ...data, clientRect: rect };
+};
+
+
 // Setup logic
 // We accept options to configure the editor initial state
 export function setupEditor(options: any) {
@@ -208,16 +232,38 @@ export function setupEditor(options: any) {
                 editorOrigin,
                 onMathSelected: (latex, isBlock, pos) => {
                     if (window.editor) {
-                        // We still need to handle the selection for the iframe bridge
                         if (typeof pos === 'number') {
                             window.editor.chain().setNodeSelection(pos).run();
                         }
                         sendMessage({ type: 'mathSelected', latex, isBlock });
                     }
                 },
+                onOpenBlockMenu: (e, resolve) => {
+                    const res = resolve();
+                    if (res) sendMessage({ type: 'openBlockMenu', ...res.message, pos: res.pos });
+                },
+                onOpenImageMenu: (e, resolve) => {
+                    const res = resolve();
+                    if (res) sendMessage({ type: 'openImageMenu', ...res.message, pos: res.pos });
+                },
+                onOpenTableMenu: (e, resolve) => {
+                    const res = resolve();
+                    if (res) sendMessage({ type: 'openTableMenu', ...res.message, pos: res.pos });
+                },
+                onCodeBlockSelected: (e, resolve) => {
+                    const res = resolve();
+                    if (res) sendMessage({ type: 'codeBlockSelected', ...res.message, pos: res.pos });
+                },
+                onImagePasted: (data) => {
+                    sendMessage({ type: 'imagePasted', ...data });
+                },
+                onResolveImageIds: (data) => {
+                    sendMessage({ type: 'resolveImageIds', ...data });
+                },
                 defaultCodeLanguage,
-                onSlashCommand: options.onSlashCommand,
-                onTagCommand: options.onTagCommand,
+                onSlashCommand: (data) => sendMessage({ type: 'slashCommand', ...serializeCommandData(data) }),
+                onTagCommand: (data) => sendMessage({ type: 'tagCommand', ...serializeCommandData(data) }),
+                onNoteLinkCommand: (data) => sendMessage({ type: 'noteLinkCommand', ...serializeCommandData(data) }),
             }),
             content: content,
             autofocus: autofocus, // Pass directly
@@ -228,10 +274,10 @@ export function setupEditor(options: any) {
                 if (editor.isEmpty) {
                     if (autofocus && typeof editor.chain === 'function') {
                         editor.chain()
-                            .focus()
                             .toggleHeading({ level: 2 })
                             .insertContentAt(editor.state.doc.content.size, '<p></p>')
                             .setTextSelection(1)
+                            .focus()
                             .run();
                     }
                 } else if (autofocus) {
@@ -282,7 +328,7 @@ export function setupEditor(options: any) {
         });
 
         applyFontFamily(fontFamily);
-        loadingEl.style.display = 'none';
+        if (loadingEl) loadingEl.style.display = 'none';
 
         // Allow content updates after setup is fully complete.
         // Use a timeout longer than the onUpdate debounce (300ms) to ensure

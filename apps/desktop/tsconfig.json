@@ -26,8 +26,8 @@
       "@/*": [
         "./*"
       ],
-      "@annota/editor-web/*": [
-        "../../packages/editor-web/*"
+      "@annota/editor-core/*": [
+        "../../packages/editor-core/*"
       ]
     }
   },

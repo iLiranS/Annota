@@ -123,7 +123,7 @@ export function TagCommandMenu({ noteId, query, range, sendCommand, onClose }: T
 
 const styles = StyleSheet.create({
     container: {
-        height: 60,
+        height: 50,
         borderTopWidth: StyleSheet.hairlineWidth,
         justifyContent: 'center',
     },

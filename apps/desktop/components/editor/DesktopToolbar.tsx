@@ -6,7 +6,7 @@ import {
 } from '@/components/ui/tooltip';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { cn } from '@/lib/utils';
-import type { ToolbarRenderProps } from '@annota/tiptap-editor';
+import type { ToolbarRenderProps } from '@annota/editor-ui';
 import {
     Baseline,
     Bold,

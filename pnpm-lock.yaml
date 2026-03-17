@@ -33,12 +33,12 @@ importers:
       '@annota/core':
         specifier: workspace:*
         version: link:../../core
-      '@annota/editor-web':
+      '@annota/editor-core':
         specifier: workspace:*
-        version: link:../../packages/editor-web
-      '@annota/tiptap-editor':
+        version: link:../../packages/editor-core
+      '@annota/editor-ui':
         specifier: workspace:*
-        version: link:../../packages/tiptap-editor
+        version: link:../../packages/editor-ui
       '@emotion/react':
         specifier: ^11.14.0
         version: 11.14.0(@types/react@19.2.14)(react@19.2.0)
@@ -181,12 +181,12 @@ importers:
       '@annota/core':
         specifier: workspace:*
         version: link:../../core
-      '@annota/editor-web':
+      '@annota/editor-core':
         specifier: workspace:*
-        version: link:../../packages/editor-web
-      '@annota/tiptap-editor':
+        version: link:../../packages/editor-core
+      '@annota/editor-ui':
         specifier: workspace:*
-        version: link:../../packages/tiptap-editor
+        version: link:../../packages/editor-ui
       '@expo/vector-icons':
         specifier: ^15.0.3
         version: 15.0.3(expo-font@55.0.4)(react-native@0.83.2(@babel/core@7.28.6)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)
@@ -423,7 +423,7 @@ importers:
         specifier: ^5.0.10
         version: 5.0.10(@types/react@19.2.14)(immer@11.1.4)(react@19.2.0)(use-sync-external-store@1.6.0(react@19.2.0))
 
-  packages/editor-web:
+  packages/editor-core:
     dependencies:
       '@floating-ui/dom':
         specifier: ^1.7.4
@@ -514,14 +514,14 @@ importers:
         specifier: ^2.0.1
         version: 2.3.0(rollup@4.59.0)(vite@5.4.21(@types/node@25.0.8)(lightningcss@1.31.1)(terser@5.44.1))
 
-  packages/tiptap-editor:
+  packages/editor-ui:
     dependencies:
       '@annota/core':
         specifier: workspace:*
         version: link:../../core
-      '@annota/editor-web':
+      '@annota/editor-core':
         specifier: workspace:*
-        version: link:../editor-web
+        version: link:../editor-core
       '@tiptap/core':
         specifier: ^3.18.0
         version: 3.20.0(@tiptap/pm@3.20.0)

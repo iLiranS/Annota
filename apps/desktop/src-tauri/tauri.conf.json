@@ -17,7 +17,7 @@
         "height": 720,
         "title": "",
         "hiddenTitle": true,
-        "transparent": true,
+        "transparent": false,
         "decorations": true,
         "titleBarStyle": "Overlay",
         "dragDropEnabled": false

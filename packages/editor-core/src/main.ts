@@ -1,6 +1,6 @@
 import 'highlight.js/styles/atom-one-dark.css'; // Better looking theme
 import 'katex/dist/katex.min.css';
-import './styles.css';
+import './styles/editor.css';
 
 import { loadingEl, sendMessage } from './bridge';
 import { setupCommands } from './commands';
@@ -251,7 +251,7 @@ sendMessage({ type: 'ready' });
 // Auto-init for debugging in browser (no bridge and not in iframe)
 const inIframe = window !== window.parent;
 if (!window.ReactNativeWebView && !inIframe) {
-    loadingEl.textContent = 'No Bridge detected. Auto-init...';
+    if (loadingEl) loadingEl.textContent = 'No Bridge detected. Auto-init...';
     console.log('No WebView bridge found, auto-initializing defaults...');
     setTimeout(() => {
         setupEditor({

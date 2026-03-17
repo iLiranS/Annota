@@ -3,8 +3,8 @@ import React from 'react';
 
 export interface ToolbarRenderProps {
     editorState: EditorState;
-    sendCommand: (cmd: string, params?: Record<string, unknown>) => void;
-    onCommand: (cmd: string, params?: Record<string, unknown>) => void;
+    sendCommand: (cmd: string, params?: Record<string, any>) => void;
+    onCommand: (cmd: string, params?: Record<string, any>) => void;
     toolbarHeight: number;
     onDismissKeyboard: () => void;
     activePopup: PopupType;
@@ -21,7 +21,7 @@ export interface TipTapEditorRef {
     setContent: (content: string) => void;
     focus: () => void;
     blur: () => void;
-    onCommand: (cmd: string, params?: Record<string, unknown>) => void;
+    onCommand: (cmd: string, params?: Record<string, any>) => void;
     // Search methods
     search: (term: string) => void;
     searchNext: () => void;
@@ -33,6 +33,7 @@ export interface TipTapEditorRef {
 export interface TipTapEditorProps {
     /** Note ID — required for local image storage association */
     noteId?: string;
+    onOpenLink?: (url: string) => void;
     initialContent?: string;
     onContentChange?: (html: string) => void;
     placeholder?: string;
@@ -43,6 +44,8 @@ export interface TipTapEditorProps {
     contentPaddingTop?: number;
     /** Called when the full-screen image gallery opens or closes */
     onGalleryVisibilityChange?: (visible: boolean) => void;
+    /** Called when an image is selected (opens gallery) */
+    onImageSelected?: (data: { images: ImageInfo[], currentIndex: number }) => void;
     /** Whether the editor is editable. Defaults to true. */
     editable?: boolean;
     /** Callback for when a block link is copied */
@@ -85,6 +88,7 @@ export interface TipTapEditorProps {
 }
 
 export interface EditorState {
+    isFocused: boolean;
     // Text formatting
     isBold: boolean;
     isItalic: boolean;
@@ -144,6 +148,7 @@ export interface EditorState {
 }
 
 export const initialEditorState: EditorState = {
+    isFocused: false,
     isBold: false,
     isItalic: false,
     isUnderline: false,
@@ -237,7 +242,7 @@ export type EditorCommand =
     | 'openMathModal'
     | 'openImageModal'
     | 'openLinkModal'
-    | 'openYoutubeModal';
+    | 'openYoutubeModal'
 
 // ============================================================================
 // Popup Types

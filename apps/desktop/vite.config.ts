@@ -1,17 +1,15 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from "@vitejs/plugin-react";
 import path from "node:path";
-import { defineConfig, loadEnv } from "vite";
-
+import { defineConfig, loadEnv, type UserConfig } from "vite";
 const host = process.env.TAURI_DEV_HOST;
 
-// https://vite.dev/config/
-// @ts-ignore
-export default defineConfig(async ({ mode }) => {
+export default defineConfig(({ mode }): UserConfig => {
   const env = loadEnv(mode, __dirname, "");
 
   return {
-    plugins: [react(), tailwindcss()],
+    // We cast plugins to any to bypass TS complaining about 2D plugin arrays
+    plugins: [react(), tailwindcss()] as any,
     define: {
       "process.env": {
         EXPO_PUBLIC_SUPABASE_URL: env.VITE_SUPABASE_URL ?? "",
@@ -32,35 +30,18 @@ export default defineConfig(async ({ mode }) => {
         'prosemirror-view',
         'prosemirror-model'
       ],
-      extensions: [
-        '.desktop.tsx', '.desktop.ts', '.desktop.jsx', '.desktop.js',
-        '.mjs', '.js', '.mts', '.ts', '.jsx', '.tsx', '.json'
-      ],
       alias: {
+        // This maps imports starting with "@/" to your "src" directory
         "@": path.resolve(__dirname, "."),
       },
     },
-
-    // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
-    //
-    // 1. prevent Vite from obscuring rust errors
     clearScreen: false,
-    // 2. tauri expects a fixed port, fail if that port is not available
     server: {
       port: 1420,
       strictPort: true,
       host: host || false,
-      hmr: host
-        ? {
-          protocol: "ws",
-          host,
-          port: 1421,
-        }
-        : undefined,
-      watch: {
-        // 3. tell Vite to ignore watching `src-tauri`
-        ignored: ["**/src-tauri/**"],
-      },
+      hmr: host ? { protocol: "ws", host, port: 1421 } : undefined,
+      watch: { ignored: ["**/src-tauri/**"] },
     },
     build: {
       chunkSizeWarningLimit: 2000,

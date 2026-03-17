@@ -1,4 +1,3 @@
-import * as Sentry from "@sentry/react";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useDailyCleanup } from "@/hooks/use-daily-cleanup";
 import {
@@ -417,4 +416,4 @@ function App() {
   );
 }
 
-export default Sentry.withProfiler(App);
+export default App;

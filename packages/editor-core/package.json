@@ -1,15 +1,14 @@
 {
-  "name": "@annota/editor-web",
+  "name": "@annota/editor-core",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "main": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./config": "./src/config.ts",
-    "./command-dispatcher": "./src/command-dispatcher.ts",
+    "./config": "./src/config/index.ts",
     "./extensions": "./src/extensions/index.ts",
-    "./styles.css": "./src/styles.css",
+    "./styles.css": "./src/styles/editor.css",
     "./dist/editor-html": "./dist/editor-html.ts"
   },
   "scripts": {

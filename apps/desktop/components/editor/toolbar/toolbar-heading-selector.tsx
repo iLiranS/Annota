@@ -10,7 +10,7 @@ import {
     DropdownMenuSubTrigger,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import type { EditorState, ToolbarRenderProps } from '@annota/tiptap-editor';
+import type { EditorState, ToolbarRenderProps } from '@annota/editor-ui';
 import { ChevronDown } from 'lucide-react';
 
 interface HeadingSelectorProps {
