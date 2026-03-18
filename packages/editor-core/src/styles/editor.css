@@ -33,7 +33,7 @@
 
 @font-face {
     font-family: 'Poppins';
-    src: url('./assets/fonts/Poppins/Poppins-Regular.ttf') format('truetype');
+    src: url('../assets/fonts/Poppins/Poppins-Regular.ttf') format('truetype');
     font-weight: 400;
     font-style: normal;
     font-display: swap;
@@ -41,7 +41,7 @@
 
 @font-face {
     font-family: 'FiraCode';
-    src: url('./assets/fonts/FiraCode/FiraCode-VF.ttf') format('truetype');
+    src: url('../assets/fonts/FiraCode/FiraCode-VF.ttf') format('truetype');
     font-weight: 300 700;
     font-style: normal;
     font-display: swap;
@@ -412,7 +412,7 @@
 /* Code block wrapper with header */
 .code-block-wrapper {
     position: relative;
-    margin: 12px 0;
+    margin: 10px 0;
     direction: ltr !important;
     unicode-bidi: isolate !important;
 }
@@ -426,7 +426,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 10px 10px;
+    padding: 8px 8px;
     background-color: transparent;
     position: absolute;
     top: 0;

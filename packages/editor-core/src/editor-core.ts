@@ -17,7 +17,7 @@ let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 let currentFontFamily: string | null = null;
 export let currentDefaultCodeLanguage: string | null = null;
 let hasAppliedFontToContent = false;
-
+let heightObserver: ResizeObserver | null = null;
 /**
  * When true, `onUpdate` will NOT send content messages back to React Native.
  * Used during initial editor setup to prevent spurious content updates caused
@@ -238,19 +238,19 @@ export function setupEditor(options: any) {
                         sendMessage({ type: 'mathSelected', latex, isBlock });
                     }
                 },
-                onOpenBlockMenu: (e, resolve) => {
+                onOpenBlockMenu: (_, resolve) => {
                     const res = resolve();
                     if (res) sendMessage({ type: 'openBlockMenu', ...res.message, pos: res.pos });
                 },
-                onOpenImageMenu: (e, resolve) => {
+                onOpenImageMenu: (_, resolve) => {
                     const res = resolve();
                     if (res) sendMessage({ type: 'openImageMenu', ...res.message, pos: res.pos });
                 },
-                onOpenTableMenu: (e, resolve) => {
+                onOpenTableMenu: (_, resolve) => {
                     const res = resolve();
                     if (res) sendMessage({ type: 'openTableMenu', ...res.message, pos: res.pos });
                 },
-                onCodeBlockSelected: (e, resolve) => {
+                onCodeBlockSelected: (_, resolve) => {
                     const res = resolve();
                     if (res) sendMessage({ type: 'codeBlockSelected', ...res.message, pos: res.pos });
                 },
@@ -336,6 +336,22 @@ export function setupEditor(options: any) {
         setTimeout(() => {
             suppressContentUpdates = false;
         }, 500);
+
+        if (!heightObserver) {
+            heightObserver = new ResizeObserver(() => {
+                // Target the actual ProseMirror content div
+                const target = window.editor?.view?.dom || editorEl;
+                if (target) {
+                    // Get the exact height of the text + a comfortable bottom padding
+                    const trueContentHeight = target.scrollHeight + 80;
+                    sendMessage({ type: 'heightChange', height: trueContentHeight });
+                }
+            });
+
+            // ONLY observe the text elements
+            if (editorEl) heightObserver.observe(editorEl);
+            if (window.editor?.view?.dom) heightObserver.observe(window.editor.view.dom);
+        }
 
     } catch (e) {
         console.error('Error during editor initialization:', e);

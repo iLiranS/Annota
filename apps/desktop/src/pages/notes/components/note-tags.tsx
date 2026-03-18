@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 export function NoteTags({ noteId, className }: { noteId: string, className?: string }) {
     const { tags, notes, removeTagFromNote } = useNotesStore();
     const navigate = useNavigate();
-    const { general } = useSettingsStore();
+    const { editor } = useSettingsStore();
     const note = notes.find(n => n.id === noteId);
 
     if (!note || !note.tags) return null;
@@ -24,10 +24,10 @@ export function NoteTags({ noteId, className }: { noteId: string, className?: st
     const appliedTags = appliedTagIds.map(id => tags.find(t => t.id === id)).filter(Boolean) as Tag[];
 
     return (
-        <div dir={general.appDirection} className={cn(
+        <div style={{ paddingInline: "1rem" }} className={cn(
             className ? className : cn(
-                "absolute top-4 z-40 flex flex-wrap gap-1.5 px-4 max-w-[70%]",
-                general.appDirection === "rtl" ? "right-2" : "left-2"
+                "py-2 top-4 z-40 flex flex-wrap gap-1.5 w-fit  max-w-[70%]",
+                editor.direction === "rtl" ? "right-0" : "left-0"
             )
         )}>
             {appliedTags.map(tag => (
@@ -35,7 +35,7 @@ export function NoteTags({ noteId, className }: { noteId: string, className?: st
                     key={tag.id}
                     onClick={() => navigate(`/notes?tagId=${tag.id}`)}
                     variant="outline"
-                    className="flex cursor-pointer items-center gap-1.5 px-2 py-0.5 bg-opacity-10 dark:bg-opacity-10 backdrop-blur-md border-opacity-50 transition-all hover:bg-opacity-20 text-xs font-semibold rounded-md shadow-sm"
+                    className="flex cursor-pointer hover:scale-105 items-center gap-1.5 px-2 py-0.5 bg-opacity-10 dark:bg-opacity-10 backdrop-blur-md border-opacity-50 transition-all hover:bg-opacity-20 text-xs font-semibold rounded-md shadow-sm"
                     style={{
                         backgroundColor: `${tag.color}1A`,
                         color: tag.color,

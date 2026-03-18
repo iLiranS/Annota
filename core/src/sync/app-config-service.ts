@@ -1,5 +1,5 @@
-import { syncApi } from '../api/sync.api';
 import { areAdaptersInitialized, getPlatformAdapters } from '../adapters';
+import { syncApi } from '../api/sync.api';
 import { SyncScheduler } from './sync-scheduler';
 
 const APP_CONFIG_CACHE_KEY = 'annota_app_config_cache';
@@ -17,7 +17,6 @@ export const appConfigService = {
                 if (cached) {
                     const config = JSON.parse(cached);
                     SyncScheduler.setSyncDisabled(!!config.sync_disabled);
-                    console.log('[AppConfigService] Applied cached config:', config);
                 }
             } catch (err) {
                 console.error('[AppConfigService] Failed to load cached config:', err);
@@ -29,8 +28,7 @@ export const appConfigService = {
             const config = await syncApi.getAppConfig();
             if (config) {
                 SyncScheduler.setSyncDisabled(!!config.sync_disabled);
-                console.log('[AppConfigService] Applied fresh config:', config);
-                
+
                 // Cache it for next startup
                 if (areAdaptersInitialized()) {
                     const adapters = getPlatformAdapters();

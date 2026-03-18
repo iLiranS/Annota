@@ -112,12 +112,22 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                     setActivePopup(type === 'openImageMenu' ? 'imageMenu' : 'blockMenu');
                     setIsPopupOpen(true);
                     break;
+                case 'scrollToNative':
+                    if (scrollViewRef.current && typeof data.y === 'number') {
+                        scrollViewRef.current.scrollTo({ y: data.y, animated: true });
+                    }
+                    break;
                 case 'mathSelected':
                     setCurrentLatex(data.latex);
                     setActivePopup('math');
                     setIsPopupOpen(true);
                     break;
                 case 'imageSelected':
+                    // 1. Tell the WebView to drop focus
+                    sendMessage('blur', {});
+                    // 2. Tell React Native to force the keyboard down
+                    Keyboard.dismiss();
+
                     openGallery(data.images, data.currentIndex);
                     if (props.onImageSelected) {
                         props.onImageSelected(data);
@@ -145,6 +155,30 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                         props.onNoteLinkCommand({
                             ...data,
                             clientRect: data.clientRect ? () => data.clientRect : undefined
+                        });
+                    }
+                    break;
+                case 'cursorPosition':
+                    // Accurately calculate what is blocking the bottom of the screen
+                    const bottomObstruction = keyboardShown ? (keyboardHeight + toolbarHeight) : 0;
+                    const visibleSpace = height - bottomObstruction;
+
+                    // Massive safe margins so the cursor rests comfortably in the middle-lower screen
+                    const bottomBuffer = 140;
+                    const topBuffer = 80;
+
+                    // If cursor is dipping too close to the toolbar, push it up
+                    if (data.bottom > scrollOffsetY.current + visibleSpace - bottomBuffer) {
+                        scrollViewRef.current?.scrollTo({
+                            y: data.bottom - visibleSpace + bottomBuffer,
+                            animated: true
+                        });
+                    }
+                    // If cursor is hiding under the top header, pull it down
+                    else if (data.top < scrollOffsetY.current + topBuffer) {
+                        scrollViewRef.current?.scrollTo({
+                            y: Math.max(0, data.top - topBuffer),
+                            animated: true
                         });
                     }
                     break;
@@ -223,6 +257,7 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                     ref={scrollViewRef}
                     style={{ flex: 1 }}
                     contentContainerStyle={{ flexGrow: 1, paddingBottom: 350 }}
+                    scrollEventThrottle={16}
                     onScroll={(e) => { scrollOffsetY.current = e.nativeEvent.contentOffset.y; }}
                     onLayout={(e) => { scrollHeight.current = e.nativeEvent.layout.height; }}
                 >
@@ -251,8 +286,13 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                         {renderToolbar({
                             editorState,
                             sendCommand: dispatchCommand,
-                            onCommand: dispatchCommand,
-                            toolbarHeight,
+                            onCommand: (cmd, params) => {
+                                if (cmd === 'copyBlockLink' && props.onCopyBlockLink) {
+                                    props.onCopyBlockLink(params?.id);
+                                } else {
+                                    dispatchCommand(cmd, params);
+                                }
+                            }, toolbarHeight,
                             onDismissKeyboard: () => { dispatchCommand('blur'); Keyboard.dismiss(); },
                             activePopup,
                             onActivePopupChange: (type) => { setActivePopup(type); setIsPopupOpen(!!type); },

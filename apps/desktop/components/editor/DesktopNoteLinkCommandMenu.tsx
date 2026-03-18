@@ -11,6 +11,7 @@ interface DesktopNoteLinkCommandMenuProps {
     clientRect: any;
     sendCommand: (cmd: string, params?: Record<string, unknown>) => void;
     onClose: () => void;
+    noteId: string;
 }
 
 export function DesktopNoteLinkCommandMenu({
@@ -18,7 +19,8 @@ export function DesktopNoteLinkCommandMenu({
     range,
     clientRect,
     sendCommand,
-    onClose
+    onClose,
+    noteId
 }: DesktopNoteLinkCommandMenuProps) {
     const { notes } = useNotesStore();
     const [selectedIndex, setSelectedIndex] = useState(0);
@@ -27,7 +29,7 @@ export function DesktopNoteLinkCommandMenu({
     const normalizedQuery = query.toLowerCase().trim();
 
     const displayNotes = useMemo(() => {
-        const filtered = notes.filter(n => !n.isDeleted && (n.title || 'Untitled').toLowerCase().includes(normalizedQuery));
+        const filtered = notes.filter(n => !n.isDeleted && n.id !== noteId && (n.title || 'Untitled').toLowerCase().includes(normalizedQuery));
         return filtered
             .sort((a, b) => {
                 const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
@@ -44,13 +46,13 @@ export function DesktopNoteLinkCommandMenu({
     const handleSelect = (note: any) => {
         // 1. Delete the "[[query" text
         sendCommand('deleteSelection', { from: range.from, to: range.to });
-        
+
         // 2. Insert the link
-        sendCommand('setLink', { 
+        sendCommand('setLink', {
             href: `annota://note/${note.id}`,
             title: note.title || 'Untitled Note'
         });
-        
+
         onClose();
     };
 

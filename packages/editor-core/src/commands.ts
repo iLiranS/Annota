@@ -18,65 +18,6 @@ function copyImageAtPosition(pos: number): boolean {
     return document.execCommand('copy');
 }
 
-function findElementById(id: string): HTMLElement | null {
-    return document.querySelector(`[data-id="${id}"]`) as HTMLElement | null;
-}
-
-function expandDetailsAncestors(editor: any, targetEl: HTMLElement) {
-    const tr = editor.state.tr;
-    let didChange = false;
-
-    editor.state.doc.descendants((node: any, pos: number) => {
-        if (node.type.name !== 'details' || node.attrs.open) return true;
-        try {
-            const domNode = editor.view.nodeDOM(pos) as HTMLElement | null;
-            if (domNode && domNode.contains(targetEl)) {
-                tr.setNodeMarkup(pos, undefined, { ...node.attrs, open: true });
-                didChange = true;
-            }
-        } catch {
-            // Ignore transient DOM resolution failures during updates.
-        }
-        return true;
-    });
-
-    if (didChange) {
-        editor.view.dispatch(tr);
-    }
-}
-
-function scrollToElementById(editor: any, id: string): boolean {
-    const target = findElementById(id);
-    if (!target) return false;
-
-    // Ensure collapsed details parents are opened before we attempt to scroll.
-    expandDetailsAncestors(editor, target);
-
-    const nextTarget = findElementById(id);
-    if (!nextTarget) return false;
-
-    nextTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    try {
-        const pos = editor.view.posAtDOM(nextTarget as Node, 0);
-        if (pos !== undefined && pos !== null) {
-            editor.commands.setTextSelection(pos);
-        }
-    } catch {
-        // If position lookup fails, keep the scroll result and skip cursor move.
-    }
-
-    return true;
-}
-
-function scrollToTopOfNote(editor: any) {
-    window.scrollTo({ top: 0, behavior: 'auto' });
-    try {
-        editor.commands.setTextSelection(1);
-    } catch {
-        // Ignore if document is temporarily not addressable.
-    }
-}
-
 export function setupCommands() {
     window.handleCommand = function (command, params) {
         // Handle 'setOptions' command first, as it might initialize the editor
@@ -215,26 +156,61 @@ export function setupCommands() {
                 e.commands.clearSearch();
                 break;
             case 'scrollToElement':
-                if (params?.id) {
-                    const didScroll = scrollToElementById(e, params.id);
-                    if (!didScroll) {
-                        let attempt = 0;
-                        const maxAttempts = 180;
-                        const tryScroll = () => {
-                            attempt += 1;
-                            if (scrollToElementById(e, params.id)) {
-                                return;
-                            }
-                            if (attempt < maxAttempts) {
-                                requestAnimationFrame(tryScroll);
-                                return;
-                            }
-                            scrollToTopOfNote(e);
-                        };
-                        requestAnimationFrame(tryScroll);
+                const { id } = params;
+                if (!window.editor) return;
+
+                let attempts = 0;
+                const maxAttempts = 120; // ~2 seconds
+
+                const tryFindAndScroll = () => {
+                    let targetPos = -1;
+                    e.state.doc.descendants((node, pos) => {
+                        if (node.attrs.id === id || node.attrs.blockId === id) {
+                            targetPos = pos;
+                            return false;
+                        }
+                    });
+
+                    let targetDom: HTMLElement | null = null;
+
+                    if (targetPos !== -1) {
+                        const nodeDom = e.view.nodeDOM(targetPos);
+                        targetDom = (nodeDom?.nodeType === 1 ? nodeDom : nodeDom?.parentElement) as HTMLElement;
+                    } else {
+                        targetDom = (document.getElementById(id) ||
+                            document.querySelector(`[data-id="${id}"]`) ||
+                            document.querySelector(`[blockId="${id}"]`)) as HTMLElement | null;
                     }
-                }
-                break;
+
+                    if (targetDom) {
+                        const detailsAncestor = targetDom.closest('details');
+                        if (detailsAncestor && !detailsAncestor.open) {
+                            detailsAncestor.open = true;
+                        }
+
+                        // CRITICAL FOR MOBILE: Calculate absolute Y position
+                        const rect = targetDom.getBoundingClientRect();
+                        const yOffset = rect.top + window.scrollY;
+
+                        if (targetPos !== -1) {
+                            e.commands.setTextSelection(targetPos);
+                        }
+
+                        // Tell React Native's ScrollView exactly where to scroll!
+                        // Subtract 50px so it sits comfortably below the top edge
+                        sendMessage({ type: 'scrollToNative', y: Math.max(0, yOffset - 50) });
+                        return;
+                    }
+
+                    if (attempts < maxAttempts) {
+                        attempts++;
+                        requestAnimationFrame(tryFindAndScroll);
+                    }
+                };
+
+                tryFindAndScroll();
+                return;
+
         }
 
         if (command !== 'getContent') {

@@ -1,10 +1,12 @@
 import { useNotesStore } from '@annota/core';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { useRouter } from 'expo-router';
 import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export function NoteTags({ noteId, style }: { noteId: string; style?: any }) {
     const { tags, notes, removeTagFromNote } = useNotesStore();
+    const router = useRouter();
     const note = notes.find(n => n.id === noteId);
 
     const appliedTagIds = useMemo(() => {
@@ -25,8 +27,9 @@ export function NoteTags({ noteId, style }: { noteId: string; style?: any }) {
         <View style={[{ paddingHorizontal: 16, paddingTop: 4, paddingBottom: 4 }, style]} pointerEvents="box-none">
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollContent} pointerEvents="box-none">
                 {appliedTags.filter(tag => tag !== undefined).map(tag => (
-                    <View
+                    <TouchableOpacity
                         key={tag.id}
+                        onPress={() => router.push({ pathname: '/Notes', params: { tagId: tag.id } })}
                         style={[
                             styles.tag,
                             {
@@ -44,7 +47,7 @@ export function NoteTags({ noteId, style }: { noteId: string; style?: any }) {
                         >
                             <MaterialIcons name="close" size={14} color={tag.color} />
                         </TouchableOpacity>
-                    </View>
+                    </TouchableOpacity>
                 ))}
             </ScrollView>
         </View>

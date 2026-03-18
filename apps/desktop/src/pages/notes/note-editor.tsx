@@ -11,7 +11,7 @@ import { generateTitle, TRASH_FOLDER_ID, useNotesStore, useSettingsStore } from 
 import TipTapEditor, { TipTapEditorRef } from "@annota/editor-ui";
 import { FileText, Loader2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { NoteFloatingActions } from "./components/note-floating-actions";
 import { NoteSearch } from "./components/note-search";
@@ -25,6 +25,9 @@ interface NoteEditorProps {
 export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId }: NoteEditorProps) {
     const navigate = useNavigate();
     const params = useParams<{ folderId: string; noteId: string }>();
+    const location = useLocation()
+    const queryParams = new URLSearchParams(location.search);
+    const elementId = queryParams.get('elementId') || queryParams.get('blockId');
 
     const noteId = propNoteId || params.noteId;
     const routeFolderId = propFolderId || params.folderId;
@@ -38,6 +41,7 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId 
     const { isDark, colors } = useAppTheme();
 
     const editorRef = useRef<TipTapEditorRef>(null);
+    const hasScrolledRef = useRef(false);
     const [initialContent, setInitialContent] = useState<string | null>(null);
 
     const { toggleSidebar: toggleNoteSidebar, open: isNoteSidebarOpen, setOpen: setNoteSidebarOpen } = useSidebar();
@@ -118,6 +122,8 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId 
             onResolve: resolve,
         });
     }, []);
+
+
 
     const handleBlockAction = useCallback(async (action: string, params?: any) => {
         if (!activeBlockMenu || !editorRef.current) return;
@@ -275,6 +281,7 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId 
         editorRef.current?.searchPrev();
     }, []);
 
+    // search in note / focus mode shortcuts
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "f") {
@@ -290,6 +297,7 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [handleOpenSearch, toggleFullScreen]);
+
 
     useEffect(() => {
         if (!noteId) return;
@@ -348,6 +356,21 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId 
 
     }, [noteId, updateNoteContent, updateNoteMetadata]);
 
+    useEffect(() => {
+        // 1. Wait until we have the ID, the ref, and the content
+        if (!elementId || !editorRef.current || !initialContent) return;
+
+        // 2. If we already handled this deep link, do nothing!
+        if (hasScrolledRef.current) return;
+
+        const timer = setTimeout(() => {
+            editorRef.current?.scrollToElement(elementId);
+            hasScrolledRef.current = true; // Mark it as completed so it never fires again
+        }, 150);
+
+        return () => clearTimeout(timer);
+    }, [elementId, initialContent]);
+
     if (!note) {
         return (
             <div className="flex h-full bg-note-bg flex-col items-center justify-center gap-4 p-8">
@@ -398,7 +421,6 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId 
                         renderHeader={() => (
                             <NoteTags
                                 noteId={noteId ?? ''}
-                                className="absolute top-4 left-0 right-0 z-10 flex flex-wrap gap-1.5 max-w-full"
                             />
                         )}
                         renderToolbar={(props) => <DesktopToolbar {...props} />}
@@ -456,6 +478,7 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId 
 
                 {noteLinkCommandState.active && noteLinkCommandState.range && noteLinkCommandState.clientRect && (
                     <DesktopNoteLinkCommandMenu
+                        noteId={noteId ?? ''}
                         query={noteLinkCommandState.query || ''}
                         range={noteLinkCommandState.range}
                         clientRect={noteLinkCommandState.clientRect}

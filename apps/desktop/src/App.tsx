@@ -14,6 +14,7 @@ import {
   SyncScheduler,
   getMasterKey,
 } from "@annota/core/platform";
+import * as Sentry from "@sentry/react";
 import { Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Location, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
@@ -191,12 +192,13 @@ function App() {
           }
 
           const noteId = parsedUrl.pathname.replace("/", "");
-          const elementId = parsedUrl.searchParams.get("elementId");
+          const elementId = parsedUrl.searchParams.get("elementId") || parsedUrl.searchParams.get("blockId");
 
           // Try to find the note to get its folderId for the route
           const note = useNotesStore.getState().notes.find((n) => n.id === noteId);
           if (note) {
-            let routePath = `/notes/${note.folderId}/${noteId}`;
+            const folderId = note.folderId || "root";
+            let routePath = `/notes/${folderId}/${noteId}`;
             if (elementId) {
               routePath += `?elementId=${elementId}`;
             }
@@ -271,10 +273,11 @@ function App() {
         const parsedUrl = new URL(url);
         if (parsedUrl.host === "note") {
           const noteId = parsedUrl.pathname.replace("/", "");
-          const elementId = parsedUrl.searchParams.get("elementId");
+          const elementId = parsedUrl.searchParams.get("elementId") || parsedUrl.searchParams.get("blockId");
           const note = useNotesStore.getState().notes.find((n) => n.id === noteId);
           if (note) {
-            let routePath = `/notes/${note.folderId}/${noteId}`;
+            const folderId = note.folderId || "root";
+            let routePath = `/notes/${folderId}/${noteId}`;
             if (elementId) routePath += `?elementId=${elementId}`;
             navigate(routePath);
           }
@@ -311,7 +314,7 @@ function App() {
             setOnline: state.setOnline
           };
         }
-      });
+      }, session.user.id);
 
       // 2. Kick off any pending image downloads from previous sessions
       imageSyncService.retryPendingDownloads(key, session.user.id).catch(err => {
@@ -416,4 +419,4 @@ function App() {
   );
 }
 
-export default App;
+export default Sentry.withProfiler(App);

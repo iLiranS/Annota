@@ -20,6 +20,11 @@ import { FolderListItem } from '@/components/notes/folder-list-item';
 import { NoteListItem } from '@/components/notes/note-list-item';
 import { Button } from "@/components/ui/button";
 import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
@@ -47,7 +52,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useCreateNote } from "@/hooks/use-create-note";
 import { cn } from "@/lib/utils";
-import { MoreVertical, SquarePen } from "lucide-react";
+import { ChevronRight, MoreVertical, SquarePen } from "lucide-react";
 import { useParams } from "react-router-dom";
 
 interface NotesSidebarProps {
@@ -95,7 +100,7 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
         if (tagId) return undefined;
         const searchFolderId = searchParams.get("folderId");
         if (searchFolderId) return searchFolderId;
-        if (routeFolderId && routeFolderId !== "root") return routeFolderId;
+        if (routeFolderId && !['root', 'null', 'undefined'].includes(routeFolderId)) return routeFolderId;
         return undefined;
     }, [routeFolderId, searchParams, tagId]);
 
@@ -403,9 +408,9 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
             <SidebarContent className="px-0  gap-0">
                 {/* Folders section */}
                 {browseFolders.length > 0 && (
-                    <SidebarGroup className="px-0 py-0">
+                    <SidebarGroup className="px-2 py-1.5">
                         <SidebarGroupContent>
-                            <SidebarMenu>
+                            <SidebarMenu className="gap-1">
                                 {browseFolders.map((folder) => (
                                     <SidebarMenuItem key={folder.id}>
                                         <FolderListItem
@@ -416,7 +421,6 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
                                             onCreateTask={handleCreateTask}
                                             onClick={() => handleFolderPress(folder.id)}
                                             isActive={currentFolderId === folder.id}
-                                            className="rounded-none"
                                         />
                                     </SidebarMenuItem>
                                 ))}
@@ -425,16 +429,18 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
                     </SidebarGroup>
                 )}
 
-                {/* Separator between Folders and Pinned/Notes */}
-                {browseFolders.length > 0 && (pinnedNotes.length > 0 || unpinnedNotes.length > 0) && (
-                    <div className="h-2 w-full bg-border/60  shrink-0" />
+                {pinnedNotes.length > 0 && (
+                    <div className="flex items-center text-[10px] text-muted-foreground/80 uppercase tracking-wider justify-start gap-0.5 px-2 py-1 ">
+                        <Ionicons name='pin-outline' size={12} />
+                        <p>Pinned </p>
+                    </div>
                 )}
 
                 {/* Pinned section */}
                 {pinnedNotes.length > 0 && (
-                    <SidebarGroup className="px-0 py-0">
+                    <SidebarGroup className="px-2 py-1.5">
                         <SidebarGroupContent>
-                            <SidebarMenu className="gap-0">
+                            <SidebarMenu className="gap-1">
                                 {pinnedNotes.map((note) => (
                                     <SidebarMenuItem key={note.id}>
                                         <NoteListItem
@@ -442,7 +448,7 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
                                             onDelete={() => deleteNote(note.id)}
                                             onClick={() => handleNotePress(note)}
                                             isActive={routeNoteId === note.id}
-                                            isInList
+                                            isInList={true}
                                         />
                                     </SidebarMenuItem>
                                 ))}
@@ -451,16 +457,18 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
                     </SidebarGroup>
                 )}
 
-                {/* Separator between Pinned and unpinned Notes */}
-                {pinnedNotes.length > 0 && unpinnedNotes.length > 0 && (
-                    <div className="h-2 w-full bg-border/60  shrink-0" />
+                {unpinnedNotes.length > 0 && (
+                    <div className="flex items-center text-[10px] text-muted-foreground/80 uppercase tracking-wider justify-start gap-0.5 px-2 py-1 ">
+                        <Ionicons name='document-text-outline' size={12} />
+                        <p>Notes</p>
+                    </div>
                 )}
 
                 {/* Notes section */}
                 {unpinnedNotes.length > 0 && (
-                    <SidebarGroup className="px-0 py-0">
+                    <SidebarGroup className="px-2 py-1.5">
                         <SidebarGroupContent>
-                            <SidebarMenu className="gap-0">
+                            <SidebarMenu className="gap-1">
                                 {unpinnedNotes.map((note) => (
                                     <SidebarMenuItem key={note.id}>
                                         <NoteListItem
@@ -468,7 +476,7 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
                                             onDelete={() => deleteNote(note.id)}
                                             onClick={() => handleNotePress(note)}
                                             isActive={routeNoteId === note.id}
-                                            isInList
+                                            isInList={true}
                                         />
                                     </SidebarMenuItem>
                                 ))}
@@ -490,32 +498,40 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
             {/* Tasks section - Fixed at bottom */}
             {folderTasks.length > 0 && (
                 <div className="px-0 pb-2 border-t max-h-50 overflow-y-auto custom-scrollbar">
-                    <SidebarGroup className="px-0 py-0">
-                        <SidebarGroupLabel className=" h-7 mb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 w-full">
-                            <div className="flex items-center justify-between w-full">
-                                <div className="flex items-center gap-2">
-                                    <Ionicons name="checkmark-circle-outline" size={17} />
-                                    <span>Active Tasks</span>
-                                </div>
-                                <span className="font-medium lowercase text-muted-foreground/40">{folderTasks.length}</span>
-                            </div>
-                        </SidebarGroupLabel>
-                        <SidebarGroupContent>
-                            <SidebarMenu>
-                                {folderTasks.map((task) => (
-                                    <SidebarMenuItem key={task.id}>
-                                        <TaskItem
-                                            task={task}
-                                            onClick={() => navigate(`/task/${task.id}`, { state: { background: location } })}
-                                            hideFolder={true}
-                                            isCompact={true}
-                                            className="rounded-none"
-                                        />
-                                    </SidebarMenuItem>
-                                ))}
-                            </SidebarMenu>
-                        </SidebarGroupContent>
-                    </SidebarGroup>
+                    <Collapsible defaultOpen className="group/collapsible">
+                        <SidebarGroup className="px-2 py-1.5">
+                            <SidebarGroupLabel asChild className="h-7 mb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 w-full px-1 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-sm cursor-pointer transition-colors">
+                                <CollapsibleTrigger>
+                                    <div className="flex items-center justify-between w-full">
+                                        <div className="flex items-center gap-2">
+                                            <Ionicons name="checkmark-circle-outline" size={17} />
+                                            <span>Active Tasks</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-medium lowercase text-muted-foreground/40">{folderTasks.length}</span>
+                                            <ChevronRight className="h-3 w-3 transition-transform group-data-[state=open]/collapsible:rotate-90" />
+                                        </div>
+                                    </div>
+                                </CollapsibleTrigger>
+                            </SidebarGroupLabel>
+                            <CollapsibleContent>
+                                <SidebarGroupContent>
+                                    <SidebarMenu className="gap-1">
+                                        {folderTasks.map((task) => (
+                                            <SidebarMenuItem key={task.id}>
+                                                <TaskItem
+                                                    task={task}
+                                                    onClick={() => navigate(`/task/${task.id}`, { state: { background: location } })}
+                                                    hideFolder={true}
+                                                    isCompact={true}
+                                                />
+                                            </SidebarMenuItem>
+                                        ))}
+                                    </SidebarMenu>
+                                </SidebarGroupContent>
+                            </CollapsibleContent>
+                        </SidebarGroup>
+                    </Collapsible>
                 </div>
             )}
 

@@ -189,6 +189,11 @@ export function dispatchEditorCommand(editor: Editor, command: string, params: R
                 chain.setLink({ href: params.href }).focus().run();
             }
             return true;
+        case 'setNodeSelection':
+            if (params?.pos !== undefined) {
+                chain.setNodeSelection(params.pos).focus().run();
+            }
+            return true;
         case 'deleteSelection': {
             if (typeof params?.from === 'number' && typeof params?.to === 'number') {
                 // Range-based deletion (used by slash commands to remove "/query" text)

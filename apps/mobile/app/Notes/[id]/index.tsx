@@ -113,36 +113,21 @@ export default function NoteEditor() {
         };
     }, [id, getNoteContent, scrollToElementId]);
 
+    // Mobile Frontend
     useEffect(() => {
-        if (isLoading || !pendingScrollElementIdRef.current) return;
+        // 1. Wait for DB load to finish, ensure we have an ID, and ensure ref exists
+        if (isLoading || !pendingScrollElementIdRef.current || !editorRef.current) return;
 
-        let cancelled = false;
-        let attempts = 0;
-        const maxAttempts = 60; // ~1s at 60fps
+        const targetId = pendingScrollElementIdRef.current;
 
-        const tryScroll = () => {
-            if (cancelled || !pendingScrollElementIdRef.current) return;
+        // 2. The React Native WebView takes ~300ms to receive the HTML 
+        // over the bridge and render it.
+        const timer = setTimeout(() => {
+            editorRef.current?.scrollToElement(targetId);
+            pendingScrollElementIdRef.current = null;
+        }, 400);
 
-            const editor = editorRef.current;
-            if (editor) {
-                editor.scrollToElement(pendingScrollElementIdRef.current);
-                pendingScrollElementIdRef.current = null;
-                return;
-            }
-
-            attempts += 1;
-            if (attempts < maxAttempts) {
-                requestAnimationFrame(tryScroll);
-            } else {
-                // Element-specific scroll can't run without editor; drop back to note top behavior.
-                pendingScrollElementIdRef.current = null;
-            }
-        };
-
-        requestAnimationFrame(tryScroll);
-        return () => {
-            cancelled = true;
-        };
+        return () => clearTimeout(timer);
     }, [isLoading]);
 
     // Disable drawer swipe gesture when editor is open
@@ -435,6 +420,7 @@ export default function NoteEditor() {
                             if (noteLinkCommandState.active && noteLinkCommandState.range) {
                                 return (
                                     <NoteLinkCommandMenu
+                                        noteId={id}
                                         query={noteLinkCommandState.query || ''}
                                         range={noteLinkCommandState.range}
                                         sendCommand={(cmd, params) => editorRef.current?.onCommand(cmd, params)}

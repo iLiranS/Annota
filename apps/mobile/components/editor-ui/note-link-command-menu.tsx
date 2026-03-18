@@ -9,16 +9,17 @@ interface NoteLinkCommandMenuProps {
     range: { from: number; to: number };
     sendCommand: (cmd: string, params?: Record<string, unknown>) => void;
     onClose: () => void;
+    noteId: string;
 }
 
-export function NoteLinkCommandMenu({ query, range, sendCommand, onClose }: NoteLinkCommandMenuProps) {
+export function NoteLinkCommandMenu({ query, range, sendCommand, onClose, noteId }: NoteLinkCommandMenuProps) {
     const { colors } = useTheme();
     const { notes } = useNotesStore();
 
     const normalizedQuery = query.toLowerCase().trim();
 
     const displayNotes = useMemo(() => {
-        const filtered = notes.filter(n => !n.isDeleted && (n.title || 'Untitled').toLowerCase().includes(normalizedQuery));
+        const filtered = notes.filter(n => !n.isDeleted && n.id !== noteId && (n.title || 'Untitled').toLowerCase().includes(normalizedQuery));
         return filtered
             .sort((a, b) => {
                 const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;

@@ -1,6 +1,6 @@
 import { useSettingsStore } from '@annota/core';
 import { Colors } from '@annota/core/constants/theme';
-import { useEffect, useMemo, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 
 /** Subscribe to the system color-scheme media query. */
 function subscribeToScheme(callback: () => void) {
@@ -31,11 +31,26 @@ export interface AppTheme {
 export function useAppTheme(): AppTheme {
     const systemIsDark = useSyncExternalStore(subscribeToScheme, getSystemIsDark);
     const { themeMode, accentColor } = useSettingsStore();
+    const [hasHydrated, setHasHydrated] = useState(
+        useSettingsStore.persist.hasHydrated()
+    );
+
+    useEffect(() => {
+        if (hasHydrated) return;
+        return useSettingsStore.persist.onFinishHydration(() => {
+            setHasHydrated(true);
+        });
+    }, [hasHydrated]);
 
     const isDark = themeMode === 'system' ? systemIsDark : themeMode === 'dark';
+    const effectiveIsDark =
+        hasHydrated
+            ? isDark
+            : typeof document !== "undefined" && document.documentElement.classList.contains("dark");
 
     // Keep the <html> class and CSS variables in sync so Tailwind and shadcn vars work.
     useEffect(() => {
+        if (!hasHydrated) return;
         const root = document.documentElement;
 
         root.classList.toggle("dark", isDark);
@@ -55,12 +70,18 @@ export function useAppTheme(): AppTheme {
             `color-mix(in oklch, ${accentColor} 18%, var(--background))`
         );
 
-    }, [isDark, accentColor]);
+        try {
+            localStorage.setItem("annota.themeMode", themeMode);
+            localStorage.setItem("annota.accentColor", accentColor);
+        } catch {
+            // Ignore storage failures (private mode, blocked storage, etc.)
+        }
+    }, [isDark, accentColor, themeMode, hasHydrated]);
 
     return useMemo(() => {
-        const palette = Colors[isDark ? 'dark' : 'light'];
+        const palette = Colors[effectiveIsDark ? 'dark' : 'light'];
         return {
-            isDark,
+            isDark: effectiveIsDark,
             accentColor,
             colors: {
                 text: palette.text,

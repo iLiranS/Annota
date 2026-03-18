@@ -1,9 +1,7 @@
 import { eq, inArray } from 'drizzle-orm';
 import { getStorageEngine } from '../stores/config';
 import { getDb, getExpoDb, useDbStore } from '../stores/db.store';
-import { useNotesStore } from '../stores/notes.store';
 import { useSyncStore } from '../stores/sync.store';
-import { useTasksStore } from '../stores/tasks.store';
 import { useUserStore } from '../stores/user.store';
 import { SyncScheduler } from '../sync/sync-scheduler';
 import { removeMasterKey } from '../utils/crypto';
@@ -187,35 +185,23 @@ export async function resetAll(): Promise<void> {
 
   try {
     // 1. Stop background sync activity to prevent "database is locked" errors
-
     SyncScheduler.instance?.dispose();
 
     // Yield the event loop to allow pending SQLite promises to finish executing
     await new Promise(resolve => setTimeout(resolve, 100));
 
-    // Sign out user and clear auth stores BEFORE clearing storage
-    // If we clear storage first, the Supabase client may fail to sign out properly
-    await useUserStore.getState().signOut();
-
-    // Reset sync store states explicitly
-    useSyncStore.getState().setLastSyncAt(new Date(0));
-    useSyncStore.getState().clearAesKey();
-
-    // 2. Clear sync pointers explicitly before clearing all storage
-    const storage = getStorageEngine();
+    // 2. Reset sync state — clears both in-memory store AND the persisted sync pointer.
+    //    Done BEFORE signOut because signOut triggers side-effects (on mobile, the auth
+    //    listener re-bootstraps the DB to a guest context, invalidating our DB refs).
     if (userId) {
-      const syncTimeKey = `${userId}_last_sync_time`;
-      await storage.removeItem(syncTimeKey);
-      console.log(`[Reset] Cleared sync pointer for ${userId}`);
+      await useSyncStore.getState().resetForUser(userId);
+    } else {
+      useSyncStore.getState().reset();
     }
 
-    if (typeof storage.clear === 'function') {
-      await storage.clear();
-      console.log('Storage cleared');
-    }
-
-    // 3. Batch the drops into a single statement
-    // This requires only ONE lock acquisition instead of fighting for it 8 times in a loop.
+    // 3. Drop and recreate tables WHILE our DB references are still valid.
+    //    signOut() must come AFTER this because it triggers onAuthStateChange which
+    //    may switch the active database (e.g. to guest), invalidating nativeDb/drizzleDb.
     const dropStatements = `
       DROP TABLE IF EXISTS note_images;
       DROP TABLE IF EXISTS images;
@@ -230,18 +216,31 @@ export async function resetAll(): Promise<void> {
       DROP TABLE IF EXISTS image_download_queue;
     `;
 
-    // Disable foreign key constraints temporarily so tables can be dropped in any order
     await nativeDb.execAsync('PRAGMA foreign_keys = OFF;');
     await nativeDb.execAsync(dropStatements);
     await nativeDb.execAsync('PRAGMA foreign_keys = ON;');
-
     console.log('All tables dropped successfully');
 
     await initDatabase(nativeDb, drizzleDb);
 
-    // Re-init stores so UI reflects the wiped database
-    await useNotesStore.getState().initApp();
-    await useTasksStore.getState().loadTasks();
+    // 4. Clear all persistent storage (AsyncStorage / Tauri Store)
+    const storage = getStorageEngine();
+    if (typeof storage.clear === 'function') {
+      await storage.clear();
+      console.log('Storage cleared');
+    }
+
+    // 5. Sign out LAST — this triggers onAuthStateChange listeners which may
+    //    re-bootstrap the app (switch DB, re-route, etc.). All destructive
+    //    work must already be done by this point.
+    //    Wrapped in try/catch because storage.clear() may have already removed
+    //    the Supabase session token, causing signOut to fail. That's fine —
+    //    server-side token revocation is best-effort; local state is already wiped.
+    try {
+      await useUserStore.getState().signOut();
+    } catch (signOutError) {
+      console.warn('[Reset] signOut failed (expected if storage was cleared first):', signOutError);
+    }
   } catch (error) {
     console.error('App reset failed:', error);
     throw error;

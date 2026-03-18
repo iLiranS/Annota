@@ -16,11 +16,11 @@ import { useSyncStore } from '../stores/sync.store';
 import { decryptPayload, deriveAesKey, encryptPayload } from '../utils/crypto';
 
 const getSyncTimeKey = (userId: string) => `${userId}_last_sync_time`;
-const storage = createStorageAdapter();
 
 // Placeholders removed
 
 export async function resetSyncPointer(userId: string) {
+    const storage = createStorageAdapter();
     await storage.removeItem(getSyncTimeKey(userId));
     console.log(`[Sync] Reset sync pointer for user ${userId}`);
 }
@@ -218,19 +218,9 @@ export async function performSyncPull(masterKey: string) {
 
     const db = getDb();
     const userId = session.user.id;
-    const lastSyncStr = await storage.getItem(getSyncTimeKey(userId));
-    let lastSyncTime = new Date('2000-01-01T00:00:00Z');
+    const { lastSyncAt } = useSyncStore.getState();
+    const lastSyncTime = lastSyncAt ?? new Date('2000-01-01T00:00:00Z');
 
-    if (lastSyncStr) {
-        try {
-            const parsed = new Date(lastSyncStr);
-            if (!isNaN(parsed.getTime())) lastSyncTime = parsed;
-        } catch (e) {
-            console.error('[Sync] Failed to parse last sync time', e);
-        }
-    }
-
-    const newSyncTime = new Date().toISOString();
     let didDeleteTombstones = false;
 
     // 1. Get/Derive the AES key
@@ -397,7 +387,7 @@ export async function performSyncPull(masterKey: string) {
         }
     }
 
-    await storage.setItem(getSyncTimeKey(userId), newSyncTime);
+    // Sync time is now persisted by setLastSyncAt (called by the syncPull wrapper)
 
     if (didDeleteTombstones) {
         await new Promise(resolve => setTimeout(resolve, 50));

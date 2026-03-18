@@ -80,7 +80,7 @@ export function NoteListItem({
                             !asChild && isCompact && !isInList ? "py-1.5" : "py-2",
                             isActive && "bg-accent/70",
                             "relative",
-                            isInList ? "rounded-none px-1" : "px-3 py-2 rounded-lg",
+                            isInList ? "rounded-lg px-2 py-2" : "px-3 py-2 rounded-lg",
                             className
                         )}
                         style={style}
@@ -101,6 +101,7 @@ export function NoteListItem({
                                     </div>
 
                                     <div className="flex items-center gap-2 shrink-0">
+
                                         {suffix}
                                         {showTimestamp && note.updatedAt && (
                                             <span className="text-[11px] text-muted-foreground/60">
@@ -145,8 +146,10 @@ export function NoteListItem({
                                 })()}
                             </>
                         )}
-                        {isInList && <div className=" h-px absolute bottom-0 w-full left-0 bg-muted-foreground/15 " />}
-
+                        {/* Subtle inset separator for list items, positioned in the middle of the gap */}
+                        {isInList && (
+                            <div className="absolute -bottom-0.5 left-4 right-4 h-px bg-border/30" />
+                        )}
                     </Comp>
                 </ContextMenuTrigger>
 

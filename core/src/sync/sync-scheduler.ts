@@ -1,4 +1,5 @@
 import { getPlatformAdapters, type Unsubscribe } from '../adapters';
+import { useSyncStore } from '../stores/sync.store';
 import { syncPull, syncPush } from './sync-service';
 
 const DEBOUNCE_MS = 10_000;       // 10 seconds of idle → push
@@ -46,7 +47,7 @@ export class SyncScheduler {
 
     // ─── Public API ────────────────────────────────────────────
 
-    init(masterKey: string, deps: SyncDependencies): void {
+    init(masterKey: string, deps: SyncDependencies, userId?: string): void {
         // Skip if already initialized with the same key
         if (this.initialized && this.masterKey === masterKey && !this.disposed) {
             return;
@@ -74,8 +75,14 @@ export class SyncScheduler {
             this.handleNetInfoChange,
         );
 
-        // Initial pull on startup
-        this.executeSyncPull();
+        // Hydrate the sync pointer from storage, then do the initial pull
+        if (userId) {
+            useSyncStore.getState().loadLastSyncAt(userId).then(() => {
+                if (!this.disposed) this.executeSyncPull();
+            });
+        } else {
+            this.executeSyncPull();
+        }
     }
 
     /** Called on every note content change — resets the debounce timer */

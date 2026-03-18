@@ -34,6 +34,10 @@ TaskManager.defineTask(BACKGROUND_SYNC_TASK, async () => {
     const key = await getMasterKey(session.user.id);
     if (!key) return BackgroundTask.BackgroundTaskResult.Success;
 
+    // Hydrate sync pointer so we only pull changes since last sync
+    const { useSyncStore } = require('@annota/core');
+    await useSyncStore.getState().loadLastSyncAt(session.user.id);
+
     // Note: For background fetch, doing heavy operations must be well bounded
     await syncPull(key);
     await syncPush(key);
@@ -341,7 +345,7 @@ export default Sentry.wrap(function RootLayout() {
             setOnline: state.setOnline
           };
         }
-      });
+      }, session.user.id);
 
       // 2. Kick off any pending image downloads from previous sessions
       imageSyncService.retryPendingDownloads(key, session.user.id).catch((err: any) => {

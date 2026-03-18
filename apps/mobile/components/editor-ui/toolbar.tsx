@@ -379,7 +379,10 @@ export function EditorToolbar({
                     type="codeLanguage"
                     currentLanguage={editorState.currentCodeLanguage}
                     onSelect={(language: string) => {
-                        onCommand('setCodeBlockLanguage', { language });
+                        if (blockData?.pos !== undefined) {
+                            onCommand('setNodeSelection', { pos: blockData.pos });
+                        }
+                        onCommand('setCodeBlockLanguage', { language, pos: blockData?.pos });
                         closePopup();
                     }}
                     onClose={closePopup}
@@ -423,11 +426,17 @@ export function EditorToolbar({
                     type="detailsBackground"
                     currentColor={editorState.detailsBackgroundColor}
                     onSelect={(color: string) => {
-                        onCommand('setDetailsBackground', { color });
+                        if (blockData?.pos !== undefined) {
+                            onCommand('setNodeSelection', { pos: blockData.pos });
+                        }
+                        onCommand('setDetailsBackground', { color, pos: blockData?.pos });
                         closePopup();
                     }}
                     onClear={() => {
-                        onCommand('unsetDetailsBackground');
+                        if (blockData?.pos !== undefined) {
+                            onCommand('setNodeSelection', { pos: blockData.pos });
+                        }
+                        onCommand('unsetDetailsBackground', { pos: blockData?.pos });
                         closePopup();
                     }}
                     onClose={closePopup}

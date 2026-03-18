@@ -160,14 +160,6 @@ export default function StorageSettings() {
                             const { resetAll } = require('@annota/core');
                             await resetAll();
 
-                            // Re-init stores
-                            const { useNotesStore } = require('@annota/core');
-                            const { useTasksStore } = require('@annota/core');
-                            await useNotesStore.getState().initApp();
-                            await useTasksStore.getState().loadTasks();
-
-                            Alert.alert("Reset Complete", "The local database has been wiped.");
-                            await loadStats();
                         } catch (e) {
                             console.error(e);
                             Alert.alert("Error", "Failed to reset database.");

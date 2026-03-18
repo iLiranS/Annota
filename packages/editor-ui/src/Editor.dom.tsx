@@ -74,6 +74,10 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
             onTagCommand,
             onNoteLinkCommand,
             onImageSelected: (data) => {
+                // Drop focus so the cursor doesn't blink behind the dark overlay
+                if (editorRef.current) {
+                    editorRef.current.commands.blur();
+                }
                 openGallery(data.images, data.currentIndex);
             },
             onResolveImageIds: (data) => {
@@ -292,6 +296,17 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                 setEditorState(getEditorState(editor) as unknown as EditorState);
             },
             onSelectionUpdate: ({ editor }) => {
+                const { selection } = editor.state;
+                let latex = '';
+
+                // Extract latex if we clicked on a math node, or extract highlighted text
+                if ((selection as any).node?.type.name === 'inlineMath') {
+                    latex = (selection as any).node.attrs.latex;
+                } else if (!selection.empty) {
+                    latex = editor.state.doc.textBetween(selection.from, selection.to, ' ');
+                }
+
+                setCurrentLatex(latex || null);
                 setEditorState(getEditorState(editor) as unknown as EditorState);
             },
             onTransaction: ({ editor }) => {
@@ -315,6 +330,36 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
             root.style.setProperty('--code-block-bg', dark ? '#1E1E1E' : '#F5F5F5');
             root.style.setProperty('--border-color', dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)');
         }, [colors, dark, editorSettings]);
+        // Keyboard Shortcuts
+        useEffect(() => {
+            const handleKeyDown = (e: KeyboardEvent) => {
+                const isMod = e.metaKey || e.ctrlKey;
+                const isShift = e.shiftKey;
+                const key = e.key.toLowerCase();
+
+                if (isMod && isShift && key === 'm') {
+                    if (!editor) return;
+                    e.preventDefault();
+
+                    const { selection } = editor.state;
+                    let latex = '';
+
+                    if ((selection as any).node?.type.name === 'inlineMath') {
+                        latex = (selection as any).node.attrs.latex;
+                    } else {
+                        latex = editor.state.doc.textBetween(selection.from, selection.to, ' ');
+                    }
+
+                    setCurrentLatex(latex || null);
+                    requestAnimationFrame(() => {
+                        setActivePopup('math');
+                    });
+                }
+            };
+
+            window.addEventListener('keydown', handleKeyDown);
+            return () => window.removeEventListener('keydown', handleKeyDown);
+        }, [editor]);
 
         // Inside Editor.dom.tsx
         const handleCommand = useCallback((cmd: string, params?: any) => {
@@ -343,8 +388,51 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
             searchPrev: () => (editor?.commands as any).searchPrev(),
             clearSearch: () => (editor?.commands as any).clearSearch(),
             scrollToElement: (id: string) => {
-                const el = document.getElementById(id);
-                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                // Desktop is native DOM. We don't need to fight TipTap's virtual state.
+                // Just poll the DOM until the element renders, then scroll to it.
+                let attempts = 0;
+
+                const interval = setInterval(() => {
+                    attempts++;
+
+                    const el = document.getElementById(id) ||
+                        document.querySelector(`[data-id="${id}"]`) ||
+                        document.querySelector(`[blockId="${id}"]`);
+
+                    if (el) {
+                        clearInterval(interval); // Found it! Stop polling.
+
+                        // If it's hidden inside a <details> block, force it open
+                        const detailsAncestor = el.closest('details');
+                        if (detailsAncestor && !detailsAncestor.open) {
+                            detailsAncestor.open = true;
+                        }
+
+                        // Pure, native browser scroll. 
+                        // We strictly DO NOT touch the TipTap selection here to prevent jump collisions.
+                        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                        // Optional: Give it a slight background flash so the user knows what they linked to,
+                        // since we aren't using TipTap's highlight selection anymore.
+                        const originalTransition = (el as HTMLElement).style.transition;
+                        const originalBg = (el as HTMLElement).style.backgroundColor;
+
+                        (el as HTMLElement).style.transition = 'background-color 0.3s';
+                        (el as HTMLElement).style.backgroundColor = 'var(--accent-color, rgba(100, 150, 255, 0.2))';
+
+                        setTimeout(() => {
+                            (el as HTMLElement).style.backgroundColor = originalBg;
+                            setTimeout(() => { (el as HTMLElement).style.transition = originalTransition; }, 300);
+                        }, 1000);
+
+                        return;
+                    }
+
+                    // Give up after ~2 seconds (40 attempts * 50ms)
+                    if (attempts >= 40) {
+                        clearInterval(interval);
+                    }
+                }, 50);
             },
         }), [editor]);
 
@@ -364,7 +452,7 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
         }, [editor, initialContent]);
 
         return (
-            <div ref={containerRef} className="editor-dom-container" style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', position: 'relative', paddingTop: contentPaddingTop }}>
+            <div ref={containerRef} className="editor-dom-container" style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
                 {renderToolbar?.({
                     editorState,
                     sendCommand: handleCommand,
