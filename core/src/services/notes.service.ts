@@ -1,15 +1,14 @@
 import * as ImagesRepo from '../db/repositories/images.repository';
 import * as notesRepo from '../db/repositories/notes.repository';
+import { MAX_NOTE_SIZE, normalizeStoredContent } from '../db/repositories/notes.repository';
 import type { NoteMetadata } from '../db/schema';
 import { insertNoteMetadataSchema } from '../db/validators/notes';
 import type { UserRole } from '../stores/user.store';
 import { generateNoteMetadata, generatePreview, generateTitle } from '../utils/notes';
 import { isPremiumUser } from '../utils/subscription';
+import { FolderService } from './folders.service';
 import * as NoteImageService from './images/note-image.service';
 import { TagService } from './tags.service';
-import { FolderService } from './folders.service';
-import { getPlatformAdapters } from '../adapters';
-import { MAX_NOTE_SIZE, normalizeStoredContent } from '../db/repositories/notes.repository';
 
 
 export const NoteService = {

@@ -92,6 +92,30 @@ export const CustomImage = Image.extend<any>({
             onResolveImageIds: null as ((data: { imageIds: string[] }) => void) | null,
         };
     },
+    parseHTML() {
+        return [
+            {
+                tag: 'img[src]',
+                getAttrs: (dom) => {
+                    if (typeof dom === 'string') return {};
+                    const element = dom as HTMLElement;
+                    const src = element.getAttribute('src') || '';
+                    const id = element.getAttribute('data-image-id');
+
+                    // 1. THE BULK PASTE SHIELD
+                    // If the HTML contains a massive base64 string but NO database ID,
+                    // it is a rogue bulk-paste injection. We reject it!
+                    if (src.startsWith('data:image/') && !id) {
+                        console.warn('[Image Extension] Blocked rogue base64 HTML injection');
+                        return false; // Returning false tells TipTap to completely destroy this node
+                    }
+
+                    // 2. Allow normal parsing for valid database images or standard web URLs (http://...)
+                    return null;
+                }
+            }
+        ];
+    },
     addAttributes() {
         return {
             ...this.parent?.(),

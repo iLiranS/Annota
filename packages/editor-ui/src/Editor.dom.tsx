@@ -1,5 +1,5 @@
 import { useSettingsStore } from '@annota/core';
-import { getPlatformAdapters, NoteImageService } from '@annota/core/platform';
+import { NoteImageService } from '@annota/core/platform';
 import { dispatchEditorCommand, getEditorProps, getEditorState, getExtensions, resolveFontFamily } from '@annota/editor-core';
 import '@annota/editor-core/styles.css';
 import { TextSelection } from '@tiptap/pm/state';
@@ -93,59 +93,6 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
             },
             onImagePasted: (data) => {
                 console.log("[EditorDom] Paste detected!", data.imageId);
-
-                if (!noteId || !editorRef.current) {
-                    console.error("[EditorDom] Paste aborted: Missing noteId or editor", { noteId, hasEditor: !!editorRef.current });
-                    return;
-                }
-
-                // 1. Internal paste (copying an image from within the note)
-                if (data.imageId && !data.imageId.startsWith('temp-')) {
-                    editorRef.current.chain().focus().insertContent({
-                        type: 'image',
-                        attrs: { src: data.src || '', imageId: data.imageId }
-                    }).run();
-                    return;
-                }
-
-                // 2. External paste
-                (async () => {
-                    try {
-                        console.log("[EditorDom] Processing external paste...");
-                        const adapters = getPlatformAdapters();
-                        const cacheDir = await adapters.fileSystem.ensureDir('cache');
-
-                        const mimeMatch = data.base64.match(/^data:(image\/\w+);base64,/);
-                        const ext = (mimeMatch ? mimeMatch[1] : 'image/png').split('/').pop() || 'png';
-                        const tempFilename = `pasted-${Date.now()}.${ext}`;
-                        const sep = cacheDir.includes('\\') ? '\\' : '/';
-                        const tempPath = `${cacheDir}${cacheDir.endsWith(sep) ? '' : sep}${tempFilename}`;
-
-                        // NATIVE BASE64 DECODING (No Buffer required!)
-                        const response = await fetch(data.base64);
-                        const arrayBuffer = await response.arrayBuffer();
-                        const rawBytes = new Uint8Array(arrayBuffer);
-
-                        console.log("[EditorDom] Writing to cache:", tempPath);
-                        await adapters.fileSystem.writeBytes(tempPath, rawBytes);
-
-                        console.log("[EditorDom] Handing off to NoteImageService...");
-                        const processed = await NoteImageService.processAndInsertImage(noteId, tempPath);
-                        const imageMap = await NoteImageService.resolveImageSources([processed.imageId]);
-
-                        console.log("[EditorDom] Replacing placeholder with DB ID:", processed.imageId);
-                        (editorRef.current.commands as any).replaceImageId({
-                            oldId: data.imageId,
-                            newId: processed.imageId,
-                            src: imageMap[processed.imageId]
-                        });
-
-                        await adapters.fileSystem.deleteFile(tempPath).catch(() => { });
-                        console.log("[EditorDom] Paste successfully processed!");
-                    } catch (err) {
-                        console.error('[EditorDom] Failed to handle pasted image:', err);
-                    }
-                })();
             },
 
             defaultCodeLanguage: editorSettings.defaultCodeLanguage,
@@ -451,6 +398,60 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                 }
             }
         }, [editor, initialContent]);
+
+        // THE GLOBAL PASTE INTERCEPTOR
+        useEffect(() => {
+            const handleGlobalPaste = async (e: ClipboardEvent) => {
+                if (!noteId || !editorRef.current) return;
+
+                const items = e.clipboardData?.items;
+                if (!items) return;
+
+                let imageFile: File | null = null;
+                for (let i = 0; i < items.length; i++) {
+                    if (items[i].type.startsWith('image/')) {
+                        imageFile = items[i].getAsFile();
+                        break;
+                    }
+                }
+
+                // If it's an image, hijack the event!
+                if (imageFile) {
+                    // 1. Stop TipTap from ever seeing this paste
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    // 2. Read the file to Base64
+                    const reader = new FileReader();
+                    reader.onload = async (event) => {
+                        const base64 = event.target?.result as string;
+                        if (base64) {
+                            try {
+                                // 3. Upload it exactly like the Toolbar does
+                                const { id, url } = await NoteImageService.saveNoteImage(noteId, base64);
+
+                                // 4. Safely insert the final local URL into the editor
+                                handleCommand('insertLocalImage', {
+                                    imageId: id,
+                                    src: url
+                                });
+                            } catch (err) {
+                                console.error('[EditorDom] Global paste upload failed:', err);
+                            }
+                        }
+                    };
+                    reader.readAsDataURL(imageFile);
+                }
+            };
+
+            // Use capture: true to intercept the event on the way DOWN the DOM tree, 
+            // guaranteeing we catch it before TipTap does!
+            document.addEventListener('paste', handleGlobalPaste, { capture: true });
+
+            return () => {
+                document.removeEventListener('paste', handleGlobalPaste, { capture: true });
+            };
+        }, [noteId, handleCommand]);
 
         return (
             <div ref={containerRef} className="editor-dom-container" style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
