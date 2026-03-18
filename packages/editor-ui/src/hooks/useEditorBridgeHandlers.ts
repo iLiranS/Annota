@@ -1,6 +1,6 @@
-import { NoteImageService, getPlatformAdapters } from '@annota/core/platform';
-import { Buffer } from 'buffer';
+import { NoteImageService } from '@annota/core/platform';
 import { useCallback } from 'react';
+import { handleImagePaste } from '../shared/image-paste';
 import { TipTapEditorProps } from '../shared/types';
 
 // Removed IMAGE_MIME_TO_EXT and getExtensionFromMime as per instruction to improve extension detection.
@@ -106,28 +106,34 @@ export function useEditorBridgeHandlers({
                     }
                 }
                 break;
-
             case 'imagePasted':
-                if (data.base64 && data.imageId && noteId) {
-                    try {
-                        const extension = getExtensionFromMime(data.base64);
-                        const base64Data = data.base64.replace(/^data:image\/\w+;base64,/, "");
-                        const rawBytes = Buffer.from(base64Data, 'base64');
-                        const adapters = getPlatformAdapters();
-                        const cacheDir = await adapters.fileSystem.ensureDir('cache');
-                        const tempPath = `${cacheDir}/pasted-${Date.now()}.${extension}`;
-                        await adapters.fileSystem.writeBytes(tempPath, new Uint8Array(rawBytes));
-                        const processed = await NoteImageService.processAndInsertImage(noteId, tempPath);
-                        const imageMap = await NoteImageService.resolveImageSources([processed.imageId]);
-                        sendMessage('replaceImageId', {
-                            oldId: data.imageId,
-                            newId: processed.imageId,
-                            src: imageMap[processed.imageId]
-                        });
-                    } catch (err) {
-                        console.error('Failed to handle pasted image:', err);
+                handleImagePaste({
+                    noteId,
+                    data,
+                    insertImage: ({ imageId, pos, src }) => {
+                        // 1. Tell the WebView to insert the placeholder or the internal copied image
+                        if (typeof pos === 'number') {
+                            sendMessage('insertContentAt', {
+                                pos,
+                                content: { type: 'image', attrs: { src: src || '', imageId } }
+                            });
+                        } else {
+                            sendMessage('insertLocalImage', { imageId, src: src || '' });
+                        }
+                    },
+                    replaceImageId: ({ oldId, newId, src }) => {
+                        // 2. Tell the WebView to safely swap the temp ID for the real Rust database UUID
+                        sendMessage('replaceImageId', { oldId, newId, src });
+                    },
+                    resolveImages: (imageMap) => {
+                        // 3. Hydrate the image so the user can see it
+                        if (Object.keys(imageMap).length > 0) {
+                            sendMessage('resolveImages', { imageMap });
+                        }
                     }
-                }
+                }).catch((err) => {
+                    console.error('Failed to handle pasted image via bridge:', err);
+                });
                 break;
         }
     }, [

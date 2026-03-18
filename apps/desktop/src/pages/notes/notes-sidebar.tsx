@@ -405,7 +405,7 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
             </SidebarHeader>
 
             {/* Content */}
-            <SidebarContent className="px-0  gap-0">
+            <SidebarContent className="px-0 gap-0 compact-scrollbar">
                 {/* Folders section */}
                 {browseFolders.length > 0 && (
                     <SidebarGroup className="px-2 py-1.5">
@@ -497,7 +497,7 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
 
             {/* Tasks section - Fixed at bottom */}
             {folderTasks.length > 0 && (
-                <div className="px-0 pb-2 border-t max-h-50 overflow-y-auto custom-scrollbar">
+                <div className="px-0 pb-2 border-t max-h-50 overflow-y-auto compact-scrollbar">
                     <Collapsible defaultOpen className="group/collapsible">
                         <SidebarGroup className="px-2 py-1.5">
                             <SidebarGroupLabel asChild className="h-7 mb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 w-full px-1 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-sm cursor-pointer transition-colors">

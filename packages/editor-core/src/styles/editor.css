@@ -535,7 +535,7 @@
     vertical-align: middle;
     /* Better baseline alignment */
     padding: 0;
-    margin: 0 03px;
+    margin: 0 3px;
     border-radius: 4px;
     cursor: pointer !important;
     line-height: 1;
@@ -543,6 +543,9 @@
     white-space: nowrap;
     user-select: none;
     max-width: 100%;
+    /* Force LTR rendering */
+    direction: ltr !important;
+    unicode-bidi: isolate !important;
 }
 
 [data-type="math"] .katex,
@@ -568,6 +571,9 @@
     text-align: center;
     width: 100%;
     max-width: 100%;
+    /* Force LTR rendering */
+    direction: ltr !important;
+    unicode-bidi: isolate !important;
 }
 
 /* 
@@ -579,6 +585,9 @@
     white-space: nowrap !important;
     user-select: none !important;
     pointer-events: none !important;
+    /* Force LTR rendering */
+    direction: ltr !important;
+    unicode-bidi: isolate !important;
 }
 
 .katex * {

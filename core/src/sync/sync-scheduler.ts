@@ -44,17 +44,27 @@ export class SyncScheduler {
     private lastOfflineToastAt = 0;
     private disposed = false;
     private initialized = false;
+    private userId: string | null = null;
 
     // ─── Public API ────────────────────────────────────────────
 
     init(masterKey: string, deps: SyncDependencies, userId?: string): void {
-        // Skip if already initialized with the same key
-        if (this.initialized && this.masterKey === masterKey && !this.disposed) {
+        if (!userId) {
+            console.log('[SyncScheduler] No user ID provided, staying quiet (guest mode)');
+            if (this.initialized) {
+                this.dispose();
+            }
             return;
         }
 
-        console.log('[SyncScheduler] Initializing with master key');
+        // Skip if already initialized with the same key
+        if (this.initialized && this.masterKey === masterKey && this.userId === userId && !this.disposed) {
+            return;
+        }
+
+        console.log('[SyncScheduler] Initializing with master key for user:', userId);
         this.masterKey = masterKey;
+        this.userId = userId;
         this.deps = deps;
         this.disposed = false;
         this.initialized = true;
@@ -76,13 +86,9 @@ export class SyncScheduler {
         );
 
         // Hydrate the sync pointer from storage, then do the initial pull
-        if (userId) {
-            useSyncStore.getState().loadLastSyncAt(userId).then(() => {
-                if (!this.disposed) this.executeSyncPull();
-            });
-        } else {
-            this.executeSyncPull();
-        }
+        useSyncStore.getState().loadLastSyncAt(userId).then(() => {
+            if (!this.disposed) this.executeSyncPull();
+        });
     }
 
     /** Called on every note content change — resets the debounce timer */
@@ -137,6 +143,7 @@ export class SyncScheduler {
     dispose(): void {
         this.disposed = true;
         this.initialized = false;
+        this.userId = null;
         this.clearAllTimers();
 
         this.appStateUnsubscribe?.();

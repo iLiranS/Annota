@@ -184,6 +184,40 @@ body {
     scrollbar-width: thin;
     scrollbar-color: var(--border) transparent;
   }
+
+  .compact-scrollbar::-webkit-scrollbar {
+    width: 2px;
+    height: 2px;
+  }
+
+  .compact-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .compact-scrollbar::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 10px;
+    transition: background 0.2s ease;
+  }
+
+  .compact-scrollbar:hover::-webkit-scrollbar-thumb {
+    background: var(--border);
+  }
+
+  .compact-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--muted-foreground);
+  }
+
+  /* Firefox support for .compact-scrollbar */
+  .compact-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+    transition: scrollbar-color 0.2s ease;
+  }
+
+  .compact-scrollbar:hover {
+    scrollbar-color: var(--border) transparent;
+  }
 }
 
 @theme {
@@ -194,6 +228,7 @@ body {
     from {
       height: 0;
     }
+
     to {
       height: var(--radix-collapsible-content-height);
     }
@@ -203,6 +238,7 @@ body {
     from {
       height: var(--radix-collapsible-content-height);
     }
+
     to {
       height: 0;
     }

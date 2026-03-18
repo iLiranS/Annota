@@ -8,6 +8,7 @@ import { TaskItem } from '@tiptap/extension-task-item';
 import { TaskList } from '@tiptap/extension-task-list';
 import { FontFamily, TextStyle } from '@tiptap/extension-text-style';
 import { Underline } from '@tiptap/extension-underline';
+import { Slice } from '@tiptap/pm/model';
 import { CellSelection } from '@tiptap/pm/tables';
 import { StarterKit } from '@tiptap/starter-kit';
 
@@ -200,6 +201,29 @@ export const getEditorProps = (callbacks: {
             .replace(/background-color\s*:[^;"']*(;|(?=["']))/gi, '')
             .replace(/font-size\s*:[^;"']*(;|(?=["']))/gi, '')
             .replace(/line-height\s*:[^;"']*(;|(?=["']))/gi, '');
+    },
+    transformPasted(slice: Slice) {
+        if (slice.content.childCount === 1) {
+            const firstChild = slice.content.firstChild;
+            if (firstChild && (firstChild.type.name === 'codeBlock' || firstChild.type.name === 'details')) {
+                // Check if it's a partial selection from within the block
+                if (slice.openStart > 0 || slice.openEnd > 0) {
+                    if (firstChild.type.name === 'codeBlock') {
+                        return new Slice(firstChild.content, Math.max(0, slice.openStart - 1), Math.max(0, slice.openEnd - 1));
+                    }
+                    if (firstChild.type.name === 'details') {
+                        let innerContent = firstChild.content;
+                        firstChild.content.forEach(node => {
+                            if (node.type.name === 'detailsContent') {
+                                innerContent = node.content;
+                            }
+                        });
+                        return new Slice(innerContent, Math.max(0, slice.openStart - 2), Math.max(0, slice.openEnd - 2));
+                    }
+                }
+            }
+        }
+        return slice;
     },
 });
 

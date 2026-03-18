@@ -28,10 +28,10 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
     ({
         initialContent = '',
         onContentChange,
+        contentPaddingTop = 0,
         placeholder = 'Start typing...',
         autofocus = false,
         onSearchResults,
-        contentPaddingTop = 0,
         onGalleryVisibilityChange,
         editable = true,
         noteId,
@@ -85,7 +85,7 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                     NoteImageService.resolveImageSources(data.imageIds).then((imageMap) => {
                         if (Object.keys(imageMap).length > 0) {
                             isHydrating.current = true;
-                            (editor?.commands as any).resolveImages({ imageMap });
+                            (editor.commands as any).resolveImages({ imageMap });
                             isHydrating.current = false;
                         }
                     });
@@ -147,6 +147,7 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                     }
                 })();
             },
+
             defaultCodeLanguage: editorSettings.defaultCodeLanguage,
         }), [
             placeholder,
@@ -160,7 +161,7 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
             onSlashCommand,
             onTagCommand,
             onNoteLinkCommand,
-            onGalleryVisibilityChange
+            onGalleryVisibilityChange,
         ]);
 
         const editorProps = useMemo(() => getEditorProps({
@@ -501,7 +502,7 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                 <div className="editor-scroller" style={{ flex: 1, overflowY: 'auto', padding: '0 24px' }}>
                     <div style={{ maxWidth: editorSettings.noteWidth || '100%', margin: '0 auto', minHeight: '100%' }}>
                         {renderHeader?.()}
-                        <EditorContent editor={editor} style={{ outline: 'none' }} />
+                        <EditorContent editor={editor} style={{ outline: 'none', paddingTop: contentPaddingTop }} />
                     </div>
                 </div>
                 {gallery.isVisible && renderImageGallery?.({

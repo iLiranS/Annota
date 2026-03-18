@@ -14,7 +14,6 @@ import {
   SyncScheduler,
   getMasterKey,
 } from "@annota/core/platform";
-import * as Sentry from "@sentry/react";
 import { Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Location, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
@@ -326,6 +325,7 @@ function App() {
 
     return () => {
       cancelled = true;
+      SyncScheduler.getInstance().dispose();
     };
   }, [session, hasMasterKey, bootstrapState]);
 
@@ -419,4 +419,4 @@ function App() {
   );
 }
 
-export default Sentry.withProfiler(App);
+export default App;

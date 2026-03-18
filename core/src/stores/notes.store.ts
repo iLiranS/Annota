@@ -7,7 +7,9 @@ import { TagService } from '../services/tags.service';
 import { SyncScheduler } from '../sync/sync-scheduler';
 import { SortType, sortFolders, sortNotes } from '../utils/sorts';
 import { generateRandomHexColor } from '../utils/tags';
+import { createStorageAdapter } from './config';
 import { useUserStore } from './user.store';
+import { getPlatformAdapters } from '../adapters';
 
 
 // Re-export types for convenience
@@ -47,7 +49,7 @@ interface NotesState {
 
     // Content operations (lazy loaded)
     getNoteContent: (noteId: string) => Promise<string>;
-    updateNoteContent: (noteId: string, content: string) => Promise<void>;
+    updateNoteContent: (noteId: string, content: string) => Promise<{ error: string | null }>;
     getNoteVersions: (noteId: string) => Promise<{ id: string; createdAt: Date }[]>;
     getNoteVersion: (versionId: string) => Promise<{ id: string; content: string; createdAt: Date } | undefined>;
     deleteNoteVersion: (noteId: string, versionId: string) => Promise<void>;
@@ -99,6 +101,17 @@ export const useNotesStore = create<NotesState>((set, get) => ({
                 await purgeGuestTombstones();
             } catch (err) {
                 console.warn('[Store] Startup maintenance failed, continuing init...', err);
+            }
+
+            // Load root settings from storage
+            try {
+                const storage = createStorageAdapter();
+                const savedSortType = await storage.getItem('root-folder-sort-type');
+                if (savedSortType) {
+                    set({ rootSettings: { sortType: savedSortType as SortType } });
+                }
+            } catch (err) {
+                console.warn('[Store] Failed to load root settings:', err);
             }
         }
 
@@ -352,16 +365,28 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     },
 
     updateNoteContent: async (noteId, content) => {
-        await NoteService.updateContent(noteId, content);
+        try {
+            await NoteService.updateContent(noteId, content);
 
-        // Fetch updated metadata (with new preview)
-        const updatedNote = await NoteService.getNoteById(noteId);
-        if (updatedNote) {
-            set(state => ({
-                notes: state.notes.map(n => n.id === noteId ? updatedNote : n)
-            }));
+            // Fetch updated metadata (with new preview)
+            const updatedNote = await NoteService.getNoteById(noteId);
+            if (updatedNote) {
+                set(state => ({
+                    notes: state.notes.map(n => n.id === noteId ? updatedNote : n)
+                }));
+            }
+            SyncScheduler.instance?.notifyContentChange();
+            return { error: null };
+        } catch (error) {
+            console.error('[Store] Failed to update note content:', error);
+            const message = error instanceof Error ? error.message : String(error);
+            getPlatformAdapters().toast.show({
+                type: 'error',
+                title: 'Note update failed',
+                message
+            });
+            return { error: message };
         }
-        SyncScheduler.instance?.notifyContentChange();
     },
 
     getNoteVersions: async (noteId) => {
@@ -552,6 +577,13 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     setFolderSortType: (folderId, sortType) => {
         if (folderId === null) {
             set({ rootSettings: { sortType } });
+            // Persist root sort type
+            try {
+                const storage = createStorageAdapter();
+                storage.setItem('root-folder-sort-type', sortType);
+            } catch (err) {
+                console.warn('[Store] Failed to save root sort type:', err);
+            }
         } else {
             get().updateFolder(folderId, { sortType });
         }

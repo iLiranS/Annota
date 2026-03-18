@@ -1,4 +1,7 @@
 import { Editor } from "@tiptap/core";
+import { DOMSerializer } from "@tiptap/pm/model";
+import { NodeSelection } from "@tiptap/pm/state";
+
 
 function getDefaultCodeLanguage(editor: any): string {
     try {
@@ -8,6 +11,27 @@ function getDefaultCodeLanguage(editor: any): string {
         return 'plaintext';
     }
 }
+
+async function copyToClipboard(text: string, html?: string) {
+    try {
+        if (html && typeof ClipboardItem !== 'undefined' && navigator.clipboard?.write) {
+            const data = [new ClipboardItem({
+                'text/plain': new Blob([text], { type: 'text/plain' }),
+                'text/html': new Blob([html], { type: 'text/html' })
+            })];
+            await navigator.clipboard.write(data);
+            console.log('Rich content copied to clipboard');
+        } else {
+            await navigator.clipboard.writeText(text);
+            console.log('Text copied to clipboard');
+        }
+    } catch (err) {
+        console.error('Failed to copy content: ', err);
+        // Fallback to basic text copy
+        try { await navigator.clipboard.writeText(text); } catch (e) { }
+    }
+}
+
 
 function hasParams(params: any): boolean {
     if (params === undefined || params === null) return false;
@@ -194,7 +218,58 @@ export function dispatchEditorCommand(editor: Editor, command: string, params: R
                 chain.setNodeSelection(params.pos).focus().run();
             }
             return true;
+        case 'insertContentAt': {
+            const pos = params?.pos;
+            const content = params?.content;
+            if (pos === undefined || content === undefined) return true;
+            const options = params?.options;
+            chain.insertContentAt(pos, content, options).focus().run();
+            return true;
+        }
+        case 'copyToClipboard': {
+            if (typeof params?.pos === 'number') {
+                editor.chain().focus().setNodeSelection(params.pos).run();
+            } else {
+                editor.chain().focus().run();
+            }
+
+            const slice = editor.state.selection.content();
+            let fragment = slice.content;
+
+            // Normalize: If we're not explicitly copying a block node (NodeSelection), 
+            // and the fragment is wrapped in a 'greedy' container like 'details' or 'codeBlock', unwrap it.
+            // This ensures copying text inside a block doesn't carry the block wrapper inappropriately.
+            const isNodeSelection = editor.state.selection instanceof NodeSelection;
+            if (!isNodeSelection) {
+                while (fragment.childCount === 1) {
+                    const child = fragment.firstChild!;
+                    if (['details', 'detailsContent', 'codeBlock'].includes(child.type.name)) {
+                        fragment = child.content;
+                    } else {
+                        break;
+                    }
+                }
+            }
+            
+            const text = fragment.textBetween(0, fragment.size, ' ');
+
+            // Generate HTML for the selected block/content
+            let html = '';
+            try {
+                const div = document.createElement('div');
+                const serializer = DOMSerializer.fromSchema(editor.schema);
+                div.appendChild(serializer.serializeFragment(fragment));
+                html = div.innerHTML;
+            } catch (e) {
+                console.error('Failed to serialize content to HTML', e);
+            }
+
+            copyToClipboard(text, html);
+            return true;
+        }
+
         case 'deleteSelection': {
+            console.log(params)
             if (typeof params?.from === 'number' && typeof params?.to === 'number') {
                 // Range-based deletion (used by slash commands to remove "/query" text)
                 editor.chain().focus().deleteRange({ from: params.from, to: params.to }).run();

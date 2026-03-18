@@ -8,11 +8,11 @@ import { useSidebar } from "@/components/ui/sidebar";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { copyImageToClipboard, writeText } from "@/lib/clipboard";
 import { generateTitle, TRASH_FOLDER_ID, useNotesStore, useSettingsStore } from "@annota/core";
+import { NoteImageService } from "@annota/core/platform";
 import TipTapEditor, { TipTapEditorRef } from "@annota/editor-ui";
 import { FileText, Loader2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { toast } from "sonner";
 import { NoteFloatingActions } from "./components/note-floating-actions";
 import { NoteSearch } from "./components/note-search";
 import { NoteTags } from "./components/note-tags";
@@ -138,12 +138,23 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId 
                 if (type === "image") {
                     const src = data.src || "";
                     copyImageToClipboard(src, data.imageId);
+                }
+                else {
+                    console.log("copying to clipboard")
+                    editorRef.current.onCommand("copyToClipboard", { pos: data.pos });
+                }
+                break;
+            case "cut":
+                if (type === "image") {
+                    const src = data.src || "";
+                    copyImageToClipboard(src, data.imageId);
+                    editorRef.current.onCommand("deleteImage", { pos: data.position });
                 } else if (type === "codeBlock") {
                     editorRef.current.onCommand("copyToClipboard", { pos: data.pos });
-                    toast.success("Code copied to clipboard", { duration: 1000 });
+                    editorRef.current.onCommand("deleteSelection", { pos: data.pos });
                 } else if (type === "details") {
-                    editorRef.current.onCommand("copyDetailsContent", { pos: data.pos });
-                    toast.success("Details content copied to clipboard", { duration: 1000 });
+                    editorRef.current.onCommand("copyToClipboard", { pos: data.pos });
+                    editorRef.current.onCommand("deleteSelection", { pos: data.pos });
                 }
                 break;
             case "delete":
@@ -154,7 +165,6 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId 
                 } else {
                     editorRef.current.onCommand("deleteSelection", { pos: data.pos });
                 }
-                toast.success("Block deleted", { duration: 1000 });
                 break;
             case "background":
                 if (type === "details") {
@@ -196,9 +206,7 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId 
                 if (id) {
                     const link = `annota://note/${noteId}?blockId=${id}`;
                     await writeText(link);
-                    toast.success("Block link copied to clipboard", { duration: 1000 });
                 } else {
-                    toast.error("Block link not available", { duration: 1000 });
                 }
                 break;
             case "language":
@@ -218,10 +226,8 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId 
                         a.click();
                         document.body.removeChild(a);
                         window.URL.revokeObjectURL(url);
-                        toast.success("Saved to downloads", { duration: 1000 });
                     } catch (err) {
                         console.error("Download failed:", err);
-                        toast.error("Failed to download image", { duration: 1000 });
                     }
                 }
                 break;
@@ -340,20 +346,71 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId 
     useEffect(() => {
         if (!noteId) return;
         setInitialContent(null);
-        getNoteContent(noteId)
-            .then((content) => setInitialContent(content || ""))
-            .catch((err) => {
+        const extractImageIds = (html: string): string[] => {
+            const regex = /data-image-id\s*=\s*(["'])(.*?)\1/gi;
+            const ids = new Set<string>();
+            let match;
+            while ((match = regex.exec(html)) !== null) {
+                const id = match[2];
+                if (!id.startsWith('temp-')) {
+                    ids.add(id);
+                }
+            }
+            return Array.from(ids);
+        };
+
+        const hydrateImageSrcs = async (html: string): Promise<string> => {
+            const ids = extractImageIds(html);
+            if (ids.length === 0) return html;
+
+            const imageMap = await NoteImageService.resolveImageSources(ids);
+            if (!imageMap || Object.keys(imageMap).length === 0) return html;
+
+            if (typeof DOMParser !== "undefined") {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, "text/html");
+                const imgs = doc.querySelectorAll("img[data-image-id]");
+                imgs.forEach((img) => {
+                    const id = img.getAttribute("data-image-id");
+                    if (id && imageMap[id]) {
+                        img.setAttribute("src", imageMap[id]);
+                    }
+                });
+                return doc.body.innerHTML;
+            }
+
+            const escapeAttr = (value: string) => value.replace(/"/g, "&quot;");
+            return html.replace(/<img\b[^>]*>/gi, (tag) => {
+                const idMatch = tag.match(/data-image-id\s*=\s*["']([^"']+)["']/i);
+                const id = idMatch?.[1];
+                if (!id || !imageMap[id]) return tag;
+                const src = escapeAttr(imageMap[id]);
+                if (/src\s*=\s*["'][^"']*["']/i.test(tag)) {
+                    return tag.replace(/src\s*=\s*["'][^"']*["']/i, `src="${src}"`);
+                }
+                return tag.replace(/\s*\/?>$/, (end) => ` src="${src}"${end}`);
+            });
+        };
+
+        (async () => {
+            try {
+                const content = await getNoteContent(noteId);
+                const html = content || "";
+                const hydrated = await hydrateImageSrcs(html);
+                setInitialContent(hydrated);
+            } catch (err) {
                 console.error("Failed to load note content", err);
                 setInitialContent("");
-            });
+            }
+        })();
     }, [noteId, getNoteContent]);
-    const handleContentChange = useCallback((html: string) => {
+    const handleContentChange = useCallback(async (html: string) => {
         if (!noteId) return;
-
         const title = generateTitle(html);
-        updateNoteContent(noteId, html);
-        updateNoteMetadata(noteId, { title });
-
+        const { error } = await updateNoteContent(noteId, html);
+        if (!error) {
+            updateNoteMetadata(noteId, { title });
+        }
     }, [noteId, updateNoteContent, updateNoteMetadata]);
 
     useEffect(() => {
@@ -416,7 +473,7 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId 
                         autofocus={shouldAutofocus}
                         editable={true}
                         noteId={noteId}
-                        contentPaddingTop={60}
+                        contentPaddingTop={JSON.parse(note.tags || '[]').length > 0 ? 20 : 40}
                         placeholder="Start typing..."
                         renderHeader={() => (
                             <NoteTags

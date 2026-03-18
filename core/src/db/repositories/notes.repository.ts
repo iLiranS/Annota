@@ -11,7 +11,9 @@ import * as ImagesRepo from './images.repository';
 // Re-export types for convenience
 export type { NoteMetadata, NoteVersion } from '../schema';
 
-function normalizeStoredContent(content: string): string {
+export const MAX_NOTE_SIZE = 145000;
+export const MAX_CONTENT_SIZE = MAX_NOTE_SIZE; // Deprecated, keep for compat if needed, otherwise use MAX_NOTE_SIZE everywhere
+export function normalizeStoredContent(content: string): string {
     if (!content) return content ?? '';
     // Keep image references by data-image-id, but strip heavy src payloads
     // (typically base64 data URIs injected only for rendering in WebView).
@@ -257,14 +259,13 @@ export async function createNoteMetadata(metadata: NoteMetadataInsert): Promise<
 }
 
 export async function createNotesBulk(notes: { metadata: NoteMetadataInsert, content: string }[]): Promise<NoteMetadata[]> {
-    const MAX_CONTENT_SIZE = 145000;
-
     return await getDb().transaction(async (tx: DbOrTx) => {
         const result: NoteMetadata[] = [];
 
         for (const item of notes) {
-            const byteSize = new TextEncoder().encode(item.content).length;
-            if (byteSize > MAX_CONTENT_SIZE) {
+            const normalized = normalizeStoredContent(item.content);
+            const byteSize = new TextEncoder().encode(normalized).length;
+            if (byteSize > MAX_NOTE_SIZE) {
                 console.warn(`[Repo] Skipping note "${item.metadata.title}" due to size: ${byteSize} bytes`);
                 continue;
             }
@@ -280,7 +281,7 @@ export async function createNotesBulk(notes: { metadata: NoteMetadataInsert, con
                 // B. Insert Content
                 await tx.insert(schema.noteContent).values({
                     id: safeInsertedNote.id,
-                    content: item.content,
+                    content: normalized,
                 }).run();
 
                 result.push(safeInsertedNote);
@@ -446,6 +447,11 @@ export async function updateNoteContent(noteId: string, content: string, preview
     const VERSION_THRESHOLD_MS = 10000; // 10 seconds
     const MAX_VERSIONS = 50;
     const normalizedContent = normalizeStoredContent(content);
+    const byteSize = new TextEncoder().encode(normalizedContent).length;
+    if (byteSize > MAX_NOTE_SIZE) {
+        console.warn(`[Repo] Skipping note content update for ${noteId} due to size: ${byteSize} bytes`);
+        return;
+    }
 
     // Extract image IDs from canonical content
     const imageIds = extractImageIdsFromContent(normalizedContent);

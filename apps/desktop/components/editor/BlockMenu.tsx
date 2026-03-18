@@ -22,6 +22,7 @@ import {
     Merge,
     Palette,
     Rows,
+    Scissors,
     Split,
     Trash2
 } from "lucide-react";
@@ -85,7 +86,11 @@ export function BlockMenu({
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => handleAction("copy")}>
                             <Copy className="mr-2 h-4 w-4" />
-                            <span>Copy Image URI</span>
+                            <span>Copy Image</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAction("cut")}>
+                            <Scissors className="mr-2 h-4 w-4" />
+                            <span>Cut Image</span>
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleAction("download")}>
                             <Download className="mr-2 h-4 w-4" />
@@ -132,7 +137,11 @@ export function BlockMenu({
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleAction("copy")}>
                             <Copy className="mr-2 h-4 w-4" />
-                            <span>Copy Content</span>
+                            <span>Copy</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAction("cut")}>
+                            <Scissors className="mr-2 h-4 w-4" />
+                            <span>Cut</span>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
@@ -168,6 +177,10 @@ export function BlockMenu({
                         <DropdownMenuItem onClick={() => handleAction("copy")}>
                             <Copy className="mr-2 h-4 w-4" />
                             <span>Copy Code</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAction("cut")}>
+                            <Scissors className="mr-2 h-4 w-4" />
+                            <span>Cut</span>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem

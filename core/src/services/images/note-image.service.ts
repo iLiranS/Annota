@@ -43,13 +43,13 @@ export async function saveNoteImage(noteId: string, base64: string): Promise<{ i
     const cacheDir = await adapters.fileSystem.ensureDir('cache');
     const tempPath = `${cacheDir}/pasted-${Date.now()}.${extension}`;
     await adapters.fileSystem.writeBytes(tempPath, new Uint8Array(rawBytes));
-    
+
     const processed = await processAndInsertImage(noteId, tempPath);
     const imageMap = await resolveImageSources([processed.imageId]);
-    
-    return { 
-        id: processed.imageId, 
-        url: imageMap[processed.imageId] 
+
+    return {
+        id: processed.imageId,
+        url: imageMap[processed.imageId]
     };
 }
 

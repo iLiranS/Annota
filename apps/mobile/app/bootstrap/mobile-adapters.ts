@@ -28,7 +28,7 @@ export function createMobileAdapters(): PlatformAdapters {
         },
         toast: {
             show: ({ type, title, message }: { type: 'success' | 'error' | 'info'; title: string; message?: string }) => {
-                const toastType = type === 'success' ? 'onlineToast' : type === 'info' ? 'offlineToast' : 'errorToast';
+                const toastType = type === 'success' ? 'success' : type === 'info' ? 'info' : 'error';
                 Toast.show({
                     type: toastType,
                     text1: title,

@@ -32,6 +32,7 @@ export function YouTubeInput({ onSubmit, onClose }: YouTubeInputProps) {
         formState: { errors, isValid },
         reset
     } = useForm<YouTubeFormValues>({
+        //@ts-expect-error
         resolver: zodResolver(youtubeSchema),
         defaultValues: {
             url: '',

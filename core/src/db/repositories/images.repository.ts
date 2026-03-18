@@ -64,6 +64,7 @@ export async function setImagesForVersion(versionId: string, imageIds: string[],
     if (uniqueImageIds.length > 0) {
         await tx.insert(versionImages)
             .values(uniqueImageIds.map(imageId => ({ versionId, imageId })))
+            .onConflictDoNothing()
             .run();
     }
 }

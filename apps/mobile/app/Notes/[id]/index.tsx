@@ -144,7 +144,7 @@ export default function NoteEditor() {
     );
 
     // Handle content changes from the editor
-    const handleContentChange = useCallback((html: string) => {
+    const handleContentChange = useCallback(async (html: string) => {
         if (!id) return;
         // Extract title from the content
         const title = generateTitle(html);
@@ -153,10 +153,12 @@ export default function NoteEditor() {
         setDisplayTitle(title);
 
         // Update the note content in the database (this also updates preview)
-        updateNoteContent(id, html);
+        const { error } = await updateNoteContent(id, html);
 
-        // Update the title in metadata
-        updateNoteMetadata(id, { title });
+        // Only update the title in metadata if the content update succeeded
+        if (!error) {
+            updateNoteMetadata(id, { title });
+        }
     }, [id, updateNoteMetadata, updateNoteContent]);
 
 

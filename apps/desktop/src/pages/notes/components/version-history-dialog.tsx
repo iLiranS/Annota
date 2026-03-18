@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
@@ -120,14 +121,6 @@ export function VersionHistoryDialog({ note, open, onOpenChange, onRevert }: Ver
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent
                 className="max-w-5xl h-[80vh] min-h-[600px] w-[95vw] gap-0 overflow-hidden p-0 shadow-2xl flex flex-col"
-                onPointerDownOutside={(e) => {
-                    // Prevent closing when the simulated events from TipTap bridge hit document.body
-                    if ((e.target as HTMLElement)?.closest('[data-radix-collection-item]')) return;
-                    e.preventDefault();
-                }}
-                onInteractOutside={(e) => {
-                    e.preventDefault();
-                }}
             >
                 <DialogHeader className="px-6 py-4 shrink-0 flex flex-row items-center justify-between border-b bg-background/50 backdrop-blur-sm">
                     <div className="flex items-center gap-3">
@@ -136,7 +129,9 @@ export function VersionHistoryDialog({ note, open, onOpenChange, onRevert }: Ver
                         </div>
                         <div>
                             <DialogTitle className="text-lg">Version History</DialogTitle>
-                            <p className="text-xs text-muted-foreground mt-0.5">{versions.length} versions available for this note</p>
+                            <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+                                {versions.length} versions available for this note
+                            </DialogDescription>
                         </div>
                     </div>
                 </DialogHeader>
@@ -236,11 +231,13 @@ export function VersionHistoryDialog({ note, open, onOpenChange, onRevert }: Ver
                                 </div>
 
                                 <TipTapEditor
+                                    key={selectedVersion.id}
                                     initialContent={selectedVersion.content || ""}
                                     editable={false}
                                     isDark={isDark}
                                     placeholder=""
                                     contentPaddingTop={60} // Add space for the floating button
+                                    noteId={note.id}
                                     colors={{
                                         primary: colors.primary,
                                         background: colors.background,
