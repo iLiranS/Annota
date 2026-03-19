@@ -644,10 +644,9 @@
     max-width: 100%;
     max-height: 350px;
     height: auto;
-    object-fit: contain;
     border-radius: 8px;
     display: block;
-    width: 100%;
+    width: auto;
 }
 
 /* Image node wrapper */
@@ -656,6 +655,7 @@
     display: inline-block;
     max-width: 100%;
     margin: 8px 0;
+    width: fit-content;
 }
 
 .image-node-wrapper.ProseMirror-selectednode {
@@ -665,17 +665,17 @@
 
 .image-node-wrapper.img-center {
     margin: 8px auto;
-    display: block;
+    display: table;
 }
 
 .image-node-wrapper.img-left {
     margin: 8px auto 8px 0;
-    display: block;
+    display: table;
 }
 
 .image-node-wrapper.img-right {
     margin: 8px 0 8px auto;
-    display: block;
+    display: table;
 }
 
 /* Three-dot menu button on images */

@@ -229,10 +229,12 @@ export function DesktopToolbar({
         {
             id: 'link',
             label: 'Link',
+            shortcut: `${MOD}K`,
             render: (
                 <LinkPopover
                     key="link"
                     title="Insert Link"
+                    shortcut={`${MOD}K`}
                     icon={LinkIcon}
                     placeholder="https://example.com"
                     isActive={editorState.isLink}
@@ -249,6 +251,7 @@ export function DesktopToolbar({
                 <LinkPopover
                     key="link-dropdown"
                     title="Insert Link"
+                    shortcut={`${MOD}K`}
                     icon={LinkIcon}
                     placeholder="https://example.com"
                     isActive={editorState.isLink}
@@ -412,7 +415,9 @@ export function DesktopToolbar({
                                 onOpenChange={(open) => setActiveTooltip(open ? item.id : null)}
                             >
                                 <TooltipTrigger asChild>
-                                    {item.render}
+                                    <div className="flex shrink-0">
+                                        {item.render}
+                                    </div>
                                 </TooltipTrigger>
                                 <TooltipContent side="top" sideOffset={12}>
                                     {item.label}
@@ -449,9 +454,11 @@ export function DesktopToolbar({
                             onOpenChange={(open) => setActiveTooltip(open ? 'undo' : null)}
                         >
                             <TooltipTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('undo')} disabled={!editorState.canUndo}>
-                                    <Undo className="w-5 h-5" />
-                                </Button>
+                                <div className="flex shrink-0">
+                                    <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('undo')} disabled={!editorState.canUndo}>
+                                        <Undo className="w-5 h-5" />
+                                    </Button>
+                                </div>
                             </TooltipTrigger>
                             <TooltipContent side="top" sideOffset={12}>
                                 Undo
@@ -464,9 +471,11 @@ export function DesktopToolbar({
                             onOpenChange={(open) => setActiveTooltip(open ? 'redo' : null)}
                         >
                             <TooltipTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('redo')} disabled={!editorState.canRedo}>
-                                    <Redo className="w-5 h-5" />
-                                </Button>
+                                <div className="flex shrink-0">
+                                    <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('redo')} disabled={!editorState.canRedo}>
+                                        <Redo className="w-5 h-5" />
+                                    </Button>
+                                </div>
                             </TooltipTrigger>
                             <TooltipContent side="top" sideOffset={12}>
                                 Redo

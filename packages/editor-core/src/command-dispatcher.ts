@@ -203,12 +203,18 @@ export function dispatchEditorCommand(editor: Editor, command: string, params: R
             return true;
         case 'setLink':
             if (!params?.href) return true;
-            if (params.title && editor.state.selection.empty) {
-                chain.insertContent({
-                    type: 'text',
-                    text: params.title,
-                    marks: [{ type: 'link', attrs: { href: params.href } }]
-                }).focus().run();
+            if (params.title) {
+                chain.insertContent([
+                    {
+                        type: 'text',
+                        text: params.title,
+                        marks: [{ type: 'link', attrs: { href: params.href } }]
+                    },
+                    {
+                        type: 'text',
+                        text: ' ',
+                    }
+                ]).focus().run();
             } else {
                 chain.setLink({ href: params.href }).focus().run();
             }

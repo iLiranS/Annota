@@ -12,12 +12,9 @@ import {
     DropdownMenuSubTrigger
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import React, { useState } from 'react';
+import { toast } from 'sonner';
 
 interface LinkPopoverProps {
     title: string;
@@ -36,6 +33,7 @@ interface LinkPopoverProps {
     onClose?: () => void;
     selectedText?: string;
     hideTitle?: boolean;
+    shortcut?: string;
 }
 
 export function LinkPopover({
@@ -54,7 +52,8 @@ export function LinkPopover({
     visible,
     onClose,
     selectedText,
-    hideTitle
+    hideTitle,
+    shortcut
 }: LinkPopoverProps) {
     const [urlValue, setUrlValue] = useState(initialValue || '');
     const [titleValue, setTitleValue] = useState(selectedText || '');
@@ -62,6 +61,13 @@ export function LinkPopover({
 
     const isControlled = visible !== undefined;
     const isVisible = isControlled ? visible : open;
+
+    React.useEffect(() => {
+        if (isVisible) {
+            setUrlValue(initialValue || '');
+            setTitleValue(selectedText || '');
+        }
+    }, [isVisible, initialValue, selectedText]);
 
     const handleOpenChange = (val: boolean) => {
         if (isControlled) {
@@ -71,16 +77,30 @@ export function LinkPopover({
             setOpen(val);
             onOpenChange?.(val);
         }
-
-        if (val) {
-            setUrlValue(initialValue || '');
-            setTitleValue(selectedText || '');
-        }
     };
 
     const handleAction = () => {
-        if (!urlValue) return;
-        onSave(urlValue, titleValue || undefined);
+        let finalUrl = urlValue.trim();
+        if (!finalUrl) return;
+
+        // Validation & Auto-fix
+        const protocolRegex = /^(https?:\/\/|annota:\/\/|mailto:|tel:)/i;
+        if (!protocolRegex.test(finalUrl)) {
+            // If it looks like a domain (contains a dot), auto-prepend https://
+            if (finalUrl.includes('.') && !finalUrl.includes(' ')) {
+                finalUrl = 'https://' + finalUrl;
+            } else {
+                toast.error('Invalid URL format');
+                return;
+            }
+        }
+        const finalTitle = titleValue.trim() || finalUrl;
+
+        // If the title matches the selected text exactly, we pass undefined for the title
+        // so that the command dispatcher uses 'setLink' (preserving existing marks like bold)
+        // rather than 'insertContent' (which would replace the selection with plain text).
+        const shouldPassTitle = finalTitle !== selectedText;
+        onSave(finalUrl, shouldPassTitle ? finalTitle : undefined);
         handleOpenChange(false);
     };
 
@@ -156,6 +176,7 @@ export function LinkPopover({
                 <DropdownMenuSubTrigger className="gap-2">
                     <Icon className="w-4 h-4" style={{ color: isActive ? activeColor : undefined }} />
                     <span>{title}</span>
+                    {shortcut && <span className="ml-auto text-[10px] opacity-50">{shortcut}</span>}
                 </DropdownMenuSubTrigger>
                 <DropdownMenuPortal>
                     <DropdownMenuSubContent className="w-80 p-3 mr-2">

@@ -14,6 +14,7 @@ import { StarterKit } from '@tiptap/starter-kit';
 
 import { Mathematics } from '@tiptap/extension-mathematics';
 import {
+    AnnotaAutolink,
     CustomCodeBlock,
     CustomHeading,
     CustomImage,
@@ -86,13 +87,16 @@ export const getExtensions = (options: {
             gapcursor: true,
         }),
         ShortcutManager,
+        AnnotaAutolink,
         CustomHeading.configure({ levels: [1, 2, 3, 4, 5, 6] }),
         Underline,
         Placeholder.configure({ placeholder: options.placeholder ?? 'Write something...' }),
         Link.configure({
             openOnClick: false,
+            autolink: true,
             protocols: ['http', 'https', 'mailto', 'tel', 'annota'],
             HTMLAttributes: { rel: 'noopener noreferrer' },
+            validate: (href) => /^(https?:\/\/|annota:\/\/|mailto:|tel:)/i.test(href),
         }),
         Highlight.configure({ multicolor: true }),
         TextStyle,

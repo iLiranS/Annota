@@ -33,7 +33,9 @@ export const ShortcutManager = Extension.create({
             // --- Custom Commands ---
             'Mod-Shift-b': () => this.editor.commands.toggleBlockquote(),
             'Mod-.': () => (this.editor.commands as any).toggleDetails(),
-            // Mod-Shift-m (Math) is handled by the desktop/mobile host to trigger the math dialog
+            // Mod-k (Link) and Mod-Shift-m (Math) are handled by the desktop/mobile host to trigger dialogs
+            'Mod-k': () => false,
+            'Mod-Shift-m': () => false,
 
 
             // --- Reset Color ---

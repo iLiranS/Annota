@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { ImageInfo } from '@annota/editor-ui';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 interface ImageGalleryProps {
     images: ImageInfo[];
@@ -19,6 +19,26 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
     onNavigate
 }) => {
     const [currentIndex, setCurrentIndex] = useState(initialIndex);
+    const [isZoomed, setIsZoomed] = useState(false);
+    const [zoomPoint, setZoomPoint] = useState({ x: 50, y: 50 });
+    const zoomPointRef = useRef({ x: 50, y: 50 });
+    const [isDragging, setIsDragging] = useState(false);
+    const lastPos = useRef({ x: 0, y: 0 });
+    const hasMoved = useRef(false);
+    const imgRef = useRef<HTMLImageElement>(null);
+
+    useEffect(() => {
+        setIsZoomed(false);
+        setIsDragging(false);
+        zoomPointRef.current = { x: 50, y: 50 };
+        setZoomPoint({ x: 50, y: 50 });
+    }, [currentIndex, visible]);
+
+    useEffect(() => {
+        const handleGlobalMouseUp = () => setIsDragging(false);
+        window.addEventListener('mouseup', handleGlobalMouseUp);
+        return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
+    }, []);
 
     useEffect(() => {
         if (visible) {
@@ -28,6 +48,11 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
 
     const handlePrevious = useCallback(() => {
         if (images.length === 0) return;
+        setIsZoomed(false);
+        setIsDragging(false);
+        hasMoved.current = false;
+        zoomPointRef.current = { x: 50, y: 50 };
+        setZoomPoint({ x: 50, y: 50 });
         const newIndex = (currentIndex - 1 + images.length) % images.length;
         setCurrentIndex(newIndex);
         if (onNavigate) onNavigate(newIndex);
@@ -35,6 +60,11 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
 
     const handleNext = useCallback(() => {
         if (images.length === 0) return;
+        setIsZoomed(false);
+        setIsDragging(false);
+        hasMoved.current = false;
+        zoomPointRef.current = { x: 50, y: 50 };
+        setZoomPoint({ x: 50, y: 50 });
         const newIndex = (currentIndex + 1) % images.length;
         setCurrentIndex(newIndex);
         if (onNavigate) onNavigate(newIndex);
@@ -59,6 +89,67 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
     if (!visible || images.length === 0) return null;
 
     const currentImage = images[currentIndex];
+
+    const handleMouseDown = (e: React.MouseEvent) => {
+        if (!isZoomed || !imgRef.current) return;
+        setIsDragging(true);
+        lastPos.current = { x: e.clientX, y: e.clientY };
+        hasMoved.current = false;
+        e.preventDefault();
+        e.stopPropagation();
+    };
+
+    const handleMouseMove = (e: React.MouseEvent) => {
+        if (!isDragging || !imgRef.current) return;
+        
+        const dx = e.clientX - lastPos.current.x;
+        const dy = e.clientY - lastPos.current.y;
+
+        if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
+            hasMoved.current = true;
+        }
+
+        const rect = imgRef.current.getBoundingClientRect();
+        const scale = 2.5;
+        // Increased sensitivity for a more "impactful" move feeling
+        const sensitivity = 1.2 / (scale - 1);
+
+        // Update ref immediately for performance (bypass React re-render)
+        zoomPointRef.current = {
+            x: Math.max(0, Math.min(100, zoomPointRef.current.x - (dx / rect.width * 100) * sensitivity)),
+            y: Math.max(0, Math.min(100, zoomPointRef.current.y - (dy / rect.height * 100) * sensitivity)),
+        };
+
+        // Direct DOM update for silky smooth panning
+        imgRef.current.style.transformOrigin = `${zoomPointRef.current.x}% ${zoomPointRef.current.y}%`;
+
+        lastPos.current = { x: e.clientX, y: e.clientY };
+    };
+
+    const handleMouseUp = () => {
+        if (isDragging) {
+            setIsDragging(false);
+            // Sync React state back on release so it's consistent
+            setZoomPoint({ ...zoomPointRef.current });
+        }
+    };
+
+    const handleImageClick = (e: React.MouseEvent) => {
+        if (hasMoved.current) return;
+
+        if (isZoomed) {
+            setIsZoomed(false);
+            return;
+        }
+
+        const rect = e.currentTarget.getBoundingClientRect();
+        const x = ((e.clientX - rect.left) / rect.width) * 100;
+        const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+        zoomPointRef.current = { x, y };
+        setZoomPoint({ x, y });
+        setIsZoomed(true);
+    };
 
     return (
         <Dialog open={visible} onOpenChange={(open) => !open && onClose()}>
@@ -90,10 +181,23 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
                         <div className="absolute inset-0 bg-primary/10 blur-[120px] rounded-full opacity-30 pointer-events-none" />
 
                         <img
+                            ref={imgRef}
                             key={currentImage.src}
                             src={currentImage.src}
                             alt={`Image ${currentIndex + 1}`}
-                            className="max-w-full max-h-[85vh] md:max-h-[80vh] object-contain select-none shadow-[0_32px_64px_-12px_rgba(0,0,0,0.8)] rounded-sm animate-in zoom-in-95 duration-500 pointer-events-none"
+                            onMouseDown={handleMouseDown}
+                            onMouseMove={handleMouseMove}
+                            onMouseUp={handleMouseUp}
+                            onMouseLeave={handleMouseUp}
+                            onClick={handleImageClick}
+                            draggable={false}
+                            className={`max-w-full max-h-[85vh] md:max-h-[80vh] object-contain select-none shadow-[0_32px_64px_-12px_rgba(0,0,0,0.8)] rounded-sm animate-in zoom-in-95 duration-500 pointer-events-auto will-change-transform
+                                ${isDragging ? 'transition-none' : 'transition-transform duration-300'}`}
+                            style={{
+                                transformOrigin: `${zoomPoint.x}% ${zoomPoint.y}%`,
+                                transform: isZoomed ? 'scale(2.5)' : 'scale(1)',
+                                cursor: isZoomed ? (isDragging ? 'grabbing' : 'zoom-out') : 'zoom-in',
+                            }}
                         />
                     </div>
                 </div>

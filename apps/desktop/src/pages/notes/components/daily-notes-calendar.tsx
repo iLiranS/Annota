@@ -115,8 +115,8 @@ export function DailyNotesCalendar() {
                 </div>
             </div>
 
-            <div className="flex-1 flex items-center justify-center p-6 overflow-hidden">
-                <div className="max-w-4xl w-full h-full flex flex-col items-center justify-center">
+            <div className="flex-1 flex  justify-center p-6 overflow-hidden">
+                <div className="max-w-4xl w-full h-full flex flex-col items-center justify-start">
                     <div className="w-full bg-border/40 p-px rounded-xl overflow-hidden border border-border shadow-sm flex flex-col h-fit max-h-full">
                         <div className="grid grid-cols-7 bg-muted/50 border-b border-border">
                             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (

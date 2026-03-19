@@ -196,8 +196,8 @@ export function AppSidebar() {
                                     onClick={() => navigateSmart("/home")}
                                     tooltip="Home"
                                 >
-                                    <Ionicons name="home" size={18} className="text-indigo-500" />
-                                    <span>Home</span>
+                                    <Ionicons name="home-outline" size={18} className="text-indigo-500" />
+                                    <span className="font-medium">Home</span>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
 
@@ -207,8 +207,8 @@ export function AppSidebar() {
                                     onClick={() => navigateSmart("/tasks")}
                                     tooltip="Tasks"
                                 >
-                                    <Ionicons name="checkmark-circle" size={18} className="text-emerald-500" />
-                                    <span>Tasks</span>
+                                    <Ionicons name="checkmark-circle-outline" size={18} className="text-emerald-500" />
+                                    <span className="font-medium">Tasks</span>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
 
@@ -225,62 +225,60 @@ export function AppSidebar() {
                                     tooltip="Daily Notes"
                                 >
                                     <Ionicons
-                                        name={(dailyFolder?.icon as any) || "calendar"}
+                                        name={dailyFolder?.icon ? `${dailyFolder.icon}-outline` : "calendar-outline"}
                                         size={18}
                                         className="text-violet-500"
                                         color={dailyFolder?.color}
                                     />
-                                    <span>{dailyFolder?.name ?? "Daily Notes"}</span>
+                                    <span className="font-medium">{dailyFolder?.name ?? "Daily Notes"}</span>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
+
+                            {/* Quick Access */}
+                            <Collapsible
+                                className="group/quick-access"
+                                open={isQuickAccessOpen}
+                                onOpenChange={setIsQuickAccessOpen}
+                                asChild
+                            >
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton asChild tooltip="Quick Access">
+                                        <CollapsibleTrigger>
+                                            <Ionicons name="star-outline" size={18} className="text-amber-400" />
+                                            <span className="flex-1 text-start font-medium">Quick Access</span>
+                                            <Ionicons name="chevron-forward" size={14} className={`transition-transform group-data-[state=open]/quick-access:rotate-90 ${general.appDirection === 'rtl' ? 'rotate-180' : ''}`} />
+                                        </CollapsibleTrigger>
+                                    </SidebarMenuButton>
+                                    <CollapsibleContent>
+                                        <SidebarMenuSub>
+                                            {quickAccessNotes.length === 0 ? (
+                                                <p className="px-3 py-2 text-xs italic text-muted-foreground">
+                                                    No starred notes
+                                                </p>
+                                            ) : (
+                                                quickAccessNotes.map((note) => (
+                                                    <SidebarMenuSubItem key={note.id}>
+                                                        <SidebarMenuSubButton
+                                                            onClick={() => {
+                                                                const folderId = note.folderId || "root";
+                                                                navigateSmart(`/notes/${folderId}/${note.id}`);
+                                                            }}
+                                                        >
+                                                            <Ionicons color={colors.primary} name="star-outline" size={14} className="text-primary" />
+                                                            <span className="truncate">
+                                                                {note.title || "Untitled Note"}
+                                                            </span>
+                                                        </SidebarMenuSubButton>
+                                                    </SidebarMenuSubItem>
+                                                ))
+                                            )}
+                                        </SidebarMenuSub>
+                                    </CollapsibleContent>
+                                </SidebarMenuItem>
+                            </Collapsible>
                         </SidebarMenu>
                     </SidebarGroupContent>
                 </SidebarGroup>
-
-                {/* Quick Access */}
-                <Collapsible
-                    className="group/quick-access"
-                    open={isQuickAccessOpen}
-                    onOpenChange={setIsQuickAccessOpen}
-                >
-                    <SidebarGroup className="py-0">
-                        <SidebarGroupLabel asChild className="text-sm text-sidebar-foreground font-normal">
-                            <CollapsibleTrigger className="flex w-full items-center gap-2">
-                                <Ionicons name="star" size={18} className="text-amber-400" />
-                                <span className="flex-1 text-start">Quick Access</span>
-                                <Ionicons name="chevron-forward" size={14} className={`transition-transform group-data-[state=open]/quick-access:rotate-90 ${general.appDirection === 'rtl' ? 'rotate-180' : ''}`} />
-                            </CollapsibleTrigger>
-                        </SidebarGroupLabel>
-                        <CollapsibleContent>
-                            <SidebarGroupContent>
-                                <SidebarMenu>
-                                    {quickAccessNotes.length === 0 ? (
-                                        <p className="px-3 py-2 text-xs italic text-muted-foreground">
-                                            No starred notes
-                                        </p>
-                                    ) : (
-                                        quickAccessNotes.map((note) => (
-                                            <SidebarMenuItem className={general.appDirection === 'ltr' ? 'pl-1' : 'pr-1'} key={note.id}>
-                                                <SidebarMenuButton
-                                                    onClick={() => {
-                                                        const folderId = note.folderId || "root";
-                                                        navigateSmart(`/notes/${folderId}/${note.id}`);
-                                                    }}
-                                                    className="text-sm"
-                                                >
-                                                    <Ionicons color={colors.primary} name="star-outline" size={16} className="text-primary" />
-                                                    <span className="truncate">
-                                                        {note.title || "Untitled Note"}
-                                                    </span>
-                                                </SidebarMenuButton>
-                                            </SidebarMenuItem>
-                                        ))
-                                    )}
-                                </SidebarMenu>
-                            </SidebarGroupContent>
-                        </CollapsibleContent>
-                    </SidebarGroup>
-                </Collapsible>
 
                 <SidebarSeparator className="opacity-80 mx-auto" />
 
@@ -301,8 +299,8 @@ export function AppSidebar() {
                                             onClick={() => navigateSmart("/notes")}
                                             tooltip="All Notes"
                                         >
-                                            <Ionicons name="documents" color={colors.primary} size={18} className="text-primary" />
-                                            <span>All Notes</span>
+                                            <Ionicons name="documents-outline" color={colors.primary} size={18} className="text-primary" />
+                                            <span className="font-medium">All Notes</span>
                                         </SidebarMenuButton>
                                     </ContextMenuTrigger>
                                     <ContextMenuContent className="w-48">
@@ -350,9 +348,9 @@ export function AppSidebar() {
                     onOpenChange={setIsTagsOpen}
                 >
                     <SidebarGroup>
-                        <SidebarGroupLabel asChild className="text-sm text-sidebar-foreground font-normal">
+                        <SidebarGroupLabel asChild className="text-sm text-sidebar-foreground font-medium">
                             <CollapsibleTrigger className="flex w-full items-center gap-2">
-                                <Ionicons name="pricetag" size={18} className="text-accent-full" />
+                                <Ionicons name="pricetag-outline" size={18} className="text-accent-full" />
                                 <span className="flex-1 text-start">Tags</span>
                                 <Ionicons name="chevron-forward" size={14} className={`transition-transform group-data-[state=open]/tags:rotate-90 ${general.appDirection === 'rtl' ? 'rotate-180' : ''}`} />
                             </CollapsibleTrigger>
@@ -437,7 +435,7 @@ export function AppSidebar() {
                             tooltip="Trash"
                         >
                             <Ionicons name="trash-outline" size={18} />
-                            <span>Trash</span>
+                            <span className="font-medium">Trash</span>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem key="settings">
@@ -446,7 +444,7 @@ export function AppSidebar() {
                             tooltip="Settings"
                         >
                             <Ionicons name="settings-outline" size={18} />
-                            <span>Settings</span>
+                            <span className="font-medium">Settings</span>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                 </SidebarMenu>

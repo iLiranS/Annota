@@ -302,6 +302,12 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                     requestAnimationFrame(() => {
                         setActivePopup('math');
                     });
+                } else if (isMod && key === 'k') {
+                    if (!editor) return;
+                    e.preventDefault();
+                    requestAnimationFrame(() => {
+                        setActivePopup('link');
+                    });
                 }
             };
 

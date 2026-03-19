@@ -231,7 +231,11 @@ export const CustomImage = Image.extend<any>({
                 img.style.backgroundColor = 'var(--border-color, #e0e0e0)';
                 img.style.minHeight = '100px';
             }
-            img.style.width = currentNode.attrs.width || '100%';
+            const nodeWidth = currentNode.attrs.width || '100%';
+            img.style.maxWidth = '100%'; 
+            img.style.width = 'auto';
+            wrapper.style.maxWidth = nodeWidth;
+            wrapper.style.width = 'fit-content';
             img.draggable = false;
 
             // Helper: collect all images in the document
@@ -326,7 +330,11 @@ export const CustomImage = Image.extend<any>({
                         img.style.backgroundColor = '';
                         img.style.minHeight = '';
                     }
-                    img.style.width = updatedNode.attrs.width || '100%';
+                    const nodeWidth = updatedNode.attrs.width || '100%';
+                    img.style.maxWidth = '100%';
+                    img.style.width = 'auto';
+                    wrapper.style.maxWidth = nodeWidth;
+                    wrapper.style.width = 'fit-content';
                     wrapper.className = `image-node-wrapper img-${updatedNode.attrs.align || 'center'}`;
                     return true;
                 },
