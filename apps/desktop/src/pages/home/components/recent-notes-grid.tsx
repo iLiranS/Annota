@@ -14,7 +14,7 @@ export function RecentNotesGrid() {
         return [...notes]
             .filter((n) => !n.isDeleted)
             .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
-            .slice(0, 4);
+            .slice(0, 6);
     }, [notes]);
 
     const handleNotePress = (id: string, folderId: string | null) => {
@@ -31,12 +31,12 @@ export function RecentNotesGrid() {
                 </h2>
             </div>
 
-            <div className="min-h-0">
+            <div className="min-h-0 ">
                 {recentNotes.length > 0 ? (
                     <div
-                        className="grid grid-cols-2 gap-3"
+                        className="grid grid-cols-3 gap-3"
                         style={{
-                            gridAutoRows: "minmax(55px, 1fr)",
+                            gridAutoRows: "minmax(45px, 1fr)",
                         }}
                     >
                         {recentNotes.map((note) => (

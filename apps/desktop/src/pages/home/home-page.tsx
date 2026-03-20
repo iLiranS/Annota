@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { GreetingHeader } from "./components/greeting-header";
-import { HomeCalendar } from "./components/home-calendar";
 import { ActivityInsights } from "./components/activity-insights";
 import { QuickStatsWidget } from "./components/quick-stats-widget";
 import { RecentNotesGrid } from "./components/recent-notes-grid";
-import { TasksOnboarding } from "./components/tasks-onboarding";
+import { HomeCalendarUnit } from "./components/home-calendar-unit";
 
 export default function HomePage() {
     const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -26,7 +25,7 @@ export default function HomePage() {
 
             {/* Main Content Area - Total dash height is constrained to viewport */}
             <div className="flex-1 flex flex-col lg:overflow-hidden p-8 pt-2 overflow-y-auto custom-scrollbar">
-                <div className="mx-auto flex-1 w-full flex flex-col lg:grid lg:grid-cols-[3fr_2fr] gap-10 lg:min-h-0 lg:overflow-hidden">
+                <div className="mx-auto flex-1 w-full flex flex-col lg:grid lg:grid-cols-[1fr_380px] gap-10 lg:min-h-0 lg:overflow-hidden">
 
                     {/* Column 1: Insights & Notes - Scrollable independently if content exceeds viewport */}
                     <div className="flex flex-col gap-4 lg:pr-2 lg:min-h-0">
@@ -38,17 +37,12 @@ export default function HomePage() {
                         </div>
                     </div>
 
-                    {/* Column 2: Calendar & Tasks - Tasks scroll internally to match Column 1's bottom area */}
+                    {/* Column 2: Calendar & Tasks Unit */}
                     <div className="flex flex-col gap-4 lg:min-h-0 lg:overflow-hidden">
-                        <div className="shrink-0">
-                            <HomeCalendar
-                                selectedDate={selectedDate}
-                                onDateSelect={setSelectedDate}
-                            />
-                        </div>
-                        <div className="lg:flex-1 lg:min-h-0">
-                            <TasksOnboarding selectedDate={selectedDate} />
-                        </div>
+                        <HomeCalendarUnit
+                            selectedDate={selectedDate}
+                            onDateSelect={setSelectedDate}
+                        />
                     </div>
 
                 </div>

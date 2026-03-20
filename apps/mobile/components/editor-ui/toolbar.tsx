@@ -219,7 +219,7 @@ export function EditorToolbar({
                                 if (editorState.isInTable) {
                                     openPopup('table');
                                 } else {
-                                    onCommand('insertTable', { rows: 3, cols: 3, withHeaderRow: true });
+                                    onCommand('insertTable', { rows: 3, cols: 3, withHeaderRow: false });
                                 }
                             }}
                         />

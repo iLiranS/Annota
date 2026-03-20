@@ -62,7 +62,8 @@ export function dispatchEditorCommand(editor: Editor, command: string, params: R
             finalParams = {
                 rows: params?.rows ?? 3,
                 cols: params?.cols ?? 3,
-                withHeaderRow: params?.withHeaderRow !== false,
+                withHeaderRow: params?.withHeaderRow === true,
+                withHeaderColumn: false,
             };
             break;
         case 'insertImage':

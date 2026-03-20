@@ -727,7 +727,6 @@
 .ProseMirror table {
     border-collapse: collapse;
     width: max-content;
-    min-width: 100%;
     table-layout: auto;
 }
 
@@ -749,9 +748,9 @@
 }
 
 .ProseMirror th {
-    background-color: var(--table-header-bg);
-    font-weight: 600;
+    font-weight: normal;
 }
+
 
 .ProseMirror .selectedCell {
     /* Overlay selection color over any cell background color using inset box-shadow */
@@ -767,8 +766,8 @@
     position: absolute;
     right: -2px;
     top: 0;
-    bottom: -2px;
-    width: 4px;
+    bottom: 0;
+    width: 2px;
     background-color: var(--accent-color);
     pointer-events: none;
     /* Ensure the handle stays on top of cell borders */
@@ -794,7 +793,7 @@
 /* Main wrapper */
 .ProseMirror .details-wrapper,
 .ProseMirror [data-type="details"] {
-    margin: 8px 0;
+    margin: 12px 0;
     border-radius: 8px;
     border: 1px solid var(--border-color);
     overflow: hidden;
@@ -807,9 +806,9 @@
 .ProseMirror [data-type="detailsSummary"] {
     display: flex;
     align-items: center;
-    padding: 12px;
+    padding: 8px;
     padding-inline-start: 4px;
-    gap: 8px;
+    gap: 4px;
     transition: background-color 0.15s ease;
 }
 
@@ -864,36 +863,50 @@
     justify-content: center;
     cursor: pointer;
     flex-shrink: 0;
-    transition: background-color 0.15s ease;
     user-select: none;
 }
 
+/* Arrow rotates when open */
 .details-arrow {
-    font-size: 10px;
-    color: var(--text-color);
-    opacity: 0.5;
     transition: transform 0.2s ease;
-    display: inline-block;
-    pointer-events: none;
 }
 
-/* Arrow rotates when open */
-.ProseMirror [data-type="details"][data-open="true"] .details-arrow,
-.ProseMirror [data-type="details"][open] .details-arrow {
+/* RTL closed state: point left (180deg) */
+.ProseMirror[dir="rtl"] .details-arrow {
+    transform: rotate(180deg);
+}
+
+/* Open state: both LTR and RTL point down (90deg) */
+.ProseMirror [data-type="details"][data-open="true"] .details-arrow {
     transform: rotate(90deg);
+}
+
+.details-arrow svg {
+    opacity: 0.7;
+    width: 16px;
+    height: 16px;
+    display: block;
+    transform-origin: center;
 }
 
 /* Content area - below the header */
 .ProseMirror .details-content,
 .ProseMirror [data-type="detailsContent"] {
     padding: 0 12px 12px 12px;
+    overflow: hidden;
+    transition: height 0.25s ease, padding 0.2s ease, opacity 0.2s ease;
 }
 
-/* Hide content when collapsed */
+/* Hide content when collapsed - using height and opacity instead of display: none for animation */
 .ProseMirror [data-type="details"]:not([data-open="true"]):not([open]) .details-content,
 .ProseMirror [data-type="details"]:not([data-open="true"]):not([open]) [data-type="detailsContent"] {
-    display: none;
+    height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    opacity: 0;
+    pointer-events: none;
 }
+
 
 /* Remove default margins in content */
 .ProseMirror .details-content>*:first-child,

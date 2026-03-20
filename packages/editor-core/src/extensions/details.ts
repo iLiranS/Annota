@@ -11,6 +11,7 @@ function stripDir(attrs: Record<string, any>): Record<string, any> {
     return rest;
 }
 
+
 declare module '@tiptap/core' {
     interface Commands<ReturnType> {
         setDetails: () => ReturnType;
@@ -25,9 +26,96 @@ declare module '@tiptap/core' {
 export const Details = TiptapDetails.extend({
     draggable: false,
 
-    // Disable the built-in NodeView that renders the toggle button
+    // Custom NodeView to handle height animation
     addNodeView() {
-        return null as any;
+        return ({ node }) => {
+            const dom = document.createElement('div');
+
+            const updateDOM = (attrs: any) => {
+                Object.entries(stripDir(attrs)).forEach(([key, value]) => {
+                    if (value !== null && value !== undefined) {
+                        dom.setAttribute(key as string, value as string);
+                    }
+                });
+                dom.classList.add('details-wrapper');
+                dom.setAttribute('data-type', 'details');
+                dom.setAttribute('data-open', attrs.open ? 'true' : 'false');
+                if (attrs.open) {
+                    dom.setAttribute('open', '');
+                } else {
+                    dom.removeAttribute('open');
+                }
+
+                if (attrs.backgroundColor) {
+                    dom.style.backgroundColor = attrs.backgroundColor as string;
+                } else {
+                    dom.style.backgroundColor = '';
+                }
+            };
+
+            updateDOM(node.attrs);
+
+            return {
+                dom,
+                contentDOM: dom,
+                update: (newNode) => {
+                    if (newNode.type.name !== node.type.name) return false;
+
+                    const wasOpen = node.attrs.open;
+                    const isOpen = newNode.attrs.open;
+
+                    if (wasOpen !== isOpen) {
+                        const contentEl = dom.querySelector('.details-content') as HTMLElement;
+                        if (contentEl) {
+                            if (isOpen) {
+                                // Opening: Animate from 0 to scrollHeight
+                                contentEl.style.display = 'block';
+                                contentEl.style.height = '0px';
+                                contentEl.style.paddingBottom = '0px';
+                                contentEl.style.opacity = '0';
+
+                                // Measure target height
+                                contentEl.style.height = 'auto';
+                                contentEl.style.paddingBottom = ''; // Restore to CSS value
+                                const targetHeight = contentEl.scrollHeight;
+
+                                // Back to start state
+                                contentEl.style.height = '0px';
+                                contentEl.style.paddingBottom = '0px';
+                                contentEl.offsetHeight; // Force reflow
+
+                                // Trigger transition
+                                contentEl.style.height = `${targetHeight}px`;
+                                contentEl.style.paddingBottom = '';
+                                contentEl.style.opacity = '1';
+
+                                const onEnd = (e: TransitionEvent) => {
+                                    if (e.propertyName === 'height' && newNode.attrs.open) {
+                                        contentEl.style.height = 'auto';
+                                        contentEl.removeEventListener('transitionend', onEnd);
+                                    }
+                                };
+                                contentEl.addEventListener('transitionend', onEnd);
+                            } else {
+                                // Closing: Animate from current height to 0
+                                const currentHeight = contentEl.scrollHeight;
+                                contentEl.style.height = `${currentHeight}px`;
+                                contentEl.style.paddingBottom = '';
+                                contentEl.offsetHeight; // Force reflow
+
+                                contentEl.style.height = '0px';
+                                contentEl.style.paddingBottom = '0px';
+                                contentEl.style.opacity = '0';
+                            }
+                        }
+                    }
+
+                    updateDOM(newNode.attrs);
+                    node = newNode;
+                    return true;
+                }
+            };
+        };
     },
 
     // Parse both our custom format and native details
@@ -196,7 +284,7 @@ export const Details = TiptapDetails.extend({
             ...this.parent?.(),
             setDetails:
                 () =>
-                    ({ commands, state }: { commands: any; state: any }) => {
+                    ({ chain, state }: { chain: any; state: any }) => {
                         const { selection } = state;
                         const { $from } = selection;
 
@@ -218,13 +306,33 @@ export const Details = TiptapDetails.extend({
                             contentToWrap = [{ type: 'paragraph' }];
                         }
 
-                        return commands.insertContent({
-                            type: this.name,
-                            content: [
-                                { type: 'detailsSummary', content: [{ type: 'heading', attrs: { level: 3 } }] },
-                                { type: 'detailsContent', content: contentToWrap },
-                            ],
-                        });
+                        return chain()
+                            .insertContent({
+                                type: this.name,
+                                content: [
+                                    { type: 'detailsSummary', content: [{ type: 'heading', attrs: { level: 3 } }] },
+                                    { type: 'detailsContent', content: contentToWrap },
+                                ],
+                            })
+                            .command(({ tr, state }: any) => {
+                                // Find the newly inserted details node to focus its summary
+                                let detailsPos = -1;
+                                state.doc.nodesBetween(selection.from, state.selection.to, (node: any, pos: any) => {
+                                    if (node.type.name === 'details' && detailsPos === -1) {
+                                        detailsPos = pos;
+                                    }
+                                });
+
+                                if (detailsPos !== -1) {
+                                    // Summary is the first child, Heading is inside it. 
+                                    // We focus the start of the heading.
+                                    const summaryContentPos = detailsPos + 2;
+                                    const resolvedPos = state.doc.resolve(summaryContentPos);
+                                    tr.setSelection(state.selection.constructor.near(resolvedPos));
+                                }
+                                return true;
+                            })
+                            .run();
                     },
             toggleDetails:
                 () =>
@@ -277,7 +385,11 @@ export const DetailsSummary = TiptapDetailsSummary.extend<any>({
 
             const arrow = document.createElement('span');
             arrow.className = 'details-arrow';
-            arrow.innerHTML = '▶';
+            arrow.innerHTML = `
+                                <svg width="12" height="12" viewBox="0 0 24 24">
+                                <path d="M8 5l8 7-8 7" fill="none" stroke="currentColor" stroke-width="2"/>
+                                </svg>
+                                `;
             toggleBtn.appendChild(arrow);
 
             const handleToggle = (e: Event) => {

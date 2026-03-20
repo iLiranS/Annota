@@ -4,10 +4,9 @@ import {
     ContextMenuItem,
     ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import { useAppTheme } from "@/hooks/use-app-theme";
 import { useCreateTask } from "@/hooks/use-create-task";
 import { useSettingsStore, useTasksStore } from "@annota/core";
-import { Newspaper, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useMemo } from "react";
 
 
@@ -39,7 +38,6 @@ export function HomeCalendar({
 }) {
     const { tasks } = useTasksStore();
     const { startOfWeek } = useSettingsStore((s) => s.general);
-    const { colors } = useAppTheme();
     const { createAndNavigate } = useCreateTask();
 
     // Get only the days for the current week
@@ -62,12 +60,7 @@ export function HomeCalendar({
 
     return (
         <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-2 shrink-0">
-                <Newspaper size={18} color={colors.primary} />
-                <h2 className="text-sm font-semibold text-foreground/80 uppercase tracking-widest">
-                    Weekly Schedule
-                </h2>
-            </div>
+
             <div className="rounded-2xl border border-border/40 bg-card/30 p-2 text-center backdrop-blur-md">
                 {/* weekdays */}
                 <div className="grid grid-cols-7 text-[10px] font-medium text-muted-foreground mb-1 uppercase tracking-tighter">

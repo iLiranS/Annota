@@ -1,10 +1,9 @@
 "use client"
 
 import { useNotesStore, useTasksStore } from "@annota/core";
-import * as LucideIcons from "lucide-react";
-import { Activity, CheckCircle2, FileText } from "lucide-react";
+import { Activity, FileText, Flame, TrendingUp } from "lucide-react";
 import { useMemo } from "react";
-import { Bar, BarChart, CartesianGrid, Label, Line, LineChart, Pie, PieChart, XAxis, YAxis } from "recharts";
+import { Label, Pie, PieChart } from "recharts";
 
 import {
     Card,
@@ -16,30 +15,29 @@ import {
     ChartTooltipContent,
     type ChartConfig,
 } from "@/components/ui/chart";
-import { Ionicons } from "@/components/ui/ionicons";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export function ActivityInsights() {
     const { notes, folders } = useNotesStore();
     const { tasks } = useTasksStore();
 
-    // Utility to get Date 30 days ago
-    const thirtyDaysAgo = useMemo(() => {
-        const d = new Date();
-        d.setDate(d.getDate() - 30);
-        d.setHours(0, 0, 0, 0);
-        return d;
+    // Calendar Month Boundaries
+    const { monthStart, monthEnd, daysInMonth } = useMemo(() => {
+        const now = new Date();
+        const start = new Date(now.getFullYear(), now.getMonth(), 1);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        end.setHours(23, 59, 59, 999);
+        return { monthStart: start, monthEnd: end, daysInMonth: end.getDate() };
     }, []);
 
-    // 1. CHART: Total Activity Line Chart (Last 30 Days)
-    // Formula: Unique count of (Notes Created/Updated + Tasks Created/Completed) per day
     const activityChartData = useMemo(() => {
         const data = [];
         const now = new Date();
 
-        for (let i = 29; i >= 0; i--) {
-            const day = new Date(now);
-            day.setDate(day.getDate() - i);
-            const dayStr = day.toISOString().split('T')[0];
+        for (let i = 1; i <= daysInMonth; i++) {
+            const day = new Date(monthStart.getFullYear(), monthStart.getMonth(), i);
+            const dayStr = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
 
             const dayStart = new Date(day);
             dayStart.setHours(0, 0, 0, 0);
@@ -48,7 +46,7 @@ export function ActivityInsights() {
 
             const dayActivitySet = new Set<string>();
 
-            // Notes activity
+            // Notes activity in this calendar month
             notes.forEach(n => {
                 if (n.isDeleted) return;
                 const created = new Date(n.createdAt);
@@ -57,7 +55,7 @@ export function ActivityInsights() {
                 if (updated >= dayStart && updated <= dayEnd) dayActivitySet.add(`note-${n.id}`);
             });
 
-            // Tasks activity
+            // Tasks activity in this calendar month
             tasks.forEach(t => {
                 const created = new Date(t.createdAt);
                 if (created >= dayStart && created <= dayEnd) dayActivitySet.add(`task-${t.id}`);
@@ -70,54 +68,19 @@ export function ActivityInsights() {
             data.push({
                 date: dayStr,
                 activity: dayActivitySet.size,
+                isFuture: day > now
             });
         }
         return data;
-    }, [notes, tasks]);
+    }, [notes, tasks, monthStart, daysInMonth]);
 
-    // 2. CHART: Task Performance (Last 4 Weeks)
-    const taskWeeksData = useMemo(() => {
-        const data = [];
-        const now = new Date();
 
-        for (let i = 3; i >= 0; i--) {
-            const weekEnd = new Date(now);
-            weekEnd.setDate(weekEnd.getDate() - (i * 7));
-            weekEnd.setHours(23, 59, 59, 999);
 
-            const weekStart = new Date(weekEnd);
-            weekStart.setDate(weekStart.getDate() - 6);
-            weekStart.setHours(0, 0, 0, 0);
-
-            const completedInWeek = tasks.filter(t => {
-                if (!t.completed || !t.completedAt) return false;
-                const compDate = new Date(t.completedAt);
-                return compDate >= weekStart && compDate <= weekEnd;
-            });
-
-            const onTime = completedInWeek.filter(t => {
-                const deadline = new Date(t.deadline);
-                const compDate = new Date(t.completedAt!);
-                return compDate <= deadline;
-            }).length;
-
-            const late = completedInWeek.length - onTime;
-
-            data.push({
-                week: i === 0 ? "This Week" : `${i}w ago`,
-                onTime,
-                late,
-            });
-        }
-        return data;
-    }, [tasks]);
-
-    // 3. CHART: Notes Pie Chart (Last 30 Days)
     const folderDistribution = useMemo(() => {
-        const notesLastMonth = notes.filter(n => !n.isDeleted && new Date(n.createdAt) >= thirtyDaysAgo);
+        const notesThisMonth = notes.filter(n => !n.isDeleted && new Date(n.createdAt) >= monthStart && new Date(n.createdAt) <= monthEnd);
         const folderCounts: Record<string, { count: number, icon: string }> = {};
 
-        notesLastMonth.forEach(n => {
+        notesThisMonth.forEach(n => {
             const fId = n.folderId || "root";
             if (!folderCounts[fId]) {
                 const folder = folders.find(f => f.id === fId);
@@ -139,28 +102,49 @@ export function ActivityInsights() {
                 fill: id === 'system-daily-notes' ? "#8B5CF6" : folder?.color || "dimgrey"
             };
         }).sort((a, b) => b.value - a.value);
-    }, [notes, folders, thirtyDaysAgo]);
+    }, [notes, folders, monthStart, monthEnd]);
 
     const totalNotes = useMemo(() => folderDistribution.reduce((acc, curr) => acc + curr.value, 0), [folderDistribution]);
 
-    // 4. CHART: Hourly Productivity (Deep Work Windows)
-    const hourlyData = useMemo(() => {
-        const hours = Array.from({ length: 24 }, (_, i) => ({ hour: i, count: 0 }));
 
-        notes.forEach(n => {
-            if (n.isDeleted || new Date(n.updatedAt) < thirtyDaysAgo) return;
-            const h = new Date(n.updatedAt).getHours();
-            hours[h].count++;
+    const completionStats = useMemo(() => {
+
+        // Relevant tasks are those whose DEADLINE falls in the current calendar month
+        const relevantTasks = tasks.filter(t => {
+            const deadline = new Date(t.deadline);
+            return deadline >= monthStart && deadline <= monthEnd;
         });
 
-        tasks.forEach(t => {
-            if (!t.completed || !t.completedAt || new Date(t.completedAt) < thirtyDaysAgo) return;
-            const h = new Date(t.completedAt).getHours();
-            hours[h].count++;
-        });
+        const onTimeCount = relevantTasks.filter(t =>
+            t.completed && t.completedAt && new Date(t.completedAt) <= new Date(t.deadline)
+        ).length;
 
-        return hours;
-    }, [notes, tasks, thirtyDaysAgo]);
+        const completedCount = relevantTasks.filter(t => t.completed).length;
+        const lateCompletedCount = completedCount - onTimeCount;
+
+        const total = relevantTasks.length;
+        const onTimeRate = total > 0 ? (onTimeCount / total) * 100 : 0;
+        const lateCompletedRate = total > 0 ? (lateCompletedCount / total) * 100 : 0;
+        const overdueRate = total > 0 ? ((total - completedCount) / total) * 100 : 0;
+
+        return { onTimeCount, lateCompletedCount, total, onTimeRate, lateCompletedRate, overdueRate };
+    }, [tasks, monthStart, monthEnd]);
+
+    const heatmapData = useMemo(() => {
+        const max = Math.max(...activityChartData.map(d => d.activity), 1);
+        return activityChartData.map(d => ({
+            ...d,
+            level: d.activity === 0 ? 0 : Math.ceil((d.activity / max) * 4)
+        }));
+    }, [activityChartData]);
+
+    const heatmapStats = useMemo(() => {
+        const pastAndToday = activityChartData.filter(d => !d.isFuture);
+        const peak = pastAndToday.length > 0 ? Math.max(...pastAndToday.map(d => d.activity)) : 0;
+        const total = pastAndToday.reduce((acc, d) => acc + d.activity, 0);
+        const average = pastAndToday.length > 0 ? (total / pastAndToday.length).toFixed(1) : 0;
+        return { peak, average };
+    }, [activityChartData]);
 
     const chartConfig: ChartConfig = {
         activity: { label: "Activity", color: "var(--chart-1)" },
@@ -172,114 +156,25 @@ export function ActivityInsights() {
     };
 
     return (
-        <div className="flex flex-col lg:grid lg:grid-cols-3 gap-3 h-full">
-            {/* Left Column: Combined Activity (2/3 width) */}
-            <div className="lg:col-span-2 flex flex-col gap-3 min-h-0 min-w-0">
-                {/* Chart 4: Hourly Focus (New!) */}
-                <Card className="py-0 gap-0 border-border/40 bg-card/50 shadow-none flex flex-col overflow-hidden">
-                    <div className="px-3 pt-3 pb-0 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <LucideIcons.Zap size={14} className="text-amber-500 fill-amber-500/20" />
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-foreground/70">Peak Hours</span>
-                        </div>
-                    </div>
-                    <CardContent className="flex-1 min-h-0 min-w-0 p-2 pt-0 gap-0">
-                        <ChartContainer config={chartConfig} className="h-[80px] w-full aspect-auto">
-                            <BarChart data={hourlyData} margin={{ top: 10, right: 0, left: -25, bottom: 0 }}>
-                                <XAxis
-                                    dataKey="hour"
-                                    hide
-                                />
-                                <Bar
-                                    dataKey="count"
-                                    fill="var(--accent-full)"
-                                    radius={[2, 2, 0, 0]}
-                                    opacity={0.8}
-                                />
-                                <ChartTooltip content={<ChartTooltipContent labelFormatter={(v) => `${String(v).padStart(2, '0')}:00`} />} />
-                            </BarChart>
-                        </ChartContainer>
-                    </CardContent>
-                </Card>
-
-                {/* Chart 3: Total Activity */}
-                <Card className="py-0 gap-0 border-border/40 bg-card/50 shadow-none flex flex-col overflow-hidden flex-1 min-h-0">
-                    <div className="px-3 pt-3 pb-0 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <Activity size={14} className="text-primary" />
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-foreground/70">Total Activity Trend</span>
-                        </div>
-                    </div>
-                    <CardContent className="flex-1 min-h-0 min-w-0 p-2 pt-0 gap-0">
-                        <ChartContainer config={chartConfig} className="h-full min-h-[140px] w-full aspect-auto">
-                            <LineChart data={activityChartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--border)" opacity={0.15} />
-                                <XAxis
-                                    dataKey="date"
-                                    hide={true}
-                                />
-                                <YAxis
-                                    fontSize={9}
-                                    tickLine={false}
-                                    axisLine={false}
-                                    tickFormatter={(v) => v === 0 ? "" : v}
-                                />
-                                <Line
-                                    type="monotone"
-                                    dataKey="activity"
-                                    stroke="var(--accent-full)"
-                                    strokeWidth={2.5}
-                                    dot={false}
-                                    activeDot={{ r: 3, strokeWidth: 0 }}
-                                />
-                                <ChartTooltip content={<ChartTooltipContent />} />
-                            </LineChart>
-                        </ChartContainer>
-                    </CardContent>
-                </Card>
-            </div>
-
-            {/* Right Column: Tasks and Notes (1/3 width) */}
-            <div className="flex flex-col gap-3 min-h-0 min-w-0">
-                {/* Chart 1: Tasks */}
-                <Card className="border-border/40 py-0 gap-0 bg-card/50 shadow-none flex flex-col overflow-hidden">
-                    <div className="px-3 pt-2 pb-0 flex items-center gap-2">
-                        <CheckCircle2 size={12} className="text-green-500" />
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-foreground/60">Tasks On-Time</span>
-                    </div>
-                    <CardContent className="p-2 pt-0 min-h-0 min-w-0">
-                        <ChartContainer config={chartConfig} className="h-[80px] w-full aspect-auto">
-                            <BarChart data={taskWeeksData} margin={{ top: 5, right: 0, left: -25, bottom: 0 }}>
-                                <XAxis
-                                    dataKey="week"
-                                    fontSize={8}
-                                    tickLine={false}
-                                    axisLine={false}
-                                    tickMargin={2}
-                                />
-                                <Bar dataKey="onTime" stackId="t" fill="palegreen" radius={[0, 0, 2, 2]} />
-                                <Bar dataKey="late" stackId="t" fill="#4479FE" radius={[2, 2, 0, 0]} />
-                                <ChartTooltip content={<ChartTooltipContent />} cursor={false} />
-                            </BarChart>
-                        </ChartContainer>
-                    </CardContent>
-                </Card>
-
-                {/* Chart 2: Notes Pie */}
-                <Card className="border-border/40 py-0 gap-0 bg-card/50 shadow-none flex flex-col flex-1 overflow-hidden min-h-0">
-                    <div className="px-3 pt-2 pb-0 flex items-center gap-2">
+        <div className="flex flex-col lg:grid lg:grid-cols-5 gap-3 h-full">
+            {/* Left Column: Topics & Performance (3/5) */}
+            <div className="lg:col-span-3 flex flex-col gap-3 min-h-0 min-w-0">
+                {/* Topics Pie Chart */}
+                <Card className="border-border/40 bg-card/30 shadow-none gap-0 p-3 flex flex-col flex-1 overflow-hidden min-h-0 backdrop-blur-md">
+                    <div className="pb-0 flex items-center gap-2">
                         <FileText size={12} className="text-blue-500" />
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-foreground/60">Topics (30 Days)</span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-foreground/60">Topics explored</span>
                     </div>
-                    <CardContent className="flex-1 min-h-0 min-w-0 p-2 pt-0 flex flex-col items-center justify-center">
-                        <ChartContainer config={chartConfig} className="aspect-auto h-full min-h-36 w-full">
+
+                    <CardContent className="flex-1 min-h-0 p-0 pt-2 flex items-center justify-between gap-6">
+                        <ChartContainer config={chartConfig} className="aspect-square h-full shrink-0 flex-1">
                             <PieChart>
                                 <Pie
                                     data={folderDistribution}
                                     dataKey="value"
                                     nameKey="name"
-                                    innerRadius={40}
-                                    outerRadius={65}
+                                    innerRadius={"55%"}
+                                    outerRadius={"80%"}
                                     strokeWidth={2}
                                     stroke="var(--card)"
                                 >
@@ -288,8 +183,8 @@ export function ActivityInsights() {
                                             if (viewBox && "cx" in viewBox && "cy" in viewBox) {
                                                 return (
                                                     <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
-                                                        <tspan x={viewBox.cx} y={viewBox.cy} className="fill-foreground text-lg font-black">{totalNotes}</tspan>
-                                                        <tspan x={viewBox.cx} y={(viewBox.cy || 0) + 12} className="fill-muted-foreground text-[10px] font-bold uppercase">Notes</tspan>
+                                                        <tspan x={viewBox.cx} y={viewBox.cy} className="fill-foreground text-sm font-black">{totalNotes}</tspan>
+                                                        <tspan x={viewBox.cx} y={(viewBox.cy || 0) + 10} className="fill-muted-foreground text-[8px] font-bold uppercase">Notes</tspan>
                                                     </text>
                                                 )
                                             }
@@ -299,18 +194,128 @@ export function ActivityInsights() {
                                 <ChartTooltip content={<ChartTooltipContent hideLabel />} />
                             </PieChart>
                         </ChartContainer>
-                        <div className="w-full mt-1 space-y-0.5">
-                            {folderDistribution.slice(0, 3).map((f) => {
-                                return (
-                                    <div key={f.id} className="flex items-center justify-between text-[10px] font-bold uppercase tracking-tighter">
-                                        <div className="flex items-center gap-1 min-w-0">
-                                            <Ionicons color={f.fill} name={f.icon} size={8} className="text-muted-foreground shrink-0" />
-                                            <span className="truncate text-foreground/70">{f.name}</span>
-                                        </div>
-                                        <span className="text-muted-foreground">{Math.round((f.value / totalNotes) * 100)}%</span>
+                        <div className="flex-1 flex flex-col gap-y-1.5 min-w-0 pr-2">
+                            {folderDistribution.slice(0, 5).map((f) => (
+                                <div key={f.id} className="flex items-center justify-between text-[10px] font-medium">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                        <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: f.fill }} />
+                                        <span className="truncate text-foreground/80">{f.name}</span>
                                     </div>
-                                );
-                            })}
+                                    <span className="text-muted-foreground ml-1">{Math.round((f.value / totalNotes) * 100)}%</span>
+                                </div>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Completion Progress Bar */}
+                <Card className="border-border/40 bg-card/30 shadow-none p-3 gap-0 flex flex-col backdrop-blur-md">
+                    <div className="pb-3 flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-1.5">
+                                <div className="w-1.5 h-1.5 rounded-[2px] bg-accent-full" />
+                                <span className="text-[9px] font-bold uppercase tracking-widest text-foreground/50">
+                                    On Time <span className="ml-0.5 text-foreground/70">{completionStats.onTimeCount}</span>
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <div className="w-1.5 h-1.5 rounded-[2px] bg-emerald-500" />
+                                <span className="text-[9px] font-bold uppercase tracking-widest text-foreground/50">
+                                    Completed <span className="ml-0.5 text-foreground/70">{completionStats.onTimeCount + completionStats.lateCompletedCount}</span>
+                                </span>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                            <div className="w-1.5 h-1.5 rounded-[2px] bg-muted-foreground/30" />
+                            <span className="text-[9px] font-bold uppercase tracking-widest text-foreground/50">
+                                Total <span className="ml-1 text-foreground/70">{completionStats.total}</span>
+                            </span>
+                        </div>
+                    </div>
+                    <div className="h-2 w-full bg-muted/10 rounded-full overflow-hidden flex">
+                        <div
+                            className="h-full bg-accent-full transition-all duration-1000"
+                            style={{ width: `${completionStats.onTimeRate}%` }}
+                        />
+                        <div
+                            className="h-full bg-emerald-500/80 transition-all duration-1000"
+                            style={{ width: `${completionStats.lateCompletedRate}%` }}
+                        />
+                        <div
+                            className="h-full bg-muted-foreground/20 transition-all duration-1000"
+                            style={{ width: `${completionStats.overdueRate}%` }}
+                        />
+                    </div>
+                </Card>
+            </div>
+
+            {/* Right Column: Activity Heatmap (2/5) */}
+            <div className="lg:col-span-2 flex flex-col gap-3 min-h-0 min-w-0">
+                <Card className="border-border/40 bg-card/30 shadow-none  p-2 pb-0 gap-0 flex flex-col flex-1 overflow-hidden min-h-0 backdrop-blur-md">
+                    <div className=" flex items-center gap-2 text-orange-500">
+                        <div className="p-1.5 rounded-md bg-orange-500/10">
+                            <Activity size={12} />
+                        </div>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-foreground/60">Recent Activity</span>
+                    </div>
+                    <CardContent className="flex-1 flex flex-col items-center justify-between p-0 py-2 gap-4">
+                        <TooltipProvider delayDuration={0}>
+                            <div className="grid grid-cols-7 gap-1.5 shrink-0">
+                                {heatmapData.map((day, i) => (
+                                    <Tooltip key={day.date}>
+                                        <TooltipTrigger asChild>
+                                            <div
+                                                className="w-[20px] h-[20px] rounded-[3px] transition-all duration-500 cursor-pointer hover:ring-1 hover:ring-accent-full/50 animate-pop-in"
+                                                style={{
+                                                    backgroundColor: 'var(--accent-full)',
+                                                    "--day-opacity": day.isFuture ? 0.05 : (day.level === 0 ? 0.15 : 0.25 + (day.level * 0.18)),
+                                                    animationDelay: `${i * 30}ms`
+                                                } as any}
+                                            />
+                                        </TooltipTrigger>
+                                        <TooltipContent className="px-2 py-1 text-[10px] bg-card border-border/40 text-foreground" side="top">
+                                            <div className="flex flex-col gap-0.5">
+                                                <div className="text-foreground/60">{new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                                                <div className="flex items-center gap-1.5 font-bold">
+                                                    <span>{day.activity} interactions</span>
+                                                </div>
+                                            </div>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                ))}
+                            </div>
+                        </TooltipProvider>
+
+                        <div className="w-full flex flex-col gap-1.5">
+                            <div className="w-full flex items-center justify-between px-2 py-2 rounded-lg bg-orange-500/3 border border-orange-500/10 hover:bg-orange-500/5 transition-colors group">
+                                <div className="flex items-center gap-2">
+                                    <div className="p-1.5 rounded-md bg-orange-500/10 text-orange-500 group-hover:scale-110 transition-transform">
+                                        <Flame size={12} />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-[7.5px] font-black uppercase tracking-widest text-foreground/40 leading-none mb-0.5">Peak day</span>
+                                        <span className="text-[9.5px] font-bold text-foreground/50">Monthly max</span>
+                                    </div>
+                                </div>
+                                <div className="text-lg font-black tabular-nums text-foreground/90 tracking-tighter">
+                                    {heatmapStats.peak}<span className="text-[10px] font-bold text-foreground/30 ml-1 italic">pts</span>
+                                </div>
+                            </div>
+
+                            <div className="w-full flex items-center justify-between px-2 py-2 rounded-lg bg-blue-500/3 border border-blue-500/10 hover:bg-blue-500/5 transition-colors group">
+                                <div className="flex items-center gap-2">
+                                    <div className="p-1.5 rounded-md bg-blue-500/10 text-blue-500 group-hover:scale-110 transition-transform">
+                                        <TrendingUp size={12} />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-[7.5px] font-black uppercase tracking-widest text-foreground/40 leading-none mb-0.5">Average</span>
+                                        <span className="text-[9.5px] font-bold text-foreground/50">Daily freq</span>
+                                    </div>
+                                </div>
+                                <div className="text-lg font-black tabular-nums text-foreground/90 tracking-tighter">
+                                    {heatmapStats.average}<span className="text-[10px] font-bold text-foreground/30 ml-1 italic">pts</span>
+                                </div>
+                            </div>
                         </div>
                     </CardContent>
                 </Card>

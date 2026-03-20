@@ -275,8 +275,8 @@ export function DesktopToolbar({
         {
             id: 'table',
             label: 'Table',
-            render: <Button key="table" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => { if (!editorState.isInTable) sendCommand('insertTable', { rows: 3, cols: 3, withHeaderRow: true }); }} style={activeStyle(editorState.isInTable)}><TableIcon className="w-5 h-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="table-dropdown" onClick={() => { if (!editorState.isInTable) sendCommand('insertTable', { rows: 3, cols: 3, withHeaderRow: true }); }} className={cn("gap-2", editorState.isInTable && "text-primary")}><TableIcon className="w-4 h-4" /> Table</DropdownMenuItem>
+            render: <Button key="table" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => { if (!editorState.isInTable) sendCommand('insertTable', { rows: 3, cols: 3, withHeaderRow: false }); }} style={activeStyle(editorState.isInTable)}><TableIcon className="w-5 h-5" /></Button>,
+            dropdownRender: <DropdownMenuItem key="table-dropdown" onClick={() => { if (!editorState.isInTable) sendCommand('insertTable', { rows: 3, cols: 3, withHeaderRow: false }); }} className={cn("gap-2", editorState.isInTable && "text-primary")}><TableIcon className="w-4 h-4" /> Table</DropdownMenuItem>
         },
         {
             id: 'image',
