@@ -14,7 +14,8 @@ export const ShortcutManager = Extension.create({
             'Mod-i': () => this.editor.commands.toggleItalic(),
             'Mod-u': () => this.editor.commands.toggleUnderline(),
             'Mod-Shift-x': () => this.editor.commands.toggleStrike(),
-            'Mod-e': () => this.editor.commands.toggleCode(),
+            'Mod-Shift-e': () => this.editor.commands.toggleCode(),
+            'Mod-e': () => true,
             'Mod-Alt-c': () => this.editor.commands.toggleCodeBlock(),
 
             // --- Headings ---

@@ -79,6 +79,7 @@ export function NotePreviewModal({
                         <div className="p-4 pt-16">
                             <TipTapEditor
                                 initialContent={content}
+                                contentPaddingTop={0}
                                 editable={false}
                                 noteId={note.id}
                                 isDark={isDark}

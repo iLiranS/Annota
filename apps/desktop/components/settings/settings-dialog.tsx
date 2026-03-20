@@ -52,16 +52,16 @@ const tabs: SettingsTab[] = [
         iconBg: "bg-gray-500",
     },
     {
-        id: "account",
-        label: "Account",
-        icon: <User className="h-4 w-4 text-white" />,
-        iconBg: "bg-green-500",
-    },
-    {
         id: "storage",
         label: "Storage & Debug",
         icon: <Database className="h-4 w-4 text-white" />,
         iconBg: "bg-orange-500",
+    },
+    {
+        id: "account",
+        label: "Account",
+        icon: <User className="h-4 w-4 text-white" />,
+        iconBg: "bg-green-500",
     },
     {
         id: "help",
@@ -91,30 +91,62 @@ export default function SettingsDialog() {
 
                 <div className="flex flex-1 min-h-0">
                     {/* Left nav */}
-                    <nav className="w-[200px] space-y-0.5 border-r border-border p-3 bg-muted/30">
-                        {tabs.map((tab) => (
-                            <button
-                                key={tab.id}
-                                type="button"
-                                onClick={() => setActiveTab(tab.id)}
-                                className={cn(
-                                    "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors",
-                                    activeTab === tab.id
-                                        ? "bg-accent font-medium"
-                                        : "hover:bg-accent/50",
-                                )}
-                            >
-                                <span
-                                    className={cn(
-                                        "flex h-6 w-6 items-center justify-center rounded-md",
-                                        tab.iconBg,
-                                    )}
-                                >
-                                    {tab.icon}
-                                </span>
-                                <span>{tab.label}</span>
-                            </button>
-                        ))}
+                    <nav className="w-[200px] flex flex-col border-r border-border p-3 bg-muted/30">
+                        <div className="flex-1 space-y-0.5">
+                            {tabs
+                                .filter((t) => !["account", "help"].includes(t.id))
+                                .map((tab) => (
+                                    <button
+                                        key={tab.id}
+                                        type="button"
+                                        onClick={() => setActiveTab(tab.id)}
+                                        className={cn(
+                                            "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors",
+                                            activeTab === tab.id
+                                                ? "bg-accent font-medium"
+                                                : "hover:bg-accent/50",
+                                        )}
+                                    >
+                                        <span
+                                            className={cn(
+                                                "flex h-6 w-6 items-center justify-center rounded-md",
+                                                tab.iconBg,
+                                            )}
+                                        >
+                                            {tab.icon}
+                                        </span>
+                                        <span>{tab.label}</span>
+                                    </button>
+                                ))}
+                        </div>
+
+                        <div className="space-y-0.5">
+                            {tabs
+                                .filter((t) => ["account", "help"].includes(t.id))
+                                .map((tab) => (
+                                    <button
+                                        key={tab.id}
+                                        type="button"
+                                        onClick={() => setActiveTab(tab.id)}
+                                        className={cn(
+                                            "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors",
+                                            activeTab === tab.id
+                                                ? "bg-accent font-medium"
+                                                : "hover:bg-accent/50",
+                                        )}
+                                    >
+                                        <span
+                                            className={cn(
+                                                "flex h-6 w-6 items-center justify-center rounded-md",
+                                                tab.iconBg,
+                                            )}
+                                        >
+                                            {tab.icon}
+                                        </span>
+                                        <span>{tab.label}</span>
+                                    </button>
+                                ))}
+                        </div>
                     </nav>
 
                     {/* Right content */}

@@ -8,12 +8,10 @@ import {
 import { Ionicons } from "@/components/ui/ionicons";
 import { formatRelativeDate } from "@/lib/date-formatter";
 import { cn } from "@/lib/utils";
-import {
-    NoteMetadata,
-    useNotesStore,
-    useSettingsStore
-} from "@annota/core";
+import { NoteMetadata, useNotesStore, useSettingsStore } from "@annota/core";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { useCallback, useState } from "react";
+import { toast } from "sonner";
 import { LocationPickerModal } from "../location-picker-modal";
 import { NotePreviewModal } from "./note-preview-modal";
 
@@ -66,6 +64,19 @@ export function NoteListItem({
         await updateNoteMetadata(note.id, { folderId: targetFolderId });
     }, [note.id, updateNoteMetadata]);
 
+    const handleCopyLink = useCallback(async () => {
+        const link = `annota://note/${note.id}`;
+        try {
+            await writeText(link);
+            toast.success("Link copied to clipboard", {
+                description: "You can now paste it anywhere to link to this note.",
+            });
+        } catch (err) {
+            console.error("Failed to copy link:", err);
+            toast.error("Failed to copy link to clipboard");
+        }
+    }, [note.id]);
+
     const Comp = asChild ? Slot : "button";
 
     return (
@@ -76,19 +87,17 @@ export function NoteListItem({
                         type="button"
                         onClick={onClick}
                         className={cn(
-                            !asChild && "group/note  relative flex w-full flex-col transition-all hover:bg-accent/50",
-                            !asChild && isCompact && !isInList ? "py-1.5" : "py-2",
-                            isActive && "bg-accent/70",
+                            !asChild && "group/note relative flex w-full flex-col transition-all hover:bg-accent/50",
+                            !asChild && (isCompact && !isInList ? "py-1.5" : "py-2"),
+                            !asChild && (isInList ? "rounded-lg px-2 py-2" : "px-3 py-2 rounded-lg"),
+                            isActive && !asChild && "bg-accent/70",
                             "relative",
-                            isInList ? "rounded-lg px-2 py-2" : "px-3 py-2 rounded-lg",
                             className
                         )}
                         style={style}
                         {...props}
                     >
-                        {asChild ? (
-                            children
-                        ) : (
+                        {asChild ? children : (
                             <>
                                 <div className="flex w-full items-center justify-between gap-2.5">
                                     <div className="flex min-w-0 items-center gap-2">
@@ -144,34 +153,35 @@ export function NoteListItem({
                                         );
                                     } catch { return null; }
                                 })()}
+                                {/* Subtle inset separator for list items, positioned in the middle of the gap */}
+                                {isInList && (
+                                    <div className="absolute -bottom-0.5 left-4 right-4 h-px bg-border/30" />
+                                )}
                             </>
-                        )}
-                        {/* Subtle inset separator for list items, positioned in the middle of the gap */}
-                        {isInList && (
-                            <div className="absolute -bottom-0.5 left-4 right-4 h-px bg-border/30" />
                         )}
                     </Comp>
                 </ContextMenuTrigger>
 
                 <ContextMenuContent className="w-52">
                     <ContextMenuItem
-                        onClick={handleTogglePin}
-
-                    >
-                        <Ionicons name={note.isPinned ? "pin" : "pin-outline"} size={16} />
-                        <span>{note.isPinned ? "Unpin Note" : "Pin Note"}</span>
-                    </ContextMenuItem>
-
-                    <ContextMenuItem
-                        onClick={() => setIsPreviewOpen(true)}
+                        onSelect={() => setIsPreviewOpen(true)}
+                        onPointerUp={(e) => e.button === 2 && e.preventDefault()}
                     >
                         <Ionicons name="eye-outline" size={16} />
                         <span>Preview Note</span>
                     </ContextMenuItem>
 
                     <ContextMenuItem
-                        onClick={handleToggleQuickAccess}
+                        onSelect={handleTogglePin}
+                        onPointerUp={(e) => e.button === 2 && e.preventDefault()}
+                    >
+                        <Ionicons name={note.isPinned ? "pin" : "pin-outline"} size={16} />
+                        <span>{note.isPinned ? "Unpin Note" : "Pin Note"}</span>
+                    </ContextMenuItem>
 
+                    <ContextMenuItem
+                        onSelect={handleToggleQuickAccess}
+                        onPointerUp={(e) => e.button === 2 && e.preventDefault()}
                     >
                         <Ionicons name={note.isQuickAccess ? "star" : "star-outline"} size={16} />
                         <span>
@@ -180,18 +190,27 @@ export function NoteListItem({
                     </ContextMenuItem>
 
                     <ContextMenuItem
-                        onClick={() => setIsLocationPickerOpen(true)}
+                        onSelect={handleCopyLink}
+                        onPointerUp={(e) => e.button === 2 && e.preventDefault()}
+                    >
+                        <Ionicons name="link-outline" size={16} />
+                        <span>Copy Link</span>
+                    </ContextMenuItem>
 
+                    <ContextMenuSeparator />
+
+                    <ContextMenuItem
+                        onSelect={() => setIsLocationPickerOpen(true)}
+                        onPointerUp={(e) => e.button === 2 && e.preventDefault()}
                     >
                         <Ionicons name="folder-outline" size={16} />
                         <span>Move Note</span>
                     </ContextMenuItem>
 
-                    <ContextMenuSeparator />
-
                     {onDelete && (
                         <ContextMenuItem
-                            onClick={onDelete}
+                            onSelect={onDelete}
+                            onPointerUp={(e) => e.button === 2 && e.preventDefault()}
                             className="gap-2 text-destructive focus:bg-destructive/10 focus:text-destructive"
                         >
                             <Ionicons name="trash-outline" size={16} />

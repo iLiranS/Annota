@@ -31,7 +31,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 
 export default function NoteEditor() {
-    const { id, source, scrollToElementId } = useLocalSearchParams<{ id: string, source: string, scrollToElementId?: string }>();
+    const { id, source, scrollToElementId, elementId, blockId } = useLocalSearchParams<{ id: string, source: string, scrollToElementId?: string, elementId?: string, blockId?: string }>();
     const { colors } = useTheme();
     const router = useRouter();
     const navigation = useNavigation();
@@ -93,7 +93,7 @@ export default function NoteEditor() {
                 } finally {
                     if (!cancelled) {
                         setIsLoading(false);
-                        pendingScrollElementIdRef.current = scrollToElementId ?? null;
+                        pendingScrollElementIdRef.current = scrollToElementId ?? elementId ?? blockId ?? null;
                     }
                 }
             } else {
@@ -111,7 +111,7 @@ export default function NoteEditor() {
         return () => {
             cancelled = true;
         };
-    }, [id, getNoteContent, scrollToElementId]);
+    }, [id, getNoteContent, scrollToElementId, elementId, blockId]);
 
     // Mobile Frontend
     useEffect(() => {

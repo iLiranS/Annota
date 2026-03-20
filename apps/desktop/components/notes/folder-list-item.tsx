@@ -9,7 +9,6 @@ import { Ionicons } from "@/components/ui/ionicons";
 import { cn } from "@/lib/utils";
 import { Folder } from "@annota/core";
 import { Slot } from "@radix-ui/react-slot";
-import { useCallback } from "react";
 
 interface FolderListItemProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     folder: Folder;
@@ -74,10 +73,7 @@ export function FolderListItem({
     children,
     ...props
 }: FolderListItemProps) {
-    const handleDelete = useCallback((e: React.MouseEvent) => {
-        e.stopPropagation();
-        if (onDelete) onDelete(folder);
-    }, [folder, onDelete]);
+
 
     const Comp = asChild ? Slot : "button";
 
@@ -100,21 +96,21 @@ export function FolderListItem({
 
             <ContextMenuContent className="w-48">
                 {onCreateNote && (
-                    <ContextMenuItem onClick={() => onCreateNote(folder)} className="gap-2">
+                    <ContextMenuItem onSelect={() => onCreateNote(folder)} className="gap-2">
                         <Ionicons name="document-outline" size={16} />
                         <span>New Note</span>
                     </ContextMenuItem>
                 )}
 
                 {onCreateTask && (
-                    <ContextMenuItem onClick={() => onCreateTask(folder)} className="gap-2">
+                    <ContextMenuItem onSelect={() => onCreateTask(folder)} className="gap-2">
                         <Ionicons name="checkmark-circle-outline" size={16} />
                         <span>New Task</span>
                     </ContextMenuItem>
                 )}
 
                 {onCreateSubFolder && (
-                    <ContextMenuItem onClick={() => onCreateSubFolder(folder)} className="gap-2">
+                    <ContextMenuItem onSelect={() => onCreateSubFolder(folder)} className="gap-2">
                         <Ionicons name="folder-outline" size={16} />
                         <span>New Sub Folder</span>
                     </ContextMenuItem>
@@ -122,14 +118,14 @@ export function FolderListItem({
 
                 <ContextMenuSeparator />
 
-                <ContextMenuItem onClick={() => onEdit(folder)} className="gap-2">
+                <ContextMenuItem onSelect={() => onEdit(folder)} className="gap-2">
                     <Ionicons name="create-outline" size={16} />
                     <span>Edit Folder</span>
                 </ContextMenuItem>
 
                 {onDelete && (
                     <ContextMenuItem
-                        onClick={handleDelete}
+                        onSelect={() => onDelete(folder)}
                         className="gap-2 text-destructive focus:bg-destructive/10 focus:text-destructive"
                     >
                         <Ionicons name="trash-outline" size={16} />

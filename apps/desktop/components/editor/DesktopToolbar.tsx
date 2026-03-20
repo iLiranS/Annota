@@ -168,9 +168,9 @@ export function DesktopToolbar({
         {
             id: 'code',
             label: 'Inline Code',
-            shortcut: `${MOD}E`,
+            shortcut: `${MOD}${SHIFT}E`,
             render: <Button key="code" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleCode')} style={activeStyle(editorState.isCode)}><Code className="w-5 h-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="code-dropdown" onClick={() => sendCommand('toggleCode')} className={cn("gap-2", editorState.isCode && "text-primary")}><Code className="w-4 h-4" /> Inline Code <span className="ml-auto text-[10px] opacity-50">{MOD}E</span></DropdownMenuItem>
+            dropdownRender: <DropdownMenuItem key="code-dropdown" onClick={() => sendCommand('toggleCode')} className={cn("gap-2", editorState.isCode && "text-primary")}><Code className="w-4 h-4" /> Inline Code <span className="ml-auto text-[10px] opacity-50">{MOD}${SHIFT}E</span></DropdownMenuItem>
         },
         {
             id: 'codeBlock',

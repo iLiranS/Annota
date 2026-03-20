@@ -38,7 +38,6 @@ import TrashPage from "./pages/notes/trash-page";
 
 // Tasks pages
 import TaskDetailDialog from "./pages/tasks/task-detail-dialog";
-import TasksLayout from "./pages/tasks/tasks-layout";
 
 // Home Page
 import HomePage from "./pages/home/home-page";
@@ -393,9 +392,6 @@ function App() {
               <Route index element={<NotesViewManager />} />
               <Route path=":folderId/:noteId" element={<NotesViewManager />} />
             </Route>
-
-            {/* Tasks */}
-            <Route path="tasks" element={<TasksLayout />} />
 
             {/* Modal-style routes as regular routes (fallback if no background) */}
             {!locationState?.background && (

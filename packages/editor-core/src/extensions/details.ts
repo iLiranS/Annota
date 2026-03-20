@@ -68,49 +68,66 @@ export const Details = TiptapDetails.extend({
                         const contentEl = dom.querySelector('.details-content') as HTMLElement;
                         if (contentEl) {
                             if (isOpen) {
-                                // Opening: Animate from 0 to scrollHeight
+                                // 1. Measure target height (precisely!)
                                 contentEl.style.display = 'block';
-                                contentEl.style.height = '0px';
-                                contentEl.style.paddingBottom = '0px';
-                                contentEl.style.opacity = '0';
-
-                                // Measure target height
+                                contentEl.style.transition = 'none';
                                 contentEl.style.height = 'auto';
-                                contentEl.style.paddingBottom = ''; // Restore to CSS value
-                                const targetHeight = contentEl.scrollHeight;
+                                contentEl.style.opacity = '1';
+                                const targetHeight = Math.ceil(contentEl.getBoundingClientRect().height) + 1;
 
-                                // Back to start state
+                                // 2. State initialization (start from 0)
                                 contentEl.style.height = '0px';
-                                contentEl.style.paddingBottom = '0px';
-                                contentEl.offsetHeight; // Force reflow
+                                contentEl.style.opacity = '0';
+                                contentEl.offsetHeight; // Force reflow (flush the 0px state)
 
-                                // Trigger transition
+                                // 3. Sync Attributes (Start Arrow Rotation)
+                                updateDOM(newNode.attrs);
+
+                                // 4. Animate to target
+                                contentEl.style.transition = ''; // Re-enable CSS transition
                                 contentEl.style.height = `${targetHeight}px`;
-                                contentEl.style.paddingBottom = '';
                                 contentEl.style.opacity = '1';
 
                                 const onEnd = (e: TransitionEvent) => {
                                     if (e.propertyName === 'height' && newNode.attrs.open) {
+                                        contentEl.style.transition = 'none';
                                         contentEl.style.height = 'auto';
+                                        contentEl.style.transition = '';
                                         contentEl.removeEventListener('transitionend', onEnd);
                                     }
                                 };
                                 contentEl.addEventListener('transitionend', onEnd);
                             } else {
-                                // Closing: Animate from current height to 0
-                                const currentHeight = contentEl.scrollHeight;
+                                // 1. Measure and Lock current height
+                                const currentHeight = Math.ceil(contentEl.getBoundingClientRect().height);
+                                contentEl.style.transition = 'none';
                                 contentEl.style.height = `${currentHeight}px`;
-                                contentEl.style.paddingBottom = '';
+                                contentEl.style.opacity = '1';
                                 contentEl.offsetHeight; // Force reflow
 
+                                // 2. Sync Attributes (Start Arrow Rotation)
+                                updateDOM(newNode.attrs);
+                                contentEl.offsetHeight; // Force reflow again to ensure attributes are processed
+
+                                // 3. Start slide-up animation
+                                contentEl.style.transition = ''; 
                                 contentEl.style.height = '0px';
-                                contentEl.style.paddingBottom = '0px';
                                 contentEl.style.opacity = '0';
+                                
+                                const onEnd = (e: TransitionEvent) => {
+                                    if (e.propertyName === 'height' && !newNode.attrs.open) {
+                                        contentEl.style.display = 'none';
+                                        contentEl.removeEventListener('transitionend', onEnd);
+                                    }
+                                };
+                                contentEl.addEventListener('transitionend', onEnd);
                             }
                         }
+                    } else {
+                        // Regular updates (background color, etc)
+                        updateDOM(newNode.attrs);
                     }
 
-                    updateDOM(newNode.attrs);
                     node = newNode;
                     return true;
                 }
@@ -357,7 +374,7 @@ export const Details = TiptapDetails.extend({
 });
 
 export const DetailsSummary = TiptapDetailsSummary.extend<any>({
-    content: 'block+',
+    content: 'heading | paragraph',
     addOptions() {
         return {
             ...this.parent?.(),

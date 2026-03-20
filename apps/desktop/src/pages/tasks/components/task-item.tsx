@@ -21,6 +21,13 @@ export function TaskItem({ task, onClick, showDate = false, hideFolder = false, 
         task.folderId ? getFolderById(task.folderId) : null
         , [task.folderId, getFolderById]);
 
+    const isBeforeToday = useMemo(() => {
+        if (!task.deadline) return false;
+        const now = new Date();
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        return task.deadline < todayStart;
+    }, [task.deadline]);
+
     const formatTime = (date: Date): string => {
         return date.toLocaleTimeString('en-US', {
             hour: 'numeric',
@@ -29,34 +36,31 @@ export function TaskItem({ task, onClick, showDate = false, hideFolder = false, 
     };
 
     const formatDate = (date: Date): string => {
-        const today = new Date();
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
         const tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1);
 
-        const isToday =
-            date.getDate() === today.getDate() &&
-            date.getMonth() === today.getMonth() &&
-            date.getFullYear() === today.getFullYear();
+        const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
-        const isTomorrow =
-            date.getDate() === tomorrow.getDate() &&
-            date.getMonth() === tomorrow.getMonth() &&
-            date.getFullYear() === tomorrow.getFullYear();
+        const isToday = d.getTime() === today.getTime();
+        const isTomorrow = d.getTime() === tomorrow.getTime();
+        const isYesterday = d.getTime() === yesterday.getTime();
 
         const timeStr = formatTime(date);
 
-        if (task.isWholeDay) {
-            if (isToday) return 'Today';
-            if (isTomorrow) return 'Tomorrow';
+        if (isToday) return task.isWholeDay ? 'Today' : `Today, ${timeStr}`;
+        if (isTomorrow) return task.isWholeDay ? 'Tomorrow' : `Tomorrow, ${timeStr}`;
+        if (isYesterday) return 'Yesterday';
+
+        if (d < yesterday) {
             return date.toLocaleDateString('en-US', {
-                weekday: 'short',
                 month: 'short',
                 day: 'numeric',
             });
         }
-
-        if (isToday) return `Today, ${timeStr}`;
-        if (isTomorrow) return `Tomorrow, ${timeStr}`;
 
         return date.toLocaleDateString('en-US', {
             weekday: 'short',
@@ -149,7 +153,7 @@ export function TaskItem({ task, onClick, showDate = false, hideFolder = false, 
                             })()
                         )}
                     >
-                        {task.isWholeDay ? formatDate(task.deadline) : (showDate ? formatDate(task.deadline) : formatTime(task.deadline))}
+                        {task.isWholeDay || showDate || isBeforeToday ? formatDate(task.deadline) : formatTime(task.deadline)}
                     </div>
                 )}
                 {!isCompact && <ChevronRight className="h-4 w-4 text-muted-foreground/30 transition-transform group-hover:translate-x-0.5" />}

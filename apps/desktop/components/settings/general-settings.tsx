@@ -118,7 +118,7 @@ export function GeneralSettings() {
                         onClick={() => updateGeneralSettings({ compactMode: !general.compactMode })}
                         action={<Toggle enabled={general.compactMode} />}
                     />
-                    <div className="h-1 bg-border/50 mx-4" />
+                    <div className="h-[2px] bg-border/50 mx-4" />
                     <SettingItem
                         label="App Direction"
                         description="Switch between LTR and RTL layout"
@@ -128,7 +128,7 @@ export function GeneralSettings() {
                         onClick={() => updateGeneralSettings({
                             appDirection: general.appDirection === 'rtl' ? 'ltr' : 'rtl'
                         })}
-                        action={<Toggle enabled={general.appDirection === 'rtl'} />}
+                        action={<ChevronRight size={16} className="text-muted-foreground" />}
                     />
                 </div>
             </section>

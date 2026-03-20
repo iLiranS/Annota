@@ -104,6 +104,18 @@ export function ActivityInsights() {
         }).sort((a, b) => b.value - a.value);
     }, [notes, folders, monthStart, monthEnd]);
 
+    const noteDailyActivity = useMemo(() => {
+        const data = [];
+        for (let i = 1; i <= daysInMonth; i++) {
+            const day = new Date(monthStart.getFullYear(), monthStart.getMonth(), i);
+            const dStart = new Date(day); dStart.setHours(0, 0, 0, 0);
+            const dEnd = new Date(day); dEnd.setHours(23, 59, 59, 999);
+            const count = notes.filter(n => !n.isDeleted && new Date(n.createdAt) >= dStart && new Date(n.createdAt) <= dEnd).length;
+            data.push({ value: count });
+        }
+        return data;
+    }, [notes, monthStart, daysInMonth]);
+
     const totalNotes = useMemo(() => folderDistribution.reduce((acc, curr) => acc + curr.value, 0), [folderDistribution]);
 
 
@@ -139,11 +151,23 @@ export function ActivityInsights() {
     }, [activityChartData]);
 
     const heatmapStats = useMemo(() => {
-        const pastAndToday = activityChartData.filter(d => !d.isFuture);
+        const todayIndex = new Date().getDate();
+        // Only count days from the start of the month up to today to ensure the average is accurate
+        const pastAndToday = activityChartData.slice(0, todayIndex);
+        
         const peak = pastAndToday.length > 0 ? Math.max(...pastAndToday.map(d => d.activity)) : 0;
-        const total = pastAndToday.reduce((acc, d) => acc + d.activity, 0);
-        const average = pastAndToday.length > 0 ? (total / pastAndToday.length).toFixed(1) : 0;
-        return { peak, average };
+        const totalActivity = pastAndToday.reduce((acc, d) => acc + d.activity, 0);
+        const average = pastAndToday.length > 0 ? (totalActivity / pastAndToday.length).toFixed(2) : 0;
+
+        // Current Streak calculation
+        let streak = 0;
+        const pastOnly = activityChartData.filter(d => !d.isFuture);
+        for (let i = pastOnly.length - 1; i >= 0; i--) {
+            if (pastOnly[i].activity > 0) streak++;
+            else if (i < pastOnly.length - 1) break;
+        }
+
+        return { peak, average, streak };
     }, [activityChartData]);
 
     const chartConfig: ChartConfig = {
@@ -160,90 +184,118 @@ export function ActivityInsights() {
             {/* Left Column: Topics & Performance (3/5) */}
             <div className="lg:col-span-3 flex flex-col gap-3 min-h-0 min-w-0">
                 {/* Topics Pie Chart */}
-                <Card className="border-border/40 bg-card/30 shadow-none gap-0 p-3 flex flex-col flex-1 overflow-hidden min-h-0 backdrop-blur-md">
+                <Card className="border-border/40 bg-card/30 shadow-none gap-0 p-3 pb-0 flex flex-col flex-1 overflow-hidden min-h-0">
                     <div className="pb-0 flex items-center gap-2">
                         <FileText size={12} className="text-blue-500" />
                         <span className="text-[10px] font-bold uppercase tracking-widest text-foreground/60">Topics explored</span>
                     </div>
 
-                    <CardContent className="flex-1 min-h-0 p-0 pt-2 flex items-center justify-between gap-6">
-                        <ChartContainer config={chartConfig} className="aspect-square h-full shrink-0 flex-1">
-                            <PieChart>
-                                <Pie
-                                    data={folderDistribution}
-                                    dataKey="value"
-                                    nameKey="name"
-                                    innerRadius={"55%"}
-                                    outerRadius={"80%"}
-                                    strokeWidth={2}
-                                    stroke="var(--card)"
-                                >
-                                    <Label
-                                        content={({ viewBox }) => {
-                                            if (viewBox && "cx" in viewBox && "cy" in viewBox) {
-                                                return (
-                                                    <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
-                                                        <tspan x={viewBox.cx} y={viewBox.cy} className="fill-foreground text-sm font-black">{totalNotes}</tspan>
-                                                        <tspan x={viewBox.cx} y={(viewBox.cy || 0) + 10} className="fill-muted-foreground text-[8px] font-bold uppercase">Notes</tspan>
-                                                    </text>
-                                                )
-                                            }
+                    <CardContent className="flex-1 min-h-0 p-0 pt-3 flex flex-col justify-between">
+                        <div className="flex items-center justify-between gap-6 px-1">
+                            <ChartContainer config={chartConfig} className="aspect-square h-24 shrink-0">
+                                <PieChart>
+                                    <Pie
+                                        data={folderDistribution}
+                                        dataKey="value"
+                                        nameKey="name"
+                                        innerRadius={"65%"}
+                                        outerRadius={"95%"}
+                                        strokeWidth={2}
+                                        stroke="var(--card)"
+                                    >
+                                        <Label
+                                            content={({ viewBox }) => {
+                                                if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                                                    return (
+                                                        <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
+                                                            <tspan x={viewBox.cx} y={viewBox.cy} className="fill-foreground text-sm font-black">{totalNotes}</tspan>
+                                                            <tspan x={viewBox.cx} y={(viewBox.cy || 0) + 12} className="fill-muted-foreground text-[8px] font-bold uppercase">Total</tspan>
+                                                        </text>
+                                                    )
+                                                }
+                                            }}
+                                        />
+                                    </Pie>
+                                    <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                                </PieChart>
+                            </ChartContainer>
+
+                            <div className="flex-1 grid grid-cols-1 gap-y-2 min-w-0 pr-1">
+                                {folderDistribution.slice(0, 4).map((f) => {
+                                    const percentage = totalNotes > 0 ? Math.round((f.value / totalNotes) * 100) : 0;
+                                    return (
+                                        <div key={f.id} className="flex flex-col gap-1">
+                                            <div className="flex items-center justify-between text-[9px] font-bold uppercase tracking-tight">
+                                                <span className="truncate text-foreground/70">{f.name}</span>
+                                                <span className="text-muted-foreground tabular-nums">{percentage}%</span>
+                                            </div>
+                                            <div className="h-1 w-full bg-muted/20 rounded-full overflow-hidden">
+                                                <div
+                                                    className="h-full rounded-full transition-all duration-1000"
+                                                    style={{ width: `${percentage}%`, backgroundColor: f.fill }}
+                                                />
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Sparkline/Area trend at the bottom to fill space creatively */}
+                        <div className="mt-auto pt-4 flex flex-col gap-1.5 -mx-3 -mb-3 bg-linear-to-t from-blue-500/5 to-transparent p-3 rounded-b-xl border-border/5">
+                            <div className="h-10 w-full flex items-end gap-[2px] pt-1">
+                                {noteDailyActivity.map((d, i) => (
+                                    <div
+                                        key={i}
+                                        className="flex-1 bg-blue-500/20 rounded-t-[1px] transition-all duration-500 hover:bg-blue-500/40"
+                                        style={{
+                                            height: `${Math.max(15, (d.value / Math.max(...noteDailyActivity.map(x => x.value), 1)) * 100)}%`,
+                                            opacity: 0.3 + (i / daysInMonth) * 0.7
                                         }}
                                     />
-                                </Pie>
-                                <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                            </PieChart>
-                        </ChartContainer>
-                        <div className="flex-1 flex flex-col gap-y-1.5 min-w-0 pr-2">
-                            {folderDistribution.slice(0, 5).map((f) => (
-                                <div key={f.id} className="flex items-center justify-between text-[10px] font-medium">
-                                    <div className="flex items-center gap-2 min-w-0">
-                                        <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: f.fill }} />
-                                        <span className="truncate text-foreground/80">{f.name}</span>
-                                    </div>
-                                    <span className="text-muted-foreground ml-1">{Math.round((f.value / totalNotes) * 100)}%</span>
-                                </div>
-                            ))}
+                                ))}
+                            </div>
                         </div>
                     </CardContent>
                 </Card>
 
                 {/* Completion Progress Bar */}
-                <Card className="border-border/40 bg-card/30 shadow-none p-3 gap-0 flex flex-col backdrop-blur-md">
+                <Card className="border-border/40 bg-card/30 shadow-none p-3 gap-0 flex flex-col  relative overflow-hidden group">
+
                     <div className="pb-3 flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-1.5">
-                                <div className="w-1.5 h-1.5 rounded-[2px] bg-accent-full" />
-                                <span className="text-[9px] font-bold uppercase tracking-widest text-foreground/50">
-                                    On Time <span className="ml-0.5 text-foreground/70">{completionStats.onTimeCount}</span>
-                                </span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                                <div className="w-1.5 h-1.5 rounded-[2px] bg-emerald-500" />
-                                <span className="text-[9px] font-bold uppercase tracking-widest text-foreground/50">
-                                    Completed <span className="ml-0.5 text-foreground/70">{completionStats.onTimeCount + completionStats.lateCompletedCount}</span>
-                                </span>
+                        <div className="flex flex-col gap-0.5">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-foreground/60">Execution rate</span>
+                            <div className="flex items-center gap-1">
+                                <span className="text-xl font-black text-foreground/90">{Math.round(completionStats.onTimeRate)}%</span>
+                                <span className="text-[8px] font-bold text-emerald-500 uppercase bg-emerald-500/10 px-1 rounded-sm">On Track</span>
                             </div>
                         </div>
-                        <div className="flex items-center gap-1.5">
-                            <div className="w-1.5 h-1.5 rounded-[2px] bg-muted-foreground/30" />
-                            <span className="text-[9px] font-bold uppercase tracking-widest text-foreground/50">
-                                Total <span className="ml-1 text-foreground/70">{completionStats.total}</span>
-                            </span>
+
+                        <div className="flex flex-col items-end gap-1">
+                            <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-1">
+                                    <div className="w-1 h-1 rounded-full bg-accent-full" />
+                                    <span className="text-[8px] font-bold text-foreground/40 uppercase tabular-nums">On Time</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <div className="w-1 h-1 rounded-full bg-emerald-500/60" />
+                                    <span className="text-[8px] font-bold text-foreground/40 uppercase tabular-nums">Late</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div className="h-2 w-full bg-muted/10 rounded-full overflow-hidden flex">
+
+                    <div className="h-1.5 w-full bg-muted/10 rounded-full overflow-hidden flex">
                         <div
-                            className="h-full bg-accent-full transition-all duration-1000"
+                            className="h-full bg-accent-full transition-all duration-1000 ease-out"
                             style={{ width: `${completionStats.onTimeRate}%` }}
                         />
                         <div
-                            className="h-full bg-emerald-500/80 transition-all duration-1000"
+                            className="h-full bg-emerald-500/50 transition-all duration-1000 ease-out"
                             style={{ width: `${completionStats.lateCompletedRate}%` }}
                         />
                         <div
-                            className="h-full bg-muted-foreground/20 transition-all duration-1000"
-                            style={{ width: `${completionStats.overdueRate}%` }}
+                            className="h-full bg-muted-foreground/10 transition-all duration-1000 ease-out flex-1"
                         />
                     </div>
                 </Card>
@@ -251,7 +303,7 @@ export function ActivityInsights() {
 
             {/* Right Column: Activity Heatmap (2/5) */}
             <div className="lg:col-span-2 flex flex-col gap-3 min-h-0 min-w-0">
-                <Card className="border-border/40 bg-card/30 shadow-none  p-2 pb-0 gap-0 flex flex-col flex-1 overflow-hidden min-h-0 backdrop-blur-md">
+                <Card className="border-border/40 bg-card/30 shadow-none  p-2 pb-0 gap-0 flex flex-col flex-1 overflow-hidden min-h-0 ">
                     <div className=" flex items-center gap-2 text-orange-500">
                         <div className="p-1.5 rounded-md bg-orange-500/10">
                             <Activity size={12} />
@@ -260,12 +312,12 @@ export function ActivityInsights() {
                     </div>
                     <CardContent className="flex-1 flex flex-col items-center justify-between p-0 py-2 gap-4">
                         <TooltipProvider delayDuration={0}>
-                            <div className="grid grid-cols-7 gap-1.5 shrink-0">
+                            <div className="grid my-auto grid-cols-7 gap-1.5 shrink-0">
                                 {heatmapData.map((day, i) => (
                                     <Tooltip key={day.date}>
                                         <TooltipTrigger asChild>
                                             <div
-                                                className="w-[20px] h-[20px] rounded-[3px] transition-all duration-500 cursor-pointer hover:ring-1 hover:ring-accent-full/50 animate-pop-in"
+                                                className=" w-6 aspect-square rounded-[3px] transition-all duration-500 cursor-pointer hover:ring-1 hover:ring-accent-full/50 animate-pop-in"
                                                 style={{
                                                     backgroundColor: 'var(--accent-full)',
                                                     "--day-opacity": day.isFuture ? 0.05 : (day.level === 0 ? 0.15 : 0.25 + (day.level * 0.18)),
@@ -273,7 +325,7 @@ export function ActivityInsights() {
                                                 } as any}
                                             />
                                         </TooltipTrigger>
-                                        <TooltipContent className="px-2 py-1 text-[10px] bg-card border-border/40 text-foreground" side="top">
+                                        <TooltipContent className="px-2 py-1 text-[10px] bg-card border-border/40 text-foreground" side={i > 20 ? 'bottom' : 'top'}>
                                             <div className="flex flex-col gap-0.5">
                                                 <div className="text-foreground/60">{new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
                                                 <div className="flex items-center gap-1.5 font-bold">
@@ -286,15 +338,14 @@ export function ActivityInsights() {
                             </div>
                         </TooltipProvider>
 
-                        <div className="w-full flex flex-col gap-1.5">
+                        <div className="w-full grid grid-cols-1 gap-2">
                             <div className="w-full flex items-center justify-between px-2 py-2 rounded-lg bg-orange-500/3 border border-orange-500/10 hover:bg-orange-500/5 transition-colors group">
                                 <div className="flex items-center gap-2">
                                     <div className="p-1.5 rounded-md bg-orange-500/10 text-orange-500 group-hover:scale-110 transition-transform">
                                         <Flame size={12} />
                                     </div>
                                     <div className="flex flex-col">
-                                        <span className="text-[7.5px] font-black uppercase tracking-widest text-foreground/40 leading-none mb-0.5">Peak day</span>
-                                        <span className="text-[9.5px] font-bold text-foreground/50">Monthly max</span>
+                                        <span className="text-[9.5px] font-bold uppercase tracking-widest text-foreground/60 leading-none">Peak day</span>
                                     </div>
                                 </div>
                                 <div className="text-lg font-black tabular-nums text-foreground/90 tracking-tighter">
@@ -308,8 +359,7 @@ export function ActivityInsights() {
                                         <TrendingUp size={12} />
                                     </div>
                                     <div className="flex flex-col">
-                                        <span className="text-[7.5px] font-black uppercase tracking-widest text-foreground/40 leading-none mb-0.5">Average</span>
-                                        <span className="text-[9.5px] font-bold text-foreground/50">Daily freq</span>
+                                        <span className="text-[9.5px] font-bold uppercase tracking-widest text-foreground/60 leading-none">Average</span>
                                     </div>
                                 </div>
                                 <div className="text-lg font-black tabular-nums text-foreground/90 tracking-tighter">

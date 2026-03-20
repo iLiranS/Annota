@@ -375,7 +375,10 @@
     border-end-end-radius: 4px;
 }
 
-.ProseMirror code {
+
+/* Style only inline code (not inside a pre) */
+.ProseMirror :not(pre)>code {
+    color: color-mix(in srgb, var(--text-color) 55%, transparent);
     background-color: var(--code-bg);
     padding: 2px 6px;
     border-radius: 4px;
@@ -383,14 +386,10 @@
     font-size: calc(var(--editor-font-size) * 0.8125);
 }
 
-/* Style only inline code (not inside a pre) */
-.ProseMirror :not(pre)>code {
-    color: color-mix(in srgb, var(--text-color) 65%, transparent);
-}
+
 
 .ProseMirror pre {
-    background-color: var(--code-block-bg);
-    padding: 24px 12px 12px 12px;
+    padding: 0px 12px 12px 12px;
     border-radius: 12px;
     overflow-x: auto;
     margin: 12px 0;
@@ -415,6 +414,8 @@
     margin: 10px 0;
     direction: ltr !important;
     unicode-bidi: isolate !important;
+    background-color: var(--code-block-bg);
+    border-radius: 12px;
 }
 
 .code-block-wrapper pre {
@@ -428,7 +429,6 @@
     justify-content: space-between;
     padding: 8px 8px;
     background-color: transparent;
-    position: absolute;
     top: 0;
     left: 0;
     right: 0;
@@ -804,28 +804,37 @@
 /* Summary/Header - editable title with arrow toggle */
 .ProseMirror .details-summary,
 .ProseMirror [data-type="detailsSummary"] {
-    display: flex;
-    align-items: center;
-    padding: 8px;
-    padding-inline-start: 4px;
-    gap: 4px;
+    display: flex !important;
+    align-items: center !important;
+    padding: 6px 8px !important;
+    padding-inline-start: 4px !important;
+    gap: 4px !important;
     transition: background-color 0.15s ease;
+    min-height: 32px !important;
 }
 
 /* Summary Content alignment and placeholder */
 .details-summary-content {
     position: relative;
     outline: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.ProseMirror .details-summary-content>*:first-child,
-.ProseMirror [data-type="detailsSummary"] .details-summary-content>*:first-child {
-    margin-top: 0;
-}
-
-.ProseMirror .details-summary-content>*:last-child,
-.ProseMirror [data-type="detailsSummary"] .details-summary-content>*:last-child {
-    margin-bottom: 0;
+.ProseMirror .details-summary-content > *,
+.ProseMirror [data-type="detailsSummary"] .details-summary-content > *,
+.ProseMirror .details-summary-content h1,
+.ProseMirror .details-summary-content h2,
+.ProseMirror .details-summary-content h3,
+.ProseMirror .details-summary-content h4,
+.ProseMirror .details-summary-content p {
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    min-height: 0 !important;
+    line-height: 1.4 !important;
+    height: auto !important;
 }
 
 .details-menu-btn {
@@ -849,10 +858,7 @@
     opacity: 1;
 }
 
-.ProseMirror .details-summary:hover,
-.ProseMirror [data-type="detailsSummary"]:hover {
-    background-color: rgba(128, 128, 128, 0.04);
-}
+
 
 /* Arrow indicator - clickable toggle button on the left */
 .details-toggle {
@@ -868,6 +874,9 @@
 
 /* Arrow rotates when open */
 .details-arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     transition: transform 0.2s ease;
 }
 
@@ -894,7 +903,7 @@
 .ProseMirror [data-type="detailsContent"] {
     padding: 0 12px 12px 12px;
     overflow: hidden;
-    transition: height 0.25s ease, padding 0.2s ease, opacity 0.2s ease;
+    transition: height 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Hide content when collapsed - using height and opacity instead of display: none for animation */

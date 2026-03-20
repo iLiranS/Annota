@@ -13,6 +13,7 @@ import { useCallback, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { FolderListItem, FolderListItemContent } from "@/components/notes/folder-list-item";
+import { NoteListItem } from "@/components/notes/note-list-item";
 import { Button } from "@/components/ui/button";
 import {
     Collapsible,
@@ -42,7 +43,7 @@ export function AppSidebar() {
     const { toggleSidebar, setOpen } = useSidebar();
     const { general } = useSettingsStore();
 
-    const { folders, notes, tags, deleteFolder, deleteTag } = useNotesStore();
+    const { folders, notes, tags, deleteFolder, deleteTag, deleteNote } = useNotesStore();
     const isOnline = useSyncStore((s) => s.isOnline);
     const isGuest = useUserStore((s) => s.isGuest);
     const showOfflineBanner = !isOnline && !isGuest;
@@ -203,17 +204,6 @@ export function AppSidebar() {
 
                             <SidebarMenuItem>
                                 <SidebarMenuButton
-                                    isActive={isActive("/tasks")}
-                                    onClick={() => navigateSmart("/tasks")}
-                                    tooltip="Tasks"
-                                >
-                                    <Ionicons name="checkmark-circle-outline" size={18} className="text-emerald-500" />
-                                    <span className="font-medium">Tasks</span>
-                                </SidebarMenuButton>
-                            </SidebarMenuItem>
-
-                            <SidebarMenuItem>
-                                <SidebarMenuButton
                                     isActive={
                                         (isActive("/notes") &&
                                             location.pathname.includes(DAILY_NOTES_FOLDER_ID)) ||
@@ -258,17 +248,24 @@ export function AppSidebar() {
                                             ) : (
                                                 quickAccessNotes.map((note) => (
                                                     <SidebarMenuSubItem key={note.id}>
-                                                        <SidebarMenuSubButton
-                                                            onClick={() => {
-                                                                const folderId = note.folderId || "root";
-                                                                navigateSmart(`/notes/${folderId}/${note.id}`);
-                                                            }}
+                                                        <NoteListItem
+                                                            note={note}
+                                                            asChild
+                                                            onDelete={() => deleteNote(note.id)}
                                                         >
-                                                            <Ionicons color={colors.primary} name="star-outline" size={14} className="text-primary" />
-                                                            <span className="truncate">
-                                                                {note.title || "Untitled Note"}
-                                                            </span>
-                                                        </SidebarMenuSubButton>
+                                                            <SidebarMenuSubButton
+                                                                isActive={location.pathname === `/notes/${note.folderId || "root"}/${note.id}`}
+                                                                onClick={() => {
+                                                                    const folderId = note.folderId || "root";
+                                                                    navigateSmart(`/notes/${folderId}/${note.id}`);
+                                                                }}
+                                                            >
+                                                                <Ionicons color={colors.primary} name="star-outline" size={14} className="text-primary" />
+                                                                <span className="truncate">
+                                                                    {note.title || "Untitled Note"}
+                                                                </span>
+                                                            </SidebarMenuSubButton>
+                                                        </NoteListItem>
                                                     </SidebarMenuSubItem>
                                                 ))
                                             )}
@@ -349,7 +346,7 @@ export function AppSidebar() {
                 >
                     <SidebarGroup>
                         <SidebarGroupLabel asChild className="text-sm text-sidebar-foreground font-medium">
-                            <CollapsibleTrigger className="flex w-full items-center gap-2">
+                            <CollapsibleTrigger className="flex w-full items-center gap-2 hover:bg-sidebar-accent">
                                 <Ionicons name="pricetag-outline" size={18} className="text-accent-full" />
                                 <span className="flex-1 text-start">Tags</span>
                                 <Ionicons name="chevron-forward" size={14} className={`transition-transform group-data-[state=open]/tags:rotate-90 ${general.appDirection === 'rtl' ? 'rotate-180' : ''}`} />
@@ -429,7 +426,7 @@ export function AppSidebar() {
                 )}
 
                 <SidebarMenu>
-                    <SidebarMenuItem className="border-t" key="trash">
+                    <SidebarMenuItem className="border-t pt-2" key="trash">
                         <SidebarMenuButton
                             onClick={() => navigateSmart("/notes/trash")}
                             tooltip="Trash"

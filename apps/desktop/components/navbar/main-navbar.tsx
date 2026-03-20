@@ -2,8 +2,6 @@ import { Button } from "@/components/ui/button"
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { useAppTheme } from "@/hooks/use-app-theme"
-import { useCreateNote } from "@/hooks/use-create-note"
-import { useCreateTask } from "@/hooks/use-create-task"
 import { cn } from "@/lib/utils"
 import { useSettingsStore, useSyncStore, useUserStore } from "@annota/core"
 import { useEffect, useRef, useState } from "react"
@@ -17,13 +15,14 @@ import { Ionicons } from "../ui/ionicons"
  * Height: 32px.
  */
 export function MainNavbar() {
-    const { colors } = useAppTheme();
     const navigate = useNavigate();
     const location = useLocation();
     const { isSyncing } = useSyncStore()
     const { session } = useUserStore();
-    const { general } = useSettingsStore();
+    const { general, updateGeneralSettings } = useSettingsStore();
+    const { colors } = useAppTheme();
     const { open } = useSidebar();
+
 
     const [canSync, setCanSync] = useState(true);
     const [canGoBack, setCanGoBack] = useState(false);
@@ -48,11 +47,15 @@ export function MainNavbar() {
                 e.preventDefault();
                 setIsSearchOpen(true);
             }
+            if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === "e") {
+                e.preventDefault();
+                updateGeneralSettings({ isTaskCalendarOpen: !general.isTaskCalendarOpen });
+            }
         };
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, []);
+    }, [general.isTaskCalendarOpen, updateGeneralSettings]);
 
     useEffect(() => {
         if (isSyncing) {
@@ -75,9 +78,6 @@ export function MainNavbar() {
         }
     };
 
-
-    const { createAndNavigate: createNewTask } = useCreateTask();
-    const { createAndNavigate: createNewNote } = useCreateNote();
 
     return (
         <header
@@ -181,44 +181,25 @@ export function MainNavbar() {
 
 
 
-                <div
-                    className="flex items-center rounded-full p-0.5"
-                    style={{ backgroundColor: `${colors.primary}10`, color: colors.primary }}
-                >
-                    <Button
-                        onClick={() => createNewNote()}
-                        variant="ghost"
-                        size="sm"
-                        className={`h-6 gap-1.5 rounded-full px-2.5 text-[11px] font-semibold transition-all active:scale-95 hover:bg-ring/10`}
-                        style={{ color: colors.primary }}
-                    >
-                        <Ionicons name="document-text-outline" size={13} />
-                        <span>Note</span>
-                    </Button>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className={cn(
+                                "h-7 w-7 rounded-full transition-all active:scale-95 text-muted-foreground/60 hover:bg-sidebar-accent hover:text-foreground",
+                                general.isTaskCalendarOpen && "text-primary"
+                            )}
+                            onClick={() => updateGeneralSettings({ isTaskCalendarOpen: !general.isTaskCalendarOpen })}
+                        >
+                            <Ionicons color={general.isTaskCalendarOpen ? colors.primary : ""} name={general.isTaskCalendarOpen ? "calendar" : "calendar-outline"} size={16} />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="text-[10px]">
+                        Task Calendar <span className="opacity-50 ml-1">⌘E</span>
+                    </TooltipContent>
+                </Tooltip>
 
-                    <div className="h-3 w-px opacity-20" style={{ backgroundColor: colors.primary }} />
-
-                    <Button
-                        onClick={() => createNewTask()}
-                        variant="ghost"
-                        size="sm"
-                        className={`h-6 gap-1.5 rounded-full px-2.5 text-[11px] font-semibold  transition-all active:scale-95 hover:bg-ring/10`}
-                        style={{ color: colors.primary }}
-                    >
-                        <span>Task</span>
-                        <Ionicons name="checkbox-outline" size={13} />
-                    </Button>
-                </div>
-
-                <Button
-                    onClick={() => { navigate("/settings", { state: { background: location } }) }}
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 text-muted-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-foreground"
-                    title="Settings"
-                >
-                    <Ionicons name="settings-outline" size={15} />
-                </Button>
             </div>
             <NotesSearchModal
                 open={isSearchOpen}
