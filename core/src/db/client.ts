@@ -96,7 +96,8 @@ export const CREATE_TABLES_SQL = `
 
   CREATE TABLE IF NOT EXISTS images (
     id TEXT PRIMARY KEY,
-    hash TEXT,
+    source_hash TEXT,
+    compressed_hash TEXT,
     local_path TEXT NOT NULL,
     mime_type TEXT,
     size INTEGER,
@@ -117,7 +118,8 @@ export const CREATE_TABLES_SQL = `
   CREATE INDEX IF NOT EXISTS idx_tasks_completed ON tasks(completed);
   CREATE INDEX IF NOT EXISTS idx_note_metadata_updated_at ON note_metadata(updated_at);
   CREATE INDEX IF NOT EXISTS idx_note_metadata_folder_id ON note_metadata(folder_id);
-  CREATE INDEX IF NOT EXISTS idx_images_hash ON images(hash);
+  CREATE INDEX IF NOT EXISTS idx_images_source_hash ON images(source_hash);
+  CREATE INDEX IF NOT EXISTS idx_images_compressed_hash ON images(compressed_hash);
   CREATE INDEX IF NOT EXISTS idx_version_images_version_id ON version_images(version_id);
   CREATE INDEX IF NOT EXISTS idx_version_images_image_id ON version_images(image_id);
   
@@ -152,7 +154,9 @@ export async function initDatabase(nativeDb: { execAsync: (sql: string) => Promi
           nonce TEXT NOT NULL,
           user_id TEXT NOT NULL,
           created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
-        );`
+        );`,
+        'ALTER TABLE images RENAME COLUMN hash TO source_hash;',
+        'ALTER TABLE images ADD COLUMN compressed_hash TEXT;'
       ];
 
       for (const query of migrations) {
@@ -257,7 +261,7 @@ export async function deleteDatabase(): Promise<void> {
   try {
     // 1. Stop background sync activity
     SyncScheduler.instance?.dispose();
-    
+
     // Yield to let any pending SQLite operations finish
     await new Promise(resolve => setTimeout(resolve, 100));
 

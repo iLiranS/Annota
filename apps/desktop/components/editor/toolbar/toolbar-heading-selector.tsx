@@ -11,7 +11,6 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import type { EditorState, ToolbarRenderProps } from '@annota/editor-ui';
-import { ChevronDown } from 'lucide-react';
 
 interface HeadingSelectorProps {
     editorState: EditorState;
@@ -69,15 +68,16 @@ export function HeadingSelector({ editorState, sendCommand, onOpenChange, isMenu
                 <Button
                     variant="ghost"
                     size="sm"
-                    className="h-9 w-13 justify-between gap-1 px-3 font-bold"
+                    className="h-9 w-12 px-3 font-bold"
                     style={{
                         color: currentHeadingLabel !== 'T' ? activeColor : undefined,
+                        opacity: currentHeadingLabel !== 'T' ? 1 : 0.7,
                         backgroundColor: currentHeadingLabel !== 'T' && activeColor ? `${activeColor}15` : undefined,
-                        borderRadius: currentHeadingLabel !== 'T' ? '8px' : undefined
+                        borderRadius: currentHeadingLabel !== 'T' ? '8px' : undefined,
+                        transition: 'opacity 0.2s ease, background-color 0.2s ease'
                     }}
                 >
                     {currentHeadingLabel}
-                    <ChevronDown className="w-4 h-4 opacity-50" />
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuPortal>

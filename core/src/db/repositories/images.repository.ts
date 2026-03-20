@@ -1,4 +1,4 @@
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, or, sql } from 'drizzle-orm';
 import { getDb } from '../../stores/db.store';
 import type { DownloadQueueInsert, DownloadQueueRecord, ImageInsert, ImageRecord } from '../schema';
 import { imageDownloadQueue, images, noteVersions, versionImages } from '../schema';
@@ -24,8 +24,15 @@ export async function getImageByLocalPath(localPath: string, tx: DbOrTx = getDb(
     return safeResult;
 }
 
-export async function getImageByHash(hash: string, tx: DbOrTx = getDb()): Promise<ImageRecord | null> {
-    const result = await tx.select().from(images).where(eq(images.hash, hash)).get();
+export async function getImageByAnyHash(hash: string, tx: DbOrTx = getDb()): Promise<ImageRecord | null> {
+    const result = await tx.select().from(images)
+        .where(
+            or(
+                eq(images.sourceHash, hash),
+                eq(images.compressedHash, hash)
+            )
+        )
+        .get();
     const safeResult = safeGet<ImageRecord>(result);
     if (!safeResult || !safeResult.id) return null;
     return safeResult;

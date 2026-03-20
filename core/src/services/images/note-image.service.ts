@@ -36,21 +36,26 @@ function getExtensionFromMime(base64: string): string {
  * Handles temporary storage, processing (resize/hash), and DB insertion.
  */
 export async function saveNoteImage(noteId: string, base64: string): Promise<{ id: string, url: string }> {
-    const extension = getExtensionFromMime(base64);
-    const base64Data = base64.replace(/^data:image\/\w+;base64,/, "");
-    const rawBytes = Buffer.from(base64Data, 'base64');
-    const adapters = getPlatformAdapters();
-    const cacheDir = await adapters.fileSystem.ensureDir('cache');
-    const tempPath = `${cacheDir}/pasted-${Date.now()}.${extension}`;
-    await adapters.fileSystem.writeBytes(tempPath, new Uint8Array(rawBytes));
+    try {
 
-    const processed = await processAndInsertImage(noteId, tempPath);
-    const imageMap = await resolveImageSources([processed.imageId]);
+        const extension = getExtensionFromMime(base64);
+        const base64Data = base64.replace(/^data:image\/\w+;base64,/, "");
+        const rawBytes = Buffer.from(base64Data, 'base64');
+        const adapters = getPlatformAdapters();
+        const cacheDir = await adapters.fileSystem.ensureDir('cache');
+        const tempPath = `${cacheDir}/pasted-${Date.now()}.${extension}`;
+        await adapters.fileSystem.writeBytes(tempPath, new Uint8Array(rawBytes));
 
-    return {
-        id: processed.imageId,
-        url: imageMap[processed.imageId]
-    };
+        const processed = await processAndInsertImage(noteId, tempPath);
+        const imageMap = await resolveImageSources([processed.imageId]);
+        return {
+            id: processed.imageId,
+            url: imageMap[processed.imageId]
+        };
+    } catch (err) {
+        console.error("[NoteImageService] Failed to save note image:", err);
+        throw err;
+    }
 }
 
 // ============ IMAGE PROCESSING PIPELINE ============
@@ -79,31 +84,35 @@ export async function processAndInsertImage(
         }
     }
 
-    // 1. Compute hash of the ORIGINAL source image first
-    const hash = await computeHash(sourceUri);
+    // 1. Compute hash of the INCOMING image (Could be original OR a pasted temp file)
+    const incomingHash = await computeHash(sourceUri);
 
-    // 2. Check for duplicate early!
-    const existing = await ImagesRepo.getImageByHash(hash);
+    // 2. Check for duplicate against BOTH hashes
+    const existing = await ImagesRepo.getImageByAnyHash(incomingHash);
     if (existing) {
-        console.log('Image already exists:', existing.id);
+        console.log('Image already exists (matched by hash):', existing.id);
         return { imageId: existing.id, isNew: false };
     }
 
     // 3. ONLY Resize and compress if it's a brand new image
     const resized = await resizeAndCompress(sourceUri);
 
-    // 4. Generate new ID and save file
+    // 4. Compute the hash of the COMPRESSED image
+    const compressedHash = await computeHash(resized.uri);
+
+    // 5. Generate new ID and save file
     const imageId = Buffer.from(getPlatformAdapters().crypto.randomBytes(16)).toString('hex');
     const fullPath = await saveToLocalStorage(resized.uri, imageId);
     const filename = fullPath.split('/').pop() || fullPath;
 
-    // 5. Get file size
+    // 6. Get file size
     const size = await getFileSize(fullPath);
 
-    // 6. Insert into DB (using the original source hash)
+    // 7. Insert into DB tracking BOTH hashes
     await ImagesRepo.insertImage({
         id: imageId,
-        hash, // This hash is now truly universal across platforms
+        sourceHash: incomingHash,     // Hash of what the user selected/pasted
+        compressedHash: compressedHash, // Hash of the final WebP
         localPath: filename,
         mimeType: 'image/webp',
         size: size ?? null,

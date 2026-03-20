@@ -99,8 +99,10 @@ export function ColorPicker({
                     title={title}
                     style={{
                         color: currentColor || undefined,
+                        opacity: currentColor ? 1 : 0.7,
                         backgroundColor: currentColor && activeColor ? `${activeColor}15` : undefined,
-                        borderRadius: currentColor ? '8px' : undefined
+                        borderRadius: currentColor ? '8px' : undefined,
+                        transition: 'opacity 0.2s ease, background-color 0.2s ease'
                     }}
                 >
                     <Icon className="w-5 h-5" />

@@ -203,8 +203,10 @@ export function LinkPopover({
                     className="h-9 w-9 shrink-0"
                     style={{
                         color: isActive ? activeColor : undefined,
+                        opacity: isActive ? 1 : 0.7,
                         backgroundColor: isActive && activeColor ? `${activeColor}15` : undefined,
-                        borderRadius: isActive ? '8px' : undefined
+                        borderRadius: isActive ? '8px' : undefined,
+                        transition: 'opacity 0.2s ease, background-color 0.2s ease'
                     }}
                 >
                     <Icon className="w-5 h-5" />

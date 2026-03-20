@@ -294,9 +294,10 @@ export function ImageGallery({
 
     const doubleTapGesture = Gesture.Tap()
         .numberOfTaps(2)
-        .onStart(() => {
+        .onStart((e) => {
             'worklet';
             if (scale.value > 1) {
+                // Zoom out — reset to center
                 scale.value = withSpring(1);
                 savedScale.value = 1;
                 translateX.value = withSpring(0);
@@ -304,8 +305,26 @@ export function ImageGallery({
                 savedTranslateX.value = 0;
                 savedTranslateY.value = 0;
             } else {
-                scale.value = withSpring(2.5);
-                savedScale.value = 2.5;
+                // Zoom in toward the tapped point
+                const targetScale = 2.5;
+
+                // e.localX/Y are relative to the gesture view (screen coords).
+                // We need to shift so the tapped point stays fixed after scaling.
+                // Formula: translate = (center - tapPoint) * (targetScale - 1)
+                const sw = screenWidthSV.value;
+                const sh = screenHeightSV.value;
+
+                const offsetX = (sw / 2 - e.x) * (targetScale - 1);
+                const offsetY = (sh / 2 - e.y) * (targetScale - 1);
+
+                const clamped = clampTranslate(offsetX, offsetY, targetScale);
+
+                scale.value = withSpring(targetScale);
+                savedScale.value = targetScale;
+                translateX.value = withSpring(clamped.x);
+                translateY.value = withSpring(clamped.y);
+                savedTranslateX.value = clamped.x;
+                savedTranslateY.value = clamped.y;
             }
         });
 

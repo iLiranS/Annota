@@ -87,7 +87,8 @@ export const tags = sqliteTable('tags', {
 // ============ IMAGES ============
 export const images = sqliteTable('images', {
     id: text('id').primaryKey(),
-    hash: text('hash'),
+    sourceHash: text('source_hash'),
+    compressedHash: text('compressed_hash'),
     localPath: text('local_path').notNull(),
     mimeType: text('mime_type'),
     size: integer('size'),

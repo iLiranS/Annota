@@ -66,7 +66,7 @@ import {
   useTasksStore
 } from '@annota/core';
 import { SyncScheduler, getMasterKey, initPlatformAdapters } from '@annota/core/platform';
-import { createMobileAdapters } from './bootstrap/mobile-adapters';
+import { createMobileAdapters } from '../bootstrap/mobile-adapters';
 
 
 setStorageEngine(AsyncStorage);

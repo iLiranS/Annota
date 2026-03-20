@@ -79,8 +79,10 @@ export function DesktopToolbar({
 
     const activeStyle = useCallback((active: boolean) => ({
         color: active ? colors.primary : undefined,
+        opacity: active ? 1 : 0.7,
         backgroundColor: active ? `${colors.primary}15` : undefined,
-        borderRadius: '8px'
+        borderRadius: '8px',
+        transition: 'opacity 0.2s ease, background-color 0.2s ease'
     }), [colors.primary]);
 
     const items: ToolbarItem[] = React.useMemo(() => [
@@ -203,9 +205,9 @@ export function DesktopToolbar({
                     variant="ghost"
                     size="icon"
                     className={cn(
-                        "h-9 w-9 shrink-0 hover:bg-accent/50 transition-colors",
-                        activePopup === 'math' && "text-primary bg-primary/10"
+                        "h-9 w-9 shrink-0 hover:bg-accent/50 transition-colors"
                     )}
+                    style={activeStyle(activePopup === 'math')}
                     onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -302,12 +304,12 @@ export function DesktopToolbar({
         const rowContentWidth = rowEl.clientWidth - paddingLeft - paddingRight;
         if (rowContentWidth <= 0) return;
 
-        const HEADING_WIDTH = 52; // w-13
+        const HEADING_WIDTH = 48; // w-12
         const ITEM_WIDTH = 36; // w-9
         const ITEM_GAP = 2; // gap-0.5
         const RIGHT_GROUP_WIDTH = 74; // undo + redo + gap
         const RIGHT_GROUP_WITH_OVERFLOW = 112; // overflow + undo + redo + gaps
-        const ROW_GAP_COUNT = 2; // items->spacer, spacer->right group
+        const ROW_GAP_COUNT = 2; // items->spacer, spacer->right group  
 
         const itemsWidthFor = (count: number) => {
             if (count <= 0) return 0;
@@ -340,37 +342,38 @@ export function DesktopToolbar({
     }, [itemsLength]);
 
     useEffect(() => {
+        const rowEl = rowRef.current;
+        if (!rowEl) return;
+
         const observer = new ResizeObserver(() => {
-            recomputeVisibleCount();
+            // Use requestAnimationFrame to ensure DOM styles have settled
+            requestAnimationFrame(recomputeVisibleCount);
         });
 
-        if (containerRef.current) observer.observe(containerRef.current);
-        return () => observer.disconnect();
-    }, [recomputeVisibleCount]);
-
-    useEffect(() => {
-        recomputeVisibleCount();
-    }, [recomputeVisibleCount, itemsLength, visibleCount]);
-
-    useEffect(() => {
-        const handleVisibility = () => {
-            if (document.visibilityState === 'visible') {
-                requestAnimationFrame(recomputeVisibleCount);
+        if (containerRef.current) {
+            observer.observe(containerRef.current);
+            // Also observe parent to catch layout shifts (like sidebars opening)
+            // even if the toolbar's own width didn't change due to max-width
+            if (containerRef.current.parentElement) {
+                observer.observe(containerRef.current.parentElement);
             }
-        };
+        }
 
-        const handleFocus = () => {
+        const handleLayoutChange = () => {
             requestAnimationFrame(recomputeVisibleCount);
+            // Sidebars often have transitions, so we check again after they likely finish
+            setTimeout(() => requestAnimationFrame(recomputeVisibleCount), 300);
         };
 
-        window.addEventListener('resize', handleFocus);
-        window.addEventListener('focus', handleFocus);
-        document.addEventListener('visibilitychange', handleVisibility);
+        window.addEventListener('resize', handleLayoutChange);
+        window.addEventListener('focus', handleLayoutChange);
+        window.addEventListener('annota-toggle-main-sidebar', handleLayoutChange as EventListener);
 
         return () => {
-            window.removeEventListener('resize', handleFocus);
-            window.removeEventListener('focus', handleFocus);
-            document.removeEventListener('visibilitychange', handleVisibility);
+            observer.disconnect();
+            window.removeEventListener('resize', handleLayoutChange);
+            window.removeEventListener('focus', handleLayoutChange);
+            window.removeEventListener('annota-toggle-main-sidebar', handleLayoutChange as EventListener);
         };
     }, [recomputeVisibleCount]);
 
@@ -455,7 +458,7 @@ export function DesktopToolbar({
                         >
                             <TooltipTrigger asChild>
                                 <div className="flex shrink-0">
-                                    <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('undo')} disabled={!editorState.canUndo}>
+                                    <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('undo')} disabled={!editorState.canUndo} style={activeStyle(false)}>
                                         <Undo className="w-5 h-5" />
                                     </Button>
                                 </div>
@@ -472,7 +475,7 @@ export function DesktopToolbar({
                         >
                             <TooltipTrigger asChild>
                                 <div className="flex shrink-0">
-                                    <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('redo')} disabled={!editorState.canRedo}>
+                                    <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('redo')} disabled={!editorState.canRedo} style={activeStyle(false)}>
                                         <Redo className="w-5 h-5" />
                                     </Button>
                                 </div>

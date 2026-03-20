@@ -410,6 +410,34 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
             const handleGlobalPaste = async (e: ClipboardEvent) => {
                 if (!noteId || !editorRef.current) return;
 
+                // 1. CHECK FOR INTERNAL HTML FIRST
+                const htmlContent = e.clipboardData?.getData('text/html');
+
+                // Check if the HTML contains your custom local URI scheme (e.g., asset:// or a custom data attribute)
+                if (htmlContent && (htmlContent.includes('asset://') || htmlContent.includes('data-image-id'))) {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(htmlContent, 'text/html');
+                    const imgElement = doc.querySelector('img');
+
+                    if (imgElement && imgElement.src) {
+                        console.log("Internal DOM copy detected! Bypassing binary upload.");
+                        e.preventDefault();
+                        e.stopPropagation();
+
+                        // Extract the ID from either your custom data attribute or parse it from the src URL
+                        const imageId = imgElement.getAttribute('data-image-id') ||
+                            imgElement.src.split(/[\/\\]/).pop()?.split('.')[0] ||
+                            'unknown-id';
+
+                        handleCommand('insertLocalImage', {
+                            imageId: imageId,
+                            src: imgElement.src
+                        });
+                        return; // STOP execution. Do not upload the mangled binary!
+                    }
+                }
+
+                // 2. FALLBACK TO BINARY UPLOAD (For external images from the web or OS)
                 const items = e.clipboardData?.items;
                 if (!items) return;
 
@@ -417,30 +445,22 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                 for (let i = 0; i < items.length; i++) {
                     if (items[i].type.startsWith('image/')) {
                         imageFile = items[i].getAsFile();
-                        break;
+                        if (imageFile) break;
                     }
                 }
 
-                // If it's an image, hijack the event!
                 if (imageFile) {
-                    // 1. Stop TipTap from ever seeing this paste
+                    console.log("External binary paste detected. Uploading...");
                     e.preventDefault();
                     e.stopPropagation();
 
-                    // 2. Read the file to Base64
                     const reader = new FileReader();
                     reader.onload = async (event) => {
                         const base64 = event.target?.result as string;
                         if (base64) {
                             try {
-                                // 3. Upload it exactly like the Toolbar does
                                 const { id, url } = await NoteImageService.saveNoteImage(noteId, base64);
-
-                                // 4. Safely insert the final local URL into the editor
-                                handleCommand('insertLocalImage', {
-                                    imageId: id,
-                                    src: url
-                                });
+                                handleCommand('insertLocalImage', { imageId: id, src: url });
                             } catch (err) {
                                 console.error('[EditorDom] Global paste upload failed:', err);
                             }
@@ -450,8 +470,6 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                 }
             };
 
-            // Use capture: true to intercept the event on the way DOWN the DOM tree, 
-            // guaranteeing we catch it before TipTap does!
             document.addEventListener('paste', handleGlobalPaste, { capture: true });
 
             return () => {

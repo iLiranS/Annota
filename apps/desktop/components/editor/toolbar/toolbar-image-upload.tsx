@@ -170,7 +170,9 @@ export function ToolbarImageUpload({ onInsertImage, onOpenChange, isMenu, visibl
                 size="icon"
                 className="h-9 w-9 shrink-0 outline-none"
                 style={{
-                    borderRadius: '8px'
+                    borderRadius: '8px',
+                    opacity: 0.7,
+                    transition: 'opacity 0.2s ease, background-color 0.2s ease'
                 }}
             >
                 <ImageIcon className="w-5 h-5" />

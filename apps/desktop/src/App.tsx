@@ -81,6 +81,7 @@ function App() {
     let cancelled = false;
 
     const bootstrap = async () => {
+
       setBootstrapState("booting");
       setBootstrapError(null);
 
