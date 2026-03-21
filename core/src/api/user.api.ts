@@ -36,11 +36,9 @@ export const userApi = {
 
 
     /** Delete all of the user's encrypted data from the remote database (used when resetting keys) */
-    wipeEncryptedData: async (userId: string) => {
-        // Calls the RPC with delete_user = false
-        const { error } = await supabase.rpc('wipe_user_data', {
-            user_id_param: userId,
-            delete_user: false
+    wipeEncryptedData: async () => {
+        const { error } = await supabase.functions.invoke('manage-user-data', {
+            body: { action: 'reset_data' }
         });
 
         if (error) {
@@ -49,11 +47,9 @@ export const userApi = {
         }
     },
 
-    deleteUserAccount: async (userId: string) => {
-        // Calls the RPC with delete_user = true
-        const { error } = await supabase.rpc('wipe_user_data', {
-            user_id_param: userId,
-            delete_user: true
+    deleteUserAccount: async () => {
+        const { error } = await supabase.functions.invoke('manage-user-data', {
+            body: { action: 'delete_account' }
         });
 
         if (error) {
@@ -61,7 +57,7 @@ export const userApi = {
             throw error;
         }
 
-        // Clean up the local auth session after the database nukes the account
+        // Clean up the local auth session
         await supabase.auth.signOut();
     },
 

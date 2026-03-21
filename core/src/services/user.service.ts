@@ -18,7 +18,7 @@ export const userService = {
         const newMnemonic = await generateMasterKey();
 
         // Wipe cloud encrypted data
-        await userApi.wipeEncryptedData(userId);
+        await userApi.wipeEncryptedData();
 
         // Store new key and update validator
         await storeMasterKey(userId, newMnemonic);
@@ -43,7 +43,7 @@ export const userService = {
      */
     setupMasterKey: async (userId: string, mnemonic: string, wipeExisting: boolean): Promise<void> => {
         if (wipeExisting) {
-            await userApi.wipeEncryptedData(userId);
+            await userApi.wipeEncryptedData();
         }
         await storeMasterKey(userId, mnemonic);
         const hash = await hashMasterKey(mnemonic);
@@ -89,6 +89,6 @@ export const userService = {
         return await userApi.getSubscriptionExpiryDate(userId);
     },
     deleteAccount: async (userId: string) => {
-        await userApi.deleteUserAccount(userId);
+        await userApi.deleteUserAccount();
     }
 };
