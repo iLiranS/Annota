@@ -1,8 +1,9 @@
 import { useSettingsStore } from '@annota/core';
-import { NoteImageService } from '@annota/core/platform';
+import { NoteFileService } from '@annota/core/platform';
 import editorHtml from '@annota/editor-core/dist/editor-html';
 import { useKeyboard } from '@react-native-community/hooks';
 import { useTheme } from '@react-navigation/native';
+import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
@@ -76,10 +77,10 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
         }, []);
 
         const sendMessage = useCallback((command: string, params: Record<string, any>) => {
-            if (['openMathModal', 'openImageModal', 'openLinkModal', 'openYoutubeModal'].includes(command)) {
+            if (['openMathModal', 'openFileModal', 'openLinkModal', 'openYoutubeModal'].includes(command)) {
                 switch (command) {
                     case 'openMathModal': setCurrentLatex(null); setActivePopup('math'); setIsPopupOpen(true); return;
-                    case 'openImageModal': setActivePopup('image'); setIsPopupOpen(true); return;
+                    case 'openFileModal': setActivePopup('file'); setIsPopupOpen(true); return;
                     case 'openLinkModal': setActivePopup('link'); setIsPopupOpen(true); return;
                     case 'openYoutubeModal': setActivePopup('youtube'); setIsPopupOpen(true); return;
                 }
@@ -107,9 +108,10 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
         const onBridgeMessage = useCallback((type: string, data: any) => {
             switch (type) {
                 case 'openImageMenu':
+                case 'openOpenFileMenu':
                 case 'openBlockMenu':
                     setBlockData(data);
-                    setActivePopup(type === 'openImageMenu' ? 'imageMenu' : 'blockMenu');
+                    setActivePopup(type === 'openBlockMenu' ? 'blockMenu' : 'fileMenu');
                     setIsPopupOpen(true);
                     break;
                 case 'scrollToNative':
@@ -132,6 +134,18 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                     if (props.onImageSelected) {
                         props.onImageSelected(data);
                     }
+                    break;
+                case 'openFile':
+                    (async () => {
+                        try {
+                            const { FileService, getPlatformAdapters } = require('@annota/core/platform');
+                            const absoluteUri = await FileService.resolveLocalUri(data.localPath);
+                            const adapters = getPlatformAdapters();
+                            await adapters.fileSystem.openFile(absoluteUri, data.mimeType);
+                        } catch (err) {
+                            console.error("[EditorNative] Failed to open file:", err);
+                        }
+                    })();
                     break;
                 case 'slashCommand':
                     if (props.onSlashCommand) {
@@ -207,31 +221,61 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
             scrollToElement: (id) => dispatchCommand('scrollToElement', { id }),
         }), [dispatchCommand]);
 
-        const handleInsertImage = useCallback(async (source: 'url' | 'library' | 'camera', value?: string) => {
+        const handleInsertFile = useCallback(async (source: 'url' | 'library' | 'camera' | 'document', value?: string) => {
             if (!noteId) return false;
             try {
-                let imageUri: string | undefined;
+                let fileUri: string | undefined;
                 if (source === 'library') {
                     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 1 });
-                    if (!result.canceled) imageUri = result.assets[0].uri;
+                    if (!result.canceled) fileUri = result.assets[0].uri;
                 } else if (source === 'camera') {
                     const result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 1 });
-                    if (!result.canceled) imageUri = result.assets[0].uri;
+                    if (!result.canceled) fileUri = result.assets[0].uri;
+                } else if (source === 'document') {
+                    const result = await DocumentPicker.getDocumentAsync({
+                        type: ['application/pdf', 'image/*'],
+                        copyToCacheDirectory: true
+                    });
+                    if (!result.canceled) {
+                        fileUri = result.assets[0].uri;
+                    }
                 } else if (source === 'url' && value) {
-                    const processed = await NoteImageService.processRemoteImage(noteId, value);
-                    const imageMap = await NoteImageService.resolveImageSources([processed.imageId]);
-                    dispatchCommand('insertLocalImage', { imageId: processed.imageId, src: imageMap[processed.imageId] });
+
+                    const processed = await NoteFileService.processRemoteFile(noteId, value);
+                    const fileMap = await NoteFileService.resolveFileSources([processed.fileId]);
+                    if (processed.mimeType === 'application/pdf') {
+                        dispatchCommand('insertFileAttachment', {
+                            fileId: processed.fileId,
+                            fileName: processed.fileName,
+                            fileSize: processed.fileSize,
+                            localPath: processed.localPath,
+                            mimeType: processed.mimeType
+                        });
+                    } else {
+                        dispatchCommand('insertLocalImage', { imageId: processed.fileId, src: fileMap[processed.fileId] });
+                    }
                     return true;
                 }
 
-                if (imageUri) {
-                    const processed = await NoteImageService.processAndInsertImage(noteId, imageUri);
-                    const imageMap = await NoteImageService.resolveImageSources([processed.imageId]);
-                    dispatchCommand('insertLocalImage', { imageId: processed.imageId, src: imageMap[processed.imageId] });
+                if (fileUri) {
+                    const processed = await NoteFileService.processAndInsertFile(noteId, fileUri);
+                    const fileMap = await NoteFileService.resolveFileSources([processed.fileId]);
+                    if (processed.mimeType === 'application/pdf') {
+                        dispatchCommand('insertFileAttachment', {
+                            fileId: processed.fileId,
+                            fileName: processed.fileName,
+                            fileSize: processed.fileSize,
+                            localPath: processed.localPath,
+                            mimeType: processed.mimeType
+                        });
+                    } else {
+                        dispatchCommand('insertLocalImage', { imageId: processed.fileId, src: fileMap[processed.fileId] });
+                    }
                     return true;
                 }
                 return false;
             } catch (err) {
+                console.error("[EditorNative] File insert failed:", err);
                 return false;
             }
         }, [noteId, dispatchCommand]);
@@ -242,9 +286,9 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
             if (isReady && initialContent) {
                 const imageIds = extractImageIds(initialContent);
                 if (imageIds.length > 0) {
-                    NoteImageService.resolveImageSources(imageIds).then((imageMap: any) => {
-                        if (Object.keys(imageMap).length > 0) {
-                            dispatchCommand('resolveImages', { imageMap });
+                    NoteFileService.resolveFileSources(imageIds).then((fileMap: any) => {
+                        if (Object.keys(fileMap).length > 0) {
+                            dispatchCommand('resolveImages', { imageMap: fileMap });
                         }
                     });
                 }
@@ -297,7 +341,7 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                             activePopup,
                             onActivePopupChange: (type) => { setActivePopup(type); setIsPopupOpen(!!type); },
                             onPopupStateChange: (isOpen) => { if (!isOpen) setIsPopupOpen(false); },
-                            onInsertImage: handleInsertImage,
+                            onInsertFile: handleInsertFile,
                             currentLatex,
                             blockData,
                             onInsertMath: () => { setActivePopup('math'); setIsPopupOpen(true); }

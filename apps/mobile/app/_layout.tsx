@@ -1,4 +1,4 @@
-import { imageSyncService } from '@annota/core';
+import { fileSyncService } from '@annota/core';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ThemeProvider } from '@react-navigation/native';
 import { drizzle } from 'drizzle-orm/expo-sqlite';
@@ -334,9 +334,9 @@ export default function RootLayout() {
         }
       }, session.user.id);
 
-      // 2. Kick off any pending image downloads from previous sessions
-      imageSyncService.retryPendingDownloads(key, session.user.id).catch((err: any) => {
-        console.error('[Startup] Failed to retry pending image downloads:', err);
+      // 2. Kick off any pending file downloads from previous sessions
+      fileSyncService.retryPendingDownloads(key, session.user.id).catch((err: any) => {
+        console.error('[Startup] Failed to retry pending files downloads:', err);
       });
     });
     return () => {

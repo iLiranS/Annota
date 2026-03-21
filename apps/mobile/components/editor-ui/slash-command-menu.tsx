@@ -28,7 +28,7 @@ const MobileIconMap: Record<string, keyof typeof MaterialIcons.glyphMap> = {
     'details': 'post-add',
     'plus': 'add',
     'math': 'functions',
-    'image': 'image',
+    'file': 'attach-file',
     'link': 'link',
     'youtube': 'smart-display',
     'table': 'table-chart',

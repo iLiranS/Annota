@@ -19,10 +19,10 @@ export default function StorageSettings() {
     const { user } = useAuthStore();
     const { colors } = useAppTheme();
     const [stats, setStats] = useState<{
-        totalImages: number;
+        totalFiles: number;
         totalLinks: number;
         orphans: number;
-        totalImagesSize: number;
+        totalFilesSize: number;
         totalNotes: number;
         totalTasks: number;
         totalFolders: number;
@@ -66,18 +66,18 @@ export default function StorageSettings() {
         }
         Alert.alert(
             "Run Garbage Collection?",
-            "This will delete all images that are not referenced by any note version. This cannot be undone.",
+            "This will delete all files that are not referenced by any note version. This cannot be undone.",
             [
                 { text: "Cancel", style: "cancel" },
                 {
-                    text: "Delete Unused Images",
+                    text: "Delete Unused Files",
                     style: "destructive",
                     onPress: () => {
                         setIsLoading(true);
                         setTimeout(async () => {
                             try {
                                 const count = await StorageService.runGarbageCollection(true); // Force clean
-                                Alert.alert("Cleanup Complete", `Deleted ${count} unused images.`);
+                                Alert.alert("Cleanup Complete", `Deleted ${count} unused Files.`);
                                 await loadStats();
                             } catch (e) {
                                 Alert.alert("Error", "Failed to clean storage.");
@@ -148,7 +148,7 @@ export default function StorageSettings() {
     const handleResetDatabase = async () => {
         Alert.alert(
             "Reset Local Database?",
-            "This will completely erase all local notes, tasks, and images from your device. If you haven't synced, they will be lost forever.",
+            "This will completely erase all local notes, tasks, and files from your device. If you haven't synced, they will be lost forever.",
             [
                 { text: "Cancel", style: "cancel" },
                 {
@@ -218,11 +218,11 @@ export default function StorageSettings() {
                 </View>
                 <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
                     <SettingItem
-                        label="Images Size"
-                        description="Physical image files on device"
-                        icon="images"
+                        label="Files Size"
+                        description="Physical files on device"
+                        icon="file-tray-full"
                         iconBg="#3b82f6"
-                        value={stats ? formatBytes(stats.totalImagesSize) : '...'}
+                        value={stats ? formatBytes(stats.totalFilesSize) : '...'}
                         colors={colors}
                     />
                     <Divider colors={colors} />
@@ -275,10 +275,10 @@ export default function StorageSettings() {
                     />
                     <Divider colors={colors} />
                     <SettingItem
-                        label="Total Images"
-                        icon="image"
+                        label="Total Files"
+                        icon="file-tray-full"
                         iconBg="#10b981"
-                        value={stats?.totalImages ?? '...'}
+                        value={stats?.totalFiles ?? '...'}
                         colors={colors}
                     />
                 </View>
@@ -313,7 +313,7 @@ export default function StorageSettings() {
                     )}
                     <SettingItem
                         label="Shrink Database"
-                        description="Remove unused images (GC)"
+                        description="Remove unused files (GC)"
                         icon="trash-bin-outline"
                         iconBg={colors.primary}
                         onPress={handleGC}

@@ -14,22 +14,22 @@ import { cn } from '@/lib/utils';
 import { getPlatformAdapters } from '@annota/core/platform';
 import { join } from '@tauri-apps/api/path';
 import {
-    Image as ImageIcon,
+    FileUp as FileIcon,
     Link as LinkIcon,
     Loader2,
     UploadCloud as Upload
 } from 'lucide-react';
 import React, { useCallback, useRef, useState } from 'react';
 
-interface ToolbarImageUploadProps {
-    onInsertImage: (source: 'url' | 'library', value?: string) => Promise<boolean>;
+interface ToolbarFileUploadProps {
+    onInsertFile: (source: 'url' | 'library', value?: string) => Promise<boolean>;
     onOpenChange?: (open: boolean) => void;
     isMenu?: boolean;
     visible?: boolean;
     onClose?: () => void;
 }
 
-export function ToolbarImageUpload({ onInsertImage, onOpenChange, isMenu, visible, onClose }: ToolbarImageUploadProps) {
+export function ToolbarFileUpload({ onInsertFile, onOpenChange, isMenu, visible, onClose }: ToolbarFileUploadProps) {
     const [open, setOpen] = useState(false);
 
     // Sync with visible prop if provided
@@ -61,14 +61,14 @@ export function ToolbarImageUpload({ onInsertImage, onOpenChange, isMenu, visibl
         if (!url) return;
         setIsLoading(true);
         try {
-            const success = await onInsertImage('url', url);
+            const success = await onInsertFile('url', url);
             if (success) {
                 handleOpenChange(false);
             }
         } finally {
             setIsLoading(false);
         }
-    }, [url, onInsertImage, handleOpenChange]);
+    }, [url, onInsertFile, handleOpenChange]);
 
     const processFile = useCallback(async (file: File) => {
         setIsLoading(true);
@@ -83,20 +83,20 @@ export function ToolbarImageUpload({ onInsertImage, onOpenChange, isMenu, visibl
 
             await adapters.fileSystem.writeBytes(tempPath, bytes);
 
-            const success = await onInsertImage('library', tempPath);
+            const success = await onInsertFile('library', tempPath);
             if (success) {
                 handleOpenChange(false);
             }
 
-            // Cleanup temp file (NoteImageService handles persisting to real storage)
+            // Cleanup temp file (NoteFileService handles persisting to real storage)
             await adapters.fileSystem.deleteFile(tempPath).catch(() => { });
         } catch (error) {
-            console.error('[ToolbarImageUpload] Failed to process file:', error);
+            console.error('[ToolbarFileUpload] Failed to process file:', error);
         } finally {
             setIsLoading(false);
             if (fileInputRef.current) fileInputRef.current.value = '';
         }
-    }, [onInsertImage, handleOpenChange]);
+    }, [onInsertFile, handleOpenChange]);
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -145,7 +145,7 @@ export function ToolbarImageUpload({ onInsertImage, onOpenChange, isMenu, visibl
             file = e.dataTransfer.files[0];
         }
 
-        if (file && file.type.startsWith('image/')) {
+        if (file && (file.type.startsWith('image/') || file.type === 'application/pdf')) {
             await processFile(file);
             return;
         }
@@ -160,8 +160,8 @@ export function ToolbarImageUpload({ onInsertImage, onOpenChange, isMenu, visibl
 
     const trigger = isMenu ? (
         <DropdownMenuItem onSelect={(e) => e.preventDefault()} onClick={() => setOpen(true)} className="gap-2">
-            <ImageIcon className="w-4 h-4" />
-            <span>Image</span>
+            <FileIcon className="w-4 h-4" />
+            <span>File</span>
         </DropdownMenuItem>
     ) : (
         <DialogTrigger asChild>
@@ -175,7 +175,7 @@ export function ToolbarImageUpload({ onInsertImage, onOpenChange, isMenu, visibl
                     transition: 'opacity 0.2s ease, background-color 0.2s ease'
                 }}
             >
-                <ImageIcon className="w-5 h-5" />
+                <FileIcon className="w-5 h-5" />
             </Button>
         </DialogTrigger>
     );
@@ -191,8 +191,8 @@ export function ToolbarImageUpload({ onInsertImage, onOpenChange, isMenu, visibl
             >
                 <DialogHeader className="p-4 pb-2 border-b border-border/50">
                     <DialogTitle className="text-lg font-semibold flex items-center gap-2">
-                        <ImageIcon className="w-5 h-5 text-primary" />
-                        Insert Image
+                        <FileIcon className="w-5 h-5 text-primary" />
+                        Insert File
                     </DialogTitle>
                 </DialogHeader>
 
@@ -237,7 +237,7 @@ export function ToolbarImageUpload({ onInsertImage, onOpenChange, isMenu, visibl
                                 type="file"
                                 ref={fileInputRef}
                                 className="hidden"
-                                accept="image/*"
+                                accept="image/*,application/pdf"
                                 onChange={handleFileChange}
                                 disabled={isLoading}
                             />
@@ -245,24 +245,24 @@ export function ToolbarImageUpload({ onInsertImage, onOpenChange, isMenu, visibl
                             {isLoading ? (
                                 <div className="flex flex-col items-center gap-2">
                                     <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                                    <p className="text-sm font-medium text-muted-foreground">Processing image...</p>
+                                    <p className="text-sm font-medium text-muted-foreground">Processing file...</p>
                                 </div>
                             ) : (
                                 <>
                                     <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                                         <Upload className="h-6 w-6 text-primary" />
                                     </div>
-                                    <p className="text-sm font-medium">Click or drag image here</p>
-                                    <p className="text-xs text-muted-foreground mt-1 text-center">We'll automatically compress it to WEBP</p>
+                                    <p className="text-sm font-medium">Click or drag file here</p>
+                                    <p className="text-xs text-muted-foreground mt-1 text-center">Images are compressed; PDFs are kept original</p>
                                 </>
                             )}
                         </div>
                     ) : (
                         <div className="space-y-4 py-2">
                             <div className="space-y-2">
-                                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Paste Image URL</label>
+                                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Paste File URL</label>
                                 <Input
-                                    placeholder="https://example.com/image.png"
+                                    placeholder="https://example.com/file.png"
                                     value={url}
                                     onChange={(e) => setUrl(e.target.value)}
                                     className="h-10 transition-all border-muted focus-visible:ring-primary/20"
@@ -297,7 +297,7 @@ export function ToolbarImageUpload({ onInsertImage, onOpenChange, isMenu, visibl
                             <Upload className="h-8 w-8 text-primary" />
                         </div>
                         <p className="text-lg font-bold text-primary">Drop to Upload</p>
-                        <p className="text-sm text-primary/70">Image files or URLs</p>
+                        <p className="text-sm text-primary/70">Images or PDFs</p>
                     </div>
                 )}
             </DialogContent>

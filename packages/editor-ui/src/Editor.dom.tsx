@@ -1,5 +1,5 @@
 import { useSettingsStore } from '@annota/core';
-import { NoteImageService } from '@annota/core/platform';
+import { NoteFileService } from '@annota/core/platform';
 import { dispatchEditorCommand, getEditorProps, getEditorState, getExtensions, resolveFontFamily } from '@annota/editor-core';
 import '@annota/editor-core/styles.css';
 import { TextSelection } from '@tiptap/pm/state';
@@ -36,7 +36,7 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
         editable = true,
         noteId,
         onOpenBlockMenu,
-        onOpenImageMenu,
+        onOpenFileMenu,
         onOpenTableMenu,
         onCodeBlockSelected,
         onSlashCommand,
@@ -65,9 +65,10 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                 setCurrentLatex(latex);
                 setActivePopup('math');
             },
+            onOpenFile: (data) => handleCommand('openFile', data),
             onSearchResults,
             onOpenBlockMenu,
-            onOpenImageMenu,
+            onOpenFileMenu,
             onOpenTableMenu,
             onCodeBlockSelected,
             onSlashCommand,
@@ -82,10 +83,10 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
             },
             onResolveImageIds: (data) => {
                 if (data.imageIds.length > 0) {
-                    NoteImageService.resolveImageSources(data.imageIds).then((imageMap) => {
-                        if (Object.keys(imageMap).length > 0) {
+                    NoteFileService.resolveFileSources(data.imageIds).then((fileMap) => {
+                        if (Object.keys(fileMap).length > 0) {
                             isHydrating.current = true;
-                            (editor.commands as any).resolveImages({ imageMap });
+                            (editor.commands as any).resolveImages({ imageMap: fileMap });
                             isHydrating.current = false;
                         }
                     });
@@ -102,7 +103,7 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
             editorSettings.defaultCodeLanguage,
             onSearchResults,
             onOpenBlockMenu,
-            onOpenImageMenu,
+            onOpenFileMenu,
             onOpenTableMenu,
             onCodeBlockSelected,
             onSlashCommand,
@@ -318,13 +319,22 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
         // Inside Editor.dom.tsx
         const handleCommand = useCallback((cmd: string, params?: any) => {
             // Intercept UI commands and open popups
-            if (['openMathModal', 'openImageModal', 'openLinkModal', 'openYoutubeModal'].includes(cmd)) {
+            if (['openMathModal', 'openFileModal', 'openLinkModal', 'openYoutubeModal'].includes(cmd)) {
                 switch (cmd) {
                     case 'openMathModal': setCurrentLatex(null); setActivePopup('math'); return;
-                    case 'openImageModal': setActivePopup('image'); return;
+                    case 'openFileModal': setActivePopup('file'); return;
                     case 'openLinkModal': setActivePopup('link'); return;
                     case 'openYoutubeModal': setActivePopup('youtube'); return;
                 }
+            }
+
+            if (cmd === 'openFile') {
+                (async () => {
+                    const { FileService, getPlatformAdapters } = await import('@annota/core/platform');
+                    const absoluteUri = await FileService.resolveLocalUri(params.localPath);
+                    await getPlatformAdapters().fileSystem.openFile(absoluteUri, params.mimeType);
+                })();
+                return;
             }
 
             // Otherwise, dispatch to TipTap
@@ -394,10 +404,10 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
             if (editor && initialContent) {
                 const imageIds = extractImageIds(initialContent);
                 if (imageIds.length > 0) {
-                    NoteImageService.resolveImageSources(imageIds).then((imageMap: any) => {
-                        if (Object.keys(imageMap).length > 0) {
+                    NoteFileService.resolveFileSources(imageIds).then((fileMap: any) => {
+                        if (Object.keys(fileMap).length > 0) {
                             isHydrating.current = true;
-                            (editor.commands as any).resolveImages({ imageMap });
+                            (editor.commands as any).resolveImages({ imageMap: fileMap });
                             isHydrating.current = false;
                         }
                     });
@@ -437,20 +447,39 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                     }
                 }
 
-                // 2. FALLBACK TO BINARY UPLOAD (For external images from the web or OS)
+                // 2. FALLBACK TO BINARY UPLOAD (For external files from the web or OS)
                 const items = e.clipboardData?.items;
                 if (!items) return;
 
-                let imageFile: File | null = null;
-                for (let i = 0; i < items.length; i++) {
-                    if (items[i].type.startsWith('image/')) {
-                        imageFile = items[i].getAsFile();
-                        if (imageFile) break;
+                // CHECK FOR PDF ATTACHMENT IN CLIPBOARD
+                const pdfFile = Array.from(items).find(item => item.type === 'application/pdf');
+                if (pdfFile) {
+                    const file = pdfFile.getAsFile();
+                    if (file) {
+                        e.preventDefault();
+                        const processed = await NoteFileService.processAndInsertFile(noteId, URL.createObjectURL(file), 'application/pdf');
+                        handleCommand('insertFileAttachment', {
+                            fileId: processed.fileId,
+                            fileName: processed.fileName,
+                            fileSize: processed.fileSize,
+                            localPath: processed.localPath,
+                            mimeType: processed.mimeType
+                        });
+                        return;
                     }
                 }
 
-                if (imageFile) {
-                    console.log("External binary paste detected. Uploading...");
+                let fileToUpload: File | null = null;
+                for (let i = 0; i < items.length; i++) {
+                    const item = items[i];
+                    if (item.type.startsWith('image/') || item.type === 'application/pdf') {
+                        fileToUpload = item.getAsFile();
+                        if (fileToUpload) break;
+                    }
+                }
+
+                if (fileToUpload) {
+                    console.log("External binary paste detected. Uploading...", fileToUpload.type);
                     e.preventDefault();
                     e.stopPropagation();
 
@@ -459,14 +488,24 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                         const base64 = event.target?.result as string;
                         if (base64) {
                             try {
-                                const { id, url } = await NoteImageService.saveNoteImage(noteId, base64);
-                                handleCommand('insertLocalImage', { imageId: id, src: url });
+                                const processed = await NoteFileService.saveNoteFile(noteId, base64);
+                                if (processed.mimeType === 'application/pdf') {
+                                    handleCommand('insertFileAttachment', {
+                                        fileId: processed.id,
+                                        fileName: processed.fileName,
+                                        fileSize: processed.fileSize,
+                                        localPath: processed.localPath,
+                                        mimeType: processed.mimeType
+                                    });
+                                } else {
+                                    handleCommand('insertLocalImage', { imageId: processed.id, src: processed.url });
+                                }
                             } catch (err) {
                                 console.error('[EditorDom] Global paste upload failed:', err);
                             }
                         }
                     };
-                    reader.readAsDataURL(imageFile);
+                    reader.readAsDataURL(fileToUpload);
                 }
             };
 
@@ -488,33 +527,42 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                     activePopup: activePopup as any,
                     onActivePopupChange: setActivePopup as any,
                     onPopupStateChange: (isOpen) => { if (!isOpen) setActivePopup(null); },
-                    onInsertImage: async (source: 'url' | 'library' | 'camera', value?: string) => {
+                    onInsertFile: async (source: 'url' | 'library' | 'camera' | 'document', value?: string) => {
                         if (!noteId) return false;
                         try {
                             if (source === 'url' && value) {
-                                const processed = await NoteImageService.processRemoteImage(noteId, value);
-                                const imageMap = await NoteImageService.resolveImageSources([processed.imageId]);
+                                const processed = await NoteFileService.processRemoteFile(noteId, value);
+                                const fileMap = await NoteFileService.resolveFileSources([processed.fileId]);
                                 if (editor) {
                                     handleCommand('insertLocalImage', {
-                                        imageId: processed.imageId,
-                                        src: imageMap[processed.imageId]
+                                        imageId: processed.fileId,
+                                        src: fileMap[processed.fileId]
                                     });
                                 }
                                 return true;
                             } else if (source === 'library' && value) {
-                                const processed = await NoteImageService.processAndInsertImage(noteId, value);
-                                const imageMap = await NoteImageService.resolveImageSources([processed.imageId]);
-                                if (editor) {
+                                const processed = await NoteFileService.processAndInsertFile(noteId, value);
+                                const fileMap = await NoteFileService.resolveFileSources([processed.fileId]);
+
+                                if (processed.mimeType === 'application/pdf') {
+                                    handleCommand('insertFileAttachment', {
+                                        fileId: processed.fileId,
+                                        fileName: processed.fileName,
+                                        fileSize: processed.fileSize,
+                                        localPath: processed.localPath,
+                                        mimeType: processed.mimeType
+                                    });
+                                } else {
                                     handleCommand('insertLocalImage', {
-                                        imageId: processed.imageId,
-                                        src: imageMap[processed.imageId]
+                                        imageId: processed.fileId,
+                                        src: fileMap[processed.fileId]
                                     });
                                 }
                                 return true;
                             }
                             return false;
                         } catch (e) {
-                            console.error('Failed to insert image:', e);
+                            console.error('Failed to insert file:', e);
                             return false;
                         }
                     },

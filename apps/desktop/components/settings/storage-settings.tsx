@@ -149,11 +149,11 @@ export function StorageSettings() {
                 </div>
                 <div className="bg-card border rounded-2xl overflow-hidden shadow-sm">
                     <SettingItem
-                        label="Images Size"
-                        description="Physical image files on device"
-                        icon={<Ionicons name="images" size={20} />}
+                        label="Files Size"
+                        description="Physical files on device"
+                        icon={<Ionicons name="file-tray-full" size={20} />}
                         iconBg="bg-blue-500"
-                        value={stats ? formatBytes(stats.totalImagesSize) : '...'}
+                        value={stats ? formatBytes(stats.totalFilesSize) : '...'}
                     />
                     <Separator />
                     <SettingItem
@@ -202,10 +202,10 @@ export function StorageSettings() {
                     />
                     <Separator />
                     <SettingItem
-                        label="Total Images"
-                        icon={<Ionicons name="image" size={20} />}
+                        label="Total Files"
+                        icon={<Ionicons name="file-tray-full" size={20} />}
                         iconBg="bg-emerald-500"
-                        value={stats?.totalImages ?? '...'}
+                        value={stats?.totalFiles ?? '...'}
                     />
                 </div>
             </section>
@@ -257,7 +257,7 @@ export function StorageSettings() {
                     <AlertDialogHeader>
                         <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This will completely erase all local notes, tasks, and images from your device.
+                            This will completely erase all local notes, tasks, and files from your device.
                             If you haven't synced, they will be lost forever.
                         </AlertDialogDescription>
                     </AlertDialogHeader>

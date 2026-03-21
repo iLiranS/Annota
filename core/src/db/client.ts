@@ -88,29 +88,30 @@ export const CREATE_TABLES_SQL = `
     last_synced_at INTEGER,
     is_perm_deleted INTEGER NOT NULL DEFAULT 0
   );
-    CREATE TABLE IF NOT EXISTS settings (
+  CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
   );
 
 
-  CREATE TABLE IF NOT EXISTS images (
+  CREATE TABLE IF NOT EXISTS files (
     id TEXT PRIMARY KEY,
     source_hash TEXT,
     compressed_hash TEXT,
     local_path TEXT NOT NULL,
     mime_type TEXT,
-    size INTEGER,
+    file_type TEXT NOT NULL DEFAULT 'image',
+    size_bytes INTEGER,
     width INTEGER,
     height INTEGER,
     sync_status TEXT NOT NULL DEFAULT 'pending',
     created_at INTEGER NOT NULL
   );
 
-  CREATE TABLE IF NOT EXISTS version_images (
+  CREATE TABLE IF NOT EXISTS version_files (
     version_id TEXT NOT NULL,
-    image_id TEXT NOT NULL,
-    PRIMARY KEY (version_id, image_id)
+    file_id TEXT NOT NULL,
+    PRIMARY KEY (version_id, file_id)
   );
 
   -- Indices for better performance
@@ -118,13 +119,13 @@ export const CREATE_TABLES_SQL = `
   CREATE INDEX IF NOT EXISTS idx_tasks_completed ON tasks(completed);
   CREATE INDEX IF NOT EXISTS idx_note_metadata_updated_at ON note_metadata(updated_at);
   CREATE INDEX IF NOT EXISTS idx_note_metadata_folder_id ON note_metadata(folder_id);
-  CREATE INDEX IF NOT EXISTS idx_images_source_hash ON images(source_hash);
-  CREATE INDEX IF NOT EXISTS idx_images_compressed_hash ON images(compressed_hash);
-  CREATE INDEX IF NOT EXISTS idx_version_images_version_id ON version_images(version_id);
-  CREATE INDEX IF NOT EXISTS idx_version_images_image_id ON version_images(image_id);
+  CREATE INDEX IF NOT EXISTS idx_files_source_hash ON files(source_hash);
+  CREATE INDEX IF NOT EXISTS idx_files_compressed_hash ON files(compressed_hash);
+  CREATE INDEX IF NOT EXISTS idx_version_files_version_id ON version_files(version_id);
+  CREATE INDEX IF NOT EXISTS idx_version_files_file_id ON version_files(file_id);
   
-  CREATE TABLE IF NOT EXISTS image_download_queue (
-    image_id TEXT PRIMARY KEY,
+  CREATE TABLE IF NOT EXISTS file_download_queue (
+    file_id TEXT PRIMARY KEY,
     note_id TEXT NOT NULL,
     nonce TEXT NOT NULL,
     user_id TEXT NOT NULL,
@@ -138,37 +139,7 @@ export async function initDatabase(nativeDb: { execAsync: (sql: string) => Promi
     // Create all tables
     await nativeDb.execAsync(CREATE_TABLES_SQL);
 
-    // Run migrations for existing databases
-    try {
-      const migrations = [
-        'ALTER TABLE tags ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0;',
-        'ALTER TABLE tags ADD COLUMN deleted_at INTEGER;',
-        'ALTER TABLE tags ADD COLUMN created_at INTEGER NOT NULL DEFAULT 0;',
-        'ALTER TABLE tags ADD COLUMN updated_at INTEGER NOT NULL DEFAULT 0;',
-        'ALTER TABLE tags ADD COLUMN is_dirty INTEGER NOT NULL DEFAULT 0;',
-        'ALTER TABLE tags ADD COLUMN last_synced_at INTEGER;',
-        'ALTER TABLE tags ADD COLUMN is_perm_deleted INTEGER NOT NULL DEFAULT 0;',
-        `CREATE TABLE IF NOT EXISTS image_download_queue (
-          image_id TEXT PRIMARY KEY,
-          note_id TEXT NOT NULL,
-          nonce TEXT NOT NULL,
-          user_id TEXT NOT NULL,
-          created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
-        );`,
-        'ALTER TABLE images RENAME COLUMN hash TO source_hash;',
-        'ALTER TABLE images ADD COLUMN compressed_hash TEXT;'
-      ];
-
-      for (const query of migrations) {
-        try {
-          await nativeDb.execAsync(query);
-        } catch (e) {
-          // Ignore errors for columns that already exist
-        }
-      }
-    } catch (migrationError) {
-      console.log('Migration check/run completed or not needed:', migrationError);
-    }
+    // No migrations needed for now (wiping existing databases)
 
     // Seed system data (Trash folder, Daily Notes folder, default settings)
     seedSystemData(drizzleDb);
@@ -207,8 +178,7 @@ export async function resetAll(): Promise<void> {
     //    signOut() must come AFTER this because it triggers onAuthStateChange which
     //    may switch the active database (e.g. to guest), invalidating nativeDb/drizzleDb.
     const dropStatements = `
-      DROP TABLE IF EXISTS note_images;
-      DROP TABLE IF EXISTS images;
+      DROP TABLE IF EXISTS files;
       DROP TABLE IF EXISTS note_metadata;
       DROP TABLE IF EXISTS note_content;
       DROP TABLE IF EXISTS note_versions;
@@ -216,8 +186,8 @@ export async function resetAll(): Promise<void> {
       DROP TABLE IF EXISTS tasks;
       DROP TABLE IF EXISTS tags;
       DROP TABLE IF EXISTS settings;
-      DROP TABLE IF EXISTS version_images;
-      DROP TABLE IF EXISTS image_download_queue;
+      DROP TABLE IF EXISTS version_files;
+      DROP TABLE IF EXISTS file_download_queue;
     `;
 
     await nativeDb.execAsync('PRAGMA foreign_keys = OFF;');
@@ -267,8 +237,7 @@ export async function deleteDatabase(): Promise<void> {
 
     // 2. Batch the drops into a single statement
     const dropStatements = `
-      DROP TABLE IF EXISTS note_images;
-      DROP TABLE IF EXISTS images;
+      DROP TABLE IF EXISTS files;
       DROP TABLE IF EXISTS note_metadata;
       DROP TABLE IF EXISTS note_content;
       DROP TABLE IF EXISTS note_versions;
@@ -276,8 +245,8 @@ export async function deleteDatabase(): Promise<void> {
       DROP TABLE IF EXISTS tasks;
       DROP TABLE IF EXISTS tags;
       DROP TABLE IF EXISTS settings;
-      DROP TABLE IF EXISTS version_images;
-      DROP TABLE IF EXISTS image_download_queue;
+      DROP TABLE IF EXISTS version_files;
+      DROP TABLE IF EXISTS file_download_queue;
     `;
 
     // Disable foreign key constraints temporarily
@@ -351,8 +320,8 @@ export async function purgeGuestTombstones(): Promise<void> {
         const versionIds = versions.map((v: any) => v.id);
 
         if (versionIds.length > 0) {
-          await tx.delete(schema.versionImages)
-            .where(inArray(schema.versionImages.versionId, versionIds))
+          await tx.delete(schema.versionFiles)
+            .where(inArray(schema.versionFiles.versionId, versionIds))
             .run();
           await tx.delete(schema.noteVersions)
             .where(inArray(schema.noteVersions.id, versionIds))

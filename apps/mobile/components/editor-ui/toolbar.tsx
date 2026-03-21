@@ -2,9 +2,9 @@ import { useTheme } from '@react-navigation/native';
 import React, { useState } from 'react';
 import { Keyboard, ScrollView, StyleSheet, View } from 'react-native';
 
-import { copyImageToClipboardMobile } from '@/utils/clipboard';
+import { copyFileToClipboardMobile } from '@/utils/clipboard';
 import { HeadingLevel } from '@annota/core';
-import { ImageService } from '@annota/core/platform';
+import { FileService } from '@annota/core/platform';
 import type { PopupType, ToolbarRenderProps } from '@annota/editor-ui';
 import { ToolbarButton } from './toolbar-button';
 import { ToolbarPopup } from './toolbar-popup';
@@ -26,7 +26,7 @@ export function EditorToolbar({
     currentLatex,
     blockData,
     onInsertMath,
-    onInsertImage,
+    onInsertFile,
 }: EditorToolbarProps) {
     const { dark, colors } = useTheme();
     const [isLoading, setIsLoading] = useState(false);
@@ -199,10 +199,10 @@ export function EditorToolbar({
                             onPress={() => openPopup('link')}
                         />
 
-                        {/* Image */}
+                        {/* File */}
                         <ToolbarButton
-                            icon="image"
-                            onPress={() => openPopup('image')}
+                            icon="attach-file"
+                            onPress={() => openPopup('file')}
                         />
 
                         {/* YouTube */}
@@ -329,18 +329,18 @@ export function EditorToolbar({
                 />
             )}
 
-            {activePopup === 'image' && (
+            {activePopup === 'file' && (
                 <ToolbarPopup
                     visible={true}
-                    type="image"
+                    type="file"
                     isLoading={isLoading}
                     onSubmit={async (url: string) => {
                         setIsLoading(true);
                         try {
-                            const success = await onInsertImage?.('url', url);
+                            const success = await onInsertFile?.('url', url);
                             if (success) closePopup();
                         } catch (error) {
-                            console.error('Image upload failed:', error);
+                            console.error('File upload failed:', error);
                         } finally {
                             setIsLoading(false);
                         }
@@ -348,10 +348,21 @@ export function EditorToolbar({
                     onPickFromLibrary={async () => {
                         setIsLoading(true);
                         try {
-                            const success = await onInsertImage?.('library');
+                            const success = await onInsertFile?.('library');
                             if (success) closePopup();
                         } catch (error) {
-                            console.error('Image pick failed:', error);
+                            console.error('File pick failed:', error);
+                        } finally {
+                            setIsLoading(false);
+                        }
+                    }}
+                    onPickDocument={async () => {
+                        setIsLoading(true);
+                        try {
+                            const success = await onInsertFile?.('document');
+                            if (success) closePopup();
+                        } catch (error) {
+                            console.error('Document pick failed:', error);
                         } finally {
                             setIsLoading(false);
                         }
@@ -359,7 +370,7 @@ export function EditorToolbar({
                     onTakePhoto={async () => {
                         setIsLoading(true);
                         try {
-                            const success = await onInsertImage?.('camera');
+                            const success = await onInsertFile?.('camera');
                             if (success) closePopup();
                         } catch (error) {
                             console.error('Take photo failed:', error);
@@ -480,32 +491,34 @@ export function EditorToolbar({
                 />
             )}
 
-            {activePopup === 'imageMenu' && blockData && (
+            {activePopup === 'fileMenu' && blockData && (
                 <ToolbarPopup
                     visible={true}
-                    type="imageMenu"
+                    type="fileMenu"
                     src={blockData.src}
                     width={blockData.width}
                     position={blockData.position}
+                    mimeType={blockData.mimeType}
+
                     onAction={(action: string, data?: any) => {
                         switch (action) {
                             case 'download':
                                 (async () => {
                                     if (blockData.imageId || blockData.src) {
-                                        await ImageService.saveImageToGallery(blockData.imageId, blockData.src);
+                                        await FileService.saveFile(blockData.imageId, blockData.src);
                                     } else {
-                                        console.error('No source found for the image.');
+                                        console.error('No source found for the file.');
                                     }
                                     closePopup();
                                 })();
                                 break;
                             case 'copy':
-                                copyImageToClipboardMobile(blockData.src, blockData.imageId);
+                                copyFileToClipboardMobile(blockData.src, blockData.imageId);
                                 onCommand('copyImage', { pos: blockData.position });
                                 closePopup();
                                 break;
                             case 'cut':
-                                copyImageToClipboardMobile(blockData.src, blockData.imageId);
+                                copyFileToClipboardMobile(blockData.src, blockData.imageId);
                                 if (blockData.imageId) {
                                     onCommand('deleteImage', { pos: blockData.position });
                                 } else {

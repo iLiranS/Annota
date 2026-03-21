@@ -85,6 +85,11 @@ export function setupCommands() {
                     }).run();
                 }
                 break;
+            case 'insertFileAttachment':
+                if (params?.fileId) {
+                    (e.commands as any).insertFileAttachment(params);
+                }
+                break;
             case 'resolveImages':
                 if (params?.imageMap) {
                     window.resolveImages?.(params.imageMap);

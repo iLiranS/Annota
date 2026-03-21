@@ -87,7 +87,7 @@ export const CustomImage = Image.extend<any>({
         return {
             ...this.parent?.(),
             onImageSelected: null as ((data: { images: any[], currentIndex: number }) => void) | null,
-            onOpenImageMenu: null as ((e: MouseEvent, resolve: () => any) => void) | null,
+            onOpenFileMenu: null as ((e: MouseEvent, resolve: () => any) => void) | null,
             onImagePasted: null as ((data: { base64: string, imageId: string, src?: string }) => void) | null,
             onResolveImageIds: null as ((data: { imageIds: string[] }) => void) | null,
         };
@@ -232,7 +232,7 @@ export const CustomImage = Image.extend<any>({
                 img.style.minHeight = '100px';
             }
             const nodeWidth = currentNode.attrs.width || '100%';
-            img.style.maxWidth = '100%'; 
+            img.style.maxWidth = '100%';
             img.style.width = 'auto';
             wrapper.style.maxWidth = nodeWidth;
             wrapper.style.width = 'fit-content';
@@ -294,7 +294,7 @@ export const CustomImage = Image.extend<any>({
             const menuBtn = createBlockMenuButton({
                 className: 'image-menu-btn',
                 iconSize: 'small',
-                onClick: this.options.onOpenImageMenu,
+                onClick: this.options.onOpenFileMenu,
                 onResolve: () => {
                     if (typeof getPos !== 'function') return null;
                     const currentPos = getPos();
@@ -303,7 +303,7 @@ export const CustomImage = Image.extend<any>({
                     return {
                         pos: currentPos,
                         message: {
-                            type: 'openImageMenu',
+                            type: 'openOpenFileMenu',
                             imageId: currentNode.attrs.imageId,
                             src: currentNode.attrs.src,
                             width: currentNode.attrs.width || '100%',

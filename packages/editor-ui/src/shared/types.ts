@@ -10,7 +10,7 @@ export interface ToolbarRenderProps {
     activePopup: PopupType;
     onActivePopupChange: (type: PopupType) => void;
     onPopupStateChange: (isOpen: boolean) => void;
-    onInsertImage: (source: 'url' | 'library' | 'camera', value?: string) => Promise<boolean>;
+    onInsertFile: (source: 'url' | 'library' | 'camera' | 'document', value?: string) => Promise<boolean>;
     currentLatex: string | null;
     blockData: any;
     onInsertMath: () => void;
@@ -54,8 +54,8 @@ export interface TipTapEditorProps {
     onOpenBlockMenu?: (e: MouseEvent, resolve: () => { pos: number; message: Record<string, unknown> } | null) => void;
     /** Callback for opening a table-specific menu */
     onOpenTableMenu?: (e: MouseEvent, resolve: () => { pos: number; message: Record<string, unknown> } | null) => void;
-    /** Callback for opening an image-specific menu */
-    onOpenImageMenu?: (e: MouseEvent, resolve: () => { pos: number; message: Record<string, unknown> } | null) => void;
+    /** Callback for opening an image/file-specific menu */
+    onOpenFileMenu?: (e: MouseEvent, resolve: () => { pos: number; message: Record<string, unknown> } | null) => void;
     /** Callback for slash command state changes */
     onSlashCommand?: (data: { active: boolean; query?: string; range?: { from: number; to: number }; clientRect?: any }) => void;
     /** Callback for tag command state changes */
@@ -240,7 +240,7 @@ export type EditorCommand =
     | 'scrollToElement'
     // Modal commands
     | 'openMathModal'
-    | 'openImageModal'
+    | 'openFileModal'
     | 'openLinkModal'
     | 'openYoutubeModal'
 
@@ -248,7 +248,7 @@ export type EditorCommand =
 // Popup Types
 // ============================================================================
 
-export type PopupType = 'headings' | 'highlight' | 'textColor' | 'youtube' | 'link' | 'image' | 'table' | 'codeLanguage' | 'math' | 'detailsBackground' | 'blockMenu' | 'imageMenu' | null;
+export type PopupType = 'headings' | 'highlight' | 'textColor' | 'youtube' | 'link' | 'file' | 'table' | 'codeLanguage' | 'math' | 'detailsBackground' | 'blockMenu' | 'fileMenu' | null;
 
 export interface BasePopupProps {
     visible: boolean;
@@ -296,10 +296,11 @@ export interface LinkPopupProps extends BasePopupProps {
     onRemove: () => void;
 }
 
-export interface ImagePopupProps extends BasePopupProps {
-    type: 'image';
+export interface FilePopupProps extends BasePopupProps {
+    type: 'file';
     onSubmit: (url: string) => void;
     onPickFromLibrary?: () => void;
+    onPickDocument?: () => void;
     onTakePhoto?: () => void;
 }
 
@@ -340,14 +341,16 @@ export interface DetailsBackgroundPopupProps extends BasePopupProps {
     onClear: () => void;
 }
 
-export interface ImageMenuPopupProps extends BasePopupProps {
-    type: 'imageMenu';
+export interface FileMenuPopupProps extends BasePopupProps {
+    type: 'fileMenu';
     src: string;
     width: string;
     position: number;
     onAction: (action: string, data?: any) => void;
+    mimeType?: string;
 }
 
-export type ToolbarPopupProps = HeadingPopupProps | ColorPopupProps | YouTubePopupProps | LinkPopupProps | ImagePopupProps | TablePopupProps | CodeLanguagePopupProps | MathPopupProps | DetailsBackgroundPopupProps | BlockMenuPopupProps | ImageMenuPopupProps;
+
+export type ToolbarPopupProps = HeadingPopupProps | ColorPopupProps | YouTubePopupProps | LinkPopupProps | FilePopupProps | TablePopupProps | CodeLanguagePopupProps | MathPopupProps | DetailsBackgroundPopupProps | BlockMenuPopupProps | FileMenuPopupProps;
 
 

@@ -1,16 +1,16 @@
 import { sql } from 'drizzle-orm';
+import * as FilesRepo from '../db/repositories/files.repository';
 import * as FoldersRepo from '../db/repositories/folders.repository';
-import * as ImagesRepo from '../db/repositories/images.repository';
 import * as NotesRepo from '../db/repositories/notes.repository';
 import * as TasksRepo from '../db/repositories/tasks.repository';
 import { getDb, useDbStore } from '../stores/db.store';
-import { deleteImageFile } from './images/image.service';
+import { deleteFile } from './files/file.service';
 
 type StorageStats = {
-    totalImages: number;
+    totalFiles: number;
     totalLinks: number;
     orphans: number;
-    totalImagesSize: number;
+    totalFilesSize: number;
     totalNotes: number;
     totalTasks: number;
     totalFolders: number;
@@ -32,10 +32,10 @@ export const StorageService = {
 
         if (!isReady) {
             return {
-                totalImages: 0,
+                totalFiles: 0,
                 totalLinks: 0,
                 orphans: 0,
-                totalImagesSize: 0,
+                totalFilesSize: 0,
                 totalNotes: 0,
                 totalTasks: 0,
                 totalFolders: 0,
@@ -46,7 +46,7 @@ export const StorageService = {
         }
 
         const tx = getDb();
-        const stats = await ImagesRepo.getStorageStats(tx);
+        const stats = await FilesRepo.getStorageStats(tx);
         const dbName = isGuest ? 'local_guest.db' : `user_${currentUserId}.db`;
 
         const totalNotes = await NotesRepo.getNotesCount(tx);
@@ -90,20 +90,20 @@ export const StorageService = {
             totalTasks,
             totalFolders,
             notesSize,
-            totalSize: stats.totalImagesSize + notesSize,
+            totalSize: stats.totalFilesSize + notesSize,
             dbName,
         };
     },
 
     runGarbageCollection: async (force = false): Promise<number> => {
-        await ImagesRepo.deleteOrphanLinks();
+        await FilesRepo.deleteOrphanLinks();
 
         const normalizedRows = await NotesRepo.normalizeAllStoredContent();
-        const deletedPaths = await ImagesRepo.deleteUnreferencedImages(undefined, force);
+        const deletedPaths = await FilesRepo.deleteUnreferencedFiles(undefined, force);
 
         let deletedCount = 0;
         for (const path of deletedPaths) {
-            await deleteImageFile(path);
+            await deleteFile(path);
             deletedCount++;
         }
 

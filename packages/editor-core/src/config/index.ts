@@ -24,6 +24,7 @@ import {
     DetailsContent,
     DetailsSummary,
     NoteLinkCommandExtension,
+    FileAttachment,
     SearchExtension,
     ShortcutManager,
     SlashCommandExtension,
@@ -60,9 +61,10 @@ export const getExtensions = (options: {
     editorOrigin?: string;
     onMathSelected?: (latex: string, isBlock: boolean, pos: number) => void;
     onImageSelected?: (data: { images: any[], currentIndex: number }) => void;
+    onOpenFile?: (data: { localPath: string; mimeType: string }) => void;
     onSearchResults?: (count: number, currentIndex: number) => void;
     onOpenBlockMenu?: (e: MouseEvent, resolve: () => any) => void;
-    onOpenImageMenu?: (e: MouseEvent, resolve: () => any) => void;
+    onOpenFileMenu?: (e: MouseEvent, resolve: () => any) => void;
     onOpenTableMenu?: (e: MouseEvent, resolve: () => any) => void;
     onCodeBlockSelected?: (e: MouseEvent, resolve: () => any) => void;
     onImagePasted?: (data: { base64: string, imageId?: string, src?: string }) => void;
@@ -109,9 +111,13 @@ export const getExtensions = (options: {
             inline: false,
             allowBase64: true,
             onImageSelected: options.onImageSelected,
-            onOpenImageMenu: options.onOpenImageMenu,
+            onOpenFileMenu: options.onOpenFileMenu,
             onImagePasted: options.onImagePasted,
             onResolveImageIds: options.onResolveImageIds,
+        }),
+        FileAttachment.configure({
+            onOpenFile: options.onOpenFile,
+            onOpenFileMenu: options.onOpenFileMenu,
         }),
         Table.configure({ resizable: true, HTMLAttributes: { class: 'editor-table' } }),
         TableRow,

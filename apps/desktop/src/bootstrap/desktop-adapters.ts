@@ -3,10 +3,11 @@ import { invoke } from '@tauri-apps/api/core';
 import { appCacheDir, appDataDir, join } from '@tauri-apps/api/path';
 import { copyFile, mkdir, readFile, remove, stat, writeFile } from '@tauri-apps/plugin-fs';
 import { fetch } from '@tauri-apps/plugin-http';
+import { openPath } from '@tauri-apps/plugin-opener';
 import { Store } from '@tauri-apps/plugin-store';
 import { encode as encodeArrayBuffer } from 'base64-arraybuffer';
 
-type Scope = 'images' | 'cache';
+type Scope = 'images' | 'cache' | 'files';
 
 const dirCache = new Map<Scope, string>();
 
@@ -40,7 +41,7 @@ async function ensureScopedDir(scope: Scope): Promise<string> {
   const cached = dirCache.get(scope);
   if (cached) return cached;
 
-  const baseDir = scope === 'images' ? await appDataDir() : await appCacheDir();
+  const baseDir = (scope === 'images' || scope === 'files') ? await appDataDir() : await appCacheDir();
   const dir = await join(baseDir, `annota-${scope}`);
   await mkdir(dir, { recursive: true });
   dirCache.set(scope, dir);
@@ -219,8 +220,8 @@ export function createDesktopAdapters(): PlatformAdapters {
           }
 
           const contentType = response.headers.get("content-type");
-          if (!contentType?.startsWith("image/")) {
-            throw new Error("URL does not point to an image");
+          if (!contentType?.startsWith("image/") && contentType !== "application/pdf") {
+            throw new Error("URL does not point to a supported file type (image or pdf)");
           }
 
           const bytes = new Uint8Array(await response.arrayBuffer());
@@ -262,6 +263,13 @@ export function createDesktopAdapters(): PlatformAdapters {
           // If you see this in your terminal/console, Tauri is blocking the path.
           console.error("Desktop Adapter: Failed to load image at path:", path, error);
           return ""; // Return empty to prevent malformed src injection
+        }
+      },
+      openFile: async (path: string) => {
+        try {
+          await openPath(path);
+        } catch (error) {
+          console.error("Desktop Adapter: Failed to open file:", path, error);
         }
       }
     },

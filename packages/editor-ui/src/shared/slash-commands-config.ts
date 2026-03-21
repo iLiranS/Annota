@@ -61,7 +61,7 @@ export const SHARED_SLASH_COMMANDS: SharedSlashCommand[] = [
         iconKey: 'plus',
         children: [
             { id: 'math', title: 'Math Formula', iconKey: 'math', action: 'openMathModal' },
-            { id: 'image', title: 'Image', iconKey: 'image', action: 'openImageModal' },
+            { id: 'file', title: 'File', iconKey: 'file', action: 'openFileModal' },
             { id: 'link', title: 'Link', iconKey: 'link', action: 'openLinkModal' },
             { id: 'youtube', title: 'YouTube Video', iconKey: 'youtube', action: 'openYoutubeModal' },
             { id: 'table', title: 'Table', iconKey: 'table', action: 'insertTable' },

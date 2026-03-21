@@ -1,11 +1,13 @@
 import type { PlatformAdapters } from '@annota/core/platform';
 import NetInfo from '@react-native-community/netinfo';
 import { Buffer } from 'buffer';
-import { Directory, File as ExpoFile, Paths } from 'expo-file-system';
+import * as FileSystem from 'expo-file-system';
 import { Action, manipulateAsync, SaveFormat } from 'expo-image-manipulator';
+import * as IntentLauncher from 'expo-intent-launcher';
 import * as MediaLibrary from 'expo-media-library';
 import * as SecureStore from 'expo-secure-store';
-import { AppState, Image } from 'react-native';
+import * as Sharing from 'expo-sharing';
+import { AppState, Image, Platform } from 'react-native';
 import crypto from 'react-native-quick-crypto';
 import Toast from 'react-native-toast-message';
 
@@ -84,45 +86,45 @@ export function createMobileAdapters(): PlatformAdapters {
             },
         },
         fileSystem: {
-            ensureDir: async (scope: 'images' | 'cache') => {
-                const parentPath = scope === 'images' ? Paths.document : Paths.cache;
-                const dir = new Directory(parentPath, scope);
+            ensureDir: async (scope: 'images' | 'cache' | 'files') => {
+                const parentPath = (scope === 'images' || scope === 'files') ? FileSystem.Paths.document : FileSystem.Paths.cache;
+                const dir = new FileSystem.Directory(parentPath, scope);
                 if (!dir.exists) {
                     await dir.create();
                 }
                 return dir.uri;
             },
             copyFile: async (from: string, to: string) => {
-                const sourceFile = new ExpoFile(from);
-                const destFile = new ExpoFile(to);
+                const sourceFile = new FileSystem.File(from);
+                const destFile = new FileSystem.File(to);
                 await sourceFile.copy(destFile);
             },
             deleteFile: async (path: string) => {
-                const file = new ExpoFile(path);
+                const file = new FileSystem.File(path);
                 if (file.exists) await file.delete();
             },
             readBase64: async (path: string) => {
-                const file = new ExpoFile(path);
+                const file = new FileSystem.File(path);
                 return await file.base64();
             },
             readBytes: async (path: string) => {
-                const file = new ExpoFile(path);
+                const file = new FileSystem.File(path);
                 return await file.bytes();
             },
             writeBytes: async (path: string, bytes: Uint8Array) => {
-                const file = new ExpoFile(path);
+                const file = new FileSystem.File(path);
                 await file.create({ overwrite: true });
                 await file.write(bytes);
             },
             getSize: async (path: string) => {
-                const file = new ExpoFile(path);
+                const file = new FileSystem.File(path);
                 return await file.size;
             },
             downloadToTemp: async (url: string) => {
-                const tempDir = new Directory(Paths.cache, 'downloads');
+                const tempDir = new FileSystem.Directory(FileSystem.Paths.cache, 'downloads');
                 if (!tempDir.exists) await tempDir.create();
 
-                const downloaded = await ExpoFile.downloadFileAsync(url, tempDir);
+                const downloaded = await FileSystem.File.downloadFileAsync(url, tempDir);
 
                 return {
                     path: downloaded.uri,
@@ -130,10 +132,26 @@ export function createMobileAdapters(): PlatformAdapters {
                 };
             },
             toImageUrl: async (path: string) => {
-                const file = new ExpoFile(path);
+                const file = new FileSystem.File(path);
                 const base64 = await file.base64();
                 const mime = path.endsWith('.webp') ? 'image/webp' : 'image/jpeg';
                 return `data:${mime};base64,${base64}`;
+            },
+            openFile: async (fileUri: string, mimeType: string = 'application/pdf') => {
+                try {
+                    if (Platform.OS === 'ios') {
+                        await Sharing.shareAsync(fileUri, { UTI: 'com.adobe.pdf' });
+                    } else {
+                        const contentUri = await FileSystem.getContentUriAsync(fileUri);
+                        await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
+                            data: contentUri,
+                            flags: 1, // FLAG_GRANT_READ_URI_PERMISSION
+                            type: mimeType,
+                        });
+                    }
+                } catch (error) {
+                    console.error("Failed to open file in Expo:", error);
+                }
             },
         },
         image: {

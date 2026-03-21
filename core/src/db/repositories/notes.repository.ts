@@ -1,12 +1,12 @@
 import { and, desc, eq, gte, inArray, isNull, lte, sql } from 'drizzle-orm';
-import { deleteImageFile } from '../../services/images/image.service';
+import { deleteFile } from '../../services/files/file.service';
 import { getDb } from '../../stores/db.store';
 import { generateId } from '../../utils/id';
 import type { NoteMetadata, NoteMetadataInsert } from '../schema';
 import * as schema from '../schema';
 import type { DbOrTx } from '../types';
 import { safeGet, safeGetAll } from '../utils';
-import * as ImagesRepo from './images.repository';
+import * as FilesRepo from './files.repository';
 
 // Re-export types for convenience
 export type { NoteMetadata, NoteVersion } from '../schema';
@@ -15,36 +15,53 @@ export const MAX_NOTE_SIZE = 145000;
 export const MAX_CONTENT_SIZE = MAX_NOTE_SIZE; // Deprecated, keep for compat if needed, otherwise use MAX_NOTE_SIZE everywhere
 export function normalizeStoredContent(content: string): string {
     if (!content) return content ?? '';
-    // Keep image references by data-image-id, but strip heavy src payloads
-    // (typically base64 data URIs injected only for rendering in WebView).
-    return content.replace(/<img\b[^>]*>/gi, (imgTag) => {
+    
+    // 1. Handle legacy image nodes: Keep data-image-id, strip heavy base64 src
+    let normalized = content.replace(/<img\b[^>]*>/gi, (imgTag) => {
         if (!/data-image-id\s*=\s*["'][^"']+["']/i.test(imgTag)) {
             return imgTag;
         }
 
-        // TipTap Image.parseHTML expects img[src] to exist.
-        // Canonical form for local images is src="" + data-image-id.
-        let normalized = imgTag
+        let tag = imgTag
             .replace(/\s+src\s*=\s*(["']).*?\1/gi, ' src=""')
             .replace(/\s+src\s*=\s*[^\s>]+/gi, ' src=""');
 
-        if (!/\s+src\s*=/i.test(normalized)) {
-            normalized = normalized.replace(/\s*\/?>$/, (end) => ` src=""${end}`);
+        if (!/\s+src\s*=/i.test(tag)) {
+            tag = tag.replace(/\s*\/?>$/, (end) => ` src=""${end}`);
         }
 
-        return normalized;
+        return tag;
     });
+
+    // 2. Handle file-attachment nodes (already clean, but ensure consistency if needed)
+    // No heavy payload stripping needed for now as they don't use src.
+    
+    return normalized;
 }
 
-function extractImageIdsFromContent(content: string): string[] {
-    const regex = /data-image-id\s*=\s*(["'])(.*?)\1/gi;
-    const ids: string[] = [];
+/**
+ * Extracts all file IDs (images or general attachments) from the HTML content.
+ * Searches for data-image-id (legacy) and fileId/file-id (new).
+ */
+function extractFileIdsFromContent(content: string): string[] {
+    const ids = new Set<string>();
+    
+    // Legacy image IDs: data-image-id="..."
+    const imageIdRegex = /data-image-id\s*=\s*(["'])(.*?)\1/gi;
     let match;
-    while ((match = regex.exec(content)) !== null) {
-        ids.push(match[2]);
+    while ((match = imageIdRegex.exec(content)) !== null) {
+        ids.add(match[2]);
     }
-    return ids;
+
+    // New file attachment IDs: fileId="..." or file-id="..."
+    const fileIdRegex = /(?:fileid|file-id)\s*=\s*(["'])(.*?)\1/gi;
+    while ((match = fileIdRegex.exec(content)) !== null) {
+        ids.add(match[2]);
+    }
+    
+    return Array.from(ids);
 }
+
 
 
 
@@ -88,7 +105,8 @@ export async function upsertSyncedNote(noteFullData: any, tx: DbOrTx = getDb()):
         .run();
 
     const noteUpdatedAt = metadataDetails.updatedAt instanceof Date ? metadataDetails.updatedAt : new Date();
-    const imageIds = extractImageIdsFromContent(content);
+    const fileIds = extractFileIdsFromContent(content);
+
     const MAX_VERSIONS = 50;
 
     // Keep the synced note represented by a local version so image links are not orphaned.
@@ -145,7 +163,7 @@ export async function upsertSyncedNote(noteFullData: any, tx: DbOrTx = getDb()):
             if (safeVersions.length > MAX_VERSIONS) {
                 const versionsToDelete = safeVersions.slice(MAX_VERSIONS).map(v => v.id);
                 if (versionsToDelete.length > 0) {
-                    await ImagesRepo.deleteImagesForVersions(versionsToDelete, tx);
+                    await FilesRepo.deleteFilesForVersions(versionsToDelete, tx);
                     await tx.delete(schema.noteVersions)
                         .where(inArray(schema.noteVersions.id, versionsToDelete))
                         .run();
@@ -154,7 +172,8 @@ export async function upsertSyncedNote(noteFullData: any, tx: DbOrTx = getDb()):
         }
     }
 
-    await ImagesRepo.setImagesForVersion(activeVersionId, imageIds, tx);
+    await FilesRepo.setFilesForVersion(activeVersionId, fileIds, tx);
+
 }
 
 // ============ METADATA OPERATIONS (fast, for lists) ============
@@ -453,8 +472,9 @@ export async function updateNoteContent(noteId: string, content: string, preview
         return;
     }
 
-    // Extract image IDs from canonical content
-    const imageIds = extractImageIdsFromContent(normalizedContent);
+    // Extract file IDs from canonical content
+    const fileIds = extractFileIdsFromContent(normalizedContent);
+
 
     // 1. Update current content (Always)
     await getDb().transaction(async (tx: DbOrTx) => {
@@ -504,7 +524,7 @@ export async function updateNoteContent(noteId: string, content: string, preview
                 const versionsToDelete = safeVersions.slice(MAX_VERSIONS).map(v => v.id);
                 if (versionsToDelete.length > 0) {
                     // Detach images from deleted versions
-                    await ImagesRepo.deleteImagesForVersions(versionsToDelete, tx);
+                    await FilesRepo.deleteFilesForVersions(versionsToDelete, tx);
 
                     await tx.delete(schema.noteVersions)
                         .where(inArray(schema.noteVersions.id, versionsToDelete))
@@ -520,15 +540,16 @@ export async function updateNoteContent(noteId: string, content: string, preview
             activeVersionId = safeGet<any>(updated)!.id;
         }
 
-        // 4. Sync images to active version
-        await ImagesRepo.setImagesForVersion(activeVersionId, imageIds, tx);
+        // 4. Sync files to active version
+        await FilesRepo.setFilesForVersion(activeVersionId, fileIds, tx);
+
 
         // 5. Garbage Collection: Delete images not referenced by ANY version
-        const deletedFilePaths = await ImagesRepo.deleteUnreferencedImages(tx);
+        const deletedFilePaths = await FilesRepo.deleteUnreferencedFiles(tx);
 
         // Clean up files (best effort)
         for (const path of deletedFilePaths) {
-            await deleteImageFile(path);
+            await deleteFile(path);
         }
     });
 }
@@ -641,14 +662,14 @@ export async function deleteAllNoteVersionsExceptLatest(noteId: string): Promise
     const versionsToDelete = safeVersions.slice(1).map(v => v.id);
 
     await getDb().transaction(async (tx: DbOrTx) => {
-        await ImagesRepo.deleteImagesForVersions(versionsToDelete, tx);
+        await FilesRepo.deleteFilesForVersions(versionsToDelete, tx);
         await tx.delete(schema.noteVersions)
             .where(inArray(schema.noteVersions.id, versionsToDelete))
             .run();
 
-        const deletedFilePaths = await ImagesRepo.deleteUnreferencedImages(tx);
+        const deletedFilePaths = await FilesRepo.deleteUnreferencedFiles(tx);
         for (const path of deletedFilePaths) {
-            await deleteImageFile(path);
+            await deleteFile(path);
         }
     });
 }

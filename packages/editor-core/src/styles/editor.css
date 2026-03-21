@@ -858,6 +858,81 @@
     opacity: 1;
 }
 
+.file-attachment-menu-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    background: transparent;
+    border: none;
+    color: var(--text-color);
+    cursor: pointer;
+    opacity: 0.2;
+    transition: all 0.2s ease;
+    margin-inline-start: 4px;
+}
+
+.file-attachment-card:hover .file-attachment-menu-btn {
+    opacity: 1;
+}
+
+.file-attachment-menu-btn:hover {
+    background-color: rgba(128, 128, 128, 0.1);
+}
+
+.file-attachment-wrapper {
+    margin: 1rem 0;
+    position: relative;
+}
+
+.file-attachment-card {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    background-color: var(--code-block-bg, #2A2A2A);
+    border-radius: 8px;
+    cursor: pointer;
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+.file-attachment-card:hover {
+    background-color: var(--quote-bg, rgba(255, 255, 255, 0.15));
+    border-color: var(--accent-color, #3b82f6);
+}
+
+.file-attachment-icon {
+    margin-inline-end: 12px;
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.file-attachment-info {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex: 1;
+}
+
+.file-attachment-name {
+    color: var(--text-color, #FFFFFF);
+    font-weight: 600;
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.file-attachment-size {
+    color: var(--placeholder-color, rgba(255, 255, 255, 0.5));
+    font-size: 12px;
+    margin-top: 2px;
+}
+
+
+
 
 
 /* Arrow indicator - clickable toggle button on the left */

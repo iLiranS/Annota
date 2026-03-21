@@ -84,35 +84,38 @@ export const tags = sqliteTable('tags', {
 });
 
 
-// ============ IMAGES ============
-export const images = sqliteTable('images', {
+// ============ FILES (Generic: Images, PDFs, etc.) ============
+export const files = sqliteTable('files', {
     id: text('id').primaryKey(),
     sourceHash: text('source_hash'),
     compressedHash: text('compressed_hash'),
     localPath: text('local_path').notNull(),
-    mimeType: text('mime_type'),
-    size: integer('size'),
-    width: integer('width'),
-    height: integer('height'),
+    mimeType: text('mime_type'), // e.g., 'image/webp' or 'application/pdf'
+    fileType: text('file_type').notNull().default('image'), // 'image' | 'pdf' (useful for quick UI filtering)
+    sizeBytes: integer('size_bytes'), // Renamed to match backend clarity
+    width: integer('width'),   // Will be null for PDFs
+    height: integer('height'), // Will be null for PDFs
     syncStatus: text('sync_status').notNull().default('pending'), // 'pending' | 'synced'
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 });
 
-// ============ VERSION IMAGES (many-to-many) ============
-export const versionImages = sqliteTable('version_images', {
+// ============ VERSION FILES (many-to-many) ============
+export const versionFiles = sqliteTable('version_files', {
     versionId: text('version_id').notNull(), // Links to note_versions.id
-    imageId: text('image_id').notNull(),     // Links to images.id
+    fileId: text('file_id').notNull(),       // Links to files.id
 }, (t) => ({
-    pk: primaryKey({ columns: [t.versionId, t.imageId] }),
+    pk: primaryKey({ columns: [t.versionId, t.fileId] }),
 }));
-// ============ DOWNLOAD QUEUE ============
-export const imageDownloadQueue = sqliteTable('image_download_queue', {
-    imageId: text('image_id').primaryKey(), // Ensures we don't queue duplicates
+
+// ============ FILE DOWNLOAD QUEUE ============
+export const fileDownloadQueue = sqliteTable('file_download_queue', {
+    fileId: text('file_id').primaryKey(), // Ensures we don't queue duplicates
     noteId: text('note_id').notNull(),
     nonce: text('nonce').notNull(),
     userId: text('user_id').notNull(),
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`),
 });
+
 // ============ SETTINGS ============
 export const settings = sqliteTable('settings', {
     key: text('key').primaryKey(),
@@ -130,8 +133,10 @@ export type Task = typeof tasks.$inferSelect;
 export type TaskInsert = typeof tasks.$inferInsert;
 export type Tag = typeof tags.$inferSelect;
 export type TagInsert = typeof tags.$inferInsert;
-export type ImageRecord = typeof images.$inferSelect;
-export type ImageInsert = typeof images.$inferInsert;
-export type DownloadQueueInsert = typeof imageDownloadQueue.$inferInsert;
-export type DownloadQueueRecord = typeof imageDownloadQueue.$inferSelect;
+
+// Updated File Exports
+export type FileRecord = typeof files.$inferSelect;
+export type FileInsert = typeof files.$inferInsert;
+export type DownloadQueueInsert = typeof fileDownloadQueue.$inferInsert;
+export type DownloadQueueRecord = typeof fileDownloadQueue.$inferSelect;
 

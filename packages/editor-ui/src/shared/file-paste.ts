@@ -1,8 +1,8 @@
-import { NoteImageService } from '@annota/core/platform';
+import { NoteFileService } from '@annota/core/platform';
 
-export type PastedImagePayload = {
+export type PastedFilePayload = {
     base64?: string;
-    imageId?: string;
+    imageId?: string; // Tiptap still uses imageId as attribute name for now
     pos?: number;
     src?: string;
 };
@@ -11,9 +11,9 @@ type InsertImageFn = (params: { imageId: string; pos?: number; src?: string }) =
 type ResolveImagesFn = (imageMap: Record<string, string>) => void;
 type ReplaceImageIdFn = (params: { oldId: string; newId: string; src?: string }) => void;
 
-export async function handleImagePaste(params: {
+export async function handleFilePaste(params: {
     noteId?: string;
-    data: PastedImagePayload;
+    data: PastedFilePayload;
     insertImage: InsertImageFn;
     resolveImages?: ResolveImagesFn;
     replaceImageId?: ReplaceImageIdFn;
@@ -26,9 +26,9 @@ export async function handleImagePaste(params: {
     if (normalizedId && !normalizedId.startsWith('temp-')) {
         insertImage({ imageId: normalizedId, pos: data.pos, src: data.src });
         if (resolveImages) {
-            const imageMap = await NoteImageService.resolveImageSources([normalizedId]);
-            if (Object.keys(imageMap).length > 0) {
-                resolveImages(imageMap);
+            const fileMap = await NoteFileService.resolveFileSources([normalizedId]);
+            if (Object.keys(fileMap).length > 0) {
+                resolveImages(fileMap);
             }
         }
         return;
@@ -38,7 +38,7 @@ export async function handleImagePaste(params: {
     if (!data.base64 || !noteId) return;
 
     const tempId = normalizedId && normalizedId.startsWith('temp-') ? normalizedId : null;
-    const { id, url } = await NoteImageService.saveNoteImage(noteId, data.base64);
+    const { id, url } = await NoteFileService.saveNoteFile(noteId, data.base64);
 
     if (tempId && replaceImageId) {
         replaceImageId({ oldId: tempId, newId: id, src: url });
@@ -50,9 +50,9 @@ export async function handleImagePaste(params: {
         if (url) {
             resolveImages({ [id]: url });
         } else {
-            const imageMap = await NoteImageService.resolveImageSources([id]);
-            if (Object.keys(imageMap).length > 0) {
-                resolveImages(imageMap);
+            const fileMap = await NoteFileService.resolveFileSources([id]);
+            if (Object.keys(fileMap).length > 0) {
+                resolveImages(fileMap);
             }
         }
     }

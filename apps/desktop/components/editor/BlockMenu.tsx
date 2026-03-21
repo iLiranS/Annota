@@ -31,7 +31,7 @@ export interface BlockMenuProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     anchorRect: DOMRect | null;
-    type: "image" | "details" | "codeBlock" | "table";
+    type: "image" | "file" | "details" | "codeBlock" | "table";
     data: any;
     onAction: (action: string, params?: any) => void;
 }
@@ -97,6 +97,23 @@ export function BlockMenu({
                             <span>Download</span>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                            onClick={() => handleAction("delete")}
+                            className="text-destructive focus:text-destructive"
+                        >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            <span>Delete</span>
+                        </DropdownMenuItem>
+                    </>
+                )}
+                {type === "file" && (
+                    <>
+                        <DropdownMenuItem onClick={() => handleAction("open")}>
+                            <Link className="mr-2 h-4 w-4" />
+                            <span>Open File</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+
                         <DropdownMenuItem
                             onClick={() => handleAction("delete")}
                             className="text-destructive focus:text-destructive"

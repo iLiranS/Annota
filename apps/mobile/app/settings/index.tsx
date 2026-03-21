@@ -67,7 +67,7 @@ export default function SettingsIndex() {
                         label="Storage & Debug"
                         icon="server-outline"
                         onPress={() => router.push('/settings/storage')}
-                        description="Manage images and cache"
+                        description="Manage files and cache"
                         iconColor="#FFFFFF"
                         iconBackgroundColor="#FF9500"
                     />

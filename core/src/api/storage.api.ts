@@ -2,11 +2,11 @@ import { decode } from 'base64-arraybuffer';
 import { supabase } from '../supabase';
 
 export const storageApi = {
-    /** Upload an image to supabase storage
+    /** Upload a file to supabase storage
      * NOTE: For React Native, we pass the data as a base64 string, and then decode it into an ArrayBuffer
      * using the built-in `decode` method to ensure it's sent properly across the RN bridge.
      */
-    uploadImage: async (path: string, base64Data: string, contentType: string, bucket = 'e2e_images') => {
+    uploadFile: async (path: string, base64Data: string, contentType: string, bucket = 'e2e_attachments') => {
         return await supabase.storage.from(bucket).upload(path, decode(base64Data), {
             contentType,
             cacheControl: '3600',
@@ -14,103 +14,86 @@ export const storageApi = {
         });
     },
 
-    /** Download an image from supabase storage */
-    downloadImage: async (path: string, bucket = 'e2e_images') => {
+    /** Download a file from supabase storage */
+    downloadFile: async (path: string, bucket = 'e2e_attachments') => {
         return await supabase.storage.from(bucket).download(path);
     },
 
-    /** Update metadata for an image */
-    updateImageMetadata: async (urlFragment: string, noteId: string, deviceId: string) => {
-        return await supabase
-            .from('image_metadata')
-            .upsert({
-                url_fragment: urlFragment,
-                note_id: noteId,
-                last_used_device_id: deviceId
-            }, {
-                onConflict: 'url_fragment'
-            });
-    },
-
-    /** Execute the RPC to replace note images */
-    replaceNoteImages: async (noteId: string, newUrlFragments: string[], deviceId: string) => {
-        return await supabase.rpc('replace_note_images', {
+    /** Execute the RPC to replace note files */
+    replaceNoteFiles: async (noteId: string, newUrlFragments: string[], deviceId: string) => {
+        return await supabase.rpc('replace_note_files', {
             p_note_id: noteId,
             p_new_url_fragments: newUrlFragments,
             p_device_id: deviceId
         });
     },
 
-    /** Execute the RPC to replace e2e note images */
-    replaceE2ENoteImages: async (noteId: string, userId: string, imageIds: string[]) => {
-        return await supabase.rpc('replace_note_images', {
+    /** Execute the RPC to replace e2e note files */
+    replaceE2ENoteFiles: async (noteId: string, userId: string, fileIds: string[]) => {
+        return await supabase.rpc('replace_note_files', {
             p_note_id: noteId,
             p_user_id: userId,
-            p_image_ids: imageIds,
+            p_file_ids: fileIds,
         });
     },
 
-    /** Get the list of orphaned images for deletion (usually run as CRON, but available here) */
-    getOrphanedImages: async () => {
-        return await supabase.rpc('get_orphaned_images_for_deletion');
+    /** Get the list of orphaned files for deletion (usually run as CRON, but available here) */
+    getOrphanedFiles: async () => {
+        return await supabase.rpc('get_orphaned_files_for_deletion');
     },
 
-    /** Retrieve signed URLs or public URLs for multiple images in a batch. */
-    getPublicUrl: (path: string, bucket = 'e2e_images') => {
+    /** Retrieve signed URLs or public URLs for multiple files in a batch. */
+    getPublicUrl: (path: string, bucket = 'e2e_attachments') => {
         const { data } = supabase.storage.from(bucket).getPublicUrl(path);
         return data.publicUrl;
     },
 
     /** List files in a path */
-    listFiles: async (path: string, bucket = 'e2e_images') => {
+    listFiles: async (path: string, bucket = 'e2e_attachments') => {
         return await supabase.storage.from(bucket).list(path);
     },
 
     /** Remove files */
-    removeFiles: async (paths: string[], bucket = 'e2e_images') => {
+    removeFiles: async (paths: string[], bucket = 'e2e_attachments') => {
         return await supabase.storage.from(bucket).remove(paths);
     },
 
-    /** Remove a metadata record */
-    removeImageMetadata: async (urlFragment: string) => {
-        return await supabase.from('image_metadata').delete().eq('url_fragment', urlFragment);
-    },
-
-    /** Retrieve user's image links used for checking missing downloads - only for updated notes */
-    getUserImageLinks: async (userId: string, noteIds: string[]) => {
-        // Fast exit if no new/updated notes were pulled
+    /** Retrieve user's file links used for checking missing downloads - only for updated notes */
+    getUserFileLinks: async (userId: string, noteIds: string[]) => {
         if (!noteIds || noteIds.length === 0) {
             return { data: [], error: null };
         }
 
         return await supabase
-            .from('note_images')
+            .from('note_files')
             .select(`
             note_id,
-            image_id,
+            file_id,
             user_id
         `)
             .eq('user_id', userId)
-            .in('note_id', noteIds); // Only get links for notes in this sync delta
+            .in('note_id', noteIds);
     },
 
-    /** Fetch encrypted metadata for a specific list of image IDs */
-    getEncryptedImagesMetadata: async (userId: string, imageIds: string[]) => {
+    /** Fetch encrypted metadata for a specific list of file IDs */
+    getEncryptedFilesMetadata: async (userId: string, fileIds: string[]) => {
         return await supabase
-            .from('encrypted_images')
+            .from('encrypted_files')
             .select('id, nonce')
-            .in('id', imageIds)
+            .in('id', fileIds)
             .eq('user_id', userId);
     },
 
-    /** Insert a new encrypted image record */
-    upsertEncryptedImage: async (id: string, userId: string, nonce: string) => {
+    /** Insert a new encrypted file record */
+    upsertEncryptedFile: async (id: string, userId: string, nonce: string, mimeType: string, sizeBytes: number) => {
         return await supabase
-            .from('encrypted_images')
+            .from('encrypted_files')
             .upsert({
                 id,
                 user_id: userId,
                 nonce,
+                mime_type: mimeType,
+                size_bytes: sizeBytes,
                 created_at: new Date().toISOString(),
             });
     }

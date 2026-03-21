@@ -242,9 +242,9 @@ export function setupEditor(options: any) {
                     const res = resolve();
                     if (res) sendMessage({ type: 'openBlockMenu', ...res.message, pos: res.pos });
                 },
-                onOpenImageMenu: (_, resolve) => {
+                onOpenFileMenu: (_, resolve) => {
                     const res = resolve();
-                    if (res) sendMessage({ type: 'openImageMenu', ...res.message, pos: res.pos });
+                    if (res) sendMessage({ type: 'openOpenFileMenu', ...res.message, pos: res.pos });
                 },
                 onOpenTableMenu: (_, resolve) => {
                     const res = resolve();
@@ -265,7 +265,8 @@ export function setupEditor(options: any) {
                 onTagCommand: (data) => sendMessage({ type: 'tagCommand', ...serializeCommandData(data) }),
                 onNoteLinkCommand: (data) => sendMessage({ type: 'noteLinkCommand', ...serializeCommandData(data) }),
             }),
-            content: content,
+            content: '', // Start empty to ensure view mounts before complex nodes (like fileAttachment) render
+
             autofocus: autofocus, // Pass directly
             onCreate: function ({ editor }) {
                 // Suppress content updates during all setup mutations
@@ -328,7 +329,18 @@ export function setupEditor(options: any) {
         });
 
         applyFontFamily(fontFamily);
+        // quick hack to solve notes with file attachment not loading issue
+        if (content) {
+            setTimeout(() => {
+                if (window.editor) {
+                    window.editor.commands.setContent(content);
+                }
+            }, 0);
+        }
+
+
         if (loadingEl) loadingEl.style.display = 'none';
+
 
         // Allow content updates after setup is fully complete.
         // Use a timeout longer than the onUpdate debounce (300ms) to ensure

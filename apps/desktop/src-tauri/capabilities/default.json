@@ -38,6 +38,17 @@
         }
       ],
       "deny": []
+    },
+    {
+      "identifier": "opener:allow-open-path",
+      "allow": [
+        {
+          "path": "$APPDATA/**"
+        },
+        {
+          "path": "$APPLOCALDATA/**"
+        }
+      ]
     }
   ]
 }

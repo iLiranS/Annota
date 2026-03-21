@@ -2,7 +2,7 @@ import { useAppTheme } from "@/hooks/use-app-theme";
 import { useDailyCleanup } from "@/hooks/use-daily-cleanup";
 import {
   authApi,
-  imageSyncService,
+  fileSyncService,
   useNotesStore,
   useSearchStore,
   useSettingsStore,
@@ -315,9 +315,9 @@ function App() {
         }
       }, session.user.id);
 
-      // 2. Kick off any pending image downloads from previous sessions
-      imageSyncService.retryPendingDownloads(key, session.user.id).catch(err => {
-        console.error('[Startup] Failed to retry pending image downloads:', err);
+      // 2. Kick off any pending file downloads from previous sessions
+      fileSyncService.retryPendingDownloads(key, session.user.id).catch(err => {
+        console.error('[Startup] Failed to retry pending file downloads:', err);
       });
     };
 

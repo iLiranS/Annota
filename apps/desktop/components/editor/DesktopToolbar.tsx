@@ -35,8 +35,8 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '../ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { ColorPicker } from './toolbar/toolbar-color-picker';
+import { ToolbarFileUpload } from './toolbar/toolbar-file-upload';
 import { HeadingSelector } from './toolbar/toolbar-heading-selector';
-import { ToolbarImageUpload } from './toolbar/toolbar-image-upload';
 import { LinkPopover } from './toolbar/toolbar-link-popover';
 import { MathPopover } from './toolbar/toolbar-math-popover';
 
@@ -51,7 +51,7 @@ type ToolbarItem = {
 export function DesktopToolbar({
     editorState,
     sendCommand,
-    onInsertImage,
+    onInsertFile: onInsertFile,
     activePopup,
     currentLatex,
     onActivePopupChange,
@@ -281,12 +281,12 @@ export function DesktopToolbar({
             dropdownRender: <DropdownMenuItem key="table-dropdown" onClick={() => { if (!editorState.isInTable) sendCommand('insertTable', { rows: 3, cols: 3, withHeaderRow: false }); }} className={cn("gap-2", editorState.isInTable && "text-primary")}><TableIcon className="w-4 h-4" /> Table</DropdownMenuItem>
         },
         {
-            id: 'image',
-            label: 'Image',
-            render: <ToolbarImageUpload key="image" onInsertImage={onInsertImage} onOpenChange={handleOpenChange} />,
-            dropdownRender: <ToolbarImageUpload key="image-dropdown" onInsertImage={onInsertImage} onOpenChange={handleOpenChange} isMenu />
+            id: 'file',
+            label: 'Insert File',
+            render: <ToolbarFileUpload key="file" onInsertFile={onInsertFile} onOpenChange={handleOpenChange} />,
+            dropdownRender: <ToolbarFileUpload key="file-dropdown" onInsertFile={onInsertFile} onOpenChange={handleOpenChange} isMenu />
         }
-    ], [editorState, sendCommand, colors.primary, activeStyle, handleOpenChange, onInsertImage, activePopup, onActivePopupChange, MOD, ALT, SHIFT]);
+    ], [editorState, sendCommand, colors.primary, activeStyle, handleOpenChange, onInsertFile, activePopup, onActivePopupChange, MOD, ALT, SHIFT]);
 
     const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
     const [resetKey, setResetKey] = useState(0);
@@ -539,10 +539,10 @@ export function DesktopToolbar({
                 hideTitle
             />
 
-            {/* Global Image Modal */}
-            <ToolbarImageUpload
-                onInsertImage={onInsertImage}
-                visible={activePopup === 'image'}
+            {/* Global File Modal */}
+            <ToolbarFileUpload
+                onInsertFile={onInsertFile}
+                visible={activePopup === 'file'}
                 onClose={() => onActivePopupChange(null)}
             />
         </TooltipProvider>

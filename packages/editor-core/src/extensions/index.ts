@@ -10,3 +10,4 @@ export * from './slash-command';
 export * from './tag-command';
 export * from './note-link-command';
 export * from './annota-autolink';
+export * from './file-attachment';

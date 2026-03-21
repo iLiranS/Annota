@@ -1,4 +1,4 @@
-import * as ImagesRepo from '../db/repositories/images.repository';
+import * as FilesRepo from '../db/repositories/files.repository';
 import * as notesRepo from '../db/repositories/notes.repository';
 import { MAX_NOTE_SIZE, normalizeStoredContent } from '../db/repositories/notes.repository';
 import type { NoteMetadata } from '../db/schema';
@@ -6,8 +6,8 @@ import { insertNoteMetadataSchema } from '../db/validators/notes';
 import type { UserRole } from '../stores/user.store';
 import { generateNoteMetadata, generatePreview, generateTitle } from '../utils/notes';
 import { isPremiumUser } from '../utils/subscription';
+import * as NoteFileService from './files/note-file.service';
 import { FolderService } from './folders.service';
-import * as NoteImageService from './images/note-image.service';
 import { TagService } from './tags.service';
 
 
@@ -138,8 +138,8 @@ export const NoteService = {
 
     // 6. Permanent Delete
     permanentlyDelete: async (noteId: string) => {
-        // 1. Clean up images (moved from repo)
-        await NoteImageService.cleanupImagesForNote(noteId);
+        // 1. Clean up files (moved from repo)
+        await NoteFileService.cleanupFilesForNote(noteId);
 
         // 2. Delete Note
         await notesRepo.permanentlyDeleteNote(noteId);
@@ -155,18 +155,18 @@ export const NoteService = {
     },
 
     deleteVersion: async (_noteId: string, versionId: string) => {
-        // 1. Get images used in this version (before they are unlinked by deletion)
-        const imageIds = await NoteImageService.getImageIdsForVersion(versionId);
+        // 1. Get files used in this version (before they are unlinked by deletion)
+        const fileIds = await NoteFileService.getFileIdsForVersion(versionId);
 
-        // 2. Delete the links in version_images table (Critical Step for Orphans check)
+        // 2. Delete the links in version_files table (Critical Step for Orphans check)
         // We must remove the links SO THAT cleanupOrphans sees the count decrease.
-        await ImagesRepo.deleteImagesForVersions([versionId]);
+        await FilesRepo.deleteFilesForVersions([versionId]);
 
         // 3. Delete the version record
         await notesRepo.deleteNoteVersion(versionId);
 
-        // 4. Cleanup images that might have become orphans
-        await NoteImageService.cleanupOrphans(imageIds);
+        // 4. Cleanup files that might have become orphans
+        await NoteFileService.cleanupOrphans(fileIds);
     },
 
     deleteAllVersionsExceptLatest: async (noteId: string) => {

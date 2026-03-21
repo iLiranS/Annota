@@ -6,15 +6,16 @@ import React from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
-interface ImageInputProps {
+interface FileInputProps {
     onSubmit: (url: string) => void;
     onPickFromLibrary?: () => void;
+    onPickDocument?: () => void;
     onTakePhoto?: () => void;
     onClose: () => void;
     isLoading?: boolean;
 }
 
-export function ImageInput({ onSubmit, onPickFromLibrary, onTakePhoto, onClose, isLoading }: ImageInputProps) {
+export function FileInput({ onSubmit, onPickFromLibrary, onPickDocument, onTakePhoto, onClose, isLoading }: FileInputProps) {
     const { colors, dark } = useTheme();
 
     const {
@@ -42,7 +43,7 @@ export function ImageInput({ onSubmit, onPickFromLibrary, onTakePhoto, onClose, 
                 {isLoading ? (
                     <View style={[styles.loadingContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
                         <ActivityIndicator size="small" color={colors.primary} />
-                        <Text style={[styles.sourceLabel, { color: colors.text, marginLeft: 8 }]}>Processing image...</Text>
+                        <Text style={[styles.sourceLabel, { color: colors.text, marginLeft: 8 }]}>Processing file...</Text>
                     </View>
                 ) : (
                     <>
@@ -53,6 +54,15 @@ export function ImageInput({ onSubmit, onPickFromLibrary, onTakePhoto, onClose, 
                             >
                                 <Ionicons name="images-outline" size={22} color={colors.primary} />
                                 <Text style={[styles.sourceLabel, { color: colors.text }]}>Library</Text>
+                            </Pressable>
+                        )}
+                        {onPickDocument && (
+                            <Pressable
+                                style={[styles.sourceButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+                                onPress={onPickDocument}
+                            >
+                                <Ionicons name="document-outline" size={22} color={colors.primary} />
+                                <Text style={[styles.sourceLabel, { color: colors.text }]}>Files</Text>
                             </Pressable>
                         )}
                         {onTakePhoto && (
@@ -91,7 +101,7 @@ export function ImageInput({ onSubmit, onPickFromLibrary, onTakePhoto, onClose, 
                             value={value}
                             onChangeText={onChange}
                             onBlur={onBlur}
-                            placeholder="https://example.com/image.jpg"
+                            placeholder="https://example.com/file.png"
                             placeholderTextColor={dark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)'}
                             autoCapitalize="none"
                             autoCorrect={false}

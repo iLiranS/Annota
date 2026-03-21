@@ -19,15 +19,15 @@ import {
     ColorPopupProps,
     DetailsBackgroundPopupProps,
     HeadingPopupProps,
-    ImageMenuPopupProps,
-    ImagePopupProps,
+    FileMenuPopupProps,
+    FilePopupProps,
     LinkPopupProps,
     MathPopupProps,
     TablePopupProps,
     ToolbarPopupProps,
     YouTubePopupProps
 } from '@annota/editor-ui';
-import { ImageInput } from './popups/image-input';
+import { FileInput } from './popups/file-input';
 import { LinkInput } from './popups/link-input';
 import { MathInput } from './popups/math-input';
 import { TableActions } from './popups/table-actions';
@@ -110,10 +110,10 @@ function BlockActionMenu({ blockType, onAction, onClose }: { blockType: string, 
 }
 
 // ============================================================================
-// Image Action Menu
+// File Action Menu
 // ============================================================================
 
-const IMAGE_ACTIONS: BlockAction[] = [
+const FILE_ACTIONS: BlockAction[] = [
     { id: 'download', label: 'Download', icon: 'file-download', action: 'download' },
     { id: 'copy', label: 'Copy', icon: 'content-copy', action: 'copy' },
     { id: 'cut', label: 'Cut', icon: 'content-cut', action: 'cut' },
@@ -127,8 +127,12 @@ const RESIZE_OPTIONS = [
     { label: '100%', value: '100%' },
 ];
 
-function ImageActionMenu({ onAction, onClose }: { onAction: (action: string, data?: any) => void, onClose: () => void }) {
+function FileActionMenu({ mimeType, onAction, onClose }: { mimeType?: string, onAction: (action: string, data?: any) => void, onClose: () => void }) {
     const { colors } = useTheme();
+    const isImage = !mimeType || mimeType.startsWith('image/');
+
+    const filteredActions = isImage ? FILE_ACTIONS : FILE_ACTIONS.filter(a => a.id === 'delete');
+
 
     return (
         <View>
@@ -139,12 +143,13 @@ function ImageActionMenu({ onAction, onClose }: { onAction: (action: string, dat
                 marginBottom: 16,
                 textAlign: 'center'
             }}>
-                Image Options
+                File Options
             </Text>
 
             {/* Action buttons */}
             <View style={{ gap: 8 }}>
-                {IMAGE_ACTIONS.map((item) => (
+                {filteredActions.map((item) => (
+
                     <TouchableOpacity
                         key={item.id}
                         style={{
@@ -165,39 +170,44 @@ function ImageActionMenu({ onAction, onClose }: { onAction: (action: string, dat
                 ))}
             </View>
 
-            {/* Resize section */}
-            <Text style={{
-                fontSize: 13,
-                fontWeight: '600',
-                color: colors.text,
-                opacity: 0.5,
-                marginTop: 16,
-                marginBottom: 8,
-                textTransform: 'uppercase',
-                letterSpacing: 0.5,
-            }}>
-                Resize
-            </Text>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-                {RESIZE_OPTIONS.map((opt) => (
-                    <TouchableOpacity
-                        key={opt.value}
-                        style={{
-                            flex: 1,
-                            paddingVertical: 10,
-                            borderRadius: 8,
-                            backgroundColor: colors.card,
-                            alignItems: 'center',
-                        }}
-                        onPress={() => {
-                            onAction('resize', { width: opt.value });
-                            onClose();
-                        }}
-                    >
-                        <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text }}>{opt.label}</Text>
-                    </TouchableOpacity>
-                ))}
-            </View>
+            {/* Resize section - Only for images */}
+            {isImage && (
+                <>
+                    <Text style={{
+                        fontSize: 13,
+                        fontWeight: '600',
+                        color: colors.text,
+                        opacity: 0.5,
+                        marginTop: 16,
+                        marginBottom: 8,
+                        textTransform: 'uppercase',
+                        letterSpacing: 0.5,
+                    }}>
+                        Resize
+                    </Text>
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                        {RESIZE_OPTIONS.map((opt) => (
+                            <TouchableOpacity
+                                key={opt.value}
+                                style={{
+                                    flex: 1,
+                                    paddingVertical: 10,
+                                    borderRadius: 8,
+                                    backgroundColor: colors.card,
+                                    alignItems: 'center',
+                                }}
+                                onPress={() => {
+                                    onAction('resize', { width: opt.value });
+                                    onClose();
+                                }}
+                            >
+                                <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text }}>{opt.label}</Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                </>
+            )}
+
         </View>
     );
 }
@@ -265,12 +275,13 @@ export function ToolbarPopup(props: ToolbarPopupProps) {
                         onClose={onClose}
                     />
                 );
-            case 'image':
+            case 'file':
                 return (
-                    <ImageInput
-                        onSubmit={(props as ImagePopupProps).onSubmit}
-                        onPickFromLibrary={(props as ImagePopupProps).onPickFromLibrary}
-                        onTakePhoto={(props as ImagePopupProps).onTakePhoto}
+                    <FileInput
+                        onSubmit={(props as FilePopupProps).onSubmit}
+                        onPickFromLibrary={(props as FilePopupProps).onPickFromLibrary}
+                        onPickDocument={(props as FilePopupProps).onPickDocument}
+                        onTakePhoto={(props as FilePopupProps).onTakePhoto}
                         onClose={onClose}
                         isLoading={isLoading}
                     />
@@ -313,12 +324,14 @@ export function ToolbarPopup(props: ToolbarPopupProps) {
                         onClear={(props as DetailsBackgroundPopupProps).onClear}
                     />
                 );
-            case 'imageMenu':
+            case 'fileMenu':
                 return (
-                    <ImageActionMenu
-                        onAction={(props as ImageMenuPopupProps).onAction}
+                    <FileActionMenu
+                        mimeType={(props as FileMenuPopupProps).mimeType}
+                        onAction={(props as FileMenuPopupProps).onAction}
                         onClose={onClose}
                     />
+
                 );
 
             default:

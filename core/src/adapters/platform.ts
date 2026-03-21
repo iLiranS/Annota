@@ -30,7 +30,7 @@ export interface PlatformAdapters {
     };
 
     fileSystem: {
-        ensureDir: (scope: 'images' | 'cache') => Promise<string>;
+        ensureDir: (scope: 'images' | 'cache' | 'files') => Promise<string>;
         copyFile: (from: string, to: string) => Promise<void>;
         deleteFile: (path: string) => Promise<void>;
         readBase64: (path: string) => Promise<string>;
@@ -38,6 +38,7 @@ export interface PlatformAdapters {
         writeBytes: (path: string, bytes: Uint8Array) => Promise<void>;
         getSize: (path: string) => Promise<number>;
         downloadToTemp: (url: string) => Promise<{ path: string; cleanup: () => Promise<void> }>;
+        openFile: (path: string, mimeType?: string) => Promise<void>;
         toImageUrl: (path: string) => Promise<string>;
     };
 

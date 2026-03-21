@@ -2,13 +2,13 @@ import { inArray } from 'drizzle-orm';
 import { authApi } from '../api/auth.api';
 import { storageApi } from '../api/storage.api';
 import { syncApi } from '../api/sync.api';
+import { getFilesByIds } from '../db/repositories/files.repository';
 import { clearDirtyFolders, getDirtyFolders, upsertSyncedFolder, } from '../db/repositories/folders.repository';
-import { getImagesByIds } from '../db/repositories/images.repository';
 import { clearDirtyNotes, getDirtyNotes, getNoteContent, upsertSyncedNote, } from '../db/repositories/notes.repository';
 import { clearDirtyTags, getDirtyTags, upsertSyncedTag, } from '../db/repositories/tags.repository';
 import { clearDirtyTasks, getDirtyTasks, upsertSyncedTask, } from '../db/repositories/tasks.repository';
 import * as schema from '../db/schema';
-import { imageSyncService } from '../services/images/image-sync.service';
+import { fileSyncService } from '../services/files/file-sync.service';
 import { StorageService } from '../services/storage.service';
 import { createStorageAdapter } from '../stores/config';
 import { getDb } from '../stores/db.store';
@@ -198,7 +198,7 @@ export async function performSyncPush(masterKey: string) {
     await pushNotes();
 
     if (pushedNoteIds.length > 0) {
-        await imageSyncService.pushImages(masterKey, userId, pushedNoteIds);
+        await fileSyncService.pushFiles(masterKey, userId, pushedNoteIds);
     }
 
     if (didDeleteTombstones) {
@@ -395,24 +395,24 @@ export async function performSyncPull(masterKey: string) {
     }
 
     // Background Image Pull
-    const { data: cloudLinks, error: linkError } = await storageApi.getUserImageLinks(userId, fetchedNoteIds);
+    const { data: cloudLinks, error: linkError } = await storageApi.getUserFileLinks(userId, fetchedNoteIds);
     if (!linkError && cloudLinks && cloudLinks.length > 0) {
-        const uniqueImageIds = Array.from(new Set(cloudLinks.map(l => l.image_id as string)));
-        const localImages = await getImagesByIds(uniqueImageIds);
-        const localImageIds = new Set(localImages.map((i: any) => i.id));
-        const missingIds = uniqueImageIds.filter(id => !localImageIds.has(id));
+        const uniqueFileIds = Array.from(new Set(cloudLinks.map(l => l.file_id as string)));
+        const localFiles = await getFilesByIds(uniqueFileIds);
+        const localFileIds = new Set(localFiles.map((i: any) => i.id));
+        const missingIds = uniqueFileIds.filter(id => !localFileIds.has(id));
 
         if (missingIds.length > 0) {
-            const { data: cloudMeta, error: metaError } = await storageApi.getEncryptedImagesMetadata(userId, missingIds);
+            const { data: cloudMeta, error: metaError } = await storageApi.getEncryptedFilesMetadata(userId, missingIds);
             if (!metaError && cloudMeta) {
                 const downloadQueue = cloudMeta.map(meta => ({
-                    imageId: meta.id,
+                    fileId: meta.id,
                     noteId: '',
                     nonce: meta.nonce,
                     masterKey,
                     userId
                 }));
-                imageSyncService.queueImagesForDownload(downloadQueue);
+                fileSyncService.queueFilesForDownload(downloadQueue);
             }
         }
     }

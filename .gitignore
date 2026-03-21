@@ -8,6 +8,9 @@ node_modules/
 #env
 .env
 
+#Supabase
+supabase/
+
 # Expo
 .expo/
 dist/

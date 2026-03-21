@@ -1,11 +1,11 @@
-import { NoteImageService } from '@annota/core/platform';
+import { NoteFileService } from '@annota/core/platform';
 import { useCallback } from 'react';
-import { handleImagePaste } from '../shared/image-paste';
+import { handleFilePaste } from '../shared/file-paste';
 import { TipTapEditorProps } from '../shared/types';
 
 // Removed IMAGE_MIME_TO_EXT and getExtensionFromMime as per instruction to improve extension detection.
 // The new approach will likely infer the extension from the base64 data itself or rely on a more robust method.
-// For now, we'll assume the platform adapters or NoteImageService can handle this.
+// For now, we'll assume the platform adapters or file services can handle this.
 // If the original logic was to be kept, it would be:
 const IMAGE_MIME_TO_EXT: Record<string, string> = {
     'image/jpeg': 'jpg',
@@ -99,15 +99,15 @@ export function useEditorBridgeHandlers({
             case 'resolveImageIds':
                 if (data.imageIds && Array.isArray(data.imageIds)) {
                     try {
-                        const imageMap = await NoteImageService.resolveImageSources(data.imageIds);
-                        sendMessage('resolveImages', { imageMap });
+                        const fileMap = await NoteFileService.resolveFileSources(data.imageIds);
+                        sendMessage('resolveImages', { imageMap: fileMap });
                     } catch (err) {
-                        console.error('Failed to resolve image IDs:', err);
+                        console.error('Failed to resolve file IDs:', err);
                     }
                 }
                 break;
             case 'imagePasted':
-                handleImagePaste({
+                handleFilePaste({
                     noteId,
                     data,
                     insertImage: ({ imageId, pos, src }) => {

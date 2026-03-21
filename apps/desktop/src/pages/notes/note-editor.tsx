@@ -8,7 +8,7 @@ import { useSidebar } from "@/components/ui/sidebar";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { copyImageToClipboard, writeText } from "@/lib/clipboard";
 import { generateTitle, TRASH_FOLDER_ID, useNotesStore, useSettingsStore } from "@annota/core";
-import { NoteImageService } from "@annota/core/platform";
+import { NoteFileService } from "@annota/core/platform";
 import TipTapEditor, { TipTapEditorRef } from "@annota/editor-ui";
 import { FileText, Loader2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -69,7 +69,7 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId 
 
     // Block Menu state
     const [activeBlockMenu, setActiveBlockMenu] = useState<{
-        type: "image" | "details" | "codeBlock" | "table";
+        type: "image" | "file" | "details" | "codeBlock" | "table";
         data: any;
         anchorRect: DOMRect;
         onResolve: () => any;
@@ -99,12 +99,12 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId 
         });
     }, []);
 
-    const handleOpenImageMenu = useCallback((e: MouseEvent, resolve: () => any) => {
+    const handleOpenFileMenu = useCallback((e: MouseEvent, resolve: () => any) => {
         const result = resolve();
         if (!result) return;
 
         setActiveBlockMenu({
-            type: "image",
+            type: result.message.type === 'openOpenFileMenu' && (result.message as any).fileId ? "file" : "image",
             data: result.message,
             anchorRect: (e.target as HTMLElement).getBoundingClientRect(),
             onResolve: resolve,
@@ -229,6 +229,11 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId 
                     } catch (err) {
                         console.error("Download failed:", err);
                     }
+                }
+                break;
+            case "open":
+                if (type === "file" && data.localPath) {
+                    editorRef.current.onCommand("openFile", { localPath: data.localPath, mimeType: data.mimeType });
                 }
                 break;
         }
@@ -363,7 +368,7 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId 
             const ids = extractImageIds(html);
             if (ids.length === 0) return html;
 
-            const imageMap = await NoteImageService.resolveImageSources(ids);
+            const imageMap = await NoteFileService.resolveFileSources(ids);
             if (!imageMap || Object.keys(imageMap).length === 0) return html;
 
             if (typeof DOMParser !== "undefined") {
@@ -483,7 +488,7 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId 
                         renderToolbar={(props) => <DesktopToolbar {...props} />}
                         renderImageGallery={(props) => <ImageGallery {...props} />}
                         onOpenBlockMenu={handleOpenBlockMenu}
-                        onOpenImageMenu={handleOpenImageMenu}
+                        onOpenFileMenu={handleOpenFileMenu}
                         onOpenTableMenu={handleOpenTableMenu}
                         onCodeBlockSelected={handleCodeBlockSelected}
                         onSlashCommand={setSlashCommandState}

@@ -154,7 +154,7 @@ export function ActivityInsights() {
         const todayIndex = new Date().getDate();
         // Only count days from the start of the month up to today to ensure the average is accurate
         const pastAndToday = activityChartData.slice(0, todayIndex);
-        
+
         const peak = pastAndToday.length > 0 ? Math.max(...pastAndToday.map(d => d.activity)) : 0;
         const totalActivity = pastAndToday.reduce((acc, d) => acc + d.activity, 0);
         const average = pastAndToday.length > 0 ? (totalActivity / pastAndToday.length).toFixed(2) : 0;
@@ -247,10 +247,11 @@ export function ActivityInsights() {
                                 {noteDailyActivity.map((d, i) => (
                                     <div
                                         key={i}
-                                        className="flex-1 bg-blue-500/20 rounded-t-[1px] transition-all duration-500 hover:bg-blue-500/40"
+                                        className="flex-1 bg-accent rounded-t-[1px] transition-all duration-200  hover:bg-accent-full animate-pop-in"
                                         style={{
                                             height: `${Math.max(15, (d.value / Math.max(...noteDailyActivity.map(x => x.value), 1)) * 100)}%`,
-                                            opacity: 0.3 + (i / daysInMonth) * 0.7
+                                            opacity: 0.3 + (i / daysInMonth) * 0.7,
+                                            animationDelay: `${i * 30}ms`
                                         }}
                                     />
                                 ))}

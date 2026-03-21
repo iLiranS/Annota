@@ -5,12 +5,12 @@ import { getPlatformAdapters } from '../../adapters';
 
 const MAX_DIMENSION = 1500;
 const WEBP_QUALITY = 0.8;
-export const MAX_IMAGE_SIZE = 20 * 1024 * 1024; // 20MB
+export const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 
 // ============ DIRECTORY MANAGEMENT ============
 
-export async function getImagesDirectory(): Promise<string> {
-    return await getPlatformAdapters().fileSystem.ensureDir('images');
+export async function getFilesDirectory(): Promise<string> {
+    return await getPlatformAdapters().fileSystem.ensureDir('files');
 }
 
 /**
@@ -23,30 +23,35 @@ export async function resolveLocalUri(storedPath: string): Promise<string> {
 
     // If it's already an absolute file URI or path, return it as is.
     // This is CRITICAL for temp files (downloads/camera) to not be re-rooted
-    // to the images directory before they are actually saved there.
+    // to the files directory before they are actually saved there.
     if (storedPath.startsWith('/') || storedPath.startsWith('file://')) {
         return storedPath;
     }
 
-    // Otherwise, assume it's a filename relative to the persistent images directory.
+    // Otherwise, assume it's a filename relative to the persistent files directory.
     let filename = storedPath;
     if (storedPath.includes('/') || storedPath.includes('\\')) {
         filename = storedPath.split(/[/\\]/).pop() || storedPath;
     }
 
-    const dir = await getImagesDirectory();
+    const dir = await getFilesDirectory();
     const separator = dir.endsWith('/') ? '' : '/';
     return `${dir}${separator}${filename}`;
 }
 
-// ============ IMAGE PROCESSING ============
+// ============ FILE PROCESSING ============
 
 /**
  * Resize and compress an image to WEBP.
  * Targets the long edge to MAX_DIMENSION (landscape → width, portrait → height).
  * Skips resize if both dimensions are already within limits.
+ * Bypasses completely for PDFs.
  */
-export async function resizeAndCompress(uri: string): Promise<{ uri: string; width: number; height: number }> {
+export async function resizeAndCompress(uri: string, fileType: string = 'image'): Promise<{ uri: string; width: number | null; height: number | null }> {
+    if (fileType === 'pdf') {
+        return { uri, width: null, height: null };
+    }
+
     const { path, width, height } = await getPlatformAdapters().image.resizeAndCompress(uri, {
         maxDimension: MAX_DIMENSION,
         quality: WEBP_QUALITY,
@@ -65,27 +70,33 @@ export async function computeHash(fileUri: string): Promise<string> {
 }
 
 /**
- * Save an image file to the local images directory.
+ * Save a file to the local files directory.
  * Returns the final local path (URI).
  */
-export async function saveToLocalStorage(sourceUri: string, imageId: string): Promise<string> {
-    const dir = await getImagesDirectory();
-    // Normalize path just in case
+export async function saveToLocalStorage(sourceUri: string, fileId: string, fileType: string = 'image'): Promise<string> {
+    const dir = await getFilesDirectory();
     const separator = dir.endsWith('/') ? '' : '/';
-    const destPath = `${dir}${separator}${imageId}.webp`;
+    const extension = fileType === 'pdf' ? 'pdf' : 'webp';
+    const destPath = `${dir}${separator}${fileId}.${extension}`;
     await getPlatformAdapters().fileSystem.copyFile(sourceUri, destPath);
     return destPath;
 }
 
 /**
- * Read an image file as a base64 data URI for WebView injection.
- * Returns `data:image/jpeg;base64,...`
+ * Read a file as a base64 data URI for WebView injection.
+ * Returns `data:image/webp;base64,...` or `data:application/pdf;base64,...`
  */
 export async function readAsBase64DataUri(localPath: string): Promise<string> {
     const absoluteUri = await resolveLocalUri(localPath);
     const base64 = await getPlatformAdapters().fileSystem.readBase64(absoluteUri);
-    // Detect MIME from extension — legacy .jpg files still need to work
-    const mime = absoluteUri.endsWith('.webp') ? 'image/webp' : 'image/jpeg';
+    
+    let mime = 'image/webp';
+    if (absoluteUri.endsWith('.pdf')) {
+        mime = 'application/pdf';
+    } else if (absoluteUri.endsWith('.jpg') || absoluteUri.endsWith('.jpeg')) {
+        mime = 'image/jpeg';
+    }
+    
     return `data:${mime};base64,${base64}`;
 }
 
@@ -97,36 +108,33 @@ export function validateUrl(url: string) {
     const parsed = new URL(url);
 
     if (parsed.protocol !== "https:") {
-        throw new Error("Only HTTPS images are allowed");
+        throw new Error("Only HTTPS URLs are allowed");
     }
 }
 
 /**
- * Download a remote image to a temporary file.
+ * Download a remote file to a temporary location.
  * Returns the URI and a cleanup function.
  */
-export async function downloadRemoteImage(url: string): Promise<{ uri: string; cleanup: () => Promise<void> }> {
+export async function downloadRemoteFile(url: string): Promise<{ uri: string; cleanup: () => Promise<void> }> {
     validateUrl(url);
 
     const result = await getPlatformAdapters().fileSystem.downloadToTemp(url);
 
     try {
-        // Double check size after download as a final safety measure
-        // We use result.path directly as it's absolute
         const size = await getFileSize(result.path);
-        if (size > MAX_IMAGE_SIZE) {
-            throw new Error("Image too large");
+        if (size > MAX_FILE_SIZE) {
+            throw new Error("File too large");
         }
         return { uri: result.path, cleanup: result.cleanup };
     } catch (e) {
-        // Ensure we clean up if something goes wrong after download
         await result.cleanup();
         throw e;
     }
 }
 
-/** Delete an image file from local storage */
-export async function deleteImageFile(localPath: string): Promise<void> {
+/** Delete a file from local storage */
+export async function deleteFile(localPath: string): Promise<void> {
     const absoluteUri = await resolveLocalUri(localPath);
     await getPlatformAdapters().fileSystem.deleteFile(absoluteUri).catch(() => { });
 }
@@ -140,11 +148,9 @@ export async function getFileSize(localPath: string): Promise<number> {
 // ============ DEVICE INTEGRATION ============
 
 /**
- * Saves a given image to the device's native gallery.
- * Prefers using the existing local file via imageId if available.
- * Falls back to extracting logic from the base64 URI if needed.
+ * Saves a given file to the device's native gallery (if image) or shares it (if PDF).
  */
-export async function saveImageToGallery(imageId?: string, base64Uri?: string): Promise<boolean> {
+export async function saveFile(fileId?: string, base64Uri?: string): Promise<boolean> {
     try {
         const hasPermission = await getPlatformAdapters().image.requestGalleryPermission();
         if (!hasPermission) {
@@ -154,13 +160,13 @@ export async function saveImageToGallery(imageId?: string, base64Uri?: string): 
 
         let localUri = '';
 
-        if (imageId) {
-            const webpPath = await resolveLocalUri(`${imageId}.webp`);
+        if (fileId) {
+            const webpPath = await resolveLocalUri(`${fileId}.webp`);
             let size = await getFileSize(webpPath);
             if (size > 0) {
                 localUri = webpPath;
             } else {
-                const jpgPath = await resolveLocalUri(`${imageId}.jpg`);
+                const jpgPath = await resolveLocalUri(`${fileId}.jpg`);
                 size = await getFileSize(jpgPath);
                 if (size > 0) {
                     localUri = jpgPath;

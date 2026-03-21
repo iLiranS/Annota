@@ -7,7 +7,7 @@ import * as schema from '../db/schema';
 import type { UserRole } from '../stores/user.store';
 import { generateFolder } from '../utils/folders';
 import { isPremiumUser } from '../utils/subscription';
-import * as NoteImageService from './images/note-image.service';
+import * as NoteFileService from './files/note-file.service';
 
 
 
@@ -163,10 +163,10 @@ export const FolderService = {
     // 6. Empty Trash
     emptyTrash: async () => {
         try {
-            // 1. Clean up images for all deleted notes
+            // 1. Clean up files for all deleted notes
             const deletedNoteIds = await notesRepo.getDeletedNoteIds();
             for (const noteId of deletedNoteIds) {
-                await NoteImageService.cleanupImagesForNote(noteId);
+                await NoteFileService.cleanupFilesForNote(noteId);
             }
 
             // 2. Delete notes and folders

@@ -242,18 +242,18 @@ export const useUserStore = create<UserState>()(
                 if (!user) return;
 
                 try {
-                    // 1. Delete all associated images from filesystem
+                    // 1. Delete all associated files from filesystem
                     // Using dynamic imports to avoid circular dependencies with db client
-                    const { getAllImagePaths } = await import('../db/repositories/images.repository');
-                    const imagePaths = await getAllImagePaths();
+                    const { getAllFilePaths } = await import('../db/repositories/files.repository');
+                    const filePaths = await getAllFilePaths();
                     const { getPlatformAdapters } = await import('../adapters');
                     const platform = getPlatformAdapters();
-                    
-                    for (const path of imagePaths) {
+
+                    for (const path of filePaths) {
                         try {
                             await platform.fileSystem.deleteFile(path);
                         } catch (e) {
-                            console.warn(`[user.store] Failed to delete image at ${path}:`, e);
+                            console.warn(`[user.store] Failed to delete file at ${path}:`, e);
                         }
                     }
 

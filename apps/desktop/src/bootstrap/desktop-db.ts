@@ -136,17 +136,18 @@ export async function resetDesktopDatabase(): Promise<void> {
   const db = await Database.load(`sqlite:${dbName}`);
 
   const tables = [
-    'note_images',
-    'images',
+    'files',
+    'version_files',
+    'file_download_queue',
     'note_metadata',
     'note_content',
     'note_versions',
     'folders',
     'tasks',
     'tags',
-    'settings',
-    'version_images'
+    'settings'
   ];
+
 
   for (const table of tables) {
     await db.execute(`DROP TABLE IF EXISTS ${table}`);
