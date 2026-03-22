@@ -14,6 +14,7 @@ import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { LocationPickerModal } from "../location-picker-modal";
 import { NotePreviewModal } from "./note-preview-modal";
+import { FolderEditModal } from "./folder-edit-modal";
 
 import { Slot } from "@radix-ui/react-slot";
 
@@ -51,6 +52,8 @@ export function NoteListItem({
 
     const [isLocationPickerOpen, setIsLocationPickerOpen] = useState(false);
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+    const [isNewFolderModalOpen, setIsNewFolderModalOpen] = useState(false);
+    const [newFolderParentId, setNewFolderParentId] = useState<string | null>(null);
 
     const handleTogglePin = useCallback(async () => {
         await updateNoteMetadata(note.id, { isPinned: !note.isPinned });
@@ -225,8 +228,22 @@ export function NoteListItem({
                 <LocationPickerModal
                     open={isLocationPickerOpen}
                     onOpenChange={setIsLocationPickerOpen}
+                    onClose={() => setIsLocationPickerOpen(false)}
                     selectedParentId={note.folderId}
                     onSelect={handleMoveNote}
+                    onCreateFolder={(id) => {
+                        setNewFolderParentId(id);
+                        setIsNewFolderModalOpen(true);
+                    }}
+                />
+            )}
+
+            {isNewFolderModalOpen && (
+                <FolderEditModal
+                    open={isNewFolderModalOpen}
+                    onOpenChange={setIsNewFolderModalOpen}
+                    folder={null}
+                    defaultParentId={newFolderParentId}
                 />
             )}
 

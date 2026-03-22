@@ -1,7 +1,7 @@
 import { useSettingsStore } from '@annota/core';
 import { NoteFileService } from '@annota/core/platform';
 import editorHtml from '@annota/editor-core/dist/editor-html';
-import { useKeyboard } from '@react-native-community/hooks';
+
 import { useTheme } from '@react-navigation/native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
@@ -58,17 +58,24 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
         const { gallery, openGallery, closeGallery, setGalleryIndex } = useSharedEditorUI(props.onGalleryVisibilityChange);
         const contentResolverRef = useRef<((html: string) => void) | null>(null);
         const [blockData, setBlockData] = useState<any>(null);
-        const { keyboardHeight, keyboardShown } = useKeyboard();
         const { width, height } = useWindowDimensions();
-        const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+        const [keyboardParams, setKeyboardParams] = useState({ isVisible: false, height: 0 });
+        const { isVisible: isKeyboardVisible, height: keyboardHeight } = keyboardParams;
 
         useEffect(() => {
             // iOS has 'Will' events that fire before animations. Android only has 'Did'.
             const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
             const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
 
-            const showSub = Keyboard.addListener(showEvent, () => setIsKeyboardVisible(true));
-            const hideSub = Keyboard.addListener(hideEvent, () => setIsKeyboardVisible(false));
+            const showSub = Keyboard.addListener(showEvent, (e) => {
+                const kh = e.endCoordinates?.height || 0;
+                setKeyboardParams({ isVisible: true, height: kh });
+            });
+            const hideSub = Keyboard.addListener(hideEvent, () => {
+                // Don't reset height to 0 immediately, just toggle visibility. 
+                // This stops the toolbar from crashing down instantly before the animation finishes.
+                setKeyboardParams((prev) => ({ ...prev, isVisible: false }));
+            });
 
             return () => {
                 showSub.remove();
@@ -174,7 +181,7 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                     break;
                 case 'cursorPosition':
                     // Accurately calculate what is blocking the bottom of the screen
-                    const bottomObstruction = keyboardShown ? (keyboardHeight + toolbarHeight) : 0;
+                    const bottomObstruction = isKeyboardVisible ? (keyboardHeight + toolbarHeight) : 0;
                     const visibleSpace = height - bottomObstruction;
 
                     // Massive safe margins so the cursor rests comfortably in the middle-lower screen
@@ -325,8 +332,19 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                         scrollEnabled={false}
                     />
                 </ScrollView>
-                {(isKeyboardVisible || isPopupOpen) && renderToolbar &&
-                    (<View style={[styles.toolbar, { bottom: keyboardHeight }]}>
+                {renderToolbar && (
+                    <View
+                        style={[
+                            styles.toolbar,
+                            {
+                                // Only push it up on iOS. Android resizes natively.
+                                bottom: Platform.OS === 'ios' ? keyboardHeight : 0,
+                                // Hide it visually and disable touches when keyboard/popup is closed
+                                opacity: (isKeyboardVisible || isPopupOpen) ? 1 : 0,
+                                pointerEvents: (isKeyboardVisible || isPopupOpen) ? 'auto' : 'none'
+                            }
+                        ]}
+                    >
                         {renderToolbar({
                             editorState,
                             sendCommand: dispatchCommand,
@@ -347,7 +365,7 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                             onInsertMath: () => { setActivePopup('math'); setIsPopupOpen(true); }
                         })}
                     </View>
-                    )}
+                )}
                 {gallery.isVisible && props.renderImageGallery?.({
                     images: gallery.images,
                     initialIndex: gallery.currentIndex,
@@ -355,14 +373,14 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                     onClose: closeGallery,
                     onNavigate: setGalleryIndex
                 })}
-                {props.renderSlashCommandMenu && isKeyboardVisible && (
+                {props.renderSlashCommandMenu && (
                     <View
                         style={[
                             styles.slashMenuContainer,
                             {
-                                // Force height to 0 immediately when hiding
-                                bottom: (isKeyboardVisible ? keyboardHeight : 0) +
-                                    ((isKeyboardVisible || isPopupOpen) && renderToolbar ? toolbarHeight : 0)
+                                bottom: Platform.OS === 'ios' ? (keyboardHeight + toolbarHeight) : toolbarHeight,
+                                opacity: isKeyboardVisible ? 1 : 0,
+                                pointerEvents: isKeyboardVisible ? 'auto' : 'none'
                             }
                         ]}
                     >

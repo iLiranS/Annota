@@ -1,4 +1,5 @@
 import LocationPickerModal from '@/components/location-picker-modal';
+import FolderEditModal from '../folder-edit-modal';
 import ThemedText from '@/components/themed-text';
 import { useNotesStore } from '@annota/core';
 import { Ionicons } from '@expo/vector-icons';
@@ -84,6 +85,8 @@ export default function TaskForm({
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [showTimePicker, setShowTimePicker] = useState(false);
     const [showFolderPicker, setShowFolderPicker] = useState(false);
+    const [isNewFolderModalVisible, setIsNewFolderModalVisible] = useState(false);
+    const [newFolderParentId, setNewFolderParentId] = useState<string | null>(null);
 
     const folderId = watch('folderId');
     const deadline = watch('deadline');

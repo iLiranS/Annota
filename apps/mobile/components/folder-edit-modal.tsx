@@ -71,6 +71,10 @@ export default function FolderEditModal({
     const [parentId, setParentId] = useState<string | null>(null);
     const [showLocationPicker, setShowLocationPicker] = useState(false);
     const [iconSearch, setIconSearch] = useState('');
+    const [subFolderCreationId, setSubFolderCreationId] = useState<{ visible: boolean; parentId: string | null }>({
+        visible: false,
+        parentId: null
+    });
 
     const filteredIcons = useMemo(() => {
         if (!iconSearch || iconSearch.trim().length < 2) return FOLDER_ICONS;
@@ -383,7 +387,6 @@ export default function FolderEditModal({
                     </View>
                 </ScrollView>
 
-                {/* Location Picker Modal */}
                 <LocationPickerModal
                     visible={showLocationPicker}
                     currentFolderId={folder?.id}

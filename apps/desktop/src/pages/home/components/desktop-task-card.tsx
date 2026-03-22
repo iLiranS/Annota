@@ -74,7 +74,7 @@ export default function DesktopTaskCard({
                 <div
                     onClick={onPress}
                     className={`
-                        group flex cursor-pointer items-center gap-3 rounded-xl border border-border/40 p-3 transition-all hover:bg-accent/40
+                        group flex cursor-pointer my-1 items-center gap-3 rounded-xl border border-border/40 p-2 transition-all hover:bg-accent/40
                         ${task.completed ? "opacity-60 bg-muted/30" : "bg-card"}
                     `}
                 >

@@ -7,30 +7,7 @@ import {
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { cn } from '@/lib/utils';
 import type { ToolbarRenderProps } from '@annota/editor-ui';
-import {
-    Baseline,
-    Bold,
-    CheckSquare,
-    Code,
-    FilePlusCorner as FileInput,
-    Highlighter,
-    Indent,
-    Italic,
-    Link as LinkIcon,
-    List,
-    ListOrdered,
-    MoreHorizontal,
-    Outdent,
-    MessageSquareQuote as Quote,
-    Redo2 as Redo,
-    Sigma,
-    SquareTerminal as SquareCode,
-    Strikethrough,
-    Table as TableIcon,
-    Underline,
-    Undo2 as Undo,
-    Youtube
-} from 'lucide-react';
+import { EditorIcons } from './EditorIcons';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '../ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
@@ -96,104 +73,104 @@ export function DesktopToolbar({
             id: 'bold',
             label: 'Bold',
             shortcut: `${MOD}B`,
-            render: <Button key="bold" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleBold')} style={activeStyle(editorState.isBold)}><Bold className="w-5 h-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="bold-dropdown" onClick={() => sendCommand('toggleBold')} className={cn("gap-2", editorState.isBold && "text-primary")}><Bold className="w-4 h-4" /> Bold <span className="ml-auto text-[10px] opacity-50">{MOD}B</span></DropdownMenuItem>
+            render: <Button key="bold" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleBold')} style={activeStyle(editorState.isBold)}><EditorIcons.Bold className="w-5 h-5" /></Button>,
+            dropdownRender: <DropdownMenuItem key="bold-dropdown" onClick={() => sendCommand('toggleBold')} className={cn("gap-2", editorState.isBold && "text-primary")}><EditorIcons.Bold className="w-4 h-4" /> Bold <span className="ml-auto text-[10px] opacity-50">{MOD}B</span></DropdownMenuItem>
         },
         {
             id: 'italic',
             label: 'Italic',
             shortcut: `${MOD}I`,
-            render: <Button key="italic" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleItalic')} style={activeStyle(editorState.isItalic)}><Italic className="w-5 h-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="italic-dropdown" onClick={() => sendCommand('toggleItalic')} className={cn("gap-2", editorState.isItalic && "text-primary")}><Italic className="w-4 h-4" /> Italic <span className="ml-auto text-[10px] opacity-50">{MOD}I</span></DropdownMenuItem>
+            render: <Button key="italic" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleItalic')} style={activeStyle(editorState.isItalic)}><EditorIcons.Italic className="w-5 h-5" /></Button>,
+            dropdownRender: <DropdownMenuItem key="italic-dropdown" onClick={() => sendCommand('toggleItalic')} className={cn("gap-2", editorState.isItalic && "text-primary")}><EditorIcons.Italic className="w-4 h-4" /> Italic <span className="ml-auto text-[10px] opacity-50">{MOD}I</span></DropdownMenuItem>
         },
         {
             id: 'underline',
             label: 'Underline',
             shortcut: `${MOD}U`,
-            render: <Button key="underline" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleUnderline')} style={activeStyle(editorState.isUnderline)}><Underline className="w-5 h-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="underline-dropdown" onClick={() => sendCommand('toggleUnderline')} className={cn("gap-2", editorState.isUnderline && "text-primary")}><Underline className="w-4 h-4" /> Underline <span className="ml-auto text-[10px] opacity-50">{MOD}U</span></DropdownMenuItem>
+            render: <Button key="underline" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleUnderline')} style={activeStyle(editorState.isUnderline)}><EditorIcons.Underline className="w-5 h-5" /></Button>,
+            dropdownRender: <DropdownMenuItem key="underline-dropdown" onClick={() => sendCommand('toggleUnderline')} className={cn("gap-2", editorState.isUnderline && "text-primary")}><EditorIcons.Underline className="w-4 h-4" /> Underline <span className="ml-auto text-[10px] opacity-50">{MOD}U</span></DropdownMenuItem>
         },
         {
             id: 'strike',
             label: 'Strikethrough',
             shortcut: `${MOD}${SHIFT}X`,
-            render: <Button key="strike" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleStrike')} style={activeStyle(editorState.isStrike)}><Strikethrough className="w-5 h-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="strike-dropdown" onClick={() => sendCommand('toggleStrike')} className={cn("gap-2", editorState.isStrike && "text-primary")}><Strikethrough className="w-4 h-4" /> Strikethrough <span className="ml-auto text-[10px] opacity-50">{MOD}${SHIFT}X</span></DropdownMenuItem>
+            render: <Button key="strike" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleStrike')} style={activeStyle(editorState.isStrike)}><EditorIcons.Strike className="w-5 h-5" /></Button>,
+            dropdownRender: <DropdownMenuItem key="strike-dropdown" onClick={() => sendCommand('toggleStrike')} className={cn("gap-2", editorState.isStrike && "text-primary")}><EditorIcons.Strike className="w-4 h-4" /> Strikethrough <span className="ml-auto text-[10px] opacity-50">{MOD}${SHIFT}X</span></DropdownMenuItem>
         },
         {
             id: 'textColor',
             label: 'Text Color',
             shortcut: `${MOD}${ALT}[0-9]`,
-            render: <ColorPicker key="textColor" title="Text Color" label="Color" icon={Baseline} currentColor={editorState.textColor} onSelect={(color) => sendCommand('setColor', { color })} onClear={() => sendCommand('unsetColor')} onOpenChange={handleOpenChange} activeColor={colors.primary} />,
-            dropdownRender: <ColorPicker key="textColor-dropdown" title="Text Color" label="Color" icon={Baseline} currentColor={editorState.textColor} onSelect={(color) => sendCommand('setColor', { color })} onClear={() => sendCommand('unsetColor')} onOpenChange={handleOpenChange} activeColor={colors.primary} isMenu />
+            render: <ColorPicker key="textColor" title="Text Color" label="Color" icon={EditorIcons.Baseline} currentColor={editorState.textColor} onSelect={(color) => sendCommand('setColor', { color })} onClear={() => sendCommand('unsetColor')} onOpenChange={handleOpenChange} activeColor={colors.primary} />,
+            dropdownRender: <ColorPicker key="textColor-dropdown" title="Text Color" label="Color" icon={EditorIcons.Baseline} currentColor={editorState.textColor} onSelect={(color) => sendCommand('setColor', { color })} onClear={() => sendCommand('unsetColor')} onOpenChange={handleOpenChange} activeColor={colors.primary} isMenu />
         },
         {
             id: 'highlight',
             label: 'Highlight',
             shortcut: `${ALT}${MOD}${SHIFT}[0-9]`,
-            render: <ColorPicker key="highlight" title="Highlight" label="Highlight" icon={Highlighter} currentColor={editorState.highlightColor} onSelect={(color) => sendCommand('setHighlight', { color })} onClear={() => sendCommand('unsetHighlight')} onOpenChange={handleOpenChange} activeColor={colors.primary} />,
-            dropdownRender: <ColorPicker key="highlight-dropdown" title="Highlight" label="Highlight" icon={Highlighter} currentColor={editorState.highlightColor} onSelect={(color) => sendCommand('setHighlight', { color })} onClear={() => sendCommand('unsetHighlight')} onOpenChange={handleOpenChange} activeColor={colors.primary} isMenu />
+            render: <ColorPicker key="highlight" title="Highlight" label="Highlight" icon={EditorIcons.Highlighter} currentColor={editorState.highlightColor} onSelect={(color) => sendCommand('setHighlight', { color })} onClear={() => sendCommand('unsetHighlight')} onOpenChange={handleOpenChange} activeColor={colors.primary} />,
+            dropdownRender: <ColorPicker key="highlight-dropdown" title="Highlight" label="Highlight" icon={EditorIcons.Highlighter} currentColor={editorState.highlightColor} onSelect={(color) => sendCommand('setHighlight', { color })} onClear={() => sendCommand('unsetHighlight')} onOpenChange={handleOpenChange} activeColor={colors.primary} isMenu />
         },
         {
             id: 'bulletList',
             label: 'Bullet List',
             shortcut: `${MOD}7`,
-            render: <Button key="bulletList" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleBulletList')} style={activeStyle(editorState.isBulletList)}><List className="w-5 h-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="bulletList-dropdown" onClick={() => sendCommand('toggleBulletList')} className={cn("gap-2", editorState.isBulletList && "text-primary")}><List className="w-4 h-4" /> Bullet List <span className="ml-auto text-[10px] opacity-50">{MOD}7</span></DropdownMenuItem>
+            render: <Button key="bulletList" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleBulletList')} style={activeStyle(editorState.isBulletList)}><EditorIcons.BulletList className="w-5 h-5" /></Button>,
+            dropdownRender: <DropdownMenuItem key="bulletList-dropdown" onClick={() => sendCommand('toggleBulletList')} className={cn("gap-2", editorState.isBulletList && "text-primary")}><EditorIcons.BulletList className="w-4 h-4" /> Bullet List <span className="ml-auto text-[10px] opacity-50">{MOD}7</span></DropdownMenuItem>
         },
         {
             id: 'orderedList',
             label: 'Numbered List',
             shortcut: `${MOD}8`,
-            render: <Button key="orderedList" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleOrderedList')} style={activeStyle(editorState.isOrderedList)}><ListOrdered className="w-5 h-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="orderedList-dropdown" onClick={() => sendCommand('toggleOrderedList')} className={cn("gap-2", editorState.isOrderedList && "text-primary")}><ListOrdered className="w-4 h-4" /> Numbered List <span className="ml-auto text-[10px] opacity-50">{MOD}8</span></DropdownMenuItem>
+            render: <Button key="orderedList" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleOrderedList')} style={activeStyle(editorState.isOrderedList)}><EditorIcons.OrderedList className="w-5 h-5" /></Button>,
+            dropdownRender: <DropdownMenuItem key="orderedList-dropdown" onClick={() => sendCommand('toggleOrderedList')} className={cn("gap-2", editorState.isOrderedList && "text-primary")}><EditorIcons.OrderedList className="w-4 h-4" /> Numbered List <span className="ml-auto text-[10px] opacity-50">{MOD}8</span></DropdownMenuItem>
         },
         {
             id: 'taskList',
             label: 'Task List',
             shortcut: `${MOD}9`,
-            render: <Button key="taskList" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleTaskList')} style={activeStyle(editorState.isTaskList)}><CheckSquare className="w-5 h-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="taskList-dropdown" onClick={() => sendCommand('toggleTaskList')} className={cn("gap-2", editorState.isTaskList && "text-primary")}><CheckSquare className="w-4 h-4" /> Task List <span className="ml-auto text-[10px] opacity-50">{MOD}9</span></DropdownMenuItem>
+            render: <Button key="taskList" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleTaskList')} style={activeStyle(editorState.isTaskList)}><EditorIcons.TaskList className="w-5 h-5" /></Button>,
+            dropdownRender: <DropdownMenuItem key="taskList-dropdown" onClick={() => sendCommand('toggleTaskList')} className={cn("gap-2", editorState.isTaskList && "text-primary")}><EditorIcons.TaskList className="w-4 h-4" /> Task List <span className="ml-auto text-[10px] opacity-50">{MOD}9</span></DropdownMenuItem>
         },
         {
             id: 'outdent',
             label: 'Outdent',
-            render: <Button key="outdent" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('liftListItem')} disabled={!editorState.canLiftListItem}><Outdent className="w-5 h-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="outdent-dropdown" onClick={() => sendCommand('liftListItem')} disabled={!editorState.canLiftListItem} className="gap-2"><Outdent className="w-4 h-4" /> Outdent</DropdownMenuItem>
+            render: <Button key="outdent" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('liftListItem')} disabled={!editorState.canLiftListItem}><EditorIcons.Outdent className="w-5 h-5" /></Button>,
+            dropdownRender: <DropdownMenuItem key="outdent-dropdown" onClick={() => sendCommand('liftListItem')} disabled={!editorState.canLiftListItem} className="gap-2"><EditorIcons.Outdent className="w-4 h-4" /> Outdent</DropdownMenuItem>
         },
         {
             id: 'indent',
             label: 'Indent',
-            render: <Button key="indent" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('sinkListItem')} disabled={!editorState.canSinkListItem}><Indent className="w-5 h-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="indent-dropdown" onClick={() => sendCommand('sinkListItem')} disabled={!editorState.canSinkListItem} className="gap-2"><Indent className="w-4 h-4" /> Indent</DropdownMenuItem>
+            render: <Button key="indent" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('sinkListItem')} disabled={!editorState.canSinkListItem}><EditorIcons.Indent className="w-5 h-5" /></Button>,
+            dropdownRender: <DropdownMenuItem key="indent-dropdown" onClick={() => sendCommand('sinkListItem')} disabled={!editorState.canSinkListItem} className="gap-2"><EditorIcons.Indent className="w-4 h-4" /> Indent</DropdownMenuItem>
         },
         {
             id: 'code',
             label: 'Inline Code',
             shortcut: `${MOD}${SHIFT}E`,
-            render: <Button key="code" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleCode')} style={activeStyle(editorState.isCode)}><Code className="w-5 h-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="code-dropdown" onClick={() => sendCommand('toggleCode')} className={cn("gap-2", editorState.isCode && "text-primary")}><Code className="w-4 h-4" /> Inline Code <span className="ml-auto text-[10px] opacity-50">{MOD}${SHIFT}E</span></DropdownMenuItem>
+            render: <Button key="code" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleCode')} style={activeStyle(editorState.isCode)}><EditorIcons.Code className="w-5 h-5" /></Button>,
+            dropdownRender: <DropdownMenuItem key="code-dropdown" onClick={() => sendCommand('toggleCode')} className={cn("gap-2", editorState.isCode && "text-primary")}><EditorIcons.Code className="w-4 h-4" /> Inline Code <span className="ml-auto text-[10px] opacity-50">{MOD}${SHIFT}E</span></DropdownMenuItem>
         },
         {
             id: 'codeBlock',
             label: 'Code Block',
             shortcut: `${MOD}${ALT}C`,
-            render: <Button key="codeBlock" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleCodeBlock')} style={activeStyle(editorState.isCodeBlock)}><SquareCode className="w-5 h-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="codeBlock-dropdown" onClick={() => sendCommand('toggleCodeBlock')} className={cn("gap-2", editorState.isCodeBlock && "text-primary")}><SquareCode className="w-4 h-4" /> Code Block <span className="ml-auto text-[10px] opacity-50">{MOD}${ALT}C</span></DropdownMenuItem>
+            render: <Button key="codeBlock" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleCodeBlock')} style={activeStyle(editorState.isCodeBlock)}><EditorIcons.CodeBlock className="w-5 h-5" /></Button>,
+            dropdownRender: <DropdownMenuItem key="codeBlock-dropdown" onClick={() => sendCommand('toggleCodeBlock')} className={cn("gap-2", editorState.isCodeBlock && "text-primary")}><EditorIcons.CodeBlock className="w-4 h-4" /> Code Block <span className="ml-auto text-[10px] opacity-50">{MOD}${ALT}C</span></DropdownMenuItem>
         },
         {
             id: 'quote',
             label: 'Quote',
             shortcut: `${MOD}${SHIFT}B`,
-            render: <Button key="quote" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleBlockquote')} style={activeStyle(editorState.isBlockquote)}><Quote className="w-5 h-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="quote-dropdown" onClick={() => sendCommand('toggleBlockquote')} className={cn("gap-2", editorState.isBlockquote && "text-primary")}><Quote className="w-4 h-4" /> Quote <span className="ml-auto text-[10px] opacity-50">{MOD}${SHIFT}B</span></DropdownMenuItem>
+            render: <Button key="quote" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleBlockquote')} style={activeStyle(editorState.isBlockquote)}><EditorIcons.Quote className="w-5 h-5" /></Button>,
+            dropdownRender: <DropdownMenuItem key="quote-dropdown" onClick={() => sendCommand('toggleBlockquote')} className={cn("gap-2", editorState.isBlockquote && "text-primary")}><EditorIcons.Quote className="w-4 h-4" /> Quote <span className="ml-auto text-[10px] opacity-50">{MOD}${SHIFT}B</span></DropdownMenuItem>
         },
         {
             id: 'details',
             label: 'Collapsible',
             shortcut: `${MOD}.`,
-            render: <Button key="details" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleDetails')} style={activeStyle(editorState.isDetails)}><FileInput className="w-5 h-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="details-dropdown" onClick={() => sendCommand('toggleDetails')} className={cn("gap-2", editorState.isDetails && "text-primary")}><FileInput className="w-4 h-4" /> Details <span className="ml-auto text-[10px] opacity-50">{MOD}.</span></DropdownMenuItem>
+            render: <Button key="details" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleDetails')} style={activeStyle(editorState.isDetails)}><EditorIcons.Details className="w-5 h-5" /></Button>,
+            dropdownRender: <DropdownMenuItem key="details-dropdown" onClick={() => sendCommand('toggleDetails')} className={cn("gap-2", editorState.isDetails && "text-primary")}><EditorIcons.Details className="w-4 h-4" /> Details <span className="ml-auto text-[10px] opacity-50">{MOD}.</span></DropdownMenuItem>
         },
         {
             id: 'math',
@@ -214,7 +191,7 @@ export function DesktopToolbar({
                         onActivePopupChange(activePopup === 'math' ? null : 'math');
                     }}
                 >
-                    <Sigma className="w-5 h-5" />
+                    <EditorIcons.Sigma className="w-5 h-5" />
                 </Button>
             ),
             dropdownRender: (
@@ -223,7 +200,7 @@ export function DesktopToolbar({
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); onActivePopupChange('math'); }}
                     className={cn("gap-2 cursor-pointer", activePopup === 'math' && "text-primary")}
                 >
-                    <Sigma className="w-4 h-4" />
+                    <EditorIcons.Sigma className="w-4 h-4" />
                     <span>Math Formula</span>
                 </DropdownMenuItem>
             )
@@ -237,7 +214,7 @@ export function DesktopToolbar({
                     key="link"
                     title="Insert Link"
                     shortcut={`${MOD}K`}
-                    icon={LinkIcon}
+                    icon={EditorIcons.Link}
                     placeholder="https://example.com"
                     isActive={editorState.isLink}
                     initialValue={editorState.linkHref || ''}
@@ -254,7 +231,7 @@ export function DesktopToolbar({
                     key="link-dropdown"
                     title="Insert Link"
                     shortcut={`${MOD}K`}
-                    icon={LinkIcon}
+                    icon={EditorIcons.Link}
                     placeholder="https://example.com"
                     isActive={editorState.isLink}
                     initialValue={editorState.linkHref || ''}
@@ -271,14 +248,14 @@ export function DesktopToolbar({
         {
             id: 'youtube',
             label: 'YouTube',
-            render: <LinkPopover key="youtube" title="YouTube Video" description="Enter a YouTube video URL" icon={Youtube} placeholder="https://youtube.com/watch?v=..." saveLabel="Insert" onSave={(href) => sendCommand('setYoutubeVideo', { src: href })} onOpenChange={handleOpenChange} hideTitle />,
-            dropdownRender: <LinkPopover key="youtube-dropdown" title="YouTube Video" description="Enter a YouTube video URL" icon={Youtube} placeholder="https://youtube.com/watch?v=..." saveLabel="Insert" onSave={(href) => sendCommand('setYoutubeVideo', { src: href })} onOpenChange={handleOpenChange} isMenu hideTitle />
+            render: <LinkPopover key="youtube" title="YouTube Video" description="Enter a YouTube video URL" icon={EditorIcons.Youtube} placeholder="https://youtube.com/watch?v=..." saveLabel="Insert" onSave={(href) => sendCommand('setYoutubeVideo', { src: href })} onOpenChange={handleOpenChange} hideTitle />,
+            dropdownRender: <LinkPopover key="youtube-dropdown" title="YouTube Video" description="Enter a YouTube video URL" icon={EditorIcons.Youtube} placeholder="https://youtube.com/watch?v=..." saveLabel="Insert" onSave={(href) => sendCommand('setYoutubeVideo', { src: href })} onOpenChange={handleOpenChange} isMenu hideTitle />
         },
         {
             id: 'table',
             label: 'Table',
-            render: <Button key="table" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => { if (!editorState.isInTable) sendCommand('insertTable', { rows: 3, cols: 3, withHeaderRow: false }); }} style={activeStyle(editorState.isInTable)}><TableIcon className="w-5 h-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="table-dropdown" onClick={() => { if (!editorState.isInTable) sendCommand('insertTable', { rows: 3, cols: 3, withHeaderRow: false }); }} className={cn("gap-2", editorState.isInTable && "text-primary")}><TableIcon className="w-4 h-4" /> Table</DropdownMenuItem>
+            render: <Button key="table" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => { if (!editorState.isInTable) sendCommand('insertTable', { rows: 3, cols: 3, withHeaderRow: false }); }} style={activeStyle(editorState.isInTable)}><EditorIcons.Table className="w-5 h-5" /></Button>,
+            dropdownRender: <DropdownMenuItem key="table-dropdown" onClick={() => { if (!editorState.isInTable) sendCommand('insertTable', { rows: 3, cols: 3, withHeaderRow: false }); }} className={cn("gap-2", editorState.isInTable && "text-primary")}><EditorIcons.Table className="w-4 h-4" /> Table</DropdownMenuItem>
         },
         {
             id: 'file',
@@ -439,7 +416,7 @@ export function DesktopToolbar({
                             <DropdownMenu onOpenChange={handleOpenChange} modal={false}>
                                 <DropdownMenuTrigger asChild>
                                     <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0">
-                                        <MoreHorizontal className="w-5 h-5" />
+                                        <EditorIcons.More className="w-5 h-5" />
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="w-56">
@@ -459,7 +436,7 @@ export function DesktopToolbar({
                             <TooltipTrigger asChild>
                                 <div className="flex shrink-0">
                                     <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('undo')} disabled={!editorState.canUndo} style={activeStyle(false)}>
-                                        <Undo className="w-5 h-5" />
+                                        <EditorIcons.Undo className="w-5 h-5" />
                                     </Button>
                                 </div>
                             </TooltipTrigger>
@@ -476,7 +453,7 @@ export function DesktopToolbar({
                             <TooltipTrigger asChild>
                                 <div className="flex shrink-0">
                                     <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('redo')} disabled={!editorState.canRedo} style={activeStyle(false)}>
-                                        <Redo className="w-5 h-5" />
+                                        <EditorIcons.Redo className="w-5 h-5" />
                                     </Button>
                                 </div>
                             </TooltipTrigger>
@@ -504,7 +481,7 @@ export function DesktopToolbar({
             {/* Global Link Popover */}
             <LinkPopover
                 title="Insert Link"
-                icon={LinkIcon}
+                icon={EditorIcons.Link}
                 placeholder="https://example.com"
                 isActive={editorState.isLink}
                 initialValue={editorState.linkHref || ''}
@@ -527,7 +504,7 @@ export function DesktopToolbar({
             <LinkPopover
                 title="YouTube Video"
                 description="Enter a YouTube video URL"
-                icon={Youtube}
+                icon={EditorIcons.Youtube}
                 placeholder="https://youtube.com/watch?v=..."
                 saveLabel="Insert"
                 onSave={(href) => {

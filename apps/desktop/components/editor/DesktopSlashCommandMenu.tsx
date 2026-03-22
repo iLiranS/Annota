@@ -2,58 +2,8 @@ import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { getFilteredCommands, SharedSlashCommand } from '@annota/editor-ui';
-import {
-    Baseline,
-    Bold,
-    CheckSquare,
-    ChevronLeft,
-    ChevronRight,
-    Code,
-    FilePlusCorner as FileInput,
-    Paperclip,
-    Italic,
-    Link,
-    List,
-    ListOrdered,
-    Layout as MessageSquare,
-    MessageSquareQuote as Quote,
-    Plus,
-    Sigma,
-    SquareTerminal as SquareCode,
-    Strikethrough,
-    Table,
-    Type,
-    Underline,
-    Youtube
-} from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-
-const DesktopIconMap: Record<string, any> = {
-    'heading': Type,
-    'h1': Type,
-    'h2': Type,
-    'h3': Type,
-    'format': Baseline,
-    'bold': Bold,
-    'italic': Italic,
-    'underline': Underline,
-    'strike': Strikethrough,
-    'list': List,
-    'bulletList': List,
-    'orderedList': ListOrdered,
-    'taskList': CheckSquare,
-    'blocks': MessageSquare,
-    'quote': Quote,
-    'codeblock': SquareCode,
-    'code': Code,
-    'details': FileInput,
-    'plus': Plus,
-    'math': Sigma,
-    'file': Paperclip,
-    'link': Link,
-    'youtube': Youtube,
-    'table': Table,
-};
+import { EditorIcons, DesktopIconMap } from './EditorIcons';
 
 interface DesktopSlashCommandMenuProps {
     query: string;
@@ -178,7 +128,7 @@ export function DesktopSlashCommandMenu({
                                     }}
                                     onMouseEnter={() => setSelectedIndex(-1)}
                                 >
-                                    <ChevronLeft className="w-5 h-5 mr-2" />
+                                    <EditorIcons.ChevronLeft className="w-5 h-5 mr-2" />
                                     <span>Back</span>
                                 </button>
                             )}
@@ -191,7 +141,7 @@ export function DesktopSlashCommandMenu({
 
                             {displayItems.map((item, index) => {
                                 const isSelected = index === selectedIndex;
-                                const Icon = DesktopIconMap[item.iconKey] || Type;
+                                const Icon = DesktopIconMap[item.iconKey] || EditorIcons.Type;
                                 return (
                                     <button
                                         key={item.id}
@@ -206,7 +156,7 @@ export function DesktopSlashCommandMenu({
                                         <Icon className="w-5 h-5 mr-2 shrink-0" />
                                         <span className="flex-1 text-left line-clamp-1">{item.title}</span>
                                         {item.children && (
-                                            <ChevronRight className="w-3.5 h-3.5 ml-auto opacity-50" />
+                                            <EditorIcons.ChevronRight className="w-3.5 h-3.5 ml-auto opacity-50" />
                                         )}
                                     </button>
                                 );

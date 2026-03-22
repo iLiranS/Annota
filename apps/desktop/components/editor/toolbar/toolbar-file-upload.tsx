@@ -14,11 +14,11 @@ import { cn } from '@/lib/utils';
 import { getPlatformAdapters } from '@annota/core/platform';
 import { join } from '@tauri-apps/api/path';
 import {
-    FileUp as FileIcon,
     Link as LinkIcon,
     Loader2,
     UploadCloud as Upload
 } from 'lucide-react';
+import { EditorIcons } from '../EditorIcons';
 import React, { useCallback, useRef, useState } from 'react';
 
 interface ToolbarFileUploadProps {
@@ -160,7 +160,7 @@ export function ToolbarFileUpload({ onInsertFile, onOpenChange, isMenu, visible,
 
     const trigger = isMenu ? (
         <DropdownMenuItem onSelect={(e) => e.preventDefault()} onClick={() => setOpen(true)} className="gap-2">
-            <FileIcon className="w-4 h-4" />
+            <EditorIcons.File className="w-4 h-4" />
             <span>File</span>
         </DropdownMenuItem>
     ) : (
@@ -175,7 +175,7 @@ export function ToolbarFileUpload({ onInsertFile, onOpenChange, isMenu, visible,
                     transition: 'opacity 0.2s ease, background-color 0.2s ease'
                 }}
             >
-                <FileIcon className="w-5 h-5" />
+                <EditorIcons.File className="w-5 h-5" />
             </Button>
         </DialogTrigger>
     );
@@ -191,7 +191,7 @@ export function ToolbarFileUpload({ onInsertFile, onOpenChange, isMenu, visible,
             >
                 <DialogHeader className="p-4 pb-2 border-b border-border/50">
                     <DialogTitle className="text-lg font-semibold flex items-center gap-2">
-                        <FileIcon className="w-5 h-5 text-primary" />
+                        <EditorIcons.File className="w-5 h-5 text-primary" />
                         Insert File
                     </DialogTitle>
                 </DialogHeader>

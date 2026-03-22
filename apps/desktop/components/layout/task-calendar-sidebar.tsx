@@ -26,6 +26,19 @@ import {
 import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
+const NewTaskButton = ({ onClick, className }: { onClick: () => void; className?: string }) => (
+    <button
+        onClick={onClick}
+        className={cn(
+            "flex w-full items-center justify-between px-2 py-1 hover:text-primary hover:bg-primary/10 rounded-lg text-muted-foreground  transition-all hover:opacity-100 mb-1",
+            className
+        )}
+    >
+        <span className="text-[10px] font-bold uppercase tracking-wider">New Task</span>
+        <Plus size={14} className="" />
+    </button>
+);
+
 export function TaskCalendarSidebar() {
     const { general, updateGeneralSettings } = useSettingsStore();
     const { tasks, toggleComplete, deleteTask } = useTasksStore();
@@ -95,8 +108,8 @@ export function TaskCalendarSidebar() {
                 if (!groups.has(groupId)) {
                     const folder = task.folderId ? getFolderById(task.folderId) : null;
                     groups.set(groupId, {
-                        title: folder ? folder.name : "No Folder",
-                        color: folder?.color,
+                        title: folder ? folder.name : "Uncategorized",
+                        color: folder?.color || "#eeeeee",
                         icon: folder?.icon || "folder-outline",
                         tasks: [],
                     });
@@ -111,6 +124,11 @@ export function TaskCalendarSidebar() {
             const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
             const tomorrowStart = new Date(todayStart);
             tomorrowStart.setDate(tomorrowStart.getDate() + 1);
+
+            // Pre-initialize groups for date to maintain order and ensure "Today" exists
+            groups.set("past", { title: "Passed", icon: "alert-circle-outline", color: "#ef4444", tasks: [] });
+            groups.set("today", { title: "Today", icon: "today-outline", color: "#3b82f6", tasks: [] });
+            groups.set("upcoming", { title: "Upcoming", icon: "calendar-number-outline", color: "#10b981", tasks: [] });
 
             pendingTasks.forEach((task) => {
                 let groupId: string;
@@ -156,8 +174,20 @@ export function TaskCalendarSidebar() {
             }
         }
 
-        return Array.from(groups.entries()).map(([id, data]) => ({ id, ...data }));
-    }, [tasks, viewMode, groupBy, showCompleted, getFolderById]);
+        const result = Array.from(groups.entries())
+            .map(([id, data]) => ({ id, ...data }))
+            .filter(g => g.tasks.length > 0 || g.id === "today");
+
+        if (groupBy === 'folder') {
+            return result.sort((a, b) => {
+                if (a.id === "__no_folder__") return -1;
+                if (b.id === "__no_folder__") return 1;
+                return a.title.localeCompare(b.title);
+            });
+        }
+
+        return result;
+    }, [tasks, viewMode, groupBy, showCompleted, getFolderById, colors.primary]);
 
 
 
@@ -173,7 +203,7 @@ export function TaskCalendarSidebar() {
         <aside
             dir="ltr"
             className={cn(
-                "flex h-full w-80 shrink-0 flex-col overflow-hidden border-sidebar-border bg-sidebar select-none",
+                "flex h-full w-72 shrink-0 flex-col overflow-hidden border-sidebar-border bg-sidebar select-none",
                 side === 'right' ? "border-l" : "border-r"
             )}
         >
@@ -196,7 +226,7 @@ export function TaskCalendarSidebar() {
                         onClick={() => setViewMode('day')}
                     >
                         <CalendarIcon size={14} className={cn("transition-colors", viewMode === 'day' ? "text-white" : "text-muted-foreground/60")} />
-                        DAY
+                        CALENDAR
                     </button>
                     <button
                         className={cn(
@@ -206,7 +236,7 @@ export function TaskCalendarSidebar() {
                         onClick={() => setViewMode('all')}
                     >
                         <List size={14} className={cn("transition-colors", viewMode === 'all' ? "text-white" : "text-muted-foreground/60")} />
-                        ALL
+                        TASKS
                     </button>
                 </div>
 
@@ -237,21 +267,15 @@ export function TaskCalendarSidebar() {
                             variant="outline"
                             size="sm"
                             className={cn(
-                                "h-8 flex-1 gap-2 rounded-lg border-sidebar-border/50 bg-background/40 text-[10px] font-bold uppercase tracking-wider",
-                                showCompleted ? "text-primary border-primary/20 bg-primary/5" : "text-muted-foreground"
+                                "h-8 flex-1 gap-2 rounded-lg border-sidebar-border/50 bg-background/40 text-[10px] font-bold uppercase tracking-wider transition-all",
+                                showCompleted
+                                    ? "text-primary border-primary/20 bg-primary/5"
+                                    : "text-muted-foreground opacity-40 hover:opacity-40"
                             )}
                             onClick={() => updateGeneralSettings({ tasksShowDone: !showCompleted })}
                         >
                             {showCompleted ? <Eye size={12} /> : <EyeOff size={12} />}
                             Done
-                        </Button>
-                        <Button
-                            onClick={() => createAndNavigate({ deadline: selectedDate || new Date() })}
-                            size="sm"
-                            className="h-8 w-8 rounded-lg p-0"
-                            style={{ backgroundColor: colors.primary }}
-                        >
-                            <Plus size={16} />
                         </Button>
                     </div>
                 )}
@@ -261,15 +285,11 @@ export function TaskCalendarSidebar() {
                         {/* Tasks Content */}
                         <div className="space-y-4">
                             {viewMode === 'day' ? (
-                                <div className="space-y-3">
+                                <div className="space-y-3 ">
                                     {/* New Task button for Day view */}
-                                    <button
+                                    <NewTaskButton
                                         onClick={() => createAndNavigate({ deadline: selectedDate || new Date() })}
-                                        className="flex w-full items-center justify-between rounded-lg border border-dashed border-sidebar-border/50 px-3 py-1.5 opacity-40 transition-all hover:opacity-100"
-                                    >
-                                        <span className="text-[10px] font-bold uppercase tracking-wider">New Task</span>
-                                        <Plus size={14} className="text-muted-foreground" />
-                                    </button>
+                                    />
 
                                     {dayTasks.length > 0 ? (
                                         dayTasks.map((task) => (
@@ -310,8 +330,19 @@ export function TaskCalendarSidebar() {
                             ) : (
                                 <div className="space-y-4">
                                     {groupedTasks.map((group) => (
-                                        <Collapsible key={group.id} defaultOpen className="space-y-1">
-                                            <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 hover:bg-sidebar-accent/50 group">
+                                        <Collapsible
+                                            key={group.id}
+                                            defaultOpen
+                                            className={cn(
+                                                "space-y-1 transition-all duration-300",
+                                                groupBy === 'folder' && "rounded-2xl p-1.5"
+                                            )}
+                                            style={(groupBy === 'folder') ? {
+                                                backgroundColor: `${group.color}15`,
+                                                border: `1px solid ${group.color}15`
+                                            } : {}}
+                                        >
+                                            <CollapsibleTrigger style={{ '--folder-color': group.color } as React.CSSProperties} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 hover:bg-(--folder-color)/10 group">
                                                 <div className="flex items-center gap-2">
                                                     <div
                                                         className="flex h-5 w-5 items-center justify-center rounded-md"
@@ -329,7 +360,18 @@ export function TaskCalendarSidebar() {
                                                 </div>
                                                 <ChevronDown size={14} className="text-muted-foreground/40 transition-transform group-data-[state=closed]:-rotate-90" />
                                             </CollapsibleTrigger>
-                                            <CollapsibleContent className="space-y-0.5">
+                                            <CollapsibleContent className={cn(
+                                                "space-y-0.5",
+                                                groupBy === 'folder' && group.id !== "__no_folder__" && ""
+                                            )}>
+                                                {((groupBy === 'date' && group.id === 'today') || groupBy === 'folder') && (
+                                                    <NewTaskButton
+                                                        onClick={() => createAndNavigate({
+                                                            folderId: groupBy === 'folder' && group.id !== "__no_folder__" ? group.id : undefined,
+                                                            deadline: groupBy === 'date' ? new Date() : undefined
+                                                        })}
+                                                    />
+                                                )}
                                                 {group.tasks.map((task) => (
                                                     <TaskItem
                                                         key={task.id}
@@ -337,6 +379,7 @@ export function TaskCalendarSidebar() {
                                                         isCompact
                                                         hideFolder={groupBy === 'folder'}
                                                         onClick={() => handleTaskClick(task.id)}
+                                                        onDelete={() => deleteTask(task.id)}
                                                     />
                                                 ))}
                                             </CollapsibleContent>

@@ -1,6 +1,7 @@
 import { useNotesStore, type NoteMetadata } from '@annota/core';
 import React, { useEffect, useState } from 'react';
 import LocationPickerModal from './location-picker-modal';
+import FolderEditModal from './folder-edit-modal';
 
 interface NoteLocationModalProps {
     visible: boolean;
@@ -18,6 +19,8 @@ export default function NoteLocationModal({
 }: NoteLocationModalProps) {
     const { updateNoteMetadata } = useNotesStore();
     const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+    const [isNewFolderModalVisible, setIsNewFolderModalVisible] = useState(false);
+    const [newFolderParentId, setNewFolderParentId] = useState<string | null>(null);
 
     // Reset state when note changes
     useEffect(() => {

@@ -135,6 +135,7 @@ export default function LocationPickerModal({
                         horizontal
                         showsHorizontalScrollIndicator={false}
                         contentContainerStyle={styles.breadcrumbContent}
+                        style={styles.flex1}
                     >
                         {breadcrumbs.map((crumb, index) => (
                             <React.Fragment key={crumb.id ?? 'root'}>
@@ -292,7 +293,10 @@ const styles = StyleSheet.create({
     },
     breadcrumbContainer: {
         borderBottomWidth: 1,
-        paddingVertical: 10,
+        height: 50,
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingRight: 10,
     },
     breadcrumbContent: {
         flexDirection: 'row',
@@ -300,7 +304,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
     },
     breadcrumbItem: {
-        paddingVertical: 4,
+        paddingVertical: 12,
         paddingHorizontal: 2,
     },
     breadcrumbItemActive: {
@@ -308,9 +312,13 @@ const styles = StyleSheet.create({
     },
     breadcrumbText: {
         fontSize: 14,
+        fontWeight: '500',
     },
     breadcrumbSeparator: {
         marginHorizontal: 4,
+    },
+    flex1: {
+        flex: 1,
     },
     currentLocationBar: {
         flexDirection: 'row',
@@ -389,5 +397,16 @@ const styles = StyleSheet.create({
     emptyHint: {
         fontSize: 13,
         marginTop: 4,
+    },
+    createFolderButton: {
+        paddingHorizontal: 12,
+        paddingVertical: 12,
+        justifyContent: 'center',
+        minWidth: 90,
+    },
+    createFolderText: {
+        fontSize: 11,
+        fontWeight: '800',
+        letterSpacing: 0.5,
     },
 });

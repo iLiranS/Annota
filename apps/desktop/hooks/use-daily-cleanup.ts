@@ -45,6 +45,18 @@ export function useDailyCleanup() {
                     // 4. Update the last run time
                     await storage.setItem(storageKey, now.toISOString());
                 }
+
+                // --- DAILY STATUS SENTENCES CLEARANCE ---
+                const sentenceKey = `${prefix}_daily_status_sentences`;
+                const lastSentenceUpdateKey = `${prefix}_last_status_sentence_update`;
+                const lastSentenceStr = await storage.getItem(lastSentenceUpdateKey);
+                const lastSentenceUpdate = lastSentenceStr ? new Date(lastSentenceStr) : null;
+
+                if (!lastSentenceUpdate || lastSentenceUpdate.toDateString() !== now.toDateString()) {
+                    // Just clear it so the UI picks a fresh one
+                    await storage.removeItem(sentenceKey);
+                    await storage.setItem(lastSentenceUpdateKey, now.toISOString());
+                }
             } catch (error) {
                 console.error("[DAILY_CLEANUP] Failed to run daily cleanup", error);
             }

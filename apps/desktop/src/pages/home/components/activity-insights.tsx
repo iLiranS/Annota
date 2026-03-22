@@ -1,9 +1,10 @@
 "use client"
 
-import { useNotesStore, useTasksStore } from "@annota/core";
+import { LATE_SENTENCES, ON_TIME_SENTENCES } from "@/src/pages/home/data/sentences";
+import { getStorageEngine, useDbStore, useNotesStore, useTasksStore } from "@annota/core";
 import { Activity, FileText, Flame, TrendingUp } from "lucide-react";
-import { useMemo } from "react";
-import { Label, Pie, PieChart } from "recharts";
+import { useEffect, useMemo, useState } from "react";
+import { Bar, BarChart, CartesianGrid, Label, Pie, PieChart, XAxis } from "recharts";
 
 import {
     Card,
@@ -13,7 +14,7 @@ import {
     ChartContainer,
     ChartTooltip,
     ChartTooltipContent,
-    type ChartConfig,
+    type ChartConfig
 } from "@/components/ui/chart";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -104,17 +105,7 @@ export function ActivityInsights() {
         }).sort((a, b) => b.value - a.value);
     }, [notes, folders, monthStart, monthEnd]);
 
-    const noteDailyActivity = useMemo(() => {
-        const data = [];
-        for (let i = 1; i <= daysInMonth; i++) {
-            const day = new Date(monthStart.getFullYear(), monthStart.getMonth(), i);
-            const dStart = new Date(day); dStart.setHours(0, 0, 0, 0);
-            const dEnd = new Date(day); dEnd.setHours(23, 59, 59, 999);
-            const count = notes.filter(n => !n.isDeleted && new Date(n.createdAt) >= dStart && new Date(n.createdAt) <= dEnd).length;
-            data.push({ value: count });
-        }
-        return data;
-    }, [notes, monthStart, daysInMonth]);
+
 
     const totalNotes = useMemo(() => folderDistribution.reduce((acc, curr) => acc + curr.value, 0), [folderDistribution]);
 
@@ -170,6 +161,33 @@ export function ActivityInsights() {
         return { peak, average, streak };
     }, [activityChartData]);
 
+    const taskCompletionChartData = useMemo(() => {
+        const data = [];
+        for (let i = 1; i <= daysInMonth; i++) {
+            const day = new Date(monthStart.getFullYear(), monthStart.getMonth(), i);
+            const dStart = new Date(day); dStart.setHours(0, 0, 0, 0);
+            const dEnd = new Date(day); dEnd.setHours(23, 59, 59, 999);
+
+            const completedOnDay = tasks.filter(t => {
+                if (!t.completed || !t.completedAt) return false;
+                const cAt = new Date(t.completedAt);
+                return cAt >= dStart && cAt <= dEnd;
+            });
+
+            const onTimeCountDaily = completedOnDay.filter(t =>
+                !t.deadline || new Date(t.completedAt!) <= new Date(t.deadline)
+            ).length;
+            const lateCountDaily = completedOnDay.length - onTimeCountDaily;
+
+            data.push({
+                date: day.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                onTime: onTimeCountDaily,
+                late: lateCountDaily
+            });
+        }
+        return data;
+    }, [tasks, monthStart, daysInMonth]);
+
     const chartConfig: ChartConfig = {
         activity: { label: "Activity", color: "var(--chart-1)" },
         onTime: { label: "On Time", color: "var(--chart-1)" },
@@ -179,12 +197,49 @@ export function ActivityInsights() {
         ...Object.fromEntries(folderDistribution.map(f => [f.name, { label: f.name, color: f.fill }]))
     };
 
+    const [dailySentences, setDailySentences] = useState<{ onTime: string, late: string } | null>(null);
+
+    useEffect(() => {
+        const load = async () => {
+            const { currentUserId, isGuest } = useDbStore.getState();
+            const prefix = isGuest ? 'guest' : `user_${currentUserId}`;
+            const storage = getStorageEngine();
+            const stored = await storage.getItem(`${prefix}_daily_status_sentences`);
+
+            if (stored) {
+                try {
+                    setDailySentences(JSON.parse(stored));
+                } catch (e) {
+                    console.error("[DAILY_SENTENCES] Parse error", e);
+                }
+            } else {
+                const onTimePicked = ON_TIME_SENTENCES[Math.floor(Math.random() * ON_TIME_SENTENCES.length)];
+                const latePicked = LATE_SENTENCES[Math.floor(Math.random() * LATE_SENTENCES.length)];
+                const both = { onTime: onTimePicked, late: latePicked };
+                setDailySentences(both);
+                await storage.setItem(`${prefix}_daily_status_sentences`, JSON.stringify(both));
+            }
+        };
+        load();
+    }, []);
+
+    const effectiveStatus = useMemo(() => {
+        const { onTimeRate, total } = completionStats;
+        const isOnTime = onTimeRate >= 50 || total === 0;
+
+        return {
+            sentence: isOnTime ? (dailySentences?.onTime ?? "Stay consistent") : (dailySentences?.late ?? "Tighten timing"),
+            color: isOnTime ? "text-accent-full" : "text-emerald-500/80",
+            bg: isOnTime ? "bg-accent/10" : "bg-emerald-500/10"
+        };
+    }, [completionStats, dailySentences]);
+
     return (
         <div className="flex flex-col lg:grid lg:grid-cols-5 gap-3 h-full">
             {/* Left Column: Topics & Performance (3/5) */}
             <div className="lg:col-span-3 flex flex-col gap-3 min-h-0 min-w-0">
                 {/* Topics Pie Chart */}
-                <Card className="border-border/40 bg-card/30 shadow-none gap-0 p-3 pb-0 flex flex-col flex-1 overflow-hidden min-h-0">
+                <Card className="border-border/40 bg-card/30 shadow-none gap-0 p-3 flex flex-col overflow-hidden min-h-0">
                     <div className="pb-0 flex items-center gap-2">
                         <FileText size={12} className="text-blue-500" />
                         <span className="text-[10px] font-bold uppercase tracking-widest text-foreground/60">Topics explored</span>
@@ -241,34 +296,19 @@ export function ActivityInsights() {
                             </div>
                         </div>
 
-                        {/* Sparkline/Area trend at the bottom to fill space creatively */}
-                        <div className="mt-auto pt-4 flex flex-col gap-1.5 -mx-3 -mb-3 bg-linear-to-t from-blue-500/5 to-transparent p-3 rounded-b-xl border-border/5">
-                            <div className="h-10 w-full flex items-end gap-[2px] pt-1">
-                                {noteDailyActivity.map((d, i) => (
-                                    <div
-                                        key={i}
-                                        className="flex-1 bg-accent rounded-t-[1px] transition-all duration-200  hover:bg-accent-full animate-pop-in"
-                                        style={{
-                                            height: `${Math.max(15, (d.value / Math.max(...noteDailyActivity.map(x => x.value), 1)) * 100)}%`,
-                                            opacity: 0.3 + (i / daysInMonth) * 0.7,
-                                            animationDelay: `${i * 30}ms`
-                                        }}
-                                    />
-                                ))}
-                            </div>
-                        </div>
                     </CardContent>
                 </Card>
 
-                {/* Completion Progress Bar */}
-                <Card className="border-border/40 bg-card/30 shadow-none p-3 gap-0 flex flex-col  relative overflow-hidden group">
-
+                {/* Combined Execution Rate & Daily Chart */}
+                <Card className="border-border/40 bg-card/30 shadow-none p-3 pb-0 gap-0 flex flex-col relative overflow-hidden group flex-1 min-h-0">
                     <div className="pb-3 flex items-center justify-between">
                         <div className="flex flex-col gap-0.5">
                             <span className="text-[10px] font-bold uppercase tracking-widest text-foreground/60">Execution rate</span>
                             <div className="flex items-center gap-1">
                                 <span className="text-xl font-black text-foreground/90">{Math.round(completionStats.onTimeRate)}%</span>
-                                <span className="text-[8px] font-bold text-emerald-500 uppercase bg-emerald-500/10 px-1 rounded-sm">On Track</span>
+                                <span className={`text-[8px] font-bold uppercase ${effectiveStatus.bg} ${effectiveStatus.color} px-1 rounded-sm`}>
+                                    {effectiveStatus.sentence}
+                                </span>
                             </div>
                         </div>
 
@@ -286,7 +326,7 @@ export function ActivityInsights() {
                         </div>
                     </div>
 
-                    <div className="h-1.5 w-full bg-muted/10 rounded-full overflow-hidden flex">
+                    <div className="h-1.5 w-full bg-muted/10 rounded-full overflow-hidden flex mb-2">
                         <div
                             className="h-full bg-accent-full transition-all duration-1000 ease-out"
                             style={{ width: `${completionStats.onTimeRate}%` }}
@@ -298,6 +338,35 @@ export function ActivityInsights() {
                         <div
                             className="h-full bg-muted-foreground/10 transition-all duration-1000 ease-out flex-1"
                         />
+                    </div>
+
+                    <div className="flex-1 min-h-0 -mx-3 bg-linear-to-t from-accent/20 to-transparent pt-4">
+                        <ChartContainer config={chartConfig} className="h-16 w-full aspect-auto!">
+                            <BarChart
+                                accessibilityLayer
+                                data={taskCompletionChartData}
+                                margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
+                            >
+                                <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.1} />
+                                <XAxis
+                                    dataKey="date"
+                                    hide
+                                />
+                                <ChartTooltip content={<ChartTooltipContent />} />
+                                <Bar
+                                    dataKey="onTime"
+                                    stackId="a"
+                                    fill="var(--color-onTime)"
+                                    radius={[0, 0, 0, 0]}
+                                />
+                                <Bar
+                                    dataKey="late"
+                                    stackId="a"
+                                    fill="var(--color-late)"
+                                    radius={[2, 2, 0, 0]}
+                                />
+                            </BarChart>
+                        </ChartContainer>
                     </div>
                 </Card>
             </div>

@@ -20,6 +20,9 @@ interface LocationPickerModalProps {
     currentFolderId?: string; // The folder being moved (to exclude it and children)
     selectedParentId: string | null;
     onSelect: (parentId: string | null) => void;
+    onClose: () => void;
+    onCreateFolder?: (parentId: string | null) => void;
+    showCreateButton?: boolean;
 }
 
 /**
@@ -32,11 +35,13 @@ export function LocationPickerModal({
     currentFolderId,
     selectedParentId,
     onSelect,
+    onClose,
+    onCreateFolder,
+    showCreateButton = true,
 }: LocationPickerModalProps) {
     const { colors } = useAppTheme();
     const { folders, getFolderById } = useNotesStore();
 
-    // Current browsing location (not the selected destination)
     const [browsingFolderId, setBrowsingFolderId] = useState<string | null>(null);
 
     // Reset browsing position when modal opens
@@ -114,10 +119,18 @@ export function LocationPickerModal({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-md p-0 overflow-hidden flex flex-col h-[500px]">
+            <DialogContent showCloseButton={false} className="max-w-md p-0 overflow-hidden flex flex-col h-[500px]">
                 <DialogHeader className="px-6 pt-5 pb-4 border-b">
                     <DialogTitle className="text-lg font-bold flex items-center justify-between">
                         <span>Select Location</span>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={onClose}
+                            className="h-8 w-8"
+                        >
+                            <Ionicons name="close" size={20} />
+                        </Button>
                     </DialogTitle>
                 </DialogHeader>
 
@@ -140,6 +153,17 @@ export function LocationPickerModal({
                             </button>
                         </React.Fragment>
                     ))}
+                    <div className="flex-1" />
+                    {showCreateButton && (
+                        <button
+                            type="button"
+                            onClick={() => onCreateFolder?.(browsingFolderId)}
+                            className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all ml-2"
+                        >
+                            <Ionicons name="plus" size={12} />
+                            New Folder
+                        </button>
+                    )}
                 </div>
 
                 {/* Current Location Info & Select Button */}

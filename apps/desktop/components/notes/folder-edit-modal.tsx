@@ -76,6 +76,10 @@ export function FolderEditModal({
     const [parentId, setParentId] = useState<string | null>(null);
     const [showLocationPicker, setShowLocationPicker] = useState(false);
     const [iconSearch, setIconSearch] = useState('');
+    const [subFolderCreationId, setSubFolderCreationId] = useState<{ open: boolean; parentId: string | null }>({
+        open: false,
+        parentId: null
+    });
 
     const filteredIcons = useMemo(() => {
         if (!iconSearch || iconSearch.trim().length < 2) return FOLDER_ICONS;
@@ -293,9 +297,23 @@ export function FolderEditModal({
                 <LocationPickerModal
                     open={showLocationPicker}
                     onOpenChange={setShowLocationPicker}
+                    onClose={() => setShowLocationPicker(false)}
                     currentFolderId={folder?.id}
                     selectedParentId={parentId}
                     onSelect={setParentId}
+                    showCreateButton={false}
+                    onCreateFolder={(id) => {
+                        setSubFolderCreationId({ open: true, parentId: id });
+                    }}
+                />
+            )}
+
+            {subFolderCreationId.open && (
+                <FolderEditModal
+                    open={subFolderCreationId.open}
+                    onOpenChange={(open) => setSubFolderCreationId(prev => ({ ...prev, open }))}
+                    folder={null}
+                    defaultParentId={subFolderCreationId.parentId}
                 />
             )}
         </Dialog>

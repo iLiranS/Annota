@@ -307,8 +307,18 @@ export default function TasksScreen() {
                                     onToggleCollapse={() => toggleGroupCollapse(group.id)}
                                     onTaskPress={handleTaskPress}
                                     onTaskToggle={handleToggle}
+                                    onNewTask={() => {
+                                        if (groupBy === 'folder') {
+                                            router.push({
+                                                pathname: '/Tasks/new',
+                                                params: { folderId: group.id !== '__no_folder__' ? group.id : undefined }
+                                            });
+                                        } else if (groupBy === 'date') {
+                                            router.push('/Tasks/new');
+                                        }
+                                    }}
                                     compact={true}
-                                    isFolder={(group as any).isFolder}
+                                    isFolder={group.isFolder}
                                     hideFolder={groupBy === 'folder'}
                                 />
                             ))

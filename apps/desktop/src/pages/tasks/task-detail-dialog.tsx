@@ -17,6 +17,7 @@ import { useForm } from "react-hook-form";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { LocationPickerModal } from "@/components/location-picker-modal";
+import { FolderEditModal } from "@/components/notes/folder-edit-modal";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -84,6 +85,8 @@ export default function TaskDetailDialog() {
     const [newLink, setNewLink] = useState("");
     const [showLinkInput, setShowLinkInput] = useState(false);
     const [showFolderPicker, setShowFolderPicker] = useState(false);
+    const [isNewFolderModalVisible, setIsNewFolderModalVisible] = useState(false);
+    const [newFolderParentId, setNewFolderParentId] = useState<string | null>(null);
 
     // Track the last submitted values to avoid redundant updates
     const lastSubmittedValues = useRef<string>("");
@@ -505,12 +508,27 @@ export default function TaskDetailDialog() {
             <LocationPickerModal
                 open={showFolderPicker}
                 onOpenChange={setShowFolderPicker}
-                selectedParentId={watchedFolderId}
-                onSelect={(folderId) => {
-                    setValue("folderId", folderId);
+                selectedParentId={watchedFolderId ?? null}
+                onSelect={(parentId) => {
+                    setValue('folderId', parentId);
+                    setShowFolderPicker(false);
                     triggerUpdate();
                 }}
+                onClose={() => setShowFolderPicker(false)}
+                onCreateFolder={(id) => {
+                    setNewFolderParentId(id);
+                    setIsNewFolderModalVisible(true);
+                }}
             />
+
+            {isNewFolderModalVisible && (
+                <FolderEditModal
+                    open={isNewFolderModalVisible}
+                    onOpenChange={setIsNewFolderModalVisible}
+                    folder={null}
+                    defaultParentId={newFolderParentId}
+                />
+            )}
         </Dialog>
     );
 }

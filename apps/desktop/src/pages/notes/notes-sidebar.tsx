@@ -261,6 +261,10 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
         createAndNavigateTask({ folderId: currentFolderId || undefined });
     }, [createAndNavigateTask, currentFolderId]);
 
+    const handleDeleteTask = useCallback((taskId: string) => {
+        useTasksStore.getState().deleteTask(taskId);
+    }, []);
+
     const currentTag = useMemo(() => tags.find(t => t.id === tagId), [tags, tagId]);
 
     const isTrash = currentFolderId === TRASH_FOLDER_ID;
@@ -294,246 +298,248 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
             data-state={open ? "expanded" : "collapsed"}
             dir={general.appDirection}
             className={cn(
-                "group/sidebar relative flex h-full flex-col bg-sidebar",
+                "group/sidebar relative flex h-full flex-col bg-sidebar overflow-hidden shrink-0",
                 general.appDirection === 'rtl' ? "border-l" : "border-r",
                 "border-border select-none",
-                !open ? "w-0 border-none opacity-0 invisible" : "opacity-100 visible",
-                !isResizing && "transition-[width,opacity] duration-300 ease-in-out",
+                !isResizing && "transition-all duration-300 ease-in-out",
                 className
             )}
             style={{ width: open ? `${width}px` : 0 }}
         >
-            {/* Resize Handle */}
-            {open && (
-                <div
-                    onMouseDown={startResizing}
-                    className={cn(
-                        "absolute top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-primary/30 transition-colors z-50",
-                        general.appDirection === 'rtl' ? "left-0 -translate-x-1/2" : "right-0 translate-x-1/2"
-                    )}
-                />
-            )}
-            {/* Header */}
-            <SidebarHeader className="h-12 border-b border-border/50 px-2 py-0 justify-center overflow-hidden">
-                <TooltipProvider>
-                    <div className="flex items-center justify-between gap-1 w-full">
-                        <div className="flex items-center gap-2 overflow-hidden flex-1">
-                            {tagId && currentTag ? (
-                                <Ionicons name={headerIcon} color={headerColor} size={16} />
-
-                            ) : (
-                                <div style={{ backgroundColor: headerColor + "30" }} className="flex h-6 w-6 shrink-0 items-center justify-center rounded transition-colors shadow-sm">
+            <div className="flex h-full flex-col shrink-0" style={{ width: `${width}px` }}>
+                {/* Resize Handle */}
+                {open && (
+                    <div
+                        onMouseDown={startResizing}
+                        className={cn(
+                            "absolute top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-primary/30 transition-colors z-50",
+                            general.appDirection === 'rtl' ? "left-0 -translate-x-1/2" : "right-0 translate-x-1/2"
+                        )}
+                    />
+                )}
+                {/* Header */}
+                <SidebarHeader className="h-12 border-b border-border/50 px-2 py-0 justify-center overflow-hidden">
+                    <TooltipProvider>
+                        <div className="flex items-center justify-between gap-1 w-full">
+                            <div className="flex items-center gap-2 overflow-hidden flex-1">
+                                {tagId && currentTag ? (
                                     <Ionicons name={headerIcon} color={headerColor} size={16} />
-                                </div>
-                            )}
-                            <h2 className="text-sm font-bold tracking-tight truncate">{headerTitle}</h2>
-                        </div>
-                        <div className="flex items-center gap-0.5 shrink-0">
-                            {!isTrash && (
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8 shrink-0 text-muted-foreground/60 hover:text-primary hover:bg-primary/10 transition-colors"
-                                            onClick={handleCreateNote}
-                                        >
-                                            <SquarePen className="h-5 w-5" />
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="bottom" className="text-[10px] font-bold">New Note</TooltipContent>
-                                </Tooltip>
-                            )}
-                            {!isDaily && !isTrash && !tagId && (
-                                <DropdownMenu>
+
+                                ) : (
+                                    <div style={{ backgroundColor: headerColor + "30" }} className="flex h-6 w-6 shrink-0 items-center justify-center rounded transition-colors shadow-sm">
+                                        <Ionicons name={headerIcon} color={headerColor} size={16} />
+                                    </div>
+                                )}
+                                <h2 className="text-sm font-bold tracking-tight truncate">{headerTitle}</h2>
+                            </div>
+                            <div className="flex items-center gap-0.5 shrink-0">
+                                {!isTrash && (
                                     <Tooltip>
                                         <TooltipTrigger asChild>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-8 w-8 shrink-0 text-muted-foreground/60 hover:text-primary hover:bg-primary/10 transition-colors"
-                                                >
-                                                    <MoreVertical className="h-5 w-5" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8 shrink-0 text-muted-foreground/60 hover:text-primary hover:bg-primary/10 transition-colors"
+                                                onClick={handleCreateNote}
+                                            >
+                                                <SquarePen className="h-5 w-5" />
+                                            </Button>
                                         </TooltipTrigger>
-                                        <TooltipContent side="bottom" className="text-[10px] font-bold">Actions</TooltipContent>
+                                        <TooltipContent side="bottom" className="text-[10px] font-bold">New Note</TooltipContent>
                                     </Tooltip>
-                                    <DropdownMenuContent align="end" className="w-52">
-                                        <DropdownMenuItem onClick={handleCreateFolder} className="gap-2 cursor-pointer">
-                                            <Ionicons name="folder-outline" size={16} />
-                                            <span>New Folder</span>
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={handleCreateTaskForCurrentFolder} className="gap-2 cursor-pointer">
-                                            <Ionicons name="checkmark-circle-outline" size={16} />
-                                            <span>New Task</span>
-                                        </DropdownMenuItem>
-
-                                        <DropdownMenuSeparator />
-
-                                        <DropdownMenuSub>
-                                            <DropdownMenuSubTrigger className="gap-2 cursor-pointer">
-                                                <Ionicons name="funnel-outline" size={16} />
-                                                <span>Sort by</span>
-                                            </DropdownMenuSubTrigger>
-                                            <DropdownMenuSubContent className="w-52">
-                                                {SORT_OPTIONS.map((option) => (
-                                                    <DropdownMenuItem
-                                                        key={option}
-                                                        className={cn(
-                                                            "flex items-center justify-between cursor-pointer",
-                                                            currentSortType === option && "bg-primary/10 text-primary font-medium"
-                                                        )}
-                                                        onClick={() => setFolderSortType(currentFolderId ?? null, option)}
+                                )}
+                                {!isDaily && !isTrash && !tagId && (
+                                    <DropdownMenu>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 shrink-0 text-muted-foreground/60 hover:text-primary hover:bg-primary/10 transition-colors"
                                                     >
-                                                        <span>{getSortTypeLabel(option)}</span>
-                                                        {currentSortType === option && (
-                                                            <Ionicons name="checkmark" size={14} />
-                                                        )}
-                                                    </DropdownMenuItem>
-                                                ))}
-                                            </DropdownMenuSubContent>
-                                        </DropdownMenuSub>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            )}
+                                                        <MoreVertical className="h-5 w-5" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="bottom" className="text-[10px] font-bold">Actions</TooltipContent>
+                                        </Tooltip>
+                                        <DropdownMenuContent align="end" className="w-52">
+                                            <DropdownMenuItem onClick={handleCreateFolder} className="gap-2 cursor-pointer">
+                                                <Ionicons name="folder-outline" size={16} />
+                                                <span>New Folder</span>
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={handleCreateTaskForCurrentFolder} className="gap-2 cursor-pointer">
+                                                <Ionicons name="checkmark-circle-outline" size={16} />
+                                                <span>New Task</span>
+                                            </DropdownMenuItem>
 
+                                            <DropdownMenuSeparator />
+
+                                            <DropdownMenuSub>
+                                                <DropdownMenuSubTrigger className="gap-2 cursor-pointer">
+                                                    <Ionicons name="funnel-outline" size={16} />
+                                                    <span>Sort by</span>
+                                                </DropdownMenuSubTrigger>
+                                                <DropdownMenuSubContent className="w-52">
+                                                    {SORT_OPTIONS.map((option) => (
+                                                        <DropdownMenuItem
+                                                            key={option}
+                                                            className={cn(
+                                                                "flex items-center justify-between cursor-pointer",
+                                                                currentSortType === option && "bg-primary/10 text-primary font-medium"
+                                                            )}
+                                                            onClick={() => setFolderSortType(currentFolderId ?? null, option)}
+                                                        >
+                                                            <span>{getSortTypeLabel(option)}</span>
+                                                            {currentSortType === option && (
+                                                                <Ionicons name="checkmark" size={14} />
+                                                            )}
+                                                        </DropdownMenuItem>
+                                                    ))}
+                                                </DropdownMenuSubContent>
+                                            </DropdownMenuSub>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                )}
+
+                            </div>
                         </div>
-                    </div>
-                </TooltipProvider>
-            </SidebarHeader>
+                    </TooltipProvider>
+                </SidebarHeader>
 
-            {/* Content */}
-            <SidebarContent className="px-0 gap-0 compact-scrollbar">
-                {/* Folders section */}
-                {browseFolders.length > 0 && (
-                    <SidebarGroup className="px-2 py-1.5">
-                        <SidebarGroupContent>
-                            <SidebarMenu className="gap-1">
-                                {browseFolders.map((folder) => (
-                                    <SidebarMenuItem key={folder.id}>
-                                        <FolderListItem
-                                            folder={folder}
-                                            onEdit={handleEditFolder}
-                                            onDelete={setFolderToDelete}
-                                            onCreateSubFolder={handleCreateSubFolder}
-                                            onCreateTask={handleCreateTask}
-                                            onClick={() => handleFolderPress(folder.id)}
-                                            isActive={currentFolderId === folder.id}
-                                        />
-                                    </SidebarMenuItem>
-                                ))}
-                            </SidebarMenu>
-                        </SidebarGroupContent>
-                    </SidebarGroup>
-                )}
-
-                {pinnedNotes.length > 0 && (
-                    <div className="flex items-center text-[10px] text-muted-foreground/80 uppercase tracking-wider justify-start gap-0.5 px-2 py-1 ">
-                        <Ionicons name='pin-outline' size={12} />
-                        <p>Pinned </p>
-                    </div>
-                )}
-
-                {/* Pinned section */}
-                {pinnedNotes.length > 0 && (
-                    <SidebarGroup className="px-2 py-1.5">
-                        <SidebarGroupContent>
-                            <SidebarMenu className="gap-1">
-                                {pinnedNotes.map((note) => (
-                                    <SidebarMenuItem key={note.id}>
-                                        <NoteListItem
-                                            note={note}
-                                            onDelete={() => deleteNote(note.id)}
-                                            onClick={() => handleNotePress(note)}
-                                            isActive={routeNoteId === note.id}
-                                            isInList={true}
-                                        />
-                                    </SidebarMenuItem>
-                                ))}
-                            </SidebarMenu>
-                        </SidebarGroupContent>
-                    </SidebarGroup>
-                )}
-
-                {unpinnedNotes.length > 0 && (
-                    <div className="flex items-center text-[10px] text-muted-foreground/80 uppercase tracking-wider justify-start gap-0.5 px-2 py-1 ">
-                        <Ionicons name='document-text-outline' size={12} />
-                        <p>Notes</p>
-                    </div>
-                )}
-
-                {/* Notes section */}
-                {unpinnedNotes.length > 0 && (
-                    <SidebarGroup className="px-2 py-1.5">
-                        <SidebarGroupContent>
-                            <SidebarMenu className="gap-1">
-                                {unpinnedNotes.map((note) => (
-                                    <SidebarMenuItem key={note.id}>
-                                        <NoteListItem
-                                            note={note}
-                                            onDelete={() => deleteNote(note.id)}
-                                            onClick={() => handleNotePress(note)}
-                                            isActive={routeNoteId === note.id}
-                                            isInList={true}
-                                        />
-                                    </SidebarMenuItem>
-                                ))}
-                            </SidebarMenu>
-                        </SidebarGroupContent>
-                    </SidebarGroup>
-                )}
-
-                {/* Empty state */}
-                {browseFolders.length === 0 && browseNotes.length === 0 && folderTasks.length === 0 && (
-                    <div className="flex  flex-col items-center gap-2 py-12 text-muted-foreground">
-                        <Ionicons name="folder-open" size={40} className="text-border" />
-                        <p className="text-sm font-medium text-center">This folder is empty</p>
-                        <p className="text-xs text-center">Create a note or folder to get started</p>
-                    </div>
-                )}
-            </SidebarContent>
-
-            {/* Tasks section - Fixed at bottom */}
-            {folderTasks.length > 0 && (
-                <div className="px-0 pb-2 border-t max-h-50 overflow-y-auto compact-scrollbar">
-                    <Collapsible defaultOpen className="group/collapsible">
+                {/* Content */}
+                <SidebarContent className="px-0 gap-0 compact-scrollbar">
+                    {/* Folders section */}
+                    {browseFolders.length > 0 && (
                         <SidebarGroup className="px-2 py-1.5">
-                            <SidebarGroupLabel asChild className="h-7 mb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 w-full px-1 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-sm cursor-pointer transition-colors">
-                                <CollapsibleTrigger>
-                                    <div className="flex items-center justify-between w-full">
-                                        <div className="flex items-center gap-2">
-                                            <Ionicons name="checkmark-circle-outline" size={17} />
-                                            <span>Active Tasks</span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <span className="font-medium lowercase text-muted-foreground/40">{folderTasks.length}</span>
-                                            <ChevronRight className="h-3 w-3 transition-transform group-data-[state=open]/collapsible:rotate-90" />
-                                        </div>
-                                    </div>
-                                </CollapsibleTrigger>
-                            </SidebarGroupLabel>
-                            <CollapsibleContent>
-                                <SidebarGroupContent>
-                                    <SidebarMenu className="gap-1">
-                                        {folderTasks.map((task) => (
-                                            <SidebarMenuItem key={task.id}>
-                                                <TaskItem
-                                                    task={task}
-                                                    onClick={() => navigate(`/task/${task.id}`, { state: { background: location } })}
-                                                    hideFolder={true}
-                                                    isCompact={true}
-                                                />
-                                            </SidebarMenuItem>
-                                        ))}
-                                    </SidebarMenu>
-                                </SidebarGroupContent>
-                            </CollapsibleContent>
+                            <SidebarGroupContent>
+                                <SidebarMenu className="gap-1">
+                                    {browseFolders.map((folder) => (
+                                        <SidebarMenuItem key={folder.id}>
+                                            <FolderListItem
+                                                folder={folder}
+                                                onEdit={handleEditFolder}
+                                                onDelete={setFolderToDelete}
+                                                onCreateSubFolder={handleCreateSubFolder}
+                                                onCreateTask={handleCreateTask}
+                                                onClick={() => handleFolderPress(folder.id)}
+                                                isActive={currentFolderId === folder.id}
+                                            />
+                                        </SidebarMenuItem>
+                                    ))}
+                                </SidebarMenu>
+                            </SidebarGroupContent>
                         </SidebarGroup>
-                    </Collapsible>
-                </div>
-            )}
+                    )}
+
+                    {pinnedNotes.length > 0 && (
+                        <div className="flex items-center text-[10px] text-muted-foreground/80 uppercase tracking-wider justify-start gap-0.5 px-2 py-1 ">
+                            <Ionicons name='pin-outline' size={12} />
+                            <p>Pinned </p>
+                        </div>
+                    )}
+
+                    {/* Pinned section */}
+                    {pinnedNotes.length > 0 && (
+                        <SidebarGroup className="px-2 py-1.5">
+                            <SidebarGroupContent>
+                                <SidebarMenu className="gap-1">
+                                    {pinnedNotes.map((note) => (
+                                        <SidebarMenuItem key={note.id}>
+                                            <NoteListItem
+                                                note={note}
+                                                onDelete={() => deleteNote(note.id)}
+                                                onClick={() => handleNotePress(note)}
+                                                isActive={routeNoteId === note.id}
+                                                isInList={true}
+                                            />
+                                        </SidebarMenuItem>
+                                    ))}
+                                </SidebarMenu>
+                            </SidebarGroupContent>
+                        </SidebarGroup>
+                    )}
+
+                    {unpinnedNotes.length > 0 && (
+                        <div className="flex items-center text-[10px] text-muted-foreground/80 uppercase tracking-wider justify-start gap-0.5 px-2 py-1 ">
+                            <Ionicons name='document-text-outline' size={12} />
+                            <p>Notes</p>
+                        </div>
+                    )}
+
+                    {/* Notes section */}
+                    {unpinnedNotes.length > 0 && (
+                        <SidebarGroup className="px-2 py-1.5">
+                            <SidebarGroupContent>
+                                <SidebarMenu className="gap-1">
+                                    {unpinnedNotes.map((note) => (
+                                        <SidebarMenuItem key={note.id}>
+                                            <NoteListItem
+                                                note={note}
+                                                onDelete={() => deleteNote(note.id)}
+                                                onClick={() => handleNotePress(note)}
+                                                isActive={routeNoteId === note.id}
+                                                isInList={true}
+                                            />
+                                        </SidebarMenuItem>
+                                    ))}
+                                </SidebarMenu>
+                            </SidebarGroupContent>
+                        </SidebarGroup>
+                    )}
+
+                    {/* Empty state */}
+                    {browseFolders.length === 0 && browseNotes.length === 0 && folderTasks.length === 0 && (
+                        <div className="flex  flex-col items-center gap-2 py-12 text-muted-foreground">
+                            <Ionicons name="folder-open" size={40} className="text-border" />
+                            <p className="text-sm font-medium text-center">This folder is empty</p>
+                            <p className="text-xs text-center">Create a note or folder to get started</p>
+                        </div>
+                    )}
+                </SidebarContent>
+
+                {/* Tasks section - Fixed at bottom */}
+                {folderTasks.length > 0 && (
+                    <div className="px-0 pb-2 border-t max-h-50 overflow-y-auto compact-scrollbar">
+                        <Collapsible defaultOpen className="group/collapsible">
+                            <SidebarGroup className="px-2 py-1.5">
+                                <SidebarGroupLabel asChild className="h-7 mb-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 w-full px-1 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-sm cursor-pointer transition-colors">
+                                    <CollapsibleTrigger>
+                                        <div className="flex items-center justify-between w-full">
+                                            <div className="flex items-center gap-2">
+                                                <Ionicons name="checkmark-circle-outline" size={17} />
+                                                <span>Active Tasks</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-medium lowercase text-muted-foreground/40">{folderTasks.length}</span>
+                                                <ChevronRight className="h-3 w-3 transition-transform group-data-[state=open]/collapsible:rotate-90" />
+                                            </div>
+                                        </div>
+                                    </CollapsibleTrigger>
+                                </SidebarGroupLabel>
+                                <CollapsibleContent>
+                                    <SidebarGroupContent>
+                                        <SidebarMenu className="gap-1">
+                                            {folderTasks.map((task) => (
+                                                <SidebarMenuItem key={task.id}>
+                                                    <TaskItem
+                                                        task={task}
+                                                        onClick={() => navigate(`/task/${task.id}`, { state: { background: location } })}
+                                                        onDelete={() => handleDeleteTask(task.id)}
+                                                        hideFolder={true}
+                                                        isCompact={true}
+                                                    />
+                                                </SidebarMenuItem>
+                                            ))}
+                                        </SidebarMenu>
+                                    </SidebarGroupContent>
+                                </CollapsibleContent>
+                            </SidebarGroup>
+                        </Collapsible>
+                    </div>
+                )}
+            </div>
 
 
             {/* Modals */}

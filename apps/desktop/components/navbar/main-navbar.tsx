@@ -192,7 +192,7 @@ export function MainNavbar() {
                             )}
                             onClick={() => updateGeneralSettings({ isTaskCalendarOpen: !general.isTaskCalendarOpen })}
                         >
-                            <Ionicons color={general.isTaskCalendarOpen ? colors.primary : ""} name={general.isTaskCalendarOpen ? "calendar" : "calendar-outline"} size={16} />
+                            <Ionicons color={general.isTaskCalendarOpen ? colors.primary : ""} name={"calendar-outline"} size={16} />
                         </Button>
                     </TooltipTrigger>
                     <TooltipContent side="bottom" className="text-[10px]">

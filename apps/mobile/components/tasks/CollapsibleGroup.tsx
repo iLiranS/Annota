@@ -13,6 +13,7 @@ export interface CollapsibleGroupProps {
     onToggleCollapse: () => void;
     onTaskPress: (task: Task) => void;
     onTaskToggle: (taskId: string) => void;
+    onNewTask?: () => void;
     compact: boolean;
     icon?: string;
     isFolder?: boolean;
@@ -27,6 +28,7 @@ export function CollapsibleGroup({
     onToggleCollapse,
     onTaskPress,
     onTaskToggle,
+    onNewTask,
     compact,
     isFolder,
     icon,
@@ -35,10 +37,21 @@ export function CollapsibleGroup({
     const { colors, dark } = useTheme();
 
     return (
-        <View style={styles.groupContainer}>
+        <View
+            style={[
+                styles.groupContainer,
+                (isFolder && color) && {
+                    backgroundColor: color + '12',
+                    borderWidth: 1,
+                    borderColor: color + '15',
+                }
+            ]}
+        >
             <Pressable
                 onPress={onToggleCollapse}
-                style={[styles.groupHeader, { backgroundColor: dark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' }]}
+                style={[
+                    styles.groupHeader,
+                ]}
             >
                 <View style={styles.groupHeaderLeft}>
                     <Ionicons
@@ -57,8 +70,8 @@ export function CollapsibleGroup({
                     <ThemedText style={[styles.groupTitle, color && { color }]}>{title}</ThemedText>
                 </View>
 
-                <View style={[styles.taskCountBadge, { backgroundColor: colors.primary + '15' }]}>
-                    <ThemedText style={[styles.taskCountText, { color: colors.primary }]}>
+                <View style={[styles.taskCountBadge, { backgroundColor: (color || colors.primary) + '15' }]}>
+                    <ThemedText style={[styles.taskCountText, { color: color || colors.primary }]}>
                         {tasks.length}
                     </ThemedText>
                 </View>
@@ -66,6 +79,18 @@ export function CollapsibleGroup({
 
             {!isCollapsed && (
                 <View style={styles.groupContent}>
+                    {onNewTask && (
+                        <Pressable
+                            onPress={onNewTask}
+                            style={({ pressed }) => [
+                                styles.newTaskButton,
+                                pressed && { opacity: 0.6 }
+                            ]}
+                        >
+                            <ThemedText style={[styles.newTaskText, { color: colors.text + '60' }]}>NEW TASK</ThemedText>
+                            <Ionicons name="add" size={16} color={colors.text + '40'} />
+                        </Pressable>
+                    )}
                     {tasks.map((task) =>
                         compact ? (
                             <CompactTaskCard
@@ -93,16 +118,16 @@ export function CollapsibleGroup({
 
 const styles = StyleSheet.create({
     groupContainer: {
-        marginBottom: 12,
+        marginBottom: 16,
+        borderRadius: 16,
+        overflow: 'hidden',
     },
     groupHeader: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 10,
-        paddingVertical: 8,
-        borderRadius: 8,
-        marginBottom: 6,
+        paddingHorizontal: 12,
+        paddingVertical: 12,
     },
     groupHeaderLeft: {
         flexDirection: 'row',
@@ -126,6 +151,20 @@ const styles = StyleSheet.create({
         fontWeight: '700',
     },
     groupContent: {
-        paddingLeft: 4,
+        paddingHorizontal: 8,
+        paddingBottom: 8,
+    },
+    newTaskButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 10,
+        paddingVertical: 8,
+        opacity: 0.5,
+    },
+    newTaskText: {
+        fontSize: 10,
+        fontWeight: '700',
+        letterSpacing: 0.5,
     },
 });

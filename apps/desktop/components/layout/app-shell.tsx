@@ -1,10 +1,10 @@
 import { SidebarProvider } from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
 import { useSettingsStore } from "@annota/core";
 import { Outlet } from "react-router-dom";
 import { MainNavbar } from "../navbar/main-navbar";
 import { AppSidebar } from "./app-sidebar";
 import { TaskCalendarSidebar } from "./task-calendar-sidebar";
-import { cn } from "@/lib/utils";
 
 /**
  * Main app shell: shadcn SidebarProvider wrapping the primary sidebar + routed content.
@@ -28,7 +28,7 @@ export default function AppShell() {
                     </main>
                     <div className={cn(
                         "transition-all duration-300 ease-in-out overflow-hidden flex shrink-0",
-                        general.isTaskCalendarOpen ? "w-80" : "w-0"
+                        general.isTaskCalendarOpen ? "w-72" : "w-0"
                     )}>
                         <TaskCalendarSidebar />
                     </div>

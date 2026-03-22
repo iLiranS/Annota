@@ -176,9 +176,14 @@ export const getEditorProps = (callbacks: {
     direction?: string;
 }) => ({
     attributes: { dir: callbacks.direction || 'auto' },
+    scrollMargin: { top: 30, bottom: 85, left: 0, right: 0 },
+    scrollThreshold: 10,
     handleScrollToSelection: () => {
-        callbacks.onScroll?.();
-        return true; // prevent default tiptap scrolling
+        if (callbacks.onScroll) {
+            callbacks.onScroll();
+            return true;
+        }
+        return false; // Allow default Prosemirror scroll with margin
     },
     handleDOMEvents: {
         drop: () => false,
