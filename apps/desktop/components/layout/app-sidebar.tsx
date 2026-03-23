@@ -30,6 +30,7 @@ import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupConte
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useCreateNote } from "@/hooks/use-create-note";
 import { useCreateTask } from "@/hooks/use-create-task";
+import { CalendarIcon } from "lucide-react";
 import { useEffect } from "react";
 import { ConfirmDialog } from "../custom-ui/confirm-dialog";
 import { FolderEditModal } from "../notes/folder-edit-modal";
@@ -214,12 +215,8 @@ export function AppSidebar() {
                                     }
                                     tooltip="Daily Notes"
                                 >
-                                    <Ionicons
-                                        name={dailyFolder?.icon ? `${dailyFolder.icon}-outline` : "calendar-outline"}
-                                        size={18}
-                                        className="text-violet-500"
-                                        color={dailyFolder?.color}
-                                    />
+                                    <CalendarIcon className="h-5 w-5 text-violet-500" />
+
                                     <span className="font-medium">{dailyFolder?.name ?? "Daily Notes"}</span>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>

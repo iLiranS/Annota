@@ -30,7 +30,7 @@ const NewTaskButton = ({ onClick, className }: { onClick: () => void; className?
     <button
         onClick={onClick}
         className={cn(
-            "flex w-full items-center justify-between px-2 py-1 hover:text-primary hover:bg-primary/10 rounded-lg text-muted-foreground  transition-all hover:opacity-100 mb-1",
+            "flex w-full items-center justify-between px-3 py-1.5 hover:text-primary hover:bg-primary/10 rounded-lg text-muted-foreground  transition-all hover:opacity-100 mb-1",
             className
         )}
     >
@@ -203,11 +203,11 @@ export function TaskCalendarSidebar() {
         <aside
             dir="ltr"
             className={cn(
-                "flex h-full w-72 shrink-0 flex-col overflow-hidden border-sidebar-border bg-sidebar select-none",
+                "flex h-full w-72 px-4 shrink-0 flex-col overflow-hidden border-sidebar-border bg-sidebar select-none",
                 side === 'right' ? "border-l" : "border-r"
             )}
         >
-            <div className="flex flex-1 flex-col gap-4 p-4 overflow-hidden">
+            <div className="flex flex-1 flex-col gap-4 pt-4  overflow-hidden">
                 {/* View Switcher is now the top element */}
                 <div className="relative flex items-center p-1 bg-muted-foreground/5 rounded-xl overflow-hidden min-h-[40px]">
                     {/* Animated background chip */}
@@ -253,7 +253,7 @@ export function TaskCalendarSidebar() {
 
                 {/* Controls (Sorting/Toggling) - Only show in 'All' view */}
                 {viewMode === 'all' && (
-                    <div className="flex items-center gap-2 px-1">
+                    <div className="flex items-center gap-2 ">
                         <Button
                             variant="outline"
                             size="sm"

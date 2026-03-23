@@ -169,6 +169,7 @@ export function AccountSettings() {
                             <Separator />
                             <SettingItem
                                 label="Account Role"
+                                description="You can manage your subscription in the mobile app"
                                 icon={<Ionicons name="star" size={20} />}
                                 iconBg="bg-amber-500"
                                 value={<RoleBadge role={userRole} />}

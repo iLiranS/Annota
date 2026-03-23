@@ -87,8 +87,8 @@ export function TaskItem({ task, onClick, onDelete, showDate = false, hideFolder
                 <button
                     onClick={onClick}
                     className={cn(
-                        "group flex w-full items-center gap-2 rounded-xl text-left transition-all duration-200 hover:bg-sidebar-accent/50",
-                        isCompact ? "px-2 py-1" : "px-3 py-3",
+                        "group flex w-full items-center gap-1.5 rounded-xl text-left transition-all duration-200 hover:bg-sidebar-accent/50",
+                        isCompact ? "px-1.5 py-1" : "px-3 py-3",
                         task.completed && "opacity-60",
                         className
                     )}
@@ -108,7 +108,7 @@ export function TaskItem({ task, onClick, onDelete, showDate = false, hideFolder
                     </div>
 
                     <div className="min-w-0 flex-1 space-y-0.5">
-                        <div className="flex items-center gap-2">
+                        <div className={cn("flex items-center", isCompact ? "gap-1" : "gap-2")}>
                             <span
                                 className={cn(
                                     "truncate font-semibold transition-all duration-200",
@@ -121,7 +121,10 @@ export function TaskItem({ task, onClick, onDelete, showDate = false, hideFolder
 
                             {linkedFolder && !hideFolder && (
                                 <div
-                                    className="flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
+                                    className={cn(
+                                        "flex items-center rounded-full text-[10px] font-bold uppercase tracking-wider",
+                                        isCompact ? "gap-1 px-1.5 py-0.5" : "gap-1.5 px-2 py-0.5"
+                                    )}
                                     style={{
                                         backgroundColor: `${linkedFolder.color || 'var(--primary)'}15`,
                                         color: linkedFolder.color || 'var(--primary)'
@@ -132,18 +135,18 @@ export function TaskItem({ task, onClick, onDelete, showDate = false, hideFolder
                                         size={10}
                                         style={{ color: linkedFolder.color || 'var(--primary)' }}
                                     />
-                                    <span className="truncate max-w-[80px]">{linkedFolder.name}</span>
+                                    <span className={cn("truncate", isCompact ? "max-w-[50px]" : "max-w-[80px]")}>{linkedFolder.name}</span>
                                 </div>
                             )}
                         </div>
                     </div>
 
-                    <div className="flex shrink-0 items-center gap-2">
+                    <div className={cn("flex shrink-0 items-center", isCompact ? "gap-1" : "gap-2")}>
                         {task.deadline && (
                             <div
                                 className={cn(
-                                    "flex items-center gap-1.5 font-medium",
-                                    isCompact ? "text-[10px]" : "text-xs",
+                                    "flex items-center gap-1 font-medium",
+                                    isCompact ? "text-[9px]" : "text-xs",
                                     (() => {
                                         if (task.completed) return "text-muted-foreground/40";
                                         const now = new Date();

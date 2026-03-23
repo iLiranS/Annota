@@ -1,21 +1,28 @@
 import SettingItem from '@/components/settings/setting-item';
 import UpdateDisplayNameForm from '@/components/user/updateDisplayNameForm';
 import { useAppTheme } from '@/hooks/use-app-theme';
-import { useUserStore as useAuthStore } from '@annota/core';
+import { isPremiumUser, useUserStore as useAuthStore } from '@annota/core';
 import { getMasterKey } from '@annota/core/platform';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as LocalAuthentication from 'expo-local-authentication';
 import React from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Purchases from 'react-native-purchases';
+import RevenueCatUI, { PAYWALL_RESULT } from "react-native-purchases-ui";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 
 export const GUEST_DISPLAY_NAME_KEY = 'guest_display_name';
 
 export default function AccountSettingsScreen() {
     const { colors } = useAppTheme();
     const insets = useSafeAreaInsets();
-    const { session, signOut, user, setGuest } = useAuthStore();
+    const { session, signOut, user, setGuest, role, sub_exp_date } = useAuthStore();
+
+    const isAlpha = process.env.EXPO_PUBLIC_IS_ALPHA === 'true';
+    const isAdmin = role?.toLowerCase() === 'admin';
+    const isPremium = isPremiumUser(role, sub_exp_date);
     const [isDisplayNameModalVisible, setIsDisplayNameModalVisible] = React.useState(false);
     const [guestDisplayName, setGuestDisplayName] = React.useState('');
 
@@ -167,6 +174,14 @@ export default function AccountSettingsScreen() {
         );
     };
 
+    const handleManageSubscription = async () => {
+        try {
+            await Purchases.showManageSubscriptions();
+        } catch (error) {
+            Alert.alert('Manage Subscription', 'Please manage your subscription in your device settings -> Apple ID -> Subscriptions.');
+        }
+    };
+
     return (
         <ScrollView
             style={[styles.container, { backgroundColor: colors.background }]}
@@ -243,6 +258,76 @@ export default function AccountSettingsScreen() {
                     )}
                 </View>
             </View>
+
+            {session && !isAlpha && !isAdmin && (
+                <View style={styles.section}>
+                    <Text style={[styles.sectionHeader, { color: colors.text + '80' }]}>SUBSCRIPTION</Text>
+                    <View style={[styles.card, { backgroundColor: colors.card }]}>
+                        {!isPremium ? (
+                            <SettingItem
+                                label="Upgrade to Pro"
+                                icon="star"
+                                onPress={async () => {
+                                    try {
+                                        // This opens the drop-in RevenueCat paywall!
+                                        const result = await RevenueCatUI.presentPaywallIfNeeded({
+                                            requiredEntitlementIdentifier: "Annota Pro"
+                                        });
+
+                                        if (result === PAYWALL_RESULT.PURCHASED || result === PAYWALL_RESULT.RESTORED) {
+                                            Toast.show({
+                                                type: 'success',
+                                                text1: 'Purchase Successful',
+                                                text2: 'Please wait a few minutes and restart the app for changes to take effect.',
+                                                visibilityTime: 6000,
+                                            });
+                                        }
+                                    } catch (e) {
+                                        console.error("Paywall error:", e);
+                                    }
+                                }}
+                                description="Get higher limits and premium features"
+                                iconColor="#FFFFFF"
+                                iconBackgroundColor="#DAA520"
+                            />
+                        ) : (
+                            <SettingItem
+                                label="Manage Subscription"
+                                icon="card-outline"
+                                onPress={handleManageSubscription}
+                                description={sub_exp_date ? `Renews/Expires on: ${new Date(sub_exp_date).toLocaleDateString()}` : "Manage your subscription"}
+                                iconColor="#FFFFFF"
+                                iconBackgroundColor="#5856D6"
+                            />
+                        )}
+                        {!isPremium && (
+                            <SettingItem
+                                label="Restore Purchases"
+                                icon="refresh-outline"
+                                onPress={async () => {
+                                    try {
+                                        const restore = await Purchases.restorePurchases();
+                                        if (typeof restore.entitlements.active['Annota Pro'] !== 'undefined') {
+                                            Toast.show({
+                                                type: 'success',
+                                                text1: 'Success',
+                                                text2: 'Purchases restored successfully. Please wait a few minutes and restart the app.',
+                                                visibilityTime: 6000,
+                                            });
+                                        } else {
+                                            Alert.alert('No Purchases', 'No active subscriptions found to restore.');
+                                        }
+                                    } catch (e) {
+                                        Alert.alert('Error', 'Failed to restore purchases.');
+                                    }
+                                }}
+                                iconColor="#FFFFFF"
+                                iconBackgroundColor="#8E8E93"
+                            />
+                        )}
+                    </View>
+                </View>
+            )}
 
             {session && (
                 <View style={styles.section}>

@@ -65,6 +65,7 @@ import {
   useSyncStore,
   useTasksStore
 } from '@annota/core';
+import RevenueCatInitializer, { logInRevenueCat, logOutRevenueCat } from '@/services/RevenueCat';
 import { SyncScheduler, getMasterKey, initPlatformAdapters } from '@annota/core/platform';
 import { createMobileAdapters } from '../bootstrap/mobile-adapters';
 
@@ -166,6 +167,7 @@ export default function RootLayout() {
         if (session) {
           checkMasterKey();
           useAuthStore.getState().getUserProfile();
+          logInRevenueCat(session.user.id);
           await bootstrapDb(session.user.id);
         } else if (user) {
           // Offline cold start — hasMasterKey is already restored from persist
@@ -226,8 +228,10 @@ export default function RootLayout() {
         if (session) {
           setSession(session);
           useAuthStore.getState().getUserProfile();
+          logInRevenueCat(session.user.id);
         } else if (event === 'SIGNED_OUT') {
           setSession(null);
+          logOutRevenueCat();
           // Clear stores immediately to prevent ghosting of previous user's data
           useNotesStore.getState().reset();
           useTasksStore.getState().reset();
@@ -391,6 +395,7 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <ThemeProvider value={theme}>
 
+        <RevenueCatInitializer />
         <Stack>
           <Stack.Screen name="(auth)" options={{ headerShown: false, gestureEnabled: false }} />
           <Stack.Screen name="(drawer)" options={{ headerShown: false, gestureEnabled: false }} />
@@ -401,6 +406,7 @@ export default function RootLayout() {
           <Stack.Screen name="Notes" options={{ headerShown: false }} />
           {/* Deep link redirect: annota://note/{id} → Notes/[id] */}
           <Stack.Screen name="note/[id]" options={{ headerShown: false, animation: 'none' }} />
+          <Stack.Screen name="paywall" options={{ headerShown: false, presentation: 'modal' }} />
 
         </Stack>
         <StatusBar style={theme.dark ? 'light' : 'dark'} />

@@ -180,11 +180,11 @@ export class SyncScheduler {
         // Transition: offline → online → drain dirty data
         if (!wasOnline && isOnline) {
             console.log('[SyncScheduler] Back online — syncing');
-            this.showOnlineToast();
+            // this.showOnlineToast();
             this.executeSyncPull().then(() => this.executeSyncPush());
         } else if (wasOnline && !isOnline) {
             console.log('[SyncScheduler] Went offline');
-            this.showOfflineToast();
+            // this.showOfflineToast();
         }
     };
 
