@@ -9,6 +9,7 @@ import { useAppTheme } from '@/hooks/use-app-theme';
 import { useUserStore as useAuthStore, useNotesStore, useSettingsStore, useTasksStore, type Task } from '@annota/core';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { BlurView } from 'expo-blur';
 import { Stack, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, LayoutChangeEvent, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
@@ -230,6 +231,15 @@ export default function HomeScreen() {
         <Stack.Screen
           options={{
             headerShown: true,
+            headerTransparent: true,
+            headerShadowVisible: false,
+            headerBackground: () => (
+              <BlurView
+                intensity={80}
+                style={StyleSheet.absoluteFill}
+                tint={dark ? 'dark' : 'light'}
+              />
+            ),
             headerTitle: () => (
               <View style={styles.headerTitleContainer}>
                 <ThemedText style={[styles.greetingText, { fontFamily: editor.fontFamily }]}>
@@ -261,7 +271,7 @@ export default function HomeScreen() {
         <ScrollView
           style={styles.container}
           contentContainerStyle={{
-            paddingTop: 20,
+            paddingTop: insets.top + 64, // Base header height + original 20px padding
             paddingBottom: insets.bottom + 20,
           }}
         >
@@ -406,7 +416,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   greetingText: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '600',
     letterSpacing: -0.5,
   },
@@ -419,8 +429,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
   },

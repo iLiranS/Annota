@@ -161,14 +161,14 @@ export function AppSidebar() {
     return (
         <Sidebar
             collapsible="offcanvas"
-            className="border-sidebar-border select-none"
+            className="border-none select-none"
             side={general.appDirection === 'rtl' ? 'right' : 'left'}
             dir={general.appDirection}
         >
             {/* ── Header ───────────────────────────────────── */}
             <SidebarHeader
                 data-tauri-drag-region
-                className="flex h-8 shrink-0 flex-row items-center gap-2 px-2 py-0"
+                className="flex h-10 shrink-0 flex-row items-center gap-2 px-2 py-0"
             >
                 <div style={{ display: general.appDirection === 'rtl' ? 'none' : 'flex' }} className="flex items-center pt-2 px-1 gap-1  h-full">
 
@@ -188,7 +188,7 @@ export function AppSidebar() {
             </SidebarHeader>
 
             {/* ── Content ──────────────────────────────────── */}
-            <SidebarContent className="min-w-0 overflow-x-hidden pt-2 ">
+            <SidebarContent className="min-w-0 overflow-x-hidden pt-2">
                 {/* Navigation group */}
                 <SidebarGroup className="pb-0">
                     <SidebarGroupContent>

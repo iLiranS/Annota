@@ -85,7 +85,7 @@ export default function MasterKeyScreen() {
                     onPress: async () => {
                         await userService.setupMasterKey(userId, mnemonic, hasCloudData);
                         useAuthStore.getState().setHasMasterKey(true);
-                        router.replace('/(drawer)');
+                        router.replace('/(app)');
                     },
                 },
             ]
@@ -110,7 +110,7 @@ export default function MasterKeyScreen() {
             await userService.importMasterKey(userId, joinedWords, storedValidator);
             useAuthStore.getState().setHasMasterKey(true);
 
-            router.replace('/(drawer)');
+            router.replace('/(app)');
         } catch (err: any) {
             console.error('Import key validation error:', err);
             if (err.message === 'INVALID_FORMAT') {

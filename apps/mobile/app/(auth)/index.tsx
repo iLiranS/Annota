@@ -40,7 +40,7 @@ export default function LoginScreen() {
             if (!key) {
                 router.replace('/(auth)/master-key');
             } else {
-                router.replace('/(drawer)');
+                router.replace('/(app)');
             }
         };
 
@@ -92,7 +92,7 @@ export default function LoginScreen() {
 
     const continueAsGuest = () => {
         setGuest(true);
-        router.replace('/(drawer)');
+        router.replace('/(app)');
     };
 
     const renderProviderButton = (provider: 'google' | 'apple' | 'github', icon: keyof typeof Ionicons.glyphMap, label: string, index: number) => {

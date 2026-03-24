@@ -319,12 +319,12 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
                     />
                 )}
                 {/* Header */}
-                <SidebarHeader className="h-12 border-b border-border/50 px-2 py-0 justify-center overflow-hidden">
+                <SidebarHeader style={{ backgroundColor: headerColor + "30" }} className="h-12 border-b border-border/50 px-2 py-0 justify-center overflow-hidden">
                     <TooltipProvider>
                         <div className="flex items-center justify-between gap-1 w-full">
                             <div className="flex items-center gap-2 overflow-hidden flex-1">
 
-                                <div style={{ backgroundColor: headerColor + "30" }} className="flex h-6 w-6 shrink-0 items-center justify-center rounded transition-colors shadow-sm">
+                                <div className="flex h-6 w-6 shrink-0 items-center justify-center  transition-colors ">
                                     {isDaily ? (
                                         <DailyNoteIcon color={headerColor} size={16} />
                                     ) : (

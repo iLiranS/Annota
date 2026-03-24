@@ -198,74 +198,53 @@ export default function TasksScreen() {
                 options={{
                     title: 'Tasks',
                     headerShown: true,
+                    headerTransparent: true,
+                    headerTitleStyle: {
+                        fontSize: 22,
+                        fontWeight: '800',
+                    },
                     headerLeft: () => (
-                        <Pressable onPress={toggle} style={{ padding: 4, marginLeft: -4 }} hitSlop={8}>
+                        <Pressable onPress={toggle} style={{ padding: 4 }} hitSlop={8}>
                             <Ionicons name="menu-outline" size={26} color={colors.primary} />
                         </Pressable>
-                    )
+                    ),
                 }}
             />
             <ScrollView
                 style={styles.scrollView}
-                contentContainerStyle={[styles.scrollContent, { paddingTop: 16 }]}
+                contentContainerStyle={[
+                    styles.scrollContent,
+                    { paddingTop: Platform.OS === 'ios' ? insets.top + 50 : insets.top + 60 }
+                ]}
                 showsVerticalScrollIndicator={false}
             >
-                {/* Header */}
-                <View style={styles.header}>
-                    <View style={styles.headerRow}>
-                        <ThemedText style={styles.title}>Tasks</ThemedText>
-                        <Pressable
-                            onPress={() => router.push('/Tasks/new')}
-                            style={({ pressed }) => [
-                                styles.addButton,
-                                {
-                                    backgroundColor: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
-                                    opacity: pressed ? 0.7 : 1,
-                                },
-                            ]}
-                            hitSlop={8}
-                        >
-                            <Ionicons name="add" size={22} color={colors.primary} />
-                        </Pressable>
-                    </View>
+                {/* Controls Row */}
+                <View style={styles.newHeaderRow}>
                     <ThemedText style={[styles.subtitle, { color: colors.text + '70' }]}>
                         {pendingTasks.length} pending · {completedTasks.length} done
                     </ThemedText>
 
-                    {/* Controls Row */}
-                    <View style={styles.controlsRow}>
+                    <View style={styles.controlsGroup}>
                         <Pressable
                             onPress={cycleGroupBy}
                             style={[
-                                styles.controlButton,
-                                {
-                                    backgroundColor: colors.primary + '15',
-                                },
+                                styles.compactControlButton,
+                                { backgroundColor: colors.primary + '15' },
                             ]}
                         >
-                            <Ionicons
-                                name="layers-outline"
-                                size={16}
-                                color={colors.primary}
-                            />
-                            <ThemedText
-                                style={[
-                                    styles.controlButtonText,
-                                    { color: colors.primary },
-                                ]}
-                            >
+                            <Ionicons name="layers-outline" size={14} color={colors.primary} />
+                            <ThemedText style={[styles.controlButtonText, { color: colors.primary }]}>
                                 {getGroupByLabel()}
                             </ThemedText>
                         </Pressable>
 
-                        {/* Toggle Completed */}
                         <Pressable
                             onPress={() => {
                                 LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
                                 updateGeneralSettings({ tasksShowDone: !showCompleted });
                             }}
                             style={[
-                                styles.controlButton,
+                                styles.compactControlButton,
                                 {
                                     backgroundColor: showCompleted ? colors.primary + '15' : dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
                                 },
@@ -273,7 +252,7 @@ export default function TasksScreen() {
                         >
                             <Ionicons
                                 name={showCompleted ? 'eye' : 'eye-off'}
-                                size={16}
+                                size={14}
                                 color={showCompleted ? colors.primary : colors.text + '70'}
                             />
                             <ThemedText
@@ -284,6 +263,20 @@ export default function TasksScreen() {
                             >
                                 Done
                             </ThemedText>
+                        </Pressable>
+
+                        <Pressable
+                            onPress={() => router.push('/Tasks/new')}
+                            style={({ pressed }) => [
+                                styles.compactAddButton,
+                                {
+                                    backgroundColor: colors.primary,
+                                    opacity: pressed ? 0.8 : 1,
+                                },
+                            ]}
+                            hitSlop={8}
+                        >
+                            <Ionicons name="add" size={20} color="white" />
                         </Pressable>
                     </View>
                 </View>
@@ -397,45 +390,37 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingBottom: 100,
     },
-    header: {
-        marginBottom: 12,
-    },
-    headerRow: {
+    newHeaderRow: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
+        marginBottom: 16,
     },
-    addButton: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
+    controlsGroup: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    compactControlButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 8,
+    },
+    compactAddButton: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
         alignItems: 'center',
         justifyContent: 'center',
     },
-    title: {
-        fontSize: 30,
-        fontWeight: '700',
-        letterSpacing: -0.5,
-    },
     subtitle: {
         fontSize: 13,
-        marginTop: 2,
-    },
-    controlsRow: {
-        flexDirection: 'row',
-        gap: 8,
-        marginTop: 8,
-    },
-    controlButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 10,
     },
     controlButtonText: {
-        fontSize: 13,
+        fontSize: 12,
         fontWeight: '600',
     },
     section: {

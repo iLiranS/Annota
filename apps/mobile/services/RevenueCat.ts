@@ -5,8 +5,17 @@ import Purchases, { LOG_LEVEL } from 'react-native-purchases';
 const IOS_API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY || '';
 const ANDROID_API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY || '';
 
+/**
+ * Flag to easily enable/disable RevenueCat across the app.
+ * Set to false to disable RevenueCat (e.g. for testing without production API keys).
+ */
+export const ENABLE_REVENUECAT = false;
+
 export const useRevenueCatInitialization = () => {
   useEffect(() => {
+    // Return early if RevenueCat is disabled
+    if (!ENABLE_REVENUECAT) return;
+
     // RevenueCat is not supported on Web
     if (Platform.OS === 'web') return;
     
@@ -21,10 +30,14 @@ export const useRevenueCatInitialization = () => {
       Purchases.setLogLevel(LOG_LEVEL.INFO);
     }
 
-    if (Platform.OS === 'ios' && IOS_API_KEY) {
-      Purchases.configure({ apiKey: IOS_API_KEY });
-    } else if (Platform.OS === 'android' && ANDROID_API_KEY) {
-      Purchases.configure({ apiKey: ANDROID_API_KEY });
+    try {
+      if (Platform.OS === 'ios' && IOS_API_KEY) {
+        Purchases.configure({ apiKey: IOS_API_KEY });
+      } else if (Platform.OS === 'android' && ANDROID_API_KEY) {
+        Purchases.configure({ apiKey: ANDROID_API_KEY });
+      }
+    } catch (err) {
+      console.warn('RevenueCat: configuration failed', err);
     }
   }, []);
 };
@@ -33,7 +46,7 @@ export const useRevenueCatInitialization = () => {
  * Identify user in RevenueCat
  */
 export const logInRevenueCat = async (userId: string) => {
-  if (Platform.OS === 'web' || !Purchases) return;
+  if (!ENABLE_REVENUECAT || Platform.OS === 'web' || !Purchases) return;
   try {
     await Purchases.logIn(userId);
   } catch (err) {
@@ -45,7 +58,7 @@ export const logInRevenueCat = async (userId: string) => {
  * Log out user from RevenueCat
  */
 export const logOutRevenueCat = async () => {
-  if (Platform.OS === 'web' || !Purchases) return;
+  if (!ENABLE_REVENUECAT || Platform.OS === 'web' || !Purchases) return;
   try {
     await Purchases.logOut();
   } catch (err) {

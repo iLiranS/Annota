@@ -3,6 +3,7 @@ import { View, StyleSheet, Text } from 'react-native';
 import RevenueCatUI, { PAYWALL_RESULT } from "react-native-purchases-ui";
 import { useRouter } from 'expo-router';
 import Toast from 'react-native-toast-message';
+import { ENABLE_REVENUECAT } from '../../services/RevenueCat';
 
 export default function PaywallScreen() {
     const router = useRouter();
@@ -30,11 +31,11 @@ export default function PaywallScreen() {
         }
     };
 
-    if (!RevenueCatUI || !RevenueCatUI.Paywall) {
+    if (!ENABLE_REVENUECAT || !RevenueCatUI || !RevenueCatUI.Paywall) {
         return (
             <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', padding: 20 }]}>
                 <Text style={{ textAlign: 'center' }}>
-                    The subscription system is not available in the current environment or a native build is required.
+                    The subscription system is currently disabled or not available in this environment.
                 </Text>
             </View>
         );
@@ -70,7 +71,7 @@ export default function PaywallScreen() {
  * Helper function to present the paywall as a modal imperatively.
  */
 export async function presentPaywall(): Promise<boolean> {
-    if (!RevenueCatUI || !RevenueCatUI.presentPaywall) return false;
+    if (!ENABLE_REVENUECAT || !RevenueCatUI || !RevenueCatUI.presentPaywall) return false;
     const paywallResult: PAYWALL_RESULT = await RevenueCatUI.presentPaywall();
     
     switch (paywallResult) {

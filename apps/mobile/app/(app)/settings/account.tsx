@@ -10,6 +10,7 @@ import React from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Purchases from 'react-native-purchases';
 import RevenueCatUI, { PAYWALL_RESULT } from "react-native-purchases-ui";
+import { ENABLE_REVENUECAT } from '../../../services/RevenueCat';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 
@@ -259,7 +260,7 @@ export default function AccountSettingsScreen() {
                 </View>
             </View>
 
-            {session && !isAlpha && !isAdmin && (
+            {session && !isAlpha && !isAdmin && ENABLE_REVENUECAT && (
                 <View style={styles.section}>
                     <Text style={[styles.sectionHeader, { color: colors.text + '80' }]}>SUBSCRIPTION</Text>
                     <View style={[styles.card, { backgroundColor: colors.card }]}>

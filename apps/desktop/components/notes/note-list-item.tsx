@@ -13,8 +13,8 @@ import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { LocationPickerModal } from "../location-picker-modal";
-import { NotePreviewModal } from "./note-preview-modal";
 import { FolderEditModal } from "./folder-edit-modal";
+import { NotePreviewModal } from "./note-preview-modal";
 
 import { Slot } from "@radix-ui/react-slot";
 
@@ -90,7 +90,7 @@ export function NoteListItem({
                         type="button"
                         onClick={onClick}
                         className={cn(
-                            !asChild && "group/note relative flex w-full flex-col transition-all hover:bg-accent/50",
+                            !asChild && "group/note relative flex w-full flex-col transition-all hover:bg-primary/10",
                             !asChild && (isCompact && !isInList ? "py-1.5" : "py-2"),
                             !asChild && (isInList ? "rounded-lg px-2 py-2" : "px-3 py-2 rounded-lg"),
                             isActive && !asChild && "bg-accent/70",

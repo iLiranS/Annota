@@ -139,14 +139,13 @@ export function TaskCalendarSidebar() {
         navigate(`/task/${id}`, { state: { background: location } });
     };
 
-    const side = general.appDirection === 'rtl' ? 'left' : 'right';
+
 
     return (
         <aside
             dir="ltr"
             className={cn(
-                "flex h-full w-72 shrink-0 flex-col overflow-hidden border-sidebar-border bg-sidebar select-none",
-                side === 'right' ? "border-l" : "border-r"
+                "flex h-full w-72 shrink-0 flex-col overflow-hidden bg-sidebar select-none",
             )}
         >
             <div className="flex flex-1 flex-col gap-4 pt-4 overflow-hidden">

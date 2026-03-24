@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import Purchases, { CustomerInfo } from 'react-native-purchases';
+import { ENABLE_REVENUECAT } from '../services/RevenueCat';
 
 const ENTITLEMENT_ID = 'Annota Pro';
 
@@ -9,7 +10,7 @@ export function useRevenueCat() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const checkEntitlements = useCallback(async () => {
-    if (!Purchases) {
+    if (!ENABLE_REVENUECAT || !Purchases) {
       setIsLoading(false);
       return;
     }
@@ -28,7 +29,10 @@ export function useRevenueCat() {
   }, []);
 
   useEffect(() => {
-    if (!Purchases) return;
+    if (!ENABLE_REVENUECAT || !Purchases) {
+      setIsLoading(false);
+      return;
+    }
 
     checkEntitlements();
 

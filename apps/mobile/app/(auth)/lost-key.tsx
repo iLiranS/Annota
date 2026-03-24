@@ -81,7 +81,7 @@ export default function LostKeyScreen() {
 
     const handleDone = () => {
         useAuthStore.getState().setHasMasterKey(true);
-        router.replace('/(drawer)');
+        router.replace('/(app)');
     };
 
     // ── Show the new key after successful generation ────────────

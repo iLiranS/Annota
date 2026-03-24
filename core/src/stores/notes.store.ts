@@ -699,7 +699,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
             return parentMatch && deletedMatch;
         });
 
-        return sortFolders(filtered, sortType);
+        return sortFolders(filtered, sortType || 'UPDATED_LAST');
     },
 
     reset: () => {

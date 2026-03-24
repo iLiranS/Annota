@@ -2,6 +2,7 @@ import { useAppTheme } from '@/hooks/use-app-theme';
 import type { Tag } from '@annota/core';
 import { DAILY_NOTES_FOLDER_ID, useUserStore as useAuthStore, useNotesStore, useSyncStore, type Folder } from '@annota/core';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useSegments } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -12,7 +13,6 @@ import {
     Text,
     View,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import Animated, {
     Easing,
     FadeIn,
@@ -24,8 +24,8 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FolderEditModal from '../folder-edit-modal';
 import TagEditModal from '../tag-edit-modal';
-import { HapticPressable } from '../ui/haptic-pressable';
 import { DailyNoteIcon } from '../ui/daily-note-icon';
+import { HapticPressable } from '../ui/haptic-pressable';
 
 
 
@@ -263,8 +263,18 @@ export default function Sidebar({ onNavigate, ...props }: SidebarProps & React.C
 
     // Get non-system top-level folders
     const topLevelFolders = useMemo(() => {
-        return getFoldersInFolder(null).filter(f => !f.isSystem);
-    }, [folders, getFoldersInFolder, rootSortType]);
+        const { sortFolders } = require('@annota/core');
+        const filtered = folders.filter(f => (f.parentId ?? null) === null && !f.isSystem && !f.isDeleted);
+        // We use rootSortType here for the top level sorting
+        const sorted = sortFolders(filtered, rootSortType || 'UPDATED_LAST');
+        return sorted;
+    }, [folders, rootSortType]);
+
+    useEffect(() => {
+        if (folders.length > 0) {
+            console.log(`[Sidebar] folders store has ${folders.length} items.`);
+        }
+    }, [folders.length]);
 
     // Get Filtered Quick Access Notes
     const quickAccessNotes = useMemo(() => {
@@ -486,7 +496,7 @@ export default function Sidebar({ onNavigate, ...props }: SidebarProps & React.C
                             onPress={() => navigateToNotes()}
                         />
                         <View style={styles.folderContainer}>
-                            {topLevelFolders.map((folder) => {
+                            {topLevelFolders.map((folder: any) => {
                                 const nested = getFoldersInFolder(folder.id).filter(f => !f.isSystem);
                                 const hasChildren = nested.length > 0;
                                 const isExpanded = expandedFolders.has(folder.id);

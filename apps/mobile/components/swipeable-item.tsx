@@ -2,7 +2,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, useTheme } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import React from 'react';
-import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import ReanimatedSwipeable, {
     SwipeableMethods,
 } from 'react-native-gesture-handler/ReanimatedSwipeable';
@@ -100,9 +101,8 @@ export default function SwipeableItem({
         <ReanimatedSwipeable
             ref={swipeableRef}
             renderRightActions={(progress, dragX) => renderActions(rightActions, dragX)}
-            friction={2}
+            friction={1}
             enableTrackpadTwoFingerGesture
-            dragOffsetFromLeftEdge={30}
             rightThreshold={40}
             onSwipeableWillOpen={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);

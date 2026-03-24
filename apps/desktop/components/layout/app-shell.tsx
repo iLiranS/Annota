@@ -17,17 +17,21 @@ export default function AppShell() {
             dir={general.appDirection}
         >
             <AppSidebar />
-            <div className="flex flex-1 flex-col overflow-hidden">
+            <div className="flex flex-1 flex-col overflow-hidden bg-sidebar">
                 <MainNavbar />
-                <div className="flex flex-1 overflow-hidden bg-background">
+                <div className="flex flex-1 overflow-hidden">
                     <main
-                        className="flex-1 overflow-hidden"
+                        className={cn(
+                            "flex-1 overflow-hidden bg-background transition-all duration-300 ease-in-out",
+                            "m-2 rounded-2xl border",
+                            "border-sidebar-border shadow-sm"
+                        )}
                         dir="ltr" // Editor/Content is always LTR unless specific note direction is set
                     >
                         <Outlet />
                     </main>
                     <div className={cn(
-                        "transition-all duration-300 ease-in-out overflow-hidden flex shrink-0",
+                        "transition-all duration-300 ease-in-out overflow-hidden flex shrink-0 bg-sidebar",
                         general.isTaskCalendarOpen ? "w-72" : "w-0"
                     )}>
                         <TaskCalendarSidebar />
