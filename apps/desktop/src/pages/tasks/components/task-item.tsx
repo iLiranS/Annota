@@ -87,8 +87,8 @@ export function TaskItem({ task, onClick, onDelete, showDate = false, hideFolder
                 <button
                     onClick={onClick}
                     className={cn(
-                        "group flex w-full items-center gap-1.5 rounded-xl text-left transition-all duration-200 hover:bg-sidebar-accent/50",
-                        isCompact ? "px-1.5 py-1" : "px-3 py-3",
+                        "group flex w-full max-w-full overflow-hidden items-center gap-1.5 rounded-xl text-left transition-all duration-200 hover:bg-sidebar-accent/50",
+                        isCompact ? "px-1 py-1" : "px-3 py-3",
                         task.completed && "opacity-60",
                         className
                     )}
@@ -100,18 +100,21 @@ export function TaskItem({ task, onClick, onDelete, showDate = false, hideFolder
                             "flex shrink-0 items-center justify-center rounded-full border-2 transition-all duration-200",
                             isCompact ? "h-4 w-4" : "h-5 w-5",
                             task.completed
-                                ? "bg-primary border-primary"
-                                : "border-muted-foreground/30 hover:border-primary"
+                                ? "border-(--folder-color) bg-(--folder-color)"
+                                : "border-muted-foreground/30 hover:border-(--folder-color)"
                         )}
+                        style={{
+                            '--folder-color': linkedFolder?.color || 'var(--primary)'
+                        } as React.CSSProperties}
                     >
                         {task.completed && <Ionicons name="checkmark" size={isCompact ? 10 : 14} className="text-primary-foreground" />}
                     </div>
 
                     <div className="min-w-0 flex-1 space-y-0.5">
-                        <div className={cn("flex items-center", isCompact ? "gap-1" : "gap-2")}>
+                        <div className={cn("flex items-center min-w-0", isCompact ? "gap-1" : "gap-2")}>
                             <span
                                 className={cn(
-                                    "truncate font-semibold transition-all duration-200",
+                                    "truncate flex-1 min-w-0 font-semibold transition-all duration-200",
                                     isCompact ? "text-xs" : "text-sm",
                                     task.completed && "line-through text-muted-foreground"
                                 )}
@@ -122,7 +125,7 @@ export function TaskItem({ task, onClick, onDelete, showDate = false, hideFolder
                             {linkedFolder && !hideFolder && (
                                 <div
                                     className={cn(
-                                        "flex items-center rounded-full text-[10px] font-bold uppercase tracking-wider",
+                                        "flex shrink-0 items-center rounded-full text-[10px] font-bold uppercase tracking-wider",
                                         isCompact ? "gap-1 px-1.5 py-0.5" : "gap-1.5 px-2 py-0.5"
                                     )}
                                     style={{

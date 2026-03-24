@@ -694,7 +694,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
             }
 
             // 3. Standard active folders
-            const parentMatch = folder.parentId === parentId;
+            const parentMatch = (folder.parentId ?? null) === (parentId ?? null);
             const deletedMatch = includeDeleted ? true : !folder.isDeleted;
             return parentMatch && deletedMatch;
         });

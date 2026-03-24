@@ -14,14 +14,15 @@ interface TaskListProps {
     onTaskPress: (task: Task) => void;
     showComingUp?: boolean;
     upcomingTasks?: Task[];
+    scrollEnabled?: boolean;
 }
-
 export default function TaskList({
     tasks,
     selectedDate,
     onTaskPress,
     showComingUp = false,
-    upcomingTasks = []
+    upcomingTasks = [],
+    scrollEnabled = true
 }: TaskListProps) {
     const { colors, dark } = useTheme();
     const router = useRouter();
@@ -120,6 +121,7 @@ export default function TaskList({
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.scrollContent}
                 style={styles.mainScroll}
+                scrollEnabled={scrollEnabled}
             >
                 {/* Tasks List */}
                 <View style={styles.listWrapper}>

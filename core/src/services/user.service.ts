@@ -88,7 +88,7 @@ export const userService = {
     getSubscriptionExpiryDate: async (userId: string) => {
         return await userApi.getSubscriptionExpiryDate(userId);
     },
-    deleteAccount: async (userId: string) => {
+    deleteAccount: async () => {
         await userApi.deleteUserAccount();
     }
 };

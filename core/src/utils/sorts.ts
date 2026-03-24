@@ -13,21 +13,23 @@ export type SortType =
 /**
  * Sort notes by the specified sort type
  */
-export function sortNotes<T extends { title: string; createdAt: Date; updatedAt: Date }>(notes: T[], sortType: SortType): T[] {
+export function sortNotes<T extends { title?: string | null; createdAt: any; updatedAt: any }>(notes: T[], sortType: SortType): T[] {
+    const getTs = (d: any) => d ? new Date(d).getTime() : 0;
+
     return [...notes].sort((a, b) => {
         switch (sortType) {
             case 'NAME_ASC':
-                return a.title.localeCompare(b.title);
+                return (a.title || '').localeCompare(b.title || '');
             case 'NAME_DESC':
-                return b.title.localeCompare(a.title);
+                return (b.title || '').localeCompare(a.title || '');
             case 'CREATED_FIRST':
-                return a.createdAt.getTime() - b.createdAt.getTime();
+                return getTs(a.createdAt) - getTs(b.createdAt);
             case 'CREATED_LAST':
-                return b.createdAt.getTime() - a.createdAt.getTime();
+                return getTs(b.createdAt) - getTs(a.createdAt);
             case 'UPDATED_FIRST':
-                return a.updatedAt.getTime() - b.updatedAt.getTime();
+                return getTs(a.updatedAt) - getTs(b.updatedAt);
             case 'UPDATED_LAST':
-                return b.updatedAt.getTime() - a.updatedAt.getTime();
+                return getTs(b.updatedAt) - getTs(a.updatedAt);
             default:
                 return 0;
         }
@@ -37,21 +39,23 @@ export function sortNotes<T extends { title: string; createdAt: Date; updatedAt:
 /**
  * Sort folders by the specified sort type
  */
-export function sortFolders<T extends { name: string; createdAt: Date; updatedAt: Date }>(folders: T[], sortType: SortType): T[] {
+export function sortFolders<T extends { name: string; createdAt: any; updatedAt: any }>(folders: T[], sortType: SortType): T[] {
+    const getTs = (d: any) => d ? new Date(d).getTime() : 0;
+
     return [...folders].sort((a, b) => {
         switch (sortType) {
             case 'NAME_ASC':
-                return a.name.localeCompare(b.name);
+                return (a.name || '').localeCompare(b.name || '');
             case 'NAME_DESC':
-                return b.name.localeCompare(a.name);
+                return (b.name || '').localeCompare(a.name || '');
             case 'CREATED_FIRST':
-                return a.createdAt.getTime() - b.createdAt.getTime();
+                return getTs(a.createdAt) - getTs(b.createdAt);
             case 'CREATED_LAST':
-                return b.createdAt.getTime() - a.createdAt.getTime();
+                return getTs(b.createdAt) - getTs(a.createdAt);
             case 'UPDATED_FIRST':
-                return a.updatedAt.getTime() - b.updatedAt.getTime();
+                return getTs(a.updatedAt) - getTs(b.updatedAt);
             case 'UPDATED_LAST':
-                return b.updatedAt.getTime() - a.updatedAt.getTime();
+                return getTs(b.updatedAt) - getTs(a.updatedAt);
             default:
                 return 0;
         }

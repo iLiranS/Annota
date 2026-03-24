@@ -4,26 +4,24 @@ import NotesSearchModal from '@/components/search/notes-search-modal';
 import TaskList from '@/components/tasks/task-list';
 import ThemedText from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useSidebar } from '@/context/sidebar-context';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { useUserStore as useAuthStore, useNotesStore, useSettingsStore, useTasksStore, type Task } from '@annota/core';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { DrawerNavigationProp } from '@react-navigation/drawer';
-import * as Haptics from 'expo-haptics';
-import { useNavigation, useRouter } from 'expo-router';
-import Drawer from 'expo-router/drawer';
+import { Stack, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, LayoutChangeEvent, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Animated, LayoutChangeEvent, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
-import { GUEST_DISPLAY_NAME_KEY } from '../settings/account';
+import { GUEST_DISPLAY_NAME_KEY } from './settings/account';
 
 
 export default function HomeScreen() {
   const router = useRouter();
-  const navigation = useNavigation<DrawerNavigationProp<any>>();
+  const { toggle } = useSidebar();
   const { session } = useAuthStore();
   const [guestDisplayName, setGuestDisplayName] = useState('Guest');
   const [storeDisplayName, setStoreDisplayName] = useState<string | null>(null);
@@ -80,7 +78,6 @@ export default function HomeScreen() {
         if (isFromCenter && e.translationY > 60 && e.velocityY > 500) {
           hasTriggeredGesture.current = true;
           runOnJS(setIsSearchVisible)(true);
-          runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Medium);
         }
       })
       .activeOffsetY(10) // Small threshold to distinguish from simple taps
@@ -230,7 +227,7 @@ export default function HomeScreen() {
   return (
     <GestureDetector gesture={panGesture}>
       <ThemedView style={styles.container}>
-        <Drawer.Screen
+        <Stack.Screen
           options={{
             headerShown: true,
             headerTitle: () => (
@@ -242,162 +239,142 @@ export default function HomeScreen() {
             ),
             headerLeft: () => (
               <Pressable
-                onPress={() => {
-                  navigation.openDrawer();
-                }}
+                onPress={toggle}
                 hitSlop={8}
-                style={({ pressed }) => [
-                  styles.headerButton,
-                  {
-                    padding: 8, // Ensure there's padding so the background is visible around the icon
-                    borderRadius: 8, // iOS native buttons usually have rounded corners for the background
-                    backgroundColor: pressed ? 'rgba(150, 150, 150, 0.2)' : 'transparent', // Native grey highlight
-                    transform: [{ scale: pressed ? 0.96 : 1 }], // Native slight zoom
-                    opacity: pressed ? 0.8 : 1,
-                  }
-                ]}
+                style={styles.headerButton}
               >
                 <Ionicons name="menu-outline" size={24} color={colors.primary} />
               </Pressable>
             ),
             headerRight: () => (
               <Pressable
-                onPress={() => {
-                  // Trigger your haptic feedback here if needed
-                  setIsSearchVisible(true);
-                }}
+                onPress={() => setIsSearchVisible(true)}
                 hitSlop={8}
-                style={({ pressed }) => [
-                  styles.headerButton,
-                  {
-                    padding: 8, // Ensure there's padding so the background is visible around the icon
-                    borderRadius: 8, // iOS native buttons usually have rounded corners for the background
-                    backgroundColor: pressed ? 'rgba(150, 150, 150, 0.2)' : 'transparent', // Native grey highlight
-                    transform: [{ scale: pressed ? 0.96 : 1 }], // Native slight zoom
-                    opacity: pressed ? 0.8 : 1,
-                  }
-                ]}
+                style={styles.headerButton}
               >
                 <Ionicons name="search" size={24} color={colors.primary} />
               </Pressable>
             ),
-            headerStyle: {
-              backgroundColor: colors.background,
-            },
-            headerShadowVisible: false,
           }}
         />
 
-        {/* Calendar */}
-        <View style={{ paddingHorizontal: 20, marginTop: 20 }}>
-          <Calendar selectedDate={selectedDate} onDateSelect={handleDateSelect} />
-        </View>
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={{
+            paddingTop: 20,
+            paddingBottom: insets.bottom + 20,
+          }}
+        >
+          {/* Calendar */}
+          <View style={{ paddingHorizontal: 20 }}>
+            <Calendar selectedDate={selectedDate} onDateSelect={handleDateSelect} />
+          </View>
 
-        {/* Content Section */}
-        <View style={styles.contentSection}>
-          {isToday ? (
-            <>
-              {/* Tab Switcher */}
-              <View style={{ paddingHorizontal: 20 }}>
-                <View
-                  style={[styles.tabContainer, { backgroundColor: colors.card }]}
-                  onLayout={onTabContainerLayout}
-                >
-                  <Animated.View
-                    style={[
-                      styles.tabIndicator,
-                      {
-                        backgroundColor: colors.primary + '80',
-                        shadowColor: colors.primary,
-                        width: tabWidth,
-                        transform: [
-                          {
-                            translateX: slideAnim.interpolate({
-                              inputRange: [0, 1],
-                              outputRange: [0, tabWidth + 4],
-                            }),
-                          },
-                        ],
-                      },
-                    ]}
-                  />
-                  <Pressable
-                    onPress={() => setActiveTab('tasks')}
-                    style={styles.tab}
+          {/* Content Section */}
+          <View style={styles.contentSection}>
+            {isToday ? (
+              <>
+                {/* Tab Switcher */}
+                <View style={{ paddingHorizontal: 20 }}>
+                  <View
+                    style={[styles.tabContainer, { backgroundColor: colors.card }]}
+                    onLayout={onTabContainerLayout}
                   >
-                    <Ionicons
-                      name="checkbox-outline"
-                      size={20}
+                    <Animated.View
                       style={[
-                        styles.tabIcon,
-                        { left: 12 },
-                        { color: activeTab === 'tasks' ? '#FFFFFF' : colors.text },
-                        { opacity: activeTab === 'tasks' ? 1 : 0.5 }
+                        styles.tabIndicator,
+                        {
+                          backgroundColor: colors.primary + '80',
+                          shadowColor: colors.primary,
+                          width: tabWidth,
+                          transform: [
+                            {
+                              translateX: slideAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0, tabWidth + 4],
+                              }),
+                            },
+                          ],
+                        },
                       ]}
                     />
-                    <ThemedText
-                      style={[
-                        styles.tabText,
-                        activeTab === 'tasks' && styles.activeTabText
-                      ]}
+                    <Pressable
+                      onPress={() => setActiveTab('tasks')}
+                      style={styles.tab}
                     >
-                      Tasks
-                    </ThemedText>
-                  </Pressable>
-                  <Pressable
-                    onPress={() => setActiveTab('notes')}
-                    style={styles.tab}
-                  >
-                    <ThemedText
-                      style={[
-                        styles.tabText,
-                        activeTab === 'notes' && styles.activeTabText
-                      ]}
+                      <Ionicons
+                        name="checkbox-outline"
+                        size={20}
+                        style={[
+                          styles.tabIcon,
+                          { left: 12 },
+                          { color: activeTab === 'tasks' ? '#FFFFFF' : colors.text },
+                          { opacity: activeTab === 'tasks' ? 1 : 0.5 }
+                        ]}
+                      />
+                      <ThemedText
+                        style={[
+                          styles.tabText,
+                          activeTab === 'tasks' && styles.activeTabText
+                        ]}
+                      >
+                        Tasks
+                      </ThemedText>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => setActiveTab('notes')}
+                      style={styles.tab}
                     >
-                      Recent Notes
-                    </ThemedText>
-                    <Ionicons
-                      name="document-text-outline"
-                      size={20}
-                      style={[
-                        styles.tabIcon,
-                        { right: 12 },
-                        { color: activeTab === 'notes' ? '#FFFFFF' : colors.text },
-                        { opacity: activeTab === 'notes' ? 1 : 0.5 }
-                      ]}
-                    />
-                  </Pressable>
+                      <ThemedText
+                        style={[
+                          styles.tabText,
+                          activeTab === 'notes' && styles.activeTabText
+                        ]}
+                      >
+                        Recent Notes
+                      </ThemedText>
+                      <Ionicons
+                        name="document-text-outline"
+                        size={20}
+                        style={[
+                          styles.tabIcon,
+                          { right: 12 },
+                          { color: activeTab === 'notes' ? '#FFFFFF' : colors.text },
+                          { opacity: activeTab === 'notes' ? 1 : 0.5 }
+                        ]}
+                      />
+                    </Pressable>
+                  </View>
                 </View>
+
+                {activeTab === 'tasks' ? (
+                  <View style={[styles.tabContentInner, { paddingHorizontal: 20 }]}>
+                    <TaskList
+                      tasks={tasksForSelectedDate}
+                      selectedDate={selectedDate}
+                      onTaskPress={handleTaskPress}
+                      showComingUp={true}
+                      upcomingTasks={upcomingTasks}
+                      scrollEnabled={false}
+                    />
+                  </View>
+                ) : (
+                  <RecentNotesList onCreateNote={handleCreateNote} scrollEnabled={false} />
+                )}
+              </>
+            ) : (
+              <View style={[styles.tabContentInner, { paddingHorizontal: 20 }]}>
+                <TaskList
+                  tasks={tasksForSelectedDate}
+                  selectedDate={selectedDate}
+                  onTaskPress={handleTaskPress}
+                  showComingUp={false}
+                  scrollEnabled={false}
+                />
               </View>
-
-              {activeTab === 'tasks' ? (
-                <View style={[styles.tabContentInner, { paddingHorizontal: 20 }]}>
-                  <TaskList
-                    tasks={tasksForSelectedDate}
-                    selectedDate={selectedDate}
-                    onTaskPress={handleTaskPress}
-                    showComingUp={true}
-                    upcomingTasks={upcomingTasks}
-                  />
-                </View>
-              ) : (
-                <RecentNotesList onCreateNote={handleCreateNote} />
-              )}
-            </>
-          ) : (
-            <View style={[styles.tabContentInner, { paddingHorizontal: 20 }]}>
-              <TaskList
-                tasks={tasksForSelectedDate}
-                selectedDate={selectedDate}
-                onTaskPress={handleTaskPress}
-                showComingUp={false}
-              />
-            </View>
-          )}
-        </View>
-
-        {/* Bottom Spacing */}
-        <View style={{ height: insets.bottom + 20 }} />
+            )}
+          </View>
+        </ScrollView>
 
         {/* Search Modal */}
         <NotesSearchModal
@@ -438,14 +415,31 @@ const styles = StyleSheet.create({
   },
   headerTitleContainer: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginLeft: -10, // Adjust for native header layout
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  glassHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    overflow: 'hidden',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(150, 150, 150, 0.2)',
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingBottom: 12,
   },
   tabContainer: {
     flexDirection: 'row',

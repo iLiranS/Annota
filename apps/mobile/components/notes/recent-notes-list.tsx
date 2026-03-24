@@ -11,9 +11,10 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 interface RecentNotesListProps {
     onNotePress?: (noteId: string) => void;
     onCreateNote: () => void;
+    scrollEnabled?: boolean;
 }
 
-export default function RecentNotesList({ onCreateNote }: RecentNotesListProps) {
+export default function RecentNotesList({ onCreateNote, scrollEnabled = true }: RecentNotesListProps) {
     const router = useRouter();
     const { colors, dark } = useTheme();
     const { notes, deleteNote, updateNoteMetadata } = useNotesStore();
@@ -76,6 +77,7 @@ export default function RecentNotesList({ onCreateNote }: RecentNotesListProps) 
                 style={styles.listContainer}
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
+                scrollEnabled={scrollEnabled}
             >
                 {recentNotes.length > 0 ? (
                     <View style={styles.notesList}>

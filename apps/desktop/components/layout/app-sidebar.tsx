@@ -9,6 +9,7 @@ import {
     type Folder,
     type Tag,
 } from "@annota/core";
+import { Files, Home, Star } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -30,9 +31,9 @@ import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupConte
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useCreateNote } from "@/hooks/use-create-note";
 import { useCreateTask } from "@/hooks/use-create-task";
-import { CalendarIcon } from "lucide-react";
 import { useEffect } from "react";
 import { ConfirmDialog } from "../custom-ui/confirm-dialog";
+import { DailyNoteIcon } from "../custom-ui/daily-note-icon";
 import { FolderEditModal } from "../notes/folder-edit-modal";
 import { TagEditModal } from "../tags/tag-edit-modal";
 import { Ionicons } from "../ui/ionicons";
@@ -44,7 +45,7 @@ export function AppSidebar() {
     const { toggleSidebar, setOpen } = useSidebar();
     const { general } = useSettingsStore();
 
-    const { folders, notes, tags, deleteFolder, deleteTag, deleteNote } = useNotesStore();
+    const { folders, notes, tags, deleteFolder, deleteTag, deleteNote, getFoldersInFolder } = useNotesStore();
     const isOnline = useSyncStore((s) => s.isOnline);
     const isGuest = useUserStore((s) => s.isGuest);
     const showOfflineBanner = !isOnline && !isGuest;
@@ -126,8 +127,8 @@ export function AppSidebar() {
 
     // Non-system top-level folders
     const topLevelFolders = useMemo(() => {
-        return folders.filter((f) => f.parentId === null && !f.isSystem);
-    }, [folders]);
+        return getFoldersInFolder(null).filter((f) => !f.isSystem);
+    }, [folders, getFoldersInFolder]);
 
     // Quick access notes
     const quickAccessNotes = useMemo(() => {
@@ -198,7 +199,7 @@ export function AppSidebar() {
                                     onClick={() => navigateSmart("/home")}
                                     tooltip="Home"
                                 >
-                                    <Ionicons name="home-outline" size={18} className="text-indigo-500" />
+                                    <Home size={18} strokeWidth={2.8} className="text-indigo-500 shrink-0" />
                                     <span className="font-medium">Home</span>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
@@ -215,7 +216,7 @@ export function AppSidebar() {
                                     }
                                     tooltip="Daily Notes"
                                 >
-                                    <CalendarIcon className="h-5 w-5 text-violet-500" />
+                                    <DailyNoteIcon size={18} className="text-violet-500" />
 
                                     <span className="font-medium">{dailyFolder?.name ?? "Daily Notes"}</span>
                                 </SidebarMenuButton>
@@ -231,7 +232,7 @@ export function AppSidebar() {
                                 <SidebarMenuItem>
                                     <SidebarMenuButton asChild tooltip="Quick Access">
                                         <CollapsibleTrigger>
-                                            <Ionicons name="star-outline" size={18} className="text-amber-400" />
+                                            <Star size={18} strokeWidth={2.8} className="text-amber-400 shrink-0" />
                                             <span className="flex-1 text-start font-medium">Quick Access</span>
                                             <Ionicons name="chevron-forward" size={14} className={`transition-transform group-data-[state=open]/quick-access:rotate-90 ${general.appDirection === 'rtl' ? 'rotate-180' : ''}`} />
                                         </CollapsibleTrigger>
@@ -257,7 +258,7 @@ export function AppSidebar() {
                                                                     navigateSmart(`/notes/${folderId}/${note.id}`);
                                                                 }}
                                                             >
-                                                                <Ionicons color={colors.primary} name="star-outline" size={14} className="text-primary" />
+                                                                <Star color={colors.primary} size={14} strokeWidth={2.8} className="text-primary shrink-0" />
                                                                 <span className="truncate">
                                                                     {note.title || "Untitled Note"}
                                                                 </span>
@@ -293,7 +294,7 @@ export function AppSidebar() {
                                             onClick={() => navigateSmart("/notes")}
                                             tooltip="All Notes"
                                         >
-                                            <Ionicons name="documents-outline" color={colors.primary} size={18} className="text-primary" />
+                                            <Files color={colors.primary} size={18} strokeWidth={2.8} className="text-primary shrink-0" />
                                             <span className="font-medium">All Notes</span>
                                         </SidebarMenuButton>
                                     </ContextMenuTrigger>
@@ -329,6 +330,7 @@ export function AppSidebar() {
                                     onCreateSubFolder={handleCreateSubFolder}
                                     onCreateTask={handleCreateTask}
                                     onCreateNote={handleCreateNote}
+                                    getFoldersInFolder={getFoldersInFolder}
                                 />
                             ))}
                         </SidebarMenu>
@@ -483,11 +485,12 @@ interface FolderTreeItemProps {
     onCreateTask: (folder: Folder) => void;
     onCreateNote: (folder: Folder) => void;
     general: GeneralSettings;
+    getFoldersInFolder: (parentId: string | null, includeDeleted?: boolean) => Folder[];
 }
 
-function FolderTreeItem({ folder, allFolders, onNavigate, onEdit, onDelete, onCreateSubFolder, onCreateTask, onCreateNote, general }: FolderTreeItemProps) {
-    const children = allFolders.filter(
-        (f) => f.parentId === folder.id && !f.isSystem,
+function FolderTreeItem({ folder, allFolders, onNavigate, onEdit, onDelete, onCreateSubFolder, onCreateTask, onCreateNote, general, getFoldersInFolder }: FolderTreeItemProps) {
+    const children = getFoldersInFolder(folder.id).filter(
+        (f) => !f.isSystem,
     );
     const hasChildren = children.length > 0;
 
@@ -551,8 +554,8 @@ function FolderTreeItem({ folder, allFolders, onNavigate, onEdit, onDelete, onCr
             <CollapsibleContent>
                 <SidebarMenuSub>
                     {children.map((child) => {
-                        const nested = allFolders.filter(
-                            (f) => f.parentId === child.id && !f.isSystem,
+                        const nested = getFoldersInFolder(child.id).filter(
+                            (f) => !f.isSystem,
                         );
                         if (nested.length > 0) {
                             return (
@@ -567,6 +570,7 @@ function FolderTreeItem({ folder, allFolders, onNavigate, onEdit, onDelete, onCr
                                     onCreateSubFolder={onCreateSubFolder}
                                     onCreateTask={onCreateTask}
                                     onCreateNote={onCreateNote}
+                                    getFoldersInFolder={getFoldersInFolder}
                                 />
                             );
                         }

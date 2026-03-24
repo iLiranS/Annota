@@ -4,7 +4,7 @@ import { syncPull, syncPush } from './sync-service';
 
 const DEBOUNCE_MS = 10_000;       // 10 seconds of idle → push
 const HARD_MAX_MS = 2 * 60_000;   // 2 minutes absolute cap
-const OFFLINE_TOAST_COOLDOWN_MS = 30_000; // Don't spam offline toast
+// const OFFLINE_TOAST_COOLDOWN_MS = 30_000; // Don't spam offline toast
 
 export interface SyncDependencies {
     reinitStores: () => Promise<void>;
@@ -41,7 +41,7 @@ export class SyncScheduler {
     private hardMaxTimer: ReturnType<typeof setTimeout> | null = null;
     private appStateUnsubscribe: Unsubscribe | null = null;
     private netInfoUnsubscribe: Unsubscribe | null = null;
-    private lastOfflineToastAt = 0;
+    // private lastOfflineToastAt = 0;
     private disposed = false;
     private initialized = false;
     private userId: string | null = null;
@@ -248,25 +248,25 @@ export class SyncScheduler {
         }
     }
 
-    private showOfflineToast(): void {
-        const now = Date.now();
-        if (now - this.lastOfflineToastAt < OFFLINE_TOAST_COOLDOWN_MS) return;
+    // private showOfflineToast(): void {
+    //     const now = Date.now();
+    //     if (now - this.lastOfflineToastAt < OFFLINE_TOAST_COOLDOWN_MS) return;
 
-        this.lastOfflineToastAt = now;
-        getPlatformAdapters().toast.show({
-            type: 'info',
-            title: 'You\'re offline',
-            message: 'Changes are saved locally and will sync when you reconnect.',
-        });
-    }
+    //     this.lastOfflineToastAt = now;
+    //     getPlatformAdapters().toast.show({
+    //         type: 'info',
+    //         title: 'You\'re offline',
+    //         message: 'Changes are saved locally and will sync when you reconnect.',
+    //     });
+    // }
 
-    private showOnlineToast(): void {
-        getPlatformAdapters().toast.show({
-            type: 'info',
-            title: 'Back online',
-            message: 'Syncing your changes...',
-        });
-    }
+    // private showOnlineToast(): void {
+    //     getPlatformAdapters().toast.show({
+    //         type: 'info',
+    //         title: 'Back online',
+    //         message: 'Syncing your changes...',
+    //     });
+    // }
 
     private clearDebounce(): void {
         if (this.debounceTimer) {

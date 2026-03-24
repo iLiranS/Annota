@@ -9,9 +9,20 @@ import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
 import * as TaskManager from 'expo-task-manager';
 import { useEffect, useRef, useState } from 'react';
-import { InteractionManager, StyleSheet, Text, View } from 'react-native';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import 'react-native-reanimated';
+import { InteractionManager, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import Animated, { 
+  interpolate, 
+  runOnJS, 
+  useAnimatedStyle, 
+  useSharedValue, 
+  withSpring,
+  withTiming,
+  Easing
+} from 'react-native-reanimated';
+import { BlurView } from 'expo-blur';
+import Sidebar from '@/components/navigation/sidebar';
+import { SidebarProvider, useSidebar } from '@/context/sidebar-context';
 import Toast, { type ToastConfig, type ToastConfigParams } from 'react-native-toast-message';
 import 'react-native-url-polyfill/auto';
 
@@ -52,6 +63,7 @@ TaskManager.defineTask(BACKGROUND_SYNC_TASK, async () => {
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { useDailyCleanup } from '@/hooks/use-daily-cleanup';
 import { useDisplayNameSync } from '@/hooks/use-display-name-sync';
+import RevenueCatInitializer, { logInRevenueCat, logOutRevenueCat } from '@/services/RevenueCat';
 import {
   authApi,
   initDatabase,
@@ -65,7 +77,6 @@ import {
   useSyncStore,
   useTasksStore
 } from '@annota/core';
-import RevenueCatInitializer, { logInRevenueCat, logOutRevenueCat } from '@/services/RevenueCat';
 import { SyncScheduler, getMasterKey, initPlatformAdapters } from '@annota/core/platform';
 import { createMobileAdapters } from '../bootstrap/mobile-adapters';
 
@@ -99,7 +110,7 @@ const getOrCreateMobileDb = async (userId: string | null): Promise<MobileDbBundl
 };
 
 export const unstable_settings = {
-  anchor: '(drawer)',
+  anchor: 'index',
 };
 
 // ─── Custom Toast Config ────────────────────────────────────
@@ -131,14 +142,86 @@ const toastConfig: ToastConfig = {
 };
 
 // ─── Root Layout ─────────────────────────────────────────────
-
 export default function RootLayout() {
+  return (
+    <SidebarProvider>
+      <AppLayoutWrapper />
+    </SidebarProvider>
+  );
+}
+
+function AppLayoutWrapper() {
   const theme = useAppTheme();
   const { initialized, session, user, isGuest, setSession, hasMasterKey, checkMasterKey } = useAuthStore();
   const dbReady = useDbStore(state => state.isReady);
   const initDB = useDbStore(state => state.initDB);
   const [dbError, setDbError] = useState<string | null>(null);
   const schedulerRef = useRef<SyncScheduler | null>(null);
+
+  const { isOpen, close, open } = useSidebar();
+  const { width: screenWidth } = useWindowDimensions();
+  const drawerWidth = Math.min(screenWidth * 0.8, 300);
+
+  const translateX = useSharedValue(0);
+  const overlayOpacity = useSharedValue(0);
+
+  // Synchronize state changes (navigation, button clicks) with the layout movement
+  useEffect(() => {
+    const isOpening = isOpen;
+    
+    translateX.value = withTiming(isOpening ? drawerWidth : 0, {
+      duration: 350,
+      easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+    });
+    
+    overlayOpacity.value = withTiming(isOpening ? 1 : 0, { 
+      duration: 300 
+    });
+  }, [isOpen, drawerWidth]);
+
+  const panGesture = Gesture.Pan()
+    .onUpdate((event) => {
+      // Allow opening only from the left edge (first 50px)
+      if (!isOpen && event.x > 50) return;
+      
+      const startX = isOpen ? drawerWidth : 0;
+      const nextX = startX + event.translationX;
+      
+      // Bound the movement: 0 to drawerWidth (with minor resistance past drawerWidth)
+      translateX.value = Math.max(0, Math.min(nextX, drawerWidth + 40));
+    })
+    .onEnd((event) => {
+      const threshold = drawerWidth / 3;
+      const fastSwipe = Math.abs(event.velocityX) > 500;
+      
+      if (isOpen) {
+        // Closing gesture
+        if (event.translationX < -threshold || (event.velocityX < -500)) {
+          translateX.value = withTiming(0, { duration: 300 });
+          runOnJS(close)();
+        } else {
+          translateX.value = withTiming(drawerWidth, { duration: 300 });
+        }
+      } else if (event.x <= 50) {
+        // Opening gesture from edge
+        if (event.translationX > threshold || (event.velocityX > 500)) {
+          translateX.value = withTiming(drawerWidth, { duration: 300 });
+          runOnJS(open)();
+        } else {
+          translateX.value = withTiming(0, { duration: 300 });
+        }
+      }
+    });
+
+  const animatedStackStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+    shadowOpacity: interpolate(translateX.value, [0, drawerWidth], [0, 0.3]),
+    elevation: interpolate(translateX.value, [0, drawerWidth], [0, 10]),
+  }));
+
+  const animatedOverlayStyle = useAnimatedStyle(() => ({
+    opacity: overlayOpacity.value,
+  }));
 
   // Run daily background cleanups (e.g. old completed tasks)
   useDailyCleanup();
@@ -295,13 +378,13 @@ export default function RootLayout() {
       } else {
         // hasMasterKey === true
         if (inAuthGroup && segments[1] !== 'master-key' && segments[1] !== 'lost-key') {
-          router.replace('/(drawer)');
+          router.replace('/');
         }
       }
     } else if (isGuest) {
       // User is a guest
       if (inAuthGroup) {
-        router.replace('/(drawer)');
+        router.replace('/');
       }
     }
   }, [session, isGuest, initialized, dbReady, segments, hasMasterKey]);
@@ -395,26 +478,52 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <ThemeProvider value={theme}>
 
-        <RevenueCatInitializer />
-        <Stack>
-          <Stack.Screen name="(auth)" options={{ headerShown: false, gestureEnabled: false }} />
-          <Stack.Screen name="(drawer)" options={{ headerShown: false, gestureEnabled: false }} />
-          <Stack.Screen name="modal" options={{ headerShown: false, presentation: 'modal', title: 'Modal' }} />
-          <Stack.Screen name="settings" options={{ headerShown: false, presentation: 'modal', title: 'Settings' }} />
-          <Stack.Screen name="Tasks/[id]/index" options={{ headerShown: true, presentation: 'modal', title: 'Edit Task' }} />
-          <Stack.Screen name="Tasks/new" options={{ headerShown: true, presentation: 'modal', title: 'Edit Task' }} />
-          <Stack.Screen name="Notes" options={{ headerShown: false }} />
-          {/* Deep link redirect: annota://note/{id} → Notes/[id] */}
-          <Stack.Screen name="note/[id]" options={{ headerShown: false, animation: 'none' }} />
-          <Stack.Screen name="paywall" options={{ headerShown: false, presentation: 'modal' }} />
+        <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+          {/* ── Sidebar ── */}
+          <View
+            style={[
+              absoluteStyles.sidebar,
+              { width: drawerWidth, backgroundColor: theme.colors.card, zIndex: 1 },
+            ]}
+          >
+            <Sidebar onNavigate={close} />
+          </View>
 
-        </Stack>
+          {/* ── Main Stack (Top Layer) ── */}
+          <GestureDetector gesture={panGesture}>
+            <Animated.View style={[{ flex: 1, zIndex: 2, backgroundColor: theme.colors.background }, animatedStackStyle]}>
+              <RevenueCatInitializer />
+              <Stack>
+                <Stack.Screen name="(auth)" options={{ headerShown: false, gestureEnabled: false }} />
+                <Stack.Screen name="index" options={{ headerShown: false, animation: 'none' }} />
+                <Stack.Screen name="Tasks/index" options={{ headerShown: false, animation: 'none' }} />
+                <Stack.Screen name="modal" options={{ headerShown: false, presentation: 'modal', title: 'Modal' }} />
+                <Stack.Screen name="settings" options={{ headerShown: false, presentation: 'modal', title: 'Settings' }} />
+                <Stack.Screen name="Tasks/[id]/index" options={{ headerShown: true, presentation: 'modal', title: 'Edit Task' }} />
+                <Stack.Screen name="Tasks/new" options={{ headerShown: true, presentation: 'modal', title: 'Edit Task' }} />
+                <Stack.Screen name="Notes" options={{ headerShown: false, animation: 'none' }} />
+                <Stack.Screen name="note/[id]" options={{ headerShown: false, animation: 'none' }} />
+                <Stack.Screen name="paywall" options={{ headerShown: false, presentation: 'modal' }} />
+              </Stack>
+
+              {/* ── Overlay (dims stack content when sidebar open) ── */}
+              {isOpen && (
+                <Animated.View
+                  style={[absoluteStyles.overlay, animatedOverlayStyle]}
+                  pointerEvents={isOpen ? 'auto' : 'none'}
+                >
+                  <Pressable style={StyleSheet.absoluteFill} onPress={close} />
+                </Animated.View>
+              )}
+            </Animated.View>
+          </GestureDetector>
+        </View>
         <StatusBar style={theme.dark ? 'light' : 'dark'} />
       </ThemeProvider>
       <Toast config={toastConfig} />
     </GestureHandlerRootView>
   );
-};
+}
 
 const styles = StyleSheet.create({
   loadingContainer: {
@@ -428,6 +537,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     paddingHorizontal: 20,
+  },
+});
+
+const absoluteStyles = StyleSheet.create({
+  sidebar: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
 });
 

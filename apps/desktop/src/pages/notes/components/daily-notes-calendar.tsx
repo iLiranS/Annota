@@ -1,3 +1,4 @@
+import { DailyNoteIcon } from "@/components/custom-ui/daily-note-icon";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -5,7 +6,7 @@ import {
     useNotesStore,
 } from "@annota/core";
 import { eachDayOfInterval, endOfMonth, endOfWeek, format, isToday, startOfMonth, startOfWeek, } from "date-fns";
-import { BookOpen, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { BookOpen, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -79,8 +80,8 @@ export function DailyNotesCalendar() {
                 <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
                     <div className="flex items-center gap-4">
                         <div className="flex items-center gap-2.5">
-                            <div className="p-1.5 rounded-lg bg-accent/10 text-accent-full">
-                                <CalendarIcon className="h-5 w-5" />
+                            <div className="p-1.5 rounded-lg bg-[#8B5CF6]/10 text-accent-full">
+                                <DailyNoteIcon className="text-[#8B5CF6]" />
                             </div>
                             <h1 className="text-lg font-bold tracking-tight">Daily Notes</h1>
                         </div>

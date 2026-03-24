@@ -15,12 +15,14 @@ import {
     SortType,
     useNotesStore,
     useSettingsStore,
+    useSyncStore,
     useTasksStore,
     type Folder,
 } from '@annota/core';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useSidebar } from '@/context/sidebar-context';
 import { useCallback, useMemo, useState } from 'react';
 import {
     StyleSheet,
@@ -30,10 +32,15 @@ import {
 import Toast from 'react-native-toast-message';
 import Animated, {
     Easing,
+    Extrapolation,
     FadeIn,
     FadeOut,
+    interpolate,
     LinearTransition,
+    runOnJS,
+    useAnimatedScrollHandler,
     useAnimatedStyle,
+    useSharedValue,
     withTiming
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -110,6 +117,7 @@ export default function NotesList() {
     const { general } = useSettingsStore();
     const isCompact = general.compactMode;
 
+    const { toggle } = useSidebar();
     const currentFolderId = params.folderId ?? null;
     const tagId = params.tagId ?? null;
     const currentFolder = currentFolderId ? getFolderById(currentFolderId) : null;
@@ -132,6 +140,53 @@ export default function NotesList() {
             return next;
         });
     }, []);
+
+    // Sync progress tracking
+    const isSyncing = useSyncStore(state => state.isSyncing);
+    const scrollY = useSharedValue(0);
+
+    const triggerSync = useCallback(async () => {
+        try {
+            await useSyncStore.getState().forceSync();
+        } catch (e) {
+            console.error('[Manual Sync]', e);
+        }
+    }, []);
+
+    const scrollHandler = useAnimatedScrollHandler({
+        onScroll: (event) => {
+            scrollY.value = event.contentOffset.y;
+        },
+        onEndDrag: (event) => {
+            if (event.contentOffset.y < -80) {
+                runOnJS(triggerSync)();
+            }
+        },
+    });
+
+    const syncIndicatorStyle = useAnimatedStyle(() => {
+        const threshold = -80;
+        const pullProgress = interpolate(
+            scrollY.value,
+            [threshold, 0],
+            [1, 0],
+            Extrapolation.CLAMP
+        );
+        
+        return {
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: isSyncing ? '100%' : `${pullProgress * 100}%`,
+            height: 2,
+            backgroundColor: colors.primary,
+            opacity: isSyncing ? withTiming(1) : (pullProgress > 0 ? 1 : 0),
+            zIndex: 1000,
+            transform: [
+                { scaleX: isSyncing ? 1 : 1 } // Not really needed if using width
+            ],
+        };
+    });
 
     // Edit modal state
     const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
@@ -378,16 +433,28 @@ export default function NotesList() {
 
     return (
         <View style={styles.container}>
+            <Animated.View style={syncIndicatorStyle} />
             <Stack.Screen
                 options={{
                     headerShown: true,
                     title: headerTitle,
                     gestureEnabled: false,
-                    headerLeft: () => (
-                        <HapticPressable onPress={() => router.back()} style={styles.headerButton} hitSlop={8}>
-                            <Ionicons name="chevron-back" size={26} color={colors.primary} />
-                        </HapticPressable>
-                    ),
+                    headerLeft: () => {
+                        const canGoBack = router.canGoBack();
+                        return (
+                            <HapticPressable 
+                                onPress={() => canGoBack ? router.back() : toggle()} 
+                                style={styles.headerButton} 
+                                hitSlop={8}
+                            >
+                                <Ionicons 
+                                    name={canGoBack ? "chevron-back" : "menu-outline"} 
+                                    size={26} 
+                                    color={colors.primary} 
+                                />
+                            </HapticPressable>
+                        );
+                    },
                     headerRight: () => (
                         <HapticPressable
                             onPress={() => setIsSearchVisible(true)}
@@ -403,6 +470,8 @@ export default function NotesList() {
             <Animated.FlatList
                 data={browseData}
                 keyExtractor={getItemKey}
+                onScroll={scrollHandler}
+                scrollEventThrottle={16}
                 contentContainerStyle={[
                     styles.listContent,
                     { paddingBottom: folderTasks.length > 0 ? 0 : 100 }

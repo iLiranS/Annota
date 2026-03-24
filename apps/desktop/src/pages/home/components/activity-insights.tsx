@@ -190,8 +190,8 @@ export function ActivityInsights() {
 
     const chartConfig: ChartConfig = {
         activity: { label: "Activity", color: "var(--chart-1)" },
-        onTime: { label: "On Time", color: "var(--chart-1)" },
-        late: { label: "Late", color: "var(--chart-2)" },
+        onTime: { label: "On Time", color: "#8b5cf6" },
+        late: { label: "Late", color: "#FF6347" },
         focus: { label: "Focus", color: "var(--accent-full)" },
         count: { label: "Interactions" },
         ...Object.fromEntries(folderDistribution.map(f => [f.name, { label: f.name, color: f.fill }]))
@@ -229,8 +229,8 @@ export function ActivityInsights() {
 
         return {
             sentence: isOnTime ? (dailySentences?.onTime ?? "Stay consistent") : (dailySentences?.late ?? "Tighten timing"),
-            color: isOnTime ? "text-accent-full" : "text-emerald-500/80",
-            bg: isOnTime ? "bg-accent/10" : "bg-emerald-500/10"
+            color: isOnTime ? "text-[#8b5cf6]" : "text-[#FF6347]",
+            bg: isOnTime ? "bg-[#8b5cf6]/10" : "bg-[#FF6347]/10"
         };
     }, [completionStats, dailySentences]);
 
@@ -315,11 +315,11 @@ export function ActivityInsights() {
                         <div className="flex flex-col items-end gap-1">
                             <div className="flex items-center gap-3">
                                 <div className="flex items-center gap-1">
-                                    <div className="w-1 h-1 rounded-full bg-accent-full" />
+                                    <div className="w-1 h-1 rounded-full bg-[#8b5cf6]" />
                                     <span className="text-[8px] font-bold text-foreground/40 uppercase tabular-nums">On Time</span>
                                 </div>
                                 <div className="flex items-center gap-1">
-                                    <div className="w-1 h-1 rounded-full bg-emerald-500/60" />
+                                    <div className="w-1 h-1 rounded-full bg-[#FF6347]" />
                                     <span className="text-[8px] font-bold text-foreground/40 uppercase tabular-nums">Late</span>
                                 </div>
                             </div>
@@ -328,11 +328,11 @@ export function ActivityInsights() {
 
                     <div className="h-1.5 w-full bg-muted/10 rounded-full overflow-hidden flex mb-2">
                         <div
-                            className="h-full bg-accent-full transition-all duration-1000 ease-out"
+                            className="h-full bg-[#8b5cf6] transition-all duration-1000 ease-out"
                             style={{ width: `${completionStats.onTimeRate}%` }}
                         />
                         <div
-                            className="h-full bg-emerald-500/50 transition-all duration-1000 ease-out"
+                            className="h-full bg-[#FF6347] transition-all duration-1000 ease-out"
                             style={{ width: `${completionStats.lateCompletedRate}%` }}
                         />
                         <div
@@ -356,13 +356,13 @@ export function ActivityInsights() {
                                 <Bar
                                     dataKey="onTime"
                                     stackId="a"
-                                    fill="var(--color-onTime)"
+                                    fill={chartConfig.onTime.color}
                                     radius={[0, 0, 0, 0]}
                                 />
                                 <Bar
                                     dataKey="late"
                                     stackId="a"
-                                    fill="var(--color-late)"
+                                    fill={chartConfig.late.color}
                                     radius={[2, 2, 0, 0]}
                                 />
                             </BarChart>

@@ -59,9 +59,9 @@ export function CollapsibleGroup({
                         size={14}
                         color={color || colors.text + '60'}
                     />
-                    {isFolder && (
+                    {icon && (
                         <Ionicons
-                            name={icon as any ?? "folder-outline"}
+                            name={icon as any}
                             size={16}
                             color={color || colors.text + '70'}
                             style={{ marginLeft: 2 }}
@@ -118,16 +118,16 @@ export function CollapsibleGroup({
 
 const styles = StyleSheet.create({
     groupContainer: {
-        marginBottom: 16,
-        borderRadius: 16,
+        marginBottom: 8,
+        borderRadius: 12,
         overflow: 'hidden',
     },
     groupHeader: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 12,
-        paddingVertical: 12,
+        paddingHorizontal: 10,
+        paddingVertical: 8,
     },
     groupHeaderLeft: {
         flexDirection: 'row',
@@ -151,8 +151,8 @@ const styles = StyleSheet.create({
         fontWeight: '700',
     },
     groupContent: {
-        paddingHorizontal: 8,
-        paddingBottom: 8,
+        paddingHorizontal: 6,
+        paddingBottom: 4,
     },
     newTaskButton: {
         flexDirection: 'row',

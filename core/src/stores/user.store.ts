@@ -262,7 +262,7 @@ export const useUserStore = create<UserState>()(
                     await deleteDatabase();
 
                     // 3. Delete the account from Supabase
-                    await userService.deleteAccount(user.id);
+                    await userService.deleteAccount();
                 } catch (e) {
                     console.error('[user.store] Error during account deletion cleanup:', e);
                     // We continue to reset the store anyway to ensure the user is logged out locally

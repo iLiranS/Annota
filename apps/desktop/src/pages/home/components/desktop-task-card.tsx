@@ -6,6 +6,7 @@ import {
 } from "@/components/ui/context-menu";
 import { Ionicons } from "@/components/ui/ionicons";
 import { Task, useNotesStore } from "@annota/core";
+import { cn } from "@/lib/utils";
 
 interface DesktopTaskCardProps {
     task: Task;
@@ -84,10 +85,13 @@ export default function DesktopTaskCard({
                             e.stopPropagation();
                             onToggle();
                         }}
-                        className={`
-                            flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors hover:bg-accent cursor-pointer
-                            ${task.completed ? "border-emerald-500 bg-emerald-500 hover:bg-emerald-600" : "border-muted-foreground/40"}
-                        `}
+                        className={cn(
+                            "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-all duration-200 cursor-pointer",
+                            task.completed ? "border-(--folder-color) bg-(--folder-color)" : "border-muted-foreground/40 hover:border-(--folder-color)"
+                        )}
+                        style={{
+                            '--folder-color': linkedFolder?.color || 'var(--primary)'
+                        } as React.CSSProperties}
                     >
                         {task.completed && <Ionicons name="checkmark" size={14} className="text-white" />}
                     </div>

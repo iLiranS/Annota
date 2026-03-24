@@ -2,12 +2,11 @@ import FloatingActionButton from '@/components/floating-action-button';
 import { CollapsibleGroup, CompactTaskCard } from '@/components/tasks';
 import ThemedText from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { useNotesStore } from '@annota/core';
-import { useSettingsStore } from '@annota/core';
-import { useTasksStore, type Task } from '@annota/core';
+import { useSidebar } from '@/context/sidebar-context';
+import { useNotesStore, useSettingsStore, useTasksStore, type Task } from '@annota/core';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@react-navigation/native';
-import { useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, LayoutAnimation, Platform, Pressable, ScrollView, StyleSheet, UIManager, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,7 +16,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
     UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-type GroupByOption = 'none' | 'folder' | 'date';
+type GroupByOption = 'folder' | 'date';
 
 export default function TasksScreen() {
     const router = useRouter();
@@ -31,8 +30,9 @@ export default function TasksScreen() {
     const showCompleted = general.tasksShowDone;
 
     // Local state
-    const [groupBy, setGroupBy] = useState<GroupByOption>('none');
+    const [groupBy, setGroupBy] = useState<GroupByOption>('date');
     const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+    const { toggle } = useSidebar();
 
     // Load tasks from database on mount
     useEffect(() => {
@@ -86,11 +86,7 @@ export default function TasksScreen() {
 
     const cycleGroupBy = useCallback(() => {
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-        setGroupBy((prev) => {
-            if (prev === 'none') return 'folder';
-            if (prev === 'folder') return 'date';
-            return 'none';
-        });
+        setGroupBy((prev) => (prev === 'folder' ? 'date' : 'folder'));
         setCollapsedGroups(new Set()); // Reset collapsed state when changing group
     }, []);
 
@@ -104,9 +100,8 @@ export default function TasksScreen() {
 
     // Group tasks
     const groupedTasks = useMemo(() => {
-        if (groupBy === 'none') return null;
 
-        const groups: Map<string, { title: string; color?: string; tasks: Task[] }> = new Map();
+        const groups: Map<string, { title: string; color?: string; icon?: string; tasks: Task[]; isFolder?: boolean }> = new Map();
 
         if (groupBy === 'folder') {
             // Group by folder
@@ -125,7 +120,7 @@ export default function TasksScreen() {
                         icon: groupIcon,
                         tasks: [],
                         isFolder: !!task.folderId
-                    } as any);
+                    });
                 }
                 groups.get(groupId)!.tasks.push(task);
             };
@@ -147,33 +142,38 @@ export default function TasksScreen() {
                 let groupId: string;
                 let groupTitle: string;
                 let groupColor: string | undefined;
+                let groupIcon: string | undefined;
 
                 if (task.deadline < now) {
                     groupId = 'past';
                     groupTitle = 'Past';
                     groupColor = '#EF4444';
+                    groupIcon = 'alert-circle-outline';
                 } else if (task.deadline < tomorrowStart) {
                     groupId = 'today';
                     groupTitle = 'Today';
-                    groupColor = '#F59E0B';
+                    groupColor = '#3b82f6';
+                    groupIcon = 'today-outline';
                 } else if (task.deadline < dayAfterTomorrowStart) {
                     groupId = 'tomorrow';
                     groupTitle = 'Tomorrow';
-                    groupColor = undefined;
+                    groupColor = '#8b5cf6';
+                    groupIcon = 'calendar-outline';
                 } else {
                     groupId = 'upcoming';
                     groupTitle = 'Upcoming';
-                    groupColor = undefined;
+                    groupColor = '#10b981';
+                    groupIcon = 'calendar-number-outline';
                 }
 
                 if (!groups.has(groupId)) {
-                    groups.set(groupId, { title: groupTitle, color: groupColor, tasks: [] });
+                    groups.set(groupId, { title: groupTitle, color: groupColor, tasks: [], icon: groupIcon });
                 }
                 groups.get(groupId)!.tasks.push(task);
             });
         }
 
-        let result = Array.from(groups.entries()).map(([id, data]) => ({ id, ...data as any }));
+        let result = Array.from(groups.entries()).map(([id, data]) => ({ id, ...data }));
 
         if (groupBy === 'folder') {
             const noFolderGroup = result.find(g => g.id === '__no_folder__');
@@ -187,18 +187,27 @@ export default function TasksScreen() {
     }, [groupBy, pendingTasks, completedTasks, showCompleted, getFolderById]);
 
     const getGroupByLabel = () => {
-        if (groupBy === 'none') return 'Group';
-        if (groupBy === 'folder') return 'Folder';
-        return 'Date';
+        return groupBy === 'folder' ? 'Folder' : 'Date';
     };
 
     const CardComponent = CompactTaskCard;
 
     return (
         <ThemedView style={styles.container}>
+            <Stack.Screen
+                options={{
+                    title: 'Tasks',
+                    headerShown: true,
+                    headerLeft: () => (
+                        <Pressable onPress={toggle} style={{ padding: 4, marginLeft: -4 }} hitSlop={8}>
+                            <Ionicons name="menu-outline" size={26} color={colors.primary} />
+                        </Pressable>
+                    )
+                }}
+            />
             <ScrollView
                 style={styles.scrollView}
-                contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 16 }]}
+                contentContainerStyle={[styles.scrollContent, { paddingTop: 16 }]}
                 showsVerticalScrollIndicator={false}
             >
                 {/* Header */}
@@ -225,25 +234,24 @@ export default function TasksScreen() {
 
                     {/* Controls Row */}
                     <View style={styles.controlsRow}>
-                        {/* Group By Button */}
                         <Pressable
                             onPress={cycleGroupBy}
                             style={[
                                 styles.controlButton,
                                 {
-                                    backgroundColor: groupBy !== 'none' ? colors.primary + '15' : dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                                    backgroundColor: colors.primary + '15',
                                 },
                             ]}
                         >
                             <Ionicons
                                 name="layers-outline"
                                 size={16}
-                                color={groupBy !== 'none' ? colors.primary : colors.text + '70'}
+                                color={colors.primary}
                             />
                             <ThemedText
                                 style={[
                                     styles.controlButtonText,
-                                    { color: groupBy !== 'none' ? colors.primary : colors.text + '70' },
+                                    { color: colors.primary },
                                 ]}
                             >
                                 {getGroupByLabel()}
@@ -280,49 +288,31 @@ export default function TasksScreen() {
                     </View>
                 </View>
 
-                {/* Tasks - Grouped or Flat */}
-                {(groupBy === 'none' ? pendingTasks.length > 0 : (groupedTasks?.length ?? 0) > 0) && (
+                {/* Tasks - Grouped */}
+                {(groupedTasks?.length ?? 0) > 0 && (
                     <View style={styles.section}>
-                        {groupBy === 'none' ? (
-                            <>
-                                <ThemedText style={styles.sectionTitle}>Upcoming</ThemedText>
-                                {pendingTasks.map((task) => (
-                                    <CardComponent
-                                        key={task.id}
-                                        task={task}
-                                        onPress={() => handleTaskPress(task)}
-                                        onToggle={() => handleToggle(task.id)}
-                                    />
-                                ))}
-                            </>
-                        ) : (
-                            groupedTasks?.map((group) => (
-                                <CollapsibleGroup
-                                    key={group.id}
-                                    title={group.title}
-                                    color={group.color}
-                                    tasks={group.tasks}
-                                    icon={group.icon}
-                                    isCollapsed={collapsedGroups.has(group.id)}
-                                    onToggleCollapse={() => toggleGroupCollapse(group.id)}
-                                    onTaskPress={handleTaskPress}
-                                    onTaskToggle={handleToggle}
-                                    onNewTask={() => {
-                                        if (groupBy === 'folder') {
-                                            router.push({
-                                                pathname: '/Tasks/new',
-                                                params: { folderId: group.id !== '__no_folder__' ? group.id : undefined }
-                                            });
-                                        } else if (groupBy === 'date') {
-                                            router.push('/Tasks/new');
-                                        }
-                                    }}
-                                    compact={true}
-                                    isFolder={group.isFolder}
-                                    hideFolder={groupBy === 'folder'}
-                                />
-                            ))
-                        )}
+                        {groupedTasks?.map((group) => (
+                            <CollapsibleGroup
+                                key={group.id}
+                                title={group.title}
+                                color={group.color}
+                                tasks={group.tasks}
+                                icon={group.icon}
+                                isCollapsed={collapsedGroups.has(group.id)}
+                                onToggleCollapse={() => toggleGroupCollapse(group.id)}
+                                onTaskPress={handleTaskPress}
+                                onTaskToggle={handleToggle}
+                                onNewTask={groupBy === 'folder' ? () => {
+                                    router.push({
+                                        pathname: '/Tasks/new',
+                                        params: { folderId: group.id !== '__no_folder__' ? group.id : undefined }
+                                    });
+                                } : undefined}
+                                compact={true}
+                                isFolder={group.isFolder}
+                                hideFolder={groupBy === 'folder'}
+                            />
+                        ))}
                     </View>
                 )}
 
@@ -408,7 +398,7 @@ const styles = StyleSheet.create({
         paddingBottom: 100,
     },
     header: {
-        marginBottom: 20,
+        marginBottom: 12,
     },
     headerRow: {
         flexDirection: 'row',
@@ -434,7 +424,7 @@ const styles = StyleSheet.create({
     controlsRow: {
         flexDirection: 'row',
         gap: 8,
-        marginTop: 14,
+        marginTop: 8,
     },
     controlButton: {
         flexDirection: 'row',
@@ -449,7 +439,7 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
     section: {
-        marginBottom: 20,
+        marginBottom: 12,
     },
     sectionTitle: {
         fontSize: 12,
@@ -462,8 +452,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginBottom: 10,
-        marginTop: 10,
+        marginBottom: 8,
+        marginTop: 4,
     },
     clearButton: {
         flexDirection: 'row',

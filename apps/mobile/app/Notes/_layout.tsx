@@ -1,16 +1,13 @@
 import { HapticPressable } from '@/components/ui/haptic-pressable';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { DrawerActions, useTheme } from '@react-navigation/native';
-import { Stack, useNavigation } from 'expo-router';
+import { useTheme } from '@react-navigation/native';
+import { Stack } from 'expo-router';
+import { useSidebar } from '@/context/sidebar-context';
 import React from 'react';
 
 export default function NotesLayout() {
     const { colors } = useTheme();
-    const navigation = useNavigation();
-
-    const openDrawer = () => {
-        navigation.dispatch(DrawerActions.openDrawer());
-    };
+    const { toggle } = useSidebar();
 
     return (
         <Stack
@@ -26,7 +23,7 @@ export default function NotesLayout() {
                     title: 'Notes',
                     headerLeft: () => (
                         <HapticPressable
-                            onPress={openDrawer}
+                            onPress={toggle}
                             style={{ padding: 4, marginLeft: -4 }}
                             hitSlop={8}
                         >

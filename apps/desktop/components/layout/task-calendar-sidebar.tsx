@@ -9,19 +9,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useCreateTask } from "@/hooks/use-create-task";
 import { cn } from "@/lib/utils";
-import DesktopTaskCard from "@/src/pages/home/components/desktop-task-card";
-import { HomeCalendar } from "@/src/pages/home/components/home-calendar";
 import { TaskItem } from "@/src/pages/tasks/components/task-item";
 import { useNotesStore, useSettingsStore, useTasksStore, type Task } from "@annota/core";
 import {
-    Calendar as CalendarIcon,
     ChevronDown,
     Eye,
     EyeOff,
     Layers,
-    List,
-    Plus,
-    TrendingUp
+    Plus
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -30,70 +25,32 @@ const NewTaskButton = ({ onClick, className }: { onClick: () => void; className?
     <button
         onClick={onClick}
         className={cn(
-            "flex w-full items-center justify-between px-3 py-1.5 hover:text-primary hover:bg-primary/10 rounded-lg text-muted-foreground  transition-all hover:opacity-100 mb-1",
+            "group flex w-full items-center gap-1.5 rounded-xl text-left transition-all duration-200 hover:bg-sidebar-accent/50 px-1 py-1 text-muted-foreground/40 hover:text-primary mb-0.5",
             className
         )}
     >
-        <span className="text-[10px] font-bold uppercase tracking-wider">New Task</span>
-        <Plus size={14} className="" />
+        <div className="flex shrink-0 items-center justify-center rounded-full border border-dashed border-muted-foreground/30 h-5 w-5 group-hover:border-primary/50 group-hover:bg-primary/5 transition-colors">
+            <Plus size={12} />
+        </div>
+        <span className="text-[11px] font-medium select-none">Add task</span>
     </button>
 );
 
 export function TaskCalendarSidebar() {
     const { general, updateGeneralSettings } = useSettingsStore();
-    const { tasks, toggleComplete, deleteTask } = useTasksStore();
+    const { tasks, deleteTask } = useTasksStore();
     const { getFolderById } = useNotesStore();
     const { colors } = useAppTheme();
     const navigate = useNavigate();
     const location = useLocation();
     const { createAndNavigate } = useCreateTask();
 
-    const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-    const [viewMode, setViewMode] = useState<'day' | 'all'>('day');
     const [groupBy, setGroupBy] = useState<'date' | 'folder'>('date');
 
     const showCompleted = general.tasksShowDone;
 
-    // Filter tasks for the selected day
-    const dayTasks = useMemo(() => {
-        if (!selectedDate) return [];
-        return tasks.filter((task) => {
-            const taskDate = new Date(task.deadline);
-            return (
-                taskDate.getDate() === selectedDate.getDate() &&
-                taskDate.getMonth() === selectedDate.getMonth() &&
-                taskDate.getFullYear() === selectedDate.getFullYear()
-            );
-        }).sort((a, b) => {
-            if (a.completed !== b.completed) return a.completed ? 1 : -1;
-            return a.deadline.getTime() - b.deadline.getTime();
-        });
-    }, [tasks, selectedDate]);
-
-    // Upcoming tasks (only if today is selected)
-    const upcomingTasks = useMemo(() => {
-        const now = new Date();
-        const todayStr = now.toDateString();
-        const selectedStr = selectedDate?.toDateString();
-
-        if (todayStr !== selectedStr) return [];
-
-        const threeDaysFromNow = new Date(now);
-        threeDaysFromNow.setDate(now.getDate() + 3);
-        threeDaysFromNow.setHours(23, 59, 59, 999);
-
-        return tasks.filter((task) => {
-            if (task.completed || task.isWholeDay) return false;
-            const d = new Date(task.deadline);
-            if (d.toDateString() === todayStr) return false;
-            return d > now && d <= threeDaysFromNow;
-        }).sort((a, b) => a.deadline.getTime() - b.deadline.getTime()).slice(0, 3);
-    }, [tasks, selectedDate]);
-
     // Grouping logic for "All Tasks" view
     const groupedTasks = useMemo(() => {
-        if (viewMode !== 'all') return [];
-
         const sortedTasks = [...tasks].sort(
             (a, b) => a.deadline.getTime() - b.deadline.getTime(),
         );
@@ -108,8 +65,8 @@ export function TaskCalendarSidebar() {
                 if (!groups.has(groupId)) {
                     const folder = task.folderId ? getFolderById(task.folderId) : null;
                     groups.set(groupId, {
-                        title: folder ? folder.name : "Uncategorized",
-                        color: folder?.color || "#eeeeee",
+                        title: folder ? folder.name : "Inbox",
+                        color: folder?.color || "#1f1f1f",
                         icon: folder?.icon || "folder-outline",
                         tasks: [],
                     });
@@ -124,44 +81,30 @@ export function TaskCalendarSidebar() {
             const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
             const tomorrowStart = new Date(todayStart);
             tomorrowStart.setDate(tomorrowStart.getDate() + 1);
+            const dayAfterTomorrowStart = new Date(tomorrowStart);
+            dayAfterTomorrowStart.setDate(dayAfterTomorrowStart.getDate() + 1);
 
-            // Pre-initialize groups for date to maintain order and ensure "Today" exists
+            // Pre-initialize groups for date to maintain order
             groups.set("past", { title: "Passed", icon: "alert-circle-outline", color: "#ef4444", tasks: [] });
             groups.set("today", { title: "Today", icon: "today-outline", color: "#3b82f6", tasks: [] });
+            groups.set("tomorrow", { title: "Tomorrow", icon: "calendar-outline", color: "#8b5cf6", tasks: [] });
             groups.set("upcoming", { title: "Upcoming", icon: "calendar-number-outline", color: "#10b981", tasks: [] });
 
             pendingTasks.forEach((task) => {
                 let groupId: string;
-                let groupTitle: string;
-                let groupIcon: string;
-                let groupColor: string;
-
                 if (task.deadline < todayStart) {
                     groupId = "past";
-                    groupTitle = "Passed";
-                    groupIcon = "alert-circle-outline";
-                    groupColor = "#ef4444";
                 } else if (task.deadline < tomorrowStart) {
                     groupId = "today";
-                    groupTitle = "Today";
-                    groupIcon = "today-outline";
-                    groupColor = "#3b82f6";
+                } else if (task.deadline < dayAfterTomorrowStart) {
+                    groupId = "tomorrow";
                 } else {
                     groupId = "upcoming";
-                    groupTitle = "Upcoming";
-                    groupIcon = "calendar-number-outline";
-                    groupColor = "#10b981";
                 }
 
-                if (!groups.has(groupId)) {
-                    groups.set(groupId, {
-                        title: groupTitle,
-                        icon: groupIcon,
-                        color: groupColor,
-                        tasks: []
-                    });
+                if (groups.has(groupId)) {
+                    groups.get(groupId)!.tasks.push(task);
                 }
-                groups.get(groupId)!.tasks.push(task);
             });
 
             if (showCompleted && completedTasks.length > 0) {
@@ -176,7 +119,7 @@ export function TaskCalendarSidebar() {
 
         const result = Array.from(groups.entries())
             .map(([id, data]) => ({ id, ...data }))
-            .filter(g => g.tasks.length > 0 || g.id === "today");
+            .filter(g => g.tasks.length > 0 || g.id === "today" || g.id === "tomorrow");
 
         if (groupBy === 'folder') {
             return result.sort((a, b) => {
@@ -187,11 +130,10 @@ export function TaskCalendarSidebar() {
         }
 
         return result;
-    }, [tasks, viewMode, groupBy, showCompleted, getFolderById, colors.primary]);
+    }, [tasks, groupBy, showCompleted, getFolderById, colors.primary]);
 
 
 
-    const isToday = selectedDate?.toDateString() === new Date().toDateString();
 
     const handleTaskClick = (id: string) => {
         navigate(`/task/${id}`, { state: { background: location } });
@@ -203,198 +145,142 @@ export function TaskCalendarSidebar() {
         <aside
             dir="ltr"
             className={cn(
-                "flex h-full w-72 px-4 shrink-0 flex-col overflow-hidden border-sidebar-border bg-sidebar select-none",
+                "flex h-full w-72 shrink-0 flex-col overflow-hidden border-sidebar-border bg-sidebar select-none",
                 side === 'right' ? "border-l" : "border-r"
             )}
         >
-            <div className="flex flex-1 flex-col gap-4 pt-4  overflow-hidden">
-                {/* View Switcher is now the top element */}
-                <div className="relative flex items-center p-1 bg-muted-foreground/5 rounded-xl overflow-hidden min-h-[40px]">
-                    {/* Animated background chip */}
-                    <div
-                        className={cn(
-                            "absolute inset-y-1 w-[calc(50%-4px)]  transition-all duration-300 ease-in-out rounded-lg z-0",
-                            viewMode === 'day' ? "left-1" : "left-[calc(50%+2px)]"
-                        )}
-                        style={{ backgroundColor: colors.primary + "80" }}
-                    />
-                    <button
-                        className={cn(
-                            "flex-1 relative flex items-center justify-center h-8 gap-2 text-[11px] font-bold transition-colors z-10 select-none",
-                            viewMode === 'day' ? "text-white" : "text-muted-foreground/60 hover:text-foreground"
-                        )}
-                        onClick={() => setViewMode('day')}
-                    >
-                        <CalendarIcon size={14} className={cn("transition-colors", viewMode === 'day' ? "text-white" : "text-muted-foreground/60")} />
-                        CALENDAR
-                    </button>
-                    <button
-                        className={cn(
-                            "flex-1 relative flex items-center justify-center h-8 gap-2 text-[11px] font-bold transition-colors z-10 select-none",
-                            viewMode === 'all' ? "text-white" : "text-muted-foreground/60 hover:text-foreground"
-                        )}
-                        onClick={() => setViewMode('all')}
-                    >
-                        <List size={14} className={cn("transition-colors", viewMode === 'all' ? "text-white" : "text-muted-foreground/60")} />
-                        TASKS
-                    </button>
+            <div className="flex flex-1 flex-col gap-4 pt-4 overflow-hidden">
+                {/* View/Group Toggle (Tab style) */}
+                <div className="px-4">
+                    <div className="relative flex items-center p-1 bg-muted-foreground/5 rounded-xl overflow-hidden min-h-[36px]">
+                        {/* Animated background chip */}
+                        <div
+                            className={cn(
+                                "absolute inset-y-1 w-[calc(50%-4px)] transition-all duration-300 ease-in-out rounded-lg z-0",
+                                groupBy === 'date' ? "left-1" : "left-[calc(50%+2px)]"
+                            )}
+                            style={{ backgroundColor: colors.primary + "40" }}
+                        />
+                        <button
+                            className={cn(
+                                "flex-1 relative flex items-center justify-center h-7 gap-1.5 text-[9px] font-bold transition-colors z-10 select-none uppercase tracking-wider",
+                                groupBy === 'date' ? "text-foreground" : "text-muted-foreground/50 hover:text-foreground"
+                            )}
+                            onClick={() => setGroupBy('date')}
+                        >
+                            <Layers size={12} className={cn("transition-colors", groupBy === 'date' ? "text-primary" : "text-muted-foreground/40")} />
+                            Date
+                        </button>
+                        <button
+                            className={cn(
+                                "flex-1 relative flex items-center justify-center h-7 gap-1.5 text-[9px] font-bold transition-colors z-10 select-none uppercase tracking-wider",
+                                groupBy === 'folder' ? "text-foreground" : "text-muted-foreground/50 hover:text-foreground"
+                            )}
+                            onClick={() => setGroupBy('folder')}
+                        >
+                            <Ionicons name="folder-outline" size={12} className={cn("transition-colors", groupBy === 'folder' ? "text-primary" : "text-muted-foreground/40")} />
+                            Folder
+                        </button>
+                    </div>
                 </div>
 
-                {/* Calendar Section (only visible in Day mode) */}
-                {viewMode === 'day' && (
-                    <HomeCalendar
-                        selectedDate={selectedDate || new Date()}
-                        onDateSelect={(date) => {
-                            setSelectedDate(date);
-                            setViewMode('day');
-                        }}
-                    />
-                )}
-
-                {/* Controls (Sorting/Toggling) - Only show in 'All' view */}
-                {viewMode === 'all' && (
-                    <div className="flex items-center gap-2 ">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 flex-1 gap-2 rounded-lg border-sidebar-border/50 bg-background/40 text-[10px] font-bold uppercase tracking-wider"
-                            onClick={() => setGroupBy(prev => prev === 'date' ? 'folder' : 'date')}
-                        >
-                            <Layers size={12} />
-                            {groupBy === 'folder' ? 'Folder' : 'Date'}
-                        </Button>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className={cn(
-                                "h-8 flex-1 gap-2 rounded-lg border-sidebar-border/50 bg-background/40 text-[10px] font-bold uppercase tracking-wider transition-all",
-                                showCompleted
-                                    ? "text-primary border-primary/20 bg-primary/5"
-                                    : "text-muted-foreground opacity-40 hover:opacity-40"
-                            )}
-                            onClick={() => updateGeneralSettings({ tasksShowDone: !showCompleted })}
-                        >
-                            {showCompleted ? <Eye size={12} /> : <EyeOff size={12} />}
-                            Done
-                        </Button>
-                    </div>
-                )}
-
-                <ScrollArea className="flex-1 -mx-4">
-                    <div className="flex flex-col gap-4 px-4 pb-4">
-                        {/* Tasks Content */}
-                        <div className="space-y-4">
-                            {viewMode === 'day' ? (
-                                <div className="space-y-3 ">
-                                    {/* New Task button for Day view */}
-                                    <NewTaskButton
-                                        onClick={() => createAndNavigate({ deadline: selectedDate || new Date() })}
-                                    />
-
-                                    {dayTasks.length > 0 ? (
-                                        dayTasks.map((task) => (
-                                            <DesktopTaskCard
+                <ScrollArea className="flex-1 w-full min-w-0 overflow-hidden">
+                    <div className="flex flex-col gap-4 px-4 pb-4 w-full min-w-0 overflow-x-hidden">
+                        {/* Tasks Content - Using Grid to force strict width */}
+                        <div className="grid grid-cols-1 w-full min-w-0 gap-4 overflow-hidden">
+                            {groupedTasks.map((group) => (
+                                <Collapsible
+                                    key={group.id}
+                                    defaultOpen
+                                    className={cn(
+                                        "space-y-1 transition-all duration-300 min-w-0",
+                                        groupBy === 'folder' && "rounded-2xl p-1.5"
+                                    )}
+                                    style={(groupBy === 'folder' && group.id !== "__no_folder__") ? {
+                                        backgroundColor: `${group.color}15`,
+                                        border: `1px solid ${group.color}15`
+                                    } : {}}
+                                >
+                                    <CollapsibleTrigger
+                                        style={{ '--folder-color': group.color } as React.CSSProperties}
+                                        className={cn(
+                                            "flex w-full items-center justify-between rounded-lg py-1 px-1 hover:bg-(--folder-color)/10 group min-w-0 transition-colors",
+                                        )}
+                                    >
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            <div
+                                                className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md"
+                                                style={{ backgroundColor: group.color ? `${group.color}15` : 'transparent' }}
+                                            >
+                                                <Ionicons
+                                                    name={(group.icon as any) || "layers-outline"}
+                                                    size={13}
+                                                    style={{ color: group.color || 'var(--primary)' }}
+                                                />
+                                            </div>
+                                            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50 truncate min-w-0 flex-1">
+                                                {group.title}
+                                            </span>
+                                        </div>
+                                        <ChevronDown size={12} className="text-muted-foreground/30 transition-transform group-data-[state=closed]:-rotate-90" />
+                                    </CollapsibleTrigger>
+                                    <CollapsibleContent className={cn(
+                                        "space-y-0.5 min-w-0 overflow-hidden w-full",
+                                    )}>
+                                        {((groupBy === 'date' && (group.id === 'today' || group.id === 'tomorrow')) || groupBy === 'folder') && (
+                                            <NewTaskButton
+                                                onClick={() => {
+                                                    const deadline = new Date();
+                                                    if (group.id === 'tomorrow') {
+                                                        deadline.setDate(deadline.getDate() + 1);
+                                                    }
+                                                    createAndNavigate({
+                                                        folderId: groupBy === 'folder' && group.id !== "__no_folder__" ? group.id : undefined,
+                                                        deadline: groupBy === 'date' ? deadline : undefined
+                                                    });
+                                                }}
+                                            />
+                                        )}
+                                        {group.tasks.map((task) => (
+                                            <TaskItem
                                                 key={task.id}
                                                 task={task}
-                                                hideFolder
-                                                onPress={() => handleTaskClick(task.id)}
-                                                onToggle={() => toggleComplete(task.id)}
+                                                isCompact
+                                                hideFolder={groupBy === 'folder'}
+                                                onClick={() => handleTaskClick(task.id)}
                                                 onDelete={() => deleteTask(task.id)}
                                             />
-                                        ))
-                                    ) : (
-                                        <div className="flex h-24 flex-col items-center justify-center rounded-2xl border border-dashed border-sidebar-border/50 bg-muted/5 p-4 text-center">
-                                            <p className="text-[11px] text-muted-foreground italic">No tasks for this day</p>
-                                        </div>
-                                    )}
-
-                                    {isToday && upcomingTasks.length > 0 && (
-                                        <div className="pt-2 space-y-2">
-                                            <div className="flex items-center gap-2 px-1">
-                                                <TrendingUp size={12} className="text-amber-500" />
-                                                <span className="text-[10px] font-bold uppercase tracking-widest text-foreground/50">Upcoming</span>
-                                            </div>
-                                            {upcomingTasks.map((task) => (
-                                                <DesktopTaskCard
-                                                    key={task.id}
-                                                    task={task}
-                                                    hideFolder
-                                                    onPress={() => handleTaskClick(task.id)}
-                                                    onToggle={() => toggleComplete(task.id)}
-                                                    onDelete={() => deleteTask(task.id)}
-                                                />
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            ) : (
-                                <div className="space-y-4">
-                                    {groupedTasks.map((group) => (
-                                        <Collapsible
-                                            key={group.id}
-                                            defaultOpen
-                                            className={cn(
-                                                "space-y-1 transition-all duration-300",
-                                                groupBy === 'folder' && "rounded-2xl p-1.5"
-                                            )}
-                                            style={(groupBy === 'folder') ? {
-                                                backgroundColor: `${group.color}15`,
-                                                border: `1px solid ${group.color}15`
-                                            } : {}}
-                                        >
-                                            <CollapsibleTrigger style={{ '--folder-color': group.color } as React.CSSProperties} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 hover:bg-(--folder-color)/10 group">
-                                                <div className="flex items-center gap-2">
-                                                    <div
-                                                        className="flex h-5 w-5 items-center justify-center rounded-md"
-                                                        style={{ backgroundColor: group.color ? `${group.color}15` : 'transparent' }}
-                                                    >
-                                                        <Ionicons
-                                                            name={(group.icon as any) || "layers-outline"}
-                                                            size={12}
-                                                            style={{ color: group.color || 'var(--primary)' }}
-                                                        />
-                                                    </div>
-                                                    <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80">
-                                                        {group.title}
-                                                    </span>
-                                                </div>
-                                                <ChevronDown size={14} className="text-muted-foreground/40 transition-transform group-data-[state=closed]:-rotate-90" />
-                                            </CollapsibleTrigger>
-                                            <CollapsibleContent className={cn(
-                                                "space-y-0.5",
-                                                groupBy === 'folder' && group.id !== "__no_folder__" && ""
-                                            )}>
-                                                {((groupBy === 'date' && group.id === 'today') || groupBy === 'folder') && (
-                                                    <NewTaskButton
-                                                        onClick={() => createAndNavigate({
-                                                            folderId: groupBy === 'folder' && group.id !== "__no_folder__" ? group.id : undefined,
-                                                            deadline: groupBy === 'date' ? new Date() : undefined
-                                                        })}
-                                                    />
-                                                )}
-                                                {group.tasks.map((task) => (
-                                                    <TaskItem
-                                                        key={task.id}
-                                                        task={task}
-                                                        isCompact
-                                                        hideFolder={groupBy === 'folder'}
-                                                        onClick={() => handleTaskClick(task.id)}
-                                                        onDelete={() => deleteTask(task.id)}
-                                                    />
-                                                ))}
-                                            </CollapsibleContent>
-                                        </Collapsible>
-                                    ))}
-                                    {tasks.length === 0 && (
-                                        <div className="text-center py-10">
-                                            <p className="text-xs text-muted-foreground">No tasks found</p>
-                                        </div>
-                                    )}
+                                        ))}
+                                    </CollapsibleContent>
+                                </Collapsible>
+                            ))}
+                            {tasks.length === 0 && (
+                                <div className="text-center py-10">
+                                    <p className="text-xs text-muted-foreground">No tasks found</p>
                                 </div>
                             )}
                         </div>
                     </div>
                 </ScrollArea>
+
+                {/* Footer Section with Done Toggle */}
+                <div className="flex items-center justify-center pb-4 pt-2 px-4 bg-sidebar border-t border-sidebar-border/20">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                            "h-7 gap-2 px-4",
+                            "flex shrink-0 items-center rounded-full text-[9px] font-bold uppercase tracking-widest transition-all",
+                            showCompleted
+                                ? "text-primary bg-primary/10 hover:bg-primary/20"
+                                : "text-muted-foreground/60 hover:text-foreground hover:bg-muted-foreground/5"
+                        )}
+                        onClick={() => updateGeneralSettings({ tasksShowDone: !showCompleted })}
+                    >
+                        {showCompleted ? <Eye size={12} /> : <EyeOff size={12} />}
+                        Show Done
+                    </Button>
+                </div>
             </div>
         </aside>
     );

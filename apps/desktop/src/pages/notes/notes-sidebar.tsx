@@ -15,6 +15,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import { ConfirmDialog } from "@/components/custom-ui/confirm-dialog";
+import { DailyNoteIcon } from "@/components/custom-ui/daily-note-icon";
 import { FolderEditModal } from "@/components/notes/folder-edit-modal";
 import { FolderListItem } from '@/components/notes/folder-list-item';
 import { NoteListItem } from '@/components/notes/note-list-item';
@@ -280,7 +281,7 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
     const headerIcon = useMemo(() => {
         if (tagId && currentTag) return "ellipse";
         if (isTrash) return "trash";
-        if (isDaily) return "calendar";
+        if (isDaily) return "calendar-clear-outline";
         return currentFolder ? currentFolder.icon : "documents";
     }, [tagId, currentTag, isTrash, isDaily, currentFolder]);
 
@@ -322,14 +323,15 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
                     <TooltipProvider>
                         <div className="flex items-center justify-between gap-1 w-full">
                             <div className="flex items-center gap-2 overflow-hidden flex-1">
-                                {tagId && currentTag ? (
-                                    <Ionicons name={headerIcon} color={headerColor} size={16} />
 
-                                ) : (
-                                    <div style={{ backgroundColor: headerColor + "30" }} className="flex h-6 w-6 shrink-0 items-center justify-center rounded transition-colors shadow-sm">
+                                <div style={{ backgroundColor: headerColor + "30" }} className="flex h-6 w-6 shrink-0 items-center justify-center rounded transition-colors shadow-sm">
+                                    {isDaily ? (
+                                        <DailyNoteIcon color={headerColor} size={16} />
+                                    ) : (
                                         <Ionicons name={headerIcon} color={headerColor} size={16} />
-                                    </div>
-                                )}
+                                    )}
+                                </div>
+
                                 <h2 className="text-sm font-bold tracking-tight truncate">{headerTitle}</h2>
                             </div>
                             <div className="flex items-center gap-0.5 shrink-0">
