@@ -7,7 +7,7 @@ export default function HomePage() {
 
     return (
         // 1. Root container is strictly screen height. No overflow here.
-        <div dir="ltr" className="flex h-full flex-col  bg-background max-w-7xl mx-auto pb-2">
+        <div dir="ltr" className="flex h-full flex-col  bg-background max-w-7xl mx-auto pb-2 ">
 
             {/* Top Section - Compact Header */}
             {/* 2. Added shrink-0 so the header never compresses */}
@@ -33,22 +33,6 @@ export default function HomePage() {
                     </div>
                 </div>
             </div>
-
-            <style>{`
-                .custom-scrollbar::-webkit-scrollbar {
-                    width: 6px;
-                }
-                .custom-scrollbar::-webkit-scrollbar-track {
-                    background: transparent;
-                }
-                .custom-scrollbar::-webkit-scrollbar-thumb {
-                    background: rgba(0,0,0,0.1);
-                    border-radius: 10px;
-                }
-                .dark .custom-scrollbar::-webkit-scrollbar-thumb {
-                    background: rgba(255,255,255,0.1);
-                }
-            `}</style>
         </div>
     );
 }

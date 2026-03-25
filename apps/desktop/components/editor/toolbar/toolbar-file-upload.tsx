@@ -18,8 +18,9 @@ import {
     Loader2,
     UploadCloud as Upload
 } from 'lucide-react';
-import { EditorIcons } from '../EditorIcons';
 import React, { useCallback, useRef, useState } from 'react';
+import { toast } from 'sonner';
+import { EditorIcons } from '../EditorIcons';
 
 interface ToolbarFileUploadProps {
     onInsertFile: (source: 'url' | 'library', value?: string) => Promise<boolean>;
@@ -59,6 +60,22 @@ export function ToolbarFileUpload({ onInsertFile, onOpenChange, isMenu, visible,
 
     const handleUrlSubmit = useCallback(async () => {
         if (!url) return;
+
+        // Image validation
+        const isImageUrl = (url: string) => {
+            const cleanUrl = url.split('?')[0].toLowerCase();
+            return cleanUrl.endsWith('.png') ||
+                cleanUrl.endsWith('.jpg') ||
+                cleanUrl.endsWith('.jpeg') ||
+                cleanUrl.endsWith('.webp') ||
+                cleanUrl.endsWith('.gif');
+        };
+
+        if (!isImageUrl(url)) {
+            toast.error("Invalid image URL", { description: "Please provide a direct link to an image (.png, .jpg, .webp, etc.)" });
+            return;
+        }
+
         setIsLoading(true);
         try {
             const success = await onInsertFile('url', url);
@@ -92,6 +109,7 @@ export function ToolbarFileUpload({ onInsertFile, onOpenChange, isMenu, visible,
             await adapters.fileSystem.deleteFile(tempPath).catch(() => { });
         } catch (error) {
             console.error('[ToolbarFileUpload] Failed to process file:', error);
+            toast.error('Failed to process file', { description: error as any });
         } finally {
             setIsLoading(false);
             if (fileInputRef.current) fileInputRef.current.value = '';
@@ -253,6 +271,7 @@ export function ToolbarFileUpload({ onInsertFile, onOpenChange, isMenu, visible,
                                         <Upload className="h-6 w-6 text-primary" />
                                     </div>
                                     <p className="text-sm font-medium">Click or drag file here</p>
+                                    <p className="text-xs text-muted-foreground mt-1 text-center">Up to: 5MB Image / 5MB PDF</p>
                                     <p className="text-xs text-muted-foreground mt-1 text-center">Images are compressed; PDFs are kept original</p>
                                 </>
                             )}
@@ -260,9 +279,9 @@ export function ToolbarFileUpload({ onInsertFile, onOpenChange, isMenu, visible,
                     ) : (
                         <div className="space-y-4 py-2">
                             <div className="space-y-2">
-                                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Paste File URL</label>
+                                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Paste Image URL</label>
                                 <Input
-                                    placeholder="https://example.com/file.png"
+                                    placeholder="https://example.com/image.png"
                                     value={url}
                                     onChange={(e) => setUrl(e.target.value)}
                                     className="h-10 transition-all border-muted focus-visible:ring-primary/20"

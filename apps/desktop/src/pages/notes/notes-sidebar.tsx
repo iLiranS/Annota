@@ -300,8 +300,8 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
             dir={general.appDirection}
             className={cn(
                 "group/sidebar relative flex h-full flex-col bg-sidebar overflow-hidden shrink-0",
-                general.appDirection === 'rtl' ? "border-l" : "border-r",
-                "border-border select-none",
+                general.appDirection === "rtl" ? "border-l" : "border-r",
+                "select-none border-border/30",
                 !isResizing && "transition-all duration-300 ease-in-out",
                 className
             )}
@@ -319,7 +319,7 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
                     />
                 )}
                 {/* Header */}
-                <SidebarHeader style={{ backgroundColor: headerColor + "30" }} className="h-12 border-b border-border/50 px-2 py-0 justify-center overflow-hidden">
+                <SidebarHeader style={{ backgroundColor: headerColor + "30" }} className="h-12  px-2 py-0 justify-center overflow-hidden">
                     <TooltipProvider>
                         <div className="flex items-center justify-between gap-1 w-full">
                             <div className="flex items-center gap-2 overflow-hidden flex-1">
@@ -332,7 +332,7 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
                                     )}
                                 </div>
 
-                                <h2 className="text-sm font-bold tracking-tight truncate">{headerTitle}</h2>
+                                <h2 style={{ color: headerColor }} className="text-sm font-bold tracking-tight truncate">{headerTitle}</h2>
                             </div>
                             <div className="flex items-center gap-0.5 shrink-0">
                                 {!isTrash && (
@@ -341,8 +341,9 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
                                             <Button
                                                 variant="ghost"
                                                 size="icon"
-                                                className="h-8 w-8 shrink-0 text-muted-foreground/60 hover:text-primary hover:bg-primary/10 transition-colors"
+                                                className="h-8 w-8 shrink-0  hover:text-primary hover:bg-primary/10 transition-colors"
                                                 onClick={handleCreateNote}
+                                                style={{ color: headerColor }}
                                             >
                                                 <SquarePen className="h-5 w-5" />
                                             </Button>
@@ -359,6 +360,8 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
                                                         variant="ghost"
                                                         size="icon"
                                                         className="h-8 w-8 shrink-0 text-muted-foreground/60 hover:text-primary hover:bg-primary/10 transition-colors"
+                                                        style={{ color: headerColor }}
+
                                                     >
                                                         <MoreVertical className="h-5 w-5" />
                                                     </Button>

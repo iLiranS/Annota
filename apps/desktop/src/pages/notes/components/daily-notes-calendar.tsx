@@ -74,10 +74,10 @@ export function DailyNotesCalendar() {
     };
 
     return (
-        <div className="flex h-full flex-col overflow-hidden bg-background">
+        <div className="flex h-full flex-col overflow-hidden bg-note-bg">
             {/* Clean Header */}
-            <div className="sticky top-0 z-10 px-8 py-4 bg-background border-b border-border">
-                <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
+            <div className="sticky top-0 z-10 px-8 py-4  border-b border-border">
+                <div className="w-full flex items-center justify-between gap-4">
                     <div className="flex items-center gap-4">
                         <div className="flex items-center gap-2.5">
                             <div className="p-1.5 rounded-lg bg-[#8B5CF6]/10 text-accent-full">

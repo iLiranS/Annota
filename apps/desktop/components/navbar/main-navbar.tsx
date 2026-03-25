@@ -1,9 +1,10 @@
 import { Button } from "@/components/ui/button"
-import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar"
+import { useSidebar } from "@/components/ui/sidebar"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { useAppTheme } from "@/hooks/use-app-theme"
 import { cn } from "@/lib/utils"
 import { useSettingsStore, useSyncStore, useUserStore } from "@annota/core"
+import { PanelLeft, PanelRight } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { NotesSearchModal } from "../search/notes-search-modal"
@@ -21,7 +22,7 @@ export function MainNavbar() {
     const { session } = useUserStore();
     const { general, updateGeneralSettings } = useSettingsStore();
     const { colors } = useAppTheme();
-    const { open } = useSidebar();
+    const { open, toggleSidebar } = useSidebar();
 
 
     const [canSync, setCanSync] = useState(true);
@@ -84,7 +85,7 @@ export function MainNavbar() {
             data-tauri-drag-region
             dir={general.appDirection}
             className={cn(
-                "flex h-10 w-full shrink-0 rotate-0 items-center justify-between border-sidebar-border bg-sidebar px-3",
+                "flex h-9 w-full shrink-0 rotate-0 items-center justify-between border-sidebar-border bg-sidebar px-3",
                 "select-none transition-all duration-200 ease-in-out",
                 general.appDirection === 'ltr' && 'pr-20',
                 general.appDirection === 'rtl' && !open && 'pr-20',
@@ -93,7 +94,15 @@ export function MainNavbar() {
             {/* Left Section: Sidebar Toggle & Search */}
             <div className="flex items-center gap-3">
                 <div className="flex items-center gap-1">
-                    <SidebarTrigger className="h-6 w-6 transition-transform active:scale-95 hover:bg-sidebar-accent text-foreground/50" />
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 transition-transform active:scale-95 hover:bg-sidebar-accent text-foreground/50"
+                        onClick={toggleSidebar}
+                        title="Toggle Sidebar"
+                    >
+                        {general.appDirection === 'rtl' ? <PanelRight size={16} /> : <PanelLeft size={16} />}
+                    </Button>
 
                     <div className={`flex items-center gap-0 ${general.appDirection === 'ltr' ? 'flex-row' : 'flex-row-reverse'}`}>
                         <Button
@@ -188,11 +197,11 @@ export function MainNavbar() {
                             size="icon"
                             className={cn(
                                 "h-7 w-7 rounded-full transition-all active:scale-95 text-muted-foreground/60 hover:bg-sidebar-accent hover:text-foreground",
-                                general.isTaskCalendarOpen && "text-primary"
+                                general.isTaskCalendarOpen && "text-accent-full"
                             )}
                             onClick={() => updateGeneralSettings({ isTaskCalendarOpen: !general.isTaskCalendarOpen })}
                         >
-                            <Ionicons color={general.isTaskCalendarOpen ? colors.primary : ""} name={"calendar-outline"} size={16} />
+                            {general.appDirection === 'rtl' ? <PanelLeft size={16} /> : <PanelRight size={16} />}
                         </Button>
                     </TooltipTrigger>
                     <TooltipContent side="bottom" className="text-[10px]">

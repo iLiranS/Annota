@@ -5,7 +5,7 @@ import * as NotesRepo from '../../db/repositories/notes.repository';
 import {
     computeHash,
     deleteFile,
-    downloadRemoteFile,
+    downloadRemoteImage,
     getFileSize,
     readAsBase64DataUri,
     resizeAndCompress,
@@ -188,7 +188,7 @@ export async function processRemoteFile(
     noteId: string,
     url: string,
 ): Promise<ProcessedFile> {
-    const temp = await downloadRemoteFile(url);
+    const temp = await downloadRemoteImage(url);
     try {
         return await processAndInsertFile(noteId, temp.uri);
     } finally {

@@ -27,10 +27,11 @@ import {
     ContextMenuItem,
     ContextMenuTrigger
 } from "@/components/ui/context-menu";
-import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubButton, SidebarMenuSubItem, SidebarRail, SidebarSeparator, useSidebar } from "@/components/ui/sidebar";
+import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubButton, SidebarMenuSubItem, SidebarRail, useSidebar } from "@/components/ui/sidebar";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useCreateNote } from "@/hooks/use-create-note";
 import { useCreateTask } from "@/hooks/use-create-task";
+import { cn } from "@/lib/utils";
 import { useEffect } from "react";
 import { ConfirmDialog } from "../custom-ui/confirm-dialog";
 import { DailyNoteIcon } from "../custom-ui/daily-note-icon";
@@ -61,6 +62,10 @@ export function AppSidebar() {
         const saved = localStorage.getItem("sidebar_tags_open");
         return saved !== null ? saved === "true" : true;
     });
+    const [isAllNotesOpen, setIsAllNotesOpen] = useState(() => {
+        const saved = localStorage.getItem("sidebar_all_notes_open");
+        return saved !== null ? saved === "true" : true;
+    });
     const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [folderToDelete, setFolderToDelete] = useState<Folder | null>(null);
@@ -82,6 +87,10 @@ export function AppSidebar() {
     useEffect(() => {
         localStorage.setItem("sidebar_tags_open", String(isTagsOpen));
     }, [isTagsOpen]);
+
+    useEffect(() => {
+        localStorage.setItem("sidebar_all_notes_open", String(isAllNotesOpen));
+    }, [isAllNotesOpen]);
 
     useEffect(() => {
         const handleToggle = (e: any) => {
@@ -168,9 +177,9 @@ export function AppSidebar() {
             {/* ── Header ───────────────────────────────────── */}
             <SidebarHeader
                 data-tauri-drag-region
-                className="flex h-10 shrink-0 flex-row items-center gap-2 px-2 py-0"
+                className={cn("flex h-9 shrink-0 flex-row items-center gap-2 py-0", general.appDirection === 'rtl' ? "pl-2 pr-4" : "pr-2 pl-4")}
             >
-                <div style={{ display: general.appDirection === 'rtl' ? 'none' : 'flex' }} className="flex items-center pt-2 px-1 gap-1  h-full">
+                <div style={{ display: general.appDirection === 'rtl' ? 'none' : 'flex' }} className="flex items-center px-1 gap-1  h-full">
 
                     <img
                         src={icon}
@@ -190,7 +199,7 @@ export function AppSidebar() {
             {/* ── Content ──────────────────────────────────── */}
             <SidebarContent className="min-w-0 overflow-x-hidden pt-2">
                 {/* Navigation group */}
-                <SidebarGroup className="pb-0">
+                <SidebarGroup className={cn("pb-0", general.appDirection === 'rtl' ? "pl-2 pr-4" : "pr-2 pl-4")}>
                     <SidebarGroupContent>
                         <SidebarMenu>
                             <SidebarMenuItem>
@@ -234,7 +243,7 @@ export function AppSidebar() {
                                         <CollapsibleTrigger>
                                             <Star size={18} strokeWidth={2.8} className="text-amber-400 shrink-0" />
                                             <span className="flex-1 text-start font-medium">Quick Access</span>
-                                            <Ionicons name="chevron-forward" size={14} className={`transition-transform group-data-[state=open]/quick-access:rotate-90 ${general.appDirection === 'rtl' ? 'rotate-180' : ''}`} />
+                                            <Ionicons name="chevron-forward" size={12} className={`transition-transform group-data-[state=open]/quick-access:rotate-90 ${general.appDirection === 'rtl' ? 'rotate-180' : ''}`} />
                                         </CollapsibleTrigger>
                                     </SidebarMenuButton>
                                     <CollapsibleContent>
@@ -275,64 +284,80 @@ export function AppSidebar() {
                     </SidebarGroupContent>
                 </SidebarGroup>
 
-                <SidebarSeparator className="opacity-80 mx-auto" />
+
 
                 {/* Notes & Folders */}
-                <SidebarGroup className="pt-0">
+                <SidebarGroup className={cn("pt-0", general.appDirection === 'rtl' ? "pl-2 pr-4" : "pr-2 pl-4")}>
                     {/* Notes label removed */}
                     <SidebarGroupContent>
                         <SidebarMenu>
-                            <SidebarMenuItem key="all-notes">
-                                <ContextMenu>
-                                    <ContextMenuTrigger asChild>
-                                        <SidebarMenuButton
-                                            isActive={
-                                                location.pathname === "/notes" &&
-                                                !queryFolderId &&
-                                                !queryTagId
-                                            }
-                                            onClick={() => navigateSmart("/notes")}
-                                            tooltip="All Notes"
+                            <Collapsible
+                                className="group/all-notes"
+                                open={isAllNotesOpen}
+                                onOpenChange={setIsAllNotesOpen}
+                            >
+                                <SidebarMenuItem key="all-notes" className="group/folder">
+                                    <ContextMenu>
+                                        <ContextMenuTrigger asChild>
+                                            <SidebarMenuButton
+                                                isActive={
+                                                    location.pathname === "/notes" &&
+                                                    !queryFolderId &&
+                                                    !queryTagId
+                                                }
+                                                onClick={() => navigateSmart("/notes")}
+                                                tooltip="All Notes"
+                                            >
+                                                <Files color={colors.primary} size={18} strokeWidth={2.8} className="text-primary shrink-0" />
+                                                <span className="font-medium">All Notes</span>
+                                            </SidebarMenuButton>
+                                        </ContextMenuTrigger>
+                                        <ContextMenuContent className="w-48">
+                                            <ContextMenuItem className="gap-2" onClick={() => createNote()}>
+                                                <Ionicons name="document-outline" size={16} />
+                                                <span>New Note</span>
+                                            </ContextMenuItem>
+                                            <ContextMenuItem className="gap-2" onClick={handleCreateTopLevelFolder}>
+                                                <Ionicons name="folder-outline" size={16} />
+                                                <span>New Folder</span>
+                                            </ContextMenuItem>
+                                            <ContextMenuItem className="gap-2" onClick={() => createTask()}>
+                                                <Ionicons name="checkmark-circle-outline" size={16} />
+                                                <span>New Task</span>
+                                            </ContextMenuItem>
+                                        </ContextMenuContent>
+                                    </ContextMenu>
+                                    <CollapsibleTrigger asChild>
+                                        <button
+                                            type="button"
+                                            className={`group/folder-chevron absolute top-1/2 -translate-y-1/2 rounded-md p-1 hover:bg-sidebar-accent ${general.appDirection === 'rtl' ? 'left-1' : 'right-1'}`}
                                         >
-                                            <Files color={colors.primary} size={18} strokeWidth={2.8} className="text-primary shrink-0" />
-                                            <span className="font-medium">All Notes</span>
-                                        </SidebarMenuButton>
-                                    </ContextMenuTrigger>
-                                    <ContextMenuContent className="w-48">
-                                        <ContextMenuItem className="gap-2" onClick={() => createNote()}>
-                                            <Ionicons name="document-outline" size={16} />
-                                            <span>New Note</span>
-                                        </ContextMenuItem>
-                                        <ContextMenuItem className="gap-2" onClick={handleCreateTopLevelFolder}>
-                                            <Ionicons name="folder-outline" size={16} />
-                                            <span>New Folder</span>
-                                        </ContextMenuItem>
-                                        <ContextMenuItem className="gap-2" onClick={() => createTask()}>
-                                            <Ionicons name="checkmark-circle-outline" size={16} />
-                                            <span>New Task</span>
-                                        </ContextMenuItem>
-                                    </ContextMenuContent>
-                                </ContextMenu>
-                            </SidebarMenuItem>
-
-                            {/* Folder tree */}
-                            {topLevelFolders.map((folder) => (
-                                <FolderTreeItem
-                                    key={folder.id}
-                                    folder={folder}
-                                    general={general}
-                                    allFolders={folders}
-                                    onNavigate={(folderId) =>
-                                        navigateSmart(`/notes?folderId=${folderId}`)
-                                    }
-                                    onEdit={handleEditFolder}
-                                    onDelete={setFolderToDelete}
-                                    onCreateSubFolder={handleCreateSubFolder}
-                                    onCreateTask={handleCreateTask}
-                                    onCreateNote={handleCreateNote}
-                                    getFoldersInFolder={getFoldersInFolder}
-                                />
-                            ))}
+                                            <Ionicons name="chevron-forward" size={12} className={`transition-transform group-data-[state=open]/all-notes:rotate-90 ${general.appDirection === 'rtl' ? 'rotate-180' : ''}`} />
+                                        </button>
+                                    </CollapsibleTrigger>
+                                </SidebarMenuItem>
+                                <CollapsibleContent>
+                                    <SidebarMenuSub>
+                                        {topLevelFolders.map((folder) => (
+                                            <FolderTreeItem
+                                                key={folder.id}
+                                                folder={folder}
+                                                general={general}
+                                                allFolders={folders}
+                                                onNavigate={(folderId) =>
+                                                    navigateSmart(`/notes?folderId=${folderId}`)
+                                                }
+                                                onEdit={handleEditFolder}
+                                                onDelete={setFolderToDelete}
+                                                onCreateSubFolder={handleCreateSubFolder}
+                                                onCreateTask={handleCreateTask}
+                                                onCreateNote={handleCreateNote}
+                                                getFoldersInFolder={getFoldersInFolder}
+                                            />
+                                        ))}
+                                    </SidebarMenuSub>
+                                </CollapsibleContent>
+                            </Collapsible>
                         </SidebarMenu>
                     </SidebarGroupContent>
                 </SidebarGroup>
@@ -343,12 +368,12 @@ export function AppSidebar() {
                     open={isTagsOpen}
                     onOpenChange={setIsTagsOpen}
                 >
-                    <SidebarGroup>
+                    <SidebarGroup className={general.appDirection === 'rtl' ? "pl-2 pr-4" : "pr-2 pl-4"}>
                         <SidebarGroupLabel asChild className="text-sm text-sidebar-foreground font-medium">
                             <CollapsibleTrigger className="flex w-full items-center gap-2 hover:bg-sidebar-accent">
                                 <Ionicons name="pricetag-outline" size={18} className="text-accent-full" />
                                 <span className="flex-1 text-start">Tags</span>
-                                <Ionicons name="chevron-forward" size={14} className={`transition-transform group-data-[state=open]/tags:rotate-90 ${general.appDirection === 'rtl' ? 'rotate-180' : ''}`} />
+                                <Ionicons name="chevron-forward" size={12} className={`transition-transform group-data-[state=open]/tags:rotate-90 ${general.appDirection === 'rtl' ? 'rotate-180' : ''}`} />
                             </CollapsibleTrigger>
                         </SidebarGroupLabel>
                         <CollapsibleContent>
@@ -407,7 +432,7 @@ export function AppSidebar() {
 
 
             {/* ── Footer ───────────────────────────────────── */}
-            <SidebarFooter className="gap-2 px-3 pb-3">
+            <SidebarFooter className={cn("gap-2 pb-3", general.appDirection === 'rtl' ? "pl-2 pr-4" : "pr-2 pl-4")}>
                 {showOfflineBanner && (
                     <div className="flex items-center gap-2 rounded-lg bg-amber-500/10 px-3 py-1.5">
                         <Ionicons name="cloud-offline" size={16} className="text-amber-500" />

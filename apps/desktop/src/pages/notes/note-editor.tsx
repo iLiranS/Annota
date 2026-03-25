@@ -443,7 +443,7 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId 
     }
 
     return (
-        <div className="flex h-full bg-note-bg flex-col w-full min-h-0 relative">
+        <div className="flex h-full bg-note-bg flex-col w-full min-h-0 relative ">
             {/* Floating Action Buttons */}
             <NoteFloatingActions
                 onToggleSearch={() => setIsSearching(prev => !prev)}
@@ -478,7 +478,7 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId 
                         autofocus={shouldAutofocus}
                         editable={true}
                         noteId={noteId}
-                        contentPaddingTop={JSON.parse(note.tags || '[]').length > 0 ? 20 : 40}
+                        contentPaddingTop={JSON.parse(note.tags || '[]').length > 0 ? 10 : 30}
                         placeholder="Start typing..."
                         renderHeader={() => (
                             <NoteTags

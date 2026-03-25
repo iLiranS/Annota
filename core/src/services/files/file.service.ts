@@ -5,7 +5,7 @@ import { getPlatformAdapters } from '../../adapters';
 
 const MAX_DIMENSION = 1500;
 const WEBP_QUALITY = 0.8;
-export const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+export const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 // ============ DIRECTORY MANAGEMENT ============
 
@@ -113,10 +113,10 @@ export function validateUrl(url: string) {
 }
 
 /**
- * Download a remote file to a temporary location.
+ * Download a remote image to a temporary location.
  * Returns the URI and a cleanup function.
  */
-export async function downloadRemoteFile(url: string): Promise<{ uri: string; cleanup: () => Promise<void> }> {
+export async function downloadRemoteImage(url: string): Promise<{ uri: string; cleanup: () => Promise<void> }> {
     validateUrl(url);
 
     const result = await getPlatformAdapters().fileSystem.downloadToTemp(url);

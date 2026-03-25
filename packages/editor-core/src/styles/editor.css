@@ -822,8 +822,8 @@
     text-overflow: ellipsis;
 }
 
-.ProseMirror .details-summary-content > *,
-.ProseMirror [data-type="detailsSummary"] .details-summary-content > *,
+.ProseMirror .details-summary-content>*,
+.ProseMirror [data-type="detailsSummary"] .details-summary-content>*,
 .ProseMirror .details-summary-content h1,
 .ProseMirror .details-summary-content h2,
 .ProseMirror .details-summary-content h3,

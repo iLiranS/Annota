@@ -1,3 +1,14 @@
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
     Collapsible,
@@ -29,8 +40,8 @@ const NewTaskButton = ({ onClick, className }: { onClick: () => void; className?
             className
         )}
     >
-        <div className="flex shrink-0 items-center justify-center rounded-full border border-dashed border-muted-foreground/30 h-5 w-5 group-hover:border-primary/50 group-hover:bg-primary/5 transition-colors">
-            <Plus size={12} />
+        <div className="flex shrink-0 items-center justify-center rounded-full border border-dashed border-muted-foreground/30 h-4 w-4 group-hover:border-primary/50 group-hover:bg-primary/5 transition-colors">
+            <Plus size={10} />
         </div>
         <span className="text-[11px] font-medium select-none">Add task</span>
     </button>
@@ -38,7 +49,7 @@ const NewTaskButton = ({ onClick, className }: { onClick: () => void; className?
 
 export function TaskCalendarSidebar() {
     const { general, updateGeneralSettings } = useSettingsStore();
-    const { tasks, deleteTask } = useTasksStore();
+    const { tasks, deleteTask, clearCompletedTasks } = useTasksStore();
     const { getFolderById } = useNotesStore();
     const { colors } = useAppTheme();
     const navigate = useNavigate();
@@ -111,7 +122,7 @@ export function TaskCalendarSidebar() {
                 groups.set("completed", {
                     title: "Completed",
                     icon: "checkmark-done-circle-outline",
-                    color: "#94a3b8",
+                    color: "green",
                     tasks: completedTasks
                 });
             }
@@ -132,6 +143,8 @@ export function TaskCalendarSidebar() {
         return result;
     }, [tasks, groupBy, showCompleted, getFolderById, colors.primary]);
 
+    const hasCompletedTasks = useMemo(() => tasks.some(t => t.completed), [tasks]);
+
 
 
 
@@ -145,12 +158,12 @@ export function TaskCalendarSidebar() {
         <aside
             dir="ltr"
             className={cn(
-                "flex h-full w-72 shrink-0 flex-col overflow-hidden bg-sidebar select-none",
+                "flex h-full w-64 shrink-0 flex-col overflow-hidden bg-sidebar select-none",
             )}
         >
             <div className="flex flex-1 flex-col gap-4 pt-4 overflow-hidden">
                 {/* View/Group Toggle (Tab style) */}
-                <div className="px-4">
+                <div className={general.appDirection === 'rtl' ? "pr-2 pl-4" : "pl-2 pr-4"}>
                     <div className="relative flex items-center p-1 bg-muted-foreground/5 rounded-xl overflow-hidden min-h-[36px]">
                         {/* Animated background chip */}
                         <div
@@ -183,8 +196,57 @@ export function TaskCalendarSidebar() {
                     </div>
                 </div>
 
+                {/* Toggle and Clear Done */}
+                <div className={cn("flex items-center gap-1.5 bg-sidebar", general.appDirection === 'rtl' ? "pr-2 pl-4" : "pl-2 pr-4", hasCompletedTasks ? "justify-between" : "justify-center")}>
+                    <Button
+                        variant="ghost"
+                        size="xs"
+                        className={cn(
+                            "flex-1 gap-2 p-0 justify-start max-w-fit h-min",
+                            "rounded-full text-[9px] font-bold uppercase tracking-widest transition-all",
+                            "text-muted-foreground/60 hover:text-foreground hover:bg-none dark:hover:bg-none"
+                        )}
+                        onClick={() => updateGeneralSettings({ tasksShowDone: !showCompleted })}
+                    >
+                        {showCompleted ? <EyeOff size={12} /> : <Eye size={12} />}
+                        <span className="truncate">{showCompleted ? "Hide Done" : "Show Done"}</span>
+                    </Button>
+
+                    {hasCompletedTasks && (
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 w-6 flex shrink-0 items-center justify-center rounded-full text-muted-foreground/40 hover:text-foreground hover:bg-muted-foreground/5 transition-all"
+                                    title="Clear completed tasks"
+                                >
+                                    <Ionicons name="trash-outline" size={14} />
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent size="sm">
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Clear completed tasks?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        This will permanently delete all your completed tasks. This action cannot be undone.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                        onClick={() => clearCompletedTasks()}
+                                        className="bg-destructive/10 hover:bg-destructive/20 text-destructive border-none shadow-none"
+                                    >
+                                        Clear All
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    )}
+                </div>
+
                 <ScrollArea className="flex-1 w-full min-w-0 overflow-hidden">
-                    <div className="flex flex-col gap-4 px-4 pb-4 w-full min-w-0 overflow-x-hidden">
+                    <div className={cn("flex flex-col gap-4 pb-4 w-full min-w-0 overflow-x-hidden", general.appDirection === 'rtl' ? "pr-2 pl-4" : "pl-2 pr-4")}>
                         {/* Tasks Content - Using Grid to force strict width */}
                         <div className="grid grid-cols-1 w-full min-w-0 gap-4 overflow-hidden">
                             {groupedTasks.map((group) => (
@@ -262,24 +324,7 @@ export function TaskCalendarSidebar() {
                     </div>
                 </ScrollArea>
 
-                {/* Footer Section with Done Toggle */}
-                <div className="flex items-center justify-center pb-4 pt-2 px-4 bg-sidebar border-t border-sidebar-border/20">
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        className={cn(
-                            "h-7 gap-2 px-4",
-                            "flex shrink-0 items-center rounded-full text-[9px] font-bold uppercase tracking-widest transition-all",
-                            showCompleted
-                                ? "text-primary bg-primary/10 hover:bg-primary/20"
-                                : "text-muted-foreground/60 hover:text-foreground hover:bg-muted-foreground/5"
-                        )}
-                        onClick={() => updateGeneralSettings({ tasksShowDone: !showCompleted })}
-                    >
-                        {showCompleted ? <Eye size={12} /> : <EyeOff size={12} />}
-                        Show Done
-                    </Button>
-                </div>
+
             </div>
         </aside>
     );

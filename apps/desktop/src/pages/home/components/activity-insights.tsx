@@ -2,7 +2,7 @@
 
 import { LATE_SENTENCES, ON_TIME_SENTENCES } from "@/src/pages/home/data/sentences";
 import { getStorageEngine, useDbStore, useNotesStore, useTasksStore } from "@annota/core";
-import { Activity, FileText, Flame, TrendingUp } from "lucide-react";
+import { Activity, CheckCircle2, FileText, Flame, Target, TrendingUp, Zap } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Label, Pie, PieChart, XAxis } from "recharts";
 
@@ -158,7 +158,7 @@ export function ActivityInsights() {
             else if (i < pastOnly.length - 1) break;
         }
 
-        return { peak, average, streak };
+        return { peak, average, streak, total: totalActivity };
     }, [activityChartData]);
 
     const taskCompletionChartData = useMemo(() => {
@@ -303,7 +303,10 @@ export function ActivityInsights() {
                 <Card className="border-border/40 bg-card/30 shadow-none p-3 pb-0 gap-0 flex flex-col relative overflow-hidden group flex-1 min-h-0">
                     <div className="pb-3 flex items-center justify-between">
                         <div className="flex flex-col gap-0.5">
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-foreground/60">Execution rate</span>
+                            <div className="flex items-center gap-1.5 text-foreground/60">
+                                <CheckCircle2 size={10} className="text-[#8b5cf6]" />
+                                <span className="text-[10px] font-bold uppercase tracking-widest leading-none">Execution rate</span>
+                            </div>
                             <div className="flex items-center gap-1">
                                 <span className="text-xl font-black text-foreground/90">{Math.round(completionStats.onTimeRate)}%</span>
                                 <span className={`text-[8px] font-bold uppercase ${effectiveStatus.bg} ${effectiveStatus.color} px-1 rounded-sm`}>
@@ -408,32 +411,44 @@ export function ActivityInsights() {
                             </div>
                         </TooltipProvider>
 
-                        <div className="w-full grid grid-cols-1 gap-2">
-                            <div className="w-full flex items-center justify-between px-2 py-2 rounded-lg bg-orange-500/3 border border-orange-500/10 hover:bg-orange-500/5 transition-colors group">
-                                <div className="flex items-center gap-2">
-                                    <div className="p-1.5 rounded-md bg-orange-500/10 text-orange-500 group-hover:scale-110 transition-transform">
-                                        <Flame size={12} />
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-[9.5px] font-bold uppercase tracking-widest text-foreground/60 leading-none">Peak day</span>
-                                    </div>
+                        <div className="w-full grid grid-cols-2 gap-x-2 gap-y-1.5 px-1 pb-1 mt-auto">
+                            <div className="flex items-center justify-between p-1.5 px-2 rounded-lg bg-orange-500/5 border border-orange-500/5 group">
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                    <Flame size={10} className="text-orange-500" />
+                                    <span className="text-[8px] font-bold uppercase tracking-widest text-foreground/40 leading-none truncate">Peak</span>
                                 </div>
-                                <div className="text-lg font-black tabular-nums text-foreground/90 tracking-tighter">
-                                    {heatmapStats.peak}<span className="text-[10px] font-bold text-foreground/30 ml-1 italic">pts</span>
+                                <div className="text-[11px] font-black tabular-nums text-foreground/90 tracking-tight shrink-0">
+                                    {heatmapStats.peak}<span className="text-[7.5px] font-bold text-foreground/30 ml-0.5 italic">pts</span>
                                 </div>
                             </div>
 
-                            <div className="w-full flex items-center justify-between px-2 py-2 rounded-lg bg-blue-500/3 border border-blue-500/10 hover:bg-blue-500/5 transition-colors group">
-                                <div className="flex items-center gap-2">
-                                    <div className="p-1.5 rounded-md bg-blue-500/10 text-blue-500 group-hover:scale-110 transition-transform">
-                                        <TrendingUp size={12} />
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-[9.5px] font-bold uppercase tracking-widest text-foreground/60 leading-none">Average</span>
-                                    </div>
+                            <div className="flex items-center justify-between p-1.5 px-2 rounded-lg bg-blue-500/5 border border-blue-500/5 group">
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                    <TrendingUp size={10} className="text-blue-500" />
+                                    <span className="text-[8px] font-bold uppercase tracking-widest text-foreground/40 leading-none truncate">Avg</span>
                                 </div>
-                                <div className="text-lg font-black tabular-nums text-foreground/90 tracking-tighter">
-                                    {heatmapStats.average}<span className="text-[10px] font-bold text-foreground/30 ml-1 italic">pts</span>
+                                <div className="text-[11px] font-black tabular-nums text-foreground/90 tracking-tight shrink-0">
+                                    {heatmapStats.average}<span className="text-[7.5px] font-bold text-foreground/30 ml-0.5 italic">pts</span>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center justify-between p-1.5 px-2 rounded-lg bg-purple-500/5 border border-purple-500/5 group">
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                    <Zap size={10} className="text-purple-500" />
+                                    <span className="text-[8px] font-bold uppercase tracking-widest text-foreground/40 leading-none truncate">Streak</span>
+                                </div>
+                                <div className="text-[11px] font-black tabular-nums text-foreground/90 tracking-tight shrink-0">
+                                    {heatmapStats.streak}<span className="text-[7.5px] font-bold text-foreground/30 ml-0.5 italic">days</span>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center justify-between p-1.5 px-2 rounded-lg bg-emerald-500/5 border border-emerald-500/5 group">
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                    <Target size={10} className="text-emerald-500" />
+                                    <span className="text-[8px] font-bold uppercase tracking-widest text-foreground/40 leading-none truncate">Total</span>
+                                </div>
+                                <div className="text-[11px] font-black tabular-nums text-foreground/90 tracking-tight shrink-0">
+                                    {heatmapStats.total}<span className="text-[7.5px] font-bold text-foreground/30 ml-0.5 italic">pts</span>
                                 </div>
                             </div>
                         </div>

@@ -81,7 +81,7 @@ export function FileInput({ onSubmit, onPickFromLibrary, onPickDocument, onTakeP
             {/* Divider */}
             <View style={styles.dividerRow}>
                 <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-                <Text style={[styles.dividerText, { color: colors.border }]}>or paste URL</Text>
+                <Text style={[styles.dividerText, { color: colors.border }]}>or paste Image URL</Text>
                 <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
             </View>
 
@@ -101,7 +101,7 @@ export function FileInput({ onSubmit, onPickFromLibrary, onPickDocument, onTakeP
                             value={value}
                             onChangeText={onChange}
                             onBlur={onBlur}
-                            placeholder="https://example.com/file.png"
+                            placeholder="https://example.com/image.png"
                             placeholderTextColor={dark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)'}
                             autoCapitalize="none"
                             autoCorrect={false}

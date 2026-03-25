@@ -23,7 +23,7 @@ export default function AppShell() {
                     <main
                         className={cn(
                             "flex-1 overflow-hidden bg-background transition-all duration-300 ease-in-out",
-                            "m-2 rounded-2xl border",
+                            "m-2 mt-0 rounded-2xl border",
                             "border-sidebar-border shadow-sm"
                         )}
                         dir="ltr" // Editor/Content is always LTR unless specific note direction is set
@@ -32,7 +32,7 @@ export default function AppShell() {
                     </main>
                     <div className={cn(
                         "transition-all duration-300 ease-in-out overflow-hidden flex shrink-0 bg-sidebar",
-                        general.isTaskCalendarOpen ? "w-72" : "w-0"
+                        general.isTaskCalendarOpen ? "w-64" : "w-0"
                     )}>
                         <TaskCalendarSidebar />
                     </div>

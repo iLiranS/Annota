@@ -6,15 +6,14 @@ export default {
   "expo": {
     name: IS_DEV ? 'Annota (Dev)' : 'Annota',
     "slug": "annota",
-    "version": "1.0.0",
+    "version": "0.1.0",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "annota",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      bundleIdentifier: IS_DEV ? 'com.anonymous.annota.dev' : 'com.anonymous.annota',
-      "icon": {
+      bundleIdentifier: IS_DEV ? 'online.annota.client.dev' : 'online.annota.client', "icon": {
         dark: iconPath,
         light: iconPath,
         tinted: iconPath
