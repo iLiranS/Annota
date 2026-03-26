@@ -20,6 +20,7 @@ export interface PlatformAdapters {
     crypto: {
         randomBytes: (size: number) => Uint8Array;
         sha256HexUtf8: (data: string) => Promise<string>;
+        argon2id: (params: { message: Uint8Array; nonce: Uint8Array; memory: number; passes: number; parallelism: number; tagLength: number }) => Promise<Uint8Array>;
         /**
          * Note for future desktop implementation: Web Crypto API appends the 16-byte authTag 
          * to the end of the ciphertext as a single ArrayBuffer. Remember to slice the last 

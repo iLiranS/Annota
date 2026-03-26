@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/button"
 import { useSidebar } from "@/components/ui/sidebar"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { useAppTheme } from "@/hooks/use-app-theme"
 import { cn } from "@/lib/utils"
 import { useSettingsStore, useSyncStore, useUserStore } from "@annota/core"
 import { PanelLeft, PanelRight } from "lucide-react"
@@ -21,7 +20,6 @@ export function MainNavbar() {
     const { isSyncing } = useSyncStore()
     const { session } = useUserStore();
     const { general, updateGeneralSettings } = useSettingsStore();
-    const { colors } = useAppTheme();
     const { open, toggleSidebar } = useSidebar();
 
 

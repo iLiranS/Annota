@@ -3,9 +3,11 @@
 import { LATE_SENTENCES, ON_TIME_SENTENCES } from "@/src/pages/home/data/sentences";
 import { getStorageEngine, useDbStore, useNotesStore, useTasksStore } from "@annota/core";
 import { Activity, CheckCircle2, FileText, Flame, Target, TrendingUp, Zap } from "lucide-react";
+import { Ionicons } from "@/components/ui/ionicons";
 import { useEffect, useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Label, Pie, PieChart, XAxis } from "recharts";
 
+import { cn } from "@/lib/utils";
 import {
     Card,
     CardContent,
@@ -87,7 +89,7 @@ export function ActivityInsights() {
                 const folder = folders.find(f => f.id === fId);
                 folderCounts[fId] = {
                     count: 0,
-                    icon: folder?.icon || (fId === "root" ? "grid-outline" : "folder-outline")
+                    icon: folder?.icon || "folder-outline"
                 };
             }
             folderCounts[fId].count++;
@@ -99,7 +101,7 @@ export function ActivityInsights() {
                 id,
                 name: folder ? folder.name : (id === 'system-daily-notes' ? "Daily" : "Other"),
                 value: data.count,
-                icon: id === 'system-daily-notes' ? "calendar" : data.icon,
+                icon: id === 'system-daily-notes' ? "calendar-outline" : data.icon,
                 fill: id === 'system-daily-notes' ? "#8B5CF6" : folder?.color || "dimgrey"
             };
         }).sort((a, b) => b.value - a.value);
@@ -230,7 +232,8 @@ export function ActivityInsights() {
         return {
             sentence: isOnTime ? (dailySentences?.onTime ?? "Stay consistent") : (dailySentences?.late ?? "Tighten timing"),
             color: isOnTime ? "text-[#8b5cf6]" : "text-[#FF6347]",
-            bg: isOnTime ? "bg-[#8b5cf6]/10" : "bg-[#FF6347]/10"
+            bg: isOnTime ? "bg-[#8b5cf6]/10" : "bg-[#FF6347]/10",
+            from: isOnTime ? "from-accent/20" : "from-[#FF6347]/20"
         };
     }, [completionStats, dailySentences]);
 
@@ -281,7 +284,10 @@ export function ActivityInsights() {
                                     return (
                                         <div key={f.id} className="flex flex-col gap-1">
                                             <div className="flex items-center justify-between text-[9px] font-bold uppercase tracking-tight">
-                                                <span className="truncate text-foreground/70">{f.name}</span>
+                                                <div className="flex items-center gap-1.5 min-w-0">
+                                                    <Ionicons name={f.icon} size={10} color={f.fill} />
+                                                    <span className="truncate text-foreground/70">{f.name}</span>
+                                                </div>
                                                 <span className="text-muted-foreground tabular-nums">{percentage}%</span>
                                             </div>
                                             <div className="h-1 w-full bg-muted/20 rounded-full overflow-hidden">
@@ -343,7 +349,7 @@ export function ActivityInsights() {
                         />
                     </div>
 
-                    <div className="flex-1 min-h-0 -mx-3 bg-linear-to-t from-accent/20 to-transparent pt-4">
+                    <div className={cn("flex-1 min-h-0 -mx-3 bg-linear-to-t to-transparent pt-4", effectiveStatus.from)}>
                         <ChartContainer config={chartConfig} className="h-16 w-full aspect-auto!">
                             <BarChart
                                 accessibilityLayer

@@ -299,9 +299,9 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
             data-state={open ? "expanded" : "collapsed"}
             dir={general.appDirection}
             className={cn(
-                "group/sidebar relative flex h-full flex-col bg-sidebar overflow-hidden shrink-0",
+                "group/sidebar relative flex h-full flex-col bg-note-bg overflow-hidden shrink-0",
                 general.appDirection === "rtl" ? "border-l" : "border-r",
-                "select-none border-border/30",
+                "select-none border-border/50",
                 !isResizing && "transition-all duration-300 ease-in-out",
                 className
             )}

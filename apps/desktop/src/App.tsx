@@ -76,6 +76,7 @@ function App() {
   const setSession = useUserStore((state) => state.setSession);
   const session = useUserStore((state) => state.session);
   const hasMasterKey = useUserStore((state) => state.hasMasterKey);
+  const saltHex = useUserStore((state) => state.saltHex);
 
   useEffect(() => {
     let cancelled = false;
@@ -290,7 +291,7 @@ function App() {
 
   // Sync Scheduler
   useEffect(() => {
-    if (!session || !hasMasterKey || bootstrapState !== "ready") return;
+    if (!session || !hasMasterKey || !saltHex || bootstrapState !== "ready") return;
 
     let cancelled = false;
 
@@ -298,7 +299,7 @@ function App() {
       const key = await getMasterKey(session.user.id);
       if (!key || cancelled) return;
 
-      SyncScheduler.getInstance().init(key, {
+      SyncScheduler.getInstance().init(key, saltHex, {
         reinitStores: async () => {
           await Promise.all([
             useNotesStore.getState().initApp(),
@@ -316,7 +317,7 @@ function App() {
       }, session.user.id);
 
       // 2. Kick off any pending file downloads from previous sessions
-      fileSyncService.retryPendingDownloads(key, session.user.id).catch(err => {
+      fileSyncService.retryPendingDownloads(key, saltHex, session.user.id).catch(err => {
         console.error('[Startup] Failed to retry pending file downloads:', err);
       });
     };
@@ -327,7 +328,7 @@ function App() {
       cancelled = true;
       SyncScheduler.getInstance().dispose();
     };
-  }, [session, hasMasterKey, bootstrapState]);
+  }, [session, hasMasterKey, saltHex, bootstrapState]);
 
   const location = useLocation();
   const locationState = location.state as { background?: Location };

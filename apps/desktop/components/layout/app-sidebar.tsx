@@ -225,7 +225,7 @@ export function AppSidebar() {
                                     }
                                     tooltip="Daily Notes"
                                 >
-                                    <DailyNoteIcon size={18} className="text-violet-500" />
+                                    <DailyNoteIcon size={16} className="text-violet-500" />
 
                                     <span className="font-medium">{dailyFolder?.name ?? "Daily Notes"}</span>
                                 </SidebarMenuButton>

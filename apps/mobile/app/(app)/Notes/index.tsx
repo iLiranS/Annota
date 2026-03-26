@@ -141,6 +141,17 @@ export default function NotesList() {
         });
     }, []);
 
+    const [isTasksCollapsed, setIsTasksCollapsed] = useState(false);
+
+    const tasksChevronStyle = useAnimatedStyle(() => ({
+        transform: [{
+            rotate: withTiming(!isTasksCollapsed ? '90deg' : '0deg', {
+                duration: 300,
+                easing: Easing.bezier(0.4, 0, 0.2, 1)
+            })
+        }]
+    }));
+
     // Sync progress tracking
     const isSyncing = useSyncStore(state => state.isSyncing);
     const scrollY = useSharedValue(0);
@@ -472,9 +483,10 @@ export default function NotesList() {
                 keyExtractor={getItemKey}
                 onScroll={scrollHandler}
                 scrollEventThrottle={16}
+                style={styles.flatList}
                 contentContainerStyle={[
                     styles.listContent,
-                    { paddingBottom: folderTasks.length > 0 ? 0 : 100 }
+                    { flexGrow: 1 }
                 ]}
                 itemLayoutAnimation={LinearTransition.duration(300).easing(Easing.bezier(0.4, 0, 0.2, 1))}
                 ListEmptyComponent={
@@ -492,6 +504,9 @@ export default function NotesList() {
                         </Text>
                     </View>
                 }
+                ListFooterComponent={
+                    folderTasks.length === 0 ? <View style={{ height: 100 }} /> : null
+                }
                 renderItem={renderItem}
             />
 
@@ -504,32 +519,53 @@ export default function NotesList() {
                         backgroundColor: colors.background,
                     }
                 ]}>
-                    <View style={styles.tasksHeader}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
-                            <Ionicons name="checkmark-circle-outline" size={16} color={colors.text + '60'} />
-                            <ThemedText style={styles.tasksHeaderText}>Active Tasks</ThemedText>
-                        </View>
-                        <ThemedText style={{ fontSize: 10, color: colors.text + '40', fontWeight: '500' }}>
-                            {folderTasks.length}
-                        </ThemedText>
-                    </View>
-                    <Animated.ScrollView
-                        style={{ maxHeight: 150 }}
-                        contentContainerStyle={{ gap: 4, paddingBottom: 10 }}
-                        showsVerticalScrollIndicator={false}
+                    <HapticPressable 
+                        onPress={() => setIsTasksCollapsed(!isTasksCollapsed)}
+                        style={[styles.sectionHeaderRow, { marginVertical: 4 }]}
                     >
-                        {folderTasks.map((task) => (
-                            <CompactTaskCard
-                                key={task.id}
-                                task={task}
-                                onToggle={() => toggleComplete(task.id)}
-                                onPress={() => router.push(`/Tasks/${task.id}`)}
-                                hideFolder={true}
-                            />
-                        ))}
-                    </Animated.ScrollView>
+                        <Ionicons name="checkmark-circle" size={14} color={colors.text + '50'} />
+                        <ThemedText style={[
+                            styles.sectionHeaderText,
+                            { color: colors.text + '50', flex: 1 }
+                        ]}>
+                            TASKS
+                        </ThemedText>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <ThemedText style={{ fontSize: 10, color: colors.text + '40', fontWeight: '500' }}>
+                                {folderTasks.length}
+                            </ThemedText>
+                            <Animated.View style={tasksChevronStyle}>
+                                <Ionicons name="chevron-forward" size={16} color={colors.text + '50'} />
+                            </Animated.View>
+                        </View>
+                    </HapticPressable>
+                    
+                    {!isTasksCollapsed && (
+                        <Animated.View
+                            entering={FadeIn.duration(200)}
+                            exiting={FadeOut.duration(200)}
+                            layout={LinearTransition.duration(300).easing(Easing.bezier(0.4, 0, 0.2, 1))}
+                        >
+                            <Animated.ScrollView
+                                style={{ maxHeight: 150 }}
+                                contentContainerStyle={{ gap: 4, paddingBottom: 10 }}
+                                showsVerticalScrollIndicator={false}
+                            >
+                                {folderTasks.map((task) => (
+                                    <CompactTaskCard
+                                        key={task.id}
+                                        task={task}
+                                        onToggle={() => toggleComplete(task.id)}
+                                        onPress={() => router.push(`/Tasks/${task.id}`)}
+                                        hideFolder={true}
+                                    />
+                                ))}
+                            </Animated.ScrollView>
+                        </Animated.View>
+                    )}
                 </View>
             )}
+
 
             {/* Bottom Footer */}
             <View style={[
@@ -602,13 +638,15 @@ export default function NotesList() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        paddingTop: 16,
+    },
+    flatList: {
+        flex: 1,
     },
     headerButton: {
         padding: 4,
     },
     listContent: {
-        paddingBottom: 100,
+        paddingTop: 16,
     },
     sectionHeaderRow: {
         flexDirection: 'row',
@@ -625,6 +663,7 @@ const styles = StyleSheet.create({
         letterSpacing: 0.8,
     },
     emptyContainer: {
+        flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
         paddingVertical: 48,
@@ -659,16 +698,10 @@ const styles = StyleSheet.create({
     },
     tasksContainer: {
         paddingHorizontal: 20,
-        paddingTop: 12,
+        paddingTop: 4,
         borderTopWidth: 1,
         maxHeight: 280,
         paddingBottom: 110, // Account for absolute footer and FAB
-    },
-    tasksHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        marginBottom: 8,
     },
     tasksHeaderText: {
         fontSize: 12,

@@ -22,9 +22,9 @@ export default function AppShell() {
                 <div className="flex flex-1 overflow-hidden">
                     <main
                         className={cn(
-                            "flex-1 overflow-hidden bg-background transition-all duration-300 ease-in-out",
-                            "m-2 mt-0 rounded-2xl border",
-                            "border-sidebar-border shadow-sm"
+                            "flex-1 overflow-hidden bg-sidebar transition-all duration-300 ease-in-out",
+                            "m-2 mt-0 rounded-2xl ",
+                            "border border-sidebar-border/60"
                         )}
                         dir="ltr" // Editor/Content is always LTR unless specific note direction is set
                     >

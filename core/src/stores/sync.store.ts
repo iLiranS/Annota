@@ -16,10 +16,16 @@ interface SyncState {
     /** Latest error message (cleared on success) */
     syncError: string | null;
 
-    /** Cached AES key derived from master mnemonic */
-    aesKey: Buffer | null;
-    /** The mnemonic used to derive the cached AES key */
+    /** Cached master key derived from mnemonic+salt */
+    derivedMasterKey: Buffer | null;
+    /** Cached subkey for notes/content */
+    notesKey: Buffer | null;
+    /** Cached subkey for files/blobs */
+    filesKey: Buffer | null;
+    /** The mnemonic used to derive the cached keys */
     activeMnemonic: string | null;
+    /** The salt hex used to derive the cached keys */
+    activeSaltHex: string | null;
 
     /** The user ID whose sync pointer is currently loaded. */
     syncUserId: string | null;
@@ -28,8 +34,8 @@ interface SyncState {
     setOnline: (v: boolean) => void;
     setLastSyncAt: (d: Date) => void;
     setSyncError: (e: string | null) => void;
-    setAesKey: (mnemonic: string | null, key: Buffer | null) => void;
-    clearAesKey: () => void;
+    setDerivedKeys: (mnemonic: string | null, saltHex: string | null, keys: { masterKey: Buffer; notesKey: Buffer; filesKey: Buffer } | null) => void;
+    clearDerivedKeys: () => void;
     forceSync: () => Promise<void>;
     /** Hydrate lastSyncAt from persistent storage for the given user. */
     loadLastSyncAt: (userId: string) => Promise<void>;
@@ -44,8 +50,11 @@ export const useSyncStore = create<SyncState>((set, get) => ({
     isOnline: true, // Optimistic default
     lastSyncAt: null,
     syncError: null,
-    aesKey: null,
+    derivedMasterKey: null,
+    notesKey: null,
+    filesKey: null,
     activeMnemonic: null,
+    activeSaltHex: null,
     syncUserId: null,
 
     setSyncing: (isSyncing) => set({ isSyncing }),
@@ -59,8 +68,20 @@ export const useSyncStore = create<SyncState>((set, get) => ({
         }
     },
     setSyncError: (syncError) => set({ syncError }),
-    setAesKey: (activeMnemonic, aesKey) => set({ activeMnemonic, aesKey }),
-    clearAesKey: () => set({ activeMnemonic: null, aesKey: null }),
+    setDerivedKeys: (activeMnemonic, activeSaltHex, keys) => set({
+        activeMnemonic,
+        activeSaltHex,
+        derivedMasterKey: keys ? keys.masterKey : null,
+        notesKey: keys ? keys.notesKey : null,
+        filesKey: keys ? keys.filesKey : null,
+    }),
+    clearDerivedKeys: () => set({
+        activeMnemonic: null,
+        activeSaltHex: null,
+        derivedMasterKey: null,
+        notesKey: null,
+        filesKey: null,
+    }),
     forceSync: async () => {
         // Lazy require breaks the cycle!
         const { SyncScheduler } = await import('../sync/sync-scheduler');
@@ -95,8 +116,11 @@ export const useSyncStore = create<SyncState>((set, get) => ({
             isSyncing: false,
             lastSyncAt: null,
             syncError: null,
-            aesKey: null,
+            derivedMasterKey: null,
+            notesKey: null,
+            filesKey: null,
             activeMnemonic: null,
+            activeSaltHex: null,
             syncUserId: null,
         });
     },
@@ -107,8 +131,11 @@ export const useSyncStore = create<SyncState>((set, get) => ({
             isSyncing: false,
             lastSyncAt: null,
             syncError: null,
-            aesKey: null,
+            derivedMasterKey: null,
+            notesKey: null,
+            filesKey: null,
             activeMnemonic: null,
+            activeSaltHex: null,
             syncUserId: null,
         });
         console.log(`[SyncStore] Cleared sync pointer for user ${userId}`);

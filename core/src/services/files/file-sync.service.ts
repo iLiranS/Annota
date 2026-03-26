@@ -5,7 +5,7 @@ import { storageApi } from '../../api/storage.api';
 import * as FilesRepo from '../../db/repositories/files.repository';
 import type { FileInsert } from '../../db/schema';
 import { useSyncStore } from '../../stores/sync.store';
-import { decryptImageBytes, deriveAesKey, encryptImageBytes } from '../../utils/crypto';
+import { decodeSaltHex, decryptFileBytes, deriveKeysFromMnemonic, encryptFileBytes } from '../../utils/crypto';
 import { getFilesDirectory, resolveLocalUri } from './file.service';
 
 const BUCKET_NAME = 'e2e_attachments';
@@ -16,6 +16,7 @@ export interface QueueItem {
     noteId: string;
     nonce: string;
     masterKey: string;
+    saltHex: string;
     userId: string;
 }
 
@@ -38,20 +39,27 @@ class FileSyncService {
     private downloadQueue: QueueItem[] = [];
     private activeDownloads: number = 0;
 
+    private async getFilesKey(masterKey: string, saltHex: string): Promise<Buffer> {
+        const { derivedMasterKey, notesKey, filesKey, activeMnemonic, activeSaltHex, setDerivedKeys } = useSyncStore.getState();
+        if (derivedMasterKey && notesKey && filesKey && activeMnemonic === masterKey && activeSaltHex === saltHex) {
+            return filesKey;
+        }
+        const saltBytes = decodeSaltHex(saltHex);
+        const keys = await deriveKeysFromMnemonic(masterKey, saltBytes);
+        const cached = {
+            masterKey: Buffer.from(keys.masterKey),
+            notesKey: Buffer.from(keys.notesKey),
+            filesKey: Buffer.from(keys.filesKey),
+        };
+        setDerivedKeys(masterKey, saltHex, cached);
+        return cached.filesKey;
+    }
+
     /**
      * Push pending files linked to HEAD versions of notes up to Supabase.
      */
-    async pushFiles(masterKey: string, userId: string, noteIdsToRefresh: string[] = []): Promise<void> {
-        // 1. Get/Derive the AES key
-        const { aesKey, activeMnemonic, setAesKey } = useSyncStore.getState();
-        const currentKey = (aesKey && activeMnemonic === masterKey)
-            ? aesKey
-            : Buffer.from(deriveAesKey(masterKey));
-
-        // 2. Update the store if we derived a new one
-        if (activeMnemonic !== masterKey) {
-            setAesKey(masterKey, currentKey);
-        }
+    async pushFiles(masterKey: string, saltHex: string, userId: string, noteIdsToRefresh: string[] = []): Promise<void> {
+        const filesKey = await this.getFilesKey(masterKey, saltHex);
 
         const candidates = await FilesRepo.getPendingFilesLinkedToLatestVersions();
 
@@ -77,7 +85,7 @@ class FileSyncService {
                     }
 
                     // 2. Encrypt raw bytes directly
-                    const { encryptedBytes, nonce } = await encryptImageBytes(rawBytes, currentKey);
+                    const { encryptedBytes, nonce } = await encryptFileBytes(rawBytes, filesKey);
 
                     // 3. Upload encrypted bytes to Storage
                     const storagePath = `${userId}/${file.id}`;
@@ -151,13 +159,14 @@ class FileSyncService {
         }
     }
 
-    async retryPendingDownloads(masterKey: string, userId: string) {
+    async retryPendingDownloads(masterKey: string, saltHex: string, userId: string) {
         const pendingItems = await FilesRepo.getPendingDownloads();
         if (pendingItems.length > 0) {
             console.log(`[FileSync] Retrying ${pendingItems.length} pending downloads...`);
             const itemsToQueue: QueueItem[] = pendingItems.map(p => ({
                 ...p,
                 masterKey,
+                saltHex,
                 userId
             }));
             this.queueFilesForDownload(itemsToQueue);
@@ -234,19 +243,10 @@ class FileSyncService {
             });
             const encryptedBytes = new Uint8Array(arrayBuffer);
 
-            // 1. Get/Derive the AES key
-            const { aesKey, activeMnemonic, setAesKey } = useSyncStore.getState();
-            const currentKey = (aesKey && activeMnemonic === item.masterKey)
-                ? aesKey
-                : Buffer.from(deriveAesKey(item.masterKey));
-
-            // 2. Update the store if we derived a new one
-            if (activeMnemonic !== item.masterKey) {
-                setAesKey(item.masterKey, currentKey);
-            }
+            const filesKey = await this.getFilesKey(item.masterKey, item.saltHex);
 
             // Decrypt → raw bytes
-            const decryptedBytes = await decryptImageBytes(encryptedBytes, item.nonce, currentKey);
+            const decryptedBytes = await decryptFileBytes(encryptedBytes, item.nonce, filesKey);
 
             // Ensure files directory exists
             const filesDir = await getFilesDirectory();

@@ -7,11 +7,11 @@ export default function HomePage() {
 
     return (
         // 1. Root container is strictly screen height. No overflow here.
-        <div dir="ltr" className="flex h-full flex-col  bg-background max-w-7xl mx-auto pb-2 ">
+        <div dir="ltr" className="flex h-full flex-col  bg-note-bg max-w-7xl mx-auto pb-2 ">
 
             {/* Top Section - Compact Header */}
             {/* 2. Added shrink-0 so the header never compresses */}
-            <div className="flex items-center justify-between px-8 py-4 border-b border-border/10 bg-card/5 backdrop-blur-xl z-10 shrink-0">
+            <div className="flex items-center justify-between px-8 py-4 border-b border-border/10  backdrop-blur-xl z-10 shrink-0">
                 <div className="">
                     <GreetingHeader />
                 </div>

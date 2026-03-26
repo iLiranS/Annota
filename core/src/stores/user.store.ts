@@ -3,7 +3,6 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { areAdaptersInitialized } from '../adapters';
 import { authApi } from '../api/auth.api';
-import { userApi } from '../api/user.api';
 import { userService } from '../services/user.service';
 import { getMasterKey } from '../utils/crypto';
 import { createStorageAdapter } from './config';
@@ -15,10 +14,8 @@ type UserState = {
     user: User | null;
     isGuest: boolean;
     initialized: boolean;
-    /** Cached key_validator hash from Supabase profiles (non-persisted). */
-    keyValidator: string | null;
-    /** Whether fetchKeyValidator has already run for this session. */
-    keyValidatorFetched: boolean;
+    /** Cached salt (hex) from Supabase profiles (persisted). */
+    saltHex: string | null;
     /** Cached user role from Supabase (non-persisted). */
     role: UserRole;
     /** Cached user sub_exp_date from Supabase (non-persisted). */
@@ -39,8 +36,6 @@ type UserState = {
     setSession: (session: Session | null) => void;
     setGuest: (guest: boolean) => void;
     signOut: () => Promise<void>;
-    /** Fetch key_validator from Supabase once, caching the result. */
-    fetchKeyValidator: (userId: string) => Promise<string | null>;
     updateDisplayName: (displayName: string) => Promise<void>;
     getDisplayName: () => Promise<string | null>;
     getUserRole: () => Promise<UserRole>;
@@ -59,8 +54,7 @@ export const useUserStore = create<UserState>()(
             user: null as User | null,
             isGuest: false,
             initialized: false,
-            keyValidator: null,
-            keyValidatorFetched: false,
+            saltHex: null,
             role: null,
             sub_exp_date: null,
             roleFetched: false,
@@ -83,8 +77,7 @@ export const useUserStore = create<UserState>()(
                             displayNameFetched: true,
                             role: profile.role,
                             roleFetched: true,
-                            keyValidator: profile.key_validator,
-                            keyValidatorFetched: true,
+                            saltHex: profile.salt ?? null,
                             sub_exp_date: profile.sub_exp_date,
                             storage_used_bytes: profile.storage_used_bytes || 0,
                             created_at: profile.created_at,
@@ -133,8 +126,7 @@ export const useUserStore = create<UserState>()(
                         role: isSameUser ? state.role : null,
                         sub_exp_date: isSameUser ? state.sub_exp_date : null,
                         roleFetched: isSameUser ? state.roleFetched : false,
-                        keyValidator: isSameUser ? state.keyValidator : null,
-                        keyValidatorFetched: isSameUser ? state.keyValidatorFetched : false,
+                        saltHex: isSameUser ? state.saltHex : null,
                         storage_used_bytes: isSameUser ? state.storage_used_bytes : 0,
                         created_at: isSameUser ? state.created_at : null,
                         updated_at: isSameUser ? state.updated_at : null,
@@ -150,25 +142,12 @@ export const useUserStore = create<UserState>()(
                     user: null,
                     displayName: null,
                     displayNameFetched: false,
+                    saltHex: null,
                 }),
 
             signOut: async () => {
                 await authApi.signOut();
-                set({ session: null, user: null, isGuest: false, keyValidator: null, keyValidatorFetched: false, role: null, roleFetched: false, displayName: null, displayNameFetched: false, hasMasterKey: null });
-            },
-
-            fetchKeyValidator: async (userId: string): Promise<string | null> => {
-                const state = get();
-                if (state.keyValidatorFetched) return state.keyValidator;
-
-                try {
-                    const validator = await userApi.getKeyValidator(userId);
-                    set({ keyValidator: validator, keyValidatorFetched: true });
-                    return validator;
-                } catch (e) {
-                    console.warn('[user.store] fetchKeyValidator failed (offline likely):', e);
-                    return state.keyValidator;
-                }
+                set({ session: null, user: null, isGuest: false, saltHex: null, role: null, roleFetched: false, displayName: null, displayNameFetched: false, hasMasterKey: null });
             },
 
             updateDisplayName: async (displayName: string) => {
@@ -272,8 +251,7 @@ export const useUserStore = create<UserState>()(
                     session: null,
                     user: null,
                     isGuest: false,
-                    keyValidator: null,
-                    keyValidatorFetched: false,
+                    saltHex: null,
                     role: null,
                     roleFetched: false,
                     displayName: null,
@@ -297,7 +275,7 @@ export const useUserStore = create<UserState>()(
                 hasMasterKey: state.hasMasterKey,
                 role: state.role,
                 sub_exp_date: state.sub_exp_date,
-                keyValidator: state.keyValidator,
+                saltHex: state.saltHex,
                 storage_used_bytes: state.storage_used_bytes,
                 created_at: state.created_at,
                 updated_at: state.updated_at

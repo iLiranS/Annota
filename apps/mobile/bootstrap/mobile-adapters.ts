@@ -63,6 +63,28 @@ export function createMobileAdapters(): PlatformAdapters {
                 hash.update(data, 'utf8');
                 return hash.digest('hex') as unknown as string;
             },
+            argon2id: async ({ message, nonce, memory, passes, parallelism, tagLength }) => {
+                return await new Promise<Uint8Array>((resolve, reject) => {
+                    crypto.argon2(
+                        'argon2id',
+                        {
+                            message,
+                            nonce,
+                            memory,
+                            passes,
+                            parallelism,
+                            tagLength,
+                        },
+                        (err: Error | null, result: Buffer) => {
+                            if (err) {
+                                reject(err);
+                                return;
+                            }
+                            resolve(new Uint8Array(result));
+                        },
+                    );
+                });
+            },
             aes256GcmEncrypt: async ({ key, nonce, plaintext }: { key: Uint8Array; nonce: Uint8Array; plaintext: Uint8Array }) => {
                 const cipher = crypto.createCipheriv('aes-256-gcm', key as any, nonce as any);
                 const encryptedContent = cipher.update(Buffer.from(plaintext) as any);

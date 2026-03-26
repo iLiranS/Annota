@@ -575,7 +575,7 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                 <div className="editor-scroller" style={{ flex: 1, overflowY: 'auto', padding: '0 24px', scrollPaddingBottom: 100 }}>
                     <div style={{ maxWidth: editorSettings.noteWidth || '100%', margin: '0 auto', minHeight: '100%' }}>
                         {renderHeader?.()}
-                        <EditorContent editor={editor} style={{ outline: 'none', paddingTop: contentPaddingTop, paddingBottom: initialContent ? 100 : 0 }} />
+                        <EditorContent editor={editor} style={{ outline: 'none', paddingTop: contentPaddingTop, paddingBottom: initialContent && initialContent.length > 200 ? 100 : 0 }} />
                     </div>
                 </div>
                 {gallery.isVisible && renderImageGallery?.({

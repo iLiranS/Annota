@@ -1,5 +1,7 @@
 import { generateMnemonic, mnemonicToSeedSync, validateMnemonic } from 'bip39';
 import { Buffer } from 'buffer';
+import { hkdf } from '@noble/hashes/hkdf';
+import { sha256 } from '@noble/hashes/sha256';
 import { getPlatformAdapters } from '../adapters';
 import './polyfill';
 
@@ -54,29 +56,54 @@ export async function removeMasterKey(userId: string) {
 
 
 
-/**
- * Hash the derived encryption key from a mnemonic for server-side validation.
- * Returns a hex-encoded SHA-256 digest of the 32-byte AES key.
- */
-export async function hashMasterKey(mnemonic: string): Promise<string> {
-    const seed = mnemonicToSeedSync(mnemonic);
-    const keyBytes = seed.subarray(0, 32);
-    const hexData = Buffer.from(keyBytes).toString('hex');
-    return await getPlatformAdapters().crypto.sha256HexUtf8(hexData);
+const ARGON2_MEMORY_KIB = 65_536;
+const ARGON2_PASSES = 2;
+const ARGON2_PARALLELISM = 1;
+const ARGON2_TAG_LENGTH = 32;
+const HKDF_SALT = new Uint8Array(0);
+const HKDF_INFO_NOTES = Buffer.from('notes', 'utf8');
+const HKDF_INFO_FILES = Buffer.from('files', 'utf8');
+
+export function decodeSaltHex(saltHex: string): Uint8Array {
+    return new Uint8Array(Buffer.from(saltHex, 'hex'));
 }
 
 /**
- * Derive a 256-bit AES key from the 12-word mnemonic.
- * This is a CPU-intensive operation (BIP39 PBKDF2). Callers should cache the result.
+ * Derive a 256-bit master key from the 12-word mnemonic + salt (Argon2id).
  */
-export function deriveAesKey(mnemonic: string): Uint8Array {
+export async function deriveKeyFromMnemonic(mnemonic: string, salt: Uint8Array): Promise<Uint8Array> {
     const seed = mnemonicToSeedSync(mnemonic);
-    return new Uint8Array(seed.subarray(0, 32));
+    return await getPlatformAdapters().crypto.argon2id({
+        message: seed,
+        nonce: salt,
+        memory: ARGON2_MEMORY_KIB,
+        passes: ARGON2_PASSES,
+        parallelism: ARGON2_PARALLELISM,
+        tagLength: ARGON2_TAG_LENGTH,
+    });
 }
 
-function ensureKey(keyOrMnemonic: string | Uint8Array): Uint8Array {
+/**
+ * Split master key into subkeys using HKDF.
+ */
+export function deriveSubkeys(masterKey: Uint8Array): { notesKey: Uint8Array; filesKey: Uint8Array } {
+    const notesKey = hkdf(sha256, masterKey, HKDF_SALT, HKDF_INFO_NOTES, 32);
+    const filesKey = hkdf(sha256, masterKey, HKDF_SALT, HKDF_INFO_FILES, 32);
+    return { notesKey, filesKey };
+}
+
+export async function deriveKeysFromMnemonic(mnemonic: string, salt: Uint8Array): Promise<{ masterKey: Uint8Array; notesKey: Uint8Array; filesKey: Uint8Array }> {
+    const masterKey = await deriveKeyFromMnemonic(mnemonic, salt);
+    const { notesKey, filesKey } = deriveSubkeys(masterKey);
+    return { masterKey, notesKey, filesKey };
+}
+
+async function ensureKey(keyOrMnemonic: string | Uint8Array, salt?: Uint8Array): Promise<Uint8Array> {
     if (typeof keyOrMnemonic === 'string') {
-        return deriveAesKey(keyOrMnemonic);
+        if (!salt) {
+            throw new Error('Salt required');
+        }
+        return await deriveKeyFromMnemonic(keyOrMnemonic, salt);
     }
     return keyOrMnemonic;
 }
@@ -95,8 +122,8 @@ export interface EncryptedBinaryPayload {
  * Encrypts a JSON payload using AES-256-GCM.
  * Returns the encrypted data (with authTag appended) and the random nonce.
  */
-export async function encryptPayload(jsonPayload: string, keyOrMnemonic: string | Uint8Array): Promise<EncryptedPayload> {
-    const keyBytes = ensureKey(keyOrMnemonic);
+export async function encryptPayload(jsonPayload: string, keyOrMnemonic: string | Uint8Array, salt?: Uint8Array): Promise<EncryptedPayload> {
+    const keyBytes = await ensureKey(keyOrMnemonic, salt);
     const plaintextBytes = new Uint8Array(Buffer.from(jsonPayload, 'utf8'));
 
     const nonceBytes = getPlatformAdapters().crypto.randomBytes(12);
@@ -120,8 +147,14 @@ export async function encryptPayload(jsonPayload: string, keyOrMnemonic: string 
 /**
  * Decrypts an encrypted payload using AES-256-GCM.
  */
-export async function decryptPayload(encryptedHexWithTag: string, nonceHex: string, keyOrMnemonic: string | Uint8Array): Promise<string> {
-    const keyBytes = ensureKey(keyOrMnemonic);
+export async function decryptPayload(
+    encryptedHexWithTag: string,
+    nonceHex: string,
+    keyOrMnemonic: string | Uint8Array,
+    options?: { strict?: boolean; salt?: Uint8Array }
+): Promise<string> {
+    const strict = options?.strict === true;
+    const keyBytes = await ensureKey(keyOrMnemonic, options?.salt);
 
     try {
         const encryptedHex = encryptedHexWithTag.slice(0, -32);
@@ -144,17 +177,23 @@ export async function decryptPayload(encryptedHexWithTag: string, nonceHex: stri
         if (decrypted.startsWith('{') || decrypted.startsWith('[')) {
             return decrypted;
         }
+        if (strict) {
+            throw new Error('INVALID_DECRYPT');
+        }
         return '{}';
     } catch (e: any) {
+        if (strict) {
+            throw e;
+        }
         return '{}'; // Return empty object string to avoid JSON parse crashes
     }
 }
 
 /**
- * Encrypts raw image bytes using AES-256-GCM.
+ * Encrypts raw file bytes using AES-256-GCM.
  */
-export async function encryptImageBytes(rawBytes: Uint8Array, keyOrMnemonic: string | Uint8Array): Promise<EncryptedBinaryPayload> {
-    const keyBytes = ensureKey(keyOrMnemonic);
+export async function encryptFileBytes(rawBytes: Uint8Array, keyOrMnemonic: string | Uint8Array, salt?: Uint8Array): Promise<EncryptedBinaryPayload> {
+    const keyBytes = await ensureKey(keyOrMnemonic, salt);
 
     const nonceBytes = getPlatformAdapters().crypto.randomBytes(12);
 
@@ -177,10 +216,16 @@ export async function encryptImageBytes(rawBytes: Uint8Array, keyOrMnemonic: str
 }
 
 /**
- * Decrypts raw encrypted image bytes using AES-256-GCM.
+ * Decrypts raw encrypted file bytes using AES-256-GCM.
  */
-export async function decryptImageBytes(encryptedBytesWithTag: Uint8Array, nonceHex: string, keyOrMnemonic: string | Uint8Array): Promise<Uint8Array> {
-    const keyBytes = ensureKey(keyOrMnemonic);
+export async function decryptFileBytes(
+    encryptedBytesWithTag: Uint8Array,
+    nonceHex: string,
+    keyOrMnemonic: string | Uint8Array,
+    options?: { strict?: boolean; salt?: Uint8Array }
+): Promise<Uint8Array> {
+    const strict = options?.strict === true;
+    const keyBytes = await ensureKey(keyOrMnemonic, options?.salt);
     const nonceBytes = new Uint8Array(Buffer.from(nonceHex, 'hex'));
 
     try {
@@ -194,6 +239,9 @@ export async function decryptImageBytes(encryptedBytesWithTag: Uint8Array, nonce
             authTag: authTag
         });
     } catch (e: any) {
+        if (strict) {
+            throw e;
+        }
         return new Uint8Array(0); // Return empty buffer on legacy payload crash
     }
 }

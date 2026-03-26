@@ -125,6 +125,17 @@ export function createDesktopAdapters(): PlatformAdapters {
         const digest = await globalThis.crypto.subtle.digest('SHA-256', toArrayBuffer(bytes));
         return bytesToHex(new Uint8Array(digest));
       },
+      argon2id: async ({ message, nonce, memory, passes, parallelism, tagLength }) => {
+        const result = await invoke<number[]>('argon2id', {
+          message: Array.from(message),
+          nonce: Array.from(nonce),
+          memory,
+          passes,
+          parallelism,
+          tagLength,
+        });
+        return new Uint8Array(result);
+      },
       aes256GcmEncrypt: async ({ key, nonce, plaintext }) => {
         const keyBytes = toStrictUint8Array(key);
         const nonceBytes = toStrictUint8Array(nonce);

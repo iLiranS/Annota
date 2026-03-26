@@ -29,7 +29,7 @@ export function DailyNoteIcon({ size = 22, color = '#8B5CF6' }: DailyNoteIconPro
         style={{
           position: 'absolute',
           top: size * (1 / 24),
-          left: size * (8 / 24),
+          left: size * (7 / 24),
           width: size * (2 / 24),
           height: size * (4 / 24),
           backgroundColor: color,
@@ -40,7 +40,7 @@ export function DailyNoteIcon({ size = 22, color = '#8B5CF6' }: DailyNoteIconPro
         style={{
           position: 'absolute',
           top: size * (1 / 24),
-          left: size * (16 / 24),
+          left: size * (15 / 24),
           width: size * (2 / 24),
           height: size * (4 / 24),
           backgroundColor: color,
@@ -75,7 +75,7 @@ export function DailyNoteIcon({ size = 22, color = '#8B5CF6' }: DailyNoteIconPro
           style={{
             fontSize: size * 0.4,
             color: color,
-            fontWeight: '900',
+            fontWeight: '700',
             textAlign: 'center',
             includeFontPadding: false,
           }}

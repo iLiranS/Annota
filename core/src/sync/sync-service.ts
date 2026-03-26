@@ -13,11 +13,27 @@ import { StorageService } from '../services/storage.service';
 import { createStorageAdapter } from '../stores/config';
 import { getDb } from '../stores/db.store';
 import { useSyncStore } from '../stores/sync.store';
-import { decryptPayload, deriveAesKey, encryptPayload } from '../utils/crypto';
+import { decodeSaltHex, decryptPayload, deriveKeysFromMnemonic, encryptPayload } from '../utils/crypto';
 
 const getSyncTimeKey = (userId: string) => `${userId}_last_sync_time`;
 
 // Placeholders removed
+
+async function getDerivedKeys(mnemonic: string, saltHex: string) {
+    const { derivedMasterKey, notesKey, filesKey, activeMnemonic, activeSaltHex, setDerivedKeys } = useSyncStore.getState();
+    if (derivedMasterKey && notesKey && filesKey && activeMnemonic === mnemonic && activeSaltHex === saltHex) {
+        return { masterKey: derivedMasterKey, notesKey, filesKey };
+    }
+    const saltBytes = decodeSaltHex(saltHex);
+    const keys = await deriveKeysFromMnemonic(mnemonic, saltBytes);
+    const cached = {
+        masterKey: Buffer.from(keys.masterKey),
+        notesKey: Buffer.from(keys.notesKey),
+        filesKey: Buffer.from(keys.filesKey),
+    };
+    setDerivedKeys(mnemonic, saltHex, cached);
+    return cached;
+}
 
 export async function resetSyncPointer(userId: string) {
     const storage = createStorageAdapter();
@@ -29,7 +45,7 @@ export async function resetSyncPointer(userId: string) {
  * Internal push implementation.
  * @internal Use syncPush instead.
  */
-export async function performSyncPush(masterKey: string) {
+export async function performSyncPush(masterKey: string, saltHex: string) {
     const { data: { session } } = await authApi.getSession();
     if (!session?.user) throw new Error("User not authenticated");
 
@@ -38,16 +54,7 @@ export async function performSyncPush(masterKey: string) {
     const now = new Date();
     let didDeleteTombstones = false;
 
-    // 1. Get/Derive the AES key
-    const { aesKey, activeMnemonic, setAesKey } = useSyncStore.getState();
-    const currentKey = (aesKey && activeMnemonic === masterKey)
-        ? aesKey
-        : Buffer.from(deriveAesKey(masterKey));
-
-    // 2. Update the store if we derived a new one
-    if (activeMnemonic !== masterKey) {
-        setAesKey(masterKey, currentKey);
-    }
+    const { notesKey } = await getDerivedKeys(masterKey, saltHex);
 
     const pushFolders = async () => {
         const dirtyFolders = await getDirtyFolders();
@@ -55,7 +62,7 @@ export async function performSyncPush(masterKey: string) {
 
         const payloadFolders = await Promise.all(dirtyFolders.map(async (folder) => {
             const isTombstone = folder.isPermDeleted;
-            const { encryptedData, nonce } = await encryptPayload(JSON.stringify(folder), currentKey);
+            const { encryptedData, nonce } = await encryptPayload(JSON.stringify(folder), notesKey);
             return {
                 id: folder.id,
                 user_id: userId,
@@ -88,7 +95,7 @@ export async function performSyncPush(masterKey: string) {
 
         const payloadTags = await Promise.all(dirtyTags.map(async (tag) => {
             const isTombstone = tag.isPermDeleted;
-            const { encryptedData, nonce } = await encryptPayload(JSON.stringify(tag), currentKey);
+            const { encryptedData, nonce } = await encryptPayload(JSON.stringify(tag), notesKey);
             return {
                 id: tag.id,
                 user_id: userId,
@@ -121,7 +128,7 @@ export async function performSyncPush(masterKey: string) {
 
         const payloadTasks = await Promise.all(dirtyTasks.map(async (task) => {
             const isTombstone = task.isPermDeleted;
-            const { encryptedData, nonce } = await encryptPayload(JSON.stringify(task), currentKey);
+            const { encryptedData, nonce } = await encryptPayload(JSON.stringify(task), notesKey);
             return {
                 id: task.id,
                 user_id: userId,
@@ -160,7 +167,7 @@ export async function performSyncPush(masterKey: string) {
             const content = await getNoteContent(metadata.id);
             const dataToEncrypt = { ...metadata, content };
 
-            const { encryptedData, nonce } = await encryptPayload(JSON.stringify(dataToEncrypt), currentKey);
+            const { encryptedData, nonce } = await encryptPayload(JSON.stringify(dataToEncrypt), notesKey);
             return {
                 id: metadata.id,
                 user_id: userId,
@@ -198,7 +205,7 @@ export async function performSyncPush(masterKey: string) {
     await pushNotes();
 
     if (pushedNoteIds.length > 0) {
-        await fileSyncService.pushFiles(masterKey, userId, pushedNoteIds);
+        await fileSyncService.pushFiles(masterKey, saltHex, userId, pushedNoteIds);
     }
 
     if (didDeleteTombstones) {
@@ -212,7 +219,7 @@ export async function performSyncPush(masterKey: string) {
  * Internal pull implementation.
  * @internal Use syncPull instead.
  */
-export async function performSyncPull(masterKey: string) {
+export async function performSyncPull(masterKey: string, saltHex: string) {
     const { data: { session } } = await authApi.getSession();
     if (!session?.user) throw new Error("User not authenticated");
 
@@ -223,16 +230,7 @@ export async function performSyncPull(masterKey: string) {
 
     let didDeleteTombstones = false;
 
-    // 1. Get/Derive the AES key
-    const { aesKey, activeMnemonic, setAesKey } = useSyncStore.getState();
-    const currentKey = (aesKey && activeMnemonic === masterKey)
-        ? aesKey
-        : Buffer.from(deriveAesKey(masterKey));
-
-    // 2. Update the store if we derived a new one
-    if (activeMnemonic !== masterKey) {
-        setAesKey(masterKey, currentKey);
-    }
+    const { notesKey } = await getDerivedKeys(masterKey, saltHex);
 
     console.log(`[Sync] Pulling changes after: ${lastSyncTime.toISOString()}`);
     const { data, error } = await syncApi.pullSyncData(lastSyncTime.toISOString());
@@ -257,7 +255,7 @@ export async function performSyncPull(masterKey: string) {
                         deletedIds.push(row.id);
                         continue;
                     }
-                    const decryptedJson = await decryptPayload(row.encrypted_data, row.nonce, currentKey);
+                    const decryptedJson = await decryptPayload(row.encrypted_data, row.nonce, notesKey);
                     const folderData = JSON.parse(decryptedJson);
                     folderData.createdAt = new Date(folderData.createdAt);
                     folderData.updatedAt = new Date(folderData.updatedAt);
@@ -291,7 +289,7 @@ export async function performSyncPull(masterKey: string) {
                         deletedIds.push(row.id);
                         continue;
                     }
-                    const decryptedJson = await decryptPayload(row.encrypted_data, row.nonce, currentKey);
+                    const decryptedJson = await decryptPayload(row.encrypted_data, row.nonce, notesKey);
                     const taskData = JSON.parse(decryptedJson);
                     taskData.createdAt = new Date(taskData.createdAt);
                     taskData.updatedAt = new Date(taskData.updatedAt);
@@ -326,7 +324,7 @@ export async function performSyncPull(masterKey: string) {
                         deletedIds.push(row.id);
                         continue;
                     }
-                    const decryptedJson = await decryptPayload(row.encrypted_data, row.nonce, currentKey);
+                    const decryptedJson = await decryptPayload(row.encrypted_data, row.nonce, notesKey);
                     const tagData = JSON.parse(decryptedJson);
                     tagData.createdAt = new Date(tagData.createdAt);
                     tagData.updatedAt = new Date(tagData.updatedAt);
@@ -361,7 +359,7 @@ export async function performSyncPull(masterKey: string) {
                         deletedIds.push(row.id);
                         continue;
                     }
-                    const decryptedJson = await decryptPayload(row.encrypted_data, row.nonce, currentKey);
+                    const decryptedJson = await decryptPayload(row.encrypted_data, row.nonce, notesKey);
                     const noteFullData = JSON.parse(decryptedJson);
                     noteFullData.createdAt = new Date(noteFullData.createdAt);
                     noteFullData.updatedAt = new Date(noteFullData.updatedAt);
@@ -410,6 +408,7 @@ export async function performSyncPull(masterKey: string) {
                     noteId: '',
                     nonce: meta.nonce,
                     masterKey,
+                    saltHex,
                     userId
                 }));
                 fileSyncService.queueFilesForDownload(downloadQueue);
@@ -422,7 +421,7 @@ export async function performSyncPull(masterKey: string) {
  * Public wrapper that handles isSyncing lock and offline checks.
  * This is the ONLY method that should be called by components/schedulers.
  */
-export async function syncPush(masterKey: string): Promise<boolean> {
+export async function syncPush(masterKey: string, saltHex: string): Promise<boolean> {
     const store = useSyncStore.getState();
     if (!store.isOnline) return false;
 
@@ -433,7 +432,7 @@ export async function syncPush(masterKey: string): Promise<boolean> {
 
     store.setSyncing(true);
     try {
-        await performSyncPush(masterKey);
+        await performSyncPush(masterKey, saltHex);
         store.setLastSyncAt(new Date());
         return true;
     } catch (err) {
@@ -449,7 +448,7 @@ export async function syncPush(masterKey: string): Promise<boolean> {
  * Public wrapper that handles isSyncing lock and offline checks.
  * This is the ONLY method that should be called by components/schedulers.
  */
-export async function syncPull(masterKey: string): Promise<boolean> {
+export async function syncPull(masterKey: string, saltHex: string): Promise<boolean> {
     const store = useSyncStore.getState();
     if (!store.isOnline) return false;
 
@@ -460,7 +459,7 @@ export async function syncPull(masterKey: string): Promise<boolean> {
 
     store.setSyncing(true);
     try {
-        await performSyncPull(masterKey);
+        await performSyncPull(masterKey, saltHex);
         store.setLastSyncAt(new Date());
         return true;
     } catch (err) {

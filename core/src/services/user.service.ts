@@ -1,12 +1,24 @@
+import { Buffer } from 'buffer';
 import { userApi } from '../api/user.api';
+import { getPlatformAdapters } from '../adapters';
 import { resetSyncPointer } from '../sync/sync-service';
-import { generateMasterKey, hashMasterKey, storeMasterKey, validateMasterKey } from '../utils/crypto';
+import { decodeSaltHex, decryptPayload, deriveKeysFromMnemonic, generateMasterKey, storeMasterKey, validateMasterKey } from '../utils/crypto';
+
+async function ensureSaltHex(userId: string): Promise<string> {
+    const profile = await userApi.getUserProfile(userId);
+    if (profile?.salt) return profile.salt as string;
+
+    const saltBytes = getPlatformAdapters().crypto.randomBytes(16);
+    const saltHex = Buffer.from(saltBytes).toString('hex');
+    await userApi.updateSalt(userId, saltHex);
+    return saltHex;
+}
 
 export const userService = {
     /**
      * Handle the lost key flow:
      * - Discard remote encrypted data
-     * - Generate a new key and update the remote validator
+     * - Generate a new key
      * - Store the new key securely on the device
      * Returns the newly generated master key mnemonic.
      */
@@ -20,10 +32,11 @@ export const userService = {
         // Wipe cloud encrypted data
         await userApi.wipeEncryptedData();
 
-        // Store new key and update validator
+        // Ensure salt exists (fresh start)
+        await ensureSaltHex(userId);
+
+        // Store new key
         await storeMasterKey(userId, newMnemonic);
-        const hash = await hashMasterKey(newMnemonic);
-        await userApi.updateKeyValidator(userId, hash);
 
         // Reset the sync pointer to pull any old missing data
         await resetSyncPointer(userId);
@@ -35,7 +48,7 @@ export const userService = {
      * Check if the user has a registered cloud payload.
      */
     hasMasterKey: async (userId: string): Promise<boolean> => {
-        return await userApi.hasMasterKey(userId);
+        return await userApi.hasEncryptedData(userId);
     },
 
     /**
@@ -45,31 +58,37 @@ export const userService = {
         if (wipeExisting) {
             await userApi.wipeEncryptedData();
         }
+        await ensureSaltHex(userId);
         await storeMasterKey(userId, mnemonic);
-        const hash = await hashMasterKey(mnemonic);
-        await userApi.updateKeyValidator(userId, hash);
         await resetSyncPointer(userId);
     },
 
     /**
-     * Import an existing master key, validating it against the remote hash if available.
-     * Throws an error if the key is structurally invalid or if it doesn't match the remote hash.
+     * Import an existing master key by decrypting a sample payload.
+     * Throws an error if the key is structurally invalid or the decrypt fails.
      */
-    importMasterKey: async (userId: string, targetMnemonic: string, storedValidatorHash: string | null): Promise<void> => {
+    importMasterKey: async (userId: string, targetMnemonic: string): Promise<void> => {
         const isValid = validateMasterKey(targetMnemonic);
         if (!isValid) {
             throw new Error('INVALID_FORMAT');
         }
 
-        if (storedValidatorHash) {
-            const importedHash = await hashMasterKey(targetMnemonic);
-            if (importedHash !== storedValidatorHash) {
-                throw new Error('HASH_MISMATCH');
+        const profile = await userApi.getUserProfile(userId);
+        const saltHex = profile?.salt as string | null;
+        if (!saltHex) {
+            throw new Error('MISSING_SALT');
+        }
+
+        const saltBytes = decodeSaltHex(saltHex);
+        const { notesKey } = await deriveKeysFromMnemonic(targetMnemonic, saltBytes);
+
+        const sample = await userApi.getEncryptedSample(userId);
+        if (sample) {
+            try {
+                await decryptPayload(sample.encrypted_data, sample.nonce, notesKey, { strict: true });
+            } catch {
+                throw new Error('INVALID_KEY');
             }
-        } else {
-            // No key_validator yet — store the hash for future validation
-            const hash = await hashMasterKey(targetMnemonic);
-            await userApi.updateKeyValidator(userId, hash);
         }
 
         await storeMasterKey(userId, targetMnemonic);

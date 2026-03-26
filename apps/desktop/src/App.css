@@ -148,7 +148,7 @@ body {
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
-  --note-bg: oklch(0.211 0 0);
+  --note-bg: oklch(0.22 0 0);
 }
 
 @layer base {
@@ -158,6 +158,8 @@ body {
 
   body {
     @apply bg-background text-foreground;
+    /* Forces hardware acceleration to keep the layer active */
+    transform: translateZ(0);
   }
 
   .custom-scrollbar::-webkit-scrollbar {

@@ -233,13 +233,7 @@ export default function HomeScreen() {
             headerShown: true,
             headerTransparent: true,
             headerShadowVisible: false,
-            headerBackground: () => (
-              <BlurView
-                intensity={80}
-                style={StyleSheet.absoluteFill}
-                tint={dark ? 'dark' : 'light'}
-              />
-            ),
+            headerStyle: { backgroundColor: 'transparent' },
             headerTitle: () => (
               <View style={styles.headerTitleContainer}>
                 <ThemedText style={[styles.greetingText, { fontFamily: editor.fontFamily }]}>
@@ -406,15 +400,6 @@ const styles = StyleSheet.create({
     flex: 1,
     marginTop: 20,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-    gap: 12,
-  },
-  greetingContainer: {
-    flex: 1,
-  },
   greetingText: {
     fontSize: 18,
     fontWeight: '600',
@@ -434,23 +419,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  glassHeader: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
-    overflow: 'hidden',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(150, 150, 150, 0.2)',
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingBottom: 12,
   },
   tabContainer: {
     flexDirection: 'row',

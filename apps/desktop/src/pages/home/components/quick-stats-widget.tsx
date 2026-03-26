@@ -32,7 +32,7 @@ export function QuickStatsWidget() {
     }, [tasks]);
 
     return (
-        <div className="flex items-center gap-6 px-4 py-2 bg-card/20 rounded-2xl border border-border/40 backdrop-blur-sm">
+        <div className="flex items-center gap-6 px-4 py-2 bg-card/30 rounded-2xl border border-border/40 backdrop-blur-sm">
             <div className="flex items-center gap-2">
                 <div className="p-2 rounded-lg bg-accent/40">
                     <CheckCircle2 size={16} style={{ color: colors.primary }} />

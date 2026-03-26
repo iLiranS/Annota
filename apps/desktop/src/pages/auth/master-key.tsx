@@ -99,8 +99,7 @@ export default function MasterKeyPage() {
         setImporting(true);
         setError(null);
         try {
-            const storedValidator = await useUserStore.getState().fetchKeyValidator(userId);
-            await userService.importMasterKey(userId, joinedWords, storedValidator);
+            await userService.importMasterKey(userId, joinedWords);
             useUserStore.getState().setHasMasterKey(true);
             navigate("/", { replace: true });
         } catch (err: unknown) {
@@ -108,8 +107,10 @@ export default function MasterKeyPage() {
                 err instanceof Error ? err.message : "Validation failed";
             if (message === "INVALID_FORMAT") {
                 setError("The 12-word phrase you entered is invalid. Please check your spelling.");
-            } else if (message === "HASH_MISMATCH") {
+            } else if (message === "INVALID_KEY") {
                 setError("The 12-word phrase does not match your registered key. Please try again.");
+            } else if (message === "MISSING_SALT") {
+                setError("Your account needs a new key. Please use the lost key flow to reset.");
             } else {
                 setError("Could not verify your key. Please try again.");
             }

@@ -36,6 +36,7 @@ export class SyncScheduler {
     private constructor() { }
 
     private masterKey: string = '';
+    private saltHex: string = '';
     private deps: SyncDependencies | null = null;
     private debounceTimer: ReturnType<typeof setTimeout> | null = null;
     private hardMaxTimer: ReturnType<typeof setTimeout> | null = null;
@@ -48,7 +49,7 @@ export class SyncScheduler {
 
     // ─── Public API ────────────────────────────────────────────
 
-    init(masterKey: string, deps: SyncDependencies, userId?: string): void {
+    init(masterKey: string, saltHex: string, deps: SyncDependencies, userId?: string): void {
         if (!userId) {
             console.log('[SyncScheduler] No user ID provided, staying quiet (guest mode)');
             if (this.initialized) {
@@ -58,12 +59,13 @@ export class SyncScheduler {
         }
 
         // Skip if already initialized with the same key
-        if (this.initialized && this.masterKey === masterKey && this.userId === userId && !this.disposed) {
+        if (this.initialized && this.masterKey === masterKey && this.saltHex === saltHex && this.userId === userId && !this.disposed) {
             return;
         }
 
         console.log('[SyncScheduler] Initializing with master key for user:', userId);
         this.masterKey = masterKey;
+        this.saltHex = saltHex;
         this.userId = userId;
         this.deps = deps;
         this.disposed = false;
@@ -143,6 +145,7 @@ export class SyncScheduler {
     dispose(): void {
         this.disposed = true;
         this.initialized = false;
+        this.saltHex = '';
         this.userId = null;
         this.clearAllTimers();
 
@@ -200,7 +203,7 @@ export class SyncScheduler {
         }
 
         try {
-            const success = await syncPush(this.masterKey);
+            const success = await syncPush(this.masterKey, this.saltHex);
             if (success) {
                 console.log('[SyncScheduler] Push success — reinitializing stores');
                 await this.reinitStores();
@@ -224,7 +227,7 @@ export class SyncScheduler {
         }
 
         try {
-            const success = await syncPull(this.masterKey);
+            const success = await syncPull(this.masterKey, this.saltHex);
             if (success) {
                 console.log('[SyncScheduler] Pull success — reinitializing stores');
                 await this.reinitStores();
@@ -283,4 +286,3 @@ export class SyncScheduler {
         }
     }
 }
-

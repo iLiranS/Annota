@@ -1,3 +1,6 @@
+import { ConfirmDialog } from "@/components/custom-ui/confirm-dialog";
+import { FolderEditModal } from "@/components/notes/folder-edit-modal";
+import { FolderListItem } from "@/components/notes/folder-list-item";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -18,10 +21,11 @@ import {
 import { Ionicons } from "@/components/ui/ionicons";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useCreateNote } from "@/hooks/use-create-note";
 import { useCreateTask } from "@/hooks/use-create-task";
 import { cn } from "@/lib/utils";
 import { TaskItem } from "@/src/pages/tasks/components/task-item";
-import { useNotesStore, useSettingsStore, useTasksStore, type Task } from "@annota/core";
+import { useNotesStore, useSettingsStore, useTasksStore, type Folder, type Task } from "@annota/core";
 import {
     ChevronDown,
     Eye,
@@ -29,14 +33,14 @@ import {
     Layers,
     Plus
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 const NewTaskButton = ({ onClick, className }: { onClick: () => void; className?: string }) => (
     <button
         onClick={onClick}
         className={cn(
-            "group flex w-full items-center gap-1.5 rounded-xl text-left transition-all duration-200 hover:bg-sidebar-accent/50 px-1 py-1 text-muted-foreground/40 hover:text-primary mb-0.5",
+            "group flex w-full items-center gap-1.5 rounded-xl text-left transition-all duration-200  px-1 py-1 text-muted-foreground/40 hover:text-primary mb-0.5",
             className
         )}
     >
@@ -50,13 +54,18 @@ const NewTaskButton = ({ onClick, className }: { onClick: () => void; className?
 export function TaskCalendarSidebar() {
     const { general, updateGeneralSettings } = useSettingsStore();
     const { tasks, deleteTask, clearCompletedTasks } = useTasksStore();
-    const { getFolderById } = useNotesStore();
+    const { getFolderById, deleteFolder } = useNotesStore();
     const { colors } = useAppTheme();
     const navigate = useNavigate();
     const location = useLocation();
-    const { createAndNavigate } = useCreateTask();
+    const { createAndNavigate: createTask } = useCreateTask();
+    const { createAndNavigate: createNote } = useCreateNote();
 
     const [groupBy, setGroupBy] = useState<'date' | 'folder'>('date');
+    const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [folderToDelete, setFolderToDelete] = useState<Folder | null>(null);
+    const [newFolderParentId, setNewFolderParentId] = useState<string | null>(null);
 
     const showCompleted = general.tasksShowDone;
 
@@ -148,9 +157,36 @@ export function TaskCalendarSidebar() {
 
 
 
+
     const handleTaskClick = (id: string) => {
         navigate(`/task/${id}`, { state: { background: location } });
     };
+
+    const handleEditFolder = useCallback((folder: Folder) => {
+        setEditingFolder(folder);
+        setNewFolderParentId(null);
+        setIsEditModalOpen(true);
+    }, []);
+
+    const handleCreateSubFolder = useCallback((parentFolder: Folder) => {
+        setEditingFolder(null); // Create mode
+        setNewFolderParentId(parentFolder.id); // Parent folder is the one clicked
+        setIsEditModalOpen(true);
+    }, []);
+
+    const handleDeleteFolder = useCallback(async () => {
+        if (!folderToDelete) return;
+        await deleteFolder(folderToDelete.id);
+        setFolderToDelete(null);
+    }, [deleteFolder, folderToDelete]);
+
+    const handleCreateTask = useCallback((folder: Folder) => {
+        createTask({ folderId: folder.id });
+    }, [createTask]);
+
+    const handleCreateNote = useCallback((folder: Folder) => {
+        createNote(folder.id);
+    }, [createNote]);
 
 
 
@@ -161,15 +197,15 @@ export function TaskCalendarSidebar() {
                 "flex h-full w-64 shrink-0 flex-col overflow-hidden bg-sidebar select-none",
             )}
         >
-            <div className="flex flex-1 flex-col gap-4 pt-4 overflow-hidden">
+            <div className="flex flex-1 flex-col gap-2 overflow-hidden">
                 {/* View/Group Toggle (Tab style) */}
                 <div className={general.appDirection === 'rtl' ? "pr-2 pl-4" : "pl-2 pr-4"}>
                     <div className="relative flex items-center p-1 bg-muted-foreground/5 rounded-xl overflow-hidden min-h-[36px]">
                         {/* Animated background chip */}
                         <div
                             className={cn(
-                                "absolute inset-y-1 w-[calc(50%-4px)] transition-all duration-300 ease-in-out rounded-lg z-0",
-                                groupBy === 'date' ? "left-1" : "left-[calc(50%+2px)]"
+                                "absolute inset-y-1 w-[calc(50%)] transition-all duration-300 ease-in-out rounded-lg z-0",
+                                groupBy === 'date' ? "left-1" : "left-[calc(50%-4px)]"
                             )}
                             style={{ backgroundColor: colors.primary + "40" }}
                         />
@@ -198,11 +234,9 @@ export function TaskCalendarSidebar() {
 
                 {/* Toggle and Clear Done */}
                 <div className={cn("flex items-center gap-1.5 bg-sidebar", general.appDirection === 'rtl' ? "pr-2 pl-4" : "pl-2 pr-4", hasCompletedTasks ? "justify-between" : "justify-center")}>
-                    <Button
-                        variant="ghost"
-                        size="xs"
+                    <button
                         className={cn(
-                            "flex-1 gap-2 p-0 justify-start max-w-fit h-min",
+                            "flex-1 gap-2 p-0 justify-start max-w-fit h-min flex items-center",
                             "rounded-full text-[9px] font-bold uppercase tracking-widest transition-all",
                             "text-muted-foreground/60 hover:text-foreground hover:bg-none dark:hover:bg-none"
                         )}
@@ -210,7 +244,7 @@ export function TaskCalendarSidebar() {
                     >
                         {showCompleted ? <EyeOff size={12} /> : <Eye size={12} />}
                         <span className="truncate">{showCompleted ? "Hide Done" : "Show Done"}</span>
-                    </Button>
+                    </button>
 
                     {hasCompletedTasks && (
                         <AlertDialog>
@@ -262,29 +296,54 @@ export function TaskCalendarSidebar() {
                                         border: `1px solid ${group.color}15`
                                     } : {}}
                                 >
-                                    <CollapsibleTrigger
-                                        style={{ '--folder-color': group.color } as React.CSSProperties}
-                                        className={cn(
-                                            "flex w-full items-center justify-between rounded-lg py-1 px-1 hover:bg-(--folder-color)/10 group min-w-0 transition-colors",
-                                        )}
-                                    >
-                                        <div className="flex items-center gap-2 min-w-0">
-                                            <div
-                                                className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md"
-                                                style={{ backgroundColor: group.color ? `${group.color}15` : 'transparent' }}
+                                    {(() => {
+                                        const trigger = (
+                                            <CollapsibleTrigger
+                                                style={{ '--folder-color': group.color } as React.CSSProperties}
+                                                className={cn(
+                                                    "flex w-full items-center justify-between rounded-lg py-1 px-1 hover:bg-(--folder-color)/10 group min-w-0 transition-colors",
+                                                )}
                                             >
-                                                <Ionicons
-                                                    name={(group.icon as any) || "layers-outline"}
-                                                    size={13}
-                                                    style={{ color: group.color || 'var(--primary)' }}
-                                                />
-                                            </div>
-                                            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50 truncate min-w-0 flex-1">
-                                                {group.title}
-                                            </span>
-                                        </div>
-                                        <ChevronDown size={12} className="text-muted-foreground/30 transition-transform group-data-[state=closed]:-rotate-90" />
-                                    </CollapsibleTrigger>
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <div
+                                                        className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md"
+                                                        style={{ backgroundColor: group.color ? `${group.color}15` : 'transparent' }}
+                                                    >
+                                                        <Ionicons
+                                                            name={(group.icon as any) || "layers-outline"}
+                                                            size={12}
+                                                            style={{ color: group.color || 'var(--primary)' }}
+                                                        />
+                                                    </div>
+                                                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50 truncate min-w-0 flex-1">
+                                                        {group.title}
+                                                    </span>
+                                                </div>
+                                                <ChevronDown size={12} className="text-muted-foreground/30 transition-transform group-data-[state=closed]:-rotate-90" />
+                                            </CollapsibleTrigger>
+                                        );
+
+                                        if (groupBy === 'folder' && group.id !== "__no_folder__") {
+                                            const folder = getFolderById(group.id);
+                                            if (folder) {
+                                                return (
+                                                    <FolderListItem
+                                                        asChild
+                                                        folder={folder}
+                                                        onEdit={handleEditFolder}
+                                                        onDelete={setFolderToDelete}
+                                                        onCreateSubFolder={handleCreateSubFolder}
+                                                        onCreateTask={handleCreateTask}
+                                                        onCreateNote={handleCreateNote}
+                                                    >
+                                                        {trigger}
+                                                    </FolderListItem>
+                                                );
+                                            }
+                                        }
+
+                                        return trigger;
+                                    })()}
                                     <CollapsibleContent className={cn(
                                         "space-y-0.5 min-w-0 overflow-hidden w-full",
                                     )}>
@@ -295,7 +354,7 @@ export function TaskCalendarSidebar() {
                                                     if (group.id === 'tomorrow') {
                                                         deadline.setDate(deadline.getDate() + 1);
                                                     }
-                                                    createAndNavigate({
+                                                    createTask({
                                                         folderId: groupBy === 'folder' && group.id !== "__no_folder__" ? group.id : undefined,
                                                         deadline: groupBy === 'date' ? deadline : undefined
                                                     });
@@ -326,6 +385,23 @@ export function TaskCalendarSidebar() {
 
 
             </div>
+
+            <FolderEditModal
+                open={isEditModalOpen}
+                onOpenChange={setIsEditModalOpen}
+                folder={editingFolder}
+                defaultParentId={newFolderParentId}
+            />
+
+            <ConfirmDialog
+                open={!!folderToDelete}
+                onOpenChange={(open) => !open && setFolderToDelete(null)}
+                title="Delete Folder?"
+                description={`This will permanently delete "${folderToDelete?.name}" and all its contents.`}
+                confirmText="Delete Folder"
+                onConfirm={handleDeleteFolder}
+                variant="destructive"
+            />
         </aside>
     );
 }

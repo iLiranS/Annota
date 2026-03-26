@@ -104,10 +104,7 @@ export default function MasterKeyScreen() {
 
         setImporting(true);
         try {
-            // Use cached key_validator from auth store (fetched once from Supabase)
-            const storedValidator = await useAuthStore.getState().fetchKeyValidator(userId);
-
-            await userService.importMasterKey(userId, joinedWords, storedValidator);
+            await userService.importMasterKey(userId, joinedWords);
             useAuthStore.getState().setHasMasterKey(true);
 
             router.replace('/(app)');
@@ -119,11 +116,17 @@ export default function MasterKeyScreen() {
                     text1: 'Invalid Key',
                     text2: 'The 12-word phrase you entered is invalid. Please check your spelling.',
                 });
-            } else if (err.message === 'HASH_MISMATCH') {
+            } else if (err.message === 'INVALID_KEY') {
                 Toast.show({
                     type: 'error',
                     text1: 'Key Mismatch',
                     text2: 'The 12-word phrase does not match your registered key. Please try again.',
+                });
+            } else if (err.message === 'MISSING_SALT') {
+                Toast.show({
+                    type: 'error',
+                    text1: 'Reset Required',
+                    text2: 'Your account needs a new key. Please use the lost key flow to reset.',
                 });
             } else {
                 Toast.show({

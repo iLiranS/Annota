@@ -34,7 +34,7 @@ export function DailyNoteIcon({ className, size = 18, color = "currentColor" }: 
             </svg>
             {/* The Date Number */}
             <span
-                className="absolute top-[65%] left-1/2 -translate-x-1/2 -translate-y-1/2 font-black select-none tracking-tighter"
+                className="absolute top-[68%] left-1/2 -translate-x-1/2 -translate-y-1/2 font-black select-none tracking-tighter"
                 style={{
                     fontSize: size * 0.45,
                     color: color,

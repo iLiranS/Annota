@@ -12,23 +12,11 @@ export const userApi = {
         return data;
     },
 
-    /** Fetch the user's profile to get the key_validator */
-    getKeyValidator: async (userId: string) => {
-        const { data, error } = await supabase
-            .from('profiles')
-            .select('key_validator')
-            .eq('id', userId)
-            .single();
-
-        if (error) throw error;
-        return data?.key_validator as string | null;
-    },
-
-    /** Update the user's profile key_validator */
-    updateKeyValidator: async (userId: string, keyValidator: string) => {
+    /** Update the user's profile salt (hex) */
+    updateSalt: async (userId: string, saltHex: string) => {
         const { error } = await supabase
             .from('profiles')
-            .update({ key_validator: keyValidator })
+            .update({ salt: saltHex })
             .eq('id', userId);
 
         if (error) throw error;
@@ -62,15 +50,37 @@ export const userApi = {
     },
 
     /** Check if the user has any encrypted data in the cloud */
-    hasMasterKey: async (userId: string): Promise<boolean> => {
-        const { data, error } = await supabase
-            .from('profiles')
-            .select('key_validator')
-            .eq('id', userId)
-            .single();
+    hasEncryptedData: async (userId: string): Promise<boolean> => {
+        const tables = ['encrypted_notes', 'encrypted_tasks', 'encrypted_tags', 'encrypted_folders'];
+        for (const table of tables) {
+            const { data, error } = await supabase
+                .from(table)
+                .select('id')
+                .eq('user_id', userId)
+                .limit(1);
 
-        if (error) throw error;
-        return data?.key_validator !== null;
+            if (error) throw error;
+            if (data && data.length > 0) return true;
+        }
+        return false;
+    },
+
+    /** Fetch a single encrypted payload sample for key validation */
+    getEncryptedSample: async (userId: string): Promise<{ encrypted_data: string; nonce: string } | null> => {
+        const tables = ['encrypted_notes', 'encrypted_tasks', 'encrypted_tags', 'encrypted_folders'];
+        for (const table of tables) {
+            const { data, error } = await supabase
+                .from(table)
+                .select('encrypted_data, nonce')
+                .eq('user_id', userId)
+                .limit(1);
+
+            if (error) throw error;
+            if (data && data.length > 0) {
+                return { encrypted_data: data[0].encrypted_data, nonce: data[0].nonce };
+            }
+        }
+        return null;
     },
 
     updateDisplayName: async (userId: string, displayName: string) => {

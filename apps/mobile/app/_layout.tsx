@@ -55,11 +55,14 @@ TaskManager.defineTask(BACKGROUND_SYNC_TASK, async () => {
     const key = await getMasterKey(session.user.id);
     if (!key) return BackgroundTask.BackgroundTaskResult.Success;
 
-    const { useSyncStore } = require('@annota/core');
+    const { useSyncStore, useUserStore } = require('@annota/core');
+    await useUserStore.persist.rehydrate();
+    const saltHex = useUserStore.getState().saltHex;
+    if (!saltHex) return BackgroundTask.BackgroundTaskResult.Success;
     await useSyncStore.getState().loadLastSyncAt(session.user.id);
 
-    await syncPull(key);
-    await syncPush(key);
+    await syncPull(key, saltHex);
+    await syncPush(key, saltHex);
 
     return BackgroundTask.BackgroundTaskResult.Success;
   } catch (error) {
@@ -128,7 +131,7 @@ export default function RootLayout() {
 
 function AppLogicHub() {
   const theme = useAppTheme();
-  const { initialized, session, user, isGuest, setSession, hasMasterKey, checkMasterKey, getUserProfile } = useAuthStore();
+  const { initialized, session, user, isGuest, setSession, hasMasterKey, checkMasterKey, getUserProfile, saltHex } = useAuthStore();
   const dbReady = useDbStore(state => state.isReady);
   const initDB = useDbStore(state => state.initDB);
   const [dbError, setDbError] = useState<string | null>(null);
@@ -263,7 +266,7 @@ function AppLogicHub() {
 
   // 5. Sync Scheduler & Background Fetch
   useEffect(() => {
-    if (!session || !dbReady || !hasMasterKey) return;
+    if (!session || !dbReady || !hasMasterKey || !saltHex) return;
     let cancelled = false;
 
     const runAfterIdle = (callback: () => void) => {
@@ -280,7 +283,7 @@ function AppLogicHub() {
 
       const scheduler = SyncScheduler.getInstance();
       schedulerRef.current = scheduler;
-      scheduler.init(key, {
+      scheduler.init(key, saltHex, {
         reinitStores: async () => {
           await Promise.all([
             useNotesStore.getState().initApp(),
@@ -297,14 +300,14 @@ function AppLogicHub() {
         }
       }, session.user.id);
 
-      fileSyncService.retryPendingDownloads(key, session.user.id).catch(() => {});
+      fileSyncService.retryPendingDownloads(key, saltHex, session.user.id).catch(() => {});
     });
 
     return () => {
       cancelled = true;
       schedulerRef.current?.dispose();
     };
-  }, [session, dbReady, hasMasterKey]);
+  }, [session, dbReady, hasMasterKey, saltHex]);
 
 
   useEffect(() => {
@@ -377,4 +380,3 @@ const toastStyles = {
     fontSize: 13,
   },
 } as const;
-
