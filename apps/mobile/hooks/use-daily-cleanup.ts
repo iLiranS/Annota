@@ -1,6 +1,6 @@
 import { useDbStore } from '@annota/core';
 import { useSettingsStore } from '@annota/core';
-import { useTasksStore } from '@annota/core';
+import { useTasksStore, vacuumDatabase } from '@annota/core';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
@@ -42,7 +42,10 @@ export function useDailyCleanup() {
                     // 3. Run your store function
                     await useTasksStore.getState().clearOldCompletedTasks(cutoffDate);
 
-                    // 4. Update the last run time
+                    // 4. Vacuum the database to reclaim space
+                    await vacuumDatabase();
+
+                    // 5. Update the last run time
                     await AsyncStorage.setItem(storageKey, now.toISOString());
                 }
             } catch (error) {

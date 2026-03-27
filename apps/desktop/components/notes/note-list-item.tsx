@@ -9,6 +9,9 @@ import { Ionicons } from "@/components/ui/ionicons";
 import { formatRelativeDate } from "@/lib/date-formatter";
 import { cn } from "@/lib/utils";
 import { NoteMetadata, useNotesStore, useSettingsStore } from "@annota/core";
+import { NoteFileService } from "@annota/core/platform";
+import { emitTo, listen } from "@tauri-apps/api/event";
+import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
@@ -79,6 +82,68 @@ export function NoteListItem({
             toast.error("Failed to copy link to clipboard");
         }
     }, [note.id]);
+
+    const handleOpenInNewWindow = useCallback(async () => {
+        const label = `note-${note.id}-${Math.random().toString(36).substring(7)}`;
+        const webview = new WebviewWindow(label, {
+            url: `/note-fullscreen/${note.id}`,
+            title: note.title || "Annota Note",
+            width: 1280,
+            height: 720,
+            decorations: true,
+            transparent: false,
+            titleBarStyle: "transparent",
+        });
+
+        // Listen for the child's "I'm ready" signal, then send it everything it needs.
+        // The child registers its listener first, then emits this event — no race condition.
+        const unlisten = await listen<{ noteId: string }>('note-window-ready', async (event) => {
+            if (event.payload.noteId !== note.id) return;
+            unlisten(); // One-shot
+
+            try {
+                const { getNoteContent, notes, tags } = useNotesStore.getState();
+                const rawContent = await getNoteContent(note.id);
+                const html = rawContent || "";
+
+                // Resolve image sources so the child doesn't need NoteFileService
+                const imageIdRegex = /data-image-id\s*=\s*(["'])(.*?)\1/gi;
+                const imageIds = new Set<string>();
+                let match;
+                while ((match = imageIdRegex.exec(html)) !== null) {
+                    if (!match[2].startsWith('temp-')) imageIds.add(match[2]);
+                }
+
+                let hydratedContent = html;
+                if (imageIds.size > 0) {
+                    const imageMap = await NoteFileService.resolveFileSources(Array.from(imageIds));
+                    if (imageMap && Object.keys(imageMap).length > 0) {
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(html, "text/html");
+                        doc.querySelectorAll("img[data-image-id]").forEach((img) => {
+                            const id = img.getAttribute("data-image-id");
+                            if (id && imageMap[id]) img.setAttribute("src", imageMap[id]);
+                        });
+                        hydratedContent = doc.body.innerHTML;
+                    }
+                }
+
+                await emitTo(label, 'note-window-init', {
+                    content: hydratedContent,
+                    tags,
+                    notes: notes.filter(n => !n.isDeleted),
+                });
+            } catch (err) {
+                console.error('[OpenInNewWindow] Failed to send init data:', err);
+            }
+        });
+
+        webview.once('tauri://error', function (e) {
+            unlisten(); // Clean up if window creation fails
+            console.error('Error creating window:', e);
+            toast.error("Failed to open note in new window");
+        });
+    }, [note.id, note.title]);
 
     const Comp = asChild ? Slot : "button";
 
@@ -172,6 +237,14 @@ export function NoteListItem({
                     >
                         <Ionicons name="eye-outline" size={16} />
                         <span>Preview Note</span>
+                    </ContextMenuItem>
+
+                    <ContextMenuItem
+                        onSelect={handleOpenInNewWindow}
+                        onPointerUp={(e) => e.button === 2 && e.preventDefault()}
+                    >
+                        <Ionicons name="open-outline" size={16} />
+                        <span>Open in New Window</span>
                     </ContextMenuItem>
 
                     <ContextMenuItem

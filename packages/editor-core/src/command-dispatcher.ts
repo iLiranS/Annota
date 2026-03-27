@@ -257,7 +257,7 @@ export function dispatchEditorCommand(editor: Editor, command: string, params: R
                     }
                 }
             }
-            
+
             const text = fragment.textBetween(0, fragment.size, ' ');
 
             // Generate HTML for the selected block/content
@@ -276,7 +276,6 @@ export function dispatchEditorCommand(editor: Editor, command: string, params: R
         }
 
         case 'deleteSelection': {
-            console.log(params)
             if (typeof params?.from === 'number' && typeof params?.to === 'number') {
                 // Range-based deletion (used by slash commands to remove "/query" text)
                 editor.chain().focus().deleteRange({ from: params.from, to: params.to }).run();

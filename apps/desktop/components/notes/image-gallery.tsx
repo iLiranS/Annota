@@ -1,6 +1,6 @@
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { ImageInfo } from '@annota/editor-ui';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 interface ImageGalleryProps {
@@ -101,7 +101,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
 
     const handleMouseMove = (e: React.MouseEvent) => {
         if (!isDragging || !imgRef.current) return;
-        
+
         const dx = e.clientX - lastPos.current.x;
         const dy = e.clientY - lastPos.current.y;
 
@@ -153,10 +153,9 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
 
     return (
         <Dialog open={visible} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent
+            <DialogContent showCloseButton={false}
                 onClick={onClose}
-                className="max-w-[100vw] w-screen h-screen p-0 border-none bg-black/95 flex flex-col items-center justify-center outline-none animate-in fade-in duration-500
-                *:data-[slot=dialog-close]:text-white/70 *:data-[slot=dialog-close]:hover:text-white *:data-[slot=dialog-close]:bg-white/5 *:data-[slot=dialog-close]:hover:bg-white/10 *:data-[slot=dialog-close]:p-2.5 *:data-[slot=dialog-close]:rounded-full *:data-[slot=dialog-close]:top-6 *:data-[slot=dialog-close]:right-6 *:data-[slot=dialog-close]:backdrop-blur-xl *:data-[slot=dialog-close]:border *:data-[slot=dialog-close]:border-white/10 *:data-[slot=dialog-close]:transition-all *:data-[slot=dialog-close]:z-70"
+                className="max-w-[100vw] w-screen h-screen p-0 border-none bg-black/80 flex flex-col items-center justify-center outline-none animate-in fade-in duration-500"
             >
                 <DialogTitle className="sr-only">Image Gallery</DialogTitle>
                 <DialogDescription className="sr-only">
@@ -166,10 +165,22 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
                 {/* Counter Overlay */}
                 <div
                     onClick={(e) => e.stopPropagation()}
-                    className="absolute top-6 left-6 z-60 text-white/90 font-medium text-xs tracking-wider uppercase select-none bg-white/5 px-4 py-2.5 rounded-full backdrop-blur-xl border border-white/10 shadow-2xl transition-all hover:bg-white/10"
+                    className="absolute top-8 left-7 z-60 text-white/90 font-medium text-xs tracking-wider uppercase select-none bg-black/25 px-4 py-2.5 rounded-full backdrop-blur-xl border border-white/10 shadow-2xl transition-all hover:bg-white/10"
                 >
                     {currentIndex + 1} <span className="opacity-40 mx-1">/</span> {images.length}
                 </div>
+
+                {/* Close Button */}
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onClose();
+                    }}
+                    className="absolute top-8 right-10.5 z-60 text-white/90 select-none bg-black/25 p-2 rounded-full backdrop-blur-xl border border-white/10 shadow-2xl transition-all hover:bg-white/10 active:scale-95 group"
+                    aria-label="Close gallery"
+                >
+                    <X className="w-5 h-5 opacity-70 group-hover:opacity-100 transition-opacity" />
+                </button>
 
                 {/* Main Content Area */}
                 <div className="relative w-full h-full flex items-center justify-center p-8 md:p-12 lg:p-16 overflow-hidden pointer-events-none">
@@ -177,8 +188,6 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
                         onClick={(e) => e.stopPropagation()}
                         className="relative group flex items-center justify-center max-w-full max-h-full pointer-events-auto"
                     >
-                        {/* Subtle Glow behind image */}
-                        <div className="absolute inset-0 bg-primary/10 blur-[120px] rounded-full opacity-30 pointer-events-none" />
 
                         <img
                             ref={imgRef}
@@ -210,7 +219,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
                                 e.stopPropagation();
                                 handlePrevious();
                             }}
-                            className="absolute left-8 top-1/2 -translate-y-1/2 z-60 p-4 rounded-full bg-white/5 hover:bg-white/10 active:bg-white/20 text-white/50 hover:text-white transition-all border border-white/10 backdrop-blur-xl active:scale-90 group shadow-2xl"
+                            className="absolute left-8 top-1/2 -translate-y-1/2 z-60 p-4 rounded-full bg-black/20 hover:bg-black/30 active:bg-black/40 text-white/50 hover:text-white transition-all border border-white/10 backdrop-blur-xl active:scale-90 group shadow-2xl"
                             aria-label="Previous image"
                         >
                             <ChevronLeft className="w-6 h-6 group-hover:-translate-x-0.5 transition-transform" />
@@ -220,7 +229,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
                                 e.stopPropagation();
                                 handleNext();
                             }}
-                            className="absolute right-8 top-1/2 -translate-y-1/2 z-60 p-4 rounded-full bg-white/5 hover:bg-white/10 active:bg-white/20 text-white/50 hover:text-white transition-all border border-white/10 backdrop-blur-xl active:scale-90 group shadow-2xl"
+                            className="absolute right-8 top-1/2 -translate-y-1/2 z-60 p-4 rounded-full bg-black/20 hover:bg-black/30 active:bg-black/40 text-white/50 hover:text-white transition-all border border-white/10 backdrop-blur-xl active:scale-90 group shadow-2xl"
                             aria-label="Next image"
                         >
                             <ChevronRight className="w-6 h-6 group-hover:scale-110 transition-transform" />

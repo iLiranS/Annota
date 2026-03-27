@@ -56,7 +56,7 @@ export function NotePreviewModal({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-4xl h-[80vh] flex flex-col p-0 overflow-hidden bg-background">
+            <DialogContent className="max-w-4xl h-[80vh] flex flex-col p-0 overflow-hidden bg-note-bg">
                 <DialogHeader className="px-6 py-3 border-b shrink-0 flex flex-row items-center justify-between space-y-0">
                     <DialogTitle className="truncate pr-8 text-lg font-bold">
                         {note.title || "Untitled Note"}

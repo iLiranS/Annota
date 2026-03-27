@@ -11,6 +11,7 @@ import { TaskCalendarSidebar } from "./task-calendar-sidebar";
  */
 export default function AppShell() {
     const { general } = useSettingsStore();
+
     return (
         <SidebarProvider
             className="h-svh"
@@ -22,18 +23,20 @@ export default function AppShell() {
                 <div className="flex flex-1 overflow-hidden">
                     <main
                         className={cn(
-                            "flex-1 overflow-hidden bg-sidebar transition-all duration-300 ease-in-out",
+                            "flex-1 overflow-hidden bg-note-bg transition-[width,transform,opacity,border-color] duration-300 ease-in-out",
                             "m-2 mt-0 rounded-2xl ",
                             "border border-sidebar-border/60"
                         )}
+
                         dir="ltr" // Editor/Content is always LTR unless specific note direction is set
                     >
                         <Outlet />
                     </main>
                     <div className={cn(
-                        "transition-all duration-300 ease-in-out overflow-hidden flex shrink-0 bg-sidebar",
+                        "transition-[width,transform,opacity] duration-300 ease-in-out overflow-hidden flex shrink-0 bg-sidebar",
                         general.isTaskCalendarOpen ? "w-64" : "w-0"
                     )}>
+
                         <TaskCalendarSidebar />
                     </div>
                 </div>

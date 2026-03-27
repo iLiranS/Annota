@@ -1,6 +1,6 @@
 import { useSettingsStore } from '@annota/core';
 import { Colors } from '@annota/core/constants/theme';
-import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useState, useSyncExternalStore } from 'react';
 
 /** Subscribe to the system color-scheme media query. */
 function subscribeToScheme(callback: () => void) {
@@ -49,32 +49,46 @@ export function useAppTheme(): AppTheme {
             : typeof document !== "undefined" && document.documentElement.classList.contains("dark");
 
     // Keep the <html> class and CSS variables in sync so Tailwind and shadcn vars work.
-    useEffect(() => {
+    const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
+
+    useIsomorphicLayoutEffect(() => {
+
         if (!hasHydrated) return;
+        
         const root = document.documentElement;
+        const body = document.body;
 
-        root.classList.toggle("dark", isDark);
+        const applyTheme = () => {
+            root.classList.toggle("dark", isDark);
+            body.classList.toggle("dark", isDark);
+            
+            // Helpful as an alternative selector in CSS
+            root.setAttribute("data-theme", isDark ? "dark" : "light");
+            body.setAttribute("data-theme", isDark ? "dark" : "light");
 
-        root.style.setProperty("--accent", accentColor + "65");
-        root.style.setProperty("--accent-full", accentColor);
-        document.documentElement.style.setProperty("--accent", accentColor + "65");
 
-        // subtle background tint
-        root.style.setProperty(
-            "--accent-soft",
-            `color-mix(in oklch, ${accentColor} 12%, var(--background))`
-        );
+            root.style.setProperty("--accent", accentColor + "65");
+            root.style.setProperty("--accent-full", accentColor);
 
-        root.style.setProperty(
-            "--accent-soft-hover",
-            `color-mix(in oklch, ${accentColor} 18%, var(--background))`
-        );
+            // subtle background tint
+            root.style.setProperty(
+                "--accent-soft",
+                `color-mix(in oklch, ${accentColor} 12%, var(--background))`
+            );
+
+            root.style.setProperty(
+                "--accent-soft-hover",
+                `color-mix(in oklch, ${accentColor} 18%, var(--background))`
+            );
+        };
+
+        applyTheme();
 
         try {
             localStorage.setItem("annota.themeMode", themeMode);
             localStorage.setItem("annota.accentColor", accentColor);
         } catch {
-            // Ignore storage failures (private mode, blocked storage, etc.)
+            // Ignore storage failures
         }
     }, [isDark, accentColor, themeMode, hasHydrated]);
 

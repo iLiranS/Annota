@@ -42,11 +42,13 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
         onSlashCommand,
         onTagCommand,
         onNoteLinkCommand,
+        onOpenLinkMenu,
         renderToolbar,
         renderHeader,
         renderImageGallery,
         isDark: propIsDark,
         colors: propColors,
+        isStandalone,
     }, ref) => {
         const colors = propColors || { primary: '#007AFF', background: '#FFFFFF', text: '#000000' };
         const dark = propIsDark ?? false;
@@ -115,6 +117,16 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
         const editorProps = useMemo(() => getEditorProps({
             direction: editorSettings.direction,
             onContextMenu: (view, event) => {
+                const target = event.target as HTMLElement;
+                const linkElement = target.closest('a');
+                if (linkElement && linkElement.href && linkElement.href.includes('annota://')) {
+                    if (onOpenLinkMenu) {
+                        event.preventDefault();
+                        onOpenLinkMenu(event as any, linkElement.href);
+                        return true;
+                    }
+                }
+
                 if (!onOpenTableMenu) return false;
 
 
@@ -206,7 +218,7 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
 
                 return false;
             }
-        }), [editorSettings.direction, onOpenTableMenu]);
+        }), [editorSettings.direction, onOpenTableMenu, onOpenLinkMenu]);
 
         const editor = useEditor({
             editable,
@@ -277,6 +289,15 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
             root.style.setProperty('--code-bg', dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)');
             root.style.setProperty('--code-block-bg', dark ? '#1E1E1E' : '#F5F5F5');
             root.style.setProperty('--border-color', dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)');
+            
+            // Refined selection background (approx 25% opacity)
+            let selectionColor = colors.primary;
+            if (selectionColor.startsWith('#')) {
+                selectionColor = selectionColor + "40"; // 25% opacity in hex
+            } else {
+                selectionColor = `rgba(var(--accent-color), 0.25)`;
+            }
+            root.style.setProperty('--selection-bg', selectionColor);
         }, [colors, dark, editorSettings]);
         // Keyboard Shortcuts
         useEffect(() => {
@@ -517,6 +538,17 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
 
         return (
             <div ref={containerRef} className="editor-dom-container" style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
+                <style>{`
+                    .editor-dom-container ::selection {
+                        background-color: var(--selection-bg, rgba(0, 122, 255, 0.2)) !important;
+                        color: inherit !important;
+                    }
+                    /* For Firefox */
+                    .editor-dom-container ::-moz-selection {
+                        background-color: var(--selection-bg, rgba(0, 122, 255, 0.2)) !important;
+                        color: inherit !important;
+                    }
+                `}</style>
                 {renderToolbar?.({
                     editorState,
                     sendCommand: handleCommand,
@@ -571,8 +603,17 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                         setActivePopup('math');
                     }
                 })}
-                <div className="editor-scroller" style={{ flex: 1, overflowY: 'auto', padding: '0 24px', scrollPaddingBottom: 100 }}>
-                    <div style={{ maxWidth: editorSettings.noteWidth || '100%', margin: '0 auto', minHeight: '100%' }}>
+                <div className="editor-scroller" style={{ 
+                    flex: 1, 
+                    overflowY: 'auto', 
+                    padding: isStandalone ? '0 12px' : '0 24px', 
+                    scrollPaddingBottom: 100 
+                }}>
+                    <div style={{ 
+                        maxWidth: editorSettings.noteWidth || '100%', 
+                        margin: '0 auto', 
+                        minHeight: '100%' 
+                    }}>
                         {renderHeader?.()}
                         <EditorContent editor={editor} style={{ outline: 'none', paddingTop: contentPaddingTop, paddingBottom: initialContent && initialContent.length > 200 ? 100 : 0 }} />
                     </div>

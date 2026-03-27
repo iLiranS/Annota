@@ -6,6 +6,7 @@ import { getStorageEngine, useDbStore, useNotesStore, useTasksStore } from "@ann
 import { Activity, CheckCircle2, FileText, Flame, Target, TrendingUp, Zap } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Label, Pie, PieChart, XAxis } from "recharts";
+import { useAppTheme } from "@/hooks/use-app-theme";
 
 import {
     Card,
@@ -23,6 +24,7 @@ import { cn } from "@/lib/utils";
 export function ActivityInsights() {
     const { notes, folders } = useNotesStore();
     const { tasks } = useTasksStore();
+    const { accentColor } = useAppTheme();
 
     // Calendar Month Boundaries
     const { monthStart, monthEnd, daysInMonth } = useMemo(() => {
@@ -314,7 +316,7 @@ export function ActivityInsights() {
                                 <span className="text-[10px] font-bold uppercase tracking-widest leading-none">Execution rate</span>
                             </div>
                             <div className="flex items-center gap-1">
-                                <span className="text-xl font-black text-foreground/90">{Math.round(completionStats.onTimeRate)}%</span>
+                                <span className="text-xl font-black text-foreground/90">{Math.round((completionStats.lateCompletedCount + completionStats.onTimeCount) / completionStats.total * 100)}%</span>
                                 <span className={`text-[8px] font-bold uppercase ${effectiveStatus.bg} ${effectiveStatus.color} px-1 rounded-sm`}>
                                     {effectiveStatus.sentence}
                                 </span>
@@ -398,7 +400,7 @@ export function ActivityInsights() {
                                             <div
                                                 className=" w-6 aspect-square rounded-[3px] transition-all duration-500 cursor-pointer hover:ring-1 hover:ring-accent-full/50 animate-pop-in"
                                                 style={{
-                                                    backgroundColor: 'var(--accent-full)',
+                                                    backgroundColor: accentColor,
                                                     "--day-opacity": day.isFuture ? 0.05 : (day.level === 0 ? 0.15 : 0.25 + (day.level * 0.18)),
                                                     animationDelay: `${i * 30}ms`
                                                 } as any}

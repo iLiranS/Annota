@@ -62,6 +62,8 @@ export interface TipTapEditorProps {
     onTagCommand?: (data: { active: boolean; query?: string; range?: { from: number; to: number }; clientRect?: any }) => void;
     /** Callback for note link command state (triggered by [[) */
     onNoteLinkCommand?: (data: { active: boolean; query?: string; range?: { from: number; to: number }; clientRect?: any }) => void;
+    /** Callback for opening a link-specific menu */
+    onOpenLinkMenu?: (e: MouseEvent, url: string) => void;
     /** Render prop for customizing the slash command menu */
     renderSlashCommandMenu?: () => React.ReactNode;
     /** Callback for when the code block language selector is clicked */
@@ -85,6 +87,7 @@ export interface TipTapEditorProps {
         background: string;
         text: string;
     };
+    isStandalone?: boolean;
 }
 
 export interface EditorState {

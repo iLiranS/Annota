@@ -1,11 +1,15 @@
-import { getStorageEngine, useDbStore, useSettingsStore, useTasksStore } from '@annota/core';
+import { getStorageEngine, useDbStore, useSettingsStore, useTasksStore, vacuumDatabase } from '@annota/core';
 import { useEffect } from 'react';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 
 export function useDailyCleanup() {
     const isReady = useDbStore(state => state.isReady);
 
     useEffect(() => {
         if (!isReady) return;
+
+        // Only run daily cleanup on the main window
+        if (getCurrentWindow().label !== 'main') return;
 
         const checkAndRunCleanup = async () => {
             const { currentUserId, isGuest } = useDbStore.getState();
@@ -42,7 +46,10 @@ export function useDailyCleanup() {
                     // 3. Run your store function
                     await useTasksStore.getState().clearOldCompletedTasks(cutoffDate);
 
-                    // 4. Update the last run time
+                    // 4. Vacuum the database to reclaim space
+                    await vacuumDatabase();
+
+                    // 5. Update the last run time
                     await storage.setItem(storageKey, now.toISOString());
                 }
 

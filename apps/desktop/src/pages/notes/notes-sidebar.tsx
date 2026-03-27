@@ -302,9 +302,10 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
                 "group/sidebar relative flex h-full flex-col bg-note-bg overflow-hidden shrink-0",
                 general.appDirection === "rtl" ? "border-l" : "border-r",
                 "select-none border-border/50",
-                !isResizing && "transition-all duration-300 ease-in-out",
+                !isResizing && "transition-[width,transform,opacity,border-color] duration-300 ease-in-out",
                 className
             )}
+
             style={{ width: open ? `${width}px` : 0 }}
         >
             <div className="flex h-full flex-col shrink-0" style={{ width: `${width}px` }}>

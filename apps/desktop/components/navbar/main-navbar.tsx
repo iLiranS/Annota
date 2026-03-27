@@ -9,6 +9,7 @@ import { useLocation, useNavigate } from "react-router-dom"
 import { NotesSearchModal } from "../search/notes-search-modal"
 import { Ionicons } from "../ui/ionicons"
 
+
 /**
  * MainNavbar: A custom title-bar / top navbar for the desktop app.
  * Designed to work with Tauri's transparent/overlay titlebar style.
@@ -21,6 +22,7 @@ export function MainNavbar() {
     const { session } = useUserStore();
     const { general, updateGeneralSettings } = useSettingsStore();
     const { open, toggleSidebar } = useSidebar();
+
 
 
     const [canSync, setCanSync] = useState(true);
@@ -84,10 +86,11 @@ export function MainNavbar() {
             dir={general.appDirection}
             className={cn(
                 "flex h-9 w-full shrink-0 rotate-0 items-center justify-between border-sidebar-border bg-sidebar px-3",
-                "select-none transition-all duration-200 ease-in-out",
+                "select-none transition-[width,height,transform,opacity,border-color] duration-200 ease-in-out",
                 general.appDirection === 'ltr' && 'pr-20',
                 general.appDirection === 'rtl' && !open && 'pr-20',
             )}
+
         >
             {/* Left Section: Sidebar Toggle & Search */}
             <div className="flex items-center gap-3">

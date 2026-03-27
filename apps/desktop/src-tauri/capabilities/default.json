@@ -3,7 +3,8 @@
   "identifier": "default",
   "description": "Capability for the main window",
   "windows": [
-    "main"
+    "main",
+    "note-*"
   ],
   "permissions": [
     "core:default",
@@ -25,6 +26,10 @@
     "deep-link:default",
     "core:window:default",
     "core:window:allow-start-dragging",
+    "core:window:allow-create",
+    "core:window:allow-set-theme",
+    "core:event:default",
+    "core:webview:allow-create-webview-window",
     "clipboard-manager:allow-read-text",
     "clipboard-manager:allow-write-text",
     "clipboard-manager:allow-write-image",

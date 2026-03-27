@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { purgeGuestTombstones, vacuumDatabase } from '../db';
+import { purgeGuestTombstones } from '../db';
 import type { Folder, FolderInsert, NoteMetadata, Tag } from '../db/schema';
 import { DAILY_NOTES_FOLDER_ID, FolderService, TRASH_FOLDER_ID } from '../services/folders.service';
 import { NoteService } from '../services/notes.service';
@@ -94,10 +94,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
         // 1. Run Maintenance FIRST, only on cold starts
         if (!wasInitialized) {
-            console.log('[Store] Running startup database maintenance...');
             try {
-                // Assuming vacuumDatabase is imported at the top of your store file
-                await vacuumDatabase();
                 await purgeGuestTombstones();
             } catch (err) {
                 console.warn('[Store] Startup maintenance failed, continuing init...', err);

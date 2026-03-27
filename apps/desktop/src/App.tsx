@@ -1,5 +1,6 @@
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useDailyCleanup } from "@/hooks/use-daily-cleanup";
+import { useNoteWindowSync } from "@/hooks/use-note-window-sync";
 import {
   authApi,
   fileSyncService,
@@ -20,6 +21,8 @@ import { Location, Navigate, Route, Routes, useLocation, useNavigate } from "rea
 import "./App.css";
 import { initDesktopSqlite } from "./bootstrap/desktop-db";
 import { initDeepLinkListener } from "./lib/auth-listener";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { emit, listen } from "@tauri-apps/api/event";
 
 // Layout components
 import AppShell from "@/components/layout/app-shell";
@@ -35,6 +38,7 @@ import MasterKeyPage from "./pages/auth/master-key";
 import NotesLayout from "./pages/notes/notes-layout";
 import NotesViewManager from "./pages/notes/notes-view-manager";
 import TrashPage from "./pages/notes/trash-page";
+import NoteFullscreen from "./pages/notes/note-fullscreen";
 
 // Tasks pages
 import TaskDetailDialog from "./pages/tasks/task-detail-dialog";
@@ -47,6 +51,7 @@ type BootstrapState = "booting" | "ready" | "error";
 function App() {
   useAppTheme();
   useDailyCleanup();
+  useNoteWindowSync();
 
   const [bootstrapState, setBootstrapState] =
     useState<BootstrapState>("booting");
@@ -136,23 +141,28 @@ function App() {
         // 4. Initialise (or switch to) the per-user SQLite database.
         await initDesktopSqlite(activeUserId);
 
-        // 5. Wrap store initialization in a timeout in case they try to network-sync and hang.
-        try {
-          const storesPromise = Promise.all([
-            useNotesStore.getState().initApp(),
-            useTasksStore.getState().loadTasks(),
-          ]);
-          const storesTimeoutPromise = new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error("Stores init timeout")), 5000)
-          );
+        // 5. Initialize stores only for the main window.
+        //    Child windows (standalone note editors) read directly from the DB
+        //    via NoteService and don't need the full store to be populated.
+        const isMain = getCurrentWindow().label === "main";
+        if (isMain) {
+          try {
+            const storesPromise = Promise.all([
+              useNotesStore.getState().initApp(),
+              useTasksStore.getState().loadTasks(),
+            ]);
+            const storesTimeoutPromise = new Promise<never>((_, reject) =>
+              setTimeout(() => reject(new Error("Stores init timeout")), 5000)
+            );
 
-          await Promise.race([storesPromise, storesTimeoutPromise]);
-        } catch (error) {
-          console.warn(
-            "[DesktopBootstrap] Stores sync timed out/failed. Proceeding with local DB data.",
-            error
-          );
-          // Don't throw here! We want the app to finish booting so the user can access local SQLite data.
+            await Promise.race([storesPromise, storesTimeoutPromise]);
+          } catch (error) {
+            console.warn(
+              "[DesktopBootstrap] Stores sync timed out/failed. Proceeding with local DB data.",
+              error
+            );
+            // Don't throw here! We want the app to finish booting so the user can access local SQLite data.
+          }
         }
 
         if (!cancelled) {
@@ -182,6 +192,13 @@ function App() {
     let unlistenDeepLink: (() => void) | undefined;
 
     const handleDeepLink = (url: string) => {
+      // If we are not in the main window, we should NOT navigate locally.
+      // Instead, we tell the main window to handle it.
+      if (getCurrentWindow().label !== 'main') {
+        emit("request-main-window-navigation", { url });
+        return;
+      }
+
       try {
         const parsedUrl = new URL(url);
         // Parse 'annota://note/123?elementId=456'
@@ -203,6 +220,9 @@ function App() {
               routePath += `?elementId=${elementId}`;
             }
             navigate(routePath);
+            const win = getCurrentWindow();
+            win.unminimize();
+            win.setFocus();
           } else {
             console.warn("[DeepLink] Note not found in store, can't route yet:", noteId);
           }
@@ -211,6 +231,24 @@ function App() {
         console.error("Failed to handle deep link:", err);
       }
     };
+
+    // 0. Listen for navigation requests from other windows (only in main window)
+    let unlistenRequest: (() => void) | undefined;
+    if (getCurrentWindow().label === 'main') {
+      listen("request-main-window-navigation", (event: any) => {
+        const win = getCurrentWindow();
+        if (event.payload?.path) {
+          // In-app route navigation (e.g. from standalone note window)
+          navigate(event.payload.path);
+          win.unminimize();
+          win.setFocus();
+        } else if (event.payload?.url) {
+          handleDeepLink(event.payload.url);
+          win.unminimize();
+          win.setFocus();
+        }
+      }).then(un => unlistenRequest = un);
+    }
 
     // 1. Listen for external OS-level links
     initDeepLinkListener(handleDeepLink).then((unlisten) => {
@@ -257,6 +295,7 @@ function App() {
 
     return () => {
       if (unlistenDeepLink) unlistenDeepLink();
+      if (unlistenRequest) unlistenRequest();
       subscription.unsubscribe();
       // Clean up the click listener when unmounting
       document.removeEventListener("click", handleGlobalClick);
@@ -291,7 +330,7 @@ function App() {
 
   // Sync Scheduler
   useEffect(() => {
-    if (!session || !hasMasterKey || !saltHex || bootstrapState !== "ready") return;
+    if (!session || !hasMasterKey || !saltHex || bootstrapState !== "ready" || getCurrentWindow().label !== "main") return;
 
     let cancelled = false;
 
@@ -335,14 +374,24 @@ function App() {
 
   // ── Booting ──────────────────────────────────────────────────
   if (bootstrapState === "booting") {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">Starting Annota…</p>
+    const isMain = getCurrentWindow().label === "main";
+    if (isMain) {
+      return (
+        <div className="flex min-h-screen items-center justify-center bg-background">
+          <div className="flex flex-col items-center gap-3">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground">Starting Annota…</p>
+          </div>
         </div>
-      </div>
-    );
+      );
+    } else {
+      // Cleaner standalone loader (just the background and a subtle spinner)
+      return (
+        <div className="flex h-screen w-screen items-center justify-center bg-background">
+          <Loader2 className="h-10 w-10 animate-spin text-muted-foreground/30" />
+        </div>
+      );
+    }
   }
 
   // ── Error ────────────────────────────────────────────────────
@@ -381,6 +430,7 @@ function App() {
 
         {/* Protected app routes */}
         <Route element={<AuthGuard />}>
+          <Route path="note-fullscreen/:noteId" element={<NoteFullscreen />} />
           <Route element={<AppShell />}>
             {/* Default redirect */}
             <Route index element={<Navigate to="/home" replace />} />

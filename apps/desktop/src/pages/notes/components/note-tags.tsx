@@ -4,7 +4,7 @@ import { useNotesStore, useSettingsStore, type Tag } from '@annota/core';
 import { Tag as TagIcon, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-export function NoteTags({ noteId, className }: { noteId: string, className?: string }) {
+export function NoteTags({ noteId, className, onTagClick }: { noteId: string, className?: string, onTagClick?: (tagId: string) => void }) {
     const { tags, notes, removeTagFromNote } = useNotesStore();
     const navigate = useNavigate();
     const { editor } = useSettingsStore();
@@ -33,7 +33,7 @@ export function NoteTags({ noteId, className }: { noteId: string, className?: st
             {appliedTags.map(tag => (
                 <Badge
                     key={tag.id}
-                    onClick={() => navigate(`/notes?tagId=${tag.id}`)}
+                    onClick={() => onTagClick ? onTagClick(tag.id) : navigate(`/notes?tagId=${tag.id}`)}
                     variant="outline"
                     className="flex cursor-pointer hover:scale-105 items-center gap-1.5 px-2 py-0.5 bg-opacity-10 dark:bg-opacity-10 backdrop-blur-md border-opacity-50 transition-all hover:bg-opacity-20 text-xs font-semibold rounded-md shadow-sm"
                     style={{

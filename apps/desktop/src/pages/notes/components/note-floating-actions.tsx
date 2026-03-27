@@ -13,6 +13,7 @@ interface NoteFloatingActionsProps {
     toggleFullScreen: () => void;
     note: NoteMetadata;
     onRevert: (content: string) => void;
+    isStandalone?: boolean;
 }
 
 export function NoteFloatingActions({
@@ -22,6 +23,7 @@ export function NoteFloatingActions({
     toggleFullScreen,
     note,
     onRevert,
+    isStandalone,
 }: NoteFloatingActionsProps) {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
@@ -52,7 +54,9 @@ export function NoteFloatingActions({
             "dark:border-white/10",
             "dark:ring-white/5",
             "dark:shadow-[0_7px_10px_rgba(0,0,0,0.6)]",
-            isMenuOpen ? "w-[210px]" : "w-11 hover:w-[210px]",
+            isStandalone 
+                ? (isMenuOpen ? "w-[124px]" : "w-11 hover:w-[124px]")
+                : (isMenuOpen ? "w-[210px]" : "w-11 hover:w-[210px]"),
             direction === "rtl" ? "left-6" : "right-6"
         )}>
             <div className="flex items-center gap-1 w-full flex-nowrap">
@@ -91,50 +95,52 @@ export function NoteFloatingActions({
                             </TooltipContent>
                         </Tooltip>
 
+                        {!isStandalone && (
+                            <Tooltip
+                                open={activeTooltip === 'sidebar'}
+                                onOpenChange={(o) => setActiveTooltip(o ? 'sidebar' : null)}
+                            >
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8.5 w-8.5 rounded-xl hover:bg-white/10 dark:hover:bg-white/5 shrink-0"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            toggleNoteSidebar();
+                                        }}
+                                    >
+                                        <SidebarClose className={cn("h-4 w-4 transition-colors", isNoteSidebarOpen ? "text-primary" : "text-muted-foreground")} />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="bottom" sideOffset={12} className="text-[10px] font-medium">Toggle Notes Sidebar</TooltipContent>
+                            </Tooltip>
+                        )}
 
-
-                        <Tooltip
-                            open={activeTooltip === 'sidebar'}
-                            onOpenChange={(o) => setActiveTooltip(o ? 'sidebar' : null)}
-                        >
-                            <TooltipTrigger asChild>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8.5 w-8.5 rounded-xl hover:bg-white/10 dark:hover:bg-white/5 shrink-0"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        toggleNoteSidebar();
-                                    }}
-                                >
-                                    <SidebarClose className={cn("h-4 w-4 transition-colors", isNoteSidebarOpen ? "text-primary" : "text-muted-foreground")} />
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent side="bottom" sideOffset={12} className="text-[10px] font-medium">Toggle Notes Sidebar</TooltipContent>
-                        </Tooltip>
-
-                        <Tooltip
-                            open={activeTooltip === 'fullscreen'}
-                            onOpenChange={(o) => setActiveTooltip(o ? 'fullscreen' : null)}
-                        >
-                            <TooltipTrigger asChild>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8.5 w-8.5 rounded-xl hover:bg-white/10 dark:hover:bg-white/5 shrink-0"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        toggleFullScreen();
-                                    }}
-                                >
-                                    {isNoteSidebarOpen ? <Maximize2 className="h-3.5 w-3.5" /> : <Minimize2 className="h-3.5 w-3.5" />}
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent side="bottom" sideOffset={12} className="text-[10px] font-medium">
-                                {isNoteSidebarOpen ? "Focus Mode" : "Exit Focus Mode"}
-                                <span className="ml-2 text-[10px] opacity-60 bg-white/10 px-1 rounded-sm border border-white/10">{MOD + ' + ' + SHIFT + ' + D'}</span>
-                            </TooltipContent>
-                        </Tooltip>
+                        {!isStandalone && (
+                            <Tooltip
+                                open={activeTooltip === 'fullscreen'}
+                                onOpenChange={(o) => setActiveTooltip(o ? 'fullscreen' : null)}
+                            >
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8.5 w-8.5 rounded-xl hover:bg-white/10 dark:hover:bg-white/5 shrink-0"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            toggleFullScreen();
+                                        }}
+                                    >
+                                        {isNoteSidebarOpen ? <Maximize2 className="h-3.5 w-3.5" /> : <Minimize2 className="h-3.5 w-3.5" />}
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="bottom" sideOffset={12} className="text-[10px] font-medium">
+                                    {isNoteSidebarOpen ? "Focus Mode" : "Exit Focus Mode"}
+                                    <span className="ml-2 text-[10px] opacity-60 bg-white/10 px-1 rounded-sm border border-white/10">{MOD + ' + ' + SHIFT + ' + D'}</span>
+                                </TooltipContent>
+                            </Tooltip>
+                        )}
 
                         <Tooltip
                             open={activeTooltip === 'more' && !isMenuOpen}
