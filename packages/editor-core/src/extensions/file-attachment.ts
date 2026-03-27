@@ -11,7 +11,7 @@ export const FileAttachment = Node.create({
     addOptions() {
         return {
             onOpenFile: null as ((data: { localPath: string; mimeType: string }) => void) | null,
-            onOpenFileMenu: null as ((e: MouseEvent, resolve: () => any) => void) | null,
+            onOpenFileMenu: null as ((e: MouseEvent, resolve: () => { pos: number; message: Record<string, unknown> } | null) => void) | null,
         };
     },
 
@@ -111,7 +111,7 @@ export const FileAttachment = Node.create({
             const menuBtn = createBlockMenuButton({
                 className: 'file-attachment-menu-btn',
                 iconSize: 'small',
-                onClick: this.options.onOpenFileMenu,
+                onClick: this.options.onOpenFileMenu || undefined,
                 onResolve: () => {
                     // Guard: ensure editor view is mounted
                     if (!editor.view || !editor.view.dom) return null;

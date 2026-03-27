@@ -1,6 +1,6 @@
 import type { PlatformAdapters } from '@annota/core/platform';
 import NetInfo from '@react-native-community/netinfo';
-import { Buffer } from 'buffer';
+import { Buffer } from '@craftzdog/react-native-buffer';
 import * as FileSystem from 'expo-file-system';
 import { Action, manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import * as IntentLauncher from 'expo-intent-launcher';
@@ -86,25 +86,25 @@ export function createMobileAdapters(): PlatformAdapters {
                 });
             },
             aes256GcmEncrypt: async ({ key, nonce, plaintext }: { key: Uint8Array; nonce: Uint8Array; plaintext: Uint8Array }) => {
-                const cipher = crypto.createCipheriv('aes-256-gcm', key as any, nonce as any);
-                const encryptedContent = cipher.update(Buffer.from(plaintext) as any);
+                const cipher = crypto.createCipheriv('aes-256-gcm', key, nonce);
+                const encryptedContent = cipher.update(Buffer.from(plaintext));
                 const encryptedFinal = cipher.final();
                 const authTag = cipher.getAuthTag();
 
-                const ciphertext = Buffer.concat([encryptedContent as any, encryptedFinal as any]);
+                const ciphertext = Buffer.concat([encryptedContent, encryptedFinal]);
                 return {
                     ciphertext: new Uint8Array(ciphertext),
                     authTag: new Uint8Array(authTag),
                 };
             },
             aes256GcmDecrypt: async ({ key, nonce, ciphertext, authTag }: { key: Uint8Array; nonce: Uint8Array; ciphertext: Uint8Array; authTag: Uint8Array }) => {
-                const decipher = crypto.createDecipheriv('aes-256-gcm', key as any, nonce as any);
-                decipher.setAuthTag(Buffer.from(authTag) as any);
+                const decipher = crypto.createDecipheriv('aes-256-gcm', key, nonce);
+                decipher.setAuthTag(Buffer.from(authTag));
 
-                const decryptedContent = decipher.update(Buffer.from(ciphertext) as any);
+                const decryptedContent = decipher.update(Buffer.from(ciphertext));
                 const decryptedFinal = decipher.final();
 
-                return new Uint8Array(Buffer.concat([decryptedContent as any, decryptedFinal as any]));
+                return new Uint8Array(Buffer.concat([decryptedContent, decryptedFinal]));
             },
         },
         fileSystem: {

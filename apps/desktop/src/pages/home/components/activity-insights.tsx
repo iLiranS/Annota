@@ -1,13 +1,12 @@
 "use client"
 
+import { Ionicons } from "@/components/ui/ionicons";
 import { LATE_SENTENCES, ON_TIME_SENTENCES } from "@/src/pages/home/data/sentences";
 import { getStorageEngine, useDbStore, useNotesStore, useTasksStore } from "@annota/core";
 import { Activity, CheckCircle2, FileText, Flame, Target, TrendingUp, Zap } from "lucide-react";
-import { Ionicons } from "@/components/ui/ionicons";
 import { useEffect, useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Label, Pie, PieChart, XAxis } from "recharts";
 
-import { cn } from "@/lib/utils";
 import {
     Card,
     CardContent,
@@ -19,6 +18,7 @@ import {
     type ChartConfig
 } from "@/components/ui/chart";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 export function ActivityInsights() {
     const { notes, folders } = useNotesStore();
@@ -310,7 +310,7 @@ export function ActivityInsights() {
                     <div className="pb-3 flex items-center justify-between">
                         <div className="flex flex-col gap-0.5">
                             <div className="flex items-center gap-1.5 text-foreground/60">
-                                <CheckCircle2 size={10} className="text-[#8b5cf6]" />
+                                <CheckCircle2 size={12} className="text-[#8b5cf6]" />
                                 <span className="text-[10px] font-bold uppercase tracking-widest leading-none">Execution rate</span>
                             </div>
                             <div className="flex items-center gap-1">

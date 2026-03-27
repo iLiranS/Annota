@@ -220,7 +220,6 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                 if (editor.isEmpty && editable) {
                     const chain = editor.chain();
                     chain
-                        //@ts-expect-error
                         .toggleHeading({ level: 2 })
                         .insertContentAt(editor.state.doc.content.size, '<p></p>')
                         .setTextSelection(1);

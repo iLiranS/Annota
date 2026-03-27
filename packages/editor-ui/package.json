@@ -4,6 +4,9 @@
     "main": "src/index.tsx",
     "react-native": "src/index.native.tsx",
     "types": "src/index",
+    "scripts": {
+        "lint": "eslint \"src/**/*.{ts,tsx}\""
+    },
     "exports": {
         ".": {
             "react-native": "./src/index.native.tsx",
@@ -13,8 +16,8 @@
     "dependencies": {
         "@annota/core": "workspace:*",
         "@annota/editor-core": "workspace:*",
-        "@tiptap/react": "^3.18.0",
-        "@tiptap/core": "^3.18.0"
+        "@tiptap/core": "^3.20.5",
+        "@tiptap/react": "^3.20.5"
     },
     "peerDependencies": {
         "react": "*",

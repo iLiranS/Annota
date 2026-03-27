@@ -20,13 +20,13 @@ import {
     Plus,
     Redo2,
     Sigma,
+    SquarePlay,
     SquareTerminal,
     Strikethrough,
     Table,
     Type,
     Underline,
-    Undo2,
-    Youtube
+    Undo2
 } from 'lucide-react';
 
 export const EditorIcons = {
@@ -66,7 +66,7 @@ export const EditorIcons = {
     Heading: Type,
     Underline,
     Undo: Undo2,
-    Youtube
+    Youtube: SquarePlay
 };
 
 export const DesktopIconMap: Record<string, any> = {

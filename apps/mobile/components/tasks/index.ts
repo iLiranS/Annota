@@ -1,7 +1,9 @@
+import TaskItem from './task-item';
+import TaskList from './task-list';
+import TaskForm from './TaskForm';
+
 export * from './CollapsibleGroup';
-export * from './task-item';
-export * from './task-list';
+export { TaskItem, TaskList, TaskForm };
 export * from './TaskCard';
-export * from './TaskForm';
-export { default as TaskForm } from './TaskForm';
+export type { TaskFormValues } from './TaskForm';
 
