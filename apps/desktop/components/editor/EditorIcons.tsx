@@ -26,7 +26,8 @@ import {
     Table,
     Type,
     Underline,
-    Undo2
+    Undo2,
+    Workflow
 } from 'lucide-react';
 
 export const EditorIcons = {
@@ -66,7 +67,8 @@ export const EditorIcons = {
     Heading: Type,
     Underline,
     Undo: Undo2,
-    Youtube: SquarePlay
+    Youtube: SquarePlay,
+    Mermaid: Workflow
 };
 
 export const DesktopIconMap: Record<string, any> = {
@@ -94,4 +96,5 @@ export const DesktopIconMap: Record<string, any> = {
     'link': EditorIcons.Link,
     'youtube': EditorIcons.Youtube,
     'table': EditorIcons.Table,
+    'mermaid': EditorIcons.Mermaid,
 };

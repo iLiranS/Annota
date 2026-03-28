@@ -54,14 +54,14 @@ export function useAppTheme(): AppTheme {
     useIsomorphicLayoutEffect(() => {
 
         if (!hasHydrated) return;
-        
+
         const root = document.documentElement;
         const body = document.body;
 
         const applyTheme = () => {
             root.classList.toggle("dark", isDark);
             body.classList.toggle("dark", isDark);
-            
+
             // Helpful as an alternative selector in CSS
             root.setAttribute("data-theme", isDark ? "dark" : "light");
             body.setAttribute("data-theme", isDark ? "dark" : "light");

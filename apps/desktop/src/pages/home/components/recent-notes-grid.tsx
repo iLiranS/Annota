@@ -1,7 +1,9 @@
 import { NoteListItem } from '@/components/notes/note-list-item';
+import { Button } from '@/components/ui/button';
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useCreateNote } from '@/hooks/use-create-note';
 import { useNotesStore } from "@annota/core";
-import { FileText } from "lucide-react";
+import { FileText, Plus } from "lucide-react";
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -9,6 +11,7 @@ export function RecentNotesGrid() {
     const { notes, deleteNote } = useNotesStore();
     const { colors } = useAppTheme();
     const navigate = useNavigate();
+    const { createAndNavigate } = useCreateNote();
 
     const recentNotes = useMemo(() => {
         return [...notes]
@@ -24,11 +27,14 @@ export function RecentNotesGrid() {
     return (
         // Added lg: prefix to overflow-hidden
         <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center justify-start gap-2 shrink-0">
                 <FileText size={18} style={{ color: colors.primary }} />
                 <h2 className="text-sm font-semibold text-foreground/80 uppercase tracking-widest">
                     Recent Notes
                 </h2>
+                <Button variant="ghost" size="sm" className='rounded-full' onClick={() => createAndNavigate()}>
+                    <Plus />
+                </Button>
             </div>
 
             <div className="min-h-0 ">

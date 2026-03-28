@@ -181,14 +181,11 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
                     const src = data.src || "";
                     copyImageToClipboard(src, data.imageId);
                     editorRef.current.onCommand("deleteImage", { pos: data.position });
-                } else if (type === "codeBlock") {
-                    editorRef.current.onCommand("copyToClipboard", { pos: data.pos });
-                    editorRef.current.onCommand("deleteSelection", { pos: data.pos });
-                } else if (type === "details") {
-                    editorRef.current.onCommand("copyToClipboard", { pos: data.pos });
-                    editorRef.current.onCommand("deleteSelection", { pos: data.pos });
-                }
-                break;
+                    } else if (["codeBlock", "details", "mermaid"].includes(type)) {
+                        editorRef.current.onCommand("copyToClipboard", { pos: data.pos });
+                        editorRef.current.onCommand("deleteSelection", { pos: data.pos });
+                    }
+                    break;
             case "delete":
                 if (type === "image") {
                     editorRef.current.onCommand("deleteImage", { pos: data.position });

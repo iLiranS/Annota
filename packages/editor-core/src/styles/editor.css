@@ -785,6 +785,141 @@
     cursor: col-resize;
 }
 
+/* Mermaid Diagrams */
+.mermaid-block {
+    position: relative;
+    margin: 1.5rem 0;
+    padding: 1.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background-color: var(--bg-color);
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.mermaid-menu-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    background: transparent;
+    border: none;
+    color: var(--text-color);
+    cursor: pointer;
+    opacity: 0.1;
+    transition: all 0.2s ease;
+    z-index: 20;
+}
+
+.mermaid-block:hover .mermaid-menu-btn {
+    opacity: 0.6;
+}
+
+.mermaid-menu-btn:hover {
+    background-color: rgba(128, 128, 128, 0.1);
+    opacity: 1 !important;
+}
+
+/* On mobile show it slightly more by default */
+@media (max-width: 768px) {
+    .mermaid-menu-btn {
+        opacity: 0.4;
+    }
+}
+
+.mermaid-block:hover {
+    border-color: var(--accent-color);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.mermaid-preview {
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100px;
+    width: 100%;
+    /* Add this to protect Mermaid's colors from Tailwind preflight in production */
+    color: var(--text-color);
+}
+
+.mermaid-preview svg {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Force Tailwind to leave Mermaid's internal SVG structure alone */
+.mermaid-preview svg * {
+    border-color: initial;
+}
+
+.mermaid-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+}
+
+.mermaid-textarea {
+    width: 100%;
+    min-height: 180px;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background-color: var(--code-block-bg);
+    color: var(--text-color);
+    font-family: 'FiraCode', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    resize: vertical;
+    outline: none;
+}
+
+.mermaid-textarea:focus {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-color) 20%, transparent);
+}
+
+.mermaid-render-btn {
+    align-self: flex-end;
+    padding: 8px 16px;
+    border-radius: 6px;
+    background-color: var(--accent-color);
+    color: white;
+    border: none;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.mermaid-render-btn:hover {
+    opacity: 0.9;
+}
+
+.mermaid-error {
+    color: #FF6B6B;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 20px;
+    border: 1px dashed #FF6B6B;
+    border-radius: 8px;
+    background-color: rgba(255, 107, 107, 0.05);
+}
+
+.mermaid-loading {
+    color: var(--placeholder-color);
+    font-size: 14px;
+    font-style: italic;
+    padding: 20px;
+}
+
 /* ========================================
    Details / Collapsible Section Styles
    Modern, clean design matching React Native

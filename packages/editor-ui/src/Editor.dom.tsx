@@ -440,6 +440,10 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
             const handleGlobalPaste = async (e: ClipboardEvent) => {
                 if (!noteId || !editorRef.current) return;
 
+                // 0. SKIP IF FOCUS IS IN AN INPUT OR TEXTAREA (like Mermaid editor)
+                const target = e.target as HTMLElement;
+                if (['INPUT', 'TEXTAREA'].includes(target.tagName)) return;
+
                 // 1. CHECK FOR INTERNAL HTML FIRST
                 const htmlContent = e.clipboardData?.getData('text/html');
 

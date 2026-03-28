@@ -65,6 +65,7 @@ export const SHARED_SLASH_COMMANDS: SharedSlashCommand[] = [
             { id: 'link', title: 'Link', iconKey: 'link', action: 'openLinkModal' },
             { id: 'youtube', title: 'YouTube Video', iconKey: 'youtube', action: 'openYoutubeModal' },
             { id: 'table', title: 'Table', iconKey: 'table', action: 'insertTable' },
+            { id: 'mermaid', title: 'Mermaid Diagram', iconKey: 'mermaid', action: 'insertMermaid' },
         ]
     },
 ];

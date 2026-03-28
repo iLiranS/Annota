@@ -6,15 +6,22 @@ import ThemedText from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useSidebar } from '@/context/sidebar-context';
 import { useAppTheme } from '@/hooks/use-app-theme';
-import { useUserStore as useAuthStore, useNotesStore, useSettingsStore, useTasksStore, type Task } from '@annota/core';
+import { useUserStore as useAuthStore, useNotesStore, useSettingsStore, useSyncStore, useTasksStore, type Task } from '@annota/core';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BlurView } from 'expo-blur';
 import { Stack, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, LayoutChangeEvent, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { runOnJS } from 'react-native-reanimated';
+import { Animated as RNAnimated, LayoutChangeEvent, Platform, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
+import Animated, {
+  Extrapolation,
+  interpolate,
+  runOnJS,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import { GUEST_DISPLAY_NAME_KEY } from './settings/account';
@@ -59,32 +66,49 @@ export default function HomeScreen() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isSearchVisible, setIsSearchVisible] = useState(false);
   const { height: screenHeight } = useWindowDimensions();
-  const hasTriggeredGesture = useRef(false);
-  const startY = useRef(0);
+  const isSyncing = useSyncStore(state => state.isSyncing);
+  const scrollY = useSharedValue(0);
 
-  const panGesture = useMemo(() =>
-    Gesture.Pan()
-      .enabled(!isSearchVisible)
-      .onBegin((e) => {
-        startY.current = e.y;
-        hasTriggeredGesture.current = false;
-      })
-      .onUpdate((e) => {
-        if (hasTriggeredGesture.current) return;
+  const triggerSync = useCallback(async () => {
+    try {
+      await useSyncStore.getState().forceSync();
+    } catch (e) {
+      console.error('[Manual Sync]', e);
+    }
+  }, []);
 
-        // Check if started in the middle-ish vertical area (avoiding edges)
-        const isFromCenter = startY.current > screenHeight * 0.15 && startY.current < screenHeight * 0.8;
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      scrollY.value = event.contentOffset.y;
+    },
+    onEndDrag: (event) => {
+      if (event.contentOffset.y < -80) {
+        runOnJS(triggerSync)();
+      }
+    },
+  });
 
-        // Trigger search on meaningful swipe down
-        if (isFromCenter && e.translationY > 60 && e.velocityY > 500) {
-          hasTriggeredGesture.current = true;
-          runOnJS(setIsSearchVisible)(true);
-        }
-      })
-      .activeOffsetY(10) // Small threshold to distinguish from simple taps
-      .shouldCancelWhenOutside(true),
-    [isSearchVisible, screenHeight]
-  );
+  const syncIndicatorStyle = useAnimatedStyle(() => {
+    const threshold = -80;
+    const pullProgress = interpolate(
+      scrollY.value,
+      [threshold, 0],
+      [1, 0],
+      Extrapolation.CLAMP
+    );
+
+    return {
+      position: 'absolute',
+      top: Platform.OS === 'ios' ? insets.top + 44 : insets.top + 56,
+      left: 0,
+      right: 0,
+      width: isSyncing ? '100%' : `${pullProgress * 100}%`,
+      height: 2,
+      backgroundColor: colors.primary,
+      opacity: isSyncing ? withTiming(1) : (pullProgress > 0 ? 1 : 0),
+      zIndex: 1000,
+    };
+  });
 
   // Use Zustand stores
   const { tasks, loadTasks } = useTasksStore();
@@ -150,7 +174,7 @@ export default function HomeScreen() {
   const [activeTab, setActiveTab] = useState<'tasks' | 'notes'>('tasks');
 
   // Animation for tab sliding background
-  const slideAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new RNAnimated.Value(0)).current;
   const [tabWidth, setTabWidth] = useState(0);
 
   // Handle tab container layout to get individual tab width
@@ -164,7 +188,7 @@ export default function HomeScreen() {
   // Animate slide when activeTab changes
   useEffect(() => {
     const toValue = activeTab === 'tasks' ? 0 : 1;
-    Animated.spring(slideAnim, {
+    RNAnimated.spring(slideAnim, {
       toValue,
       useNativeDriver: true,
       // Jelly-like spring configuration
@@ -226,170 +250,171 @@ export default function HomeScreen() {
   }, [router]);
 
   return (
-    <GestureDetector gesture={panGesture}>
-      <ThemedView style={styles.container}>
-        <Stack.Screen
-          options={{
-            headerShown: true,
-            headerTransparent: true,
-            headerShadowVisible: false,
-            headerStyle: { backgroundColor: 'transparent' },
-            headerTitle: () => (
-              <View style={styles.headerTitleContainer}>
-                <ThemedText style={[styles.greetingText, { fontFamily: editor.fontFamily }]}>
-                  {greeting}, <ThemedText style={[styles.userName, { color: colors.primary }]}>{displayName}</ThemedText>
-                </ThemedText>
-              </View>
-            ),
-            headerLeft: () => (
-              <Pressable
-                onPress={toggle}
-                hitSlop={8}
-                style={styles.headerButton}
-              >
-                <Ionicons name="menu-outline" size={24} color={colors.primary} />
-              </Pressable>
-            ),
-            headerRight: () => (
-              <Pressable
-                onPress={() => setIsSearchVisible(true)}
-                hitSlop={8}
-                style={styles.headerButton}
-              >
-                <Ionicons name="search" size={24} color={colors.primary} />
-              </Pressable>
-            ),
-          }}
-        />
+    <ThemedView style={styles.container}>
+      <Animated.View style={syncIndicatorStyle} />
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          headerTransparent: true,
+          headerShadowVisible: false,
+          headerStyle: { backgroundColor: 'transparent' },
+          headerTitle: () => (
+            <View style={styles.headerTitleContainer}>
+              <ThemedText style={[styles.greetingText, { fontFamily: editor.fontFamily }]}>
+                {greeting}, <ThemedText style={[styles.userName, { color: colors.primary }]}>{displayName}</ThemedText>
+              </ThemedText>
+            </View>
+          ),
+          headerLeft: () => (
+            <Pressable
+              onPress={toggle}
+              hitSlop={8}
+              style={styles.headerButton}
+            >
+              <Ionicons name="menu-outline" size={24} color={colors.primary} />
+            </Pressable>
+          ),
+          headerRight: () => (
+            <Pressable
+              onPress={() => setIsSearchVisible(true)}
+              hitSlop={8}
+              style={styles.headerButton}
+            >
+              <Ionicons name="search" size={24} color={colors.primary} />
+            </Pressable>
+          ),
+        }}
+      />
 
-        <ScrollView
-          style={styles.container}
-          contentContainerStyle={{
-            paddingTop: insets.top + 64, // Base header height + original 20px padding
-            paddingBottom: insets.bottom + 20,
-          }}
-        >
-          {/* Calendar */}
-          <View style={{ paddingHorizontal: 20 }}>
-            <Calendar selectedDate={selectedDate} onDateSelect={handleDateSelect} />
-          </View>
+      <Animated.ScrollView
+        style={styles.container}
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
+        contentContainerStyle={{
+          paddingTop: insets.top + 64, // Base header height + original 20px padding
+          paddingBottom: insets.bottom + 20,
+        }}
+      >
+        {/* Calendar */}
+        <View style={{ paddingHorizontal: 20 }}>
+          <Calendar selectedDate={selectedDate} onDateSelect={handleDateSelect} />
+        </View>
 
-          {/* Content Section */}
-          <View style={styles.contentSection}>
-            {isToday ? (
-              <>
-                {/* Tab Switcher */}
-                <View style={{ paddingHorizontal: 20 }}>
-                  <View
-                    style={[styles.tabContainer, { backgroundColor: colors.card }]}
-                    onLayout={onTabContainerLayout}
+        {/* Content Section */}
+        <View style={styles.contentSection}>
+          {isToday ? (
+            <>
+              {/* Tab Switcher */}
+              <View style={{ paddingHorizontal: 20 }}>
+                <View
+                  style={[styles.tabContainer, { backgroundColor: colors.card }]}
+                  onLayout={onTabContainerLayout}
+                >
+                  <RNAnimated.View
+                    style={[
+                      styles.tabIndicator,
+                      {
+                        backgroundColor: colors.primary + '80',
+                        shadowColor: colors.primary,
+                        width: tabWidth,
+                        transform: [
+                          {
+                            translateX: slideAnim.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [0, tabWidth + 4],
+                            }),
+                          },
+                        ],
+                      },
+                    ]}
+                  />
+                  <Pressable
+                    onPress={() => setActiveTab('tasks')}
+                    style={styles.tab}
                   >
-                    <Animated.View
+                    <Ionicons
+                      name="checkbox-outline"
+                      size={20}
                       style={[
-                        styles.tabIndicator,
-                        {
-                          backgroundColor: colors.primary + '80',
-                          shadowColor: colors.primary,
-                          width: tabWidth,
-                          transform: [
-                            {
-                              translateX: slideAnim.interpolate({
-                                inputRange: [0, 1],
-                                outputRange: [0, tabWidth + 4],
-                              }),
-                            },
-                          ],
-                        },
+                        styles.tabIcon,
+                        { left: 12 },
+                        { color: activeTab === 'tasks' ? '#FFFFFF' : colors.text },
+                        { opacity: activeTab === 'tasks' ? 1 : 0.5 }
                       ]}
                     />
-                    <Pressable
-                      onPress={() => setActiveTab('tasks')}
-                      style={styles.tab}
+                    <ThemedText
+                      style={[
+                        styles.tabText,
+                        activeTab === 'tasks' && styles.activeTabText
+                      ]}
                     >
-                      <Ionicons
-                        name="checkbox-outline"
-                        size={20}
-                        style={[
-                          styles.tabIcon,
-                          { left: 12 },
-                          { color: activeTab === 'tasks' ? '#FFFFFF' : colors.text },
-                          { opacity: activeTab === 'tasks' ? 1 : 0.5 }
-                        ]}
-                      />
-                      <ThemedText
-                        style={[
-                          styles.tabText,
-                          activeTab === 'tasks' && styles.activeTabText
-                        ]}
-                      >
-                        Tasks
-                      </ThemedText>
-                    </Pressable>
-                    <Pressable
-                      onPress={() => setActiveTab('notes')}
-                      style={styles.tab}
+                      Tasks
+                    </ThemedText>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => setActiveTab('notes')}
+                    style={styles.tab}
+                  >
+                    <ThemedText
+                      style={[
+                        styles.tabText,
+                        activeTab === 'notes' && styles.activeTabText
+                      ]}
                     >
-                      <ThemedText
-                        style={[
-                          styles.tabText,
-                          activeTab === 'notes' && styles.activeTabText
-                        ]}
-                      >
-                        Recent Notes
-                      </ThemedText>
-                      <Ionicons
-                        name="document-text-outline"
-                        size={20}
-                        style={[
-                          styles.tabIcon,
-                          { right: 12 },
-                          { color: activeTab === 'notes' ? '#FFFFFF' : colors.text },
-                          { opacity: activeTab === 'notes' ? 1 : 0.5 }
-                        ]}
-                      />
-                    </Pressable>
-                  </View>
-                </View>
-
-                {activeTab === 'tasks' ? (
-                  <View style={[styles.tabContentInner, { paddingHorizontal: 20 }]}>
-                    <TaskList
-                      tasks={tasksForSelectedDate}
-                      selectedDate={selectedDate}
-                      onTaskPress={handleTaskPress}
-                      showComingUp={true}
-                      upcomingTasks={upcomingTasks}
-                      scrollEnabled={false}
+                      Recent Notes
+                    </ThemedText>
+                    <Ionicons
+                      name="document-text-outline"
+                      size={20}
+                      style={[
+                        styles.tabIcon,
+                        { right: 12 },
+                        { color: activeTab === 'notes' ? '#FFFFFF' : colors.text },
+                        { opacity: activeTab === 'notes' ? 1 : 0.5 }
+                      ]}
                     />
-                  </View>
-                ) : (
-                  <RecentNotesList onCreateNote={handleCreateNote} scrollEnabled={false} />
-                )}
-              </>
-            ) : (
-              <View style={[styles.tabContentInner, { paddingHorizontal: 20 }]}>
-                <TaskList
-                  tasks={tasksForSelectedDate}
-                  selectedDate={selectedDate}
-                  onTaskPress={handleTaskPress}
-                  showComingUp={false}
-                  scrollEnabled={false}
-                />
+                  </Pressable>
+                </View>
               </View>
-            )}
-          </View>
-        </ScrollView>
 
-        {/* Search Modal */}
-        <NotesSearchModal
-          visible={isSearchVisible}
-          onClose={() => setIsSearchVisible(false)}
-          onFolderPress={handleFolderPress}
-          onNotePress={handleNotePress}
-          allFolders={folders}
-        />
-      </ThemedView>
-    </GestureDetector>
+              {activeTab === 'tasks' ? (
+                <View style={[styles.tabContentInner, { paddingHorizontal: 20 }]}>
+                  <TaskList
+                    tasks={tasksForSelectedDate}
+                    selectedDate={selectedDate}
+                    onTaskPress={handleTaskPress}
+                    showComingUp={true}
+                    upcomingTasks={upcomingTasks}
+                    scrollEnabled={false}
+                  />
+                </View>
+              ) : (
+                <RecentNotesList onCreateNote={handleCreateNote} scrollEnabled={false} />
+              )}
+            </>
+          ) : (
+            <View style={[styles.tabContentInner, { paddingHorizontal: 20 }]}>
+              <TaskList
+                tasks={tasksForSelectedDate}
+                selectedDate={selectedDate}
+                onTaskPress={handleTaskPress}
+                showComingUp={false}
+                scrollEnabled={false}
+              />
+            </View>
+          )}
+        </View>
+      </Animated.ScrollView>
+
+      {/* Search Modal */}
+      <NotesSearchModal
+        visible={isSearchVisible}
+        onClose={() => setIsSearchVisible(false)}
+        onFolderPress={handleFolderPress}
+        onNotePress={handleNotePress}
+        allFolders={folders}
+      />
+    </ThemedView>
   );
 }
 const styles = StyleSheet.create({

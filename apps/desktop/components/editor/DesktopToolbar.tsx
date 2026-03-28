@@ -7,10 +7,10 @@ import {
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { cn } from '@/lib/utils';
 import type { ToolbarRenderProps } from '@annota/editor-ui';
-import { EditorIcons } from './EditorIcons';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '../ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
+import { EditorIcons } from './EditorIcons';
 import { ColorPicker } from './toolbar/toolbar-color-picker';
 import { ToolbarFileUpload } from './toolbar/toolbar-file-upload';
 import { HeadingSelector } from './toolbar/toolbar-heading-selector';
@@ -163,14 +163,13 @@ export function DesktopToolbar({
             label: 'Quote',
             shortcut: `${MOD}${SHIFT}B`,
             render: <Button key="quote" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleBlockquote')} style={activeStyle(editorState.isBlockquote)}><EditorIcons.Quote className="w-5 h-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="quote-dropdown" onClick={() => sendCommand('toggleBlockquote')} className={cn("gap-2", editorState.isBlockquote && "text-primary")}><EditorIcons.Quote className="w-4 h-4" /> Quote <span className="ml-auto text-[10px] opacity-50">{MOD}${SHIFT}B</span></DropdownMenuItem>
+            dropdownRender: <DropdownMenuItem key="quote-dropdown" onClick={() => sendCommand('toggleBlockquote')} className={cn("gap-2", editorState.isBlockquote && "text-primary")}><EditorIcons.Quote className="w-4 h-4" /> Quote <span className="ml-auto text-[10px] opacity-50">{MOD}${SHIFT}Z</span></DropdownMenuItem>
         },
         {
-            id: 'details',
-            label: 'Collapsible',
-            shortcut: `${MOD}.`,
-            render: <Button key="details" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleDetails')} style={activeStyle(editorState.isDetails)}><EditorIcons.Details className="w-5 h-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="details-dropdown" onClick={() => sendCommand('toggleDetails')} className={cn("gap-2", editorState.isDetails && "text-primary")}><EditorIcons.Details className="w-4 h-4" /> Details <span className="ml-auto text-[10px] opacity-50">{MOD}.</span></DropdownMenuItem>
+            id: 'table',
+            label: 'Table',
+            render: <Button key="table" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => { if (!editorState.isInTable) sendCommand('insertTable', { rows: 3, cols: 3, withHeaderRow: false }); }} style={activeStyle(editorState.isInTable)}><EditorIcons.Table className="w-5 h-5" /></Button>,
+            dropdownRender: <DropdownMenuItem key="table-dropdown" onClick={() => { if (!editorState.isInTable) sendCommand('insertTable', { rows: 3, cols: 3, withHeaderRow: false }); }} className={cn("gap-2", editorState.isInTable && "text-primary")}><EditorIcons.Table className="w-4 h-4" /> Table</DropdownMenuItem>
         },
         {
             id: 'math',
@@ -245,24 +244,6 @@ export function DesktopToolbar({
                 />
             )
         },
-        {
-            id: 'youtube',
-            label: 'YouTube',
-            render: <LinkPopover key="youtube" title="YouTube Video" description="Enter a YouTube video URL" icon={EditorIcons.Youtube} placeholder="https://youtube.com/watch?v=..." saveLabel="Insert" onSave={(href) => sendCommand('setYoutubeVideo', { src: href })} onOpenChange={handleOpenChange} hideTitle />,
-            dropdownRender: <LinkPopover key="youtube-dropdown" title="YouTube Video" description="Enter a YouTube video URL" icon={EditorIcons.Youtube} placeholder="https://youtube.com/watch?v=..." saveLabel="Insert" onSave={(href) => sendCommand('setYoutubeVideo', { src: href })} onOpenChange={handleOpenChange} isMenu hideTitle />
-        },
-        {
-            id: 'table',
-            label: 'Table',
-            render: <Button key="table" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => { if (!editorState.isInTable) sendCommand('insertTable', { rows: 3, cols: 3, withHeaderRow: false }); }} style={activeStyle(editorState.isInTable)}><EditorIcons.Table className="w-5 h-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="table-dropdown" onClick={() => { if (!editorState.isInTable) sendCommand('insertTable', { rows: 3, cols: 3, withHeaderRow: false }); }} className={cn("gap-2", editorState.isInTable && "text-primary")}><EditorIcons.Table className="w-4 h-4" /> Table</DropdownMenuItem>
-        },
-        {
-            id: 'file',
-            label: 'Insert File',
-            render: <ToolbarFileUpload key="file" onInsertFile={onInsertFile} onOpenChange={handleOpenChange} />,
-            dropdownRender: <ToolbarFileUpload key="file-dropdown" onInsertFile={onInsertFile} onOpenChange={handleOpenChange} isMenu />
-        }
     ], [editorState, sendCommand, colors.primary, activeStyle, handleOpenChange, onInsertFile, activePopup, onActivePopupChange, MOD, ALT, SHIFT]);
 
     const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
@@ -284,8 +265,8 @@ export function DesktopToolbar({
         const HEADING_WIDTH = 48; // w-12
         const ITEM_WIDTH = 36; // w-9
         const ITEM_GAP = 2; // gap-0.5
-        const RIGHT_GROUP_WIDTH = 74; // undo + redo + gap
-        const RIGHT_GROUP_WITH_OVERFLOW = 112; // overflow + undo + redo + gaps
+        const RIGHT_GROUP_WIDTH = 112; // plus + undo + redo + gaps
+        const RIGHT_GROUP_WITH_OVERFLOW = 150; // overflow + plus + undo + redo + gaps
         const ROW_GAP_COUNT = 2; // items->spacer, spacer->right group  
 
         const itemsWidthFor = (count: number) => {
@@ -368,7 +349,7 @@ export function DesktopToolbar({
                 }}
                 className="
                             absolute bottom-6 left-1/2 -translate-x-1/2
-                            w-[90%] max-w-[920px]
+                            w-[90%] max-w-[825px]
                             flex items-center
                             p-0.5
                             rounded-2xl
@@ -428,6 +409,41 @@ export function DesktopToolbar({
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         )}
+
+                        <DropdownMenu onOpenChange={handleOpenChange} modal={false}>
+                            <DropdownMenuTrigger asChild>
+                                <Button key="plus" variant="ghost" size="icon" className="h-9 w-9 shrink-0 outline-none">
+                                    <EditorIcons.Plus className="w-5 h-5" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-56">
+                                <DropdownMenuItem key="details-plus" onClick={() => sendCommand('toggleDetails')} className={cn("gap-2", editorState.isDetails && "text-primary")}>
+                                    <EditorIcons.Details className="w-4 h-4" />
+                                    Details
+                                    <span className="ml-auto text-[10px] opacity-50">{MOD}.</span>
+                                </DropdownMenuItem>
+
+                                <DropdownMenuItem key="mermaid-plus" onClick={() => sendCommand('insertMermaid')} className="gap-2">
+                                    <EditorIcons.Mermaid className="w-4 h-4" />
+                                    Mermaid Diagram
+                                </DropdownMenuItem>
+
+                                <ToolbarFileUpload key="file-plus" onInsertFile={onInsertFile} onOpenChange={handleOpenChange} isMenu />
+
+                                <LinkPopover
+                                    key="youtube-plus"
+                                    title="YouTube Video"
+                                    description="Enter a YouTube video URL"
+                                    icon={EditorIcons.Youtube}
+                                    placeholder="https://youtube.com/watch?v=..."
+                                    saveLabel="Insert"
+                                    onSave={(href) => sendCommand('setYoutubeVideo', { src: href })}
+                                    onOpenChange={handleOpenChange}
+                                    isMenu
+                                    hideTitle
+                                />
+                            </DropdownMenuContent>
+                        </DropdownMenu>
 
                         <Tooltip
                             open={!isPopupOpen && activeTooltip === 'undo'}

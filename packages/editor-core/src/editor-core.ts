@@ -137,8 +137,9 @@ export function setupEditor(options: any) {
         defaultCodeLanguage = null
     } = options;
 
-    // Set CSS variables for theme
+    // Set CSS variables and attributes for theme
     const container = document.getElementById('editor-container') || document.documentElement;
+    container.setAttribute('data-theme', isDark ? 'dark' : 'light');
     container.style.setProperty('--bg-color', colors.background);
     container.style.setProperty('--text-color', colors.text);
     container.style.setProperty('--accent-color', colors.primary);
@@ -152,6 +153,9 @@ export function setupEditor(options: any) {
     container.style.setProperty('--editor-max-width', noteWidth > 0 ? `${noteWidth}px` : '100%');
     container.style.setProperty('--editor-padding-top', `${paddingTop}px`);
     applyFontFamily(fontFamily);
+
+    // Notify extensions about theme changes
+    window.dispatchEvent(new CustomEvent('annota-theme-change', { detail: { isDark } }));
 
     // Height is auto so it can grow
     document.body.style.height = 'auto';

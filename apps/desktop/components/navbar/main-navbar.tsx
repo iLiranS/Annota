@@ -196,10 +196,7 @@ export function MainNavbar() {
                         <Button
                             variant="ghost"
                             size="icon"
-                            className={cn(
-                                "h-7 w-7 rounded-full transition-all active:scale-95 text-muted-foreground/60 hover:bg-sidebar-accent hover:text-foreground",
-                                general.isTaskCalendarOpen && "text-accent-full"
-                            )}
+                            className={cn("h-7 w-7 rounded-full transition-all active:scale-95 text-muted-foreground/60 hover:bg-sidebar-accent hover:text-foreground", general.isTaskCalendarOpen && "text-accent-full")}
                             onClick={() => updateGeneralSettings({ isTaskCalendarOpen: !general.isTaskCalendarOpen })}
                         >
                             {general.appDirection === 'rtl' ? <PanelLeft size={16} /> : <PanelRight size={16} />}

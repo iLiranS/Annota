@@ -258,7 +258,12 @@ export function dispatchEditorCommand(editor: Editor, command: string, params: R
                 }
             }
 
-            const text = fragment.textBetween(0, fragment.size, ' ');
+            let text = fragment.textBetween(0, fragment.size, ' ');
+
+            // Fallback for atom nodes with code (like mermaid)
+            if (isNodeSelection && !text.trim() && (editor.state.selection as NodeSelection).node.attrs.code) {
+                text = (editor.state.selection as NodeSelection).node.attrs.code;
+            }
 
             // Generate HTML for the selected block/content
             let html = '';

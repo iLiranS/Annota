@@ -9,6 +9,7 @@ import {
     sortNotes,
     TRASH_FOLDER_ID,
     useNotesStore,
+    useSyncStore,
 } from '@annota/core';
 import { useSidebar } from '@/context/sidebar-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -22,6 +23,15 @@ import {
     Text,
     View
 } from 'react-native';
+import Animated, {
+    Extrapolation,
+    interpolate,
+    runOnJS,
+    useAnimatedScrollHandler,
+    useAnimatedStyle,
+    useSharedValue,
+    withTiming
+} from 'react-native-reanimated';
 
 interface FolderItemProps {
     folder: Folder;
@@ -182,6 +192,51 @@ export default function TrashScreen() {
     const { colors } = useTheme();
     const { toggle } = useSidebar();
     const [currentFolderId, setCurrentFolderId] = useState<string | null>(TRASH_FOLDER_ID);
+
+    // Sync progress tracking
+    const isSyncing = useSyncStore(state => state.isSyncing);
+    const scrollY = useSharedValue(0);
+
+    const triggerSync = useCallback(async () => {
+        try {
+            await useSyncStore.getState().forceSync();
+        } catch (e) {
+            console.error('[Manual Sync]', e);
+        }
+    }, []);
+
+    const scrollHandler = useAnimatedScrollHandler({
+        onScroll: (event) => {
+            scrollY.value = event.contentOffset.y;
+        },
+        onEndDrag: (event) => {
+            if (event.contentOffset.y < -80) {
+                runOnJS(triggerSync)();
+            }
+        },
+    });
+
+    const syncIndicatorStyle = useAnimatedStyle(() => {
+        const threshold = -80;
+        const pullProgress = interpolate(
+            scrollY.value,
+            [threshold, 0],
+            [1, 0],
+            Extrapolation.CLAMP
+        );
+        
+        return {
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            width: isSyncing ? '100%' : `${pullProgress * 100}%`,
+            height: 2,
+            backgroundColor: colors.primary,
+            opacity: isSyncing ? withTiming(1) : (pullProgress > 0 ? 1 : 0),
+            zIndex: 1000,
+        };
+    });
 
 
     // Zustand store
@@ -366,6 +421,7 @@ export default function TrashScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
+            <Animated.View style={syncIndicatorStyle} />
             <Stack.Screen
                 options={{
                     headerShown: true,
@@ -405,9 +461,11 @@ export default function TrashScreen() {
 
 
 
-            <FlatList
+            <Animated.FlatList
                 data={trashData}
                 keyExtractor={getItemKey}
+                onScroll={scrollHandler}
+                scrollEventThrottle={16}
                 contentContainerStyle={styles.listContent}
                 ListEmptyComponent={
                     <View style={styles.emptyContainer}>

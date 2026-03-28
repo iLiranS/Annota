@@ -2,7 +2,6 @@ import { Color } from '@tiptap/extension-color';
 import { Highlight } from '@tiptap/extension-highlight';
 import { Link } from '@tiptap/extension-link';
 import { Placeholder } from '@tiptap/extension-placeholder';
-import { Table } from '@tiptap/extension-table';
 import { TableRow } from '@tiptap/extension-table-row';
 import { TaskItem } from '@tiptap/extension-task-item';
 import { TaskList } from '@tiptap/extension-task-list';
@@ -18,6 +17,7 @@ import {
     CustomCodeBlock,
     CustomHeading,
     CustomImage,
+    CustomTable,
     CustomTableCell,
     CustomTableHeader,
     Details,
@@ -28,7 +28,8 @@ import {
     SearchExtension,
     ShortcutManager,
     SlashCommandExtension,
-    TagCommandExtension
+    TagCommandExtension,
+    Mermaid
 } from '../extensions';
 import { CustomYoutube } from '../extensions/custom-yotube';
 
@@ -119,7 +120,7 @@ export const getExtensions = (options: {
             onOpenFile: options.onOpenFile,
             onOpenFileMenu: options.onOpenFileMenu,
         }),
-        Table.configure({ resizable: true, HTMLAttributes: { class: 'editor-table' } }),
+        CustomTable.configure({ resizable: true, HTMLAttributes: { class: 'editor-table' } }),
         TableRow,
         CustomTableCell,
         CustomTableHeader,
@@ -167,6 +168,9 @@ export const getExtensions = (options: {
         }),
         NoteLinkCommandExtension.configure({
             onNoteLinkCommand: options.onNoteLinkCommand,
+        }),
+        Mermaid.configure({
+            onOpenBlockMenu: options.onOpenBlockMenu,
         }),
     ];
 

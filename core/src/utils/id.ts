@@ -22,7 +22,7 @@ export function generateId(byteSize = 16): string {
     let bytes: Uint8Array;
     if (typeof globalThis.crypto?.getRandomValues === 'function') {
         bytes = new Uint8Array(byteSize);
-        globalThis.crypto.getRandomValues(bytes);
+        globalThis.crypto.getRandomValues(bytes as any);
     } else {
         bytes = fallbackRandomBytes(byteSize);
     }

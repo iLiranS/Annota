@@ -31,7 +31,7 @@ export interface BlockMenuProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     anchorRect: DOMRect | null;
-    type: "image" | "file" | "details" | "codeBlock" | "table";
+    type: "image" | "file" | "details" | "codeBlock" | "table" | "mermaid";
     data: any;
     onAction: (action: string, params?: any) => void;
 }
@@ -293,12 +293,37 @@ export function BlockMenu({
                             <span>Split Cell</span>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => handleAction("copy")}>
+                            <Copy className="mr-2 h-4 w-4" />
+                            <span>Copy Table</span>
+                        </DropdownMenuItem>
                         <DropdownMenuItem
                             onClick={() => handleAction("delete")}
                             className="text-destructive focus:text-destructive"
                         >
                             <Trash2 className="mr-2 h-4 w-4" />
                             <span>Delete Table</span>
+                        </DropdownMenuItem>
+                    </>
+                )}
+
+                {type === "mermaid" && (
+                    <>
+                        <DropdownMenuItem onClick={() => handleAction("copy")}>
+                            <Copy className="mr-2 h-4 w-4" />
+                            <span>Copy Diagram</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAction("cut")}>
+                            <Scissors className="mr-2 h-4 w-4" />
+                            <span>Cut Diagram</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                            onClick={() => handleAction("delete")}
+                            className="text-destructive focus:text-destructive"
+                        >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            <span>Delete Diagram</span>
                         </DropdownMenuItem>
                     </>
                 )}

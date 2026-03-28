@@ -3,12 +3,21 @@ import { CollapsibleGroup, CompactTaskCard } from '@/components/tasks';
 import ThemedText from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useSidebar } from '@/context/sidebar-context';
-import { useNotesStore, useSettingsStore, useTasksStore, type Task } from '@annota/core';
+import { useNotesStore, useSettingsStore, useSyncStore, useTasksStore, type Task } from '@annota/core';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@react-navigation/native';
 import { Stack, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, LayoutAnimation, Platform, Pressable, ScrollView, StyleSheet, UIManager, View } from 'react-native';
+import { Alert, LayoutAnimation, Platform, Pressable, StyleSheet, UIManager, View } from 'react-native';
+import Animated, {
+  Extrapolation,
+  interpolate,
+  runOnJS,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Enable LayoutAnimation on Android
@@ -33,6 +42,51 @@ export default function TasksScreen() {
     const [groupBy, setGroupBy] = useState<GroupByOption>('date');
     const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
     const { toggle } = useSidebar();
+
+    // Sync progress tracking
+    const isSyncing = useSyncStore(state => state.isSyncing);
+    const scrollY = useSharedValue(0);
+
+    const triggerSync = useCallback(async () => {
+        try {
+            await useSyncStore.getState().forceSync();
+        } catch (e) {
+            console.error('[Manual Sync]', e);
+        }
+    }, []);
+
+    const scrollHandler = useAnimatedScrollHandler({
+        onScroll: (event) => {
+            scrollY.value = event.contentOffset.y;
+        },
+        onEndDrag: (event) => {
+            if (event.contentOffset.y < -80) {
+                runOnJS(triggerSync)();
+            }
+        },
+    });
+
+    const syncIndicatorStyle = useAnimatedStyle(() => {
+        const threshold = -80;
+        const pullProgress = interpolate(
+            scrollY.value,
+            [threshold, 0],
+            [1, 0],
+            Extrapolation.CLAMP
+        );
+        
+        return {
+            position: 'absolute',
+            top: Platform.OS === 'ios' ? insets.top + 44 : insets.top + 56,
+            left: 0,
+            right: 0,
+            width: isSyncing ? '100%' : `${pullProgress * 100}%`,
+            height: 2,
+            backgroundColor: colors.primary,
+            opacity: isSyncing ? withTiming(1) : (pullProgress > 0 ? 1 : 0),
+            zIndex: 1000,
+        };
+    });
 
     // Load tasks from database on mount
     useEffect(() => {
@@ -194,6 +248,7 @@ export default function TasksScreen() {
 
     return (
         <ThemedView style={styles.container}>
+            <Animated.View style={syncIndicatorStyle} />
             <Stack.Screen
                 options={{
                     title: 'Tasks',
@@ -210,8 +265,10 @@ export default function TasksScreen() {
                     ),
                 }}
             />
-            <ScrollView
+            <Animated.ScrollView
                 style={styles.scrollView}
+                onScroll={scrollHandler}
+                scrollEventThrottle={16}
                 contentContainerStyle={[
                     styles.scrollContent,
                     { paddingTop: Platform.OS === 'ios' ? insets.top + 50 : insets.top + 60 }
@@ -351,7 +408,7 @@ export default function TasksScreen() {
                     </View>
                 )}
 
-            </ScrollView>
+            </Animated.ScrollView>
 
             {/* Bottom Footer */}
             <View style={[

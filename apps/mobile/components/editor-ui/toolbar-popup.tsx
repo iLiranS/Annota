@@ -79,7 +79,7 @@ function BlockActionMenu({ blockType, onAction, onClose }: { blockType: string, 
                 marginBottom: 16,
                 textAlign: 'center'
             }}>
-                {blockType === 'codeBlock' ? 'Code Block' : blockType === 'details' ? 'Section' : 'Block Options'}
+                {blockType === 'codeBlock' ? 'Code Block' : blockType === 'details' ? 'Section' : blockType === 'mermaid' ? 'Diagram' : 'Block Options'}
             </Text>
 
             <View style={{ gap: 8 }}>

@@ -1,5 +1,17 @@
+import { Table } from '@tiptap/extension-table';
 import { TableCell } from '@tiptap/extension-table-cell';
 import { TableHeader } from '@tiptap/extension-table-header';
+
+export const CustomTable = Table.extend({
+    addKeyboardShortcuts() {
+        return {
+            'Mod-Enter': () => this.editor.commands.addRowAfter(),
+            'Shift-Mod-Enter': () => this.editor.commands.addRowBefore(),
+            'Alt-Mod-Enter': () => this.editor.commands.addColumnBefore(),
+            'Shift-Alt-Mod-Enter': () => this.editor.commands.addColumnAfter(),
+        };
+    },
+});
 
 export const CustomTableCell = TableCell.extend({
     addAttributes() {
@@ -32,3 +44,4 @@ export const CustomTableHeader = TableHeader.extend({
         };
     },
 });
+

@@ -1,12 +1,12 @@
 "use client"
 
 import { Ionicons } from "@/components/ui/ionicons";
+import { useAppTheme } from "@/hooks/use-app-theme";
 import { LATE_SENTENCES, ON_TIME_SENTENCES } from "@/src/pages/home/data/sentences";
 import { getStorageEngine, useDbStore, useNotesStore, useTasksStore } from "@annota/core";
 import { Activity, CheckCircle2, FileText, Flame, Target, TrendingUp, Zap } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Label, Pie, PieChart, XAxis } from "recharts";
-import { useAppTheme } from "@/hooks/use-app-theme";
 
 import {
     Card,
@@ -316,10 +316,10 @@ export function ActivityInsights() {
                                 <span className="text-[10px] font-bold uppercase tracking-widest leading-none">Execution rate</span>
                             </div>
                             <div className="flex items-center gap-1">
-                                <span className="text-xl font-black text-foreground/90">{Math.round((completionStats.lateCompletedCount + completionStats.onTimeCount) / completionStats.total * 100)}%</span>
-                                <span className={`text-[8px] font-bold uppercase ${effectiveStatus.bg} ${effectiveStatus.color} px-1 rounded-sm`}>
+                                <span className="text-xl font-black text-foreground/90">{completionStats.total > 0 ? `${Math.round((completionStats.lateCompletedCount + completionStats.onTimeCount) / completionStats.total * 100)}%` : 'No Tasks Yet'}</span>
+                                {completionStats.total > 0 && <span className={`text-[8px] font-bold uppercase ${effectiveStatus.bg} ${effectiveStatus.color} px-1 rounded-sm`}>
                                     {effectiveStatus.sentence}
-                                </span>
+                                </span>}
                             </div>
                         </div>
 

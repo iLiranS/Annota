@@ -1,4 +1,4 @@
-import { inArray, eq, sql, or } from 'drizzle-orm';
+import { eq, or } from 'drizzle-orm';
 import { authApi } from '../api/auth.api';
 import { storageApi } from '../api/storage.api';
 import { syncApi } from '../api/sync.api';
@@ -332,7 +332,7 @@ export async function performSyncPull(masterKey: string, saltHex: string) {
                         // 1. Try to match with exact hyphenated UUID from Supabase
                         // 2. OR match with trimmed hyphenless ID (for legacy local data)
                         const hyphenlessId = id.replace(/-/g, '');
-                        
+
                         await db.delete(schema.tasks)
                             .where(or(
                                 eq(schema.tasks.id, id),
@@ -442,7 +442,7 @@ export async function performSyncPull(masterKey: string, saltHex: string) {
                         for (const rawId of deletedIds) {
                             const id = String(rawId).trim();
                             const hyphenlessId = id.replace(/-/g, '');
-                            
+
                             // Delete children before parent to respect Foreign Keys
                             await tx.delete(schema.noteContent)
                                 .where(or(
@@ -450,14 +450,14 @@ export async function performSyncPull(masterKey: string, saltHex: string) {
                                     eq(schema.noteContent.id, hyphenlessId)
                                 ))
                                 .execute();
-                                
+
                             await tx.delete(schema.noteVersions)
                                 .where(or(
                                     eq(schema.noteVersions.noteId, id),
                                     eq(schema.noteVersions.noteId, hyphenlessId)
                                 ))
                                 .execute();
-                                
+
                             await tx.delete(schema.noteMetadata)
                                 .where(or(
                                     eq(schema.noteMetadata.id, id),

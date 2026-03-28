@@ -224,6 +224,11 @@ export function EditorToolbar({
                             }}
                         />
 
+                        <ToolbarButton
+                            icon="account-tree"
+                            onPress={() => onCommand('insertMermaid')}
+                        />
+
                         <View style={styles.separator} />
 
                         {/* Undo/Redo */}
