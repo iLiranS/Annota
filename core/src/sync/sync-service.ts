@@ -1,4 +1,4 @@
-import { inArray } from 'drizzle-orm';
+import { inArray, eq, sql, or } from 'drizzle-orm';
 import { authApi } from '../api/auth.api';
 import { storageApi } from '../api/storage.api';
 import { syncApi } from '../api/sync.api';
@@ -78,8 +78,9 @@ export async function performSyncPush(masterKey: string, saltHex: string) {
 
         const tombstones = dirtyFolders.filter((f: any) => f.isPermDeleted);
         if (tombstones.length > 0) {
-            const tombstoneIds = tombstones.map((f: any) => f.id);
-            await db.delete(schema.folders).where(inArray(schema.folders.id, tombstoneIds));
+            for (const f of tombstones) {
+                await db.delete(schema.folders).where(eq(schema.folders.id, f.id)).execute();
+            }
             didDeleteTombstones = true;
         }
 
@@ -111,8 +112,9 @@ export async function performSyncPush(masterKey: string, saltHex: string) {
 
         const tombstones = dirtyTags.filter((t: any) => t.isPermDeleted);
         if (tombstones.length > 0) {
-            const tombstoneIds = tombstones.map((t: any) => t.id);
-            await db.delete(schema.tags).where(inArray(schema.tags.id, tombstoneIds));
+            for (const t of tombstones) {
+                await db.delete(schema.tags).where(eq(schema.tags.id, t.id)).execute();
+            }
             didDeleteTombstones = true;
         }
 
@@ -144,8 +146,9 @@ export async function performSyncPush(masterKey: string, saltHex: string) {
 
         const tombstones = dirtyTasks.filter((t: any) => t.isPermDeleted);
         if (tombstones.length > 0) {
-            const tombstoneIds = tombstones.map((t: any) => t.id);
-            await db.delete(schema.tasks).where(inArray(schema.tasks.id, tombstoneIds));
+            for (const t of tombstones) {
+                await db.delete(schema.tasks).where(eq(schema.tasks.id, t.id)).execute();
+            }
             didDeleteTombstones = true;
         }
 
@@ -184,11 +187,12 @@ export async function performSyncPush(masterKey: string, saltHex: string) {
 
         const tombstones = dirtyNotes.filter((n: any) => n.isPermDeleted);
         if (tombstones.length > 0) {
-            const tombstoneIds = tombstones.map((n: any) => n.id);
             await db.transaction(async (tx: any) => {
-                await tx.delete(schema.noteContent).where(inArray(schema.noteContent.id, tombstoneIds));
-                await tx.delete(schema.noteVersions).where(inArray(schema.noteVersions.noteId, tombstoneIds));
-                await tx.delete(schema.noteMetadata).where(inArray(schema.noteMetadata.id, tombstoneIds));
+                for (const n of tombstones) {
+                    await tx.delete(schema.noteContent).where(eq(schema.noteContent.id, n.id)).execute();
+                    await tx.delete(schema.noteVersions).where(eq(schema.noteVersions.noteId, n.id)).execute();
+                    await tx.delete(schema.noteMetadata).where(eq(schema.noteMetadata.id, n.id)).execute();
+                }
             });
             didDeleteTombstones = true;
         }
@@ -267,10 +271,29 @@ export async function performSyncPull(masterKey: string, saltHex: string) {
                 }
             }
 
-            await db.transaction(async (tx: any) => {
-                if (deletedIds.length > 0) await tx.delete(schema.folders).where(inArray(schema.folders.id, deletedIds));
-                for (const f of parsedFolders) await upsertSyncedFolder(f, tx);
-            });
+            if (deletedIds.length > 0) {
+                try {
+                    for (const rawId of deletedIds) {
+                        const id = String(rawId).trim();
+                        const hyphenlessId = id.replace(/-/g, '');
+                        await db.delete(schema.folders)
+                            .where(or(
+                                eq(schema.folders.id, id),
+                                eq(schema.folders.id, hyphenlessId)
+                            ))
+                            .execute();
+                    }
+                } catch (e) {
+                    console.error("Failed to delete folders", deletedIds, e);
+                }
+                didDeleteTombstones = true;
+            }
+
+            if (parsedFolders.length > 0) {
+                await db.transaction(async (tx: any) => {
+                    for (const f of parsedFolders) await upsertSyncedFolder(f, tx);
+                });
+            }
             if (deletedIds.length > 0) didDeleteTombstones = true;
             await new Promise(resolve => setTimeout(resolve, 0));
         }
@@ -302,10 +325,32 @@ export async function performSyncPull(masterKey: string, saltHex: string) {
                 }
             }
 
-            await db.transaction(async (tx: any) => {
-                if (deletedIds.length > 0) await tx.delete(schema.tasks).where(inArray(schema.tasks.id, deletedIds));
-                for (const t of parsedTasks) await upsertSyncedTask(t, tx);
-            });
+            if (deletedIds.length > 0) {
+                try {
+                    for (const rawId of deletedIds) {
+                        const id = String(rawId).trim();
+                        // 1. Try to match with exact hyphenated UUID from Supabase
+                        // 2. OR match with trimmed hyphenless ID (for legacy local data)
+                        const hyphenlessId = id.replace(/-/g, '');
+                        
+                        await db.delete(schema.tasks)
+                            .where(or(
+                                eq(schema.tasks.id, id),
+                                eq(schema.tasks.id, hyphenlessId)
+                            ))
+                            .execute();
+                    }
+                } catch (e) {
+                    console.error("Failed to delete tasks", deletedIds, e);
+                }
+                didDeleteTombstones = true;
+            }
+
+            if (parsedTasks.length > 0) {
+                await db.transaction(async (tx: any) => {
+                    for (const t of parsedTasks) await upsertSyncedTask(t, tx);
+                });
+            }
             if (deletedIds.length > 0) didDeleteTombstones = true;
             await new Promise(resolve => setTimeout(resolve, 0));
         }
@@ -336,10 +381,29 @@ export async function performSyncPull(masterKey: string, saltHex: string) {
                 }
             }
 
-            await db.transaction(async (tx: any) => {
-                if (deletedIds.length > 0) await tx.delete(schema.tags).where(inArray(schema.tags.id, deletedIds));
-                for (const t of parsedTags) await upsertSyncedTag(t, tx);
-            });
+            if (deletedIds.length > 0) {
+                try {
+                    for (const rawId of deletedIds) {
+                        const id = String(rawId).trim();
+                        const hyphenlessId = id.replace(/-/g, '');
+                        await db.delete(schema.tags)
+                            .where(or(
+                                eq(schema.tags.id, id),
+                                eq(schema.tags.id, hyphenlessId)
+                            ))
+                            .execute();
+                    }
+                } catch (e) {
+                    console.error("Failed to delete tags", deletedIds, e);
+                }
+                didDeleteTombstones = true;
+            }
+
+            if (parsedTags.length > 0) {
+                await db.transaction(async (tx: any) => {
+                    for (const t of parsedTags) await upsertSyncedTag(t, tx);
+                });
+            }
             if (deletedIds.length > 0) didDeleteTombstones = true;
             await new Promise(resolve => setTimeout(resolve, 0));
         }
@@ -372,14 +436,47 @@ export async function performSyncPull(masterKey: string, saltHex: string) {
                 }
             }
 
-            await db.transaction(async (tx: any) => {
-                if (deletedIds.length > 0) {
-                    await tx.delete(schema.noteMetadata).where(inArray(schema.noteMetadata.id, deletedIds));
-                    await tx.delete(schema.noteContent).where(inArray(schema.noteContent.id, deletedIds));
-                    await tx.delete(schema.noteVersions).where(inArray(schema.noteVersions.noteId, deletedIds));
+            if (deletedIds.length > 0) {
+                try {
+                    await db.transaction(async (tx: any) => {
+                        for (const rawId of deletedIds) {
+                            const id = String(rawId).trim();
+                            const hyphenlessId = id.replace(/-/g, '');
+                            
+                            // Delete children before parent to respect Foreign Keys
+                            await tx.delete(schema.noteContent)
+                                .where(or(
+                                    eq(schema.noteContent.id, id),
+                                    eq(schema.noteContent.id, hyphenlessId)
+                                ))
+                                .execute();
+                                
+                            await tx.delete(schema.noteVersions)
+                                .where(or(
+                                    eq(schema.noteVersions.noteId, id),
+                                    eq(schema.noteVersions.noteId, hyphenlessId)
+                                ))
+                                .execute();
+                                
+                            await tx.delete(schema.noteMetadata)
+                                .where(or(
+                                    eq(schema.noteMetadata.id, id),
+                                    eq(schema.noteMetadata.id, hyphenlessId)
+                                ))
+                                .execute();
+                        }
+                    });
+                } catch (e) {
+                    console.error("Failed to delete notes", deletedIds, e);
                 }
-                for (const n of parsedNotes) await upsertSyncedNote(n, tx);
-            });
+                didDeleteTombstones = true;
+            }
+
+            if (parsedNotes.length > 0) {
+                await db.transaction(async (tx: any) => {
+                    for (const n of parsedNotes) await upsertSyncedNote(n, tx);
+                });
+            }
             if (deletedIds.length > 0) didDeleteTombstones = true;
             await new Promise(resolve => setTimeout(resolve, 0));
         }

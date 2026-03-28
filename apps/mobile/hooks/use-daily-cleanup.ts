@@ -1,9 +1,6 @@
-import { useDbStore } from '@annota/core';
-import { useSettingsStore } from '@annota/core';
-import { useTasksStore, vacuumDatabase } from '@annota/core';
+import { useDbStore, useSettingsStore, useTasksStore, vacuumDatabase } from '@annota/core';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect } from 'react';
-import { AppState, AppStateStatus } from 'react-native';
 
 export function useDailyCleanup() {
     useEffect(() => {
@@ -56,15 +53,6 @@ export function useDailyCleanup() {
         // Run on initial app load
         checkAndRunCleanup();
 
-        // Optional: Also check when the app comes back from the background
-        const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
-            if (nextAppState === 'active') {
-                checkAndRunCleanup();
-            }
-        });
 
-        return () => {
-            subscription.remove();
-        };
     }, []);
 }

@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, sql, or } from 'drizzle-orm';
 import { getDb } from '../../stores/db.store';
 import type { Folder, FolderInsert, NoteMetadata } from '../schema';
 import * as schema from '../schema';
@@ -30,13 +30,44 @@ export async function clearDirtyFolders(folderIds: string[]): Promise<void> {
 }
 
 export async function upsertSyncedFolder(folderData: Folder, tx: DbOrTx = getDb()): Promise<void> {
-    const result = await tx.select().from(schema.folders).where(eq(schema.folders.id, folderData.id)).get();
+    const id = folderData.id;
+    const hyphenlessId = id.replace(/-/g, '');
+
+    // 1. Find existing by Hyphenated or Hyphenless
+    const result = await tx.select().from(schema.folders)
+        .where(or(
+            eq(schema.folders.id, id),
+            eq(schema.folders.id, hyphenlessId)
+        ))
+        .get();
+
     const existing = safeGet<Folder>(result);
-    if (existing && existing.updatedAt > folderData.updatedAt) {
-        console.log(`[Sync] Local folder ${folderData.id} is newer, ignoring pulled row. Local: ${existing.updatedAt}, Pulled: ${folderData.updatedAt}`);
-        return;
+
+    if (existing) {
+        if (existing.updatedAt > folderData.updatedAt) {
+            console.log(`[Sync] Local folder ${id} is newer, ignoring pulled row.`);
+            return;
+        }
+
+        // 2. MIGRATION: If legacy hyphenless folder found, upgrade ID and CASCADE
+        if (existing.id === hyphenlessId && id !== hyphenlessId) {
+            console.log(`[Sync] Migrating legacy Folder ID and references: ${hyphenlessId} -> ${id}`);
+            
+            // Update Folder ID itself
+            await tx.update(schema.folders).set({ id }).where(eq(schema.folders.id, hyphenlessId)).run();
+            
+            // Cascade to children's parentId
+            await tx.update(schema.folders).set({ parentId: id }).where(eq(schema.folders.parentId, hyphenlessId)).run();
+            
+            // Cascade to Notes
+            await tx.update(schema.noteMetadata).set({ folderId: id }).where(eq(schema.noteMetadata.folderId, hyphenlessId)).run();
+            
+            // Cascade to Tasks
+            await tx.update(schema.tasks).set({ folderId: id }).where(eq(schema.tasks.folderId, hyphenlessId)).run();
+        }
     }
 
+    // 3. Perform standard upsert on the standardized ID
     await tx.insert(schema.folders)
         .values(folderData)
         .onConflictDoUpdate({ target: schema.folders.id, set: folderData })

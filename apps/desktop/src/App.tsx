@@ -15,14 +15,14 @@ import {
   SyncScheduler,
   getMasterKey,
 } from "@annota/core/platform";
+import { emit, listen } from "@tauri-apps/api/event";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Location, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import "./App.css";
 import { initDesktopSqlite } from "./bootstrap/desktop-db";
 import { initDeepLinkListener } from "./lib/auth-listener";
-import { getCurrentWindow } from "@tauri-apps/api/window";
-import { emit, listen } from "@tauri-apps/api/event";
 
 // Layout components
 import AppShell from "@/components/layout/app-shell";
@@ -35,10 +35,10 @@ import LostKeyPage from "./pages/auth/lost-key";
 import MasterKeyPage from "./pages/auth/master-key";
 
 // Notes pages
+import NoteFullscreen from "./pages/notes/note-fullscreen";
 import NotesLayout from "./pages/notes/notes-layout";
 import NotesViewManager from "./pages/notes/notes-view-manager";
 import TrashPage from "./pages/notes/trash-page";
-import NoteFullscreen from "./pages/notes/note-fullscreen";
 
 // Tasks pages
 import TaskDetailDialog from "./pages/tasks/task-detail-dialog";
@@ -331,8 +331,8 @@ function App() {
   // Sync Scheduler
   useEffect(() => {
     if (!session || !hasMasterKey || !saltHex || bootstrapState !== "ready" || getCurrentWindow().label !== "main") return;
-
     let cancelled = false;
+    if (SyncScheduler.getInstance().isInitialized()) return;
 
     const setupScheduler = async () => {
       const key = await getMasterKey(session.user.id);
@@ -367,7 +367,7 @@ function App() {
       cancelled = true;
       SyncScheduler.getInstance().dispose();
     };
-  }, [session, hasMasterKey, saltHex, bootstrapState]);
+  }, [session?.user?.id, hasMasterKey, saltHex, bootstrapState]);
 
   const location = useLocation();
   const locationState = location.state as { background?: Location };

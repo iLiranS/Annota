@@ -61,7 +61,7 @@ export function createMobileAdapters(): PlatformAdapters {
             sha256HexUtf8: async (data: string) => {
                 const hash = crypto.createHash('sha256');
                 hash.update(data, 'utf8');
-                return hash.digest('hex') as unknown as string;
+                return Buffer.from(hash.digest()).toString('hex');
             },
             argon2id: async ({ message, nonce, memory, passes, parallelism, tagLength }) => {
                 return await new Promise<Uint8Array>((resolve, reject) => {
@@ -75,18 +75,19 @@ export function createMobileAdapters(): PlatformAdapters {
                             parallelism,
                             tagLength,
                         },
-                        (err: Error | null, result: Buffer) => {
+                        (err: Error | null, result: any) => {
                             if (err) {
                                 reject(err);
                                 return;
                             }
-                            resolve(new Uint8Array(result));
+                            // Convert result to Buffer if it's not already, then to Uint8Array
+                            resolve(new Uint8Array(Buffer.from(result)));
                         },
                     );
                 });
             },
             aes256GcmEncrypt: async ({ key, nonce, plaintext }: { key: Uint8Array; nonce: Uint8Array; plaintext: Uint8Array }) => {
-                const cipher = crypto.createCipheriv('aes-256-gcm', key, nonce);
+                const cipher = crypto.createCipheriv('aes-256-gcm', Buffer.from(key), Buffer.from(nonce));
                 const encryptedContent = cipher.update(Buffer.from(plaintext));
                 const encryptedFinal = cipher.final();
                 const authTag = cipher.getAuthTag();
@@ -98,7 +99,7 @@ export function createMobileAdapters(): PlatformAdapters {
                 };
             },
             aes256GcmDecrypt: async ({ key, nonce, ciphertext, authTag }: { key: Uint8Array; nonce: Uint8Array; ciphertext: Uint8Array; authTag: Uint8Array }) => {
-                const decipher = crypto.createDecipheriv('aes-256-gcm', key, nonce);
+                const decipher = crypto.createDecipheriv('aes-256-gcm', Buffer.from(key), Buffer.from(nonce));
                 decipher.setAuthTag(Buffer.from(authTag));
 
                 const decryptedContent = decipher.update(Buffer.from(ciphertext));

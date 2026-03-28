@@ -33,6 +33,11 @@ export class SyncScheduler {
         return SyncScheduler._syncDisabled;
     }
 
+    public isInitialized(): boolean {
+        console.log("[SyncScheduler] isInitialized", this.initialized);
+        return this.initialized;
+    }
+
     private constructor() { }
 
     private masterKey: string = '';

@@ -6,7 +6,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useSegments } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-    Image,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -372,19 +371,9 @@ export default function Sidebar({ onNavigate, ...props }: SidebarProps & React.C
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
-            {/* Header */}
-            <View style={[styles.header, { paddingTop: insets.top + 16, borderBottomColor: colors.border }]}>
-                <Image
-                    source={require('@/assets/images/icon.png')}
-                    style={styles.logo}
-                    resizeMode="contain"
-                />
-                <Text style={[styles.headerTitle, { color: colors.text }]}>Annota</Text>
-            </View>
-
             <ScrollView
                 {...props}
-                contentContainerStyle={[styles.scrollContent, { flexGrow: 1 }]}
+                contentContainerStyle={[styles.scrollContent, { flexGrow: 1, paddingTop: insets.top + 16 }]}
             >
                 <View style={{ flex: 1 }}>
                     {/* Top Section */}
@@ -649,26 +638,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
     },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingBottom: 16,
-        gap: 12,
-        borderBottomWidth: StyleSheet.hairlineWidth,
-    },
-    logo: {
-        width: 32,
-        height: 32,
-        borderRadius: 8,
-    },
-    headerTitle: {
-        fontSize: 22,
-        fontWeight: '700',
-        letterSpacing: -0.5,
-    },
     scrollContent: {
-        paddingTop: 8,
     },
     section: {
         paddingHorizontal: 12,

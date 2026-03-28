@@ -1,4 +1,4 @@
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql, or } from 'drizzle-orm';
 import { getDb } from '../../stores/db.store';
 import { generateId } from '../../utils/id';
 import type { Tag, TagInsert } from '../schema';
@@ -33,6 +33,29 @@ export async function clearDirtyTags(tagIds: string[]): Promise<void> {
 }
 
 export async function upsertSyncedTag(tagData: Tag, tx: DbOrTx = getDb()): Promise<void> {
+    const id = tagData.id;
+    const hyphenlessId = id.replace(/-/g, '');
+
+    // 1. Find existing by Hyphenated or Hyphenless
+    const result = await tx.select().from(schema.tags)
+        .where(or(
+            eq(schema.tags.id, id),
+            eq(schema.tags.id, hyphenlessId)
+        ))
+        .get();
+
+    const existing = safeGet<Tag>(result);
+
+    if (existing) {
+        if (existing.updatedAt > tagData.updatedAt) return;
+
+        // 2. MIGRATION: Upgrade ID
+        if (existing.id === hyphenlessId && id !== hyphenlessId) {
+            console.log(`[Sync] Migrating legacy Tag ID: ${hyphenlessId} -> ${id}`);
+            await tx.update(schema.tags).set({ id }).where(eq(schema.tags.id, hyphenlessId)).run();
+        }
+    }
+
     await tx.insert(schema.tags)
         .values(tagData)
         .onConflictDoUpdate({ target: schema.tags.id, set: tagData })

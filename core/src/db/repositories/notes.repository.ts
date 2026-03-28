@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray, isNull, lte, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, isNull, lte, sql, or } from 'drizzle-orm';
 import { deleteFile } from '../../services/files/file.service';
 import { getDb } from '../../stores/db.store';
 import { generateId } from '../../utils/id';
@@ -81,18 +81,43 @@ export async function clearDirtyNotes(noteIds: string[]): Promise<void> {
 }
 
 export async function upsertSyncedNote(noteFullData: any, tx: DbOrTx = getDb()): Promise<void> {
-    const result = await tx.select().from(schema.noteMetadata).where(eq(schema.noteMetadata.id, noteFullData.id)).get();
+    const id = noteFullData.id;
+    const hyphenlessId = id.replace(/-/g, '');
+
+    // 1. Find existing by Hyphenated or Hyphenless
+    const result = await tx.select().from(schema.noteMetadata)
+        .where(or(
+            eq(schema.noteMetadata.id, id),
+            eq(schema.noteMetadata.id, hyphenlessId)
+        ))
+        .get();
+
     const existing = safeGet<NoteMetadata>(result);
-    if (existing && existing.updatedAt > noteFullData.updatedAt) {
-        console.log(`[Sync] Local note ${noteFullData.id} is newer, ignoring pulled row. Local: ${existing.updatedAt}, Pulled: ${noteFullData.updatedAt}`);
-        return;
+
+    if (existing) {
+        if (existing.updatedAt > noteFullData.updatedAt) {
+            console.log(`[Sync] Local note ${id} is newer, ignoring pulled row.`);
+            return;
+        }
+
+        // 2. MIGRATION: Upgrade ID and references in noteContent and noteVersions
+        if (existing.id === hyphenlessId && id !== hyphenlessId) {
+            console.log(`[Sync] Migrating legacy Note ID and content link: ${hyphenlessId} -> ${id}`);
+            
+            // Update Note Metadata ID
+            await tx.update(schema.noteMetadata).set({ id }).where(eq(schema.noteMetadata.id, hyphenlessId)).run();
+            // Update Note Content ID
+            await tx.update(schema.noteContent).set({ id }).where(eq(schema.noteContent.id, hyphenlessId)).run();
+            // Update Note Versions noteId
+            await tx.update(schema.noteVersions).set({ noteId: id }).where(eq(schema.noteVersions.noteId, hyphenlessId)).run();
+        }
     }
 
     const content = normalizeStoredContent(noteFullData.content || '');
     const metadataDetails = { ...noteFullData };
     delete metadataDetails.content; // The rest is metadata
 
-    // Insert or Update Metadata
+    // 3. Perform standard upsert on Metadata
     await tx.insert(schema.noteMetadata)
         .values(metadataDetails)
         .onConflictDoUpdate({ target: schema.noteMetadata.id, set: metadataDetails })

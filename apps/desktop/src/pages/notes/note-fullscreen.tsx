@@ -3,10 +3,13 @@ import { DesktopNoteLinkCommandMenu } from "@/components/editor/DesktopNoteLinkC
 import { DesktopSlashCommandMenu } from "@/components/editor/DesktopSlashCommandMenu";
 import { DesktopTagCommandMenu } from "@/components/editor/DesktopTagCommandMenu";
 import { DesktopToolbar } from "@/components/editor/DesktopToolbar";
+import { LinkContextMenu } from "@/components/editor/LinkContextMenu";
 import { ImageGallery } from "@/components/notes/image-gallery";
+import { NotePreviewModal } from "@/components/notes/note-preview-modal";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useOpenNoteInNewWindow } from "@/hooks/use-open-note-in-new-window";
 import { copyImageToClipboard, writeText } from "@/lib/clipboard";
-import { generateTitle, useNotesStore } from "@annota/core";
+import { generateTitle, NoteMetadata, useNotesStore } from "@annota/core";
 import TipTapEditor, { TipTapEditorRef } from "@annota/editor-ui";
 import { emit, once } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -15,10 +18,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { NoteSearch } from "./components/note-search";
 import { NoteTags } from "./components/note-tags";
-import { LinkContextMenu } from "@/components/editor/LinkContextMenu";
-import { NotePreviewModal } from "@/components/notes/note-preview-modal";
-import { useOpenNoteInNewWindow } from "@/hooks/use-open-note-in-new-window";
-import { NoteMetadata } from "@annota/core";
 
 /**
  * Standalone fullscreen note editor for child windows.
@@ -59,7 +58,7 @@ export default function NoteFullscreen() {
         anchorRect: DOMRect;
         onResolve: () => any;
     } | null>(null);
-    
+
     // Link Context Menu state
     const [linkMenuState, setLinkMenuState] = useState<{
         open: boolean;
@@ -360,8 +359,7 @@ export default function NoteFullscreen() {
 
     return (
         <div className="h-screen w-screen bg-note-bg flex flex-col overflow-hidden">
-            {/* Drag region for the transparent title bar */}
-            <div data-tauri-drag-region className="h-11 shrink-0" />
+
 
             {/* Editor area */}
             <div className="flex-1 min-h-0 relative">

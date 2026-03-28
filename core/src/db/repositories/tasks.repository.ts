@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, inArray, lt, sql } from 'drizzle-orm';
+import { and, asc, eq, gte, inArray, lt, sql, or } from 'drizzle-orm';
 import { getDb } from '../../stores/db.store';
 import type { Task, TaskInsert } from '../schema';
 import * as schema from '../schema';
@@ -34,13 +34,35 @@ export async function clearDirtyTasks(taskIds: string[]): Promise<void> {
 }
 
 export async function upsertSyncedTask(taskData: Task, tx: DbOrTx = getDb()): Promise<void> {
-    const result = await tx.select().from(schema.tasks).where(eq(schema.tasks.id, taskData.id)).get();
+    const id = taskData.id;
+    const hyphenlessId = id.replace(/-/g, '');
+
+    // 1. Try to find existing row by Hyphenated ID (modern) or Hyphenless ID (legacy)
+    const result = await tx.select().from(schema.tasks)
+        .where(or(
+            eq(schema.tasks.id, id),
+            eq(schema.tasks.id, hyphenlessId)
+        ))
+        .get();
+
     const existing = safeGet<Task>(result);
-    if (existing && existing.updatedAt > taskData.updatedAt) {
-        console.log(`[Sync] Local task ${taskData.id} is newer, ignoring pulled row. Local: ${existing.updatedAt}, Pulled: ${taskData.updatedAt}`);
-        return;
+
+    if (existing) {
+        // Handle newer local edits
+        if (existing.updatedAt > taskData.updatedAt) {
+            console.log(`[Sync] Local task ${id} is newer, ignoring pulled row. Local: ${existing.updatedAt}, Pulled: ${taskData.updatedAt}`);
+            return;
+        }
+
+        // 2. MIGRATION: If we found a legacy hyphenless row, we need to upgrade its ID to the hyphenated one
+        // so that the subsequent upsert (onConflictDoUpdate) targets the correct primary key.
+        if (existing.id === hyphenlessId && id !== hyphenlessId) {
+            console.log(`[Sync] Migrating legacy Task ID: ${hyphenlessId} -> ${id}`);
+            await tx.update(schema.tasks).set({ id }).where(eq(schema.tasks.id, hyphenlessId)).run();
+        }
     }
 
+    // 3. Perform the standard upsert on the (now standardized) ID
     await tx.insert(schema.tasks)
         .values(taskData)
         .onConflictDoUpdate({ target: schema.tasks.id, set: taskData })

@@ -10,6 +10,7 @@ import {
     TRASH_FOLDER_ID,
     useNotesStore,
 } from '@annota/core';
+import { useSidebar } from '@/context/sidebar-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
 import { Stack, useRouter } from 'expo-router';
@@ -179,6 +180,7 @@ type ListItem =
 export default function TrashScreen() {
     const router = useRouter();
     const { colors } = useTheme();
+    const { toggle } = useSidebar();
     const [currentFolderId, setCurrentFolderId] = useState<string | null>(TRASH_FOLDER_ID);
 
 
@@ -368,11 +370,23 @@ export default function TrashScreen() {
                 options={{
                     headerShown: true,
                     title: headerTitle,
-                    headerLeft: () => (
-                        <HapticPressable onPress={() => router.back()} style={styles.headerButton} hitSlop={8}>
-                            <Ionicons name="chevron-back" size={26} color={colors.primary} />
-                        </HapticPressable>
-                    ),
+                    gestureEnabled: false,
+                    headerLeft: () => {
+                        const canGoBack = router.canGoBack();
+                        return (
+                            <HapticPressable 
+                                onPress={() => canGoBack ? router.back() : toggle()} 
+                                style={styles.headerButton} 
+                                hitSlop={8}
+                            >
+                                <Ionicons 
+                                    name={canGoBack ? "chevron-back" : "menu-outline"} 
+                                    size={26} 
+                                    color={colors.primary} 
+                                />
+                            </HapticPressable>
+                        );
+                    },
                     headerRight: !isEmpty
                         ? () => (
                             <HapticPressable
