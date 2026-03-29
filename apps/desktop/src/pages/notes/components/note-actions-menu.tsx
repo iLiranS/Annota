@@ -110,9 +110,40 @@ export function NoteActionsMenu({ note, onRevert, onOpenChange }: NoteActionsMen
                         <span className="text-sm font-medium">Copy link to note</span>
                     </DropdownMenuItem>
 
-                    <DropdownMenuItem className="rounded-lg gap-3 py-2 cursor-default opacity-50">
-                        <Ionicons name="share-outline" size={18} />
-                        <span className="text-sm font-medium">Export</span>
+                    <DropdownMenuSeparator className="my-1 opacity-50" />
+                    
+                    <DropdownMenuItem
+                        className="rounded-lg gap-3 py-2 cursor-pointer"
+                        onClick={async () => {
+                            const content = await useNotesStore.getState().getNoteContent(note.id);
+                            if (!content) return;
+                            const { ExportService } = await import('@annota/editor-core');
+                            const { DesktopExportAdapter } = await import('@/lib/export/DesktopExportAdapter');
+                            const adapter = new DesktopExportAdapter();
+                            const service = new ExportService(adapter);
+                            await service.triggerMarkdownExport(note.title || 'Note', content);
+                            toast.success("Markdown exported successfully");
+                        }}
+                    >
+                        <Ionicons name="logo-markdown" size={18} />
+                        <span className="text-sm font-medium">Export as Markdown</span>
+                    </DropdownMenuItem>
+
+                    <DropdownMenuItem
+                        className="rounded-lg gap-3 py-2 cursor-pointer"
+                        onClick={async () => {
+                            const content = await useNotesStore.getState().getNoteContent(note.id);
+                            if (!content) return;
+                            const { ExportService } = await import('@annota/editor-core');
+                            const { DesktopExportAdapter } = await import('@/lib/export/DesktopExportAdapter');
+                            const adapter = new DesktopExportAdapter();
+                            const service = new ExportService(adapter);
+                            await service.triggerPdfExport(note.title || 'Note', content);
+                            toast.success("PDF export triggered");
+                        }}
+                    >
+                        <Ionicons name="document-text-outline" size={18} />
+                        <span className="text-sm font-medium">Export as PDF</span>
                     </DropdownMenuItem>
                 </DropdownMenuContent>
             </DropdownMenu>
