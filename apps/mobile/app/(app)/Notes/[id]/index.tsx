@@ -73,7 +73,16 @@ export default function NoteEditor() {
 
 
     const pendingScrollElementIdRef = useRef<string | null>(null);
-    const shouldAutofocus = source === 'new' || (!content || content === '<p></p>');
+    const isEmptyContent = (html: string) => {
+        const normalized = html
+            .replace(/&nbsp;/gi, '')
+            .replace(/\s/g, '')
+            .toLowerCase();
+        return normalized === '' || normalized === '<p></p>' || normalized === '<p><br></p>';
+    };
+
+    const shouldAutofocus = content !== null && isEmptyContent(content);
+    const isContentReady = !id || content !== null;
 
     // Load content from database on mount
     useEffect(() => {
@@ -349,7 +358,7 @@ export default function NoteEditor() {
                 }}
             />
 
-            {isLoading ? (
+            {isLoading || !isContentReady ? (
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color={colors.primary} />
                 </View>

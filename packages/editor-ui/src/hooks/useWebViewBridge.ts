@@ -8,8 +8,10 @@ interface WebViewBridgeOptions {
 
 export function useWebViewBridge({ sendMessage, onMessage }: WebViewBridgeOptions) {
     const [isReady, setIsReady] = useState(false);
+    const [isEditorReady, setIsEditorReady] = useState(false);
     const [editorState, setEditorState] = useState<EditorState>(initialEditorState);
     const isReadyRef = useRef(false);
+    const isEditorReadyRef = useRef(false);
     const queuedCommandsRef = useRef<Array<{ command: string; params: Record<string, any> }>>([]);
 
     const dispatchCommand = useCallback((command: string, params: Record<string, any> = {}) => {
@@ -38,6 +40,10 @@ export function useWebViewBridge({ sendMessage, onMessage }: WebViewBridgeOption
                 break;
             case 'state':
                 setEditorState(data.state);
+                if (!isEditorReadyRef.current) {
+                    isEditorReadyRef.current = true;
+                    setIsEditorReady(true);
+                }
                 break;
         }
 
@@ -46,6 +52,7 @@ export function useWebViewBridge({ sendMessage, onMessage }: WebViewBridgeOption
 
     return {
         isReady,
+        isEditorReady,
         editorState,
         setEditorState,
         dispatchCommand,

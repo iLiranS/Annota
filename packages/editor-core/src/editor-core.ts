@@ -25,6 +25,8 @@ let heightObserver: ResizeObserver | null = null;
  * insertion — none of which represent real user edits.
  */
 let suppressContentUpdates = false;
+let deferEditableUntilInteraction = false;
+let hasUserActivated = false;
 
 const editorOrigin = (() => {
     try {
@@ -128,17 +130,20 @@ export function setupEditor(options: any) {
         content = '',
         placeholder = 'Write something...',
         autofocus = false,
+        editable = true,
         paddingTop = 0,
         direction = 'auto',
         fontFamily = 'system',
         fontSize = 16,
         lineSpacing = 1.5,
+        paragraphSpacing = 12,
         noteWidth = 0,
         defaultCodeLanguage = null
     } = options;
 
     // Set CSS variables and attributes for theme
     const container = document.getElementById('editor-container') || document.documentElement;
+    const listItemSpacing = Math.max(2, Math.round(paragraphSpacing / 3));
     container.setAttribute('data-theme', isDark ? 'dark' : 'light');
     container.style.setProperty('--bg-color', colors.background);
     container.style.setProperty('--text-color', colors.text);
@@ -149,10 +154,12 @@ export function setupEditor(options: any) {
     container.style.setProperty('--border-color', isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)');
     container.style.setProperty('--quote-bg', hexToRgba(colors.primary, 0.2));
     container.style.setProperty('--editor-font-size', `${fontSize}px`);
+    container.style.setProperty('--editor-font-family', resolveFontFamily(fontFamily));
     container.style.setProperty('--editor-line-height', `${lineSpacing}`);
+    container.style.setProperty('--editor-paragraph-spacing', `${paragraphSpacing}px`);
+    container.style.setProperty('--editor-list-item-spacing', `${listItemSpacing}px`);
     container.style.setProperty('--editor-max-width', noteWidth > 0 ? `${noteWidth}px` : '100%');
     container.style.setProperty('--editor-padding-top', `${paddingTop}px`);
-    applyFontFamily(fontFamily);
 
     // Notify extensions about theme changes
     window.dispatchEvent(new CustomEvent('annota-theme-change', { detail: { isDark } }));
@@ -165,9 +172,9 @@ export function setupEditor(options: any) {
     editorEl.setAttribute('dir', direction);
 
     // If editor already exists, ONLY update what's necessary, DO NOT DESTROY
-    if (window.editor) {
-        // Just update theme variables (already done above)
+    const shouldDeferEditable = !autofocus && editable !== false && !hasUserActivated;
 
+    if (window.editor) {
         // Update direction on the ProseMirror view DOM and editorProps so it
         // persists across view updates. CSS handles the rest via unicode-bidi.
         const currentEditorProps = window.editor.options.editorProps || {};
@@ -192,7 +199,16 @@ export function setupEditor(options: any) {
 
         // Update editable state
         if (options.editable !== undefined) {
-            window.editor.setEditable(options.editable);
+            if (options.editable === false) {
+                deferEditableUntilInteraction = false;
+                window.editor.setEditable(false);
+            } else if (shouldDeferEditable) {
+                deferEditableUntilInteraction = true;
+                window.editor.setEditable(false);
+            } else {
+                deferEditableUntilInteraction = false;
+                window.editor.setEditable(true);
+            }
         }
 
         // Make sure scroll prop is kept
@@ -221,7 +237,7 @@ export function setupEditor(options: any) {
     try {
         currentDefaultCodeLanguage = defaultCodeLanguage;
         window.editor = new Editor({
-            editable: options.editable !== undefined ? options.editable : true,
+            editable: shouldDeferEditable ? false : editable,
             // Disable TipTap's built-in TextDirection extension entirely.
             // It's configured once at creation and can't be updated dynamically.
             // We handle direction ourselves via the DOM dir attribute + CSS.
@@ -333,6 +349,19 @@ export function setupEditor(options: any) {
         });
 
         applyFontFamily(fontFamily);
+        if (shouldDeferEditable && window.editor?.view?.dom) {
+            deferEditableUntilInteraction = true;
+            const enableOnInteraction = () => {
+                if (!window.editor || hasUserActivated) return;
+                hasUserActivated = true;
+                deferEditableUntilInteraction = false;
+                window.editor.setEditable(true);
+            };
+            const dom = window.editor.view.dom;
+            dom.addEventListener('pointerdown', enableOnInteraction, { capture: true, once: true });
+            dom.addEventListener('touchstart', enableOnInteraction, { capture: true, once: true });
+            dom.addEventListener('mousedown', enableOnInteraction, { capture: true, once: true });
+        }
         // quick hack to solve notes with file attachment not loading issue
         if (content) {
             setTimeout(() => {

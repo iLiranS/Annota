@@ -285,6 +285,9 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
             root.style.setProperty('--accent-color', colors.primary);
             root.style.setProperty('--editor-font-size', `${editorSettings.fontSize}px`);
             root.style.setProperty('--editor-font-family', resolveFontFamily(editorSettings.fontFamily));
+            root.style.setProperty('--editor-line-height', `${editorSettings.lineSpacing}`);
+            root.style.setProperty('--editor-paragraph-spacing', `${editorSettings.paragraphSpacing}px`);
+            root.style.setProperty('--editor-max-width', editorSettings.noteWidth > 0 ? `${editorSettings.noteWidth}px` : '100%');
             root.style.setProperty('--placeholder-color', dark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)');
             root.style.setProperty('--code-bg', dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)');
             root.style.setProperty('--code-block-bg', dark ? '#1E1E1E' : '#F5F5F5');

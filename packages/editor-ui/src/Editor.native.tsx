@@ -180,6 +180,7 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                     }
                     break;
                 case 'cursorPosition':
+                    if (!isKeyboardVisible) return;
                     // Accurately calculate what is blocking the bottom of the screen
                     const bottomObstruction = isKeyboardVisible ? (keyboardHeight + toolbarHeight) : 0;
                     const visibleSpace = height - bottomObstruction;
@@ -205,12 +206,30 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                     break;
             }
             handleCommonMessage(type, data);
-        }, [handleCommonMessage, props, openGallery]);
+        }, [handleCommonMessage, props, openGallery, isKeyboardVisible, keyboardHeight, toolbarHeight, height]);
 
-        const { isReady, editorState, dispatchCommand, handleBridgeMessage } = useWebViewBridge({
+        const { isReady, isEditorReady, editorState, dispatchCommand, handleBridgeMessage } = useWebViewBridge({
             sendMessage,
             onMessage: onBridgeMessage
         });
+
+        // Sync settings when they change
+        useEffect(() => {
+            if (isReady) {
+                sendMessage('setOptions', {
+                    isDark: dark,
+                    colors,
+                    fontSize: editorSettings.fontSize,
+                    lineSpacing: editorSettings.lineSpacing,
+                    paragraphSpacing: editorSettings.paragraphSpacing,
+                    fontFamily: editorSettings.fontFamily,
+                    noteWidth: editorSettings.noteWidth,
+                    direction: editorSettings.direction,
+                    defaultCodeLanguage: editorSettings.defaultCodeLanguage,
+                });
+            }
+        }, [isReady, dark, colors, editorSettings, sendMessage]);
+
 
         useImperativeHandle(ref, () => ({
             getContent: () => new Promise((resolve) => {
@@ -289,8 +308,8 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
 
 
         useEffect(() => {
-            // Only attempt to resolve once the WebView is fully booted up (isReady)
-            if (isReady && initialContent) {
+            // Only attempt to resolve once the editor is fully initialized
+            if (isEditorReady && initialContent) {
                 const imageIds = extractImageIds(initialContent);
                 if (imageIds.length > 0) {
                     NoteFileService.resolveFileSources(imageIds).then((fileMap: any) => {
@@ -300,7 +319,7 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                     });
                 }
             }
-        }, [initialContent, isReady, dispatchCommand]);
+        }, [initialContent, isEditorReady, dispatchCommand]);
 
         return (
             <View style={styles.container}>
@@ -317,7 +336,6 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                         ref={webViewRef}
                         originWhitelist={['*']}
                         hideKeyboardAccessoryView={true}
-                        keyboardDisplayRequiresUserAction={false}
                         allowFileAccessFromFileURLs={true}
                         allowUniversalAccessFromFileURLs={true}
                         mixedContentMode="always"
@@ -330,6 +348,7 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                         }}
                         style={[styles.webView, { height: Math.max(editorHeight, 100) }]}
                         scrollEnabled={false}
+                        keyboardDisplayRequiresUserAction={false}
                     />
                 </ScrollView>
                 {renderToolbar && (
