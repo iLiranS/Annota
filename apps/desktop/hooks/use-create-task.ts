@@ -1,10 +1,11 @@
 import { useTasksStore } from "@annota/core";
 import { useCallback } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
+import { useSmartNavigate } from "./use-smart-navigate";
 import { toast } from "sonner";
 
 export function useCreateTask() {
-    const navigate = useNavigate();
+    const navigate = useSmartNavigate();
     const location = useLocation();
     const createTaskStore = useTasksStore((s) => s.createTask);
 

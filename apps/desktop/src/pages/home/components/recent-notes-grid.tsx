@@ -2,15 +2,15 @@ import { NoteListItem } from '@/components/notes/note-list-item';
 import { Button } from '@/components/ui/button';
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useCreateNote } from '@/hooks/use-create-note';
+import { useSmartNavigate } from '@/hooks/use-smart-navigate';
 import { useNotesStore } from "@annota/core";
 import { FileText, Plus } from "lucide-react";
 import { useMemo } from "react";
-import { useNavigate } from "react-router-dom";
 
 export function RecentNotesGrid() {
     const { notes, deleteNote } = useNotesStore();
     const { colors } = useAppTheme();
-    const navigate = useNavigate();
+    const navigateSmart = useSmartNavigate();
     const { createAndNavigate } = useCreateNote();
 
     const recentNotes = useMemo(() => {
@@ -21,7 +21,7 @@ export function RecentNotesGrid() {
     }, [notes]);
 
     const handleNotePress = (id: string, folderId: string | null) => {
-        navigate(`/notes/${folderId || 'root'}/${id}`);
+        navigateSmart(`/notes/${folderId || 'root'}/${id}`);
     };
 
     return (

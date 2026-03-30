@@ -136,7 +136,7 @@ export function setupEditor(options: any) {
         fontFamily = 'system',
         fontSize = 16,
         lineSpacing = 1.5,
-        paragraphSpacing = 12,
+        paragraphSpacing = 4,
         noteWidth = 0,
         defaultCodeLanguage = null
     } = options;

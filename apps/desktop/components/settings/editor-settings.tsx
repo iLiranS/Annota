@@ -14,6 +14,7 @@ import {
     ChevronRight,
     Languages,
     Maximize2,
+    Pilcrow,
     TextCursor,
     Type
 } from "lucide-react";
@@ -103,6 +104,11 @@ export function EditorSettings() {
         const level = Math.round((editor.lineSpacing - 1.5) / 0.1);
         return (level > 0 ? '+' : '') + level;
     };
+    
+    const getParagraphSpacingDisplay = () => {
+        const level = Math.round((editor.paragraphSpacing - 4) / 2);
+        return (level > 0 ? '+' : '') + level;
+    };
 
     const getNoteWidthDisplay = () => {
         if (editor.noteWidth === 0) return "Full Width";
@@ -144,6 +150,17 @@ export function EditorSettings() {
                         value={editor.lineSpacing}
                         displayValue={getLineSpacingDisplay()}
                         onChange={(val) => updateEditorSettings({ lineSpacing: val })}
+                    />
+                    <SliderItem
+                        label="Paragraph Spacing"
+                        icon={<Pilcrow size={18} />}
+                        iconBg="bg-teal-500"
+                        min={0}
+                        max={24}
+                        step={2}
+                        value={editor.paragraphSpacing}
+                        displayValue={getParagraphSpacingDisplay()}
+                        onChange={(val) => updateEditorSettings({ paragraphSpacing: val })}
                     />
                 </div>
             </section>

@@ -12,8 +12,8 @@
     --editor-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     --editor-font-size: 16px;
     --editor-line-height: 1.5;
-    --editor-paragraph-spacing: 12px;
-    --editor-list-item-spacing: 4px;
+    --editor-paragraph-spacing: 4px;
+    --editor-list-item-spacing: 2px;
     --editor-max-width: 100%;
     --editor-padding-top: 0px;
 }
@@ -168,8 +168,8 @@
 
 .ProseMirror p {
     margin: 0 !important;
-    padding-top: calc(var(--editor-paragraph-spacing) / 2) !important;
-    padding-bottom: calc(var(--editor-paragraph-spacing) / 2) !important;
+    padding-top: calc(var(--editor-paragraph-spacing)) !important;
+    padding-bottom: calc(var(--editor-paragraph-spacing)) !important;
     unicode-bidi: plaintext;
     text-align: start;
     min-height: 1.1em;
@@ -493,7 +493,6 @@
     border: none;
     color: var(--text-color);
     cursor: pointer;
-    transition: opacity 0.15s ease;
     user-select: none;
     opacity: 0.25;
     pointer-events: auto;
@@ -635,7 +634,7 @@
 }
 
 .ProseMirror div[data-youtube-video] {
-    margin: 16px 0;
+    margin: var(--editor-paragraph-spacing) 0;
     width: 100%;
     display: flex;
     justify-content: center;
@@ -982,9 +981,9 @@
 .ProseMirror .details-wrapper,
 .ProseMirror [data-type="details"] {
     margin: 0;
-    margin-bottom: var(--editor-paragraph-spacing);
+    margin-bottom: calc(var(--editor-paragraph-spacing) * 2);
     border-radius: 12px;
-    border: 1px solid var(--border-color);
+    border: 1px solid color-mix(in srgb, var(--border-color), transparent 50%);
     overflow: hidden;
     background-color: transparent;
     transition: background-color 0.2s ease;
@@ -995,12 +994,17 @@
 .ProseMirror [data-type="detailsSummary"] {
     display: flex !important;
     align-items: center !important;
-    padding: 6px 8px !important;
+    padding: 10px 8px !important;
     padding-inline-start: 4px !important;
+    background-color: rgba(0, 0, 0, 0.02);
     gap: 0px !important;
-    background-color: rgba(0, 0, 0, 0.03);
     transition: background-color 0.15s ease;
     min-height: 32px !important;
+}
+
+html.dark .ProseMirror .details-summary,
+html.dark .ProseMirror [data-type="detailsSummary"] {
+    background-color: rgba(0, 0, 0, 0.05);
 }
 
 /* Summary Content alignment and placeholder */
@@ -1031,15 +1035,14 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    width: 24px;
+    height: 24px;
     border-radius: 4px;
     background: transparent;
     border: none;
     color: var(--text-color);
     cursor: pointer;
     opacity: 0.5;
-    transition: all 0.2s ease;
     margin-inline-end: 8px;
 }
 
@@ -1167,7 +1170,9 @@
 /* Content area - below the header */
 .ProseMirror .details-content,
 .ProseMirror [data-type="detailsContent"] {
-    padding: calc(var(--editor-paragraph-spacing) / 2) 14px calc(var(--editor-paragraph-spacing) / 2) 36px;
+    padding-block: calc(var(--editor-paragraph-spacing) / 2);
+    padding-inline-start: 36px;
+    padding-inline-end: 14px;
     overflow: hidden;
     transition: height 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }

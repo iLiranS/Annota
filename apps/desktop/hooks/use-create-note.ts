@@ -1,10 +1,11 @@
 import { useNotesStore } from "@annota/core";
 import { useCallback } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
+import { useSmartNavigate } from "./use-smart-navigate";
 import { toast } from "sonner";
 
 export function useCreateNote() {
-    const navigate = useNavigate();
+    const navigate = useSmartNavigate();
     const location = useLocation();
     const createNote = useNotesStore((s) => s.createNote);
 
@@ -25,13 +26,7 @@ export function useCreateNote() {
                 const search = tagId ? `?tagId=${tagId}` : "";
                 const targetPath = `/notes/${targetFolderId}/${note.id}${search}`;
 
-                const currentPath = location.pathname + location.search;
-                if (currentPath === targetPath) return { data: note, error: null };
-
-                const isTargetContent = targetPath.startsWith('/notes') && !targetPath.startsWith('/notes/trash');
-                const isCurrentContent = location.pathname.startsWith('/notes') && !location.pathname.startsWith('/notes/trash');
-
-                navigate(targetPath, { replace: !isTargetContent && !isCurrentContent });
+                navigate(targetPath);
             }
             return { data: note, error: null };
         } catch (error: any) {

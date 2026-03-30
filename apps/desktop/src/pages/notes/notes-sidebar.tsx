@@ -1,3 +1,4 @@
+import { useSmartNavigate } from "@/hooks/use-smart-navigate";
 import {
     DAILY_NOTES_FOLDER_ID,
     getSortTypeLabel,
@@ -71,6 +72,7 @@ const SORT_OPTIONS: SortType[] = [
 
 export function NotesSidebar({ className }: NotesSidebarProps) {
     const navigate = useNavigate();
+    const navigateSmart = useSmartNavigate();
     const location = useLocation();
     const { folderId: routeFolderId, noteId: routeNoteId } = useParams();
     const [searchParams] = useSearchParams();
@@ -155,14 +157,6 @@ export function NotesSidebar({ className }: NotesSidebarProps) {
         [isResizing, general.appDirection]
     );
 
-    const navigateSmart = useCallback((path: string) => {
-        if (location.pathname + location.search === path) return;
-
-        const isTargetContent = path.startsWith('/notes') && !path.startsWith('/notes/trash');
-        const isCurrentContent = location.pathname.startsWith('/notes') && !location.pathname.startsWith('/notes/trash');
-
-        navigate(path, { replace: !isTargetContent && !isCurrentContent });
-    }, [location, navigate]);
 
     useEffect(() => {
         if (isResizing) {

@@ -110,10 +110,10 @@ export const Details = TiptapDetails.extend({
                                 contentEl.offsetHeight; // Force reflow again to ensure attributes are processed
 
                                 // 3. Start slide-up animation
-                                contentEl.style.transition = ''; 
+                                contentEl.style.transition = '';
                                 contentEl.style.height = '0px';
                                 contentEl.style.opacity = '0';
-                                
+
                                 const onEnd = (e: TransitionEvent) => {
                                     if (e.propertyName === 'height' && !newNode.attrs.open) {
                                         contentEl.style.display = 'none';

@@ -53,6 +53,16 @@ export default function EditorSettings() {
                     displayValue={getDisplayValue(editor.lineSpacing, 1.5, 0.1)}
                     onValueChange={(val) => updateEditorSettings({ lineSpacing: 1.5 + (val * 0.1) })}
                 />
+
+                <DummySlider
+                    label="Paragraph Spacing"
+                    value={Math.max(-5, Math.min(10, Math.round((editor.paragraphSpacing - 4) / 2)))}
+                    minValue={-2}
+                    maxValue={10}
+                    step={1}
+                    displayValue={getDisplayValue(editor.paragraphSpacing, 4, 2)}
+                    onValueChange={(val) => updateEditorSettings({ paragraphSpacing: 4 + (val * 2) })}
+                />
             </View>
 
             <View style={styles.section}>

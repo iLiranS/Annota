@@ -19,10 +19,10 @@ import {
     type NoteMetadata,
 } from "@annota/core";
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useSmartNavigate } from "@/hooks/use-smart-navigate";
 
 export default function TrashPage() {
-    const navigate = useNavigate();
+    const navigate = useSmartNavigate();
     const [currentFolderId, setCurrentFolderId] = useState<string | null>(
         TRASH_FOLDER_ID,
     );
