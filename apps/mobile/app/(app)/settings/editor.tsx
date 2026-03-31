@@ -56,12 +56,12 @@ export default function EditorSettings() {
 
                 <DummySlider
                     label="Paragraph Spacing"
-                    value={Math.max(-5, Math.min(10, Math.round((editor.paragraphSpacing - 4) / 2)))}
-                    minValue={-2}
-                    maxValue={10}
+                    value={Math.max(-4, Math.min(8, Math.round((editor.paragraphSpacing - 8) / 2)))}
+                    minValue={-4}
+                    maxValue={8}
                     step={1}
-                    displayValue={getDisplayValue(editor.paragraphSpacing, 4, 2)}
-                    onValueChange={(val) => updateEditorSettings({ paragraphSpacing: 4 + (val * 2) })}
+                    displayValue={getDisplayValue(editor.paragraphSpacing, 8, 2)}
+                    onValueChange={(val) => updateEditorSettings({ paragraphSpacing: 8 + (val * 2) })}
                 />
             </View>
 

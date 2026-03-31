@@ -181,6 +181,17 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                     break;
                 case 'cursorPosition':
                     if (!isKeyboardVisible) return;
+
+                    // --- THE RTL BUG SHIELD ---
+                    // WebKit's RTL bug causes trailing spaces to report their position as `top: 0`.
+                    // If the WebView tells us the cursor is at the very top of the document, 
+                    // but the user's screen is scrolled down further than 150px, it's a phantom coordinate.
+                    // We simply block the scroll so the screen doesn't violently jump up.
+                    if (data.top < 10 && scrollOffsetY.current > 150) {
+                        return;
+                    }
+                    // --------------------------
+
                     // Accurately calculate what is blocking the bottom of the screen
                     const bottomObstruction = isKeyboardVisible ? (keyboardHeight + toolbarHeight) : 0;
                     const visibleSpace = height - bottomObstruction;

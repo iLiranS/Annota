@@ -60,7 +60,7 @@ const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
     direction: 'auto',
     fontSize: 16,
     lineSpacing: 1.5,
-    paragraphSpacing: 4,
+    paragraphSpacing: 8,
     fontFamily: 'system',
     floatingNoteHeader: true,
     noteWidth: 900,

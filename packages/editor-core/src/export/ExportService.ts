@@ -231,12 +231,18 @@ export class ExportService {
             }
         }
 
-        // 2. Promote background colours and fix Image collapsing ───────────────
-        doc.querySelectorAll('[data-type="details"],[data-type="detailsSummary"],td,th,mark,[style*="background"],img')
+        // 2. Promote background colours and fix Image/Table collapsing ─────────
+        doc.querySelectorAll('[data-type="details"],[data-type="detailsSummary"],td,th,mark,[style*="background"],img,table')
             .forEach((el: HTMLElement) => {
                 // Fix Backgrounds
                 const color = el.getAttribute('data-background-color') ?? el.style?.backgroundColor ?? null;
                 if (color) el.style.backgroundColor = color;
+
+                // Fix Tables (Ensure they take full width)
+                if (el.tagName.toLowerCase() === 'table') {
+                    el.style.width = '100%';
+                    el.removeAttribute('width');
+                }
 
                 // Fix Images (Prevent 0px height collapse in PDF print engines)
                 if (el.tagName.toLowerCase() === 'img') {
@@ -373,6 +379,7 @@ export class ExportService {
             * {
                 -webkit-print-color-adjust: exact !important;
                         print-color-adjust: exact !important;
+                box-sizing: border-box;
             }
 
             :root {
@@ -386,10 +393,12 @@ export class ExportService {
 
             @media print {
                 @page { margin: 2cm; }
-                body  { padding: 0; }
+                body  { padding: 0; max-width: none !important; width: 100% !important; }
                 .no-print { display: none; }
                 [data-type="details"],
                 .details-wrapper { break-inside: avoid; }
+                table { break-inside: auto; }
+                tr { break-inside: avoid; break-after: auto; }
             }
 
             body {
@@ -481,22 +490,33 @@ export class ExportService {
 
             /* ── Tables ─────────────────────────────────────────────────────── */
             table {
-                width:           100%;
+                display:         table !important;
+                width:           100% !important;
+                min-width:       100% !important;
                 border-collapse: collapse;
                 margin:          2em 0;
                 font-size:       .95em;
+                table-layout:    auto;
+            }
+            .tableWrapper {
+                width:           100% !important;
+                margin:          2em 0 !important;
+                overflow:        visible !important;
             }
             th, td {
-                padding:    10px 14px;
-                border:     1px solid var(--border);
-                text-align: left;
+                padding:        10px 14px;
+                border:         1px solid var(--border);
+                text-align:     left;
+                vertical-align: top;
+                word-break:     break-word;
+                overflow-wrap:  anywhere;
             }
             th {
-                background-color: var(--table-header);
+                background-color: var(--table-header) !important;
                 font-weight:      700;
                 color:            #333;
             }
-            tr:nth-child(even) td { background-color: #fafafa; }
+            tr:nth-child(even) td { background-color: #fafafa !important; }
 
             /* ── Details / Summary ──────────────────────────────────────────── */
             [data-type="details"],

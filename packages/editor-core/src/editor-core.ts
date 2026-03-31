@@ -25,6 +25,7 @@ let heightObserver: ResizeObserver | null = null;
  * insertion — none of which represent real user edits.
  */
 let suppressContentUpdates = false;
+//@ts-ignore
 let deferEditableUntilInteraction = false;
 let hasUserActivated = false;
 
@@ -82,7 +83,9 @@ export function scrollCursorIntoView() {
         if (!window.editor || !window.editor.isFocused) return;
 
         try {
-            const { from } = window.editor.state.selection;
+            let { from } = window.editor.state.selection;
+
+
             const coords = window.editor.view.coordsAtPos(from);
             if (!coords) return;
 
@@ -136,7 +139,7 @@ export function setupEditor(options: any) {
         fontFamily = 'system',
         fontSize = 16,
         lineSpacing = 1.5,
-        paragraphSpacing = 4,
+        paragraphSpacing = 8,
         noteWidth = 0,
         defaultCodeLanguage = null
     } = options;

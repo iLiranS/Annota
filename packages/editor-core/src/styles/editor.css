@@ -12,7 +12,7 @@
     --editor-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     --editor-font-size: 16px;
     --editor-line-height: 1.5;
-    --editor-paragraph-spacing: 4px;
+    --editor-paragraph-spacing: 8px;
     --editor-list-item-spacing: 2px;
     --editor-max-width: 100%;
     --editor-padding-top: 0px;
@@ -168,8 +168,8 @@
 
 .ProseMirror p {
     margin: 0 !important;
-    padding-top: calc(var(--editor-paragraph-spacing)) !important;
-    padding-bottom: calc(var(--editor-paragraph-spacing)) !important;
+    padding-top: calc(var(--editor-paragraph-spacing) * 0.5) !important;
+    padding-bottom: calc(var(--editor-paragraph-spacing) * 0.5) !important;
     unicode-bidi: plaintext;
     text-align: start;
     min-height: 1.1em;
@@ -736,6 +736,8 @@
     /* Respect container width */
     width: 100%;
     max-width: 100%;
+    display: block;
+    /* Ensure block display for overflow to work */
 }
 
 /* Custom scrollbar for tables to make them feel integrated but visible */
@@ -779,6 +781,22 @@
     vertical-align: top;
     position: relative;
     word-wrap: break-word;
+}
+
+/* Mobile-specific Table Overrides */
+@media (max-width: 768px) {
+    .ProseMirror table {
+        /* Allow the table to grow beyond its container on mobile for scrolling */
+        width: auto !important;
+        min-width: 100% !important;
+        table-layout: auto !important;
+    }
+
+    .ProseMirror td,
+    .ProseMirror th {
+        /* Ensure cells have enough width to be readable */
+        min-width: 120px !important;
+    }
 }
 
 .ProseMirror tr:last-child td,
@@ -981,7 +999,7 @@
 .ProseMirror .details-wrapper,
 .ProseMirror [data-type="details"] {
     margin: 0;
-    margin-bottom: calc(var(--editor-paragraph-spacing) * 2);
+    margin-bottom: calc(var(--editor-paragraph-spacing));
     border-radius: 12px;
     border: 1px solid color-mix(in srgb, var(--border-color), transparent 50%);
     overflow: hidden;

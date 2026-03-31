@@ -106,7 +106,7 @@ export function EditorSettings() {
     };
     
     const getParagraphSpacingDisplay = () => {
-        const level = Math.round((editor.paragraphSpacing - 4) / 2);
+        const level = Math.round((editor.paragraphSpacing - 8) / 2);
         return (level > 0 ? '+' : '') + level;
     };
 

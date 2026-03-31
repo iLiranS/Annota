@@ -114,111 +114,122 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
             onGalleryVisibilityChange,
         ]);
 
-        const editorProps = useMemo(() => getEditorProps({
-            direction: editorSettings.direction,
-            onContextMenu: (view, event) => {
-                const target = event.target as HTMLElement;
-                const linkElement = target.closest('a');
-                if (linkElement && linkElement.href && linkElement.href.includes('annota://')) {
-                    if (onOpenLinkMenu) {
+        const editorProps = useMemo(() => {
+            const baseProps = getEditorProps({
+                direction: editorSettings.direction,
+                onContextMenu: (view, event) => {
+                    const target = event.target as HTMLElement;
+                    const linkElement = target.closest('a');
+                    if (linkElement && linkElement.href && linkElement.href.includes('annota://')) {
+                        if (onOpenLinkMenu) {
+                            event.preventDefault();
+                            onOpenLinkMenu(event as any, linkElement.href);
+                            return true;
+                        }
+                    }
+
+                    if (!onOpenTableMenu) return false;
+
+                    const { state, dispatch } = view;
+                    const pos = view.posAtDOM(event.target as Node, 0);
+                    if (pos === null) return false;
+
+                    const $pos = state.doc.resolve(pos);
+                    let isInTable = false;
+                    let tableNodePos = -1;
+                    let cellNodePos = -1;
+
+                    for (let d = $pos.depth; d > 0; d--) {
+                        const node = $pos.node(d);
+                        if (node.type.name === 'table') {
+                            isInTable = true;
+                            tableNodePos = $pos.before(d);
+                        }
+                        if (node.type.name === 'tableCell' || node.type.name === 'tableHeader') {
+                            cellNodePos = $pos.before(d);
+                        }
+                    }
+
+                    if (isInTable) {
                         event.preventDefault();
-                        onOpenLinkMenu(event as any, linkElement.href);
-                        return true;
-                    }
-                }
 
-                if (!onOpenTableMenu) return false;
+                        const { selection } = state;
+                        let shouldSetSelection = true;
 
+                        // Bulletproof check for CellSelection
+                        const isCellSelection = (selection as any).constructor.name === 'CellSelection' || selection.toJSON().type === 'cell';
 
+                        if (isCellSelection) {
+                            // Check if the clicked DOM position falls inside the current multi-cell ranges
+                            const ranges = (selection as any).ranges;
+                            for (let i = 0; i < ranges.length; i++) {
+                                if (pos >= ranges[i].$from.pos && pos <= ranges[i].$to.pos) {
+                                    shouldSetSelection = false; // User clicked inside their selection, preserve it!
+                                    break;
+                                }
+                            }
+                        } else {
+                            // Single cursor check
+                            const isSelectionInClickedCell = selection.$from.depth >= $pos.depth &&
+                                selection.$from.before($pos.depth) === cellNodePos;
+                            if (isSelectionInClickedCell) shouldSetSelection = false;
+                        }
 
-                const { state, dispatch } = view;
-                const pos = view.posAtDOM(event.target as Node, 0);
-                if (pos === null) return false;
+                        if (shouldSetSelection) {
+                            dispatch(state.tr.setSelection(TextSelection.create(state.doc, pos)));
+                        }
 
-                const $pos = state.doc.resolve(pos);
-                let isInTable = false;
-                let tableNodePos = -1;
-                let cellNodePos = -1;
+                        const cellNode = state.doc.nodeAt(cellNodePos);
 
-                for (let d = $pos.depth; d > 0; d--) {
-                    const node = $pos.node(d);
-                    if (node.type.name === 'table') {
-                        isInTable = true;
-                        tableNodePos = $pos.before(d);
-                    }
-                    if (node.type.name === 'tableCell' || node.type.name === 'tableHeader') {
-                        cellNodePos = $pos.before(d);
-                    }
-                }
-
-
-                if (isInTable) {
-                    event.preventDefault();
-
-                    const { selection } = state;
-                    let shouldSetSelection = true;
-
-                    // Bulletproof check for CellSelection
-                    const isCellSelection = (selection as any).constructor.name === 'CellSelection' || selection.toJSON().type === 'cell';
-
-                    if (isCellSelection) {
-                        // Check if the clicked DOM position falls inside the current multi-cell ranges
-                        const ranges = (selection as any).ranges;
-                        for (let i = 0; i < ranges.length; i++) {
-                            if (pos >= ranges[i].$from.pos && pos <= ranges[i].$to.pos) {
-                                shouldSetSelection = false; // User clicked inside their selection, preserve it!
-                                break;
+                        // Calculate merge capability with a manual fallback for ProseMirror quirks
+                        let canMerge = editorRef.current?.can().mergeCells() || false;
+                        if (!canMerge && isCellSelection) {
+                            const cellSel = selection as any;
+                            // If anchor and head are in different positions, multiple cells are selected
+                            if (cellSel.$anchorCell && cellSel.$headCell && cellSel.$anchorCell.pos !== cellSel.$headCell.pos) {
+                                canMerge = true;
                             }
                         }
-                    } else {
-                        // Single cursor check
-                        const isSelectionInClickedCell = selection.$from.depth >= $pos.depth &&
-                            selection.$from.before($pos.depth) === cellNodePos;
-                        if (isSelectionInClickedCell) shouldSetSelection = false;
-                    }
-
-                    if (shouldSetSelection) {
-                        dispatch(state.tr.setSelection(TextSelection.create(state.doc, pos)));
-                    }
-
-                    const cellNode = state.doc.nodeAt(cellNodePos);
-
-                    // Calculate merge capability with a manual fallback for ProseMirror quirks
-                    let canMerge = editorRef.current?.can().mergeCells() || false;
-                    if (!canMerge && isCellSelection) {
-                        const cellSel = selection as any;
-                        // If anchor and head are in different positions, multiple cells are selected
-                        if (cellSel.$anchorCell && cellSel.$headCell && cellSel.$anchorCell.pos !== cellSel.$headCell.pos) {
-                            canMerge = true;
+                        // Calculate split capability with a manual fallback
+                        let canSplit = editorRef.current?.can().splitCell() || false;
+                        if (!canSplit && cellNode) {
+                            // If the cell spans multiple columns or rows, it can be split!
+                            if ((cellNode.attrs.colspan && cellNode.attrs.colspan > 1) ||
+                                (cellNode.attrs.rowspan && cellNode.attrs.rowspan > 1)) {
+                                canSplit = true;
+                            }
                         }
-                    }
-                    // Calculate split capability with a manual fallback
-                    let canSplit = editorRef.current?.can().splitCell() || false;
-                    if (!canSplit && cellNode) {
-                        // If the cell spans multiple columns or rows, it can be split!
-                        if ((cellNode.attrs.colspan && cellNode.attrs.colspan > 1) ||
-                            (cellNode.attrs.rowspan && cellNode.attrs.rowspan > 1)) {
-                            canSplit = true;
-                        }
-                    }
-                    onOpenTableMenu(event, () => ({
-                        pos: tableNodePos,
-                        message: {
-                            type: 'openBlockMenu',
-                            blockType: 'table',
+                        onOpenTableMenu(event, () => ({
                             pos: tableNodePos,
-                            cellPos: cellNodePos,
-                            backgroundColor: cellNode?.attrs.backgroundColor,
-                            canMergeCells: canMerge,
-                            canSplitCell: canSplit, // Use our calculated fallback
-                        }
-                    }));
-                    return true;
-                }
+                            message: {
+                                type: 'openBlockMenu',
+                                blockType: 'table',
+                                pos: tableNodePos,
+                                cellPos: cellNodePos,
+                                backgroundColor: cellNode?.attrs.backgroundColor,
+                                canMergeCells: canMerge,
+                                canSplitCell: canSplit, // Use our calculated fallback
+                            }
+                        }));
+                        return true;
+                    }
 
-                return false;
-            }
-        }), [editorSettings.direction, onOpenTableMenu, onOpenLinkMenu]);
+                    return false;
+                }
+            });
+
+            return {
+                ...baseProps,
+                handleScrollToSelection: () => {
+                    // If we are in RTL, completely kill ProseMirror's auto-scroll.
+                    // This stops the desktop micro-jumps entirely.
+                    if (editorSettings.direction === 'rtl') {
+                        return true;
+                    }
+                    return false;
+                }
+            };
+        }, [editorSettings.direction, onOpenTableMenu, onOpenLinkMenu]);
 
         const editor = useEditor({
             editable,
@@ -292,7 +303,7 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
             root.style.setProperty('--code-bg', dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)');
             root.style.setProperty('--code-block-bg', dark ? '#1E1E1E' : '#F5F5F5');
             root.style.setProperty('--border-color', dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)');
-            
+
             // Refined selection background (approx 25% opacity)
             let selectionColor = colors.primary;
             if (selectionColor.startsWith('#')) {
@@ -544,7 +555,7 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
         }, [noteId, handleCommand]);
 
         return (
-            <div ref={containerRef} className="editor-dom-container" style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
+            <div dir={editorSettings.direction} ref={containerRef} className="editor-dom-container" style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
                 <style>{`
                     .editor-dom-container ::selection {
                         background-color: var(--selection-bg, rgba(0, 122, 255, 0.2)) !important;
@@ -554,6 +565,13 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                     .editor-dom-container ::-moz-selection {
                         background-color: var(--selection-bg, rgba(0, 122, 255, 0.2)) !important;
                         color: inherit !important;
+                    }
+                    .ProseMirror[dir="rtl"] {
+                        unicode-bidi: bidi-override;
+                        unicode-bidi: isolate; 
+                    }
+                    .ProseMirror[dir="rtl"] p {
+                        unicode-bidi: isolate;
                     }
                 `}</style>
                 {renderToolbar?.({
@@ -610,19 +628,19 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                         setActivePopup('math');
                     }
                 })}
-                <div className="editor-scroller" style={{ 
-                    flex: 1, 
-                    overflowY: 'auto', 
-                    padding: isStandalone ? '0 12px' : '0 24px', 
-                    scrollPaddingBottom: 100 
+                <div className="editor-scroller" dir={editorSettings.direction} style={{
+                    flex: 1,
+                    overflowY: 'auto',
+                    padding: isStandalone ? '0 12px' : '0 24px',
+                    scrollPaddingBottom: 100
                 }}>
-                    <div style={{ 
-                        maxWidth: editorSettings.noteWidth || '100%', 
-                        margin: '0 auto', 
-                        minHeight: '100%' 
+                    <div style={{
+                        maxWidth: editorSettings.noteWidth || '100%',
+                        margin: '0 auto',
+                        minHeight: '100%'
                     }}>
                         {renderHeader?.()}
-                        <EditorContent editor={editor} style={{ outline: 'none', paddingTop: contentPaddingTop, paddingBottom: initialContent && initialContent.length > 200 ? 100 : 0 }} />
+                        <EditorContent editor={editor} style={{ outline: 'none', paddingTop: contentPaddingTop, paddingBottom: initialContent && initialContent.length > 100 ? 100 : 0 }} />
                     </div>
                 </div>
                 {gallery.isVisible && renderImageGallery?.({
