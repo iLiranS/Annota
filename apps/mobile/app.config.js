@@ -1,7 +1,4 @@
 const IS_DEV = process.env.APP_VARIANT === 'development';
-const iconPath = IS_DEV
-  ? "./assets/images/icon-dev.png"
-  : "./assets/images/icon.png";
 export default {
   "expo": {
     name: IS_DEV ? 'Annota (Dev)' : 'Annota',
@@ -11,23 +8,19 @@ export default {
     "icon": "./assets/images/icon.png",
     "scheme": "annota",
     "userInterfaceStyle": "automatic",
-    "ios": {
-      "supportsTablet": true,
-      bundleIdentifier: IS_DEV ? 'online.annota.client.dev' : 'online.annota.client', "icon": {
-        dark: iconPath,
-        light: iconPath,
-        tinted: iconPath
-      },
-      "requireFullScreen": true,
-      "infoPlist": {
-        "BGTaskSchedulerPermittedIdentifiers": [
+    ios: {
+      supportsTablet: true,
+      bundleIdentifier: IS_DEV
+        ? 'online.annota.client.dev'
+        : 'online.annota.client',
+      icon: "./assets/annota-ios.icon",
+      requireFullScreen: true,
+      infoPlist: {
+        BGTaskSchedulerPermittedIdentifiers: [
           "com.expo.modules.backgroundtask.processing"
         ],
-        "UIBackgroundModes": [
-          "fetch",
-          "remote-notification"
-        ],
-        "UISupportedInterfaceOrientations": [
+        UIBackgroundModes: ["fetch", "remote-notification"],
+        UISupportedInterfaceOrientations: [
           "UIInterfaceOrientationPortrait",
           "UIInterfaceOrientationPortraitUpsideDown",
           "UIInterfaceOrientationLandscapeLeft",

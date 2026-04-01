@@ -7,17 +7,59 @@ A private, local-first mobile note-taking application designed for speed, privac
 -   🏠 **Local-First & Offline**: Everything is stored directly on the device using SQLite. No external cloud dependencies, ensuring maximum privacy and instant access.
 -   ✍️ **Desktop-Class Rich Text**: Full TipTap integration providing advanced formatting, tables, and media support within a mobile-optimized interface.
 -   📁 **Hierarchical Organization**: A flexible folder system allowing for deep nesting and structured note management.
--   🖼 **Smart Image Handling**: Automatic image hashing and deduplication. Images are stored locally, resized for performance, and referenced via persistent IDs.
+-   🧷 **Smart File Handling**: Automatic double hashing and deduplication. Files are stored locally, Images resized for performance, and referenced via persistent IDs.
 -   ⚡ **Aggressive Caching**: Uses Zustand for a dual-layer state management system—fetching from the database while keeping everything in-memory for zero-latency interactions.
+- 🌐 **Server**:(Optional) Supabase for sync and backup w/ end to end encryption (client side) with auto cleanup to minimize storage.
 
 ## 🛠 Tech Stack
 
--   **Frontend**: React Native + Expo (Router, File-system, Image Manipulator).
--   **Editor**: TipTap (WebView-based).
+-   **Frontend**: React Native + Expo (Mobile) , Tauri (Desktop)
+-   **Editor**: TipTap + Extensions.
 -   **State**: Zustand (Store + Persistence).
 -   **Database**: SQLite via Drizzle ORM.
 -   **Storage**: Local file system for media.
+-   **Backend**: Supabase (Optional)
 
-## 🏗 System Logic
+## 
 
-The app operates on a "Sync-on-Write" principle. The Zustand store acts as the primary source of truth for the UI, while background services ensure that every change is immediately mirrored to the SQLite database. Images are processed through a dedicated pipeline (Resize -> Hash -> Store) before being injected into the editor as base64 data URIs.
+## Environment Variables
+
+To run Annota, you will need to add the following environment variables to your mobile .env and desktop .env relatively **(unless fully offline)** :
+
+`EXPO_PUBLIC_SUPABASE_KEY`
+
+`EXPO_PUBLIC_SUPABASE_UR`
+
+`VITE_SUPABASE_URL`
+
+`VITE_SUPABASE_KEY`
+
+
+## Run Locally
+
+Clone the project
+
+```bash
+  git clone https://github.com/iLiranS/Annota
+```
+
+Install dependencies
+
+```bash
+  pnpm install
+```
+
+Start the local server 
+
+```bash
+  /apps/mobile -> pnpm start
+  /apps/desktop -> pnpm tauri dev
+```
+
+
+## Contributing
+
+Contributions are always welcome!
+
+We currently looking for active testers - especially for Windows / Android compatibility, and further improvements to the systems.
+
