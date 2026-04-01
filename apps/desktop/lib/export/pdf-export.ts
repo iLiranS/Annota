@@ -1,5 +1,4 @@
-// apps/desktop/src/lib/pdf-export.ts
-import { ExportService } from '@annota/editor-core';
+import { ExportService, ExportOptions } from '@annota/editor-core';
 import { DesktopExportAdapter } from './DesktopExportAdapter';
 
 const exportService = new ExportService(new DesktopExportAdapter());
@@ -7,9 +6,10 @@ const exportService = new ExportService(new DesktopExportAdapter());
 export async function exportToPDF(
     htmlContent: string,
     title: string = 'Note',
+    options?: ExportOptions
 ): Promise<void> {
     try {
-        await exportService.triggerPdfExport(title, htmlContent);
+        await exportService.triggerPdfExport(title, htmlContent, options);
     } catch (error) {
         console.error('Failed to export to PDF:', error);
         throw error;

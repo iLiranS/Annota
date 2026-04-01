@@ -1,5 +1,5 @@
 import { HapticPressable } from '@/components/ui/haptic-pressable';
-import { useNotesStore } from '@annota/core';
+import { useNotesStore, useSettingsStore } from '@annota/core';
 import { exportToMarkdown } from '@/utils/export/markdown-export';
 import { exportToPDF } from '@/utils/export/pdf-export';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -49,7 +49,13 @@ export default function ExportScreen() {
         if (!noteContent) return;
         setIsExportingPDF(true);
         try {
-            await exportToPDF(noteContent, noteTitle);
+            const settings = useSettingsStore.getState().editor;
+            await exportToPDF(noteContent, noteTitle, {
+                fontSize: settings.fontSize,
+                lineHeight: settings.lineSpacing,
+                paragraphSpacing: settings.paragraphSpacing,
+                accentColor: useSettingsStore.getState().accentColor
+            });
         } catch (error) {
             Alert.alert('Export Failed', 'Could not generate or share PDF.');
         } finally {

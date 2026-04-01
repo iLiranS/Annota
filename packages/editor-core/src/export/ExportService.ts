@@ -4,6 +4,13 @@ import TurndownService from 'turndown';
 import { gfm } from 'turndown-plugin-gfm';
 import { ExportAdapter } from './types';
 
+export interface ExportOptions {
+    fontSize?: number;
+    lineHeight?: number;
+    paragraphSpacing?: number;
+    accentColor?: string;
+}
+
 export class ExportService {
     private turndownService: TurndownService | null = null;
     private initPromise: Promise<void> | null = null;
@@ -166,11 +173,15 @@ export class ExportService {
         return md.trim();
     }
 
-    async triggerPdfExport(title: string, rawHtml: string): Promise<void> {
+    async triggerPdfExport(
+        title: string,
+        rawHtml: string,
+        options?: ExportOptions
+    ): Promise<void> {
         // Ensure DOM polyfills are set up (needed for preprocessHtmlForPrint on mobile)
         await this.ensureTurndown();
         const processedHtml = await this.preprocessHtmlForPrint(rawHtml);
-        const printReadyHtml = this.generatePrintableHtml(title, processedHtml);
+        const printReadyHtml = this.generatePrintableHtml(title, processedHtml, options);
         const safeTitle = this.sanitizeFilename(title);
         await this.adapter.exportPdf(safeTitle, printReadyHtml);
     }
@@ -373,7 +384,12 @@ export class ExportService {
     // ─── HTML shell ───────────────────────────────────────────────────────────
     // No injected title header — users control their own content headings.
 
-    private generatePrintableHtml(title: string, html: string): string {
+    private generatePrintableHtml(title: string, html: string, options?: ExportOptions): string {
+        const fontSize = options?.fontSize ?? 16;
+        const lineHeight = options?.lineHeight ?? 1.6;
+        const paragraphSpacing = (options?.paragraphSpacing ?? 8) / 2; // Split for top/bottom
+        const accentColor = options?.accentColor ?? '#007AFF';
+
         const styles = /* css */ `
             /* Force all backgrounds to print — critical for WebKit / WKWebView */
             * {
@@ -383,7 +399,7 @@ export class ExportService {
             }
 
             :root {
-                --primary:      #007AFF;
+                --primary:      ${accentColor};
                 --text:         #1a1a1a;
                 --bg:           #ffffff;
                 --border:       #e0e0e0;
@@ -404,7 +420,8 @@ export class ExportService {
             body {
                 font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
                              Roboto, Helvetica, Arial, sans-serif;
-                line-height:      1.6;
+                line-height:      ${lineHeight};
+                font-size:        ${fontSize}px;
                 color:            var(--text);
                 max-width:        900px;
                 margin:           0 auto;
@@ -413,18 +430,42 @@ export class ExportService {
             }
 
             h1, h2, h3, h4, h5, h6 {
-                margin-top:    1.5em;
-                margin-bottom: 0.5em;
-                font-weight:   600;
+                margin: 0;
+                padding-top: ${paragraphSpacing * 2.5}px;
+                padding-bottom: ${paragraphSpacing * 1.5}px;
+                font-weight:   500;
                 color:         #000;
                 line-height:   1.2;
             }
-            h1 { font-size: 2.2em; border-bottom: 2px solid var(--border); padding-bottom: .3em; }
-            h2 { font-size: 1.8em; border-bottom: 1px solid var(--border); padding-bottom: .2em; }
-            h3 { font-size: 1.5em; }
+            h1 { 
+                font-size: 2.1em; 
+                border-bottom: 1.5px solid #f2f2f2; 
+                padding-bottom: .2em; 
+                margin-top: ${paragraphSpacing * 1.5}px;
+                font-weight: 700;
+            }
+            h2 { 
+                font-size: 1.7em; 
+                border-bottom: 1px solid #f2f2f2; 
+                padding-bottom: .2em;
+                margin-top: ${paragraphSpacing * 1.25}px;
+            }
+            h3 { font-size: 1.4em; }
 
-            p { margin-bottom: 1.1em; }
-            a { color: var(--primary); text-decoration: none; }
+            p { 
+                margin: 0;
+                padding-top: ${paragraphSpacing}px;
+                padding-bottom: ${paragraphSpacing}px;
+            }
+            a { color: var(--primary); text-decoration: underline; }
+
+            hr {
+                border: none;
+                height: 1px;
+                background-color: var(--border);
+                opacity: 0.5;
+                margin: ${paragraphSpacing * 2}px 0;
+            }
 
             img {
                 max-width:     100%;
@@ -468,8 +509,14 @@ export class ExportService {
             .hljs-symbol, .hljs-bullet, .hljs-link, .hljs-meta, .hljs-selector-id, .hljs-title { color: #4078f2 !important; }
             .hljs-built_in, .hljs-title.class_, .hljs-class .hljs-title { color: #c18401 !important; }
             .hljs-emphasis { font-style: italic; }
-            .hljs-strong { font-weight: bold; }
+            .hljs-strong { font-weight: 500; }
             .hljs-link { text-decoration: underline; }
+
+            /* ── Lists ──────────────────────────────────────────────────────── */
+            ul, ol { margin: ${paragraphSpacing}px 0; }
+            li { padding-bottom: ${paragraphSpacing / 2}px; }
+            ul li::marker { color: var(--primary); }
+            ol li::marker { color: var(--primary); font-weight: 600; }
 
             /* ── Math ───────────────────────────────────────────────────────── */
             .katex-display { margin: 1.2em 0 !important; }
@@ -576,11 +623,11 @@ export class ExportService {
                 display:       flex !important;
                 align-items:   flex-start !important;
                 gap:           12px !important;
-                margin-bottom: 0.6em !important;
+                margin-bottom: 4px !important;
                 list-style:    none !important;
             }
             li.task-list-item > label, li[data-type="taskItem"] > label {
-                margin-top:    0.35em !important;
+                margin-top:    0.3em !important;
                 flex-shrink:   0 !important;
                 display:       flex !important;
                 align-items:   center !important;
@@ -598,6 +645,7 @@ export class ExportService {
                 height: 1.15em !important;
                 margin: 0 !important;
                 cursor: pointer !important;
+                accent-color: var(--primary) !important;
             }
 
             mark { border-radius: 3px; padding: 0 2px; }

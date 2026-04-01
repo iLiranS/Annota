@@ -1,4 +1,4 @@
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAppTheme } from "@/hooks/use-app-theme";
@@ -144,6 +144,11 @@ export function NotesSearchModal({ open, onOpenChange }: NotesSearchModalProps) 
                 showCloseButton={false}
                 className="max-w-2xl p-0 overflow-hidden flex flex-col h-[500px] max-h-[85vh] top-[10%] translate-y-0 gap-0 border-primary/20 shadow-[0_0_50px_-12px_rgba(0,0,0,0.5)]"
             >
+                <DialogTitle className="sr-only">Search</DialogTitle>
+                <DialogDescription className="sr-only">
+                    Search your notes and folders
+                </DialogDescription>
+
                 {/* Header Section */}
                 <div className="flex items-center gap-4 px-5 py-3 bg-background border-b shrink-0 relative z-20">
                     <Ionicons name={isSearching ? "sync" : "search"} size={20} className={cn("text-muted-foreground/30", isSearching && "animate-spin")} />

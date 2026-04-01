@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Ionicons } from "@/components/ui/ionicons";
 import { useAppTheme } from "@/hooks/use-app-theme";
-import { NoteMetadata, useNotesStore } from "@annota/core";
+import { NoteMetadata, useNotesStore, useSettingsStore } from "@annota/core";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { Check, MoreVertical } from "lucide-react";
 import { useCallback, useState } from "react";
@@ -138,7 +138,16 @@ export function NoteActionsMenu({ note, onRevert, onOpenChange }: NoteActionsMen
                             const { DesktopExportAdapter } = await import('@/lib/export/DesktopExportAdapter');
                             const adapter = new DesktopExportAdapter();
                             const service = new ExportService(adapter);
-                            await service.triggerPdfExport(note.title || 'Note', content);
+
+                            // Get current editor settings
+                            const settings = useSettingsStore.getState().editor;
+
+                            await service.triggerPdfExport(note.title || 'Note', content, {
+                                fontSize: settings.fontSize,
+                                lineHeight: settings.lineSpacing,
+                                paragraphSpacing: settings.paragraphSpacing,
+                                accentColor: useSettingsStore.getState().accentColor
+                            });
                             toast.success("PDF export triggered");
                         }}
                     >
