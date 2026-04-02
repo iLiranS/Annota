@@ -13,6 +13,7 @@ import { AppearanceSettings } from "./appearance-settings";
 import { EditorSettings } from "./editor-settings";
 import { GeneralSettings } from "./general-settings";
 import { HelpSettings } from "./help-settings";
+import { APP_RELEASE_VERSION, useChangelog } from "@annota/core";
 
 import {
     Dialog,
@@ -74,6 +75,7 @@ const tabs: SettingsTab[] = [
 export default function SettingsDialog() {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState("appearance");
+    const { openManual } = useChangelog("desktop");
 
     const handleClose = () => {
         navigate(-1);
@@ -147,6 +149,13 @@ export default function SettingsDialog() {
                                     </button>
                                 ))}
                         </div>
+                        <p 
+                            onClick={openManual}
+                            className="mt-auto pt-4 px-3 text-[10px] font-mono text-center text-muted-foreground/80 uppercase tracking-tighter cursor-pointer hover:text-primary transition-colors"
+                        >
+                            build {APP_RELEASE_VERSION}
+                        </p>
+
                     </nav>
 
                     {/* Right content */}

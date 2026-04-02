@@ -96,6 +96,7 @@ export default function AppLayout() {
             <Stack.Screen name="Tasks/index" options={{ headerShown: false, animation: 'none' }} />
             <Stack.Screen name="modal" options={{ headerShown: false, presentation: 'modal', title: 'Modal' }} />
             <Stack.Screen name="settings" options={{ headerShown: false, presentation: 'modal', title: 'Settings' }} />
+            <Stack.Screen name="changelog" options={{ headerShown: false, presentation: 'modal', title: 'Changelog' }} />
             <Stack.Screen name="Tasks/[id]/index" options={{ headerShown: true, presentation: 'modal', title: 'Edit Task' }} />
             <Stack.Screen name="Tasks/new" options={{ headerShown: true, presentation: 'modal', title: 'Edit Task' }} />
             <Stack.Screen name="Notes" options={{ headerShown: false, animation: 'none' }} />

@@ -1,3 +1,4 @@
+export * from './changelog.store';
 export * from './config';
 export { getExpoDb, useDbStore } from './db.store';
 export * from './notes.store';

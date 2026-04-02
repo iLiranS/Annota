@@ -11,11 +11,12 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: IS_DEV
-        ? 'online.annota.client.dev'
-        : 'online.annota.client',
+        ? 'online.annota.app.dev'
+        : 'online.annota.app',
       icon: "./assets/annota-ios.icon",
       requireFullScreen: true,
       infoPlist: {
+        ITSAppUsesNonExemptEncryption: false,
         BGTaskSchedulerPermittedIdentifiers: [
           "com.expo.modules.backgroundtask.processing"
         ],
@@ -45,6 +46,7 @@ export default {
     "plugins": [
       "expo-router",
       "expo-document-picker",
+      "expo-apple-authentication",
       [
         "expo-splash-screen",
         {
@@ -77,6 +79,11 @@ export default {
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "69ecbf03-90c0-4bad-b07e-8aa2fac8b8b0"
+      }
     }
   }
 }

@@ -82,6 +82,10 @@ export async function clearDirtyNotes(noteIds: string[]): Promise<void> {
 
 export async function upsertSyncedNote(noteFullData: any, tx: DbOrTx = getDb()): Promise<void> {
     const id = noteFullData.id;
+    if (!id) {
+        console.error('[Sync] Cannot upsert note: missing ID', noteFullData);
+        return;
+    }
     const hyphenlessId = id.replace(/-/g, '');
 
     // 1. Find existing by Hyphenated or Hyphenless

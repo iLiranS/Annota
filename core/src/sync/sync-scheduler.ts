@@ -34,7 +34,6 @@ export class SyncScheduler {
     }
 
     public isInitialized(): boolean {
-        console.log("[SyncScheduler] isInitialized", this.initialized);
         return this.initialized;
     }
 
@@ -239,7 +238,7 @@ export class SyncScheduler {
             }
             return success;
         } catch (err) {
-            console.error('[SyncScheduler] Pull failed');
+            console.error('[SyncScheduler] Pull failed', err);
             return false;
         }
     }

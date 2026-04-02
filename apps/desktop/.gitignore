@@ -22,3 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+#tests
+test-fs.js
+
+#embedded + publish
+embedded.provisionprofile
+publish-mac.sh

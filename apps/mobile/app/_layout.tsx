@@ -12,6 +12,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SidebarProvider } from '@/context/sidebar-context';
+import ChangelogModal from '@/components/changelog-modal';
 import Toast, { type ToastConfig, type ToastConfigParams } from 'react-native-toast-message';
 import 'react-native-url-polyfill/auto';
 
@@ -346,6 +347,7 @@ function AppLogicHub() {
       </Stack>
       <StatusBar style={theme.dark ? 'light' : 'dark'} />
       <Toast config={toastConfig} />
+      <ChangelogModal />
     </ThemeProvider>
   );
 }

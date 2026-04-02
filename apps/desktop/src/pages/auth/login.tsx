@@ -17,7 +17,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import logo from "@/src/assets/icon.png";
 
-type OAuthProvider = "google" | "github";
+type OAuthProvider = "google" | "github" | "apple";
 
 export default function LoginPage() {
     const [loadingProvider, setLoadingProvider] = useState<string | null>(null);
@@ -141,6 +141,11 @@ export default function LoginPage() {
 
             <CardContent className="space-y-4 pt-4">
                 {providerButton(
+                    "apple",
+                    <AppleIcon />,
+                    "Apple",
+                )}
+                {providerButton(
                     "google",
                     <GoogleIcon />,
                     "Google",
@@ -210,6 +215,16 @@ function GoogleIcon() {
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                 fill="#EA4335"
             />
+        </svg>
+    );
+}
+
+
+
+function AppleIcon() {
+    return (
+        <svg className="h-[21px] w-[21px] fill-current -ml-2" viewBox="0 0 256 315">
+            <path d="M213.803 167.03c.442 47.58 41.74 63.413 42.197 63.615-.35 1.116-6.599 22.563-21.757 44.716-13.104 19.153-26.705 38.235-48.13 38.63-21.05.388-27.82-12.483-51.888-12.483-24.061 0-31.582 12.083-51.5 12.871-20.68.783-36.428-20.71-49.64-39.793-27.034-39.033-47.633-110.3-19.928-158.406 13.713-23.89 38.25-39.017 64.914-39.405 20.309-.387 39.469 13.648 52.046 13.648 12.585 0 35.777-16.65 60.119-14.154 10.199.419 38.795 4.09 57.144 30.976l-1.928 1.205c-15.35 9.176-25.541 25.565-25.541 44.316.037.03.044.037.044.037zM176.622 35.347c10.511-12.729 17.58-30.403 15.631-48.105-15.204.612-33.608 10.125-44.519 22.853-9.782 11.31-18.352 29.32-16.082 46.565 16.985 1.31 34.467-8.583 44.97-21.313z" />
         </svg>
     );
 }

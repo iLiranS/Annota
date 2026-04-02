@@ -6,3 +6,4 @@ export * from './polyfill';
 export * from './sorts';
 export * from './tasks';
 export * from './subscription';
+export * from './compareVersions';

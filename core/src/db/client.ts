@@ -93,6 +93,11 @@ export const CREATE_TABLES_SQL = `
     value TEXT NOT NULL
   );
 
+  CREATE TABLE IF NOT EXISTS app_settings (
+    id INTEGER PRIMARY KEY,
+    last_seen_changelog_version TEXT DEFAULT '0.0.0'
+  );
+
 
   CREATE TABLE IF NOT EXISTS files (
     id TEXT PRIMARY KEY,
@@ -186,6 +191,7 @@ export async function resetAll(): Promise<void> {
       DROP TABLE IF EXISTS tasks;
       DROP TABLE IF EXISTS tags;
       DROP TABLE IF EXISTS settings;
+      DROP TABLE IF EXISTS app_settings;
       DROP TABLE IF EXISTS version_files;
       DROP TABLE IF EXISTS file_download_queue;
     `;
@@ -245,6 +251,7 @@ export async function deleteDatabase(): Promise<void> {
       DROP TABLE IF EXISTS tasks;
       DROP TABLE IF EXISTS tags;
       DROP TABLE IF EXISTS settings;
+      DROP TABLE IF EXISTS app_settings;
       DROP TABLE IF EXISTS version_files;
       DROP TABLE IF EXISTS file_download_queue;
     `;

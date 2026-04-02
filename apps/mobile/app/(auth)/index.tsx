@@ -97,7 +97,7 @@ export default function LoginScreen() {
 
     const renderProviderButton = (provider: 'google' | 'apple' | 'github', icon: keyof typeof Ionicons.glyphMap, label: string, index: number) => {
         const isLoading = loadingProvider === provider;
-        const isDisabled = loadingProvider !== null || provider === 'apple'
+        const isDisabled = loadingProvider !== null;
 
         return (
             <Animated.View entering={FadeInDown.delay(400 + index * 100).duration(600)}>
@@ -107,7 +107,7 @@ export default function LoginScreen() {
                         {
                             backgroundColor: theme.colors.card,
                             borderColor: theme.colors.border,
-                            opacity: pressed ? 0.8 : (isDisabled && (provider === 'apple' || provider === 'google') ? 0.5 : 1)
+                            opacity: pressed ? 0.8 : (isDisabled ? 0.5 : 1)
                         }
                     ]}
                     disabled={isDisabled}
@@ -144,8 +144,9 @@ export default function LoginScreen() {
 
                 <View style={styles.providersContainer}>
 
-                    {renderProviderButton('google', 'logo-google', 'Google', 1)}
-                    {renderProviderButton('github', 'logo-github', 'GitHub', 2)}
+                    {renderProviderButton('apple', 'logo-apple', 'Apple', 1)}
+                    {renderProviderButton('google', 'logo-google', 'Google', 2)}
+                    {renderProviderButton('github', 'logo-github', 'GitHub', 3)}
                 </View>
 
                 <Animated.View entering={FadeInDown.delay(700).duration(600)} style={styles.dividerContainer}>

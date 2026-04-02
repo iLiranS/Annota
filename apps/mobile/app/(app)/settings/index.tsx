@@ -2,13 +2,15 @@ import SettingItem from '@/components/settings/setting-item';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { APP_RELEASE_VERSION, useChangelog } from '@annota/core';
 
 export default function SettingsIndex() {
     const router = useRouter();
     const { colors } = useAppTheme();
     const insets = useSafeAreaInsets();
+    const { openManual } = useChangelog('mobile');
 
     return (
         <ScrollView
@@ -88,9 +90,9 @@ export default function SettingsIndex() {
                 </View>
             </View>
 
-            <View style={styles.footer}>
-                <Text style={[styles.versionText, { color: colors.text + '40' }]}>Version 1.0.0 (Build 100)</Text>
-            </View>
+            <TouchableOpacity onPress={() => router.push('/changelog')} style={styles.footer} activeOpacity={0.6}>
+                <Text style={[styles.versionText, { color: colors.text + '40' }]}>Version {APP_RELEASE_VERSION}</Text>
+            </TouchableOpacity>
         </ScrollView>
     );
 }

@@ -28,6 +28,7 @@ import { initDeepLinkListener } from "./lib/auth-listener";
 import AppShell from "@/components/layout/app-shell";
 import AuthGuard from "@/components/layout/auth-guard";
 import SettingsDialog from "@/components/settings/settings-dialog";
+import ChangelogModal from "@/components/changelog/changelog-modal";
 
 import AuthLayout from "./pages/auth/auth-layout";
 import LoginPage from "./pages/auth/login";
@@ -463,6 +464,7 @@ function App() {
           <Route path="task/:id" element={<TaskDetailDialog />} />
         </Routes>
       )}
+      <ChangelogModal />
     </>
   );
 }

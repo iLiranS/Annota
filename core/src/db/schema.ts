@@ -140,3 +140,11 @@ export type FileInsert = typeof files.$inferInsert;
 export type DownloadQueueInsert = typeof fileDownloadQueue.$inferInsert;
 export type DownloadQueueRecord = typeof fileDownloadQueue.$inferSelect;
 
+// ============ APP SETTINGS ============
+export const appSettings = sqliteTable('app_settings', {
+    // Hardcode this to 1 so we only ever have one settings row per device
+    id: integer('id').primaryKey(),
+    lastSeenChangelogVersion: text('last_seen_changelog_version').default('0.0.0'),
+});
+export type AppSettings = typeof appSettings.$inferSelect;
+export type AppSettingsInsert = typeof appSettings.$inferInsert;

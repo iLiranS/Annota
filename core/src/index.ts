@@ -11,4 +11,7 @@ export * from '../constants/colors';
 export * from '../constants/editor';
 export * from '../constants/editor-fonts';
 export * from '../constants/theme';
+export * from '../constants/config';
+export * from './hooks/useChangelog';
+
 
