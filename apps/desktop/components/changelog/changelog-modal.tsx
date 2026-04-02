@@ -16,7 +16,7 @@ export default function ChangelogModal() {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && markAsSeen()}>
-      <DialogContent className="max-w-2xl p-0 overflow-hidden border-none bg-note-bg backdrop-blur-xl shadow-2xl">
+      <DialogContent aria-describedby={undefined} className="max-w-2xl p-0 overflow-hidden border-none bg-note-bg backdrop-blur-xl shadow-2xl">
         {/* Header Hero */}
         <div className="relative h-fill bg-linear-to-br from-accent-full/10 via-accent-full/5 to-transparent flex items-end p-8 border-b border-border/50">
           <div className="absolute top-6 right-8 bg-primary/10 text-primary px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase border border-primary/20">
@@ -30,15 +30,15 @@ export default function ChangelogModal() {
         </div>
 
         {/* Content */}
-        <ScrollArea className="max-h-[55vh] p-8">
+        <ScrollArea className="max-h-[55vh] px-8 py-2">
           <div className="space-y-10">
             {changelogData.features.length > 0 && (
               <section className="space-y-5">
                 <div className="flex items-center gap-2.5 text-primary">
                   <div className="p-1.5 rounded-md bg-primary/10">
-                    <Sparkles className="h-4 w-4" />
+                    <Sparkles className="h-4 w-4 text-accent-full" />
                   </div>
-                  <h3 className="font-bold text-base tracking-tight italic">What's New</h3>
+                  <h3 className="font-bold text-base tracking-tight italic text-accent-full">What's New</h3>
                 </div>
                 <ul className="space-y-4">
                   {changelogData.features.map((feature, i) => (

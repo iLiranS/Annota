@@ -13,4 +13,5 @@ node_modules
 .expo-shared
 dist
 build
+build-**
 .env.local

@@ -1,19 +1,19 @@
-import { useChangelog, useAppTheme } from "@annota/core";
 import { useAppTheme as useLocalTheme } from "@/hooks/use-app-theme";
+import { useChangelog } from "@annota/core";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import React from "react";
 import {
+  SafeAreaView,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
   View,
-  SafeAreaView,
 } from "react-native";
 import ThemedText from "./themed-text";
 
 interface Props {
-    isScreen?: boolean;
-    onClose?: () => void;
+  isScreen?: boolean;
+  onClose?: () => void;
 }
 
 export default function ChangelogModalContent({ isScreen, onClose }: Props) {
@@ -21,73 +21,73 @@ export default function ChangelogModalContent({ isScreen, onClose }: Props) {
   const { colors, dark } = useLocalTheme();
 
   React.useEffect(() => {
-      if (isScreen && !changelogData) {
-          openManual();
-      }
+    if (isScreen && !changelogData) {
+      openManual();
+    }
   }, [isScreen, changelogData]);
 
   if (!changelogData && !isScreen) return null;
   if (isScreen && !changelogData) return <View style={{ flex: 1, backgroundColor: colors.background }} />;
 
   const handleDone = () => {
-      markAsSeen();
-      if (onClose) onClose();
+    markAsSeen();
+    if (onClose) onClose();
   };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <SafeAreaView style={{ flex: 0, backgroundColor: colors.background }} />
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <ThemedText style={styles.title}>
-            {changelogData!.title}
-          </ThemedText>
-          <View style={[styles.badge, { backgroundColor: colors.primary + '15' }]}>
-             <ThemedText style={[styles.badgeText, { color: colors.primary }]}>{changelogData!.date}</ThemedText>
-          </View>
-        </View>
-
-        <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
-           {changelogData!.features.length > 0 && (
-             <View style={styles.section}>
-               <View style={styles.sectionHeader}>
-                 <Ionicons name="sparkles" size={20} color={colors.primary} />
-                 <ThemedText style={styles.sectionTitle}>What's New</ThemedText>
-               </View>
-               {changelogData!.features.map((feature, i) => (
-                 <View key={i} style={styles.listItem}>
-                   <View style={[styles.dot, { backgroundColor: colors.primary }]} />
-                   <ThemedText style={styles.listText}>{feature}</ThemedText>
-                 </View>
-               ))}
-             </View>
-           )}
-
-           {changelogData!.fixes.length > 0 && (
-             <View style={styles.section}>
-               <View style={styles.sectionHeader}>
-                 <Ionicons name="bug" size={20} color={colors.text + '60'} />
-                 <ThemedText style={[styles.sectionTitle, { color: colors.text + '80' }]}>Improvements</ThemedText>
-               </View>
-               {changelogData!.fixes.map((fix, i) => (
-                 <View key={i} style={styles.listItem}>
-                   <Ionicons name="checkmark-circle" size={16} color={colors.primary + '40'} />
-                   <ThemedText style={[styles.listText, { color: colors.text + '70' }]}>{fix}</ThemedText>
-                 </View>
-               ))}
-             </View>
-           )}
-        </ScrollView>
-
-        <View style={styles.footer}>
-           <TouchableOpacity 
-            activeOpacity={0.8}
-            style={[styles.button, { backgroundColor: colors.primary, shadowColor: dark ? '#000' : colors.primary }]} 
-            onPress={handleDone}
-           >
-              <ThemedText style={styles.buttonText}>Awesome</ThemedText>
-           </TouchableOpacity>
+      <SafeAreaView style={{ flex: 0, backgroundColor: colors.background }} />
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <ThemedText style={styles.title}>
+          {changelogData!.title}
+        </ThemedText>
+        <View style={[styles.badge, { backgroundColor: colors.primary + '15' }]}>
+          <ThemedText style={[styles.badgeText, { color: colors.primary }]}>{changelogData!.date}</ThemedText>
         </View>
       </View>
+
+      <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
+        {changelogData!.features.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="sparkles" size={20} color={colors.primary} />
+              <ThemedText style={styles.sectionTitle}>What's New</ThemedText>
+            </View>
+            {changelogData!.features.map((feature, i) => (
+              <View key={i} style={styles.listItem}>
+                <View style={[styles.dot, { backgroundColor: colors.primary }]} />
+                <ThemedText style={styles.listText}>{feature}</ThemedText>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {changelogData!.fixes.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="bug" size={20} color={colors.text + '60'} />
+              <ThemedText style={[styles.sectionTitle, { color: colors.text + '80' }]}>Improvements</ThemedText>
+            </View>
+            {changelogData!.fixes.map((fix, i) => (
+              <View key={i} style={styles.listItem}>
+                <Ionicons name="checkmark-circle" size={16} color={colors.primary + '40'} />
+                <ThemedText style={[styles.listText, { color: colors.text + '70' }]}>{fix}</ThemedText>
+              </View>
+            ))}
+          </View>
+        )}
+      </ScrollView>
+
+      <View style={styles.footer}>
+        <TouchableOpacity
+          activeOpacity={0.8}
+          style={[styles.button, { backgroundColor: colors.primary, shadowColor: dark ? '#000' : colors.primary }]}
+          onPress={handleDone}
+        >
+          <ThemedText style={styles.buttonText}>Awesome</ThemedText>
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 }
 

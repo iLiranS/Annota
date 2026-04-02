@@ -63,6 +63,7 @@
         "expo-symbols": "~55.0.5",
         "expo-system-ui": "~55.0.10",
         "expo-task-manager": "~55.0.10",
+        "expo-updates": "~55.0.16",
         "expo-web-browser": "~55.0.10",
         "linkedom": "^0.18.12",
         "react": "19.2.0",

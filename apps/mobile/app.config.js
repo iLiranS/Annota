@@ -8,6 +8,12 @@ export default {
     "icon": "./assets/images/icon.png",
     "scheme": "annota",
     "userInterfaceStyle": "automatic",
+    updates: {
+      url: "https://u.expo.dev/69ecbf03-90c0-4bad-b07e-8aa2fac8b8b0"
+    },
+    runtimeVersion: {
+      policy: "appVersion"
+    },
     ios: {
       supportsTablet: true,
       bundleIdentifier: IS_DEV

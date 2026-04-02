@@ -1,10 +1,10 @@
-import { useEffect, useCallback } from 'react';
 import { eq } from 'drizzle-orm';
+import { useCallback, useEffect } from 'react';
+import { APP_RELEASE_VERSION } from '../../constants/config';
 import { getDb } from '../db/runtime';
 import { appSettings } from '../db/schema';
-import { APP_RELEASE_VERSION } from '../../constants/config';
-import { isNewerVersion } from '../utils/compareVersions';
 import { useChangelogStore } from '../stores/changelog.store';
+import { isNewerVersion } from '../utils/compareVersions';
 
 export const useChangelog = (platform: 'mobile' | 'desktop') => {
     const isOpen = useChangelogStore(s => s.isOpen);
@@ -14,31 +14,35 @@ export const useChangelog = (platform: 'mobile' | 'desktop') => {
 
     const fetchChangelog = useCallback(async (version: string) => {
         try {
-            const response = await fetch('https://annota.online/changelog.json');
+            const response = await fetch('https://annota.online/api/changelog/latest');
             if (!response.ok) return null;
-            
-            const fullChangelog = await response.json();
-            const entry = fullChangelog[version];
+
+            const entry = await response.json();
 
             if (entry) {
+                // If it's thekeyed object from before, try to find the version.
+                // But from the user's description, it now returns the entry directly.
+                const targetEntry = entry[version] || entry;
+
                 const features = [
-                    ...(entry.common?.features || []),
-                    ...(entry[platform]?.features || [])
+                    ...(targetEntry.common?.features || []),
+                    ...(targetEntry[platform]?.features || [])
                 ];
                 const fixes = [
-                    ...(entry.common?.fixes || []),
-                    ...(entry[platform]?.fixes || [])
+                    ...(targetEntry.common?.fixes || []),
+                    ...(targetEntry[platform]?.fixes || [])
                 ];
 
                 return {
-                    title: entry.title,
-                    date: entry.date,
+                    title: targetEntry.title,
+                    date: targetEntry.date,
                     features,
                     fixes
                 };
             }
-        } catch (e) {
+        } catch (e: any) {
             console.error("[Changelog] Fetch failed", e);
+            alert(`FETCH ERROR: ${e.message || JSON.stringify(e)}`);
         }
         return null;
     }, [platform]);
@@ -49,7 +53,7 @@ export const useChangelog = (platform: 'mobile' | 'desktop') => {
             try {
                 const db = getDb();
                 let settings = await db.select().from(appSettings).where(eq(appSettings.id, 1));
-                
+
                 if (settings.length === 0) {
                     try {
                         await db.insert(appSettings)
@@ -87,7 +91,7 @@ export const useChangelog = (platform: 'mobile' | 'desktop') => {
             await db.update(appSettings)
                 .set({ lastSeenChangelogVersion: APP_RELEASE_VERSION })
                 .where(eq(appSettings.id, 1));
-            
+
             setIsOpen(false);
         } catch (error) {
             console.error("Failed to update SQLite:", error);
@@ -104,11 +108,11 @@ export const useChangelog = (platform: 'mobile' | 'desktop') => {
         console.log("[Changelog] Fetching current version:", APP_RELEASE_VERSION);
         const data = await fetchChangelog(APP_RELEASE_VERSION);
         if (data) {
-           console.log("[Changelog] Fetch success, opening...");
-           setChangelogData(data);
-           setIsOpen(true);
+            console.log("[Changelog] Fetch success, opening...");
+            setChangelogData(data);
+            setIsOpen(true);
         } else {
-           console.warn("[Changelog] Fetch returned no data for version:", APP_RELEASE_VERSION);
+            console.warn("[Changelog] Fetch returned no data for version:", APP_RELEASE_VERSION);
         }
     };
 
