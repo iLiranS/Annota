@@ -335,7 +335,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-top: 3px;
+    height: calc(var(--editor-font-size) * var(--editor-line-height));
+    margin-top: calc(var(--editor-paragraph-spacing) * 0.5);
     /* Better alignment with first line of text */
 }
 
@@ -361,7 +362,7 @@
     content: '';
     position: absolute;
     left: 50%;
-    top: 42%;
+    top: 48%;
     width: 4px;
     height: 8px;
     border: solid white;

@@ -6,6 +6,8 @@
   <true/>
   <key>com.apple.security.network.client</key>
   <true/>
+  <key>com.apple.security.files.user-selected.read-only</key>
+  <true/>
   
   <key>com.apple.application-identifier</key>
   <string>73Q8GTL92B.online.annota.app</string>

@@ -37,11 +37,12 @@
   "bundle": {
     "category": "public.app-category.productivity",
     "macOS": {
-      "bundleVersion": "2",
+      "bundleVersion": "4",
       "minimumSystemVersion": "12.0",
       "files": {
         "embedded.provisionprofile": "./embedded.provisionprofile"
-      }
+      },
+      "entitlements": "./entitlements.mas.plist"
     },
     "active": true,
     "targets": "all",

@@ -18,12 +18,12 @@ export const useRevenueCatInitialization = () => {
 
     // RevenueCat is not supported on Web
     if (Platform.OS === 'web') return;
-    
+
     // Safety check: ensure Purchases is actually available 
     // (This can be null if native modules are not linked or in Expo Go)
     if (!Purchases) {
-        console.warn('RevenueCat: Purchases SDK is not available in this environment.');
-        return;
+      console.warn('RevenueCat: Purchases SDK is not available in this environment.');
+      return;
     }
 
     if (__DEV__) {

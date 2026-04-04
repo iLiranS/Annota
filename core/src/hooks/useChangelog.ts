@@ -8,11 +8,14 @@ import { isNewerVersion } from '../utils/compareVersions';
 
 export const useChangelog = (platform: 'mobile' | 'desktop') => {
     const isOpen = useChangelogStore(s => s.isOpen);
+    const isLoading = useChangelogStore(s => s.isLoading);
     const setIsOpen = useChangelogStore(s => s.setOpen);
+    const setIsLoading = useChangelogStore(s => s.setLoading);
     const changelogData = useChangelogStore(s => s.changelogData);
     const setChangelogData = useChangelogStore(s => s.setData);
 
     const fetchChangelog = useCallback(async (version: string) => {
+        setIsLoading(true);
         try {
             const response = await fetch('https://annota.online/api/changelog/latest');
             if (!response.ok) return null;
@@ -43,6 +46,8 @@ export const useChangelog = (platform: 'mobile' | 'desktop') => {
         } catch (e: any) {
             console.error("[Changelog] Fetch failed", e);
             alert(`FETCH ERROR: ${e.message || JSON.stringify(e)}`);
+        } finally {
+            setIsLoading(false);
         }
         return null;
     }, [platform]);
@@ -100,21 +105,21 @@ export const useChangelog = (platform: 'mobile' | 'desktop') => {
 
     const openManual = async () => {
         console.log("[Changelog] Manual open triggered");
+        setIsOpen(true);
         if (changelogData) {
-            console.log("[Changelog] Data already present, opening...");
-            setIsOpen(true);
+            console.log("[Changelog] Data already present");
             return;
         }
         console.log("[Changelog] Fetching current version:", APP_RELEASE_VERSION);
         const data = await fetchChangelog(APP_RELEASE_VERSION);
         if (data) {
-            console.log("[Changelog] Fetch success, opening...");
+            console.log("[Changelog] Fetch success");
             setChangelogData(data);
-            setIsOpen(true);
         } else {
             console.warn("[Changelog] Fetch returned no data for version:", APP_RELEASE_VERSION);
+            // Optionally close if failed, or let it show the "no data" state
         }
     };
 
-    return { isOpen, changelogData, markAsSeen, setIsOpen, openManual };
+    return { isOpen, isLoading, changelogData, markAsSeen, setIsOpen, openManual };
 };

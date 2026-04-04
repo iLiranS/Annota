@@ -29,7 +29,10 @@ export function useSmartNavigate() {
 
         // If we are currently NOT on content, any navigation away from it should be a REPLACE
         // unless explicitly requested to push.
-        const shouldReplace = options?.replace ?? !isCurrentContent;
+        // CRITICAL: We MUST NOT replace if we are passing a background state (modal route),
+        // otherwise we won't be able to go back to the current page when closing the modal.
+        const isModalNav = !!(options?.state as any)?.background;
+        const shouldReplace = options?.replace ?? (!isCurrentContent && !isModalNav);
 
         navigate(to, { ...options, replace: shouldReplace });
     }, [location, navigate]);

@@ -12,3 +12,4 @@ export * from './note-link-command';
 export * from './annota-autolink';
 export * from './file-attachment';
 export * from './mermaid';
+export * from './reorder-list-item';

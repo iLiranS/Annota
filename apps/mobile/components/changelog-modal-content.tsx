@@ -3,6 +3,7 @@ import { useChangelog } from "@annota/core";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import React from "react";
 import {
+  ActivityIndicator,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -17,7 +18,7 @@ interface Props {
 }
 
 export default function ChangelogModalContent({ isScreen, onClose }: Props) {
-  const { changelogData, markAsSeen, openManual } = useChangelog("mobile");
+  const { isLoading, changelogData, markAsSeen, openManual } = useChangelog("mobile");
   const { colors, dark } = useLocalTheme();
 
   React.useEffect(() => {
@@ -26,8 +27,17 @@ export default function ChangelogModalContent({ isScreen, onClose }: Props) {
     }
   }, [isScreen, changelogData]);
 
+  if (isLoading) {
+    return (
+      <View style={[styles.container, styles.center, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <ThemedText style={styles.loadingText}>Fetching latest updates...</ThemedText>
+      </View>
+    );
+  }
+
   if (!changelogData && !isScreen) return null;
-  if (isScreen && !changelogData) return <View style={{ flex: 1, backgroundColor: colors.background }} />;
+  if (!changelogData) return <View style={{ flex: 1, backgroundColor: colors.background }} />;
 
   const handleDone = () => {
     markAsSeen();
@@ -178,4 +188,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: -0.2,
   },
+  center: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    opacity: 0.6,
+  }
 });

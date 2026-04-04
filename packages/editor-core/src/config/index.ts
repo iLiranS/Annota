@@ -29,7 +29,8 @@ import {
     ShortcutManager,
     SlashCommandExtension,
     TagCommandExtension,
-    Mermaid
+    Mermaid,
+    ListItemReorder
 } from '../extensions';
 import { CustomYoutube } from '../extensions/custom-yotube';
 
@@ -90,6 +91,7 @@ export const getExtensions = (options: {
             gapcursor: true,
         }),
         ShortcutManager,
+        ListItemReorder,
         AnnotaAutolink,
         CustomHeading.configure({ levels: [1, 2, 3, 4, 5, 6] }),
         Underline,
