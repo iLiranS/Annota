@@ -2,9 +2,9 @@ import { Button } from "@/components/ui/button"
 import { useSidebar } from "@/components/ui/sidebar"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
-import { useSettingsStore, useSyncStore, useUserStore } from "@annota/core"
+import { useSearchStore, useSettingsStore, useSyncStore, useUserStore } from "@annota/core"
 import { PanelLeft, PanelRight } from "lucide-react"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { NotesSearchModal } from "../search/notes-search-modal"
 import { Ionicons } from "../ui/ionicons"
@@ -15,6 +15,17 @@ import { Ionicons } from "../ui/ionicons"
  * Designed to work with Tauri's transparent/overlay titlebar style.
  * Height: 32px.
  */
+const RTL_LANGS = new Set([
+    "ar",
+    "fa",
+    "he",
+    "ur",
+    "ps",
+    "dv",
+    "ku",
+    "yi",
+]);
+
 export function MainNavbar() {
     const navigate = useNavigate();
     const location = useLocation();
@@ -23,12 +34,35 @@ export function MainNavbar() {
     const { general, updateGeneralSettings } = useSettingsStore();
     const { open, toggleSidebar } = useSidebar();
 
+    const isMac = useMemo(() => {
+        if (typeof navigator === "undefined") {
+            return false;
+        }
+        return /Mac|iPod|iPhone|iPad/i.test(navigator.platform || "") || /Mac/i.test(navigator.userAgent || "");
+    }, []);
+
+    const localeDir = useMemo(() => {
+        if (typeof navigator === "undefined") {
+            return "ltr";
+        }
+        const lang = (navigator.languages && navigator.languages[0]) || navigator.language || "en";
+        const base = lang.split("-")[0]?.toLowerCase() ?? "en";
+        return RTL_LANGS.has(base) ? "rtl" : "ltr";
+    }, []);
+
+    const sidebarSide = general.appDirection === "rtl" ? "right" : "left";
+    const windowControlsSide = isMac ? (localeDir === "rtl" ? "right" : "left") : "right";
+    const needsWindowControlsPadding = windowControlsSide === sidebarSide ? !open : true;
+    const windowControlsPaddingClass = needsWindowControlsPadding
+        ? (windowControlsSide === "left" ? "pl-20" : "pr-20")
+        : undefined;
+
 
 
     const [canSync, setCanSync] = useState(true);
     const [canGoBack, setCanGoBack] = useState(false);
     const [canGoForward, setCanGoForward] = useState(false);
-    const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const { isOpen: isSearchOpen, setIsOpen: setIsSearchOpen } = useSearchStore();
     const maxIdxRef = useRef(0);
 
     useEffect(() => {
@@ -41,22 +75,6 @@ export function MainNavbar() {
             setCanGoForward(hState.idx < maxIdxRef.current);
         }
     }, [location]);
-
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === "f") {
-                e.preventDefault();
-                setIsSearchOpen(true);
-            }
-            if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === "e") {
-                e.preventDefault();
-                updateGeneralSettings({ isTaskCalendarOpen: !general.isTaskCalendarOpen });
-            }
-        };
-
-        window.addEventListener("keydown", handleKeyDown);
-        return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [general.isTaskCalendarOpen, updateGeneralSettings]);
 
     useEffect(() => {
         if (isSyncing) {
@@ -87,8 +105,7 @@ export function MainNavbar() {
             className={cn(
                 "flex h-9 w-full shrink-0 rotate-0 items-center justify-between border-sidebar-border bg-sidebar px-3",
                 "select-none transition-[width,height,transform,opacity,border-color] duration-200 ease-in-out",
-                general.appDirection === 'ltr' && 'pr-20',
-                general.appDirection === 'rtl' && !open && 'pr-20',
+                windowControlsPaddingClass,
             )}
 
         >

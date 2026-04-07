@@ -1,5 +1,4 @@
 import { useSmartNavigate } from "@/hooks/use-smart-navigate";
-import icon from "@/src/assets/icon.png";
 import {
     DAILY_NOTES_FOLDER_ID,
     GeneralSettings,
@@ -28,7 +27,7 @@ import {
     ContextMenuItem,
     ContextMenuTrigger
 } from "@/components/ui/context-menu";
-import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubButton, SidebarMenuSubItem, useSidebar } from "@/components/ui/sidebar";
+import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubButton, SidebarMenuSubItem, useSidebar } from "@/components/ui/sidebar";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useCreateNote } from "@/hooks/use-create-note";
 import { useCreateTask } from "@/hooks/use-create-task";
@@ -168,30 +167,10 @@ export function AppSidebar() {
             side={general.appDirection === 'rtl' ? 'right' : 'left'}
             dir={general.appDirection}
         >
-            {/* ── Header ───────────────────────────────────── */}
-            <SidebarHeader
-                data-tauri-drag-region
-                className={cn("flex h-9 shrink-0 flex-row items-center gap-2 py-0", general.appDirection === 'rtl' ? "pr-3" : " pl-3")}
-            >
-                <div style={{ display: general.appDirection === 'rtl' ? 'none' : 'flex' }} className="flex items-center  gap-1  h-full">
 
-                    <img
-                        src={icon}
-                        data-tauri-drag-region
-                        className="w-6 aspect-square select-none"
-                        alt="Annota"
-                        onError={(e) => {
-                            (e.target as HTMLImageElement).style.display = "none";
-                        }}
-                    />
-                    <span data-tauri-drag-region className="text-sm  font-bold tracking-tight group-data-[collapsible=icon]:hidden">
-                        Annota
-                    </span>
-                </div>
-            </SidebarHeader>
 
             {/* ── Content ──────────────────────────────────── */}
-            <SidebarContent className="min-w-0 overflow-x-hidden pt-2">
+            <SidebarContent className="min-w-0 overflow-x-hidden pt-10">
                 {/* Navigation group */}
                 <SidebarGroup className={cn("pb-0", general.appDirection === 'rtl' ? "pr-3" : " pl-3")}>
                     <SidebarGroupContent>

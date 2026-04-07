@@ -170,8 +170,6 @@ export default function NoteEditor() {
         }
     }, [id, updateNoteMetadata, updateNoteContent]);
 
-
-
     const handleBack = useCallback(() => {
         editorRef.current?.blur();
         router.back();

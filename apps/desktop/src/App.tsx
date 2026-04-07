@@ -1,5 +1,6 @@
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useDailyCleanup } from "@/hooks/use-daily-cleanup";
+import { useGlobalShortcuts } from "@/hooks/use-global-shortcuts";
 import { useNoteWindowSync } from "@/hooks/use-note-window-sync";
 import {
   authApi,
@@ -49,10 +50,42 @@ import HomePage from "./pages/home/home-page";
 
 type BootstrapState = "booting" | "ready" | "error";
 
+const STARTUP_NETWORK_TIMEOUT_MS = 5000;
+
+class StartupTimeoutError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "StartupTimeoutError";
+  }
+}
+
+const withStartupTimeout = async <T,>(
+  promise: Promise<T>,
+  label: string,
+  timeoutMs: number = STARTUP_NETWORK_TIMEOUT_MS,
+): Promise<T> => {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new StartupTimeoutError(`${label} timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+  });
+
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+};
+
+const isStartupTimeout = (error: unknown) =>
+  error instanceof StartupTimeoutError;
+
 function App() {
   useAppTheme();
   useDailyCleanup();
   useNoteWindowSync();
+  useGlobalShortcuts();
 
   const [bootstrapState, setBootstrapState] =
     useState<BootstrapState>("booting");
@@ -100,9 +133,12 @@ function App() {
         // 2. Fetch/Apply remote app config (blocking sync if needed)
         try {
           const { appConfigService } = await import("@annota/core");
-          await appConfigService.init();
+          await withStartupTimeout(appConfigService.init(), "App config");
         } catch (e) {
           console.error("[DesktopBootstrap] Failed to init app config:", e);
+          if (isStartupTimeout(e)) {
+            useSyncStore.getState().setOnline(false);
+          }
         }
 
         // 3. Optimistically grab the persisted user ID FIRST
@@ -116,14 +152,10 @@ function App() {
 
         // 3. Attempt session restore with a safety timeout
         try {
-          const sessionPromise = authApi.getSession();
-          // 3-second timeout: if the network is a black hole, we move on.
-          const timeoutPromise = new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error("Network timeout")), 3000)
-          );
-
-          // Race the session fetch against the timeout
-          const { data } = await Promise.race([sessionPromise, timeoutPromise]) as any;
+          const { data } = await withStartupTimeout(
+            authApi.getSession(),
+            "Session restore",
+          ) as any;
 
           if (data?.session) {
             setSession(data.session);
@@ -136,6 +168,9 @@ function App() {
             "[DesktopBootstrap] Session restore delayed/failed (offline likely). Falling back to local user state.",
             error,
           );
+          if (isStartupTimeout(error)) {
+            useSyncStore.getState().setOnline(false);
+          }
           // We gracefully catch this. activeUserId still holds the persisted ID!
         }
 

@@ -6,6 +6,8 @@ interface SearchState {
     searchScope: 'all' | 'current';
     isSearching: boolean;
     dbResults: UnifiedSearchResult[];
+    isOpen: boolean;
+    setIsOpen: (open: boolean) => void;
     setSearchQuery: (query: string, currentFolderId: string | null) => void;
     setSearchScope: (scope: 'all' | 'current') => void;
     performSearch: (currentFolderId: string | null) => Promise<void>;
@@ -20,6 +22,9 @@ export const useSearchStore = create<SearchState>((set, get) => ({
     searchScope: 'all',
     isSearching: false,
     dbResults: [],
+    isOpen: false,
+
+    setIsOpen: (open) => set({ isOpen: open }),
 
     setSearchQuery: (query, currentFolderId) => {
         set({ searchQuery: query });

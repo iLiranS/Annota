@@ -164,11 +164,13 @@ export class ExportService {
         md = md.replace(/<p[^>]*>(.*?)<\/p>/gis, '$1\n\n');
         md = md.replace(/<strong[^>]*>(.*?)<\/strong>/gis, '**$1**');
         md = md.replace(/<em[^>]*>(.*?)<\/em>/gis, '_$1_');
+        md = md.replace(/<pre[^>]*><code[^>]*>(.*?)<\/code><\/pre>/gis, '\n\n```\n$1\n```\n\n');
+        md = md.replace(/<code[^>]*>(.*?)<\/code>/gis, '`$1`');
         md = md.replace(/<br\s*\/?>/gis, '\n');
 
         // 3. Cleanup
         md = md.replace(/<[^>]+>/g, ''); // Strip remaining tags
-        md = md.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+        md = md.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/&quot;/g, '"');
 
         return md.trim();
     }
@@ -492,7 +494,19 @@ export class ExportService {
                 color:       #383a42 !important;
                 overflow:    visible !important;
             }
-            code, .code-block-wrapper code {
+
+            /* ── Inline Code ─────────────────────────────────────────────── */
+            :not(pre) > code {
+                font-family: 'FiraCode', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+                font-size:   0.85em !important;
+                background-color: rgba(0, 0, 0, 0.05) !important;
+                color:       rgba(0, 0, 0, 0.7) !important;
+                padding:     2px 6px !important;
+                border-radius: 4px !important;
+                white-space: normal !important;
+            }
+
+            pre code, .code-block-wrapper code {
                 font-family: inherit !important;
                 background:  none !important;
                 padding:     0 !important;

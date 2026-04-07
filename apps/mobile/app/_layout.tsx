@@ -120,6 +120,37 @@ const toastConfig: ToastConfig = {
   info: (props: any) => <CustomToast {...props} />,
 };
 
+const STARTUP_NETWORK_TIMEOUT_MS = 5000;
+
+class StartupTimeoutError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'StartupTimeoutError';
+  }
+}
+
+const withStartupTimeout = async <T,>(
+  promise: Promise<T>,
+  label: string,
+  timeoutMs: number = STARTUP_NETWORK_TIMEOUT_MS,
+): Promise<T> => {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new StartupTimeoutError(`${label} timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+  });
+
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+};
+
+const isStartupTimeout = (error: unknown) =>
+  error instanceof StartupTimeoutError;
+
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -152,7 +183,14 @@ function AppLogicHub() {
         await useSettingsStore.persist.rehydrate();
         
         const { appConfigService } = require('@annota/core'); // Keep this require if it's truly problematic as top-level due to side effects
-        await appConfigService.init();
+        try {
+          await withStartupTimeout(appConfigService.init(), 'App config');
+        } catch (err) {
+          console.warn('[RootLayout] App config init timed out/failed. Proceeding offline.', err);
+          if (isStartupTimeout(err)) {
+            useSyncStore.getState().setOnline(false);
+          }
+        }
 
         subscription = authApi.onAuthStateChange((event, session) => {
           if (!isMounted) return;
@@ -173,17 +211,31 @@ function AppLogicHub() {
           }
         });
 
-        const { data: { session: currentSession } } = await authApi.getSession();
-        if (isMounted) {
-          if (currentSession) {
-            setSession(currentSession);
+        try {
+          const { data: { session: currentSession } } = await withStartupTimeout(
+            authApi.getSession(),
+            'Session restore',
+          );
+          if (isMounted) {
+            if (currentSession) {
+              setSession(currentSession);
+            }
           }
-          if (!useAuthStore.getState().initialized) {
+        } catch (err) {
+          console.warn('[RootLayout] Session restore delayed/failed (offline likely).', err);
+          if (isStartupTimeout(err)) {
+            useSyncStore.getState().setOnline(false);
+          }
+        } finally {
+          if (isMounted && !useAuthStore.getState().initialized) {
             useAuthStore.setState({ initialized: true });
           }
         }
       } catch (err) {
         console.error('[RootLayout] initAuth error:', err);
+        if (isMounted && !useAuthStore.getState().initialized) {
+          useAuthStore.setState({ initialized: true });
+        }
       }
     };
 

@@ -48,9 +48,9 @@ function GallerySlide({
         if (isActive) {
             return {
                 transform: [
+                    { scale: zoomScale.value },
                     { translateX: baseX + zoomTranslateX.value },
                     { translateY: zoomTranslateY.value },
-                    { scale: zoomScale.value },
                 ],
             };
         }
@@ -105,6 +105,8 @@ export function ImageGallery({
     const translateY = useSharedValue(0);
     const savedTranslateX = useSharedValue(0);
     const savedTranslateY = useSharedValue(0);
+    const pinchStartFocalX = useSharedValue(0);
+    const pinchStartFocalY = useSharedValue(0);
 
     // Dismiss (vertical drag)
     const dismissY = useSharedValue(0);
@@ -182,9 +184,34 @@ export function ImageGallery({
     };
 
     const pinchGesture = Gesture.Pinch()
+        .onStart((e) => {
+            'worklet';
+            savedScale.value = scale.value;
+            savedTranslateX.value = translateX.value;
+            savedTranslateY.value = translateY.value;
+            pinchStartFocalX.value = e.focalX;
+            pinchStartFocalY.value = e.focalY;
+        })
         .onUpdate((e) => {
             'worklet';
-            scale.value = savedScale.value * e.scale;
+            const scaleFactor = e.scale;
+            const nextScale = savedScale.value * scaleFactor;
+
+            const sw = screenWidthSV.value;
+            const sh = screenHeightSV.value;
+            const dx0 = pinchStartFocalX.value - sw / 2;
+            const dy0 = pinchStartFocalY.value - sh / 2;
+            const dx = e.focalX - sw / 2;
+            const dy = e.focalY - sh / 2;
+
+            // Keep the pinch focal point stable while scaling.
+            const rawX = scaleFactor * savedTranslateX.value + dx - scaleFactor * dx0;
+            const rawY = scaleFactor * savedTranslateY.value + dy - scaleFactor * dy0;
+            const clamped = clampTranslate(rawX, rawY, nextScale);
+
+            scale.value = nextScale;
+            translateX.value = clamped.x;
+            translateY.value = clamped.y;
         })
         .onEnd(() => {
             'worklet';
@@ -219,17 +246,21 @@ export function ImageGallery({
 
     const panGesture = Gesture.Pan()
         .averageTouches(true)
+        .maxPointers(1)
         .onStart(() => {
             'worklet';
             savedOffset.value = totalOffset.value;
+            savedTranslateX.value = translateX.value;
+            savedTranslateY.value = translateY.value;
         })
         .onUpdate((e) => {
             'worklet';
             if (scale.value > 1.05) {
                 // Zoomed — pan around the image, clamped to borders
+                const dragScale = 1 / Math.max(1, scale.value);
                 const clamped = clampTranslate(
-                    savedTranslateX.value + e.translationX,
-                    savedTranslateY.value + e.translationY,
+                    savedTranslateX.value + e.translationX * dragScale,
+                    savedTranslateY.value + e.translationY * dragScale,
                     scale.value
                 );
                 translateX.value = clamped.x;
@@ -307,6 +338,7 @@ export function ImageGallery({
             } else {
                 // Zoom in toward the tapped point
                 const targetScale = 2.5;
+                const focusDamping = 0.85;
 
                 // e.localX/Y are relative to the gesture view (screen coords).
                 // We need to shift so the tapped point stays fixed after scaling.
@@ -314,8 +346,8 @@ export function ImageGallery({
                 const sw = screenWidthSV.value;
                 const sh = screenHeightSV.value;
 
-                const offsetX = (sw / 2 - e.x) * (targetScale - 1);
-                const offsetY = (sh / 2 - e.y) * (targetScale - 1);
+                const offsetX = (sw / 2 - e.x) * (targetScale - 1) * focusDamping;
+                const offsetY = (sh / 2 - e.y) * (targetScale - 1) * focusDamping;
 
                 const clamped = clampTranslate(offsetX, offsetY, targetScale);
 
