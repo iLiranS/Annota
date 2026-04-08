@@ -9,6 +9,8 @@
     --code-block-bg: #F5F5F5;
     --border-color: rgba(0, 0, 0, 0.15);
     --table-header-bg: rgba(33, 33, 33, 0.371);
+    --table-cell-min-width: 64px;
+    --table-cell-default-width: 104px;
     --editor-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     --editor-font-size: 16px;
     --editor-line-height: 1.5;
@@ -74,6 +76,7 @@
     white-space: pre-wrap;
     /* Required for ProseMirror cursor and space handling */
     word-break: break-word;
+    min-width: 0;
 }
 
 /* Custom Scrollbar */
@@ -513,7 +516,8 @@
     border: none;
     height: 1px;
     background-color: var(--border-color);
-    opacity: 0.6; /* Softer than standard borders */
+    opacity: 0.6;
+    /* Softer than standard borders */
     margin: var(--editor-paragraph-spacing) 0;
 }
 
@@ -733,9 +737,14 @@
 /* Table Styles */
 .ProseMirror .tableWrapper {
     overflow-x: auto;
+    overflow-y: hidden;
     margin: 0;
     margin-bottom: var(--editor-paragraph-spacing);
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    touch-action: pan-x pan-y;
+    position: relative;
+    min-width: 0;
     /* Respect container width */
     width: 100%;
     max-width: 100%;
@@ -765,18 +774,21 @@
 .ProseMirror table {
     border-collapse: separate;
     border-spacing: 0;
-    width: 100%;
-    min-width: 100%;
+    width: max-content;
+    max-width: none;
+    min-width: 0;
     table-layout: fixed;
     /* Better for custom column widths */
     border: 1px solid var(--border-color);
     border-radius: 12px;
     overflow: hidden;
+    display: inline-table;
 }
 
 .ProseMirror td,
 .ProseMirror th {
-    min-width: 80px;
+    min-width: var(--table-cell-min-width);
+    width: var(--table-cell-default-width);
     padding: 10px 14px;
     border-bottom: 1px solid var(--border-color);
     border-right: 1px solid var(--border-color);
@@ -788,17 +800,29 @@
 
 /* Mobile-specific Table Overrides */
 @media (max-width: 768px) {
+    .ProseMirror .tableWrapper {
+        overflow-x: scroll;
+        margin-bottom: 10px;
+        margin-bottom: max(10px, var(--editor-paragraph-spacing));
+        margin-left: -16px;
+        margin-right: -16px;
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
     .ProseMirror table {
         /* Allow the table to grow beyond its container on mobile for scrolling */
-        width: auto !important;
-        min-width: 100% !important;
-        table-layout: auto !important;
+        width: max-content !important;
+        max-width: none !important;
+        min-width: 0 !important;
+        table-layout: fixed !important;
     }
 
     .ProseMirror td,
     .ProseMirror th {
         /* Ensure cells have enough width to be readable */
-        min-width: 120px !important;
+        min-width: var(--table-cell-min-width) !important;
+        width: var(--table-cell-default-width) !important;
     }
 }
 
@@ -911,25 +935,109 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
+/* Scrollable preview wrapper — enables panning for wide/zoomed diagrams */
+.mermaid-preview-scroll {
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    width: 100%;
+    max-height: 500px;
+    cursor: grab;
+}
+
+.mermaid-preview-scroll.is-panning {
+    cursor: grabbing;
+    user-select: none;
+}
+
+/* Custom scrollbar for mermaid preview — both axes */
+.mermaid-preview-scroll::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.mermaid-preview-scroll::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 10px;
+}
+
+.mermaid-preview-scroll::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 10px;
+}
+
+.mermaid-preview-scroll::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-color);
+}
+
 .mermaid-preview {
-    cursor: pointer;
     display: flex;
     justify-content: center;
     align-items: center;
     min-height: 100px;
-    width: 100%;
+    width: max-content;
+    min-width: 100%;
     /* Add this to protect Mermaid's colors from Tailwind preflight in production */
     color: var(--text-color);
 }
 
 .mermaid-preview svg {
-    max-width: 100%;
     height: auto;
 }
 
 /* Force Tailwind to leave Mermaid's internal SVG structure alone */
 .mermaid-preview svg * {
     border-color: initial;
+}
+
+/* Zoom toolbar — sits below the preview, appears on hover */
+.mermaid-zoom-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 2px;
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--bg-color) 85%, transparent);
+    border: 1px solid var(--border-color);
+    width: fit-content;
+    margin: 4px auto 0;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    user-select: none;
+}
+
+.mermaid-block:hover .mermaid-zoom-toolbar {
+    opacity: 1;
+}
+
+.mermaid-zoom-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 24px;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-color);
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    padding: 0;
+}
+
+.mermaid-zoom-btn:hover {
+    background-color: rgba(128, 128, 128, 0.15);
+}
+
+.mermaid-zoom-btn.mermaid-zoom-label {
+    width: auto;
+    padding: 0 6px;
+    font-size: 11px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    min-width: 42px;
+    opacity: 0.7;
 }
 
 .mermaid-editor {
@@ -1070,6 +1178,13 @@ html.dark .ProseMirror [data-type="detailsSummary"] {
 .details-menu-btn:hover {
     background-color: rgba(128, 128, 128, 0.1);
     opacity: 1;
+}
+
+@media (max-width: 768px) {
+    .details-menu-btn {
+        width: 32px;
+        height: 32px;
+    }
 }
 
 .file-attachment-menu-btn {

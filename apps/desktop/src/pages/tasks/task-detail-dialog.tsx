@@ -80,6 +80,9 @@ export default function TaskDetailDialog() {
     const watchedLinks = watch("links") || [];
     const watchedDeadline = watch("deadline");
     const watchedIsWholeDay = watch("isWholeDay");
+
+    const isValidDate = (d: unknown): d is Date =>
+        d instanceof Date && !isNaN(d.getTime());
     const watchedCompleted = watch("completed");
 
     const [newLink, setNewLink] = useState("");
@@ -187,19 +190,19 @@ export default function TaskDetailDialog() {
 
     return (
         <Dialog open onOpenChange={(open) => !open && handleClose()}>
-            <DialogContent className="max-w-xl h-[85vh] w-[90vw] gap-0 overflow-hidden p-0 shadow-2xl flex flex-col">
+            <DialogContent className="max-w-xl max-h-[80vh] w-[90vw] gap-0 overflow-hidden p-0 shadow-2xl flex flex-col">
                 <DialogDescription className="sr-only">Task Details</DialogDescription>
-                <DialogHeader className="px-6 pt-5 pb-4 shrink-0 border-b">
-                    <DialogTitle className="text-lg flex items-center gap-2">
-                        <CheckCircle2 className="h-5 w-5" style={{ color: colors.primary }} />
+                <DialogHeader className="px-5 pt-4 pb-3 shrink-0 border-b">
+                    <DialogTitle className="text-base flex items-center gap-2">
+                        <CheckCircle2 className="h-4.5 w-4.5" style={{ color: colors.primary }} />
                         Task Details
                     </DialogTitle>
                 </DialogHeader>
 
-                <div className="flex-1 overflow-auto p-6 custom-scrollbar">
-                    <form className="space-y-6" onBlur={handleBlur} onSubmit={(e) => e.preventDefault()}>
+                <div className="flex-1 overflow-auto p-5 custom-scrollbar">
+                    <form className="space-y-4" onBlur={handleBlur} onSubmit={(e) => e.preventDefault()}>
                         {/* Title */}
-                        <div className="space-y-2">
+                        <div className="space-y-1.5">
                             <div className="flex justify-between items-center">
                                 <Label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/60">Title</Label>
                                 <span className="text-[10px] tabular-nums font-medium text-muted-foreground/40">
@@ -210,34 +213,136 @@ export default function TaskDetailDialog() {
                                 {...register("title")}
                                 placeholder="Task Title"
                                 maxLength={50}
-                                className="border-none bg-muted/40 selection:text-foreground/80  p-2 text-xl font-bold shadow-none focus-visible:ring-1 placeholder:text-muted-foreground/40"
+                                className="border-none bg-muted/40 selection:text-foreground/80 p-2 text-lg font-bold shadow-none focus-visible:ring-1 placeholder:text-muted-foreground/40"
                             />
                         </div>
 
-                        {/* Description */}
-                        <div className="space-y-2">
+                        {/* Description + Links container */}
+                        <div className="space-y-1.5">
                             <div className="flex justify-between items-center">
                                 <Label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/60">Description</Label>
                                 <span className="text-[10px] tabular-nums font-medium text-muted-foreground/40">
                                     {(watchedDescription || "").length}/200
                                 </span>
                             </div>
-                            <div className="rounded-xl bg-muted/40 p-3 ring-1 ring-inset ring-muted-foreground/5 focus-within:ring-primary/20 transition-all">
-                                <textarea
-                                    {...register("description")}
-                                    placeholder="Add description..."
-                                    rows={4}
-                                    maxLength={200}
-                                    className="w-full resize-none border-none bg-transparent p-0 text-sm shadow-none focus-visible:outline-none focus:ring-0 placeholder:text-muted-foreground/40 leading-relaxed"
-                                />
+                            <div className="rounded-xl bg-muted/40 ring-1 ring-inset ring-muted-foreground/5 focus-within:ring-primary/20 transition-all">
+                                <div className="p-3 pb-2">
+                                    <textarea
+                                        {...register("description")}
+                                        placeholder="Add description..."
+                                        rows={3}
+                                        maxLength={200}
+                                        className="w-full resize-none border-none bg-transparent p-0 text-sm shadow-none focus-visible:outline-none focus:ring-0 placeholder:text-muted-foreground/40 leading-relaxed"
+                                    />
+                                </div>
+
+                                {/* Links — integrated inside description card */}
+                                <div className="border-t border-muted-foreground/6 px-3 py-2 space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 flex items-center gap-1.5">
+                                            <LinkIcon className="h-2.5 w-2.5" /> Links
+                                        </span>
+                                        {watchedLinks.length < 5 && (
+                                            <button
+                                                type="button"
+                                                className="text-[10px] font-medium flex items-center gap-0.5 opacity-50 hover:opacity-100 transition-opacity"
+                                                style={{ color: colors.primary }}
+                                                onClick={() => setShowLinkInput(true)}
+                                            >
+                                                <Plus className="h-3 w-3" /> Add
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {watchedLinks.length > 0 && (
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {watchedLinks.map((link, index) => {
+                                                let text = link;
+                                                let isAnnota = false;
+                                                let noteId = "";
+
+                                                if (link.startsWith("annota://note/")) {
+                                                    const match = link.match(/^annota:\/\/note\/([a-f0-9\-]+)/i);
+                                                    if (match) {
+                                                        noteId = match[1];
+                                                        const note = getNoteById(noteId);
+                                                        text = note ? note.title : "Unknown Note";
+                                                        isAnnota = true;
+                                                    }
+                                                } else {
+                                                    const domainMatch = link.match(/^(?:https?:\/\/)?(?:www\.)?([^\/?#]+)/i);
+                                                    if (domainMatch) {
+                                                        const domain = domainMatch[1];
+                                                        text = domain.includes(".") ? domain.split(".").slice(0, -1).join(".") : domain;
+                                                    }
+                                                }
+
+                                                return (
+                                                    <div
+                                                        key={index}
+                                                        className="group flex items-center gap-1.5 pl-2 pr-1 py-1 rounded-lg bg-background/60 border border-muted-foreground/8 hover:border-primary/25 transition-all cursor-pointer"
+                                                        onClick={() => {
+                                                            if (isAnnota && noteId) {
+                                                                const note = getNoteById(noteId);
+                                                                const folderId = note?.folderId || "root";
+                                                                navigate(`/notes/${folderId}/${noteId}`);
+                                                            } else if (!isAnnota) {
+                                                                void openUrl(link).catch((err) => console.error("Couldn't load page", err));
+                                                            }
+                                                        }}
+                                                    >
+                                                        {isAnnota ? (
+                                                            <img src={icon} className="h-3 w-3 rounded-sm" alt="Annota" />
+                                                        ) : (
+                                                            <LinkIcon className="h-2.5 w-2.5 text-muted-foreground/60" />
+                                                        )}
+                                                        <span className="text-[10px] truncate font-medium max-w-[120px]">{text}</span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleRemoveLink(index);
+                                                            }}
+                                                            className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-destructive/10 text-destructive/60 hover:text-destructive transition-all"
+                                                        >
+                                                            <X className="h-2.5 w-2.5" />
+                                                        </button>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+
+                                    {showLinkInput && (
+                                        <div className="flex gap-1.5 animate-in slide-in-from-top-1 duration-200">
+                                            <Input
+                                                value={newLink}
+                                                onChange={(e) => setNewLink(e.target.value)}
+                                                placeholder="Paste link..."
+                                                className="h-7 text-[11px] bg-background/60 border-muted-foreground/10"
+                                                autoFocus
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        e.preventDefault();
+                                                        handleAddLink();
+                                                    }
+                                                    if (e.key === 'Escape') setShowLinkInput(false);
+                                                }}
+                                            />
+                                            <Button size="sm" className="h-7 w-7 p-0 shrink-0" onClick={handleAddLink} style={{ backgroundColor: colors.primary }}>
+                                                <Plus className="h-3.5 w-3.5" />
+                                            </Button>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
                         <Separator className="opacity-50" />
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {/* Date & Time Picker */}
-                            <div className="space-y-3">
+                            <div className="space-y-2">
                                 <div className="flex items-center justify-between">
                                     <Label className="text-[11px] font-semibold text-muted-foreground flex items-center gap-2">
                                         <CalendarIcon className="h-3 w-3" /> DEADLINE
@@ -273,7 +378,7 @@ export default function TaskDetailDialog() {
                                                     className="w-full justify-start font-normal text-xs h-9 bg-muted/30 border-muted-foreground/10"
                                                 >
                                                     <CalendarIcon className="mr-2 h-3.5 w-3.5 opacity-50" />
-                                                    {watchedDeadline ? format(watchedDeadline, "PPP") : "Pick a date"}
+                                                    {isValidDate(watchedDeadline) ? format(watchedDeadline, "PPP") : "Pick a date"}
                                                 </Button>
                                             </PopoverTrigger>
                                             <PopoverContent className="w-auto p-0" align="start">
@@ -298,10 +403,14 @@ export default function TaskDetailDialog() {
                                         <Field className="w-[100px]">
                                             <Input
                                                 type="time"
-                                                value={watchedDeadline ? format(watchedDeadline, "HH:mm") : ""}
+                                                value={isValidDate(watchedDeadline) ? format(watchedDeadline, "HH:mm") : ""}
                                                 onChange={(e) => {
-                                                    const [hours, minutes] = e.target.value.split(":").map(Number);
-                                                    const newDate = new Date(watchedDeadline);
+                                                    const raw = e.target.value;
+                                                    if (!raw) return;
+                                                    const [hours, minutes] = raw.split(":").map(Number);
+                                                    if (isNaN(hours) || isNaN(minutes)) return;
+                                                    const base = isValidDate(watchedDeadline) ? watchedDeadline : new Date();
+                                                    const newDate = new Date(base);
                                                     newDate.setHours(hours, minutes);
                                                     setValue("deadline", newDate);
                                                 }}
@@ -313,8 +422,8 @@ export default function TaskDetailDialog() {
                                 </FieldGroup>
                             </div>
 
-                            {/* Folder Link Placeholder */}
-                            <div className="space-y-3">
+                            {/* Folder */}
+                            <div className="space-y-2">
                                 <Label className="text-[11px] font-semibold text-muted-foreground flex items-center gap-2">
                                     <FolderIcon className="h-3 w-3" /> FOLDER
                                 </Label>
@@ -359,107 +468,6 @@ export default function TaskDetailDialog() {
                             </div>
                         </div>
 
-                        {/* Links */}
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <Label className="text-[11px] font-semibold text-muted-foreground flex items-center gap-2">
-                                    <LinkIcon className="h-3 w-3" /> LINKS
-                                </Label>
-                                {watchedLinks.length < 5 && (
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        type="button"
-                                        className="h-6 px-2 text-[10px] hover:bg-primary/10"
-                                        style={{ color: colors.primary }}
-                                        onClick={() => setShowLinkInput(true)}
-                                    >
-                                        <Plus className="h-3 w-3 mr-1" /> Add Link
-                                    </Button>
-                                )}
-                            </div>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                {watchedLinks.map((link, index) => {
-                                    let text = link;
-                                    let isAnnota = false;
-                                    let noteId = "";
-
-                                    if (link.startsWith("annota://note/")) {
-                                        const match = link.match(/^annota:\/\/note\/([a-f0-9\-]+)/i);
-                                        if (match) {
-                                            noteId = match[1];
-                                            const note = getNoteById(noteId);
-                                            text = note ? note.title : "Unknown Note";
-                                            isAnnota = true;
-                                        }
-                                    } else {
-                                        const domainMatch = link.match(/^(?:https?:\/\/)?(?:www\.)?([^\/?#]+)/i);
-                                        if (domainMatch) {
-                                            const domain = domainMatch[1];
-                                            // Strip the TLD (everything after the last dot)
-                                            text = domain.includes(".") ? domain.split(".").slice(0, -1).join(".") : domain;
-                                        }
-                                    }
-
-                                    return (
-                                        <div
-                                            key={index}
-                                            className="group flex items-center gap-2 p-2 rounded-md bg-muted/20 border border-transparent hover:border-primary/20 transition-all cursor-pointer"
-                                            onClick={() => {
-                                                if (isAnnota && noteId) {
-                                                    const note = getNoteById(noteId);
-                                                    const folderId = note?.folderId || "root";
-                                                    navigate(`/notes/${folderId}/${noteId}`);
-                                                } else if (!isAnnota) {
-                                                    void openUrl(link).catch((err) => console.error("Couldn't load page", err));
-                                                }
-                                            }}
-                                        >
-                                            {isAnnota ? (
-                                                <img src={icon} className="h-3.5 w-3.5 rounded-sm" alt="Annota" />
-                                            ) : (
-                                                <LinkIcon className="h-3 w-3 text-muted-foreground" />
-                                            )}
-                                            <span className="flex-1 text-[11px] truncate font-medium">{text}</span>
-                                            <button
-                                                type="button"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleRemoveLink(index);
-                                                }}
-                                                className="opacity-0 group-hover:opacity-100 p-1 rounded-sm hover:bg-destructive/10 text-destructive/70 hover:text-destructive transition-all"
-                                            >
-                                                <Trash2 className="h-3 w-3" />
-                                            </button>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-
-                            {showLinkInput && (
-                                <div className="flex gap-2 animate-in slide-in-from-top-1 duration-200">
-                                    <Input
-                                        value={newLink}
-                                        onChange={(e) => setNewLink(e.target.value)}
-                                        placeholder="Paste link..."
-                                        className="h-8 text-[11px] bg-muted/50"
-                                        autoFocus
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter') {
-                                                e.preventDefault();
-                                                handleAddLink();
-                                            }
-                                            if (e.key === 'Escape') setShowLinkInput(false);
-                                        }}
-                                    />
-                                    <Button size="sm" className="h-8 w-8 p-0" onClick={handleAddLink} style={{ backgroundColor: colors.primary }}>
-                                        <Plus className="h-4 w-4" />
-                                    </Button>
-                                </div>
-                            )}
-                        </div>
-
                         <Separator className="opacity-50" />
 
                         {/* Footer Actions */}
@@ -477,10 +485,10 @@ export default function TaskDetailDialog() {
                                         className="flex items-center gap-2 group transition-all"
                                     >
                                         <div className={cn(
-                                            "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all",
+                                            "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all",
                                             watchedCompleted ? "border-primary bg-primary" : "border-muted-foreground/30 group-hover:border-muted-foreground/50"
                                         )} style={watchedCompleted ? { backgroundColor: colors.primary, borderColor: colors.primary } : {}}>
-                                            {watchedCompleted && <CheckCircle2 className="h-4 w-4 text-white" />}
+                                            {watchedCompleted && <CheckCircle2 className="h-3.5 w-3.5 text-white" />}
                                         </div>
                                         <span className={cn(
                                             "text-sm font-semibold transition-colors",
@@ -495,10 +503,10 @@ export default function TaskDetailDialog() {
                             <Button
                                 variant="ghost"
                                 type="button"
-                                className="text-destructive hover:bg-destructive/10 hover:text-destructive bg-destructive/5 px-4 h-11"
+                                className="text-destructive hover:bg-destructive/10 hover:text-destructive bg-destructive/5 px-3 h-9 text-xs"
                                 onClick={handleDelete}
                             >
-                                <Trash2 className="h-4 w-4 mr-2" /> Delete Task
+                                <Trash2 className="h-3.5 w-3.5 mr-1.5" /> Delete
                             </Button>
                         </div>
                     </form>

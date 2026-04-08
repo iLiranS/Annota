@@ -11,7 +11,7 @@ export function useGlobalShortcuts() {
         const handleKeyDown = (e: KeyboardEvent) => {
             // mod+n (Cmd+N on Mac, Ctrl+N on Windows)
             const isMod = e.metaKey || e.ctrlKey;
-            
+
             if (isMod && !e.shiftKey && !e.altKey) {
                 const key = e.key.toLowerCase();
 

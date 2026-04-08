@@ -1,8 +1,192 @@
-import { Table } from '@tiptap/extension-table';
+import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
+import type { EditorView, NodeView, ViewMutationRecord } from '@tiptap/pm/view';
+import { columnResizing, tableEditing } from '@tiptap/pm/tables';
+import { Table, TableView } from '@tiptap/extension-table';
 import { TableCell } from '@tiptap/extension-table-cell';
 import { TableHeader } from '@tiptap/extension-table-header';
+import type { TableOptions } from '@tiptap/extension-table';
 
-export const CustomTable = Table.extend({
+interface CustomTableOptions extends TableOptions {
+    defaultCellMinWidth: number;
+}
+
+const getColStyleDeclaration = (minWidth: number, width?: number): [string, string] => {
+    if (width) {
+        return ['width', `${Math.max(width, minWidth)}px`];
+    }
+
+    return ['min-width', `${minWidth}px`];
+};
+
+const updateColumns = (
+    node: ProseMirrorNode,
+    colgroup: HTMLTableColElement,
+    table: HTMLTableElement,
+    minCellWidth: number,
+    defaultCellWidth: number,
+    overrideCol?: number,
+    overrideValue?: number,
+) => {
+    let totalWidth = 0;
+    let fixedWidth = true;
+    let nextDOM = colgroup.firstChild;
+    const row = node.firstChild;
+
+    if (row !== null) {
+        for (let i = 0, col = 0; i < row.childCount; i += 1) {
+            const { colspan, colwidth } = row.child(i).attrs;
+
+            for (let j = 0; j < colspan; j += 1, col += 1) {
+                const explicitWidth =
+                    overrideCol === col ? overrideValue : (colwidth && (colwidth[j] as number | undefined));
+                const fallbackWidth = defaultCellWidth > 0 ? defaultCellWidth : undefined;
+                const resolvedWidth = explicitWidth ?? fallbackWidth;
+                const cssWidth = resolvedWidth ? `${resolvedWidth}px` : '';
+
+                totalWidth += resolvedWidth || minCellWidth;
+
+                if (!resolvedWidth) {
+                    fixedWidth = false;
+                }
+
+                if (!nextDOM) {
+                    const colElement = document.createElement('col');
+                    const [propertyKey, propertyValue] = getColStyleDeclaration(minCellWidth, resolvedWidth);
+
+                    colElement.style.setProperty(propertyKey, propertyValue);
+                    colgroup.appendChild(colElement);
+                } else {
+                    if ((nextDOM as HTMLTableColElement).style.width !== cssWidth) {
+                        const [propertyKey, propertyValue] = getColStyleDeclaration(minCellWidth, resolvedWidth);
+
+                        (nextDOM as HTMLTableColElement).style.setProperty(propertyKey, propertyValue);
+                    }
+
+                    nextDOM = nextDOM.nextSibling;
+                }
+            }
+        }
+    }
+
+    while (nextDOM) {
+        const after = nextDOM.nextSibling;
+
+        nextDOM.parentNode?.removeChild(nextDOM);
+        nextDOM = after;
+    }
+
+    const hasUserWidth =
+        node.attrs.style && typeof node.attrs.style === 'string' && /\bwidth\s*:/i.test(node.attrs.style);
+
+    if (fixedWidth && !hasUserWidth) {
+        table.style.width = `${totalWidth}px`;
+        table.style.minWidth = '';
+    } else {
+        table.style.width = '';
+        table.style.minWidth = `${totalWidth}px`;
+    }
+};
+
+class CustomTableView implements NodeView {
+    node: ProseMirrorNode;
+    minCellWidth: number;
+    defaultCellWidth: number;
+    dom: HTMLDivElement;
+    table: HTMLTableElement;
+    colgroup: HTMLTableColElement;
+    contentDOM: HTMLTableSectionElement;
+
+    constructor(node: ProseMirrorNode, defaultCellWidth: number, minCellWidth: number) {
+        this.node = node;
+        this.minCellWidth = minCellWidth;
+        this.defaultCellWidth = defaultCellWidth;
+        this.dom = document.createElement('div');
+        this.dom.className = 'tableWrapper';
+        this.table = this.dom.appendChild(document.createElement('table'));
+
+        if (node.attrs.style) {
+            this.table.style.cssText = node.attrs.style;
+        }
+
+        this.colgroup = this.table.appendChild(document.createElement('colgroup'));
+        updateColumns(node, this.colgroup, this.table, this.minCellWidth, this.defaultCellWidth);
+        this.contentDOM = this.table.appendChild(document.createElement('tbody'));
+    }
+
+    update(node: ProseMirrorNode) {
+        if (node.type !== this.node.type) {
+            return false;
+        }
+
+        this.node = node;
+        updateColumns(node, this.colgroup, this.table, this.minCellWidth, this.defaultCellWidth);
+
+        return true;
+    }
+
+    ignoreMutation(mutation: ViewMutationRecord) {
+        const target = mutation.target as Node;
+        const isInsideWrapper = this.dom.contains(target);
+        const isInsideContent = this.contentDOM.contains(target);
+
+        if (isInsideWrapper && !isInsideContent) {
+            if (mutation.type === 'attributes' || mutation.type === 'childList' || mutation.type === 'characterData') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+}
+
+export const CustomTable = Table.extend<CustomTableOptions>({
+    addOptions() {
+        const parent = this.parent?.();
+        const base: TableOptions = parent ?? {
+            HTMLAttributes: {},
+            resizable: false,
+            renderWrapper: false,
+            handleWidth: 5,
+            cellMinWidth: 25,
+            View: TableView,
+            lastColumnResizable: true,
+            allowTableNodeSelection: false,
+        };
+
+        return {
+            ...base,
+            HTMLAttributes: base.HTMLAttributes ?? {},
+            defaultCellMinWidth: base.cellMinWidth,
+        };
+    },
+    addProseMirrorPlugins() {
+        const isResizable = this.options.resizable && this.editor.isEditable;
+        const minCellWidth = this.options.cellMinWidth ?? 25;
+        const defaultCellWidth = this.options.defaultCellMinWidth ?? minCellWidth;
+
+        const TableViewWithDefaults = class extends CustomTableView {
+            constructor(node: ProseMirrorNode, cellWidth: number, _view?: EditorView) {
+                super(node, cellWidth, minCellWidth);
+            }
+        };
+
+        return [
+            ...(isResizable
+                ? [
+                    columnResizing({
+                        handleWidth: this.options.handleWidth,
+                        cellMinWidth: minCellWidth,
+                        defaultCellMinWidth: defaultCellWidth,
+                        View: TableViewWithDefaults,
+                        lastColumnResizable: this.options.lastColumnResizable,
+                    }),
+                ]
+                : []),
+            tableEditing({
+                allowTableNodeSelection: this.options.allowTableNodeSelection,
+            }),
+        ];
+    },
     addKeyboardShortcuts() {
         return {
             'Mod-Enter': () => this.editor.commands.addRowAfter(),
@@ -46,4 +230,3 @@ export const CustomTableHeader = TableHeader.extend({
         };
     },
 });
-

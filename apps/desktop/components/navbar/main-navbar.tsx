@@ -114,15 +114,21 @@ export function MainNavbar() {
             {/* Left Section: Sidebar Toggle & Search */}
             <div className="flex items-center gap-3">
                 <div className="flex items-center gap-1">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 transition-transform active:scale-95 hover:bg-sidebar-accent text-foreground/50"
-                        onClick={toggleSidebar}
-                        title="Toggle Sidebar"
-                    >
-                        {general.appDirection === 'rtl' ? <PanelRight size={16} /> : <PanelLeft size={16} />}
-                    </Button>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 transition-transform active:scale-95 hover:bg-sidebar-accent text-foreground/50"
+                                onClick={toggleSidebar}
+                            >
+                                {general.appDirection === 'rtl' ? <PanelRight size={16} /> : <PanelLeft size={16} />}
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="text-[10px]">
+                            Toggle Sidebar
+                        </TooltipContent>
+                    </Tooltip>
 
                     <div className={`flex items-center gap-0 ${general.appDirection === 'ltr' ? 'flex-row' : 'flex-row-reverse'}`}>
                         <Button
@@ -159,7 +165,7 @@ export function MainNavbar() {
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7 rounded-full bg-transparent dark:bg-transparent text-muted-foreground/60 transition-all hover:bg-background/80 hover:text-primary active:scale-95"
+                            className="h-7 w-7 rounded-full text-muted-foreground/60 transition-all hover:bg-sidebar-accent hover:text-foreground active:scale-95"
                             onClick={() => setIsSearchOpen(true)}
                         >
                             <Ionicons name="search" size={15} />
@@ -250,7 +256,7 @@ export function MainNavbar() {
                         </Button>
                     </TooltipTrigger>
                     <TooltipContent side="bottom" className="text-[10px]">
-                        Task Calendar <span className="opacity-50 ml-1">⌘E</span>
+                        Task Sidebar <span className="opacity-50 ml-1">⌘E</span>
                     </TooltipContent>
                 </Tooltip>
 

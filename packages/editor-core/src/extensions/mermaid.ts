@@ -91,8 +91,40 @@ export const Mermaid = Node.create({
             const dom = document.createElement('div');
             dom.className = 'mermaid-block';
 
+            // Scrollable preview wrapper
+            const previewScroll = document.createElement('div');
+            previewScroll.className = 'mermaid-preview-scroll';
+
             const preview = document.createElement('div');
             preview.className = 'mermaid-preview';
+
+            previewScroll.appendChild(preview);
+
+            // Zoom toolbar
+            const zoomToolbar = document.createElement('div');
+            zoomToolbar.className = 'mermaid-zoom-toolbar';
+
+            const zoomOutBtn = document.createElement('button');
+            zoomOutBtn.className = 'mermaid-zoom-btn';
+            zoomOutBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+            zoomOutBtn.title = 'Zoom Out';
+            zoomOutBtn.draggable = false;
+
+            const zoomResetBtn = document.createElement('button');
+            zoomResetBtn.className = 'mermaid-zoom-btn mermaid-zoom-label';
+            zoomResetBtn.textContent = '100%';
+            zoomResetBtn.title = 'Reset Zoom';
+            zoomResetBtn.draggable = false;
+
+            const zoomInBtn = document.createElement('button');
+            zoomInBtn.className = 'mermaid-zoom-btn';
+            zoomInBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+            zoomInBtn.title = 'Zoom In';
+            zoomInBtn.draggable = false;
+
+            zoomToolbar.appendChild(zoomOutBtn);
+            zoomToolbar.appendChild(zoomResetBtn);
+            zoomToolbar.appendChild(zoomInBtn);
 
             const editor_div = document.createElement('div');
             editor_div.className = 'mermaid-editor';
@@ -101,7 +133,7 @@ export const Mermaid = Node.create({
             const textarea = document.createElement('textarea');
             textarea.value = node.attrs.code;
             textarea.className = 'mermaid-textarea';
-            textarea.spellcheck = false; // Usually better for code
+            textarea.spellcheck = false;
             textarea.draggable = false;
 
             const render_button = document.createElement('button');
@@ -113,7 +145,8 @@ export const Mermaid = Node.create({
             editor_div.appendChild(render_button);
 
             preview.draggable = false;
-            dom.appendChild(preview);
+            dom.appendChild(previewScroll);
+            dom.appendChild(zoomToolbar);
             dom.appendChild(editor_div);
 
             // Three-dot menu button
@@ -143,6 +176,99 @@ export const Mermaid = Node.create({
             let isEditing = false;
             let currentRenderId = 0;
             let themeOverride: boolean | null = null;
+            let currentZoom = 1;
+            const ZOOM_STEP = 0.15;
+            const MIN_ZOOM = 0.3;
+            const MAX_ZOOM = 3;
+
+            const applyZoom = () => {
+                const svg = preview.querySelector('svg');
+                if (svg) {
+                    // Use the SVG's intrinsic size as the base
+                    const intrinsicW = svg.viewBox?.baseVal?.width || svg.getBoundingClientRect().width / currentZoom;
+                    const intrinsicH = svg.viewBox?.baseVal?.height || svg.getBoundingClientRect().height / currentZoom;
+                    const scaledW = intrinsicW * currentZoom;
+                    const scaledH = intrinsicH * currentZoom;
+                    svg.style.width = `${scaledW}px`;
+                    svg.style.height = `${scaledH}px`;
+                    svg.style.minWidth = `${scaledW}px`;
+                    svg.style.maxWidth = 'none';
+                }
+                zoomResetBtn.textContent = `${Math.round(currentZoom * 100)}%`;
+            };
+
+            zoomInBtn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                currentZoom = Math.min(MAX_ZOOM, currentZoom + ZOOM_STEP);
+                applyZoom();
+            };
+
+            zoomOutBtn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                currentZoom = Math.max(MIN_ZOOM, currentZoom - ZOOM_STEP);
+                applyZoom();
+            };
+
+            zoomResetBtn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                currentZoom = 1;
+                // Clear explicit sizing so it returns to natural layout
+                const svg = preview.querySelector('svg');
+                if (svg) {
+                    svg.style.width = '';
+                    svg.style.height = '';
+                    svg.style.minWidth = '';
+                    svg.style.maxWidth = '';
+                }
+                zoomResetBtn.textContent = '100%';
+            };
+
+            // Prevent these zoom buttons from triggering ProseMirror interactions
+            [zoomInBtn, zoomOutBtn, zoomResetBtn].forEach(btn => {
+                btn.onmousedown = (e) => e.stopPropagation();
+            });
+
+            // --- Drag-to-pan ---
+            let isPanning = false;
+            let panStartX = 0;
+            let panStartY = 0;
+            let scrollStartX = 0;
+            let scrollStartY = 0;
+            let didPan = false;
+
+            previewScroll.onmousedown = (e) => {
+                // Only pan on primary button
+                if (e.button !== 0) return;
+                e.stopPropagation();
+                isPanning = true;
+                didPan = false;
+                panStartX = e.clientX;
+                panStartY = e.clientY;
+                scrollStartX = previewScroll.scrollLeft;
+                scrollStartY = previewScroll.scrollTop;
+                previewScroll.classList.add('is-panning');
+            };
+
+            const onPanMove = (e: MouseEvent) => {
+                if (!isPanning) return;
+                const dx = e.clientX - panStartX;
+                const dy = e.clientY - panStartY;
+                if (Math.abs(dx) > 3 || Math.abs(dy) > 3) didPan = true;
+                previewScroll.scrollLeft = scrollStartX - dx;
+                previewScroll.scrollTop = scrollStartY - dy;
+            };
+
+            const onPanEnd = () => {
+                if (!isPanning) return;
+                isPanning = false;
+                previewScroll.classList.remove('is-panning');
+            };
+
+            document.addEventListener('mousemove', onPanMove);
+            document.addEventListener('mouseup', onPanEnd);
 
             const isDarkMode = () => {
                 if (typeof themeOverride === 'boolean') return themeOverride;
@@ -277,12 +403,14 @@ export const Mermaid = Node.create({
                 }
             };
 
-            preview.onclick = (e) => {
+            // Double-click opens the code editor (single-click is reserved for panning)
+            previewScroll.ondblclick = (e) => {
                 if (!editor.isEditable) return;
                 e.preventDefault();
                 e.stopPropagation();
                 isEditing = true;
-                preview.style.display = 'none';
+                previewScroll.style.display = 'none';
+                zoomToolbar.style.display = 'none';
                 editor_div.style.display = 'flex';
                 textarea.focus();
             };
@@ -293,14 +421,24 @@ export const Mermaid = Node.create({
                 isEditing = false;
                 const newCode = textarea.value;
 
-                preview.style.display = 'flex';
+                previewScroll.style.display = '';
+                zoomToolbar.style.display = '';
                 editor_div.style.display = 'none';
 
+                // Reset zoom on re-render
+                currentZoom = 1;
+                const svg = preview.querySelector('svg');
+                if (svg) {
+                    svg.style.width = '';
+                    svg.style.height = '';
+                    svg.style.minWidth = '';
+                    svg.style.maxWidth = '';
+                }
+                zoomResetBtn.textContent = '100%';
+
                 if (typeof getPos === 'function') {
-                    // This will trigger NodeView.update() which will call render()
                     editor.commands.updateAttributes('mermaid', { code: newCode });
                 } else {
-                    // Fallback for standalone nodes
                     render();
                 }
             };
@@ -370,13 +508,18 @@ export const Mermaid = Node.create({
                 destroy: () => {
                     window.removeEventListener('annota-theme-change', onThemeChange as EventListener);
                     observer.disconnect();
+                    document.removeEventListener('mousemove', onPanMove);
+                    document.removeEventListener('mouseup', onPanEnd);
                 },
                 stopEvent: (event) => {
                     const target = event.target as HTMLElement;
+                    // Always stop events on zoom buttons
+                    if (zoomToolbar.contains(target)) return true;
                     return isEditing && (target === textarea || textarea.contains(target) || target === render_button);
                 },
-                ignoreMutation: (_mutation) => {
-                    return isEditing;
+                ignoreMutation: () => {
+                    // Always ignore — zoom transform and SVG renders both mutate the DOM
+                    return true;
                 }
             };
         };
