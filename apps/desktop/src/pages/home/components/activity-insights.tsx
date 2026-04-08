@@ -244,13 +244,15 @@ export function ActivityInsights() {
             {/* Left Column: Topics & Performance (3/5) */}
             <div className="lg:col-span-3 flex flex-col gap-3 min-h-0 min-w-0">
                 {/* Topics Pie Chart */}
-                <Card className="border-border/40 bg-card/30 shadow-none gap-0 p-3 flex flex-col overflow-hidden min-h-0">
+                <Card className="border-border/40 bg-card/30 shadow-none gap-0 px-3 pt-1.5 pb-3 flex flex-col overflow-hidden min-h-0">
                     <div className="pb-0 flex items-center gap-2">
-                        <FileText size={12} className="text-blue-500" />
+                        <div className="p-1.5 rounded-md bg-blue-500/10">
+                            <FileText size={14} className="text-blue-500" />
+                        </div>
                         <span className="text-[10px] font-bold uppercase tracking-widest text-foreground/60">Topics explored</span>
                     </div>
 
-                    <CardContent className="flex-1 min-h-0 p-0 pt-3 flex flex-col justify-between">
+                    <CardContent className="flex-1 min-h-0 p-0 pt-1.5 flex flex-col justify-between">
                         <div className="flex items-center justify-between gap-6 px-1">
                             <ChartContainer config={chartConfig} className="aspect-square h-24 shrink-0">
                                 <PieChart>
@@ -308,11 +310,13 @@ export function ActivityInsights() {
                 </Card>
 
                 {/* Combined Execution Rate & Daily Chart */}
-                <Card className="border-border/40 bg-card/30 shadow-none p-3 pb-0 gap-0 flex flex-col relative overflow-hidden group flex-1 min-h-0">
-                    <div className="pb-3 flex items-center justify-between">
+                <Card className="border-border/40 bg-card/30 shadow-none px-3 pt-1.5 pb-0 gap-0 flex flex-col relative overflow-hidden group flex-1 min-h-0">
+                    <div className="pb-1.5 flex items-center justify-between">
                         <div className="flex flex-col gap-0.5">
                             <div className="flex items-center gap-1.5 text-foreground/60">
-                                <CheckCircle2 size={12} className="text-[#8b5cf6]" />
+                                <div className="p-1.5 rounded-md bg-[#8b5cf6]/10">
+                                    <CheckCircle2 size={14} className="text-[#8b5cf6]" />
+                                </div>
                                 <span className="text-[10px] font-bold uppercase tracking-widest leading-none">Execution rate</span>
                             </div>
                             <div className="flex items-center gap-1">
@@ -387,9 +391,9 @@ export function ActivityInsights() {
                 <Card className="border-border/40 bg-card/30 shadow-none  p-2 pb-0 gap-0 flex flex-col flex-1 overflow-hidden min-h-0 ">
                     <div className=" flex items-center gap-2 text-orange-500">
                         <div className="p-1.5 rounded-md bg-orange-500/10">
-                            <Activity size={12} />
+                            <Activity size={14} />
                         </div>
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-foreground/60">Recent Activity</span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-foreground/60">Monthly Activity</span>
                     </div>
                     <CardContent className="flex-1 flex flex-col items-center justify-between p-0 py-2 gap-4">
                         <TooltipProvider delayDuration={0}>
@@ -422,41 +426,45 @@ export function ActivityInsights() {
                         <div className="w-full grid grid-cols-2 gap-x-2 gap-y-1.5 px-1 pb-1 mt-auto">
                             <div className="flex items-center justify-between p-1.5 px-2 rounded-lg bg-orange-500/5 border border-orange-500/5 group">
                                 <div className="flex items-center gap-1.5 min-w-0">
-                                    <Flame size={10} className="text-orange-500" />
+                                    <Flame size={14} className="text-orange-500" />
                                     <span className="text-[8px] font-bold uppercase tracking-widest text-foreground/40 leading-none truncate">Peak</span>
                                 </div>
-                                <div className="text-[11px] font-black tabular-nums text-foreground/90 tracking-tight shrink-0">
-                                    {heatmapStats.peak}<span className="text-[7.5px] font-bold text-foreground/30 ml-0.5 italic">pts</span>
+                                <div className="flex items-baseline gap-0.5 shrink-0">
+                                    <span className="text-[11px] font-black tabular-nums text-foreground/90 tracking-tight">{heatmapStats.peak}</span>
+                                    <span className="text-[8.5px] font-bold text-foreground/50 w-[24px]">pts</span>
                                 </div>
                             </div>
 
                             <div className="flex items-center justify-between p-1.5 px-2 rounded-lg bg-blue-500/5 border border-blue-500/5 group">
                                 <div className="flex items-center gap-1.5 min-w-0">
-                                    <TrendingUp size={10} className="text-blue-500" />
+                                    <TrendingUp size={14} className="text-blue-500" />
                                     <span className="text-[8px] font-bold uppercase tracking-widest text-foreground/40 leading-none truncate">Avg</span>
                                 </div>
-                                <div className="text-[11px] font-black tabular-nums text-foreground/90 tracking-tight shrink-0">
-                                    {heatmapStats.average}<span className="text-[7.5px] font-bold text-foreground/30 ml-0.5 italic">pts</span>
+                                <div className="flex items-baseline gap-0.5 shrink-0">
+                                    <span className="text-[11px] font-black tabular-nums text-foreground/90 tracking-tight">{heatmapStats.average}</span>
+                                    <span className="text-[8.5px] font-bold text-foreground/50 w-[24px]">pts</span>
                                 </div>
                             </div>
 
                             <div className="flex items-center justify-between p-1.5 px-2 rounded-lg bg-purple-500/5 border border-purple-500/5 group">
                                 <div className="flex items-center gap-1.5 min-w-0">
-                                    <Zap size={10} className="text-purple-500" />
+                                    <Zap size={14} className="text-purple-500" />
                                     <span className="text-[8px] font-bold uppercase tracking-widest text-foreground/40 leading-none truncate">Streak</span>
                                 </div>
-                                <div className="text-[11px] font-black tabular-nums text-foreground/90 tracking-tight shrink-0">
-                                    {heatmapStats.streak}<span className="text-[7.5px] font-bold text-foreground/30 ml-0.5 italic">days</span>
+                                <div className="flex items-baseline gap-0.5 shrink-0">
+                                    <span className="text-[11px] font-black tabular-nums text-foreground/90 tracking-tight">{heatmapStats.streak}</span>
+                                    <span className="text-[8.5px] font-bold text-foreground/50 w-[24px]">days</span>
                                 </div>
                             </div>
 
                             <div className="flex items-center justify-between p-1.5 px-2 rounded-lg bg-emerald-500/5 border border-emerald-500/5 group">
                                 <div className="flex items-center gap-1.5 min-w-0">
-                                    <Target size={10} className="text-emerald-500" />
+                                    <Target size={14} className="text-emerald-500" />
                                     <span className="text-[8px] font-bold uppercase tracking-widest text-foreground/40 leading-none truncate">Total</span>
                                 </div>
-                                <div className="text-[11px] font-black tabular-nums text-foreground/90 tracking-tight shrink-0">
-                                    {heatmapStats.total}<span className="text-[7.5px] font-bold text-foreground/30 ml-0.5 italic">pts</span>
+                                <div className="flex items-baseline gap-0.5 shrink-0">
+                                    <span className="text-[11px] font-black tabular-nums text-foreground/90 tracking-tight">{heatmapStats.total}</span>
+                                    <span className="text-[8.5px] font-bold text-foreground/50 w-[24px]">pts</span>
                                 </div>
                             </div>
                         </div>

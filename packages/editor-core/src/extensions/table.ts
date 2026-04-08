@@ -9,6 +9,8 @@ export const CustomTable = Table.extend({
             'Shift-Mod-Enter': () => this.editor.commands.addRowBefore(),
             'Alt-Mod-Enter': () => this.editor.commands.addColumnBefore(),
             'Shift-Alt-Mod-Enter': () => this.editor.commands.addColumnAfter(),
+            'Tab': () => this.editor.commands.goToNextCell(),
+            'Shift-Tab': () => this.editor.commands.goToPreviousCell(),
         };
     },
 });

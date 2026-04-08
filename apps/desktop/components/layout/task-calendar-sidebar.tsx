@@ -189,6 +189,7 @@ export function TaskCalendarSidebar() {
     }, [createNote]);
 
 
+    const sidebarXPadding = general.appDirection === 'rtl' ? "pr-1 pl-3" : "pl-1 pr-3";
 
     return (
         <aside
@@ -199,7 +200,7 @@ export function TaskCalendarSidebar() {
         >
             <div className="flex flex-1 flex-col gap-2 overflow-hidden">
                 {/* View/Group Toggle (Tab style) */}
-                <div className={general.appDirection === 'rtl' ? "pr-2 pl-4" : "pl-2 pr-4"}>
+                <div className={sidebarXPadding}>
                     <div className="relative flex items-center p-1 bg-muted-foreground/5 rounded-xl overflow-hidden min-h-[36px]">
                         {/* Animated background chip */}
                         <div
@@ -233,7 +234,7 @@ export function TaskCalendarSidebar() {
                 </div>
 
                 {/* Toggle and Clear Done */}
-                <div className={cn("flex items-center gap-1.5 bg-sidebar", general.appDirection === 'rtl' ? "pr-2 pl-4" : "pl-2 pr-4", hasCompletedTasks ? "justify-between" : "justify-center")}>
+                <div className={cn("flex items-center gap-1.5 bg-sidebar", sidebarXPadding, hasCompletedTasks ? "justify-between" : "justify-center")}>
                     <button
                         className={cn(
                             "flex-1 gap-2 p-0 justify-start max-w-fit h-min flex items-center",
@@ -280,7 +281,7 @@ export function TaskCalendarSidebar() {
                 </div>
 
                 <ScrollArea className="flex-1 w-full min-w-0 overflow-hidden">
-                    <div className={cn("flex flex-col gap-4 pb-4 w-full min-w-0 overflow-x-hidden", general.appDirection === 'rtl' ? "pr-2 pl-4" : "pl-2 pr-4")}>
+                    <div className={cn("flex flex-col gap-4 pb-4 w-full min-w-0 overflow-x-hidden", sidebarXPadding)}>
                         {/* Tasks Content - Using Grid to force strict width */}
                         <div className="grid grid-cols-1 w-full min-w-0 gap-4 overflow-hidden">
                             {groupedTasks.map((group) => (

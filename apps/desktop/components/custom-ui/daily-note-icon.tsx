@@ -36,7 +36,7 @@ export function DailyNoteIcon({ className, size = 18, color = "currentColor" }: 
             <span
                 className="absolute top-[68%] left-1/2 -translate-x-1/2 -translate-y-1/2 font-black select-none tracking-tighter"
                 style={{
-                    fontSize: size * 0.45,
+                    fontSize: size * 0.48,
                     color: color,
                     lineHeight: 1,
                 }}

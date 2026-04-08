@@ -158,7 +158,7 @@ export function AppSidebar() {
     const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
     const queryFolderId = queryParams.get("folderId");
     const queryTagId = queryParams.get("tagId");
-
+    const sidebarXPadding = general.appDirection === 'rtl' ? "pr-3 pl-1" : "pl-3 pr-1";
 
     return (
         <Sidebar
@@ -170,9 +170,9 @@ export function AppSidebar() {
 
 
             {/* ── Content ──────────────────────────────────── */}
-            <SidebarContent className="min-w-0 overflow-x-hidden pt-10">
+            <SidebarContent className={cn("min-w-0 overflow-x-hidden pt-10", sidebarXPadding)}>
                 {/* Navigation group */}
-                <SidebarGroup className={cn("pb-0", general.appDirection === 'rtl' ? "pr-3" : " pl-3")}>
+                <SidebarGroup className="pb-0">
                     <SidebarGroupContent>
                         <SidebarMenu>
                             <SidebarMenuItem>
@@ -260,7 +260,7 @@ export function AppSidebar() {
 
 
                 {/* Notes & Folders */}
-                <SidebarGroup className={cn("pt-0", general.appDirection === 'rtl' ? "pr-3" : "pl-3")}>
+                <SidebarGroup className="pt-0">
                     {/* Notes label removed */}
                     <SidebarGroupContent>
                         <SidebarMenu>
@@ -349,7 +349,7 @@ export function AppSidebar() {
                     open={isTagsOpen}
                     onOpenChange={setIsTagsOpen}
                 >
-                    <SidebarGroup className={general.appDirection === 'rtl' ? "pr-3" : " pl-3"}>
+                    <SidebarGroup>
                         <SidebarGroupLabel asChild className="text-sm text-sidebar-foreground font-medium">
                             <CollapsibleTrigger className={cn("flex w-full items-center gap-2 hover:bg-sidebar-accent ", general.appDirection === 'rtl' ? "pl-1 pr-1" : "pl-1 pr-1")}>
                                 <Ionicons name="pricetag-outline" size={18} className="text-accent-full" />
@@ -368,22 +368,22 @@ export function AppSidebar() {
                                         </SidebarMenuItem>
                                     ) : (
                                         tags.map((tag) => (
-                                            <SidebarMenuItem key={tag.id}>
+                                            <SidebarMenuItem style={{ "--primary": tag.color } as React.CSSProperties} key={tag.id}>
                                                 <ContextMenu>
                                                     <ContextMenuTrigger asChild>
                                                         <SidebarMenuButton
                                                             onClick={() => navigateSmart(`/notes?tagId=${tag.id}`)}
                                                             isActive={isActive("/notes") && location.search.includes(`tagId=${tag.id}`)}
-                                                            className="text-sm hover:bg-primary/10"
-                                                            style={{ "--primary": tag.color } as React.CSSProperties}
+                                                            className="text-sm hover:bg-primary/10 data-[active=true]:bg-primary/10"
+
                                                         >
                                                             <Ionicons className={general.appDirection === 'ltr' ? 'pl-1' : 'pr-1'} color={tag.color} name="ellipse" size={16} />
-                                                            <span className="truncate text-xs font-mono text-primary">{tag.name}</span>
+                                                            <span className="truncate text-xs font-mono text-primary ">{tag.name}</span>
                                                         </SidebarMenuButton>
                                                     </ContextMenuTrigger>
                                                     <ContextMenuContent className="w-48">
                                                         <ContextMenuItem
-                                                            className="gap-2"
+                                                            className="gap-2 "
                                                             onClick={() => {
                                                                 setEditingTag(tag);
                                                                 setIsTagEditModalOpen(true);
@@ -413,7 +413,7 @@ export function AppSidebar() {
 
 
             {/* ── Footer ───────────────────────────────────── */}
-            <SidebarFooter className={cn("gap-2 pb-3", general.appDirection === 'rtl' ? "pr-3" : " pl-3")}>
+            <SidebarFooter className={cn("gap-2 pb-3", sidebarXPadding)}>
                 {showOfflineBanner && (
                     <div className="flex items-center gap-2 rounded-lg bg-amber-500/10 px-3 py-1.5">
                         <Ionicons name="cloud-offline" size={16} className="text-amber-500" />
@@ -430,26 +430,23 @@ export function AppSidebar() {
                     </div>
                 )}
 
-                <SidebarMenu>
-                    <SidebarMenuItem className="border-t pt-2" key="trash">
-                        <SidebarMenuButton
-                            onClick={() => navigateSmart("/notes/trash")}
-                            tooltip="Trash"
-                        >
-                            <Ionicons name="trash-outline" size={18} />
-                            <span className="font-medium">Trash</span>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                    <SidebarMenuItem key="settings">
-                        <SidebarMenuButton
-                            onClick={() => navigate("/settings", { state: { background: location } })}
-                            tooltip="Settings"
-                        >
-                            <Ionicons name="settings-outline" size={18} />
-                            <span className="font-medium">Settings</span>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                </SidebarMenu>
+                <div className="flex items-center justify-between border-t pt-1">
+                    <SidebarMenuButton
+                        className="h-9 w-9 active:bg-transparent active:scale-95 active:text-blue-400 grid place-items-start hover:bg-transparent dark:hover:bg-transparent hover:cursor-pointer hover:text-blue-400"
+                        onClick={() => navigate("/settings", { state: { background: location } })}
+                        tooltip="Settings"
+                    >
+                        <Ionicons name="settings-outline" size={18} />
+                    </SidebarMenuButton>
+
+                    <SidebarMenuButton
+                        className="h-9 w-9 active:bg-transparent active:scale-95 active:text-destructive grid place-items-end hover:bg-transparent dark:hover:bg-transparent hover:text-destructive hover:cursor-pointer"
+                        onClick={() => navigateSmart("/notes/trash")}
+                        tooltip="Trash"
+                    >
+                        <Ionicons name="trash-outline" size={18} />
+                    </SidebarMenuButton>
+                </div>
             </SidebarFooter>
 
 
