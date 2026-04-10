@@ -134,12 +134,12 @@ export async function encryptPayload(jsonPayload: string, keyOrMnemonic: string 
         plaintext: plaintextBytes
     });
 
-    const encryptedHex = Buffer.from(ciphertext).toString('hex');
-    const authTagHex = Buffer.from(authTag).toString('hex');
+    const encryptedB64 = Buffer.from(ciphertext).toString('base64');
+    const authTagB64 = Buffer.from(authTag).toString('base64');
     const nonceHex = Buffer.from(nonceBytes).toString('hex');
 
     return {
-        encryptedData: encryptedHex + authTagHex,
+        encryptedData: encryptedB64 + authTagB64,
         nonce: nonceHex
     };
 }
@@ -148,7 +148,7 @@ export async function encryptPayload(jsonPayload: string, keyOrMnemonic: string 
  * Decrypts an encrypted payload using AES-256-GCM.
  */
 export async function decryptPayload(
-    encryptedHexWithTag: string,
+    encryptedB64WithTag: string,
     nonceHex: string,
     keyOrMnemonic: string | Uint8Array,
     options?: { strict?: boolean; salt?: Uint8Array }
@@ -157,12 +157,12 @@ export async function decryptPayload(
     const keyBytes = await ensureKey(keyOrMnemonic, options?.salt);
 
     try {
-        const encryptedHex = encryptedHexWithTag.slice(0, -32);
-        const authTagHex = encryptedHexWithTag.slice(-32);
+        const encryptedB64 = encryptedB64WithTag.slice(0, -24);
+        const authTagB64 = encryptedB64WithTag.slice(-24);
 
         const nonceBytes = new Uint8Array(Buffer.from(nonceHex, 'hex'));
-        const ciphertextBytes = new Uint8Array(Buffer.from(encryptedHex, 'hex'));
-        const authTagBytes = new Uint8Array(Buffer.from(authTagHex, 'hex'));
+        const ciphertextBytes = new Uint8Array(Buffer.from(encryptedB64, 'base64'));
+        const authTagBytes = new Uint8Array(Buffer.from(authTagB64, 'base64'));
 
         const decryptedBytes = await getPlatformAdapters().crypto.aes256GcmDecrypt({
             key: keyBytes,

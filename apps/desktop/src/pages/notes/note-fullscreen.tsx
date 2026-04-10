@@ -69,10 +69,13 @@ export default function NoteFullscreen() {
     const [previewNote, setPreviewNote] = useState<NoteMetadata | null>(null);
 
     const handleOpenLinkMenu = useCallback((e: MouseEvent, url: string) => {
+        // Use the full <a> element's rect, not e.target which may be a partial text node
+        const linkEl = e.composedPath().find((el: any) => el?.tagName === 'A') as HTMLAnchorElement | undefined;
+        const anchorEl = linkEl ?? (e.target as HTMLElement);
         setLinkMenuState({
             open: true,
             url,
-            anchorRect: (e.target as HTMLElement).getBoundingClientRect(),
+            anchorRect: anchorEl.getBoundingClientRect(),
         });
     }, []);
 
@@ -463,6 +466,8 @@ export default function NoteFullscreen() {
                         url={linkMenuState.url}
                         onPreview={handlePreviewNote}
                         onOpenInNewWindow={handleOpenInNewWindow}
+                        onEdit={() => editorRef.current?.onCommand('openLinkModal')}
+                        onDelete={() => editorRef.current?.onCommand('unsetLink')}
                     />
                 )}
 

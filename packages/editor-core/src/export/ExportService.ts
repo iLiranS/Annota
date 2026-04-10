@@ -244,9 +244,14 @@ export class ExportService {
             }
         }
 
-        // 2. Promote background colours and fix Image/Table collapsing ─────────
-        doc.querySelectorAll('[data-type="details"],[data-type="detailsSummary"],td,th,mark,[style*="background"],img,table')
+        // 2. Promote background colours, fix Image/Table collapsing, and setup auto-direction ─────────
+        doc.querySelectorAll('[data-type="details"],[data-type="detailsSummary"],[data-type="detailsContent"],td,th,mark,[style*="background"],img,table,ul,ol,blockquote')
             .forEach((el: HTMLElement) => {
+                // Auto-direction for RTL support
+                if (!el.hasAttribute('dir')) {
+                    el.setAttribute('dir', 'auto');
+                }
+
                 // Fix Backgrounds
                 const color = el.getAttribute('data-background-color') ?? el.style?.backgroundColor ?? null;
                 if (color) el.style.backgroundColor = color;
@@ -431,6 +436,11 @@ export class ExportService {
                 background-color: var(--bg);
             }
 
+            h1, h2, h3, h4, h5, h6, p, li, blockquote, summary, [data-type="detailsSummary"], td, th {
+                unicode-bidi: plaintext;
+                text-align: start;
+            }
+
             h1, h2, h3, h4, h5, h6 {
                 margin: 0;
                 padding-top: ${paragraphSpacing * 2.5}px;
@@ -493,6 +503,8 @@ export class ExportService {
                 word-break:  break-all !important;
                 color:       #383a42 !important;
                 overflow:    visible !important;
+                direction:   ltr !important;
+                unicode-bidi: isolate !important;
             }
 
             /* ── Inline Code ─────────────────────────────────────────────── */
@@ -504,6 +516,8 @@ export class ExportService {
                 padding:     2px 6px !important;
                 border-radius: 4px !important;
                 white-space: normal !important;
+                direction:   ltr !important;
+                unicode-bidi: isolate !important;
             }
 
             pre code, .code-block-wrapper code {
@@ -527,26 +541,48 @@ export class ExportService {
             .hljs-link { text-decoration: underline; }
 
             /* ── Lists ──────────────────────────────────────────────────────── */
-            ul, ol { margin: ${paragraphSpacing}px 0; }
+            ul, ol { 
+                margin: ${paragraphSpacing}px 0; 
+                padding-inline-start: 1.5em; /* Use logical padding for RTL support */
+            }
             li { padding-bottom: ${paragraphSpacing / 2}px; }
             ul li::marker { color: var(--primary); }
             ol li::marker { color: var(--primary); font-weight: 600; }
 
             /* ── Math ───────────────────────────────────────────────────────── */
-            .katex-display { margin: 1.2em 0 !important; }
+            .katex-display, 
+            .katex,
+            .math-node,
+            [data-type="math"],
+            [data-type="inlineMath"],
+            [data-type="inline-math"],
+            [data-type="blockMath"],
+            [data-type="block-math"],
+            [data-type="mathBlock"],
+            [data-latex],
+            [data-formula],
+            .tiptap-mathematics-render,
+            .Tiptap-mathematics-render {
+                direction: ltr !important;
+                unicode-bidi: isolate !important;
+            }
+            .katex-display { 
+                margin: 1.2em 0 !important; 
+                text-align: center;
+            }
             .katex { font-size: 1.15em !important; }
 
             /* Don't style mermaid <pre> as code blocks */
             pre.mermaid { background: none !important; border: none !important; padding: 0 !important; margin: 0 !important; }
 
             blockquote {
-                margin:        1.5em 0;
-                padding:       .8em 1.5em;
-                color:         #555;
-                background:    #fafafa;
-                border-left:   5px solid var(--primary);
-                border-radius: 0 8px 8px 0;
-                font-style:    italic;
+                margin:           1.5em 0;
+                padding:          .8em 1.5em;
+                color:            #555;
+                background:       #fafafa;
+                border-inline-start: 5px solid var(--primary);
+                border-radius:    0 8px 8px 0;
+                font-style:       italic;
             }
 
             /* ── Tables ─────────────────────────────────────────────────────── */
@@ -554,10 +590,14 @@ export class ExportService {
                 display:         table !important;
                 width:           100% !important;
                 min-width:       100% !important;
-                border-collapse: collapse;
+                border-collapse: separate;
+                border-spacing:  0;
                 margin:          2em 0;
                 font-size:       .95em;
                 table-layout:    auto;
+                border:          1px solid var(--border);
+                border-radius:   12px;
+                overflow:        hidden;
             }
             .tableWrapper {
                 width:           100% !important;
@@ -566,11 +606,18 @@ export class ExportService {
             }
             th, td {
                 padding:        10px 14px;
-                border:         1px solid var(--border);
-                text-align:     left;
+                border-bottom:  1px solid var(--border);
+                border-inline-end: 1px solid var(--border);
+                text-align:     start;
                 vertical-align: top;
                 word-break:     break-word;
                 overflow-wrap:  anywhere;
+            }
+            tr:last-child td {
+                border-bottom: none;
+            }
+            th:last-child, td:last-child {
+                border-inline-end: none;
             }
             th {
                 background-color: var(--table-header) !important;
@@ -624,6 +671,8 @@ export class ExportService {
                 border:          1px solid var(--border);
                 border-radius:   14px;
                 background:      #fff;
+                direction:       ltr !important;
+                unicode-bidi:    isolate !important;
             }
             svg { max-width: 100%; height: auto; }
 
@@ -666,8 +715,8 @@ export class ExportService {
             .page-break { page-break-after: always; }
         `;
 
-        return `<!DOCTYPE html>
-<html lang="en">
+    return `<!DOCTYPE html>
+<html lang="en" dir="auto">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">

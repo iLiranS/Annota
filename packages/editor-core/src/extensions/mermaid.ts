@@ -237,14 +237,12 @@ export const Mermaid = Node.create({
             let panStartY = 0;
             let scrollStartX = 0;
             let scrollStartY = 0;
-            let didPan = false;
 
             previewScroll.onmousedown = (e) => {
                 // Only pan on primary button
                 if (e.button !== 0) return;
                 e.stopPropagation();
                 isPanning = true;
-                didPan = false;
                 panStartX = e.clientX;
                 panStartY = e.clientY;
                 scrollStartX = previewScroll.scrollLeft;
@@ -256,7 +254,6 @@ export const Mermaid = Node.create({
                 if (!isPanning) return;
                 const dx = e.clientX - panStartX;
                 const dy = e.clientY - panStartY;
-                if (Math.abs(dx) > 3 || Math.abs(dy) > 3) didPan = true;
                 previewScroll.scrollLeft = scrollStartX - dx;
                 previewScroll.scrollTop = scrollStartY - dy;
             };

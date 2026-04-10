@@ -259,7 +259,16 @@ export const getEditorState = (editor: any) => {
     const e = editor;
     const highlightAttrs = e.getAttributes('highlight');
     const textStyleAttrs = e.getAttributes('textStyle');
-    const linkAttrs = e.getAttributes('link');
+    let linkAttrs = e.getAttributes('link');
+    
+    // Robust fallback: if Tiptap's getAttributes is empty, manually check selection boundaries
+    if (!linkAttrs.href) {
+        const { selection } = e.state;
+        const $pos = selection.$from;
+        const mark = $pos.marks().find((m: any) => m.type.name === 'link');
+        if (mark) linkAttrs = mark.attrs;
+    }
+    
     const imageAttrs = e.getAttributes('image');
 
     const isInTable = e.isActive('table');

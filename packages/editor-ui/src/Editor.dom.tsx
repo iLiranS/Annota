@@ -60,6 +60,11 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
         const containerRef = useRef<HTMLDivElement>(null);
         const isHydrating = useRef(false);
         const editorRef = useRef<any>(null);
+        // Use a ref so the contextmenu handler always calls the latest callback (avoids stale closure)
+        const onOpenLinkMenuRef = useRef(onOpenLinkMenu);
+        useEffect(() => { onOpenLinkMenuRef.current = onOpenLinkMenu; }, [onOpenLinkMenu]);
+        const onOpenTableMenuRef = useRef(onOpenTableMenu);
+        useEffect(() => { onOpenTableMenuRef.current = onOpenTableMenu; }, [onOpenTableMenu]);
 
         const extensions = useMemo(() => getExtensions({
             placeholder,
@@ -118,17 +123,38 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
             const baseProps = getEditorProps({
                 direction: editorSettings.direction,
                 onContextMenu: (view, event) => {
-                    const target = event.target as HTMLElement;
-                    const linkElement = target.closest('a');
-                    if (linkElement && linkElement.href && linkElement.href.includes('annota://')) {
-                        if (onOpenLinkMenu) {
-                            event.preventDefault();
-                            onOpenLinkMenu(event as any, linkElement.href);
-                            return true;
+                    const linkElement = event.composedPath().find((el: any) => el.nodeName === 'A') as HTMLAnchorElement | undefined;
+                    
+                    if (linkElement && linkElement.href && onOpenLinkMenuRef.current) {
+                        const { state, dispatch } = view;
+                        
+                        const coords = { left: event.clientX, top: event.clientY };
+                        const posResult = view.posAtCoords(coords);
+                        const pos = posResult ? posResult.pos : view.posAtDOM(event.target as Node, 0);
+
+                        if (pos !== null) {
+                            const { doc, schema } = state;
+                            const markType = schema.marks.link;
+                            if (markType) {
+                                const $pos = doc.resolve(pos);
+                                const range = $pos.markAround(markType);
+                                if (range) {
+                                    dispatch(state.tr.setSelection(TextSelection.create(doc, range.from, range.to)));
+                                } else {
+                                    dispatch(state.tr.setSelection(TextSelection.create(doc, pos)));
+                                }
+                            }
                         }
+
+                        event.preventDefault();
+                        const capturedHref = linkElement.href;
+                        setTimeout(() => {
+                            onOpenLinkMenuRef.current?.(event as any, capturedHref);
+                        }, 50);
+                        return true;
                     }
 
-                    if (!onOpenTableMenu) return false;
+                    if (!onOpenTableMenuRef.current) return false;
 
                     const { state, dispatch } = view;
                     const pos = view.posAtDOM(event.target as Node, 0);
@@ -199,7 +225,7 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                                 canSplit = true;
                             }
                         }
-                        onOpenTableMenu(event, () => ({
+                        onOpenTableMenuRef.current?.(event, () => ({
                             pos: tableNodePos,
                             message: {
                                 type: 'openBlockMenu',
@@ -229,7 +255,8 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                     return false;
                 }
             };
-        }, [editorSettings.direction, onOpenTableMenu, onOpenLinkMenu]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        }, [editorSettings.direction]); // callbacks are accessed via refs, no need to re-create
 
         const editor = useEditor({
             editable,
@@ -313,6 +340,61 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
             }
             root.style.setProperty('--selection-bg', selectionColor);
         }, [colors, dark, editorSettings]);
+
+        // Capture-phase contextmenu handler for links.
+        // Attaches on `document` in capture phase to guarantee it fires before
+        // Tauri/WebView shows its native context menu for <a> elements.
+        useEffect(() => {
+            const handler = (event: MouseEvent) => {
+                // Only handle right-clicks inside our editor container
+                const container = containerRef.current;
+                if (!container || !container.contains(event.target as Node)) return;
+
+                // Find an <a> element in the event path (safe for text nodes)
+                const link = event.composedPath().find((el: any) => el?.tagName === 'A') as HTMLAnchorElement | undefined;
+                if (!link || !link.href) return;
+
+                // Only intercept if our callback is ready
+                if (!onOpenLinkMenuRef.current) return;
+
+                event.preventDefault();
+                event.stopPropagation();
+
+                // Try to select the full link range in the editor
+                try {
+                    const editor = editorRef.current;
+                    if (editor?.isDestroyed === false && editor?.view) {
+                        const view = editor.view;
+                        const { state, dispatch } = view;
+                        const coords = { left: event.clientX, top: event.clientY };
+                        const posResult = view.posAtCoords(coords);
+                        if (posResult) {
+                            const { doc, schema } = state;
+                            const markType = schema.marks.link;
+                            if (markType) {
+                                const $pos = doc.resolve(posResult.pos);
+                                const range = $pos.markAround(markType);
+                                if (range) {
+                                    dispatch(state.tr.setSelection(TextSelection.create(doc, range.from, range.to)));
+                                }
+                            }
+                        }
+                    }
+                } catch {
+                    // Editor not ready — skip selection update, still open the menu
+                }
+
+                const capturedHref = link.href;
+                setTimeout(() => {
+                    onOpenLinkMenuRef.current?.(event as any, capturedHref);
+                }, 50);
+            };
+
+            document.addEventListener('contextmenu', handler, true);
+            return () => document.removeEventListener('contextmenu', handler, true);
+        }, []); // empty deps — callbacks via refs, editorRef is stable
+
+
         // Keyboard Shortcuts
         useEffect(() => {
             const handleKeyDown = (e: KeyboardEvent) => {
