@@ -39,23 +39,37 @@ To run Annota, you will need to add the following environment variables to your 
 
 ## Run Locally
 
-Clone the project
+Annota is built with a local-first architecture. You can clone the repository and run it locally with minimal effort and knowledge—no server is strictly required for the core experience.
+
+> [!NOTE]
+> While a Supabase setup is required for cross-device synchronization and backups, detailed initialization instructions and automated setup scripts are coming soon. For now, you can easily get it working in offline mode but it will require some changes to disable supabase in the code.
+
+### 1. Clone the project
 
 ```bash
   git clone https://github.com/iLiranS/Annota
 ```
 
-Install dependencies
+### 2. Install dependencies
 
 ```bash
   pnpm install
 ```
 
-Start the local server 
+### 3. Start the application
 
+Navigate to the respective app directory and run:
+
+**Mobile:**
 ```bash
-  /apps/mobile -> pnpm start
-  /apps/desktop -> pnpm tauri dev
+  cd apps/mobile
+  pnpm start
+```
+
+**Desktop:**
+```bash
+  cd apps/desktop
+  pnpm tauri dev
 ```
 
 

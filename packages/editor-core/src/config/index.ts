@@ -11,7 +11,29 @@ import { Slice } from '@tiptap/pm/model';
 import { CellSelection } from '@tiptap/pm/tables';
 import { StarterKit } from '@tiptap/starter-kit';
 
-import { Mathematics } from '@tiptap/extension-mathematics';
+import { Mathematics, InlineMath, BlockMath } from '@tiptap/extension-mathematics';
+
+const CustomInlineMath = InlineMath.extend({
+    renderText({ node }) {
+        return node.attrs.latex;
+    }
+});
+
+const CustomBlockMath = BlockMath.extend({
+    renderText({ node }) {
+        return `\n${node.attrs.latex}\n`;
+    }
+});
+
+const CustomMathematics = Mathematics.extend({
+    addExtensions() {
+        return [
+            CustomBlockMath.configure({ ...this.options.blockOptions, katexOptions: this.options.katexOptions }),
+            CustomInlineMath.configure({ ...this.options.inlineOptions, katexOptions: this.options.katexOptions })
+        ];
+    }
+});
+
 import {
     AnnotaAutolink,
     CustomCodeBlock,
@@ -147,18 +169,18 @@ export const getExtensions = (options: {
         }),
         // @ts-ignore - Type mismatch due to tiptap version difference between packages
         DetailsContent,
-        Mathematics.configure({
+        CustomMathematics.configure({
             katexOptions: {
                 throwOnError: false,
                 output: 'html',
             },
             inlineOptions: {
-                onClick: (node, pos) => {
+                onClick: (node: any, pos: number) => {
                     options.onMathSelected?.(node.attrs.latex, false, pos);
                 }
             },
             blockOptions: {
-                onClick: (node, pos) => {
+                onClick: (node: any, pos: number) => {
                     options.onMathSelected?.(node.attrs.latex, true, pos);
                 }
             }
