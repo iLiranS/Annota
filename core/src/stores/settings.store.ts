@@ -27,7 +27,9 @@ export interface GeneralSettings {
     taskListShowDone: boolean;
     autoClearTasksDays: AutoClearTasksDays;
     appDirection: 'ltr' | 'rtl';
-    isTaskCalendarOpen: boolean;
+    isAiSidebarOpen: boolean;
+    aiSidebarMode: 'floating' | 'pinned';
+    isAiSidebarSticky: boolean;
 }
 
 export interface SettingsState {
@@ -76,7 +78,9 @@ const DEFAULT_GENERAL_SETTINGS: GeneralSettings = {
     taskListShowDone: true,
     autoClearTasksDays: 60,
     appDirection: 'ltr',
-    isTaskCalendarOpen: false,
+    isAiSidebarOpen: false,
+    aiSidebarMode: 'floating',
+    isAiSidebarSticky: true,
 };
 
 export const useSettingsStore = create<SettingsState>()(

@@ -23,7 +23,7 @@ export function useGlobalShortcuts() {
                     setIsSearchOpen(true);
                 } else if (key === 'e' && !e.shiftKey) {
                     e.preventDefault();
-                    updateGeneralSettings({ isTaskCalendarOpen: !general.isTaskCalendarOpen });
+                    updateGeneralSettings({ isAiSidebarOpen: !general.isAiSidebarOpen });
                 } else if (key === '=' || key === '+') {
                     e.preventDefault();
                     updateEditorSettings({ fontSize: Math.min(24, editor.fontSize + 1) });
@@ -41,6 +41,6 @@ export function useGlobalShortcuts() {
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [createAndNavigate, setIsSearchOpen, general.isTaskCalendarOpen, updateGeneralSettings, editor.fontSize, updateEditorSettings]);
+    }, [createAndNavigate, setIsSearchOpen, general.isAiSidebarOpen, updateGeneralSettings, editor.fontSize, updateEditorSettings]);
 }
 

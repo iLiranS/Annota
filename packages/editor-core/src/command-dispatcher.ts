@@ -225,6 +225,12 @@ export function dispatchEditorCommand(editor: Editor, command: string, params: R
                 chain.setNodeSelection(params.pos).focus().run();
             }
             return true;
+        case 'insertContent': {
+            const content = params?.content;
+            if (!content) return true;
+            chain.insertContent(content, params?.options).focus().run();
+            return true;
+        }
         case 'insertContentAt': {
             const pos = params?.pos;
             const content = params?.content;

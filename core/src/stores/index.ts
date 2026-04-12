@@ -7,4 +7,5 @@ export * from './settings.store';
 export * from './sync.store';
 export * from './tasks.store';
 export * from './user.store';
+export * from './ai.store';
 

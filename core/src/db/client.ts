@@ -136,6 +136,22 @@ export const CREATE_TABLES_SQL = `
     user_id TEXT NOT NULL,
     created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
   );
+
+  CREATE TABLE IF NOT EXISTS ai_chats (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL DEFAULT 'New Chat',
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS ai_messages (
+    id TEXT PRIMARY KEY,
+    chat_id TEXT NOT NULL,
+    role TEXT NOT NULL,
+    content TEXT NOT NULL,
+    model TEXT,
+    created_at INTEGER NOT NULL
+  );
 `;
 
 // Initialize database (create tables and seed system data)
@@ -194,6 +210,8 @@ export async function resetAll(): Promise<void> {
       DROP TABLE IF EXISTS app_settings;
       DROP TABLE IF EXISTS version_files;
       DROP TABLE IF EXISTS file_download_queue;
+      DROP TABLE IF EXISTS ai_chats;
+      DROP TABLE IF EXISTS ai_messages;
     `;
 
     await nativeDb.execAsync('PRAGMA foreign_keys = OFF;');
@@ -254,6 +272,8 @@ export async function deleteDatabase(): Promise<void> {
       DROP TABLE IF EXISTS app_settings;
       DROP TABLE IF EXISTS version_files;
       DROP TABLE IF EXISTS file_download_queue;
+      DROP TABLE IF EXISTS ai_chats;
+      DROP TABLE IF EXISTS ai_messages;
     `;
 
     // Disable foreign key constraints temporarily

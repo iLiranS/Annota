@@ -249,14 +249,14 @@ export function MainNavbar() {
                         <Button
                             variant="ghost"
                             size="icon"
-                            className={cn("h-7 w-7 rounded-full transition-all active:scale-95 text-muted-foreground/60 hover:bg-sidebar-accent hover:text-foreground", general.isTaskCalendarOpen && "text-accent-full")}
-                            onClick={() => updateGeneralSettings({ isTaskCalendarOpen: !general.isTaskCalendarOpen })}
+                            className={cn("h-7 w-7 rounded-full transition-all active:scale-95 text-muted-foreground/60 hover:bg-sidebar-accent hover:text-foreground ai-sidebar-toggle", general.isAiSidebarOpen && "text-accent-full")}
+                            onClick={() => updateGeneralSettings({ isAiSidebarOpen: !general.isAiSidebarOpen })}
                         >
                             {general.appDirection === 'rtl' ? <PanelLeft size={16} /> : <PanelRight size={16} />}
                         </Button>
                     </TooltipTrigger>
                     <TooltipContent side="bottom" className="text-[10px]">
-                        Task Sidebar <span className="opacity-50 ml-1">⌘E</span>
+                        AI Sidebar <span className="opacity-50 ml-1">⌘E</span>
                     </TooltipContent>
                 </Tooltip>
 

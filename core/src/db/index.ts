@@ -36,5 +36,6 @@ export * from './validators/folders';
 export * from './validators/image';
 export * from './validators/notes';
 export * from './validators/tasks';
+export * from './schema';
 export { schema };
 

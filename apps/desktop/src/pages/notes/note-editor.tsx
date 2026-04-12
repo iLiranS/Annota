@@ -411,6 +411,22 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
 
     // search in note / focus mode shortcuts
     useEffect(() => {
+        const handleInsertAiContent = async (e: CustomEvent<{ content: string }>) => {
+            if (!editorRef.current) return;
+            try {
+                const { convertMarkdownToAnnotaHTML } = await import("@annota/editor-core");
+                const html = await convertMarkdownToAnnotaHTML(e.detail.content);
+                editorRef.current.onCommand('insertContent', { content: html });
+            } catch (err) {
+                console.error('[AI Insert] Conversion failed:', err);
+            }
+        };
+
+        window.addEventListener('annota-insert-ai-content' as any, handleInsertAiContent);
+        return () => window.removeEventListener('annota-insert-ai-content' as any, handleInsertAiContent);
+    }, []);
+
+    useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "f") {
                 e.preventDefault();

@@ -41,7 +41,7 @@ export function NoteFloatingActions({
             "flex items-center",
             "p-1",
             "rounded-2xl",
-            "z-50",
+            "z-30",
             "overflow-hidden",
             "cursor-default",
             "transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1)",
@@ -54,7 +54,7 @@ export function NoteFloatingActions({
             "dark:border-white/10",
             "dark:ring-white/5",
             "dark:shadow-[0_7px_10px_rgba(0,0,0,0.6)]",
-            isStandalone 
+            isStandalone
                 ? (isMenuOpen ? "w-[124px]" : "w-11 hover:w-[124px]")
                 : (isMenuOpen ? "w-[210px]" : "w-11 hover:w-[210px]"),
             direction === "rtl" ? "left-6" : "right-6"

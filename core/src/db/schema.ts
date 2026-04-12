@@ -122,6 +122,24 @@ export const settings = sqliteTable('settings', {
     value: text('value').notNull(), // JSON
 });
 
+// ============ AI CHATS (Local Only) ============
+export const aiChats = sqliteTable('ai_chats', {
+    id: text('id').primaryKey(),
+    title: text('title').notNull().default('New Chat'),
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
+// ============ AI MESSAGES (Local Only) ============
+export const aiMessages = sqliteTable('ai_messages', {
+    id: text('id').primaryKey(),
+    chatId: text('chat_id').notNull(), // References aiChats.id
+    role: text('role').$type<'system' | 'user' | 'assistant'>().notNull(),
+    content: text('content').notNull(),
+    model: text('model'), // The model used for this message
+    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+});
+
 // ============ TYPE EXPORTS ============
 export type NoteMetadata = typeof noteMetadata.$inferSelect;
 export type NoteMetadataInsert = typeof noteMetadata.$inferInsert;
@@ -148,3 +166,8 @@ export const appSettings = sqliteTable('app_settings', {
 });
 export type AppSettings = typeof appSettings.$inferSelect;
 export type AppSettingsInsert = typeof appSettings.$inferInsert;
+
+export type AiChat = typeof aiChats.$inferSelect;
+export type AiChatInsert = typeof aiChats.$inferInsert;
+export type AiMessage = typeof aiMessages.$inferSelect;
+export type AiMessageInsert = typeof aiMessages.$inferInsert;
