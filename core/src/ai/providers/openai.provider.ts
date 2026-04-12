@@ -1,6 +1,7 @@
 import { AiMessage, useAiStore } from '@annota/core';
 import { AiProviderAdapter } from '../types';
 import { DEFAULT_SYSTEM_PROMPT } from '../constants';
+import { getApiKey } from '../security';
 
 // We'll use a dynamic import for Tauri HTTP if available, otherwise fallback to global fetch
 // In a desktop environment, useAiChat will be used which is run within the Tauri context.
@@ -26,7 +27,8 @@ export class OpenAiProvider implements AiProviderAdapter {
         onChunk: (text: string) => void,
         signal?: AbortSignal
     ): Promise<void> {
-        const { openAiKey, selectedModelOpenAi } = useAiStore.getState();
+        const { selectedModelOpenAi } = useAiStore.getState();
+        const openAiKey = await getApiKey('openai');
         if (!openAiKey) throw new Error('OpenAI API Key is missing. Please add it in settings.');
 
         const fetchFn = await getProxiedFetch();
@@ -94,7 +96,8 @@ export class OpenAiProvider implements AiProviderAdapter {
     }
 
     async generateTitle(firstMessage: string): Promise<string> {
-        const { openAiKey, selectedModelOpenAi } = useAiStore.getState();
+        const { selectedModelOpenAi } = useAiStore.getState();
+        const openAiKey = await getApiKey('openai');
         if (!openAiKey) return 'New Chat';
 
         const fetchFn = await getProxiedFetch();

@@ -31,7 +31,8 @@ import {
   useSearchStore,
   useSettingsStore,
   useSyncStore,
-  useTasksStore
+  useTasksStore,
+  useAiStore
 } from '@annota/core';
 import { SyncScheduler, getMasterKey, initPlatformAdapters } from '@annota/core/platform';
 import { createMobileAdapters } from '../bootstrap/mobile-adapters';
@@ -184,6 +185,7 @@ function AppLogicHub() {
         console.log('[RootLayout] Starting auth hydration...');
         await useAuthStore.persist.rehydrate();
         await useSettingsStore.persist.rehydrate();
+        await useAiStore.persist.rehydrate();
         
         const { appConfigService } = require('@annota/core'); // Keep this require if it's truly problematic as top-level due to side effects
         try {

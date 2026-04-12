@@ -16,5 +16,6 @@ export * from './hooks/useChangelog';
 export * from './ai/types';
 export * from './ai/providers';
 export * from './ai/constants';
+export * from './ai/security';
 
 

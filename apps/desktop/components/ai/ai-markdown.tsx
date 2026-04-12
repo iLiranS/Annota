@@ -47,7 +47,7 @@ export function AiMarkdown({ content }: AiMarkdownProps) {
                             }
 
                             return (
-                                <div className="code-block-wrapper my-4 border border-border/10 bg-black/3! dark:bg-white/3! overflow-hidden rounded-lg">
+                                <div dir="ltr" className="code-block-wrapper my-4 border border-border/10 bg-black/3! dark:bg-white/3! overflow-hidden rounded-lg">
                                     <div className="code-block-header py-0! px-3! min-h-0! h-7! pointer-events-auto! border-b! border-border/5! flex! items-center!">
                                         <div className="p-0! bg-transparent! text-[10px]! opacity-70! uppercase! tracking-wider! font-bold!">
                                             {lang}
@@ -74,6 +74,7 @@ export function AiMarkdown({ content }: AiMarkdownProps) {
 
                         return (
                             <code
+                                dir="ltr"
                                 className={cn(
                                     "px-1.5 py-0.5 rounded text-[12px] font-mono",
                                     "bg-black/5 dark:bg-white/10 text-foreground/80",

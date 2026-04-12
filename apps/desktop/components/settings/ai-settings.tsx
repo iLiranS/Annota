@@ -1,14 +1,14 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { 
-    Select, 
-    SelectContent, 
-    SelectItem, 
-    SelectTrigger, 
-    SelectValue 
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue
 } from "@/components/ui/select";
-import { useAiStore } from "@annota/core";
+import { removeApiKey, saveApiKey, useAiStore } from "@annota/core";
 import { AlertCircle, Bot, Check, ExternalLink, ShieldCheck, Sparkles } from "lucide-react";
 import { useState } from "react";
 
@@ -16,18 +16,12 @@ export function AiSettings() {
     const {
         activeProvider,
         setActiveProvider,
-        openAiKey,
-        setOpenAiKey,
-        anthropicKey,
-        setAnthropicKey,
-        selectedModelOpenAi,
-        setSelectedModelOpenAi,
-        selectedModelAnthropic,
-        setSelectedModelAnthropic,
-        googleKey,
-        setGoogleKey,
-        selectedModelGoogle,
-        setSelectedModelGoogle,
+        hasOpenAiKey,
+        setHasOpenAiKey,
+        hasAnthropicKey,
+        setHasAnthropicKey,
+        hasGoogleKey,
+        setHasGoogleKey,
         ollamaBaseUrl,
         setOllamaBaseUrl,
         isOllamaRunning,
@@ -35,6 +29,74 @@ export function AiSettings() {
     } = useAiStore();
 
     const [isCheckingOllama, setIsCheckingOllama] = useState(false);
+
+    // Local state for keys
+    const [localOpenAiKey, setLocalOpenAiKey] = useState('');
+    const [localAnthropicKey, setLocalAnthropicKey] = useState('');
+    const [localGoogleKey, setLocalGoogleKey] = useState('');
+
+    // UI states
+    const [isSavingOpenAi, setIsSavingOpenAi] = useState(false);
+    const [isSavingAnthropic, setIsSavingAnthropic] = useState(false);
+    const [isSavingGoogle, setIsSavingGoogle] = useState(false);
+
+    // Fetch mask values asynchronously on mount just in case we wanted them, 
+    // but the hasKey booleans already tell us if they exist.
+    // Instead of showing the full key, we just rely on hasKey flags to show a masked placeholder.
+
+    const handleSaveOpenAiKey = async () => {
+        setIsSavingOpenAi(true);
+        try {
+            if (localOpenAiKey.trim()) {
+                await saveApiKey('openai', localOpenAiKey.trim());
+                setHasOpenAiKey(true);
+                setLocalOpenAiKey(''); // Clear input after save
+            } else if (!hasOpenAiKey) {
+                await removeApiKey('openai');
+                setHasOpenAiKey(false);
+            }
+        } catch (error) {
+            console.error("Failed to save OpenAI key:", error);
+        } finally {
+            setIsSavingOpenAi(false);
+        }
+    };
+
+    const handleSaveAnthropicKey = async () => {
+        setIsSavingAnthropic(true);
+        try {
+            if (localAnthropicKey.trim()) {
+                await saveApiKey('anthropic', localAnthropicKey.trim());
+                setHasAnthropicKey(true);
+                setLocalAnthropicKey('');
+            } else if (!hasAnthropicKey) {
+                await removeApiKey('anthropic');
+                setHasAnthropicKey(false);
+            }
+        } catch (error) {
+            console.error("Failed to save Anthropic key:", error);
+        } finally {
+            setIsSavingAnthropic(false);
+        }
+    };
+
+    const handleSaveGoogleKey = async () => {
+        setIsSavingGoogle(true);
+        try {
+            if (localGoogleKey.trim()) {
+                await saveApiKey('google', localGoogleKey.trim());
+                setHasGoogleKey(true);
+                setLocalGoogleKey('');
+            } else if (!hasGoogleKey) {
+                await removeApiKey('google');
+                setHasGoogleKey(false);
+            }
+        } catch (error) {
+            console.error("Failed to save Google key:", error);
+        } finally {
+            setIsSavingGoogle(false);
+        }
+    };
 
     const handleCheckOllama = async () => {
         setIsCheckingOllama(true);
@@ -44,42 +106,29 @@ export function AiSettings() {
 
     return (
         <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300 pb-10">
-            {/* Recommendations & Technical Info */}
-            <div className="grid gap-3">
-                <div className="flex gap-3 p-4 rounded-2xl bg-primary/5 border border-primary/10 items-start">
-                    <Sparkles className="h-4 w-4 shrink-0 mt-0.5 text-primary" />
-                    <div className="space-y-1">
-                        <p className="text-[11px] font-bold uppercase tracking-wider text-primary/80">Recommendation</p>
-                        <p className="text-[11px] leading-relaxed text-muted-foreground">
-                            We recommend <strong>Google Gemini</strong> for its generous free limits or <strong>Ollama</strong> for 100% private local use.
-                        </p>
-                    </div>
-                </div>
-
-                <div className="flex gap-3 p-4 rounded-2xl bg-muted/30 border border-border/40 items-start">
-                    <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-muted-foreground/60" />
-                    <div className="space-y-1">
-                        <p className="text-[11px] font-bold uppercase tracking-wider opacity-60">Context Handling</p>
-                        <p className="text-[11px] leading-relaxed text-muted-foreground/80">
-                            <strong>Ollama:</strong> Receives fresh note content on <em>every</em> message for maximum accuracy. <br/>
-                            <strong>Cloud:</strong> Receives context on the first message or context shift to optimize tokens/cost.
-                        </p>
-                    </div>
-                </div>
-            </div>
-
             {/* Token Warning for Cloud Providers */}
             {activeProvider !== 'ollama' && (
-                <div className="flex gap-3 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-500/90 items-start">
-                    <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-                    <div className="space-y-1">
-                        <p className="text-[11px] font-bold uppercase tracking-wider">Token Usage Warning</p>
-                        <p className="text-[11px] leading-relaxed opacity-80">
-                            Cloud providers may result in higher token usage as note context is sent with messages. Monitor your dashboard carefully.
+                <div className="flex gap-2.5 p-3 rounded-xl bg-amber-500/5 border border-amber-500/10 text-amber-500/80 items-start">
+                    <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                    <div className="space-y-0.5">
+                        <p className="text-[10px] font-bold uppercase tracking-tight">TOKENS USED</p>
+                        <p className="text-[11px] leading-snug opacity-90">
+                            Because the full note context is injected into every message to maintain accuracy, Cloud providers (OpenAI, Anthropic, Google) will consume higher token volumes. Models with "Prompt Caching" (like Claude 3.5 or Gemini 2.5) will automatically discount these costs. Local AI (Ollama) is always free.
                         </p>
                     </div>
                 </div>
             )}
+
+            {/* Recommendations & Technical Info */}
+            <div className="flex gap-2.5 p-3 rounded-xl bg-primary/5 border border-primary/10 items-start">
+                <Sparkles className="h-3.5 w-3.5 shrink-0 mt-0.5 text-primary/70" />
+                <div className="space-y-0.5">
+                    <p className="text-[10px] font-bold uppercase tracking-tight text-primary/70">Info</p>
+                    <p className="text-[11px] leading-snug text-muted-foreground/90">
+                        We recommend <strong>Gemini free API version</strong> for fast and easy cloud responses, or <strong>Ollama</strong> for a fully private, offline experience. To ensure the AI is always in sync with your writing, the live note content is sent as context with every single message across all providers.
+                    </p>
+                </div>
+            </div>
 
             {/* Provider Selection */}
             <div className="space-y-3">
@@ -107,20 +156,20 @@ export function AiSettings() {
                             <Bot size={15} />
                             <h4 className="text-[13px] font-bold">Ollama Configuration</h4>
                         </div>
-                        
+
                         <div className="grid gap-3">
                             <Label htmlFor="ollama-url" className="text-xs font-medium">Base URL</Label>
                             <div className="flex gap-2">
-                                <Input 
+                                <Input
                                     id="ollama-url"
                                     value={ollamaBaseUrl}
                                     onChange={(e) => setOllamaBaseUrl(e.target.value)}
                                     placeholder="http://127.0.0.1:11434"
                                     className="h-9 rounded-xl border-border/40"
                                 />
-                                <Button 
-                                    variant="outline" 
-                                    size="sm" 
+                                <Button
+                                    variant="outline"
+                                    size="sm"
                                     onClick={handleCheckOllama}
                                     disabled={isCheckingOllama}
                                     className="rounded-xl px-4 h-9"
@@ -152,34 +201,30 @@ export function AiSettings() {
                         <div className="grid gap-4">
                             <div className="grid gap-2">
                                 <Label htmlFor="openai-key" className="text-xs font-medium">API Key</Label>
-                                <Input 
-                                    id="openai-key"
-                                    type="password"
-                                    value={openAiKey}
-                                    onChange={(e) => setOpenAiKey(e.target.value)}
-                                    placeholder="sk-..."
-                                    className="h-9 rounded-xl border-border/40 font-mono text-[13px]"
-                                />
+                                <div className="flex gap-2">
+                                    <Input
+                                        id="openai-key"
+                                        type="password"
+                                        value={localOpenAiKey}
+                                        onChange={(e) => setLocalOpenAiKey(e.target.value)}
+                                        placeholder={hasOpenAiKey ? "sk-••••••••••••• (Key configured)" : "sk-..."}
+                                        className="h-9 rounded-xl border-border/40 font-mono text-[13px] flex-1"
+                                    />
+                                    <Button
+                                        onClick={handleSaveOpenAiKey}
+                                        disabled={isSavingOpenAi || (!localOpenAiKey.trim() && hasOpenAiKey)}
+                                        size="sm"
+                                        className="h-9 rounded-xl px-4"
+                                    >
+                                        {isSavingOpenAi ? "Saving..." : "Save"}
+                                    </Button>
+                                </div>
                                 <div className="flex items-center gap-1 text-[10px] text-muted-foreground/60">
-                                    <span>Stored locally on this device.</span>
+                                    <span>Stored locally in secure vault.</span>
                                     <a href="https://platform.openai.com/api-keys" target="_blank" rel="noreferrer" className="flex items-center gap-0.5 hover:text-primary transition-colors ml-1">
                                         Get key <ExternalLink size={10} />
                                     </a>
                                 </div>
-                            </div>
-
-                            <div className="grid gap-2">
-                                <Label className="text-xs font-medium">Model Selection</Label>
-                                <Select value={selectedModelOpenAi} onValueChange={setSelectedModelOpenAi}>
-                                    <SelectTrigger className="h-9 rounded-xl border-border/40">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent className="rounded-xl border-border/40">
-                                        <SelectItem value="gpt-4o">GPT-4o (Smartest)</SelectItem>
-                                        <SelectItem value="gpt-4o-mini">GPT-4o mini (Fast & Cheap)</SelectItem>
-                                        <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo</SelectItem>
-                                    </SelectContent>
-                                </Select>
                             </div>
                         </div>
                     </div>
@@ -195,34 +240,30 @@ export function AiSettings() {
                         <div className="grid gap-4">
                             <div className="grid gap-2">
                                 <Label htmlFor="anthropic-key" className="text-xs font-medium">API Key</Label>
-                                <Input 
-                                    id="anthropic-key"
-                                    type="password"
-                                    value={anthropicKey}
-                                    onChange={(e) => setAnthropicKey(e.target.value)}
-                                    placeholder="sk-ant-..."
-                                    className="h-9 rounded-xl border-border/40 font-mono text-[13px]"
-                                />
+                                <div className="flex gap-2">
+                                    <Input
+                                        id="anthropic-key"
+                                        type="password"
+                                        value={localAnthropicKey}
+                                        onChange={(e) => setLocalAnthropicKey(e.target.value)}
+                                        placeholder={hasAnthropicKey ? "sk-ant-••••••••••••• (Key configured)" : "sk-ant-..."}
+                                        className="h-9 rounded-xl border-border/40 font-mono text-[13px] flex-1"
+                                    />
+                                    <Button
+                                        onClick={handleSaveAnthropicKey}
+                                        disabled={isSavingAnthropic || (!localAnthropicKey.trim() && hasAnthropicKey)}
+                                        size="sm"
+                                        className="h-9 rounded-xl px-4"
+                                    >
+                                        {isSavingAnthropic ? "Saving..." : "Save"}
+                                    </Button>
+                                </div>
                                 <div className="flex items-center gap-1 text-[10px] text-muted-foreground/60">
-                                    <span>Stored locally on this device.</span>
+                                    <span>Stored locally in secure vault.</span>
                                     <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer" className="flex items-center gap-0.5 hover:text-primary transition-colors ml-1">
                                         Get key <ExternalLink size={10} />
                                     </a>
                                 </div>
-                            </div>
-
-                            <div className="grid gap-2">
-                                <Label className="text-xs font-medium">Model Selection</Label>
-                                <Select value={selectedModelAnthropic} onValueChange={setSelectedModelAnthropic}>
-                                    <SelectTrigger className="h-9 rounded-xl border-border/40">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent className="rounded-xl border-border/40">
-                                        <SelectItem value="claude-3-5-sonnet-latest">Claude 3.5 Sonnet</SelectItem>
-                                        <SelectItem value="claude-3-5-haiku-latest">Claude 3.5 Haiku</SelectItem>
-                                        <SelectItem value="claude-3-opus-latest">Claude 3 Opus</SelectItem>
-                                    </SelectContent>
-                                </Select>
                             </div>
                         </div>
                     </div>
@@ -238,33 +279,30 @@ export function AiSettings() {
                         <div className="grid gap-4">
                             <div className="grid gap-2">
                                 <Label htmlFor="google-key" className="text-xs font-medium">API Key (Google AI Studio)</Label>
-                                <Input 
-                                    id="google-key"
-                                    type="password"
-                                    value={googleKey}
-                                    onChange={(e) => setGoogleKey(e.target.value)}
-                                    placeholder="Paste your API key here..."
-                                    className="h-9 rounded-xl border-border/40 font-mono text-[13px]"
-                                />
+                                <div className="flex gap-2">
+                                    <Input
+                                        id="google-key"
+                                        type="password"
+                                        value={localGoogleKey}
+                                        onChange={(e) => setLocalGoogleKey(e.target.value)}
+                                        placeholder={hasGoogleKey ? "••••••••••••• (Key configured)" : "Paste your API key here..."}
+                                        className="h-9 rounded-xl border-border/40 font-mono text-[13px] flex-1"
+                                    />
+                                    <Button
+                                        onClick={handleSaveGoogleKey}
+                                        disabled={isSavingGoogle || (!localGoogleKey.trim() && hasGoogleKey)}
+                                        size="sm"
+                                        className="h-9 rounded-xl px-4"
+                                    >
+                                        {isSavingGoogle ? "Saving..." : "Save"}
+                                    </Button>
+                                </div>
                                 <div className="flex items-center gap-1 text-[10px] text-muted-foreground/60">
-                                    <span>Stored locally on this device. Uses OpenAI compatibility endpoint.</span>
+                                    <span>Stored locally in secure vault. Uses OpenAI compatibility endpoint.</span>
                                     <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="flex items-center gap-0.5 hover:text-primary transition-colors ml-1">
                                         Get key <ExternalLink size={10} />
                                     </a>
                                 </div>
-                            </div>
-
-                            <div className="grid gap-2">
-                                <Label className="text-xs font-medium">Model Selection</Label>
-                                <Select value={selectedModelGoogle} onValueChange={setSelectedModelGoogle}>
-                                    <SelectTrigger className="h-9 rounded-xl border-border/40">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent className="rounded-xl border-border/40">
-                                        <SelectItem value="gemini-2.5-flash">Gemini 2.5 Flash</SelectItem>
-                                        <SelectItem value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</SelectItem>
-                                    </SelectContent>
-                                </Select>
                             </div>
                         </div>
                     </div>

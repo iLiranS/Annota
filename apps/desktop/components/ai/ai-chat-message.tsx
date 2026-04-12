@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { cn, isRtl } from "@/lib/utils";
 import { AiMessage } from "@annota/core";
 import { CopyPlus, X } from "lucide-react";
 import { AiMarkdown } from "./ai-markdown";
@@ -12,6 +12,7 @@ interface AiChatMessageProps {
 
 export function AiChatMessage({ message, isStreaming, onInsertToNote }: AiChatMessageProps) {
     const isUser = message.role === 'user';
+    const _isRtl = isRtl(message.content);
 
     return (
         <div
@@ -20,12 +21,16 @@ export function AiChatMessage({ message, isStreaming, onInsertToNote }: AiChatMe
                 isUser ? "items-end" : "items-start"
             )}
         >
-            <div className={cn(
-                "text-[13px] leading-relaxed rounded-2xl wrap-break-word px-3.5 py-2.5",
-                isUser
-                    ? "max-w-[85%] bg-muted/60 text-foreground rounded-br-sm self-end shadow-sm"
-                    : "w-full bg-transparent text-foreground border-none shadow-none px-0"
-            )}>
+            <div 
+                dir={_isRtl ? "rtl" : "ltr"}
+                className={cn(
+                    "text-[13px] leading-relaxed rounded-2xl wrap-break-word px-3.5 py-2.5",
+                    _isRtl ? "text-right" : "text-left",
+                    isUser
+                        ? "max-w-[85%] bg-muted/60 text-foreground rounded-br-sm self-end shadow-sm"
+                        : "w-full bg-transparent text-foreground border-none shadow-none px-0"
+                )}
+            >
                 {isUser ? (
                     <span className="whitespace-pre-wrap">{message.content}</span>
                 ) : (

@@ -26,11 +26,11 @@ export interface AiState {
     ollamaBaseUrl: string;
     isOllamaRunning: boolean;
     lastCheckedAt: number | null;
-    
-    // API Keys
-    openAiKey: string;
-    anthropicKey: string;
-    googleKey: string;
+
+    // API Keys (Stronghold Managed - these only track presence)
+    hasOpenAiKey: boolean;
+    hasAnthropicKey: boolean;
+    hasGoogleKey: boolean;
 
     // Models
     availableModels: OllamaModel[];
@@ -39,21 +39,21 @@ export interface AiState {
     selectedModelAnthropic: string;
     selectedModelGoogle: string;
     isLoadingModels: boolean;
-    
+
     // UI Refresh bits
     refreshTicket: number;
     triggerChatRefresh: () => void;
-    
+
     // Actions
     setOllamaBaseUrl: (url: string) => void;
     checkConnection: () => Promise<boolean>;
     fetchModels: () => Promise<void>;
     setSelectedModel: (model: string | null) => void;
-    
+
     setActiveProvider: (provider: AiProviderType) => void;
-    setOpenAiKey: (key: string) => void;
-    setAnthropicKey: (key: string) => void;
-    setGoogleKey: (key: string) => void;
+    setHasOpenAiKey: (has: boolean) => void;
+    setHasAnthropicKey: (has: boolean) => void;
+    setHasGoogleKey: (has: boolean) => void;
     setSelectedModelOpenAi: (model: string) => void;
     setSelectedModelAnthropic: (model: string) => void;
     setSelectedModelGoogle: (model: string) => void;
@@ -67,9 +67,9 @@ export const useAiStore = create<AiState>()(
             ollamaBaseUrl: 'http://127.0.0.1:11434',
             isOllamaRunning: false,
             lastCheckedAt: null,
-            openAiKey: '',
-            anthropicKey: '',
-            googleKey: '',
+            hasOpenAiKey: false,
+            hasAnthropicKey: false,
+            hasGoogleKey: false,
             availableModels: [],
             selectedModel: null,
             selectedModelOpenAi: 'gpt-4o-mini',
@@ -81,7 +81,7 @@ export const useAiStore = create<AiState>()(
 
             // Actions
             setOllamaBaseUrl: (url) => set({ ollamaBaseUrl: url }),
-            
+
             checkConnection: async () => {
                 const { ollamaBaseUrl } = get();
                 try {
@@ -102,12 +102,12 @@ export const useAiStore = create<AiState>()(
                     const response = await fetch(`${ollamaBaseUrl}/api/tags`);
                     if (response.ok) {
                         const data = await response.json();
-                        set({ 
-                            availableModels: data.models || [], 
+                        set({
+                            availableModels: data.models || [],
                             isOllamaRunning: true,
-                            isLoadingModels: false 
+                            isLoadingModels: false
                         });
-                        
+
                         // Set default model if none selected
                         const currentSelected = get().selectedModel;
                         if (!currentSelected && data.models?.length > 0) {
@@ -124,9 +124,9 @@ export const useAiStore = create<AiState>()(
             setSelectedModel: (model) => set({ selectedModel: model }),
 
             setActiveProvider: (provider) => set({ activeProvider: provider }),
-            setOpenAiKey: (key) => set({ openAiKey: key }),
-            setAnthropicKey: (key) => set({ anthropicKey: key }),
-            setGoogleKey: (key) => set({ googleKey: key }),
+            setHasOpenAiKey: (has) => set({ hasOpenAiKey: has }),
+            setHasAnthropicKey: (has) => set({ hasAnthropicKey: has }),
+            setHasGoogleKey: (has) => set({ hasGoogleKey: has }),
             setSelectedModelOpenAi: (model) => set({ selectedModelOpenAi: model }),
             setSelectedModelAnthropic: (model) => set({ selectedModelAnthropic: model }),
             setSelectedModelGoogle: (model) => set({ selectedModelGoogle: model }),
@@ -134,13 +134,14 @@ export const useAiStore = create<AiState>()(
         {
             name: 'ai-store',
             storage: createJSONStorage(() => createStorageAdapter()),
+            skipHydration: true,
             partialize: (state) => ({
                 activeProvider: state.activeProvider,
                 ollamaBaseUrl: state.ollamaBaseUrl,
                 selectedModel: state.selectedModel,
-                openAiKey: state.openAiKey,
-                anthropicKey: state.anthropicKey,
-                googleKey: state.googleKey,
+                hasOpenAiKey: state.hasOpenAiKey,
+                hasAnthropicKey: state.hasAnthropicKey,
+                hasGoogleKey: state.hasGoogleKey,
                 selectedModelOpenAi: state.selectedModelOpenAi,
                 selectedModelAnthropic: state.selectedModelAnthropic,
                 selectedModelGoogle: state.selectedModelGoogle,

@@ -10,7 +10,8 @@ import {
   useSettingsStore,
   useSyncStore,
   useTasksStore,
-  useUserStore
+  useUserStore,
+  useAiStore
 } from "@annota/core";
 import {
   SyncScheduler,
@@ -129,6 +130,7 @@ function App() {
         // 1. Rehydrate persisted stores manually (storage/adapters initialized in main.tsx)
         await useUserStore.persist.rehydrate();
         await useSettingsStore.persist.rehydrate();
+        await useAiStore.persist.rehydrate();
 
         // 2. Fetch/Apply remote app config (blocking sync if needed)
         try {

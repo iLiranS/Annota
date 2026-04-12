@@ -1,6 +1,7 @@
 import { AiMessage, useAiStore } from '@annota/core';
 import { AiProviderAdapter } from '../types';
 import { DEFAULT_SYSTEM_PROMPT } from '../constants';
+import { getApiKey } from '../security';
 
 async function getProxiedFetch() {
     try {
@@ -22,7 +23,8 @@ export class AnthropicProvider implements AiProviderAdapter {
         onChunk: (text: string) => void,
         signal?: AbortSignal
     ): Promise<void> {
-        const { anthropicKey, selectedModelAnthropic } = useAiStore.getState();
+        const { selectedModelAnthropic } = useAiStore.getState();
+        const anthropicKey = await getApiKey('anthropic');
         if (!anthropicKey) throw new Error('Anthropic API Key is missing. Please add it in settings.');
 
         const fetchFn = await getProxiedFetch();
@@ -91,7 +93,8 @@ export class AnthropicProvider implements AiProviderAdapter {
     }
 
     async generateTitle(firstMessage: string): Promise<string> {
-        const { anthropicKey, selectedModelAnthropic } = useAiStore.getState();
+        const { selectedModelAnthropic } = useAiStore.getState();
+        const anthropicKey = await getApiKey('anthropic');
         if (!anthropicKey) return 'New Chat';
 
         const fetchFn = await getProxiedFetch();

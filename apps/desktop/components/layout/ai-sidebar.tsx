@@ -14,7 +14,7 @@ import {
     Trash2
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { matchPath, useLocation } from "react-router-dom";
+import { matchPath, useLocation, useNavigate } from "react-router-dom";
 
 import { AiChatInput } from "../ai/ai-chat-input";
 import { AiChatError, AiChatMessage } from "../ai/ai-chat-message";
@@ -27,14 +27,15 @@ export function AiSidebar() {
         ollamaBaseUrl,
         checkConnection,
         fetchModels,
-        openAiKey,
-        anthropicKey,
-        googleKey,
+        hasOpenAiKey,
+        hasAnthropicKey,
+        hasGoogleKey,
         refreshTicket
     } = useAiStore();
 
     const { notes, getNoteContent } = useNotesStore();
     const location = useLocation();
+    const navigate = useNavigate();
     const [activeChatId, setActiveChatId] = useState<string | null>(null);
     const [chats, setChats] = useState<AiChat[]>([]);
     const activeChat = activeChatId ? chats.find(c => c.id === activeChatId) : null;
@@ -202,10 +203,10 @@ export function AiSidebar() {
     const isConfigured = activeProvider === 'ollama' 
         ? isOllamaRunning 
         : activeProvider === 'openai' 
-            ? !!openAiKey
+            ? hasOpenAiKey
             : activeProvider === 'anthropic'
-                ? !!anthropicKey
-                : !!googleKey;
+                ? hasAnthropicKey
+                : hasGoogleKey;
 
     if (!isConfigured) {
         return (
@@ -245,10 +246,7 @@ export function AiSidebar() {
                             variant="outline"
                             size="sm"
                             className="mt-2 rounded-xl gap-2 h-9 px-6 bg-primary/5 border-primary/20 hover:bg-primary/10 transition-all font-medium"
-                            onClick={() => {
-                                // Close sidebar if floating and sticky is off? Or just let user navigate
-                                // For now, we'll suggest going to settings via the app navbar/shortcut
-                            }}
+                            onClick={() => navigate("/settings", { state: { background: location } })}
                         >
                             <Settings2 size={14} />
                             Open Settings
@@ -296,7 +294,7 @@ export function AiSidebar() {
 
                         {/* Title */}
                         {activeChatId && activeChat ? (
-                            <span className="text-[12px] font-semibold truncate text-foreground/80">
+                            <span dir="auto" className="text-[12px] font-semibold truncate text-foreground/80">
                                 {activeChat.title}
                             </span>
                         ) : (
@@ -377,7 +375,7 @@ export function AiSidebar() {
                                             )}
                                         >
                                             <div className="flex-1 flex flex-col min-w-0 pr-2 gap-0.5">
-                                                <span className="truncate font-medium text-[12px]">{chat.title}</span>
+                                                <span dir="auto" className="truncate font-medium text-[12px]">{chat.title}</span>
                                                 <span className="text-[9px] opacity-40 tracking-wide">
                                                     {new Date(chat.updatedAt).toLocaleString(undefined, {
                                                         month: 'numeric',

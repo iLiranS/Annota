@@ -3,6 +3,7 @@ import { AiMessage } from '../../db/schema';
 import { useAiStore } from '../../stores/ai.store';
 import { AiProviderAdapter } from '../types';
 import { DEFAULT_SYSTEM_PROMPT } from '../constants';
+import { getApiKey } from '../security';
 
 export class GoogleProvider implements AiProviderAdapter {
     readonly id = 'google';
@@ -13,7 +14,8 @@ export class GoogleProvider implements AiProviderAdapter {
         onChunk: (text: string) => void,
         signal?: AbortSignal
     ): Promise<void> {
-        const { googleKey, selectedModelGoogle } = useAiStore.getState();
+        const { selectedModelGoogle } = useAiStore.getState();
+        const googleKey = await getApiKey('google');
 
         if (!googleKey) {
             throw new Error('Google API key not configured');
@@ -84,7 +86,8 @@ export class GoogleProvider implements AiProviderAdapter {
     }
 
     async generateTitle(firstMessage: string): Promise<string> {
-        const { googleKey, selectedModelGoogle } = useAiStore.getState();
+        const { selectedModelGoogle } = useAiStore.getState();
+        const googleKey = await getApiKey('google');
 
         if (!googleKey) return "Untitled Chat";
 

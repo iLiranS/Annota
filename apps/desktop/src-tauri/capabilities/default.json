@@ -35,6 +35,7 @@
     "clipboard-manager:allow-write-image",
     "http:allow-fetch",
     "dialog:default",
+    "os:allow-hostname",
     {
       "identifier": "http:default",
       "allow": [

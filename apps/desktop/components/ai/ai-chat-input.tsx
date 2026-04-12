@@ -6,8 +6,8 @@ import {
     DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { cn } from '@/lib/utils';
-import { useAiStore } from "@annota/core";
-import { Bot, ChevronDown, Send, Square } from 'lucide-react';
+import { useAiStore, OPENAI_MODELS, ANTHROPIC_MODELS, GOOGLE_MODELS } from "@annota/core";
+import { Bot, ChevronDown, Send, Square, Check } from 'lucide-react';
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 
 interface AiChatInputProps {
@@ -24,7 +24,10 @@ export function AiChatInput({ onSend, onStop, disabled }: AiChatInputProps) {
         setSelectedModel,
         selectedModelOpenAi,
         selectedModelAnthropic,
-        selectedModelGoogle
+        selectedModelGoogle,
+        setSelectedModelOpenAi,
+        setSelectedModelAnthropic,
+        setSelectedModelGoogle
     } = useAiStore();
 
     const currentModelName = activeProvider === 'ollama' 
@@ -34,6 +37,23 @@ export function AiChatInput({ onSend, onStop, disabled }: AiChatInputProps) {
             : activeProvider === 'anthropic'
                 ? selectedModelAnthropic
                 : selectedModelGoogle;
+
+    const getProviderModels = () => {
+        switch (activeProvider) {
+            case 'ollama': return availableModels.map(m => ({ label: m.name, value: m.name }));
+            case 'openai': return OPENAI_MODELS;
+            case 'anthropic': return ANTHROPIC_MODELS;
+            case 'google': return GOOGLE_MODELS;
+            default: return [];
+        }
+    };
+
+    const handleSetModel = (model: string) => {
+        if (activeProvider === 'ollama') setSelectedModel(model);
+        else if (activeProvider === 'openai') setSelectedModelOpenAi(model);
+        else if (activeProvider === 'anthropic') setSelectedModelAnthropic(model);
+        else if (activeProvider === 'google') setSelectedModelGoogle(model);
+    };
 
     const [content, setContent] = useState('');
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -81,51 +101,49 @@ export function AiChatInput({ onSend, onStop, disabled }: AiChatInputProps) {
                     onChange={(e) => setContent(e.target.value)}
                     onKeyDown={handleKeyDown}
                     rows={1}
+                    dir="auto"
                     placeholder={!currentModelName ? "Select a model to start..." : "Ask AI about current note..."}
                     disabled={disabled || !currentModelName}
                     className="w-full bg-transparent border-none outline-none resize-none px-3 pt-2 pb-1 text-[14px] leading-relaxed max-h-[160px] min-h-[44px] overflow-y-auto custom-scrollbar disabled:opacity-50"
                 />
 
                 <div className="flex items-center justify-between px-1.5 pb-0.5">
-                    {activeProvider === 'ollama' ? (
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-7 px-2 rounded-full gap-1.5 text-[10px] font-bold text-muted-foreground hover:text-foreground bg-muted/30 hover:bg-muted/50 transition-all border border-transparent hover:border-border/50"
-                                >
-                                    <Bot size={12} className={cn("transition-colors", currentModelName ? "text-primary" : "text-muted-foreground")} />
-                                    <span className="max-w-[80px] truncate">{currentModelName || "Select Model"}</span>
-                                    <ChevronDown size={10} className="opacity-50" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="start" className="w-48 rounded-xl border-border/50 shadow-xl bg-popover/95 backdrop-blur-md">
-                                {availableModels.length === 0 ? (
-                                    <div className="p-2 text-xs text-muted-foreground text-center font-medium">No models found</div>
-                                ) : (
-                                    availableModels.map(m => (
-                                        <DropdownMenuItem
-                                            key={m.name}
-                                            className={cn("text-xs rounded-lg cursor-pointer", currentModelName === m.name && "bg-primary/10 text-primary")}
-                                            onClick={() => setSelectedModel(m.name)}
-                                        >
-                                            {m.name}
-                                        </DropdownMenuItem>
-                                    ))
-                                )}
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    ) : (
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 px-2 rounded-full gap-1.5 text-[10px] font-bold text-muted-foreground cursor-default hover:text-muted-foreground bg-muted/30 transition-all border border-transparent"
-                        >
-                            <Bot size={12} className="text-primary" />
-                            <span className="max-w-[120px] truncate">{currentModelName}</span>
-                        </Button>
-                    )}
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 rounded-full gap-1.5 text-[10px] font-bold text-muted-foreground hover:text-foreground bg-muted/30 hover:bg-muted/50 transition-all border border-transparent hover:border-border/50"
+                            >
+                                <Bot size={12} className={cn("transition-colors", currentModelName ? "text-primary" : "text-muted-foreground")} />
+                                <span className="max-w-[120px] truncate">
+                                    {currentModelName ? (getProviderModels().find(m => m.value === currentModelName)?.label || currentModelName) : "Select Model"}
+                                </span>
+                                <ChevronDown size={10} className="opacity-50" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="w-48 rounded-xl border-border/50 shadow-xl bg-popover/95 backdrop-blur-md">
+                            {getProviderModels().length === 0 ? (
+                                <div className="p-2 text-xs text-muted-foreground text-center font-medium">No models found</div>
+                            ) : (
+                                getProviderModels().map(m => (
+                                    <DropdownMenuItem
+                                        key={m.value}
+                                        className={cn(
+                                            "text-xs rounded-lg cursor-pointer flex items-center gap-2",
+                                            currentModelName === m.value && "bg-primary/10 text-primary focus:bg-primary/20 focus:text-primary"
+                                        )}
+                                        onClick={() => handleSetModel(m.value)}
+                                    >
+                                        <span className="flex w-3 h-3 items-center justify-center">
+                                            {currentModelName === m.value && <Check size={12} strokeWidth={3} />}
+                                        </span>
+                                        <span className={cn("truncate", currentModelName === m.value && "font-semibold")}>{m.label}</span>
+                                    </DropdownMenuItem>
+                                ))
+                            )}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
 
                     <Button
                         onClick={() => disabled ? onStop?.() : handleSend()}
