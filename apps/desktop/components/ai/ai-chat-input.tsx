@@ -57,8 +57,9 @@ export function AiChatInput({ onSend, onStop, disabled }: AiChatInputProps) {
                     value={content}
                     onChange={(e) => setContent(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="Ask AI about current note..."
-                    className="w-full bg-transparent border-none outline-none resize-none px-3 pt-2 pb-1 text-[14px] leading-relaxed max-h-[160px] min-h-[44px] overflow-y-auto custom-scrollbar"
+                    placeholder={!selectedModel ? "Select a model to start..." : "Ask AI about current note..."}
+                    disabled={disabled || !selectedModel}
+                    className="w-full bg-transparent border-none outline-none resize-none px-3 pt-2 pb-1 text-[14px] leading-relaxed max-h-[160px] min-h-[44px] overflow-y-auto custom-scrollbar disabled:opacity-50"
                 />
 
                 <div className="flex items-center justify-between px-1.5 pb-0.5">
@@ -70,13 +71,13 @@ export function AiChatInput({ onSend, onStop, disabled }: AiChatInputProps) {
                                 className="h-7 px-2 rounded-full gap-1.5 text-[10px] font-bold text-muted-foreground hover:text-foreground bg-muted/30 hover:bg-muted/50 transition-all border border-transparent hover:border-border/50"
                             >
                                 <Bot size={12} className={cn("transition-colors", selectedModel ? "text-primary" : "text-muted-foreground")} />
-                                <span className="max-w-[80px] truncate">{selectedModel || "Model"}</span>
+                                <span className="max-w-[80px] truncate">{selectedModel || "Select Model"}</span>
                                 <ChevronDown size={10} className="opacity-50" />
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start" className="w-48 rounded-xl border-border/50 shadow-xl bg-popover/95 backdrop-blur-md">
                             {availableModels.length === 0 ? (
-                                <div className="p-2 text-xs text-muted-foreground text-center">No models found</div>
+                                <div className="p-2 text-xs text-muted-foreground text-center font-medium">No models found</div>
                             ) : (
                                 availableModels.map(m => (
                                     <DropdownMenuItem
@@ -93,12 +94,12 @@ export function AiChatInput({ onSend, onStop, disabled }: AiChatInputProps) {
 
                     <Button
                         onClick={() => disabled ? onStop?.() : handleSend()}
-                        disabled={!disabled && (!content.trim())}
+                        disabled={(!disabled && !content.trim()) || (!disabled && !selectedModel)}
                         size="icon"
                         className={cn(
                             "h-7 w-7 rounded-full transition-all shrink-0 shadow-sm",
                             disabled ? "bg-foreground text-background hover:bg-foreground/90" :
-                                (content.trim()) ? "bg-primary text-primary-foreground shadow-md hover:scale-105 active:scale-95" : "bg-muted text-muted-foreground/30"
+                                (content.trim() && selectedModel) ? "bg-primary text-primary-foreground shadow-md hover:scale-105 active:scale-95" : "bg-muted text-muted-foreground/30"
                         )}
                     >
                         {disabled ? (

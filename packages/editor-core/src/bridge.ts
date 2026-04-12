@@ -10,7 +10,8 @@ export function sendMessage(data: any) {
         // Talks to the Desktop App (Iframe)
         window.parent.postMessage(data, '*');
     } else {
-        console.warn("No bridge available to send message:", data);
+        // No bridge available to send message. This is expected when running 
+        // as a direct component (e.g. in the Desktop app) rather than embedded.
     }
 }
 

@@ -128,6 +128,7 @@ export const aiChats = sqliteTable('ai_chats', {
     title: text('title').notNull().default('New Chat'),
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
     updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+    currentContextId: text('current_context_id'),
 });
 
 // ============ AI MESSAGES (Local Only) ============

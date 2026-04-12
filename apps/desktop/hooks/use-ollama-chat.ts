@@ -2,6 +2,15 @@ import { AiMessage, aiChats, aiMessages, generateId, getDb, useAiStore } from '@
 import { asc, eq } from 'drizzle-orm';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+const SYSTEM_PROMPT = `You are a highly efficient AI assistant integrated into the Annota note-taking app. 
+Your primary directive is brevity. Always answer directly, concisely, and cleanly. 
+Do not use conversational filler.
+
+CRITICAL FORMATTING RULES:
+1. ALWAYS use raw Markdown for formatting (headers, bold, lists, and tables).
+2. NEVER wrap your entire response inside a \`\`\`markdown code block. Just output the raw markdown directly.
+3. For mathematical equations, ALWAYS use standard LaTeX delimiters: $ for inline math (e.g., $E=mc^2$) and $$ for block math. Do not use \\( or \\[.`;
+
 export function useOllamaChat(chatId: string | null) {
     const [messages, setMessages] = useState<AiMessage[]>([]);
     const [isStreaming, setIsStreaming] = useState(false);
@@ -130,7 +139,7 @@ export function useOllamaChat(chatId: string | null) {
         }
     }, []);
 
-    const sendMessage = useCallback(async (content: string, contextNotes: Array<{ title: string, content: string }> = [], overrideChatId?: string) => {
+    const sendMessage = useCallback(async (content: string, contextNotes: Array<{ title: string, content: string }> = [], overrideChatId?: string, activeNoteId?: string) => {
         const effectiveChatId = overrideChatId || chatId;
         if (!effectiveChatId || !selectedModel) return;
 
@@ -145,7 +154,6 @@ export function useOllamaChat(chatId: string | null) {
         const db = getDb();
         const userMessageId = generateId();
         const assistantId = generateId();
-
         const timestamp = new Date();
 
         const userMsg: AiMessage = {
@@ -161,36 +169,48 @@ export function useOllamaChat(chatId: string | null) {
         setMessages(prev => [...prev, userMsg]);
         await db.insert(aiMessages).values(userMsg).run();
 
-        // Update chat's updatedAt
-        await db.update(aiChats).set({ updatedAt: timestamp }).where(eq(aiChats.id, effectiveChatId)).run();
+        // Update chat's updatedAt and currentContextId
+        await db.update(aiChats).set({ 
+            updatedAt: timestamp,
+            currentContextId: activeNoteId || null
+        }).where(eq(aiChats.id, effectiveChatId)).run();
 
-        // Define strict system behavior
-        const SYSTEM_PROMPT = `You are a highly efficient AI assistant integrated into the Annota note-taking app. 
-Your primary directive is brevity. Always answer directly, concisely, and cleanly. 
-Do not use conversational filler.
+        // 1. Generate title in background if first message
+        if (isFirstMessage) {
+            generateTitleInBackground(content, effectiveChatId);
+        }
 
-CRITICAL FORMATTING RULES:
-1. ALWAYS use raw Markdown for formatting (headers, bold, lists, and tables).
-2. NEVER wrap your entire response inside a \`\`\`markdown code block. Just output the raw markdown directly.
-3. For mathematical equations, ALWAYS use standard LaTeX delimiters: $ for inline math (e.g., $E=mc^2$) and $$ for block math. Do not use \\( or \\[.`;
+        // 2. Prepare messages for Ollama using a sliding window for token efficiency
+        // Since setMessages is async, let's just get the history from the current state and add the new one
+        const historyForOllama = [...messages, userMsg];
+        const otherMsgs = historyForOllama.filter(m => m.role !== 'system');
+        const efficientHistory = otherMsgs.slice(-10); // Keep last 10 turns
 
-        // Prepare messages for Ollama
-        const history = messages.map(m => ({ role: m.role, content: m.content }));
+        // Dynamically build the ephemeral system prompt with the live note data
         const contextString = contextNotes.length > 0
             ? contextNotes.map(n => `[Note: ${n.title}]\n${n.content}`).join('\n\n')
             : null;
 
-        const ollamaMessages = [];
+        const liveSystemContent = contextString
+            ? `${SYSTEM_PROMPT}\n\nUse the following live note context to answer accurately:\n${contextString}`
+            : SYSTEM_PROMPT;
 
-        // Always include basic system prompt
-        let finalSystemContent = SYSTEM_PROMPT;
-        if (contextString) {
-            finalSystemContent += `\n\nUse the following note contexts to answer accurately:\n${contextString}`;
-        }
+        // Construct the final payload for the network request
+        const ollamaMessages = [
+            { role: 'system', content: liveSystemContent },
+            ...efficientHistory.map(m => ({
+                role: m.role,
+                content: m.content
+            }))
+        ];
 
-        ollamaMessages.push({ role: 'system', content: finalSystemContent });
-        ollamaMessages.push(...history);
-        ollamaMessages.push({ role: 'user', content });
+        // Diagnostics for token/context efficiency
+        console.groupCollapsed(`🤖 AI Request [${selectedModel}]`);
+        console.log(`Messages: ${ollamaMessages.length}`);
+        console.log(`Turns (History): ${otherMsgs.length}`);
+        console.log(`Characters (Approx): ${JSON.stringify(ollamaMessages).length}`);
+        console.log(`System Prompt Length: ${ollamaMessages.find(m => m.role === 'system')?.content.length || 0}`);
+        console.groupEnd();
 
         // Initialize assistant message in state
         streamingContentRef.current = '';
@@ -256,11 +276,7 @@ CRITICAL FORMATTING RULES:
             // Update chat updatedAt again
             await db.update(aiChats).set({ updatedAt: new Date() }).where(eq(aiChats.id, effectiveChatId)).run();
 
-            // Generate title based on first response if this is a new chat
-            // (messages.length was 1 when we started, so now it's basically 2 messages in DB: 1 user + 1 assistant)
-            if (isFirstMessage) {
-                generateTitleInBackground(streamingContentRef.current, effectiveChatId);
-            }
+
 
         } catch (err: any) {
             if (err.name === 'AbortError') {

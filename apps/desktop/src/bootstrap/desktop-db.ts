@@ -98,22 +98,24 @@ export async function initDesktopSqlite(userId: string | null): Promise<void> {
       await db.execute("PRAGMA journal_mode = WAL;");
       await db.execute("PRAGMA foreign_keys = ON;");
 
-      // Keep desktop schema aligned with core's SQLite bootstrap SQL.
-      const statements = splitSqlStatements(CREATE_TABLES_SQL);
-      for (const statement of statements) {
-        await db.execute(statement);
-      }
-
-      // Register the active user in the DB store and provide an Expo SQLite-compatible nativeDb wrapper
-      useDbStore.getState().initDB(userId, {
+      const nativeDbWrapper = {
         execAsync: async (rawSql: string) => {
-          // Tauri's db.execute doesn't support multiple statements separated by ';' directly
           const statements = splitSqlStatements(rawSql);
           for (const statement of statements) {
             await db.execute(statement);
           }
+        },
+        selectAsync: async (sql: string, params: any[]) => {
+          return await db.select(sql, params);
         }
-      });
+      };
+
+      // Use the centralized initDatabase from core to handle tables + migrations
+      const { initDatabase } = await import("@annota/core");
+      await initDatabase(nativeDbWrapper, drizzleDb as any);
+
+      // Register the active user in the DB store
+      useDbStore.getState().initDB(userId, nativeDbWrapper);
     })();
 
     userDbCache.set(cacheKey, bootstrapPromise);

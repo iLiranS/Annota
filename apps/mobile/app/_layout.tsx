@@ -88,7 +88,10 @@ const getOrCreateMobileDb = async (userId: string | null): Promise<MobileDbBundl
   const expoDb = openDatabaseSync(dbName);
   const drizzleDb = drizzle(expoDb);
 
-  await initDatabase(expoDb, drizzleDb as any);
+  await initDatabase({
+    execAsync: (sql: string) => expoDb.execAsync(sql),
+    selectAsync: (sql: string, params: any[]) => expoDb.getAllAsync(sql, params)
+  }, drizzleDb as any);
   const bundle = { expoDb, drizzleDb };
   mobileDbCache.set(cacheKey, bundle);
   return bundle;

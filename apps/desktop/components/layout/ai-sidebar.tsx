@@ -1,35 +1,24 @@
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useOllamaChat } from "@/hooks/use-ollama-chat";
 import { cn } from "@/lib/utils";
 import { AiChat, aiChats, aiMessages, generateId, getDb, useAiStore, useNotesStore, useSettingsStore } from "@annota/core";
-import { hljs } from "@annota/editor-core";
 import { desc, eq } from "drizzle-orm";
-import 'katex/dist/katex.min.css';
 import {
     Bot,
     ChevronLeft,
-    Copy,
-    CopyPlus,
     MessageSquare,
     Pin,
     Plus,
     Settings2,
     Sparkles,
-    Trash2,
-    X
+    Trash2
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import ReactMarkdown from 'react-markdown';
 import { matchPath, useLocation } from "react-router-dom";
-import rehypeKatex from 'rehype-katex';
-import remarkGfm from 'remark-gfm';
-import remarkMath from 'remark-math';
 
-// Import styles to match the editor
-import '@annota/editor-core/styles.css';
-import 'highlight.js/styles/atom-one-dark.css';
 import { AiChatInput } from "../ai/ai-chat-input";
+import { AiChatError, AiChatMessage } from "../ai/ai-chat-message";
+import { useOllamaChat } from "@/hooks/use-ollama-chat";
 
 export function AiSidebar() {
     const {
@@ -57,29 +46,13 @@ export function AiSidebar() {
     // Auto-inject context of current note
     const handleSendMessage = useCallback(async (content: string) => {
         let currentId = activeChatId;
-
-        if (!currentId) {
-            const db = getDb();
-            currentId = generateId();
-            const now = new Date();
-            const newChat: AiChat = {
-                id: currentId,
-                title: "New Chat",
-                createdAt: now,
-                updatedAt: now,
-            };
-            await db.insert(aiChats).values(newChat).run();
-            setChats(prev => [newChat, ...prev]);
-            setActiveChatId(currentId);
-        }
-
         const contextNotes: Array<{ title: string, content: string }> = [];
 
+        // ALWAYS extract the live note state, regardless of whether it's a new chat
         const match = matchPath({ path: "/notes/:folderId/:noteId" }, location.pathname)
             || matchPath({ path: "/notes/:noteId" }, location.pathname);
 
         const noteId = match?.params?.noteId;
-
         if (noteId) {
             const currentNote = notes.find(n => n.id === noteId);
             if (currentNote) {
@@ -117,7 +90,24 @@ export function AiSidebar() {
             }
         }
 
-        originalSendMessage(content, contextNotes, currentId);
+        // ONLY create the database record if it's a new chat
+        if (!currentId) {
+            const db = getDb();
+            currentId = generateId();
+            const now = new Date();
+            const newChat: AiChat = {
+                id: currentId,
+                title: "New Chat",
+                createdAt: now,
+                updatedAt: now,
+                currentContextId: noteId || null,
+            };
+            await db.insert(aiChats).values(newChat).run();
+            setChats(prev => [newChat, ...prev]);
+            setActiveChatId(currentId);
+        }
+
+        originalSendMessage(content, contextNotes, currentId, noteId);
     }, [location.pathname, notes, getNoteContent, originalSendMessage, activeChatId]);
 
     // Initial connection check & models fetch
@@ -358,137 +348,16 @@ export function AiSidebar() {
                     <>
                         <ScrollArea className="flex-1 min-h-0">
                             <div className="flex flex-col gap-4 px-3 py-4">
-                                {messages.map((m, idx) => (
-                                    <div
+                                {messages.filter(m => m.role !== 'system').map((m, idx) => (
+                                    <AiChatMessage
                                         key={m.id || idx}
-                                        className={cn(
-                                            "flex flex-col gap-1",
-                                            m.role === 'user' ? "items-end" : "items-start"
-                                        )}
-                                    >
-                                        <div className={cn(
-                                            "text-[13px] leading-relaxed rounded-2xl wrap-break-word px-3.5 py-2.5",
-                                            m.role === 'user'
-                                                ? "max-w-[85%] bg-muted/60 text-foreground rounded-br-sm self-end shadow-sm"
-                                                : "w-full bg-transparent text-foreground border-none shadow-none px-0"
-                                        )}>
-                                            {m.role === 'user' ? (
-                                                <span className="whitespace-pre-wrap">{m.content}</span>
-                                            ) : (
-                                                <div className="relative group/content">
-                                                    <div className="prose prose-sm dark:prose-invert max-w-none
-                                                        prose-p:leading-relaxed prose-p:my-1.5
-                                                        prose-table:block prose-table:overflow-x-auto
-                                                        prose-th:border prose-th:border-border/30 prose-th:p-2 prose-th:bg-muted/50
-                                                        prose-td:border prose-td:border-border/20 prose-td:p-2
-                                                        prose-headings:font-semibold prose-headings:my-2
-                                                        prose-ul:my-1.5 prose-ol:my-1.5 prose-li:my-0.5">
-                                                        <ReactMarkdown
-                                                            remarkPlugins={[remarkGfm, remarkMath]}
-                                                            rehypePlugins={[rehypeKatex]}
-                                                            components={{
-                                                                pre({ children }) {
-                                                                    return <>{children}</>;
-                                                                },
-                                                                code({ node, inline, className, children, ...props }: any) {
-                                                                    const match = /language-(\w+)/.exec(className || '');
-                                                                    const lang = match ? match[1] : '';
-                                                                    const code = String(children).replace(/\n$/, '');
-
-                                                                    if (!inline && lang) {
-                                                                        let highlighted = code;
-                                                                        try {
-                                                                            highlighted = hljs.getLanguage(lang)
-                                                                                ? hljs.highlight(code, { language: lang }).value
-                                                                                : hljs.highlightAuto(code).value;
-                                                                        } catch (e) {
-                                                                            console.warn("AI Highlighting failed:", e);
-                                                                        }
-
-                                                                        return (
-                                                                            <div className="code-block-wrapper my-4 border border-border/10 bg-black/3! dark:bg-white/3! overflow-hidden">
-                                                                                <div className="code-block-header py-0! px-3! min-h-0! h-7! pointer-events-auto! border-b! border-border/5! flex! items-center!">
-                                                                                    <div className="p-0! bg-transparent! text-[10px]! opacity-70! uppercase! tracking-wider! font-bold!">
-                                                                                        {lang}
-                                                                                    </div>
-                                                                                    <button
-                                                                                        onClick={() => {
-                                                                                            navigator.clipboard.writeText(code);
-                                                                                        }}
-                                                                                        className="code-menu-btn h-5! w-5! p-0! flex items-center justify-center hover:bg-white/10 rounded-md transition-colors"
-                                                                                        title="Copy Code"
-                                                                                    >
-                                                                                        <Copy size={11} className="opacity-70" />
-                                                                                    </button>
-                                                                                </div>
-                                                                                <pre className="m-0! p-3! bg-transparent! border-none!">
-                                                                                    <code
-                                                                                        className={`hljs language-${lang} bg-transparent! p-0!`}
-                                                                                        dangerouslySetInnerHTML={{ __html: highlighted }}
-                                                                                    />
-                                                                                </pre>
-                                                                            </div>
-                                                                        );
-                                                                    }
-
-                                                                    return (
-                                                                        <code
-                                                                            className={cn(
-                                                                                "px-1.5 py-0.5 rounded text-[12px] font-mono",
-                                                                                "bg-black/5 dark:bg-white/10 text-foreground/80",
-                                                                                className
-                                                                            )}
-                                                                            {...props}
-                                                                        >
-                                                                            {children}
-                                                                        </code>
-                                                                    );
-                                                                }
-                                                            }}
-                                                        >
-                                                            {m.content}
-                                                        </ReactMarkdown>
-                                                    </div>
-
-                                                    {!isStreaming && m.content && (
-                                                        <div className="absolute -right-1 -top-1 opacity-0 group-hover/content:opacity-100 transition-opacity">
-                                                            <Button
-                                                                variant="secondary"
-                                                                size="icon"
-                                                                className="h-6 w-6 rounded-full shadow-md border border-border/50 hover:scale-105 active:scale-95 transition-all"
-                                                                onClick={() => handleInsertToNote(m.content)}
-                                                                title="Insert to note"
-                                                            >
-                                                                <CopyPlus size={10} />
-                                                            </Button>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
-
-                                            {/* Typing indicator */}
-                                            {m.role === 'assistant' && !m.content && isStreaming && (
-                                                <span className="flex items-center gap-1 py-0.5">
-                                                    <span className="h-1.5 w-1.5 bg-primary/60 rounded-full animate-bounce [animation-delay:-0.3s]" />
-                                                    <span className="h-1.5 w-1.5 bg-primary/60 rounded-full animate-bounce [animation-delay:-0.15s]" />
-                                                    <span className="h-1.5 w-1.5 bg-primary/60 rounded-full animate-bounce" />
-                                                </span>
-                                            )}
-                                        </div>
-
-                                        {/* Role label */}
-                                        <span className="text-[9px] text-muted-foreground/35 px-1 uppercase tracking-widest font-bold">
-                                            {m.role === 'assistant' ? (m.model || 'assistant') : 'You'}
-                                        </span>
-                                    </div>
+                                        message={m}
+                                        isStreaming={isStreaming}
+                                        onInsertToNote={handleInsertToNote}
+                                    />
                                 ))}
 
-                                {error && (
-                                    <div className="p-3 rounded-xl bg-destructive/10 text-destructive text-[11px] flex items-center gap-2 border border-destructive/20">
-                                        <X size={13} />
-                                        {error}
-                                    </div>
-                                )}
+                                {error && <AiChatError error={error} />}
 
                                 {/* Scroll anchor */}
                                 <div ref={scrollEndRef} />

@@ -141,7 +141,8 @@ export const CREATE_TABLES_SQL = `
     id TEXT PRIMARY KEY,
     title TEXT NOT NULL DEFAULT 'New Chat',
     created_at INTEGER NOT NULL,
-    updated_at INTEGER NOT NULL
+    updated_at INTEGER NOT NULL,
+    current_context_id TEXT
   );
 
   CREATE TABLE IF NOT EXISTS ai_messages (
@@ -155,12 +156,62 @@ export const CREATE_TABLES_SQL = `
 `;
 
 // Initialize database (create tables and seed system data)
-export async function initDatabase(nativeDb: { execAsync: (sql: string) => Promise<void> }, drizzleDb: DbType): Promise<void> {
+export async function initDatabase(
+  nativeDb: { 
+    execAsync: (sql: string) => Promise<void>,
+    selectAsync?: (sql: string, params: any[]) => Promise<any[]>
+  }, 
+  drizzleDb: DbType
+): Promise<void> {
   try {
-    // Create all tables
+    // 1. Create all base tables using IF NOT EXISTS
     await nativeDb.execAsync(CREATE_TABLES_SQL);
 
-    // No migrations needed for now (wiping existing databases)
+    // 2. Migration Tracker Setup
+    await nativeDb.execAsync(`
+      CREATE TABLE IF NOT EXISTS _migrations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE,
+        applied_at INTEGER NOT NULL
+      );
+    `);
+
+    // 3. Define Migrations
+    const migrations = [
+      {
+        name: '001_add_current_context_id',
+        sql: 'ALTER TABLE ai_chats ADD COLUMN current_context_id TEXT;'
+      }
+    ];
+
+    // 4. Execute Migrations
+    if (nativeDb.selectAsync) {
+      for (const m of migrations) {
+        const alreadyApplied = await nativeDb.selectAsync(
+          'SELECT id FROM _migrations WHERE name = ?',
+          [m.name]
+        );
+
+        if (!alreadyApplied || alreadyApplied.length === 0) {
+          try {
+            await nativeDb.execAsync(m.sql);
+            await nativeDb.execAsync(
+              `INSERT INTO _migrations (name, applied_at) VALUES ('${m.name}', ${Date.now()});`
+            );
+            console.log(`[DB] Applied migration: ${m.name}`);
+          } catch (e: any) {
+            // If the column already exists (from a previous ad-hoc attempt), just record it
+            if (e.message?.includes('duplicate column name') || e.message?.includes('already exists')) {
+               await nativeDb.execAsync(
+                `INSERT INTO _migrations (name, applied_at) VALUES ('${m.name}', ${Date.now()});`
+              );
+            } else {
+              console.error(`[DB] Migration failed: ${m.name}`, e);
+            }
+          }
+        }
+      }
+    }
 
     // Seed system data (Trash folder, Daily Notes folder, default settings)
     seedSystemData(drizzleDb);
