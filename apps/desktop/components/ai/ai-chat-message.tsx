@@ -58,10 +58,6 @@ export function AiChatMessage({ message, isStreaming, onInsertToNote }: AiChatMe
                 )}
             </div>
 
-            {/* Role label */}
-            <span className="text-[9px] text-muted-foreground/35 px-1 uppercase tracking-widest font-bold">
-                {isUser ? 'You' : (message.model || 'assistant')}
-            </span>
         </div>
     );
 }

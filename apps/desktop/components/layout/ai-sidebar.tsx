@@ -18,14 +18,18 @@ import { matchPath, useLocation } from "react-router-dom";
 
 import { AiChatInput } from "../ai/ai-chat-input";
 import { AiChatError, AiChatMessage } from "../ai/ai-chat-message";
-import { useOllamaChat } from "@/hooks/use-ollama-chat";
+import { useAiChat } from "@/hooks/use-ai-chat";
 
 export function AiSidebar() {
     const {
+        activeProvider,
         isOllamaRunning,
         ollamaBaseUrl,
         checkConnection,
         fetchModels,
+        openAiKey,
+        anthropicKey,
+        googleKey,
         refreshTicket
     } = useAiStore();
 
@@ -36,12 +40,42 @@ export function AiSidebar() {
     const activeChat = activeChatId ? chats.find(c => c.id === activeChatId) : null;
     const scrollEndRef = useRef<HTMLDivElement>(null);
 
-    const { messages, sendMessage: originalSendMessage, isStreaming, error, stop } = useOllamaChat(activeChatId);
+    const { messages, sendMessage: originalSendMessage, isStreaming, error, stop } = useAiChat(activeChatId);
+
+    const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
+    const lastScrollTopRef = useRef(0);
+
+    // Reset auto-scroll when a new generation starts
+    useEffect(() => {
+        if (isStreaming) {
+            setShouldAutoScroll(true);
+        }
+    }, [isStreaming]);
 
     // Auto-scroll to bottom on new messages
     useEffect(() => {
-        scrollEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages, isStreaming]);
+        if (shouldAutoScroll) {
+            scrollEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }
+    }, [messages, isStreaming, shouldAutoScroll]);
+
+    const handleChatScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+        const target = e.currentTarget;
+        const { scrollTop, scrollHeight, clientHeight } = target;
+        
+        // Detect if user is scrolling UP during streaming
+        if (isStreaming && scrollTop < lastScrollTopRef.current - 1) {
+            setShouldAutoScroll(false);
+        }
+        
+        // Re-enable if user manually scrolls back to bottom
+        const isAtBottom = Math.ceil(scrollHeight - scrollTop) <= clientHeight + 10;
+        if (isAtBottom && !shouldAutoScroll) {
+            setShouldAutoScroll(true);
+        }
+        
+        lastScrollTopRef.current = scrollTop;
+    }, [isStreaming, shouldAutoScroll]);
 
     // Auto-inject context of current note
     const handleSendMessage = useCallback(async (content: string) => {
@@ -108,13 +142,16 @@ export function AiSidebar() {
         }
 
         originalSendMessage(content, contextNotes, currentId, noteId);
+        setShouldAutoScroll(true);
     }, [location.pathname, notes, getNoteContent, originalSendMessage, activeChatId]);
 
-    // Initial connection check & models fetch
+    // Initial connection check & models fetch (Only for Ollama)
     useEffect(() => {
-        checkConnection();
-        fetchModels();
-    }, [checkConnection, fetchModels]);
+        if (activeProvider === 'ollama') {
+            checkConnection();
+            fetchModels();
+        }
+    }, [checkConnection, fetchModels, activeProvider]);
 
     // Load available chats
     const loadChats = useCallback(async () => {
@@ -160,9 +197,17 @@ export function AiSidebar() {
     const { general, updateGeneralSettings } = useSettingsStore();
     const isFloating = general.aiSidebarMode === 'floating';
 
-    // ─── Offline / not connected state ──────────────────────────────────────────
+    // ─── Connectivity State Checks ──────────────────────────────────────────
 
-    if (!isOllamaRunning) {
+    const isConfigured = activeProvider === 'ollama' 
+        ? isOllamaRunning 
+        : activeProvider === 'openai' 
+            ? !!openAiKey
+            : activeProvider === 'anthropic'
+                ? !!anthropicKey
+                : !!googleKey;
+
+    if (!isConfigured) {
         return (
             <div className="flex flex-col h-full w-full overflow-hidden">
                 <div className={cn(
@@ -174,24 +219,46 @@ export function AiSidebar() {
                     <div className="p-4 rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/20">
                         <Bot size={36} />
                     </div>
-                    <div className="space-y-1.5">
-                        <h3 className="text-sm font-semibold">Ollama Required</h3>
-                        <p className="text-xs text-muted-foreground max-w-[200px] leading-relaxed">
-                            Annota uses local AI. Please ensure Ollama is running on your machine.
+                    <div className="space-y-1.5 px-4">
+                        <h3 className="text-sm font-semibold capitalize">
+                            {activeProvider} {activeProvider === 'ollama' ? 'Required' : 'Configuration'}
+                        </h3>
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                            {activeProvider === 'ollama' 
+                                ? "Annota uses local AI. Please ensure Ollama is running on your machine."
+                                : `Please configure your ${activeProvider} API key in the AI Models settings.`
+                            }
                         </p>
                     </div>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        className="mt-2 rounded-xl gap-2 h-9 px-6 bg-primary/5 border-primary/20 hover:bg-primary/10 transition-all font-medium"
-                        onClick={() => { checkConnection(); fetchModels(); }}
-                    >
-                        <Settings2 size={14} />
-                        Retry Connection
-                    </Button>
-                    <p className="text-[10px] text-muted-foreground/40 absolute bottom-6">
-                        {ollamaBaseUrl}
-                    </p>
+                    {activeProvider === 'ollama' ? (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="mt-2 rounded-xl gap-2 h-9 px-6 bg-primary/5 border-primary/20 hover:bg-primary/10 transition-all font-medium"
+                            onClick={() => { checkConnection(); fetchModels(); }}
+                        >
+                            <Settings2 size={14} />
+                            Retry Connection
+                        </Button>
+                    ) : (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="mt-2 rounded-xl gap-2 h-9 px-6 bg-primary/5 border-primary/20 hover:bg-primary/10 transition-all font-medium"
+                            onClick={() => {
+                                // Close sidebar if floating and sticky is off? Or just let user navigate
+                                // For now, we'll suggest going to settings via the app navbar/shortcut
+                            }}
+                        >
+                            <Settings2 size={14} />
+                            Open Settings
+                        </Button>
+                    )}
+                    {activeProvider === 'ollama' && (
+                        <p className="text-[10px] text-muted-foreground/40 absolute bottom-6">
+                            {ollamaBaseUrl}
+                        </p>
+                    )}
                 </div>
             </div>
         );
@@ -335,7 +402,7 @@ export function AiSidebar() {
                             </div>
                         </ScrollArea>
 
-                        <div className="p-2 pt-1 shrink-0 border-t border-border/20">
+                        <div className="p-2 pt-1 shrink-0">
                             <AiChatInput
                                 onSend={handleSendMessage}
                                 onStop={stop}
@@ -346,7 +413,10 @@ export function AiSidebar() {
                 ) : (
                     // ── Active chat view ────────────────────────────────────────
                     <>
-                        <ScrollArea className="flex-1 min-h-0">
+                        <ScrollArea 
+                            className="flex-1 min-h-0"
+                            onScroll={handleChatScroll}
+                        >
                             <div className="flex flex-col gap-4 px-3 py-4">
                                 {messages.filter(m => m.role !== 'system').map((m, idx) => (
                                     <AiChatMessage
@@ -364,7 +434,7 @@ export function AiSidebar() {
                             </div>
                         </ScrollArea>
 
-                        <div className="p-2 pt-1 shrink-0 border-t border-border/20">
+                        <div className="p-2 pt-1 shrink-0">
                             <AiChatInput
                                 onSend={handleSendMessage}
                                 onStop={stop}

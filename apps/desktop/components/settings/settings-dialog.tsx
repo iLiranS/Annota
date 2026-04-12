@@ -1,11 +1,4 @@
-import {
-    Brush,
-    Cog,
-    Database,
-    HelpCircle,
-    Type,
-    User,
-} from "lucide-react";
+import { Bot, Brush, Cog, Database, HelpCircle, Type, User } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AccountSettings } from "./account-settings";
@@ -13,6 +6,7 @@ import { AppearanceSettings } from "./appearance-settings";
 import { EditorSettings } from "./editor-settings";
 import { GeneralSettings } from "./general-settings";
 import { HelpSettings } from "./help-settings";
+import { AiSettings } from "./ai-settings";
 import { APP_RELEASE_VERSION, useChangelog } from "@annota/core";
 
 import {
@@ -63,6 +57,12 @@ const tabs: SettingsTab[] = [
         label: "Account",
         icon: <User className="h-4 w-4 text-white" />,
         iconBg: "bg-green-500",
+    },
+    {
+        id: "ai",
+        label: "AI Models",
+        icon: <Bot className="h-4 w-4 text-white" />,
+        iconBg: "bg-blue-600",
     },
     {
         id: "help",
@@ -174,6 +174,8 @@ export default function SettingsDialog() {
                             <GeneralSettings />
                         ) : activeTab === "storage" ? (
                             <StorageSettings />
+                        ) : activeTab === "ai" ? (
+                            <AiSettings />
                         ) : activeTab === "help" ? (
                             <HelpSettings />
                         ) : (

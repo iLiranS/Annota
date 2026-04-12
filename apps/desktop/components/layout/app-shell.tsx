@@ -92,7 +92,7 @@ export default function AppShell() {
                 // Check if the click was on the toggle button (to prevent double-toggle if the button also handles closing)
                 // Actually, most of the time the toggle button is the one that opened it.
                 // But let's keep it simple: if click is outside the sidebar, close it.
-                
+
                 // One detail: if the click is on the "Model Selector" dropdown or other portals, 
                 // we should be careful. Usually portals are outside the ref.
                 // However, standard use-click-outside logic usually handles this path.
@@ -162,7 +162,7 @@ export default function AppShell() {
                             <div
                                 onMouseDown={startResizing}
                                 className={cn(
-                                    "absolute top-0 bottom-0 w-3 cursor-col-resize z-60 flex items-center justify-center group",
+                                    "absolute top-0 bottom-0 w-3 cursor-col-resize z-50 flex items-center justify-center group",
                                     general.appDirection === "rtl" ? "-right-1.5" : "-left-1.5"
                                 )}
                             >

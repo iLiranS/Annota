@@ -116,17 +116,11 @@ export function GeneralSettings() {
                         description="Floating overlays content, Pinned shrinks it"
                         icon={<PanelRight size={18} />}
                         iconBg="bg-indigo-500"
+                        value={general.aiSidebarMode === 'pinned' ? 'Pinned' : 'Floating'}
                         onClick={() => updateGeneralSettings({
                             aiSidebarMode: general.aiSidebarMode === 'floating' ? 'pinned' : 'floating'
                         })}
-                        action={
-                            <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-medium uppercase text-muted-foreground">
-                                    {general.aiSidebarMode}
-                                </span>
-                                <Toggle enabled={general.aiSidebarMode === 'pinned'} />
-                            </div>
-                        }
+                        action={<ChevronRight size={16} className="text-muted-foreground" />}
                     />
                     <div className="h-[2px] bg-border/50 mx-4" />
                     <SettingItem

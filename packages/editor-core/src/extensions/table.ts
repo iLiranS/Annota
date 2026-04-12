@@ -23,7 +23,6 @@ const updateColumns = (
     colgroup: HTMLTableColElement,
     table: HTMLTableElement,
     minCellWidth: number,
-    defaultCellWidth: number,
     overrideCol?: number,
     overrideValue?: number,
 ) => {
@@ -35,13 +34,13 @@ const updateColumns = (
     if (row !== null) {
         for (let i = 0, col = 0; i < row.childCount; i += 1) {
             const { colspan, colwidth } = row.child(i).attrs;
-
             for (let j = 0; j < colspan; j += 1, col += 1) {
                 const explicitWidth =
                     overrideCol === col ? overrideValue : (colwidth && (colwidth[j] as number | undefined));
-                const fallbackWidth = defaultCellWidth > 0 ? defaultCellWidth : undefined;
-                const resolvedWidth = explicitWidth ?? fallbackWidth;
-                const cssWidth = resolvedWidth ? `${resolvedWidth}px` : '';
+
+                // If there's an explicit width (like when the user has resized the column), use it.
+                // Otherwise do not supply a default - let the table automatically size itself based on contents.
+                const resolvedWidth = explicitWidth;
 
                 totalWidth += resolvedWidth || minCellWidth;
 
@@ -51,17 +50,22 @@ const updateColumns = (
 
                 if (!nextDOM) {
                     const colElement = document.createElement('col');
-                    const [propertyKey, propertyValue] = getColStyleDeclaration(minCellWidth, resolvedWidth);
-
-                    colElement.style.setProperty(propertyKey, propertyValue);
+                    if (resolvedWidth) {
+                        const [propertyKey, propertyValue] = getColStyleDeclaration(minCellWidth, resolvedWidth);
+                        colElement.style.setProperty(propertyKey, propertyValue);
+                    } else {
+                        colElement.style.minWidth = `${minCellWidth}px`;
+                    }
                     colgroup.appendChild(colElement);
                 } else {
-                    if ((nextDOM as HTMLTableColElement).style.width !== cssWidth) {
+                    const colElement = nextDOM as HTMLTableColElement;
+                    if (resolvedWidth) {
                         const [propertyKey, propertyValue] = getColStyleDeclaration(minCellWidth, resolvedWidth);
-
-                        (nextDOM as HTMLTableColElement).style.setProperty(propertyKey, propertyValue);
+                        colElement.style.setProperty(propertyKey, propertyValue);
+                    } else {
+                        colElement.style.width = '';
+                        colElement.style.minWidth = `${minCellWidth}px`;
                     }
-
                     nextDOM = nextDOM.nextSibling;
                 }
             }
@@ -109,7 +113,7 @@ class CustomTableView implements NodeView {
         }
 
         this.colgroup = this.table.appendChild(document.createElement('colgroup'));
-        updateColumns(node, this.colgroup, this.table, this.minCellWidth, this.defaultCellWidth);
+        updateColumns(node, this.colgroup, this.table, this.minCellWidth);
         this.contentDOM = this.table.appendChild(document.createElement('tbody'));
     }
 
@@ -119,7 +123,7 @@ class CustomTableView implements NodeView {
         }
 
         this.node = node;
-        updateColumns(node, this.colgroup, this.table, this.minCellWidth, this.defaultCellWidth);
+        updateColumns(node, this.colgroup, this.table, this.minCellWidth);
 
         return true;
     }
