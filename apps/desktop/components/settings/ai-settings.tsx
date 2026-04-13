@@ -9,7 +9,7 @@ import {
     SelectValue
 } from "@/components/ui/select";
 import { removeApiKey, saveApiKey, useAiStore } from "@annota/core";
-import { AlertCircle, Bot, Check, ExternalLink, ShieldCheck, Sparkles } from "lucide-react";
+import { Bot, Check, ExternalLink, ShieldCheck, Sparkles } from "lucide-react";
 import { useState } from "react";
 
 export function AiSettings() {
@@ -106,26 +106,17 @@ export function AiSettings() {
 
     return (
         <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300 pb-10">
-            {/* Token Warning for Cloud Providers */}
-            {activeProvider !== 'ollama' && (
-                <div className="flex gap-2.5 p-3 rounded-xl bg-amber-500/5 border border-amber-500/10 text-amber-500/80 items-start">
-                    <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-                    <div className="space-y-0.5">
-                        <p className="text-[10px] font-bold uppercase tracking-tight">TOKENS USED</p>
-                        <p className="text-[11px] leading-snug opacity-90">
-                            Because the full note context is injected into every message to maintain accuracy, Cloud providers (OpenAI, Anthropic, Google) will consume higher token volumes. Models with "Prompt Caching" (like Claude 3.5 or Gemini 2.5) will automatically discount these costs. Local AI (Ollama) is always free.
-                        </p>
-                    </div>
-                </div>
-            )}
-
-            {/* Recommendations & Technical Info */}
+            {/* Token & Context Info */}
             <div className="flex gap-2.5 p-3 rounded-xl bg-primary/5 border border-primary/10 items-start">
                 <Sparkles className="h-3.5 w-3.5 shrink-0 mt-0.5 text-primary/70" />
                 <div className="space-y-0.5">
-                    <p className="text-[10px] font-bold uppercase tracking-tight text-primary/70">Info</p>
+                    <p className="text-[10px] font-bold uppercase tracking-tight text-primary/70">Smart Context</p>
                     <p className="text-[11px] leading-snug text-muted-foreground/90">
-                        We recommend <strong>Gemini free API version</strong> for fast and easy cloud responses, or <strong>Ollama</strong> for a fully private, offline experience. To ensure the AI is always in sync with your writing, the live note content is sent as context with every single message across all providers.
+                        Note context is trimmed intelligently — short notes are sent in full, longer ones are excerpted based on your question.{' '}
+                        {activeProvider !== 'ollama'
+                            ? <>Cloud providers still charge for tokens used. Models with prompt caching (Claude, Gemini) will reduce repeat costs automatically.</>
+                            : <>Ollama is always free and fully local.</>
+                        }
                     </p>
                 </div>
             </div>

@@ -119,7 +119,7 @@ export function MainNavbar() {
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-6 w-6 transition-transform active:scale-95 hover:bg-sidebar-accent text-foreground/50"
+                                className="h-6 w-6 transition-transform hover:bg-sidebar-accent hover:text-foreground active:scale-95 text-foreground/50"
                                 onClick={toggleSidebar}
                             >
                                 {general.appDirection === 'rtl' ? <PanelRight size={16} /> : <PanelLeft size={16} />}

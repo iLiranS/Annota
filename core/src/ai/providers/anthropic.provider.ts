@@ -1,7 +1,7 @@
 import { AiMessage, useAiStore } from '@annota/core';
-import { AiProviderAdapter } from '../types';
 import { DEFAULT_SYSTEM_PROMPT } from '../constants';
 import { getApiKey } from '../security';
+import { AiProviderAdapter } from '../types';
 
 async function getProxiedFetch() {
     try {
@@ -10,7 +10,7 @@ async function getProxiedFetch() {
             const { fetch } = await import('@tauri-apps/plugin-http');
             return fetch;
         }
-    } catch (e) {}
+    } catch (e) { }
     return fetch;
 }
 
@@ -29,15 +29,16 @@ export class AnthropicProvider implements AiProviderAdapter {
 
         const fetchFn = await getProxiedFetch();
 
-        // Anthropic has a separate system parameter
         const systemPrompt = liveNoteContent
             ? `${DEFAULT_SYSTEM_PROMPT}\n\nUse the following live note context to answer accurately:\n${liveNoteContent}`
             : DEFAULT_SYSTEM_PROMPT;
 
-        const messages = history.filter(m => m.role !== 'system').map(m => ({
-            role: m.role === 'assistant' ? 'assistant' : 'user',
-            content: m.content
-        }));
+        const messages = history
+            .filter(m => m.role !== 'system')
+            .map(m => ({
+                role: m.role === 'assistant' ? 'assistant' : 'user',
+                content: m.content
+            }));
 
         const response = await fetchFn('https://api.anthropic.com/v1/messages', {
             method: 'POST',
@@ -45,7 +46,7 @@ export class AnthropicProvider implements AiProviderAdapter {
                 'Content-Type': 'application/json',
                 'x-api-key': anthropicKey,
                 'anthropic-version': '2023-06-01',
-                'dangerously-allow-browser': 'true' // Though we use proxy, this might be needed or ignored
+                'dangerously-allow-browser': 'true'
             },
             body: JSON.stringify({
                 model: selectedModelAnthropic,
@@ -79,9 +80,9 @@ export class AnthropicProvider implements AiProviderAdapter {
             for (const line of lines) {
                 const cleanLine = line.trim();
                 if (!cleanLine.startsWith('data: ')) continue;
-                
+
                 try {
-                    const json = JSON.parse(cleanLine.replace('data: ', ''));
+                    const json = JSON.parse(cleanLine.slice(6));
                     if (json.type === 'content_block_delta' && json.delta?.text) {
                         onChunk(json.delta.text);
                     }

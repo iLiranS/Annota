@@ -1,10 +1,8 @@
 import { AiMessage, useAiStore } from '@annota/core';
-import { AiProviderAdapter } from '../types';
 import { DEFAULT_SYSTEM_PROMPT } from '../constants';
 import { getApiKey } from '../security';
+import { AiProviderAdapter } from '../types';
 
-// We'll use a dynamic import for Tauri HTTP if available, otherwise fallback to global fetch
-// In a desktop environment, useAiChat will be used which is run within the Tauri context.
 async function getProxiedFetch() {
     try {
         // @ts-ignore
@@ -33,17 +31,15 @@ export class OpenAiProvider implements AiProviderAdapter {
 
         const fetchFn = await getProxiedFetch();
 
-        // Ephemeral injection
         const liveSystemContent = liveNoteContent
             ? `${DEFAULT_SYSTEM_PROMPT}\n\nUse the following live note context to answer accurately:\n${liveNoteContent}`
             : DEFAULT_SYSTEM_PROMPT;
 
         const messages = [
             { role: 'system', content: liveSystemContent },
-            ...history.filter(m => m.role !== 'system').map(m => ({
-                role: m.role,
-                content: m.content
-            }))
+            ...history
+                .filter(m => m.role !== 'system')
+                .map(m => ({ role: m.role, content: m.content }))
         ];
 
         const response = await fetchFn('https://api.openai.com/v1/chat/completions', {
@@ -84,7 +80,7 @@ export class OpenAiProvider implements AiProviderAdapter {
                 if (!cleanLine || cleanLine === 'data: [DONE]') continue;
                 if (cleanLine.startsWith('data: ')) {
                     try {
-                        const json = JSON.parse(cleanLine.replace('data: ', ''));
+                        const json = JSON.parse(cleanLine.slice(6));
                         const content = json.choices[0]?.delta?.content;
                         if (content) onChunk(content);
                     } catch (e) {

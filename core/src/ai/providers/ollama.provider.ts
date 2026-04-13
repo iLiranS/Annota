@@ -1,6 +1,6 @@
 import { AiMessage, useAiStore } from '@annota/core';
-import { AiProviderAdapter } from '../types';
 import { DEFAULT_SYSTEM_PROMPT } from '../constants';
+import { AiProviderAdapter } from '../types';
 
 export class OllamaProvider implements AiProviderAdapter {
     id = 'ollama' as const;
@@ -14,19 +14,15 @@ export class OllamaProvider implements AiProviderAdapter {
         const { ollamaBaseUrl, selectedModel } = useAiStore.getState();
         if (!selectedModel) throw new Error('No model selected');
 
-        // Ephemeral injection
         const liveSystemContent = liveNoteContent
             ? `${DEFAULT_SYSTEM_PROMPT}\n\nUse the following live note context to answer accurately:\n${liveNoteContent}`
             : DEFAULT_SYSTEM_PROMPT;
 
-        const efficientHistory = history.filter(m => m.role !== 'system').slice(-10);
-
-        const ollamaMessages = [
+        const messages = [
             { role: 'system', content: liveSystemContent },
-            ...efficientHistory.map(m => ({
-                role: m.role,
-                content: m.content
-            }))
+            ...history
+                .filter(m => m.role !== 'system')
+                .map(m => ({ role: m.role, content: m.content }))
         ];
 
         const response = await fetch(`${ollamaBaseUrl}/api/chat`, {
@@ -34,7 +30,7 @@ export class OllamaProvider implements AiProviderAdapter {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 model: selectedModel,
-                messages: ollamaMessages,
+                messages,
                 stream: true,
             }),
             signal
@@ -72,20 +68,19 @@ export class OllamaProvider implements AiProviderAdapter {
         if (!selectedModel) return 'New Chat';
 
         const response = await fetch(`${ollamaBaseUrl}/api/generate`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 model: selectedModel,
                 prompt: `Summarize the following text into a 3 to 5 word title. Do not use quotes, punctuation, or conversational filler. Output ONLY the title.\n\nText: ${firstMessage}`,
                 stream: false,
-                system: "You are a title generator. Output only the requested words."
+                system: 'You are a title generator. Output only the requested words.'
             }),
         });
 
         if (!response.ok) return 'New Chat';
 
         const data = await response.json();
-        let newTitle = data.response.trim();
-        return newTitle.replace(/^["']|["']$/g, '');
+        return data.response.trim().replace(/^["']|["']$/g, '');
     }
 }

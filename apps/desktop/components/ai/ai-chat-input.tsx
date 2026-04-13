@@ -6,8 +6,8 @@ import {
     DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { cn } from '@/lib/utils';
-import { useAiStore, OPENAI_MODELS, ANTHROPIC_MODELS, GOOGLE_MODELS } from "@annota/core";
-import { Bot, ChevronDown, Send, Square, Check, Sparkles } from 'lucide-react';
+import { ANTHROPIC_MODELS, GOOGLE_MODELS, OPENAI_MODELS, useAiStore } from "@annota/core";
+import { Bot, Check, ChevronDown, Send, Sparkles, Square } from 'lucide-react';
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 
 interface AiChatInputProps {
@@ -31,10 +31,10 @@ export function AiChatInput({ onSend, onSummarize, onStop, disabled }: AiChatInp
         setSelectedModelGoogle
     } = useAiStore();
 
-    const currentModelName = activeProvider === 'ollama' 
-        ? selectedModel 
-        : activeProvider === 'openai' 
-            ? selectedModelOpenAi 
+    const currentModelName = activeProvider === 'ollama'
+        ? selectedModel
+        : activeProvider === 'openai'
+            ? selectedModelOpenAi
             : activeProvider === 'anthropic'
                 ? selectedModelAnthropic
                 : selectedModelGoogle;
@@ -75,7 +75,7 @@ export function AiChatInput({ onSend, onSummarize, onStop, disabled }: AiChatInp
         };
 
         adjustHeight();
-        
+
         // Catch the end of potential sidebar transitions
         const timer = setTimeout(adjustHeight, 400);
         return () => clearTimeout(timer);
@@ -148,7 +148,7 @@ export function AiChatInput({ onSend, onSummarize, onStop, disabled }: AiChatInp
                                 <ChevronDown size={10} className="opacity-50" />
                             </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="w-48 rounded-xl border-border/50 shadow-xl bg-popover/95 backdrop-blur-md">
+                        <DropdownMenuContent align="start" className="w-max rounded-xl border-border/50 shadow-xl bg-popover/95 backdrop-blur-md">
                             {getProviderModels().length === 0 ? (
                                 <div className="p-2 text-xs text-muted-foreground text-center font-medium">No models found</div>
                             ) : (

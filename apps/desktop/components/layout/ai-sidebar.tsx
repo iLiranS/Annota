@@ -16,9 +16,9 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 import { matchPath, useLocation, useNavigate } from "react-router-dom";
 
+import { useAiChat } from "@/hooks/use-ai-chat";
 import { AiChatInput } from "../ai/ai-chat-input";
 import { AiChatError, AiChatMessage } from "../ai/ai-chat-message";
-import { useAiChat } from "@/hooks/use-ai-chat";
 
 export function AiSidebar() {
     const {
@@ -63,18 +63,18 @@ export function AiSidebar() {
     const handleChatScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
         const target = e.currentTarget;
         const { scrollTop, scrollHeight, clientHeight } = target;
-        
+
         // Detect if user is scrolling UP during streaming
         if (isStreaming && scrollTop < lastScrollTopRef.current - 1) {
             setShouldAutoScroll(false);
         }
-        
+
         // Re-enable if user manually scrolls back to bottom
         const isAtBottom = Math.ceil(scrollHeight - scrollTop) <= clientHeight + 10;
         if (isAtBottom && !shouldAutoScroll) {
             setShouldAutoScroll(true);
         }
-        
+
         lastScrollTopRef.current = scrollTop;
     }, [isStreaming, shouldAutoScroll]);
 
@@ -142,10 +142,10 @@ export function AiSidebar() {
             setActiveChatId(currentId);
         }
 
-        originalSendMessage(content, contextNotes, { 
-            overrideChatId: currentId, 
-            activeNoteId: noteId, 
-            mode 
+        originalSendMessage(content, contextNotes, {
+            overrideChatId: currentId,
+            activeNoteId: noteId,
+            mode
         });
         setShouldAutoScroll(true);
     }, [location.pathname, notes, getNoteContent, originalSendMessage, activeChatId]);
@@ -208,9 +208,9 @@ export function AiSidebar() {
 
     // ─── Connectivity State Checks ──────────────────────────────────────────
 
-    const isConfigured = activeProvider === 'ollama' 
-        ? isOllamaRunning 
-        : activeProvider === 'openai' 
+    const isConfigured = activeProvider === 'ollama'
+        ? isOllamaRunning
+        : activeProvider === 'openai'
             ? hasOpenAiKey
             : activeProvider === 'anthropic'
                 ? hasAnthropicKey
@@ -222,7 +222,7 @@ export function AiSidebar() {
                 <div className={cn(
                     "flex flex-col h-full w-full items-center justify-center text-center gap-4 p-6 overflow-hidden transition-all duration-300",
                     isFloating
-                        ? "rounded-2xl border border-border/40 bg-sidebar/95 backdrop-blur-xl shadow-2xl"
+                        ? " border border-border bg-sidebar  "
                         : "bg-sidebar/50"
                 )}>
                     <div className="p-4 rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/20">
@@ -233,7 +233,7 @@ export function AiSidebar() {
                             {activeProvider} {activeProvider === 'ollama' ? 'Required' : 'Configuration'}
                         </h3>
                         <p className="text-xs text-muted-foreground leading-relaxed">
-                            {activeProvider === 'ollama' 
+                            {activeProvider === 'ollama'
                                 ? "Annota uses local AI. Please ensure Ollama is running on your machine."
                                 : `Please configure your ${activeProvider} API key in the AI Models settings.`
                             }
@@ -275,9 +275,9 @@ export function AiSidebar() {
     return (
         <div dir="ltr" className="flex flex-col h-full w-full overflow-hidden">
             <div className={cn(
-                "flex flex-col h-full w-full overflow-hidden shadow-sm transition-all duration-300",
+                "flex flex-col h-full w-full overflow-hidden  transition-all duration-300",
                 isFloating
-                    ? "rounded-2xl border border-border/40 bg-sidebar/95 backdrop-blur-xl shadow-2xl"
+                    ? "rounded-2xl  border border-border/40 bg-sidebar"
                     : "bg-sidebar/50" // Subtle background when pinned
             )}>
 
@@ -420,7 +420,7 @@ export function AiSidebar() {
                 ) : (
                     // ── Active chat view ────────────────────────────────────────
                     <>
-                        <ScrollArea 
+                        <ScrollArea
                             className="flex-1 min-h-0"
                             onScroll={handleChatScroll}
                         >

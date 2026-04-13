@@ -21,7 +21,7 @@ export function AiChatMessage({ message, isStreaming, onInsertToNote }: AiChatMe
                 isUser ? "items-end" : "items-start"
             )}
         >
-            <div 
+            <div
                 dir={_isRtl ? "rtl" : "ltr"}
                 className={cn(
                     "text-[13px] leading-relaxed rounded-2xl wrap-break-word px-3.5 py-2.5",
@@ -34,35 +34,34 @@ export function AiChatMessage({ message, isStreaming, onInsertToNote }: AiChatMe
                 {isUser ? (
                     <span className="whitespace-pre-wrap">{message.content}</span>
                 ) : (
-                    <div className="relative group/content">
+                    <div className="flex flex-col gap-2">
                         <AiMarkdown content={message.content} />
 
+                        {/* Typing indicator */}
+                        {!message.content && isStreaming && (
+                            <span className="flex items-center gap-1 py-0.5">
+                                <span className="h-1.5 w-1.5 bg-primary/60 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                                <span className="h-1.5 w-1.5 bg-primary/60 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                                <span className="h-1.5 w-1.5 bg-primary/60 rounded-full animate-bounce" />
+                            </span>
+                        )}
+
                         {!isStreaming && message.content && onInsertToNote && (
-                            <div className="absolute -right-1 -top-1 opacity-0 group-hover/content:opacity-100 transition-opacity">
+                            <div className="flex justify-start pt-0.5">
                                 <Button
-                                    variant="secondary"
-                                    size="icon"
-                                    className="h-6 w-6 rounded-full shadow-md border border-border/50 hover:scale-105 active:scale-95 transition-all"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 gap-1.5 px-2 text-[11px]  rounded-lg"
                                     onClick={() => onInsertToNote(message.content)}
-                                    title="Insert to note"
                                 >
-                                    <CopyPlus size={10} />
+                                    <CopyPlus size={12} />
+                                    Insert into note
                                 </Button>
                             </div>
                         )}
                     </div>
                 )}
-
-                {/* Typing indicator */}
-                {message.role === 'assistant' && !message.content && isStreaming && (
-                    <span className="flex items-center gap-1 py-0.5">
-                        <span className="h-1.5 w-1.5 bg-primary/60 rounded-full animate-bounce [animation-delay:-0.3s]" />
-                        <span className="h-1.5 w-1.5 bg-primary/60 rounded-full animate-bounce [animation-delay:-0.15s]" />
-                        <span className="h-1.5 w-1.5 bg-primary/60 rounded-full animate-bounce" />
-                    </span>
-                )}
             </div>
-
         </div>
     );
 }
