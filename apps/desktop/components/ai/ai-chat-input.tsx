@@ -7,16 +7,17 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from '@/lib/utils';
 import { useAiStore, OPENAI_MODELS, ANTHROPIC_MODELS, GOOGLE_MODELS } from "@annota/core";
-import { Bot, ChevronDown, Send, Square, Check } from 'lucide-react';
+import { Bot, ChevronDown, Send, Square, Check, Sparkles } from 'lucide-react';
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 
 interface AiChatInputProps {
-    onSend: (content: string, contextNotes: Array<{ title: string, content: string }>) => void;
+    onSend: (content: string) => void;
+    onSummarize: () => void;
     onStop?: () => void;
     disabled: boolean;
 }
 
-export function AiChatInput({ onSend, onStop, disabled }: AiChatInputProps) {
+export function AiChatInput({ onSend, onSummarize, onStop, disabled }: AiChatInputProps) {
     const {
         activeProvider,
         availableModels,
@@ -57,6 +58,7 @@ export function AiChatInput({ onSend, onStop, disabled }: AiChatInputProps) {
 
     const [content, setContent] = useState('');
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const MAX_LENGTH = 2500;
 
     // Auto-resize textarea
     useLayoutEffect(() => {
@@ -81,7 +83,7 @@ export function AiChatInput({ onSend, onStop, disabled }: AiChatInputProps) {
 
     const handleSend = useCallback(async () => {
         if (!content.trim() || disabled) return;
-        onSend(content, []); // Context now managed by Sidebar
+        onSend(content);
         setContent('');
     }, [content, onSend, disabled]);
 
@@ -92,13 +94,37 @@ export function AiChatInput({ onSend, onStop, disabled }: AiChatInputProps) {
         }
     };
 
+    const isNearLimit = content.length > MAX_LENGTH * 0.8;
+
     return (
         <div className="flex flex-col gap-2 mb-2">
+            <div className="flex items-center justify-between px-1">
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onSummarize}
+                    disabled={disabled || !currentModelName}
+                    className="h-7 px-3 rounded-full gap-1.5 text-[10px] font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all border border-border/40 hover:border-primary/20 bg-muted/20"
+                >
+                    <Sparkles size={11} className="text-primary/60" />
+                    Summarize Note
+                </Button>
+
+                {isNearLimit && (
+                    <span className={cn(
+                        "text-[10px] font-medium",
+                        content.length >= MAX_LENGTH ? "text-destructive" : "text-muted-foreground/60"
+                    )}>
+                        {content.length}/{MAX_LENGTH}
+                    </span>
+                )}
+            </div>
+
             <div className="w-full bg-background border rounded-[24px] shadow-sm focus-within:shadow-md focus-within:border-primary/30 group p-1.5 flex flex-col gap-1">
                 <textarea
                     ref={textareaRef}
                     value={content}
-                    onChange={(e) => setContent(e.target.value)}
+                    onChange={(e) => setContent(e.target.value.slice(0, MAX_LENGTH))}
                     onKeyDown={handleKeyDown}
                     rows={1}
                     dir="auto"

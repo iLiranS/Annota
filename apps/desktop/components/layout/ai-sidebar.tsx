@@ -79,7 +79,7 @@ export function AiSidebar() {
     }, [isStreaming, shouldAutoScroll]);
 
     // Auto-inject context of current note
-    const handleSendMessage = useCallback(async (content: string) => {
+    const handleSendMessage = useCallback(async (content: string, mode: 'auto' | 'summary' = 'auto') => {
         let currentId = activeChatId;
         const contextNotes: Array<{ title: string, content: string }> = [];
 
@@ -120,7 +120,7 @@ export function AiSidebar() {
 
                 contextNotes.push({
                     title: currentNote.title || 'Current Note',
-                    content: cleanContent.slice(0, 15000)
+                    content: cleanContent // Don't slice here, let useAiChat handle trimming
                 });
             }
         }
@@ -132,7 +132,7 @@ export function AiSidebar() {
             const now = new Date();
             const newChat: AiChat = {
                 id: currentId,
-                title: "New Chat",
+                title: mode === 'summary' ? "Note Summary" : "New Chat",
                 createdAt: now,
                 updatedAt: now,
                 currentContextId: noteId || null,
@@ -142,9 +142,17 @@ export function AiSidebar() {
             setActiveChatId(currentId);
         }
 
-        originalSendMessage(content, contextNotes, currentId, noteId);
+        originalSendMessage(content, contextNotes, { 
+            overrideChatId: currentId, 
+            activeNoteId: noteId, 
+            mode 
+        });
         setShouldAutoScroll(true);
     }, [location.pathname, notes, getNoteContent, originalSendMessage, activeChatId]);
+
+    const handleSummarize = useCallback(() => {
+        handleSendMessage("Please summarize this note. Cover all major sections and key points.", 'summary');
+    }, [handleSendMessage]);
 
     // Initial connection check & models fetch (Only for Ollama)
     useEffect(() => {
@@ -403,6 +411,7 @@ export function AiSidebar() {
                         <div className="p-2 pt-1 shrink-0">
                             <AiChatInput
                                 onSend={handleSendMessage}
+                                onSummarize={handleSummarize}
                                 onStop={stop}
                                 disabled={isStreaming}
                             />
@@ -435,6 +444,7 @@ export function AiSidebar() {
                         <div className="p-2 pt-1 shrink-0">
                             <AiChatInput
                                 onSend={handleSendMessage}
+                                onSummarize={handleSummarize}
                                 onStop={stop}
                                 disabled={isStreaming}
                             />

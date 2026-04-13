@@ -9,6 +9,9 @@ import {
 } from '@annota/core';
 import { asc, eq } from 'drizzle-orm';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { buildHistoryWindow, prepareNoteContext, structuredSample } from '@/lib/ai-utils';
+
+export type ContextMode = 'auto' | 'summary' | 'full';
 
 export function useAiChat(chatId: string | null) {
     const [messages, setMessages] = useState<AiMessage[]>([]);
@@ -68,16 +71,15 @@ export function useAiChat(chatId: string | null) {
             lastRenderTimeRef.current = now;
         }
 
-        if (isStreaming) {
-            animationFrameRef.current = requestAnimationFrame(updateUiWithStreamingContent);
-        }
-    }, [isStreaming]);
+        animationFrameRef.current = requestAnimationFrame(updateUiWithStreamingContent);
+    }, []);
 
     useEffect(() => {
         if (isStreaming) {
             animationFrameRef.current = requestAnimationFrame(updateUiWithStreamingContent);
         } else if (animationFrameRef.current) {
             cancelAnimationFrame(animationFrameRef.current);
+            animationFrameRef.current = null;
             // Final update to catch the tail
             setMessages(prev => {
                 const assistantId = assistantMessageIdRef.current;
@@ -90,7 +92,10 @@ export function useAiChat(chatId: string | null) {
             });
         }
         return () => {
-            if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+            if (animationFrameRef.current) {
+                cancelAnimationFrame(animationFrameRef.current);
+                animationFrameRef.current = null;
+            }
         };
     }, [isStreaming, updateUiWithStreamingContent]);
 
@@ -124,9 +129,13 @@ export function useAiChat(chatId: string | null) {
     const sendMessage = useCallback(async (
         content: string,
         contextNotes: Array<{ title: string, content: string }> = [],
-        overrideChatId?: string,
-        activeNoteId?: string
+        options: {
+            overrideChatId?: string | null;
+            activeNoteId?: string | null;
+            mode?: ContextMode;
+        } = {}
     ) => {
+        const { overrideChatId, activeNoteId, mode = 'auto' } = options;
         const effectiveChatId = overrideChatId || chatId;
         if (!effectiveChatId) return;
 
@@ -142,11 +151,19 @@ export function useAiChat(chatId: string | null) {
         const db = getDb();
         const timestamp = new Date();
 
-        // 1. Get current chat state to check for context shifts
+        // 1. Get current history and chat state to check for first message
         const currentChat = await db.select().from(aiChats).where(eq(aiChats.id, effectiveChatId)).get();
-        const isFirstMessage = !currentChat || messages.length === 0;
+        const fullHistory = await db.select()
+            .from(aiMessages)
+            .where(eq(aiMessages.chatId, effectiveChatId))
+            .orderBy(asc(aiMessages.createdAt))
+            .all();
+            
+        const isFirstMessage = !currentChat || fullHistory.length === 0;
 
         // 2. Handle Context Shifts / First Turn Markers
+        const updatedHistory = [...fullHistory];
+
         if (activeNoteId && contextNotes.length > 0) {
             const activeNote = contextNotes[0]; // Assuming for now we primarily track the "active" note
 
@@ -169,6 +186,7 @@ export function useAiChat(chatId: string | null) {
                 };
                 await db.insert(aiMessages).values(markerMsg).run();
                 setMessages(prev => [...prev, markerMsg]);
+                updatedHistory.push(markerMsg);
 
                 // Update chat's currentContextId
                 await db.update(aiChats).set({
@@ -190,6 +208,7 @@ export function useAiChat(chatId: string | null) {
 
         setMessages(prev => [...prev, userMsg]);
         await db.insert(aiMessages).values(userMsg).run();
+        updatedHistory.push(userMsg);
 
         // Update chat's updatedAt
         await db.update(aiChats).set({
@@ -219,17 +238,31 @@ export function useAiChat(chatId: string | null) {
         setError(null);
 
         try {
-            // Get full live content for ephemeral injection (Phase 3)
-            const liveNoteContent = contextNotes.length > 0
-                ? contextNotes.map(n => `[Note: ${n.title}]\n${n.content}`).join('\n\n')
-                : null;
+            // Context Preparation with Tiered Trimming
+            let liveNoteContent: string | null = null;
+            if (contextNotes.length > 0) {
+                liveNoteContent = contextNotes.map(n => {
+                    const header = `[Note: ${n.title}]\n`;
+                    let body = '';
+                    
+                    if (mode === 'summary') {
+                        body = structuredSample(n.content, 12000);
+                    } else if (mode === 'full') {
+                        body = n.content;
+                    } else {
+                        body = prepareNoteContext(n.content, content);
+                    }
+                    
+                    return `${header}${body}`;
+                }).join('\n\n');
+            }
 
-            // Fetch history from DB or state (latest)
-            const history = await db.select()
-                .from(aiMessages)
-                .where(eq(aiMessages.chatId, effectiveChatId))
-                .orderBy(asc(aiMessages.createdAt))
-                .all();
+            // Apply sliding window to the updated history
+            const history = buildHistoryWindow(updatedHistory, 4000);
+
+            // If it's a summary action, we might want to inject a custom system prompt
+            // However, the adapter might already handle system messages.
+            // For now, let's keep it simple and just rely on the content provided.
 
             await adapter.sendMessage(
                 history,
