@@ -3,7 +3,6 @@ import { supabase } from '../supabase';
 // Helper type based on what the sync uses
 export type SyncPayload = {
     folders: any[];
-    tasks: any[];
     notes: any[];
     tags: any[];
 };
@@ -21,10 +20,6 @@ export const syncApi = {
         return await supabase.from('encrypted_folders').upsert(folders);
     },
 
-    /** Upsert encrypted tasks */
-    upsertTasks: async (tasks: any[]) => {
-        return await supabase.from('encrypted_tasks').upsert(tasks);
-    },
 
     /** Upsert encrypted tags */
     upsertTags: async (tags: any[]) => {

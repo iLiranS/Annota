@@ -30,12 +30,10 @@ export * from './repositories/files.repository';
 export * from './repositories/folders.repository';
 export * from './repositories/notes.repository';
 export * from './repositories/tags.repository';
-export * from './repositories/tasks.repository';
+export * from './schema';
 export * from './types';
 export * from './validators/folders';
 export * from './validators/image';
 export * from './validators/notes';
-export * from './validators/tasks';
-export * from './schema';
 export { schema };
 

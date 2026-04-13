@@ -1,5 +1,5 @@
 import { DAILY_NOTES_FOLDER_ID, useNotesStore, useSettingsStore } from "@annota/core";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { DailyNotesCalendar } from "./components/daily-notes-calendar";
 import NoteEditor from "./note-editor";
 import NotesEmpty from "./notes-empty";
@@ -11,6 +11,8 @@ import NotesEmpty from "./notes-empty";
 export default function NotesViewManager() {
     const { folderId: routeFolderId, noteId: routeNoteId } = useParams<{ folderId: string; noteId: string }>();
     const [searchParams] = useSearchParams();
+    const navigate = useNavigate();
+    const location = useLocation();
 
     const { lastViewedNoteId, lastViewedFolderId } = useSettingsStore();
     const notes = useNotesStore((s) => s.notes);
@@ -27,11 +29,15 @@ export default function NotesViewManager() {
         return <DailyNotesCalendar />;
     }
 
-    // 3. Priority: Memorized Note
-    if (lastViewedNoteId) {
+    // 3. Priority: Memorized Note (with auto-navigation)
+    // Only auto-navigate on the primary root "/notes" without search params or tag selection
+    if (lastViewedNoteId && location.pathname === "/notes" && !routeNoteId && !searchParams.get("folderId") && !searchParams.get("tagId")) {
         const memorizedNote = notes.find(n => n.id === lastViewedNoteId && !n.isDeleted);
         if (memorizedNote) {
-            return <NoteEditor key={lastViewedNoteId} noteId={lastViewedNoteId} folderId={lastViewedFolderId || 'root'} />;
+            // Use replace: true to avoid cluttering history on startup
+            const folderId = memorizedNote.folderId || 'root';
+            window.setTimeout(() => navigate(`/notes/${folderId}/${lastViewedNoteId}`, { replace: true }), 0);
+            return <NoteEditor key={lastViewedNoteId} noteId={lastViewedNoteId} folderId={folderId} />;
         }
     }
 

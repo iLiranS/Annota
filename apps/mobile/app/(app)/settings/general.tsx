@@ -1,5 +1,5 @@
 import SettingItem from '@/components/settings/setting-item';
-import { useSettingsStore, type AutoClearTasksDays } from '@annota/core';
+import { useSettingsStore } from '@annota/core';
 import { useTheme } from '@react-navigation/native';
 import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -14,14 +14,7 @@ export default function GeneralSettings() {
         });
     };
 
-    const toggleAutoClearTasks = () => {
-        const options: AutoClearTasksDays[] = [30, 60, 90, 180];
-        const currentIndex = options.indexOf(general.autoClearTasksDays || 30);
-        const nextIndex = (currentIndex + 1) % options.length;
-        updateGeneralSettings({
-            autoClearTasksDays: options[nextIndex]
-        });
-    };
+
 
     return (
         <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -38,18 +31,7 @@ export default function GeneralSettings() {
                 </View>
             </View>
 
-            <View style={styles.section}>
-                <Text style={[styles.sectionHeader, { color: colors.text + '80' }]}>TASKS</Text>
-                <View style={[styles.card, { backgroundColor: colors.card }]}>
-                    <SettingItem
-                        label="Clear Completed Tasks"
-                        type="value"
-                        value={`${general.autoClearTasksDays || 30} days`}
-                        onPress={toggleAutoClearTasks}
-                        icon="trash-bin-outline"
-                    />
-                </View>
-            </View>
+
 
             <View style={styles.section}>
                 <Text style={[styles.sectionHeader, { color: colors.text + '80' }]}>DISPLAY</Text>

@@ -6,7 +6,6 @@ import { createStorageAdapter } from './config';
 // Types
 export type ThemeMode = 'light' | 'dark' | 'system';
 export type StartOfWeek = 'sunday' | 'monday';
-export type AutoClearTasksDays = 30 | 60 | 90 | 180;
 
 export interface EditorSettings {
     direction: 'ltr' | 'rtl' | 'auto';
@@ -23,9 +22,6 @@ export interface GeneralSettings {
     startOfWeek: StartOfWeek;
     compactMode: boolean;
     hapticFeedback: boolean;
-    tasksShowDone: boolean;
-    taskListShowDone: boolean;
-    autoClearTasksDays: AutoClearTasksDays;
     appDirection: 'ltr' | 'rtl';
     isAiSidebarOpen: boolean;
     aiSidebarMode: 'floating' | 'pinned';
@@ -74,9 +70,6 @@ const DEFAULT_GENERAL_SETTINGS: GeneralSettings = {
     startOfWeek: 'sunday',
     compactMode: false,
     hapticFeedback: true,
-    tasksShowDone: true,
-    taskListShowDone: true,
-    autoClearTasksDays: 60,
     appDirection: 'ltr',
     isAiSidebarOpen: false,
     aiSidebarMode: 'floating',

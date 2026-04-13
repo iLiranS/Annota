@@ -13,8 +13,8 @@ export default function NotesEmpty() {
 
     return (
         <div className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground animate-in fade-in duration-500">
-            <FileText className="h-12 w-12 text-primary/20" />
-            <p className="text-sm font-medium">Select a note to start editing</p>
+            <FileText className="h-10 w-10 text-primary/10" />
+            <p className="text-sm font-medium">Open a note or create a new one to get started</p>
         </div>
     );
 }

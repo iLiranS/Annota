@@ -115,7 +115,7 @@ export default function LostKeyPage() {
                 <div className="rounded-lg bg-destructive/10 p-4">
                     <p className="text-center text-sm font-semibold leading-relaxed text-destructive">
                         This action is irreversible. Creating a new master key will
-                        permanently erase all your encrypted cloud data — notes, tasks, and
+                        permanently erase all your encrypted cloud data — notes and
                         folders.
                     </p>
                 </div>

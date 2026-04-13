@@ -24,7 +24,6 @@ export default function StorageSettings() {
         orphans: number;
         totalFilesSize: number;
         totalNotes: number;
-        totalTasks: number;
         totalFolders: number;
         notesSize: number;
         totalSize: number;
@@ -148,7 +147,7 @@ export default function StorageSettings() {
     const handleResetDatabase = async () => {
         Alert.alert(
             "Reset Local Database?",
-            "This will completely erase all local notes, tasks, and files from your device. If you haven't synced, they will be lost forever.",
+            "This will completely erase all local notes and files from your device. If you haven't synced, they will be lost forever.",
             [
                 { text: "Cancel", style: "cancel" },
                 {
@@ -255,14 +254,6 @@ export default function StorageSettings() {
                         icon="journal"
                         iconBg="#8b5cf6"
                         value={stats?.totalNotes ?? '...'}
-                        colors={colors}
-                    />
-                    <Divider colors={colors} />
-                    <SettingItem
-                        label="Total Tasks"
-                        icon="checkbox"
-                        iconBg="#14b8a6"
-                        value={stats?.totalTasks ?? '...'}
                         colors={colors}
                     />
                     <Divider colors={colors} />

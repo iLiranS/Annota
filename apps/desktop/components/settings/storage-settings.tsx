@@ -17,7 +17,6 @@ import {
     StorageService,
     useNotesStore,
     useSyncStore,
-    useTasksStore,
     useUserStore
 } from "@annota/core";
 import { useEffect, useState } from "react";
@@ -99,7 +98,6 @@ export function StorageSettings() {
 
             // Re-init stores so UI reflects the wiped database
             await useNotesStore.getState().initApp();
-            await useTasksStore.getState().loadTasks();
 
             toast.success("Local database has been wiped");
             setShowResetDialog(false);
@@ -188,13 +186,6 @@ export function StorageSettings() {
                     />
                     <Separator />
                     <SettingItem
-                        label="Total Tasks"
-                        icon={<Ionicons name="checkbox" size={20} />}
-                        iconBg="bg-teal-500"
-                        value={stats?.totalTasks ?? '...'}
-                    />
-                    <Separator />
-                    <SettingItem
                         label="Total Folders"
                         icon={<Ionicons name="folder" size={20} />}
                         iconBg="bg-sky-500"
@@ -257,7 +248,7 @@ export function StorageSettings() {
                     <AlertDialogHeader>
                         <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This will completely erase all local notes, tasks, and files from your device.
+                            This will completely erase all local notes and files from your device.
                             If you haven't synced, they will be lost forever.
                         </AlertDialogDescription>
                     </AlertDialogHeader>

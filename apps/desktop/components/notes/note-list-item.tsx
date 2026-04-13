@@ -32,6 +32,7 @@ interface NoteListItemProps extends React.ButtonHTMLAttributes<HTMLButtonElement
     asChild?: boolean;
     children?: React.ReactNode;
     isInList?: boolean;
+    forceCompact?: boolean;
 }
 
 export function NoteListItem({
@@ -47,11 +48,12 @@ export function NoteListItem({
     asChild,
     children,
     isInList,
+    forceCompact,
     ...props
 }: NoteListItemProps) {
     const { updateNoteMetadata, tags } = useNotesStore();
     const { general } = useSettingsStore();
-    const isCompact = !showDescription && general.compactMode;
+    const isCompact = (general.compactMode || forceCompact);
 
     const [isLocationPickerOpen, setIsLocationPickerOpen] = useState(false);
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);

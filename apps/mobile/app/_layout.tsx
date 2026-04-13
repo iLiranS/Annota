@@ -31,7 +31,6 @@ import {
   useSearchStore,
   useSettingsStore,
   useSyncStore,
-  useTasksStore,
   useAiStore
 } from '@annota/core';
 import { SyncScheduler, getMasterKey, initPlatformAdapters } from '@annota/core/platform';
@@ -208,7 +207,6 @@ function AppLogicHub() {
             setSession(null);
             logOutRevenueCat();
             useNotesStore.getState().reset();
-            useTasksStore.getState().reset();
             useSearchStore.getState().reset();
             useSyncStore.getState().reset();
           } else if (!useAuthStore.getState().initialized) {
@@ -267,8 +265,7 @@ function AppLogicHub() {
         // Once DB is configured, load the in-memory stores
         console.log('[RootLayout] Loading stores data...');
         await Promise.all([
-          useNotesStore.getState().initApp(),
-          useTasksStore.getState().loadTasks()
+          useNotesStore.getState().initApp()
         ]);
         
         if (session) {
@@ -345,7 +342,6 @@ function AppLogicHub() {
         reinitStores: async () => {
           await Promise.all([
             useNotesStore.getState().initApp(),
-            useTasksStore.getState().loadTasks(),
           ]);
         },
         getSyncState: () => {

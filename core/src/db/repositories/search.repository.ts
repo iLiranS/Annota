@@ -44,45 +44,6 @@ export const SearchRepository = {
             .all();
     },
 
-    async searchTasks(query: string, folderId: string | null = null) {
-        const exactMatch = query;
-        const startsWithMatch = `${query}%`;
-        const searchTerm = `%${query}%`;
-
-        const conditions = [
-            eq(schema.tasks.completed, false),
-            eq(schema.tasks.isPermDeleted, false)
-        ];
-
-        if (folderId) {
-            conditions.push(eq(schema.tasks.folderId, folderId));
-        }
-
-        return getDb().select({
-            id: schema.tasks.id,
-            title: schema.tasks.title,
-            description: schema.tasks.description,
-            deadline: schema.tasks.deadline,
-            folderId: schema.tasks.folderId,
-            completed: schema.tasks.completed,
-            updatedAt: schema.tasks.updatedAt,
-            // Prioritization logic: Title (3) > Description (2) > Links/Other (1)
-            score: sql<number>`
-                CASE 
-                    WHEN LOWER(${schema.tasks.title}) = LOWER(${exactMatch}) THEN 5
-                    WHEN LOWER(${schema.tasks.title}) LIKE LOWER(${startsWithMatch}) THEN 4
-                    WHEN LOWER(${schema.tasks.title}) LIKE LOWER(${searchTerm}) THEN 3
-                    WHEN LOWER(${schema.tasks.description}) LIKE LOWER(${searchTerm}) THEN 1
-                    WHEN LOWER(${schema.tasks.links}) LIKE LOWER(${searchTerm}) THEN 1
-                    ELSE 0 
-                END
-            `.as('score')
-        })
-            .from(schema.tasks)
-            .where(and(...conditions, sql`score > 0`))
-            .orderBy(desc(sql`score`), desc(schema.tasks.updatedAt))
-            .all();
-    },
 
     async searchFolders(query: string) {
         const exactMatch = query;

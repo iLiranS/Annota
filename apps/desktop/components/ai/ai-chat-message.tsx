@@ -47,11 +47,11 @@ export function AiChatMessage({ message, isStreaming, onInsertToNote }: AiChatMe
                         )}
 
                         {!isStreaming && message.content && onInsertToNote && (
-                            <div className="flex justify-start pt-0.5">
+                            <div className="flex justify-start pt-0.5  transition-opacity">
                                 <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="h-7 gap-1.5 px-2 text-[11px]  rounded-lg"
+                                    className="h-7 gap-1.5 px-2 text-[11px]  rounded-lg opacity-60 hover:opacity-100"
                                     onClick={() => onInsertToNote(message.content)}
                                 >
                                     <CopyPlus size={12} />

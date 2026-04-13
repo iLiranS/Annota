@@ -1,77 +1,87 @@
-import { useSmartNavigate } from "@/hooks/use-smart-navigate";
-import {
-    DAILY_NOTES_FOLDER_ID,
-    GeneralSettings,
-    useNotesStore,
-    useSettingsStore,
-    useSyncStore,
-    useUserStore,
-    type Folder,
-    type Tag,
-} from "@annota/core";
-import { Files, Home, Star } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
-import { FolderListItem, FolderListItemContent } from "@/components/notes/folder-list-item";
-import { NoteListItem } from "@/components/notes/note-list-item";
-import { Button } from "@/components/ui/button";
-import {
-    Collapsible,
-    CollapsibleContent,
-    CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import {
-    ContextMenu,
-    ContextMenuContent,
-    ContextMenuItem,
-    ContextMenuTrigger
-} from "@/components/ui/context-menu";
-import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubButton, SidebarMenuSubItem, useSidebar } from "@/components/ui/sidebar";
+import { Sidebar, SidebarContent, SidebarRail, useSidebar } from "@/components/ui/sidebar";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useCreateNote } from "@/hooks/use-create-note";
-import { useCreateTask } from "@/hooks/use-create-task";
+import { useSmartNavigate } from "@/hooks/use-smart-navigate";
+import { DAILY_NOTES_FOLDER_ID, TRASH_FOLDER_ID, getSortTypeLabel, sortNotes, useNotesStore, useSettingsStore, useSyncStore, useUserStore, type Folder, type SortType } from "@annota/core";
+
+// Modular Components
 import { cn } from "@/lib/utils";
-import { useEffect } from "react";
 import { ConfirmDialog } from "../custom-ui/confirm-dialog";
-import { DailyNoteIcon } from "../custom-ui/daily-note-icon";
 import { FolderEditModal } from "../notes/folder-edit-modal";
-import { TagEditModal } from "../tags/tag-edit-modal";
-import { Ionicons } from "../ui/ionicons";
+import { BreadcrumbsSection } from "./sidebar/breadcrumbs";
+import { FoldersTree } from "./sidebar/folders-tree";
+import { NotesList } from "./sidebar/notes-list";
+import { PinnedNotesSection } from "./sidebar/pinned-notes";
+import { QuickAccessSection } from "./sidebar/quick-access";
+import { SidebarFooterSection } from "./sidebar/sidebar-footer";
+import { SidebarHeaderSection } from "./sidebar/sidebar-header";
+import { TagsList } from "./sidebar/tags-list";
+
+const SORT_OPTIONS: SortType[] = [
+    'UPDATED_LAST',
+    'UPDATED_FIRST',
+    'CREATED_LAST',
+    'CREATED_FIRST',
+    'NAME_ASC',
+    'NAME_DESC',
+];
 
 export function AppSidebar() {
     const navigate = useNavigate();
     const navigateSmart = useSmartNavigate();
     const location = useLocation();
+    const { folderId: routeFolderId, noteId: routeNoteId } = useParams();
+    const [searchParams] = useSearchParams();
     const { colors } = useAppTheme();
-    const { toggleSidebar, setOpen } = useSidebar();
     const { general } = useSettingsStore();
 
-    const { folders, notes, tags, deleteFolder, deleteTag, deleteNote, getFoldersInFolder } = useNotesStore();
+    const {
+        notes,
+        tags,
+        deleteFolder,
+        deleteNote,
+        getFoldersInFolder,
+        getNotesInFolder,
+        getFolderById,
+        getSortType,
+        setFolderSortType,
+    } = useNotesStore();
+
     const isOnline = useSyncStore((s) => s.isOnline);
     const isGuest = useUserStore((s) => s.isGuest);
     const showOfflineBanner = !isOnline && !isGuest;
-    const { createAndNavigate: createTask } = useCreateTask();
     const { createAndNavigate: createNote } = useCreateNote();
 
+    const tagId = searchParams.get("tagId");
+
+    const currentFolderId = useMemo(() => {
+        if (tagId) return undefined;
+        const searchFolderId = searchParams.get("folderId");
+        if (searchFolderId) return searchFolderId;
+        if (routeFolderId && !['root', 'null', 'undefined'].includes(routeFolderId)) return routeFolderId;
+        return undefined;
+    }, [routeFolderId, searchParams, tagId]);
+
+    const currentFolder = currentFolderId ? getFolderById(currentFolderId) : null;
+    const parentFolder = currentFolder?.parentId ? getFolderById(currentFolder.parentId) : null;
+    const currentSortType = getSortType(currentFolderId ?? null);
+
     const [retryCooldown, setRetryCooldown] = useState(false);
-    const [isQuickAccessOpen, setIsQuickAccessOpen] = useState(() => {
-        const saved = localStorage.getItem("sidebar_quick_access_open");
+    const [isFoldersOpen, setIsFoldersOpen] = useState(() => {
+        const saved = localStorage.getItem("sidebar_folders_open");
         return saved !== null ? saved === "true" : true;
     });
     const [isTagsOpen, setIsTagsOpen] = useState(() => {
         const saved = localStorage.getItem("sidebar_tags_open");
         return saved !== null ? saved === "true" : true;
     });
-    const [isAllNotesOpen, setIsAllNotesOpen] = useState(() => {
-        const saved = localStorage.getItem("sidebar_all_notes_open");
-        return saved !== null ? saved === "true" : true;
-    });
+
     const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [folderToDelete, setFolderToDelete] = useState<Folder | null>(null);
-    const [editingTag, setEditingTag] = useState<Tag | null>(null);
-    const [isTagEditModalOpen, setIsTagEditModalOpen] = useState(false);
     const [newFolderParentId, setNewFolderParentId] = useState<string | null>(null);
 
     const handleRetry = useCallback(() => {
@@ -82,28 +92,12 @@ export function AppSidebar() {
     }, [retryCooldown]);
 
     useEffect(() => {
-        localStorage.setItem("sidebar_quick_access_open", String(isQuickAccessOpen));
-    }, [isQuickAccessOpen]);
+        localStorage.setItem("sidebar_folders_open", String(isFoldersOpen));
+    }, [isFoldersOpen]);
 
     useEffect(() => {
         localStorage.setItem("sidebar_tags_open", String(isTagsOpen));
     }, [isTagsOpen]);
-
-    useEffect(() => {
-        localStorage.setItem("sidebar_all_notes_open", String(isAllNotesOpen));
-    }, [isAllNotesOpen]);
-
-    useEffect(() => {
-        const handleToggle = (e: any) => {
-            if (e.detail?.open !== undefined) {
-                setOpen(e.detail.open);
-            } else {
-                toggleSidebar();
-            }
-        };
-        window.addEventListener('annota-toggle-main-sidebar', handleToggle);
-        return () => window.removeEventListener('annota-toggle-main-sidebar', handleToggle);
-    }, [toggleSidebar, setOpen]);
 
     const handleEditFolder = useCallback((folder: Folder) => {
         setEditingFolder(folder);
@@ -112,8 +106,8 @@ export function AppSidebar() {
     }, []);
 
     const handleCreateSubFolder = useCallback((parentFolder: Folder) => {
-        setEditingFolder(null); // Create mode
-        setNewFolderParentId(parentFolder.id); // Parent folder is the one clicked
+        setEditingFolder(null);
+        setNewFolderParentId(parentFolder.id);
         setIsEditModalOpen(true);
     }, []);
 
@@ -123,486 +117,246 @@ export function AppSidebar() {
         setFolderToDelete(null);
     }, [deleteFolder, folderToDelete]);
 
-    const handleCreateTask = useCallback((folder: Folder) => {
-        createTask({ folderId: folder.id });
-    }, [createTask]);
-    const handleCreateNote = useCallback((folder: Folder) => {
-        createNote(folder.id);
-    }, [createNote]);
-    const handleCreateTopLevelFolder = useCallback(() => {
-        setEditingFolder(null);
-        setNewFolderParentId(null);
-        setIsEditModalOpen(true);
-    }, []);
+    const browseNotes = useMemo(() => {
+        if (tagId) {
+            const list = notes.filter(n => {
+                if (!n.tags) return false;
+                try {
+                    const tagIds = JSON.parse(n.tags) as string[];
+                    return tagIds.includes(tagId) && !n.isDeleted && !n.isPermDeleted;
+                } catch { return false; }
+            });
+            return sortNotes(list, currentSortType);
+        }
+        const list = getNotesInFolder(currentFolderId ?? null);
+        return sortNotes(list, currentSortType);
+    }, [notes, currentFolderId, currentSortType, tagId]);
 
-    // Non-system top-level folders
-    const topLevelFolders = useMemo(() => {
-        return getFoldersInFolder(null).filter((f) => !f.isSystem);
-    }, [folders, getFoldersInFolder]);
+    const { pinnedNotes, unpinnedNotes } = useMemo(() => {
+        return {
+            pinnedNotes: browseNotes.filter((n) => n.isPinned),
+            unpinnedNotes: browseNotes.filter((n) => !n.isPinned),
+        };
+    }, [browseNotes]);
 
-    // Quick access notes
     const quickAccessNotes = useMemo(() => {
         return notes.filter((n) => n.isQuickAccess && !n.isDeleted);
     }, [notes]);
 
-    // Daily notes folder
-    const dailyFolder = useMemo(
-        () => folders.find((f) => f.id === DAILY_NOTES_FOLDER_ID),
-        [folders],
-    );
+    const currentTag = useMemo(() => tags.find(t => t.id === tagId), [tags, tagId]);
+    const isTrash = currentFolderId === TRASH_FOLDER_ID;
+    const isDaily = currentFolderId === DAILY_NOTES_FOLDER_ID;
 
+    const breadcrumbs = useMemo(() => {
+        if (!currentFolderId && !tagId && !isTrash && !isDaily) return null;
+        const crumbs: { name: string; id: string | null; icon?: string; color?: string }[] = [];
+        crumbs.push({ name: "All Notes", id: null, icon: "documents" });
 
-    // Active path helper
-    const isActive = (path: string) => location.pathname.startsWith(path);
+        if (tagId || isTrash || isDaily) return crumbs;
 
-    const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
-    const queryFolderId = queryParams.get("folderId");
-    const queryTagId = queryParams.get("tagId");
+        if (currentFolderId && parentFolder) {
+            if (parentFolder.parentId) {
+                crumbs.push({ name: "...", id: null });
+            }
+            crumbs.push({
+                name: parentFolder.name,
+                id: parentFolder.id,
+                icon: parentFolder.icon || "folder",
+                color: parentFolder.color
+            });
+        }
+        return crumbs;
+    }, [currentFolderId, tagId, isTrash, isDaily, parentFolder]);
+
+    const handleNavigate = useCallback((id: string | null) => {
+        if (id) {
+            navigateSmart(`/notes?folderId=${id}`);
+        } else {
+            navigateSmart("/notes");
+        }
+    }, [navigateSmart]);
+
+    const headerTitle = useMemo(() => {
+        if (tagId) return currentTag?.name ?? "Tag";
+        if (isTrash) return "Trash";
+        if (isDaily) return "Daily Notes";
+        return currentFolder ? currentFolder.name : "Annota";
+    }, [tagId, currentTag, isTrash, isDaily, currentFolder]);
+
+    const headerIcon = useMemo(() => {
+        if (tagId && currentTag) return "ellipse";
+        if (isTrash) return "trash";
+        if (isDaily) return "calendar-clear-outline";
+        return currentFolder ? currentFolder.icon : "documents";
+    }, [tagId, currentTag, isTrash, isDaily, currentFolder]);
+
+    const headerColor = useMemo(() => {
+        if (tagId && currentTag) return currentTag.color;
+        if (isTrash) return "#EF4444";
+        if (isDaily) return "#8B5CF6";
+        return currentFolder?.color || colors.primary;
+    }, [tagId, currentTag, isTrash, isDaily, currentFolder, colors.primary]);
+
+    const { open } = useSidebar();
+    const [width, setWidth] = useState(() => {
+        const saved = localStorage.getItem("sidebar_width");
+        return saved ? parseInt(saved, 10) : 260;
+    });
+    const [isResizing, setIsResizing] = useState(false);
+
+    const startResizing = useCallback((e: React.MouseEvent) => {
+        e.preventDefault();
+        setIsResizing(true);
+    }, []);
+
+    useEffect(() => {
+        if (!isResizing) return;
+
+        const handleMouseMove = (e: MouseEvent) => {
+            const isRtl = general.appDirection === "rtl";
+            const newWidth = isRtl ? window.innerWidth - e.clientX : e.clientX - 10;
+            if (newWidth >= 180 && newWidth <= 450) {
+                setWidth(newWidth);
+            }
+        };
+
+        const handleMouseUp = () => {
+            setIsResizing(false);
+            localStorage.setItem("sidebar_width", width.toString());
+        };
+
+        window.addEventListener("mousemove", handleMouseMove);
+        window.addEventListener("mouseup", handleMouseUp);
+        return () => {
+            window.removeEventListener("mousemove", handleMouseMove);
+            window.removeEventListener("mouseup", handleMouseUp);
+        };
+    }, [isResizing, width, general.appDirection]);
+
     const sidebarXPadding = general.appDirection === 'rtl' ? "pr-3 pl-1" : "pl-3 pr-1";
 
     return (
-        <Sidebar
-            collapsible="offcanvas"
-            className="border-none select-none"
-            side={general.appDirection === 'rtl' ? 'right' : 'left'}
-            dir={general.appDirection}
+        <div
+            className={cn(
+                "relative flex shrink-0 flex-col bg-transparent transition-all duration-300 ease-in-out border-e border-sidebar-border/60 overflow-hidden",
+                !open && "w-0! opacity-0 pointer-events-none border-none",
+                isResizing && "transition-none"
+            )}
+            style={{
+                width: open ? `${width}px` : 0,
+                ["--sidebar-width" as any]: `${width}px`
+            }}
         >
+            <Sidebar
+                collapsible="none"
+                className="border-none select-none bg-transparent w-full "
+                side={general.appDirection === 'rtl' ? 'right' : 'left'}
+            >
+                <div
+                    onMouseDown={startResizing}
+                    className={cn(
+                        "absolute top-0 bottom-0 w-1 cursor-col-resize z-50 hover:bg-primary/30 transition-colors",
+                        general.appDirection === "rtl" ? "left-0" : "right-0"
+                    )}
+                />
+                <SidebarHeaderSection
+                    title={headerTitle}
+                    icon={headerIcon}
+                    color={headerColor}
+                    isDaily={isDaily}
+                    isTrash={isTrash}
+                    currentSortType={currentSortType}
+                    onSortChange={(type) => setFolderSortType(currentFolderId ?? null, type)}
+                    onCreateNote={() => createNote(currentFolderId || "")}
+                    onCreateFolder={() => {
+                        setEditingFolder(null);
+                        setNewFolderParentId(null);
+                        setIsEditModalOpen(true);
+                    }}
+                    sortOptions={SORT_OPTIONS}
+                    getSortTypeLabel={getSortTypeLabel}
+                />
 
+                <BreadcrumbsSection
+                    breadcrumbs={breadcrumbs}
+                    onNavigate={handleNavigate}
+                />
 
-            {/* ── Content ──────────────────────────────────── */}
-            <SidebarContent className={cn("min-w-0 overflow-x-hidden pt-10", sidebarXPadding)}>
-                {/* Navigation group */}
-                <SidebarGroup className="pb-0">
-                    <SidebarGroupContent>
-                        <SidebarMenu>
-                            <SidebarMenuItem>
-                                <SidebarMenuButton
-                                    isActive={isActive("/home") || location.pathname === "/"}
-                                    onClick={() => navigateSmart("/home")}
-                                    tooltip="Home"
-                                >
-                                    <Home size={18} strokeWidth={2.8} className="text-indigo-500 shrink-0" />
-                                    <span className="font-medium">Home</span>
-                                </SidebarMenuButton>
-                            </SidebarMenuItem>
+                <SidebarContent className={cn("min-w-0 flex flex-col overflow-hidden pt-2", sidebarXPadding)}>
+                    <QuickAccessSection
+                        notes={quickAccessNotes}
+                        activeNoteId={routeNoteId}
+                        onNoteClick={(note) => navigateSmart(`/notes/${note.folderId || "root"}/${note.id}`)}
+                        onDeleteNote={deleteNote}
+                        general={general}
+                    />
 
-                            <SidebarMenuItem>
-                                <SidebarMenuButton
-                                    isActive={
-                                        (isActive("/notes") &&
-                                            location.pathname.includes(DAILY_NOTES_FOLDER_ID)) ||
-                                        queryFolderId === DAILY_NOTES_FOLDER_ID
-                                    }
-                                    onClick={() =>
-                                        navigateSmart(`/notes?folderId=${DAILY_NOTES_FOLDER_ID}`)
-                                    }
-                                    tooltip="Daily Notes"
-                                >
-                                    <DailyNoteIcon size={16} className="text-violet-500" />
+                    <PinnedNotesSection
+                        notes={pinnedNotes}
+                        activeNoteId={routeNoteId}
+                        onNoteClick={(note) => navigateSmart(`/notes/${note.folderId || "root"}/${note.id}`)}
+                        onDeleteNote={deleteNote}
+                        general={general}
+                    />
 
-                                    <span className="font-medium">{dailyFolder?.name ?? "Daily Notes"}</span>
-                                </SidebarMenuButton>
-                            </SidebarMenuItem>
+                    <NotesList
+                        notes={unpinnedNotes}
+                        activeNoteId={routeNoteId}
+                        onNoteClick={(note) => navigateSmart(`/notes/${note.folderId || "root"}/${note.id}`)}
+                        onDeleteNote={deleteNote}
+                        general={general}
+                    />
+                </SidebarContent>
 
-                            {/* Quick Access */}
-                            <Collapsible
-                                className="group/quick-access"
-                                open={isQuickAccessOpen}
-                                onOpenChange={setIsQuickAccessOpen}
-                                asChild
-                            >
-                                <SidebarMenuItem>
-                                    <SidebarMenuButton asChild tooltip="Quick Access">
-                                        <CollapsibleTrigger>
-                                            <Star size={18} strokeWidth={2.8} className="text-amber-400 shrink-0" />
-                                            <span className="flex-1 text-start font-medium">Quick Access</span>
-                                            <Ionicons name="chevron-forward" size={16} className={`transition-transform hover:text-accent-full group-data-[state=open]/quick-access:rotate-90 ${general.appDirection === 'rtl' ? 'rotate-180' : ''}`} />
-                                        </CollapsibleTrigger>
-                                    </SidebarMenuButton>
-                                    <CollapsibleContent>
-                                        <SidebarMenuSub>
-                                            {quickAccessNotes.length === 0 ? (
-                                                <p className="px-3 py-2 text-xs italic text-muted-foreground">
-                                                    No starred notes
-                                                </p>
-                                            ) : (
-                                                quickAccessNotes.map((note) => (
-                                                    <SidebarMenuSubItem key={note.id}>
-                                                        <NoteListItem
-                                                            note={note}
-                                                            asChild
-                                                            onDelete={() => deleteNote(note.id)}
-                                                        >
-                                                            <SidebarMenuSubButton className="gap-1"
-                                                                isActive={location.pathname === `/notes/${note.folderId || "root"}/${note.id}`}
-                                                                onClick={() => {
-                                                                    const folderId = note.folderId || "root";
-                                                                    navigateSmart(`/notes/${folderId}/${note.id}`);
-                                                                }}
-                                                            >
-                                                                <Ionicons name="document-text" color={colors.primary} className="text-primary shrink-0" />
-                                                                <span className="truncate opacity-80">
-                                                                    {note.title || "Untitled Note"}
-                                                                </span>
-                                                            </SidebarMenuSubButton>
-                                                        </NoteListItem>
-                                                    </SidebarMenuSubItem>
-                                                ))
-                                            )}
-                                        </SidebarMenuSub>
-                                    </CollapsibleContent>
-                                </SidebarMenuItem>
-                            </Collapsible>
-                        </SidebarMenu>
-                    </SidebarGroupContent>
-                </SidebarGroup>
+                <div className={cn("mt-auto border-t border-border/10 pb-2", sidebarXPadding)}>
+                    <FoldersTree
+                        isFoldersOpen={isFoldersOpen}
+                        setIsFoldersOpen={setIsFoldersOpen}
+                        onNavigate={(id) => navigateSmart(`/notes?folderId=${id}`)}
+                        onEdit={handleEditFolder}
+                        onDelete={setFolderToDelete}
+                        onCreateSubFolder={handleCreateSubFolder}
+                        onCreateNote={createNote}
+                        getFoldersInFolder={getFoldersInFolder}
+                        general={general}
+                        currentFolderId={currentFolderId ?? null}
+                    />
 
+                    <TagsList
+                        tags={tags}
+                        isTagsOpen={isTagsOpen}
+                        setIsTagsOpen={setIsTagsOpen}
+                        activeTagId={tagId}
+                        onTagClick={(id) => navigateSmart(`/notes?tagId=${id}`)}
+                        general={general}
+                    />
 
-
-                {/* Notes & Folders */}
-                <SidebarGroup className="pt-0">
-                    {/* Notes label removed */}
-                    <SidebarGroupContent>
-                        <SidebarMenu>
-                            <Collapsible
-                                className="group/all-notes"
-                                open={isAllNotesOpen}
-                                onOpenChange={setIsAllNotesOpen}
-                            >
-                                <SidebarMenuItem key="all-notes" className="group/folder">
-                                    <ContextMenu>
-                                        <ContextMenuTrigger asChild>
-                                            <SidebarMenuButton
-                                                isActive={
-                                                    location.pathname === "/notes" &&
-                                                    !queryFolderId &&
-                                                    !queryTagId
-                                                }
-                                                onClick={() => navigateSmart("/notes")}
-                                                tooltip="All Notes"
-                                            >
-                                                <Files color={colors.primary} size={18} strokeWidth={2.8} className="text-primary shrink-0" />
-                                                <span className="flex-1 text-start font-medium">All Notes</span>
-                                                <CollapsibleTrigger asChild>
-                                                    <span
-                                                        onClick={(e) => e.stopPropagation()}
-                                                        className="flex items-center justify-center  hover:bg-sidebar-accent rounded transition-colors"
-                                                    >
-                                                        <Ionicons
-                                                            name="chevron-forward"
-                                                            size={16}
-                                                            className={cn(
-                                                                "transition-transform hover:text-accent-full",
-                                                                "group-data-[state=open]/all-notes:rotate-90",
-                                                                general.appDirection === 'rtl' ? 'rotate-180' : ''
-                                                            )}
-                                                        />
-                                                    </span>
-                                                </CollapsibleTrigger>
-                                            </SidebarMenuButton>
-                                        </ContextMenuTrigger>
-                                        <ContextMenuContent className="w-48">
-                                            <ContextMenuItem className="gap-2" onClick={() => createNote()}>
-                                                <Ionicons name="document-outline" size={16} />
-                                                <span>New Note</span>
-                                            </ContextMenuItem>
-                                            <ContextMenuItem className="gap-2" onClick={handleCreateTopLevelFolder}>
-                                                <Ionicons name="folder-outline" size={16} />
-                                                <span>New Folder</span>
-                                            </ContextMenuItem>
-                                            <ContextMenuItem className="gap-2" onClick={() => createTask()}>
-                                                <Ionicons name="checkmark-circle-outline" size={16} />
-                                                <span>New Task</span>
-                                            </ContextMenuItem>
-                                        </ContextMenuContent>
-                                    </ContextMenu>
-                                </SidebarMenuItem>
-                                <CollapsibleContent>
-                                    <SidebarMenuSub>
-                                        {topLevelFolders.map((folder) => (
-                                            <FolderTreeItem
-                                                key={folder.id}
-                                                folder={folder}
-                                                general={general}
-                                                allFolders={folders}
-                                                onNavigate={(folderId) =>
-                                                    navigateSmart(`/notes?folderId=${folderId}`)
-                                                }
-                                                onEdit={handleEditFolder}
-                                                onDelete={setFolderToDelete}
-                                                onCreateSubFolder={handleCreateSubFolder}
-                                                onCreateTask={handleCreateTask}
-                                                onCreateNote={handleCreateNote}
-                                                getFoldersInFolder={getFoldersInFolder}
-                                            />
-                                        ))}
-                                    </SidebarMenuSub>
-                                </CollapsibleContent>
-                            </Collapsible>
-                        </SidebarMenu>
-                    </SidebarGroupContent>
-                </SidebarGroup>
-
-
-                <Collapsible
-                    className="group/tags mt-auto"
-                    open={isTagsOpen}
-                    onOpenChange={setIsTagsOpen}
-                >
-                    <SidebarGroup>
-                        <SidebarGroupLabel asChild className="text-sm text-sidebar-foreground font-medium">
-                            <CollapsibleTrigger className={cn("flex w-full items-center gap-2 hover:bg-sidebar-accent ", general.appDirection === 'rtl' ? "pl-1 pr-1" : "pl-1 pr-1")}>
-                                <Ionicons name="pricetag-outline" size={18} className="text-accent-full" />
-                                <span className="flex-1 text-start">Tags</span>
-                                <Ionicons name="chevron-forward" size={16} className={`transition-transform hover:text-accent-full group-data-[state=open]/tags:rotate-90 ${general.appDirection === 'rtl' ? 'rotate-180' : ''}`} />
-                            </CollapsibleTrigger>
-                        </SidebarGroupLabel>
-                        <CollapsibleContent>
-                            <SidebarGroupContent>
-                                <SidebarMenu className="px-1">
-                                    {tags.length === 0 ? (
-                                        <SidebarMenuItem key="no-tags">
-                                            <p className="px-3 py-2 text-xs italic text-muted-foreground">
-                                                No tags yet
-                                            </p>
-                                        </SidebarMenuItem>
-                                    ) : (
-                                        tags.map((tag) => (
-                                            <SidebarMenuItem style={{ "--primary": tag.color } as React.CSSProperties} key={tag.id}>
-                                                <ContextMenu>
-                                                    <ContextMenuTrigger asChild>
-                                                        <SidebarMenuButton
-                                                            onClick={() => navigateSmart(`/notes?tagId=${tag.id}`)}
-                                                            isActive={isActive("/notes") && location.search.includes(`tagId=${tag.id}`)}
-                                                            className="text-sm hover:bg-primary/10 data-[active=true]:bg-primary/10"
-
-                                                        >
-                                                            <Ionicons className={general.appDirection === 'ltr' ? 'pl-1' : 'pr-1'} color={tag.color} name="ellipse" size={16} />
-                                                            <span className="truncate text-xs font-mono text-primary ">{tag.name}</span>
-                                                        </SidebarMenuButton>
-                                                    </ContextMenuTrigger>
-                                                    <ContextMenuContent className="w-48">
-                                                        <ContextMenuItem
-                                                            className="gap-2 "
-                                                            onClick={() => {
-                                                                setEditingTag(tag);
-                                                                setIsTagEditModalOpen(true);
-                                                            }}
-                                                        >
-                                                            <Ionicons name="pencil-outline" size={16} />
-                                                            <span>Update Tag</span>
-                                                        </ContextMenuItem>
-                                                        <ContextMenuItem
-                                                            className="gap-2 text-destructive focus:text-destructive"
-                                                            onClick={() => deleteTag(tag.id)}
-                                                        >
-                                                            <Ionicons name="trash-outline" size={16} />
-                                                            <span>Delete Tag</span>
-                                                        </ContextMenuItem>
-                                                    </ContextMenuContent>
-                                                </ContextMenu>
-                                            </SidebarMenuItem>
-                                        ))
-                                    )}
-                                </SidebarMenu>
-                            </SidebarGroupContent>
-                        </CollapsibleContent>
-                    </SidebarGroup>
-                </Collapsible>
-            </SidebarContent>
-
-
-            {/* ── Footer ───────────────────────────────────── */}
-            <SidebarFooter className={cn("gap-2 pb-3", sidebarXPadding)}>
-                {showOfflineBanner && (
-                    <div className="flex items-center gap-2 rounded-lg bg-amber-500/10 px-3 py-1.5">
-                        <Ionicons name="cloud-offline" size={16} className="text-amber-500" />
-                        <span className="flex-1 text-xs font-medium">Offline</span>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 px-2 text-xs text-indigo-500"
-                            disabled={retryCooldown}
-                            onClick={handleRetry}
-                        >
-                            {retryCooldown ? "Wait…" : "Retry"}
-                        </Button>
-                    </div>
-                )}
-
-                <div className="flex items-center justify-between border-t pt-1">
-                    <SidebarMenuButton
-                        className="h-9 w-9 active:bg-transparent active:scale-95 active:text-blue-400 grid place-items-start hover:bg-transparent dark:hover:bg-transparent hover:cursor-pointer hover:text-blue-400"
-                        onClick={() => navigate("/settings", { state: { background: location } })}
-                        tooltip="Settings"
-                    >
-                        <Ionicons name="settings-outline" size={18} />
-                    </SidebarMenuButton>
-
-                    <SidebarMenuButton
-                        className="h-9 w-9 active:bg-transparent active:scale-95 active:text-destructive grid place-items-end hover:bg-transparent dark:hover:bg-transparent hover:text-destructive hover:cursor-pointer"
-                        onClick={() => navigateSmart("/notes/trash")}
-                        tooltip="Trash"
-                    >
-                        <Ionicons name="trash-outline" size={18} />
-                    </SidebarMenuButton>
+                    <SidebarFooterSection
+                        showOfflineBanner={showOfflineBanner}
+                        retryCooldown={retryCooldown}
+                        onRetry={handleRetry}
+                        onSettingsClick={() => navigate("/settings", { state: { background: location } })}
+                        onTrashClick={() => navigateSmart("/notes/trash")}
+                        sidebarXPadding={sidebarXPadding}
+                    />
                 </div>
-            </SidebarFooter>
 
-
-            {/* Modals */}
-            <FolderEditModal
-                open={isEditModalOpen}
-                onOpenChange={setIsEditModalOpen}
-                folder={editingFolder}
-                defaultParentId={newFolderParentId}
-            />
-
-            <TagEditModal
-                open={isTagEditModalOpen}
-                onOpenChange={setIsTagEditModalOpen}
-                tag={editingTag}
-            />
-
-            <ConfirmDialog
-                open={!!folderToDelete}
-                onOpenChange={(open) => !open && setFolderToDelete(null)}
-                title="Delete Folder?"
-                description={`This will permanently delete "${folderToDelete?.name}" and all its contents.`}
-                confirmText="Delete Folder"
-                onConfirm={handleDeleteFolder}
-                variant="destructive"
-            />
-        </Sidebar>
-    );
-}
-
-interface FolderTreeItemProps {
-    folder: Folder;
-    allFolders: Folder[];
-    onNavigate: (folderId: string) => void;
-    onEdit: (folder: Folder) => void;
-    onDelete: (folder: Folder) => void;
-    onCreateSubFolder: (parentFolder: Folder) => void;
-    onCreateTask: (folder: Folder) => void;
-    onCreateNote: (folder: Folder) => void;
-    general: GeneralSettings;
-    getFoldersInFolder: (parentId: string | null, includeDeleted?: boolean) => Folder[];
-}
-
-function FolderTreeItem({ folder, allFolders, onNavigate, onEdit, onDelete, onCreateSubFolder, onCreateTask, onCreateNote, general, getFoldersInFolder }: FolderTreeItemProps) {
-    const children = getFoldersInFolder(folder.id).filter(
-        (f) => !f.isSystem,
-    );
-    const hasChildren = children.length > 0;
-
-    const [isOpen, setIsOpen] = useState(() => {
-        const saved = localStorage.getItem(`sidebar_folder_open_${folder.id}`);
-        return saved !== null ? saved === "true" : false;
-    });
-
-    const handleOpenChange = useCallback((open: boolean) => {
-        setIsOpen(open);
-        localStorage.setItem(`sidebar_folder_open_${folder.id}`, String(open));
-    }, [folder.id]);
-
-    if (!hasChildren) {
-        return (
-            <SidebarMenuItem className="group/folder">
-                <FolderListItem
-                    asChild
-                    folder={folder}
-                    onEdit={onEdit}
-                    onDelete={onDelete}
-                    onCreateSubFolder={onCreateSubFolder}
-                    onCreateTask={onCreateTask}
-                    onCreateNote={onCreateNote}
-                    className="group/item"
-                >
-                    <SidebarMenuButton
-                        onClick={() => onNavigate(folder.id)}
-
-                    >
-                        <FolderListItemContent folder={folder} />
-                    </SidebarMenuButton>
-                </FolderListItem>
-            </SidebarMenuItem>
-        );
-    }
-
-    return (
-        <Collapsible open={isOpen} onOpenChange={handleOpenChange}>
-            <SidebarMenuItem className="group/folder flex items-center hover:bg-sidebar-accent rounded-lg">
-                <FolderListItem
-                    asChild
-                    folder={folder}
-                    onEdit={onEdit}
-                    onDelete={onDelete}
-                    onCreateSubFolder={onCreateSubFolder}
-                    onCreateTask={onCreateTask}
-                    onCreateNote={onCreateNote}
-                    className="group/item"
-                >
-                    <SidebarMenuButton
-                        onClick={() => onNavigate(folder.id)}
-
-                    >
-                        <FolderListItemContent folder={folder} />
-                    </SidebarMenuButton>
-                </FolderListItem>
-                <CollapsibleTrigger asChild>
-                    <button
-                        type="button"
-                        className={`group/folder-chevron hover:text-accent-full p-1 ${general.appDirection === 'rtl' ? 'left-1' : 'right-1'}`}
-                    >
-                        <Ionicons name="chevron-forward" size={12} className={`transition-transform group-data-[state=open]/folder-chevron:rotate-90 ${general.appDirection === 'rtl' ? 'rotate-180' : ''}`} />
-                    </button>
-                </CollapsibleTrigger>
-            </SidebarMenuItem>
-            <CollapsibleContent>
-                <SidebarMenuSub>
-                    {children.map((child) => {
-                        const nested = getFoldersInFolder(child.id).filter(
-                            (f) => !f.isSystem,
-                        );
-                        if (nested.length > 0) {
-                            return (
-                                <FolderTreeItem
-                                    key={child.id}
-                                    folder={child}
-                                    allFolders={allFolders}
-                                    general={general}
-                                    onNavigate={onNavigate}
-                                    onEdit={onEdit}
-                                    onDelete={onDelete}
-                                    onCreateSubFolder={onCreateSubFolder}
-                                    onCreateTask={onCreateTask}
-                                    onCreateNote={onCreateNote}
-                                    getFoldersInFolder={getFoldersInFolder}
-                                />
-                            );
-                        }
-                        return (
-                            <SidebarMenuSubItem key={child.id}>
-                                <FolderListItem
-                                    asChild
-                                    folder={child}
-                                    onEdit={onEdit}
-                                    onDelete={onDelete}
-                                    onCreateSubFolder={onCreateSubFolder}
-                                    onCreateTask={onCreateTask}
-                                    onCreateNote={onCreateNote}
-                                    className="group/item "
-                                >
-                                    <SidebarMenuSubButton onClick={() => onNavigate(child.id)}>
-                                        <FolderListItemContent folder={child} />
-                                    </SidebarMenuSubButton>
-                                </FolderListItem>
-                            </SidebarMenuSubItem>
-                        );
-                    })}
-                </SidebarMenuSub>
-            </CollapsibleContent>
-        </Collapsible>
+                <FolderEditModal
+                    open={isEditModalOpen}
+                    onOpenChange={setIsEditModalOpen}
+                    folder={editingFolder}
+                    defaultParentId={newFolderParentId}
+                />
+                <ConfirmDialog
+                    open={!!folderToDelete}
+                    onOpenChange={(v) => !v && setFolderToDelete(null)}
+                    title="Delete Folder?"
+                    description={`Permanently delete "${folderToDelete?.name}"?`}
+                    onConfirm={handleDeleteFolder}
+                    variant="destructive"
+                />
+                <SidebarRail />
+            </Sidebar>
+        </div>
     );
 }

@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/button"
 import { useSidebar } from "@/components/ui/sidebar"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { useCreateNote } from "@/hooks/use-create-note"
 import { cn } from "@/lib/utils"
 import { useSearchStore, useSettingsStore, useSyncStore, useUserStore } from "@annota/core"
 import { PanelLeft, PanelRight } from "lucide-react"
@@ -34,7 +33,6 @@ export function MainNavbar() {
     const { session } = useUserStore();
     const { general, updateGeneralSettings } = useSettingsStore();
     const { open, toggleSidebar } = useSidebar();
-    const { createAndNavigate } = useCreateNote();
 
     const isMac = useMemo(() => {
         if (typeof navigator === "undefined") {
@@ -179,19 +177,7 @@ export function MainNavbar() {
 
             {/* Right Section: Actions */}
             <div className="flex items-center gap-1.5">
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Button
-                            onClick={() => createAndNavigate()}
-                            className="h-6 px-2 rounded-full bg-accent text-background dark:text-foreground  hover:bg-accent/90 transition-all active:scale-95 flex items-center gap-1 border-none shadow-sm"
-                        >
-                            <span className="text-[10px] font-semibold">New Note</span>
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="text-[10px]">
-                        New Note
-                    </TooltipContent>
-                </Tooltip>
+
 
                 {session?.user?.id && <div className={cn(
                     "flex items-center gap-1 transition-opacity duration-300",

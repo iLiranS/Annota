@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull, sql, or } from 'drizzle-orm';
+import { and, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 import { getDb } from '../../stores/db.store';
 import type { Folder, FolderInsert, NoteMetadata } from '../schema';
 import * as schema from '../schema';
@@ -52,18 +52,15 @@ export async function upsertSyncedFolder(folderData: Folder, tx: DbOrTx = getDb(
         // 2. MIGRATION: If legacy hyphenless folder found, upgrade ID and CASCADE
         if (existing.id === hyphenlessId && id !== hyphenlessId) {
             console.log(`[Sync] Migrating legacy Folder ID and references: ${hyphenlessId} -> ${id}`);
-            
+
             // Update Folder ID itself
             await tx.update(schema.folders).set({ id }).where(eq(schema.folders.id, hyphenlessId)).run();
-            
+
             // Cascade to children's parentId
             await tx.update(schema.folders).set({ parentId: id }).where(eq(schema.folders.parentId, hyphenlessId)).run();
-            
+
             // Cascade to Notes
             await tx.update(schema.noteMetadata).set({ folderId: id }).where(eq(schema.noteMetadata.folderId, hyphenlessId)).run();
-            
-            // Cascade to Tasks
-            await tx.update(schema.tasks).set({ folderId: id }).where(eq(schema.tasks.folderId, hyphenlessId)).run();
         }
     }
 

@@ -59,22 +59,6 @@ export const CREATE_TABLES_SQL = `
     is_perm_deleted INTEGER NOT NULL DEFAULT 0
   );
 
-  CREATE TABLE IF NOT EXISTS tasks (
-    id TEXT PRIMARY KEY,
-    title TEXT NOT NULL CHECK(length(title) <= 50),
-    description TEXT NOT NULL DEFAULT '' CHECK(length(description) <= 200),
-    deadline INTEGER NOT NULL,
-    is_whole_day INTEGER NOT NULL DEFAULT 0,
-    completed INTEGER NOT NULL DEFAULT 0,
-    completed_at INTEGER,
-    folder_id TEXT,
-    links TEXT NOT NULL DEFAULT '[]',
-    created_at INTEGER NOT NULL,
-    updated_at INTEGER NOT NULL,
-    is_dirty INTEGER NOT NULL DEFAULT 0,
-    last_synced_at INTEGER,
-    is_perm_deleted INTEGER NOT NULL DEFAULT 0
-  );
 
   CREATE TABLE IF NOT EXISTS tags (
     id TEXT PRIMARY KEY,
@@ -120,8 +104,6 @@ export const CREATE_TABLES_SQL = `
   );
 
   -- Indices for better performance
-  CREATE INDEX IF NOT EXISTS idx_tasks_deadline ON tasks(deadline);
-  CREATE INDEX IF NOT EXISTS idx_tasks_completed ON tasks(completed);
   CREATE INDEX IF NOT EXISTS idx_note_metadata_updated_at ON note_metadata(updated_at);
   CREATE INDEX IF NOT EXISTS idx_note_metadata_folder_id ON note_metadata(folder_id);
   CREATE INDEX IF NOT EXISTS idx_files_source_hash ON files(source_hash);
@@ -181,6 +163,10 @@ export async function initDatabase(
       {
         name: '001_add_current_context_id',
         sql: 'ALTER TABLE ai_chats ADD COLUMN current_context_id TEXT;'
+      },
+      {
+        name: '002_remove_tasks_table',
+        sql: 'DROP TABLE IF EXISTS tasks;'
       }
     ];
 
@@ -255,7 +241,6 @@ export async function resetAll(): Promise<void> {
       DROP TABLE IF EXISTS note_content;
       DROP TABLE IF EXISTS note_versions;
       DROP TABLE IF EXISTS folders;
-      DROP TABLE IF EXISTS tasks;
       DROP TABLE IF EXISTS tags;
       DROP TABLE IF EXISTS settings;
       DROP TABLE IF EXISTS app_settings;
@@ -317,7 +302,6 @@ export async function deleteDatabase(): Promise<void> {
       DROP TABLE IF EXISTS note_content;
       DROP TABLE IF EXISTS note_versions;
       DROP TABLE IF EXISTS folders;
-      DROP TABLE IF EXISTS tasks;
       DROP TABLE IF EXISTS tags;
       DROP TABLE IF EXISTS settings;
       DROP TABLE IF EXISTS app_settings;
@@ -415,11 +399,6 @@ export async function purgeGuestTombstones(): Promise<void> {
       // 2. Folders cleanup
       await tx.delete(schema.folders)
         .where(eq(schema.folders.isPermDeleted, true))
-        .run();
-
-      // 3. Tasks cleanup
-      await tx.delete(schema.tasks)
-        .where(eq(schema.tasks.isPermDeleted, true))
         .run();
     });
 

@@ -124,10 +124,10 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                 direction: editorSettings.direction,
                 onContextMenu: (view, event) => {
                     const linkElement = event.composedPath().find((el: any) => el.nodeName === 'A') as HTMLAnchorElement | undefined;
-                    
+
                     if (linkElement && linkElement.href && onOpenLinkMenuRef.current) {
                         const { state, dispatch } = view;
-                        
+
                         const coords = { left: event.clientX, top: event.clientY };
                         const posResult = view.posAtCoords(coords);
                         const pos = posResult ? posResult.pos : view.posAtDOM(event.target as Node, 0);
@@ -255,7 +255,7 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                     return false;
                 }
             };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+            // eslint-disable-next-line react-hooks/exhaustive-deps
         }, [editorSettings.direction]); // callbacks are accessed via refs, no need to re-create
 
         const editor = useEditor({

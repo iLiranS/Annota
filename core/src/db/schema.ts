@@ -52,22 +52,6 @@ export const folders = sqliteTable('folders', {
     isPermDeleted: integer('is_perm_deleted', { mode: 'boolean' }).notNull().default(false),
 });
 
-// ============ TASKS ============
-export const tasks = sqliteTable('tasks', {
-    id: text('id').primaryKey(),
-    title: text('title').notNull(), // Max 50 chars
-    description: text('description').notNull().default(''), // Max 200 chars
-    deadline: integer('deadline', { mode: 'timestamp' }).notNull(),
-    isWholeDay: integer('is_whole_day', { mode: 'boolean' }).notNull().default(false),
-    completed: integer('completed', { mode: 'boolean' }).notNull().default(false),
-    completedAt: integer('completed_at', { mode: 'timestamp' }),
-    folderId: text('folder_id'), // Folder ID (no FK constraint)
-    links: text('links').notNull().default('[]'), // JSON array of links
-    createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-    updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
-    isDirty: integer('is_dirty', { mode: 'boolean' }).notNull().default(false),
-    isPermDeleted: integer('is_perm_deleted', { mode: 'boolean' }).notNull().default(false),
-});
 
 // ============ TAGS ============
 export const tags = sqliteTable('tags', {
@@ -148,8 +132,6 @@ export type NoteContent = typeof noteContent.$inferSelect;
 export type NoteVersion = typeof noteVersions.$inferSelect;
 export type Folder = typeof folders.$inferSelect;
 export type FolderInsert = typeof folders.$inferInsert;
-export type Task = typeof tasks.$inferSelect;
-export type TaskInsert = typeof tasks.$inferInsert;
 export type Tag = typeof tags.$inferSelect;
 export type TagInsert = typeof tags.$inferInsert;
 

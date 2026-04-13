@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const coreDir = path.join(__dirname, 'src/db/repositories');
-const filesToProcess = ['notes.repository.ts', 'folders.repository.ts', 'tasks.repository.ts', 'images.repository.ts'];
+const filesToProcess = ['notes.repository.ts', 'folders.repository.ts', 'images.repository.ts'];
 
 for (const file of filesToProcess) {
     const filePath = path.join(coreDir, file);

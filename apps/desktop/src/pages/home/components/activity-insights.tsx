@@ -2,9 +2,8 @@
 
 import { Ionicons } from "@/components/ui/ionicons";
 import { useAppTheme } from "@/hooks/use-app-theme";
-import { LATE_SENTENCES, ON_TIME_SENTENCES } from "@/src/pages/home/data/sentences";
-import { getStorageEngine, useDbStore, useNotesStore, useTasksStore } from "@annota/core";
-import { Activity, CheckCircle2, FileText, Flame, Target, TrendingUp, Zap } from "lucide-react";
+import { getStorageEngine, useDbStore, useNotesStore } from "@annota/core";
+import { Activity, FileText, Flame, Target, TrendingUp, Zap } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Label, Pie, PieChart, XAxis } from "recharts";
 
@@ -23,7 +22,6 @@ import { cn } from "@/lib/utils";
 
 export function ActivityInsights() {
     const { notes, folders } = useNotesStore();
-    const { tasks } = useTasksStore();
     const { accentColor } = useAppTheme();
 
     // Calendar Month Boundaries
@@ -60,16 +58,6 @@ export function ActivityInsights() {
                 if (updated >= dayStart && updated <= dayEnd) dayActivitySet.add(`note-${n.id}`);
             });
 
-            // Tasks activity in this calendar month
-            tasks.forEach(t => {
-                const created = new Date(t.createdAt);
-                if (created >= dayStart && created <= dayEnd) dayActivitySet.add(`task-${t.id}`);
-                if (t.completed && t.completedAt) {
-                    const completed = new Date(t.completedAt);
-                    if (completed >= dayStart && completed <= dayEnd) dayActivitySet.add(`task-${t.id}`);
-                }
-            });
-
             data.push({
                 date: dayStr,
                 activity: dayActivitySet.size,
@@ -77,7 +65,7 @@ export function ActivityInsights() {
             });
         }
         return data;
-    }, [notes, tasks, monthStart, daysInMonth]);
+    }, [notes, monthStart, daysInMonth]);
 
 
 
@@ -114,28 +102,6 @@ export function ActivityInsights() {
     const totalNotes = useMemo(() => folderDistribution.reduce((acc, curr) => acc + curr.value, 0), [folderDistribution]);
 
 
-    const completionStats = useMemo(() => {
-
-        // Relevant tasks are those whose DEADLINE falls in the current calendar month
-        const relevantTasks = tasks.filter(t => {
-            const deadline = new Date(t.deadline);
-            return deadline >= monthStart && deadline <= monthEnd;
-        });
-
-        const onTimeCount = relevantTasks.filter(t =>
-            t.completed && t.completedAt && new Date(t.completedAt) <= new Date(t.deadline)
-        ).length;
-
-        const completedCount = relevantTasks.filter(t => t.completed).length;
-        const lateCompletedCount = completedCount - onTimeCount;
-
-        const total = relevantTasks.length;
-        const onTimeRate = total > 0 ? (onTimeCount / total) * 100 : 0;
-        const lateCompletedRate = total > 0 ? (lateCompletedCount / total) * 100 : 0;
-        const overdueRate = total > 0 ? ((total - completedCount) / total) * 100 : 0;
-
-        return { onTimeCount, lateCompletedCount, total, onTimeRate, lateCompletedRate, overdueRate };
-    }, [tasks, monthStart, monthEnd]);
 
     const heatmapData = useMemo(() => {
         const max = Math.max(...activityChartData.map(d => d.activity), 1);
@@ -165,79 +131,15 @@ export function ActivityInsights() {
         return { peak, average, streak, total: totalActivity };
     }, [activityChartData]);
 
-    const taskCompletionChartData = useMemo(() => {
-        const data = [];
-        for (let i = 1; i <= daysInMonth; i++) {
-            const day = new Date(monthStart.getFullYear(), monthStart.getMonth(), i);
-            const dStart = new Date(day); dStart.setHours(0, 0, 0, 0);
-            const dEnd = new Date(day); dEnd.setHours(23, 59, 59, 999);
-
-            const completedOnDay = tasks.filter(t => {
-                if (!t.completed || !t.completedAt) return false;
-                const cAt = new Date(t.completedAt);
-                return cAt >= dStart && cAt <= dEnd;
-            });
-
-            const onTimeCountDaily = completedOnDay.filter(t =>
-                !t.deadline || new Date(t.completedAt!) <= new Date(t.deadline)
-            ).length;
-            const lateCountDaily = completedOnDay.length - onTimeCountDaily;
-
-            data.push({
-                date: day.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-                onTime: onTimeCountDaily,
-                late: lateCountDaily
-            });
-        }
-        return data;
-    }, [tasks, monthStart, daysInMonth]);
 
     const chartConfig: ChartConfig = {
         activity: { label: "Activity", color: "var(--chart-1)" },
-        onTime: { label: "On Time", color: "#8b5cf6" },
-        late: { label: "Late", color: "#FF6347" },
         focus: { label: "Focus", color: "var(--accent-full)" },
         count: { label: "Interactions" },
         ...Object.fromEntries(folderDistribution.map(f => [f.name, { label: f.name, color: f.fill }]))
     };
 
-    const [dailySentences, setDailySentences] = useState<{ onTime: string, late: string } | null>(null);
 
-    useEffect(() => {
-        const load = async () => {
-            const { currentUserId, isGuest } = useDbStore.getState();
-            const prefix = isGuest ? 'guest' : `user_${currentUserId}`;
-            const storage = getStorageEngine();
-            const stored = await storage.getItem(`${prefix}_daily_status_sentences`);
-
-            if (stored) {
-                try {
-                    setDailySentences(JSON.parse(stored));
-                } catch (e) {
-                    console.error("[DAILY_SENTENCES] Parse error", e);
-                }
-            } else {
-                const onTimePicked = ON_TIME_SENTENCES[Math.floor(Math.random() * ON_TIME_SENTENCES.length)];
-                const latePicked = LATE_SENTENCES[Math.floor(Math.random() * LATE_SENTENCES.length)];
-                const both = { onTime: onTimePicked, late: latePicked };
-                setDailySentences(both);
-                await storage.setItem(`${prefix}_daily_status_sentences`, JSON.stringify(both));
-            }
-        };
-        load();
-    }, []);
-
-    const effectiveStatus = useMemo(() => {
-        const { onTimeRate, total } = completionStats;
-        const isOnTime = onTimeRate >= 50 || total === 0;
-
-        return {
-            sentence: isOnTime ? (dailySentences?.onTime ?? "Stay consistent") : (dailySentences?.late ?? "Tighten timing"),
-            color: isOnTime ? "text-[#8b5cf6]" : "text-[#FF6347]",
-            bg: isOnTime ? "bg-[#8b5cf6]/10" : "bg-[#FF6347]/10",
-            from: isOnTime ? "from-accent/20" : "from-[#FF6347]/20"
-        };
-    }, [completionStats, dailySentences]);
 
     return (
         <div className="flex flex-col lg:grid lg:grid-cols-5 gap-3 h-full">
@@ -309,79 +211,18 @@ export function ActivityInsights() {
                     </CardContent>
                 </Card>
 
-                {/* Combined Execution Rate & Daily Chart */}
-                <Card className="border-border/40 bg-card/30 shadow-none px-3 pt-1.5 pb-0 gap-0 flex flex-col relative overflow-hidden group flex-1 min-h-0">
-                    <div className="pb-1.5 flex items-center justify-between">
-                        <div className="flex flex-col gap-0.5">
-                            <div className="flex items-center gap-1.5 text-foreground/60">
-                                <div className="p-1.5 rounded-md bg-[#8b5cf6]/10">
-                                    <CheckCircle2 size={14} className="text-[#8b5cf6]" />
-                                </div>
-                                <span className="text-[10px] font-bold uppercase tracking-widest leading-none">Execution rate</span>
+                <Card className="border-border/40 bg-card/30 shadow-none px-4 py-4 gap-4 flex flex-col flex-1 min-h-0 overflow-hidden group">
+                    <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2 text-indigo-500">
+                             <div className="p-1.5 rounded-md bg-indigo-500/10">
+                                <TrendingUp size={14} />
                             </div>
-                            <div className="flex items-center gap-1">
-                                <span className="text-xl font-black text-foreground/90">{completionStats.total > 0 ? `${Math.round((completionStats.lateCompletedCount + completionStats.onTimeCount) / completionStats.total * 100)}%` : 'No Tasks Yet'}</span>
-                                {completionStats.total > 0 && <span className={`text-[8px] font-bold uppercase ${effectiveStatus.bg} ${effectiveStatus.color} px-1 rounded-sm`}>
-                                    {effectiveStatus.sentence}
-                                </span>}
-                            </div>
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-foreground/60">Insight</span>
                         </div>
-
-                        <div className="flex flex-col items-end gap-1">
-                            <div className="flex items-center gap-3">
-                                <div className="flex items-center gap-1">
-                                    <div className="w-1 h-1 rounded-full bg-[#8b5cf6]" />
-                                    <span className="text-[8px] font-bold text-foreground/40 uppercase tabular-nums">On Time</span>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                    <div className="w-1 h-1 rounded-full bg-[#FF6347]" />
-                                    <span className="text-[8px] font-bold text-foreground/40 uppercase tabular-nums">Late</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="h-1.5 w-full bg-muted/10 rounded-full overflow-hidden flex mb-2">
-                        <div
-                            className="h-full bg-[#8b5cf6] transition-all duration-1000 ease-out"
-                            style={{ width: `${completionStats.onTimeRate}%` }}
-                        />
-                        <div
-                            className="h-full bg-[#FF6347] transition-all duration-1000 ease-out"
-                            style={{ width: `${completionStats.lateCompletedRate}%` }}
-                        />
-                        <div
-                            className="h-full bg-muted-foreground/10 transition-all duration-1000 ease-out flex-1"
-                        />
-                    </div>
-
-                    <div className={cn("flex-1 min-h-0 -mx-3 bg-linear-to-t to-transparent pt-4", effectiveStatus.from)}>
-                        <ChartContainer config={chartConfig} className="h-16 w-full aspect-auto!">
-                            <BarChart
-                                accessibilityLayer
-                                data={taskCompletionChartData}
-                                margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
-                            >
-                                <CartesianGrid vertical={false} strokeDasharray="3 3" opacity={0.1} />
-                                <XAxis
-                                    dataKey="date"
-                                    hide
-                                />
-                                <ChartTooltip content={<ChartTooltipContent />} />
-                                <Bar
-                                    dataKey="onTime"
-                                    stackId="a"
-                                    fill={chartConfig.onTime.color}
-                                    radius={[0, 0, 0, 0]}
-                                />
-                                <Bar
-                                    dataKey="late"
-                                    stackId="a"
-                                    fill={chartConfig.late.color}
-                                    radius={[2, 2, 0, 0]}
-                                />
-                            </BarChart>
-                        </ChartContainer>
+                        <p className="text-sm font-medium text-foreground/80 mt-1">
+                            You've recorded <span className="text-indigo-500 font-bold">{heatmapStats.total}</span> interactions this month. 
+                            Keep capturing ideas to maintain your <span className="text-purple-500 font-bold">{heatmapStats.streak} day</span> streak.
+                        </p>
                     </div>
                 </Card>
             </div>

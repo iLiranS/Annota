@@ -16,8 +16,8 @@ import {
     TextInput,
     View,
 } from 'react-native';
-import Toast from 'react-native-toast-message';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 
 type ListItem = any;
 
@@ -89,13 +89,7 @@ export default function NotesSearchModal({
         [handleClose, onNotePress]
     );
 
-    const handleTaskPress = useCallback(
-        (taskId: string) => {
-            handleClose();
-            router.push(`/Tasks/${taskId}`);
-        },
-        [handleClose, router]
-    );
+
 
     const handleTogglePin = useCallback(
         async (note: NoteMetadata) => {
@@ -123,7 +117,6 @@ export default function NotesSearchModal({
             if (item.type === 'section-header') {
                 let iconName: any = 'document-text';
                 if (item.title === 'Folders') iconName = 'folder';
-                if (item.title === 'Tasks') iconName = 'checkbox';
                 return (
                     <View style={styles.sectionHeaderRow}>
                         <Ionicons name={iconName} size={14} color={colors.text + '50'} />
@@ -170,14 +163,6 @@ export default function NotesSearchModal({
                             >
                                 <Ionicons name="document-text-outline" size={22} color={colors.primary} />
                             </Pressable>
-                            <Pressable
-                                onPress={() => {
-                                    handleClose();
-                                    router.push({ pathname: '/Tasks/new', params: { folderId: item.data.id } });
-                                }}
-                            >
-                                <Ionicons name="checkbox-outline" size={22} color={colors.primary} />
-                            </Pressable>
                         </View>
                     </View>
                 );
@@ -220,58 +205,9 @@ export default function NotesSearchModal({
                 );
             }
 
-            if (item.type === 'task') {
-                const task = item.data;
-                const folder = allFolders.find((f) => f.id === task.folderId);
-                const isFirstTask = index === 0 || searchData[index - 1].type !== 'task';
-                const isLastTask = index === searchData.length - 1 || searchData[index + 1].type !== 'task';
-
-                return (
-                    <Pressable
-                        onPress={() => handleTaskPress(task.id)}
-                        style={({ pressed }) => [
-                            styles.taskCard,
-                            { backgroundColor: colors.card, borderColor: colors.border },
-                            isFirstTask && styles.roundTop,
-                            isLastTask && styles.roundBottom,
-                            pressed && { backgroundColor: colors.border + '50' }
-                        ]}
-                    >
-                        <View style={styles.taskIconWrapper}>
-                            <Ionicons
-                                name={task.completed ? "checkmark-circle" : "checkbox-outline"}
-                                size={20}
-                                color={task.completed ? "#10b981" : colors.primary}
-                            />
-                        </View>
-                        <View style={styles.taskContent}>
-                            <Text style={[
-                                styles.taskTitle,
-                                { color: colors.text },
-                                task.completed && styles.taskCompleted
-                            ]}>
-                                {task.title}
-                            </Text>
-                            <View style={styles.taskFooter}>
-                                <View style={[styles.folderInfo, { backgroundColor: folder?.color + '10' || colors.background + '10' }]}>
-                                    <Ionicons
-                                        name={folder ? (folder.icon as any) : 'home'}
-                                        size={10}
-                                        color={folder?.color || colors.text + '80'}
-                                    />
-                                    <Text style={[styles.folderName, { color: folder?.color || colors.text + '80' }]}>
-                                        {folder ? folder.name : 'Notes'}
-                                    </Text>
-                                </View>
-                            </View>
-                        </View>
-                    </Pressable>
-                );
-            }
-
             return null;
         },
-        [colors, handleFolderPress, handleNotePress, handleTaskPress, onFolderLongPress, onNoteLongPress, allFolders, handleDeleteNote, handleTogglePin, handleToggleQuickAccess, searchData, createNote, router, handleClose]
+        [colors, handleFolderPress, handleNotePress, onFolderLongPress, onNoteLongPress, allFolders, handleDeleteNote, handleTogglePin, handleToggleQuickAccess, searchData, createNote, router, handleClose]
     );
 
     const getItemKey = (item: any, index: number): string => {
@@ -347,7 +283,7 @@ export default function NotesSearchModal({
                         <View style={styles.emptyContainer}>
                             <Ionicons name="sparkles-outline" size={40} color={colors.primary} style={{ opacity: 0.2, marginBottom: 12 }} />
                             <Text style={[styles.emptyText, { color: colors.text, opacity: 0.4 }]}>
-                                Search Notes, Tasks & Folders
+                                Search Notes & Folders
                             </Text>
                         </View>
                     )}

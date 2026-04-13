@@ -51,7 +51,7 @@ export const userApi = {
 
     /** Check if the user has any encrypted data in the cloud */
     hasEncryptedData: async (userId: string): Promise<boolean> => {
-        const tables = ['encrypted_notes', 'encrypted_tasks', 'encrypted_tags', 'encrypted_folders'];
+        const tables = ['encrypted_notes', 'encrypted_tags', 'encrypted_folders'];
         for (const table of tables) {
             const { data, error } = await supabase
                 .from(table)
@@ -67,7 +67,7 @@ export const userApi = {
 
     /** Fetch a single encrypted payload sample for key validation */
     getEncryptedSample: async (userId: string): Promise<{ encrypted_data: string; nonce: string } | null> => {
-        const tables = ['encrypted_notes', 'encrypted_tasks', 'encrypted_tags', 'encrypted_folders'];
+        const tables = ['encrypted_notes', 'encrypted_tags', 'encrypted_folders'];
         for (const table of tables) {
             const { data, error } = await supabase
                 .from(table)

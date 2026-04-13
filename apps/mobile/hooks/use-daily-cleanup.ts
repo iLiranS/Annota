@@ -1,4 +1,4 @@
-import { useDbStore, useSettingsStore, useTasksStore, vacuumDatabase } from '@annota/core';
+import { useDbStore, useSettingsStore, vacuumDatabase } from '@annota/core';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect } from 'react';
 
@@ -28,21 +28,10 @@ export function useDailyCleanup() {
                 }
 
                 if (shouldRun) {
-                    // 1. Get the user's setting (7, 30, 90, 180) from your settings store
-                    const { general } = useSettingsStore.getState();
-                    const daysToKeep = general.autoClearTasksDays || 30;
-
-                    // 2. Calculate the cutoff date
-                    const cutoffDate = new Date();
-                    cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
-
-                    // 3. Run your store function
-                    await useTasksStore.getState().clearOldCompletedTasks(cutoffDate);
-
-                    // 4. Vacuum the database to reclaim space
+                    // 1. Vacuum the database to reclaim space
                     await vacuumDatabase();
 
-                    // 5. Update the last run time
+                    // 2. Update the last run time
                     await AsyncStorage.setItem(storageKey, now.toISOString());
                 }
             } catch (error) {

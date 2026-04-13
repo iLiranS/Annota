@@ -5,8 +5,7 @@ import { syncApi } from '../api/sync.api';
 import { getFilesByIds } from '../db/repositories/files.repository';
 import { clearDirtyFolders, getDirtyFolders, upsertSyncedFolder, } from '../db/repositories/folders.repository';
 import { clearDirtyNotes, getDirtyNotes, getNoteContent, upsertSyncedNote, } from '../db/repositories/notes.repository';
-import { clearDirtyTags, getDirtyTags, upsertSyncedTag, } from '../db/repositories/tags.repository';
-import { clearDirtyTasks, getDirtyTasks, upsertSyncedTask, } from '../db/repositories/tasks.repository';
+import { clearDirtyTags, getDirtyTags, upsertSyncedTag } from '../db/repositories/tags.repository';
 import * as schema from '../db/schema';
 import { fileSyncService } from '../services/files/file-sync.service';
 import { StorageService } from '../services/storage.service';
@@ -126,40 +125,6 @@ export async function performSyncPush(masterKey: string, saltHex: string) {
         }
     };
 
-    const pushTasks = async () => {
-        const dirtyTasks = await getDirtyTasks();
-        if (dirtyTasks.length === 0) return;
-
-        const payloadTasks = await Promise.all(dirtyTasks.map(async (task) => {
-            const isTombstone = task.isPermDeleted;
-            const { encryptedData, nonce } = await encryptPayload(JSON.stringify(task), notesKey);
-            return {
-                id: task.id,
-                user_id: userId,
-                updated_at: now.toISOString(),
-                created_at: task.createdAt.toISOString(),
-                is_deleted: isTombstone || false,
-                encrypted_data: encryptedData,
-                nonce: nonce,
-            };
-        }));
-
-        const { error } = await syncApi.upsertTasks(payloadTasks);
-        if (error) throw error;
-
-        const tombstones = dirtyTasks.filter((t: any) => t.isPermDeleted);
-        if (tombstones.length > 0) {
-            for (const t of tombstones) {
-                await db.delete(schema.tasks).where(eq(schema.tasks.id, t.id)).execute();
-            }
-            didDeleteTombstones = true;
-        }
-
-        const aliveTasks = dirtyTasks.filter((t: any) => !t.isPermDeleted);
-        if (aliveTasks.length > 0) {
-            await clearDirtyTasks(aliveTasks.map((t: any) => t.id));
-        }
-    };
 
     let pushedNoteIds: string[] = [];
     const pushNotes = async () => {
@@ -208,7 +173,6 @@ export async function performSyncPush(masterKey: string, saltHex: string) {
 
     await pushFolders();
     await pushTags();
-    await pushTasks();
     await pushNotes();
 
     if (pushedNoteIds.length > 0) {
@@ -246,7 +210,6 @@ export async function performSyncPull(masterKey: string, saltHex: string) {
 
     const cloudFolders = data.folders || [];
     const cloudTags = data.tags || [];
-    const cloudTasks = data.tasks || [];
     const cloudNotes = data.notes || [];
 
     // Pull Folders
@@ -302,62 +265,6 @@ export async function performSyncPull(masterKey: string, saltHex: string) {
         }
     }
 
-    // Pull Tasks
-    if (cloudTasks.length > 0) {
-        for (let i = 0; i < cloudTasks.length; i += 15) {
-            const chunk = cloudTasks.slice(i, i + 15);
-            const deletedIds: string[] = [];
-            const parsedTasks: any[] = [];
-
-            for (const row of chunk) {
-                try {
-                    if (row.is_deleted) {
-                        deletedIds.push(row.id);
-                        continue;
-                    }
-                    const decryptedJson = await decryptPayload(row.encrypted_data, row.nonce, notesKey);
-                    const taskData = JSON.parse(decryptedJson);
-                    taskData.createdAt = new Date(taskData.createdAt);
-                    taskData.updatedAt = new Date(taskData.updatedAt);
-                    taskData.deadline = new Date(taskData.deadline);
-                    taskData.completedAt = taskData.completedAt ? new Date(taskData.completedAt) : null;
-                    taskData.isDirty = false;
-                    parsedTasks.push(taskData);
-                } catch (e) {
-                    console.error("Failed to decrypt task", row.id, e);
-                }
-            }
-
-            if (deletedIds.length > 0) {
-                try {
-                    for (const rawId of deletedIds) {
-                        const id = String(rawId).trim();
-                        // 1. Try to match with exact hyphenated UUID from Supabase
-                        // 2. OR match with trimmed hyphenless ID (for legacy local data)
-                        const hyphenlessId = id.replace(/-/g, '');
-
-                        await db.delete(schema.tasks)
-                            .where(or(
-                                eq(schema.tasks.id, id),
-                                eq(schema.tasks.id, hyphenlessId)
-                            ))
-                            .execute();
-                    }
-                } catch (e) {
-                    console.error("Failed to delete tasks", deletedIds, e);
-                }
-                didDeleteTombstones = true;
-            }
-
-            if (parsedTasks.length > 0) {
-                await db.transaction(async (tx: any) => {
-                    for (const t of parsedTasks) await upsertSyncedTask(t, tx);
-                });
-            }
-            if (deletedIds.length > 0) didDeleteTombstones = true;
-            await new Promise(resolve => setTimeout(resolve, 0));
-        }
-    }
 
     // Pull Tags
     if (cloudTags.length > 0) {

@@ -337,7 +337,7 @@ export function AccountSettings() {
                     </DialogHeader>
                     <div className="py-4">
                         <p className="text-sm text-muted-foreground">
-                            To confirm, please realize that this cannot be undone. All your encrypted notes, tasks, and folders on our servers will be wiped.
+                            To confirm, please realize that this cannot be undone. All your encrypted notes, and folders on our servers will be wiped.
                         </p>
                     </div>
                     <DialogFooter>

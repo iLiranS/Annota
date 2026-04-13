@@ -5,9 +5,9 @@ import NoteLocationModal from '@/components/note-location-modal';
 import NoteCard from '@/components/notes/note-card';
 import OptionsMenu from '@/components/options-menu';
 import NotesSearchModal from '@/components/search/notes-search-modal';
-import { CompactTaskCard } from '@/components/tasks/TaskCard';
 import ThemedText from '@/components/themed-text';
 import { HapticPressable } from '@/components/ui/haptic-pressable';
+import { useSidebar } from '@/context/sidebar-context';
 import {
     NoteMetadata,
     sortFolders,
@@ -16,20 +16,17 @@ import {
     useNotesStore,
     useSettingsStore,
     useSyncStore,
-    useTasksStore,
     type Folder,
 } from '@annota/core';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useSidebar } from '@/context/sidebar-context';
 import { useCallback, useMemo, useState } from 'react';
 import {
     StyleSheet,
     Text,
     View
 } from 'react-native';
-import Toast from 'react-native-toast-message';
 import Animated, {
     Easing,
     Extrapolation,
@@ -44,6 +41,7 @@ import Animated, {
     withTiming
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 
 type ListItem =
     | { type: 'folder'; data: Folder }
@@ -112,7 +110,6 @@ export default function NotesList() {
         setFolderSortType,
         updateNoteMetadata,
     } = useNotesStore();
-    const { tasks, toggleComplete } = useTasksStore();
 
     const { general } = useSettingsStore();
     const isCompact = general.compactMode;
@@ -141,16 +138,6 @@ export default function NotesList() {
         });
     }, []);
 
-    const [isTasksCollapsed, setIsTasksCollapsed] = useState(false);
-
-    const tasksChevronStyle = useAnimatedStyle(() => ({
-        transform: [{
-            rotate: withTiming(!isTasksCollapsed ? '90deg' : '0deg', {
-                duration: 300,
-                easing: Easing.bezier(0.4, 0, 0.2, 1)
-            })
-        }]
-    }));
 
     // Sync progress tracking
     const isSyncing = useSyncStore(state => state.isSyncing);
@@ -183,7 +170,7 @@ export default function NotesList() {
             [1, 0],
             Extrapolation.CLAMP
         );
-        
+
         return {
             position: 'absolute',
             top: 0,
@@ -234,10 +221,6 @@ export default function NotesList() {
         return { pinnedNotes: pinned, unpinnedNotes: unpinned };
     }, [browseNotes]);
 
-    const folderTasks = useMemo(() => {
-        if (!currentFolderId || tagId) return [];
-        return tasks.filter(t => t.folderId === currentFolderId && !t.completed);
-    }, [tasks, currentFolderId, tagId]);
 
     const browseData = useMemo((): ListItem[] => {
         const items: ListItem[] = [];
@@ -300,10 +283,6 @@ export default function NotesList() {
         }
     }, [createNote, currentFolderId, router, tagId]);
 
-    // Create new task and navigate to it
-    const handleCreateTask = useCallback(async () => {
-        router.push({ pathname: '/Tasks/new', params: { folderId: currentFolderId ?? '' } });
-    }, [currentFolderId, router]);
 
     // Change sort type
     const handleSortChange = useCallback(
@@ -453,15 +432,15 @@ export default function NotesList() {
                     headerLeft: () => {
                         const canGoBack = router.canGoBack();
                         return (
-                            <HapticPressable 
-                                onPress={() => canGoBack ? router.back() : toggle()} 
-                                style={styles.headerButton} 
+                            <HapticPressable
+                                onPress={() => canGoBack ? router.back() : toggle()}
+                                style={styles.headerButton}
                                 hitSlop={8}
                             >
-                                <Ionicons 
-                                    name={canGoBack ? "chevron-back" : "menu-outline"} 
-                                    size={26} 
-                                    color={colors.primary} 
+                                <Ionicons
+                                    name={canGoBack ? "chevron-back" : "menu-outline"}
+                                    size={26}
+                                    color={colors.primary}
                                 />
                             </HapticPressable>
                         );
@@ -505,66 +484,11 @@ export default function NotesList() {
                     </View>
                 }
                 ListFooterComponent={
-                    folderTasks.length === 0 ? <View style={{ height: 100 }} /> : null
+                    <View style={{ height: 100 }} />
                 }
                 renderItem={renderItem}
             />
 
-            {/* Tasks section - Fixed at bottom */}
-            {folderTasks.length > 0 && (
-                <View style={[
-                    styles.tasksContainer,
-                    {
-                        borderTopColor: colors.border,
-                        backgroundColor: colors.background,
-                    }
-                ]}>
-                    <HapticPressable 
-                        onPress={() => setIsTasksCollapsed(!isTasksCollapsed)}
-                        style={[styles.sectionHeaderRow, { marginVertical: 4 }]}
-                    >
-                        <Ionicons name="checkmark-circle" size={14} color={colors.text + '50'} />
-                        <ThemedText style={[
-                            styles.sectionHeaderText,
-                            { color: colors.text + '50', flex: 1 }
-                        ]}>
-                            TASKS
-                        </ThemedText>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                            <ThemedText style={{ fontSize: 10, color: colors.text + '40', fontWeight: '500' }}>
-                                {folderTasks.length}
-                            </ThemedText>
-                            <Animated.View style={tasksChevronStyle}>
-                                <Ionicons name="chevron-forward" size={16} color={colors.text + '50'} />
-                            </Animated.View>
-                        </View>
-                    </HapticPressable>
-                    
-                    {!isTasksCollapsed && (
-                        <Animated.View
-                            entering={FadeIn.duration(200)}
-                            exiting={FadeOut.duration(200)}
-                            layout={LinearTransition.duration(300).easing(Easing.bezier(0.4, 0, 0.2, 1))}
-                        >
-                            <Animated.ScrollView
-                                style={{ maxHeight: 150 }}
-                                contentContainerStyle={{ gap: 4, paddingBottom: 10 }}
-                                showsVerticalScrollIndicator={false}
-                            >
-                                {folderTasks.map((task) => (
-                                    <CompactTaskCard
-                                        key={task.id}
-                                        task={task}
-                                        onToggle={() => toggleComplete(task.id)}
-                                        onPress={() => router.push(`/Tasks/${task.id}`)}
-                                        hideFolder={true}
-                                    />
-                                ))}
-                            </Animated.ScrollView>
-                        </Animated.View>
-                    )}
-                </View>
-            )}
 
 
             {/* Bottom Footer */}
@@ -590,7 +514,6 @@ export default function NotesList() {
                         <OptionsMenu
                             currentSortType={currentSortType}
                             onNewFolder={() => setIsCreatingFolder(true)}
-                            onNewTask={handleCreateTask}
                             onSortChange={handleSortChange}
                             onTrash={() => router.push('/Notes/trash')}
                             onSettings={handleSettings}
@@ -696,18 +619,5 @@ const styles = StyleSheet.create({
         paddingTop: 10,
         minHeight: 48,
     },
-    tasksContainer: {
-        paddingHorizontal: 20,
-        paddingTop: 4,
-        borderTopWidth: 1,
-        maxHeight: 280,
-        paddingBottom: 110, // Account for absolute footer and FAB
-    },
-    tasksHeaderText: {
-        fontSize: 12,
-        fontWeight: '700',
-        textTransform: 'uppercase',
-        letterSpacing: 0.8,
-        opacity: 0.6,
-    },
+
 });

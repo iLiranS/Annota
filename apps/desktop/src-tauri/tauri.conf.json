@@ -20,7 +20,8 @@
         "transparent": false,
         "decorations": true,
         "titleBarStyle": "Overlay",
-        "dragDropEnabled": false
+        "dragDropEnabled": false,
+        "additionalBrowserArgs": "--enable-features=OverlayScrollbar"
       }
     ],
     "security": {

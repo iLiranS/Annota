@@ -5,13 +5,12 @@ import { useNoteWindowSync } from "@/hooks/use-note-window-sync";
 import {
   authApi,
   fileSyncService,
+  useAiStore,
   useNotesStore,
   useSearchStore,
   useSettingsStore,
   useSyncStore,
-  useTasksStore,
-  useUserStore,
-  useAiStore
+  useUserStore
 } from "@annota/core";
 import {
   SyncScheduler,
@@ -27,10 +26,10 @@ import { initDesktopSqlite } from "./bootstrap/desktop-db";
 import { initDeepLinkListener } from "./lib/auth-listener";
 
 // Layout components
+import ChangelogModal from "@/components/changelog/changelog-modal";
 import AppShell from "@/components/layout/app-shell";
 import AuthGuard from "@/components/layout/auth-guard";
 import SettingsDialog from "@/components/settings/settings-dialog";
-import ChangelogModal from "@/components/changelog/changelog-modal";
 
 import AuthLayout from "./pages/auth/auth-layout";
 import LoginPage from "./pages/auth/login";
@@ -43,8 +42,7 @@ import NotesLayout from "./pages/notes/notes-layout";
 import NotesViewManager from "./pages/notes/notes-view-manager";
 import TrashPage from "./pages/notes/trash-page";
 
-// Tasks pages
-import TaskDetailDialog from "./pages/tasks/task-detail-dialog";
+
 
 // Home Page
 import HomePage from "./pages/home/home-page";
@@ -187,7 +185,6 @@ function App() {
           try {
             const storesPromise = Promise.all([
               useNotesStore.getState().initApp(),
-              useTasksStore.getState().loadTasks(),
             ]);
             const storesTimeoutPromise = new Promise<never>((_, reject) =>
               setTimeout(() => reject(new Error("Stores init timeout")), 5000)
@@ -324,7 +321,6 @@ function App() {
       } else if (event === "SIGNED_OUT") {
         setSession(null);
         useNotesStore.getState().reset();
-        useTasksStore.getState().reset();
         useSearchStore.getState().reset();
         useSyncStore.getState().reset();
         setRunId((v) => v + 1);
@@ -380,7 +376,6 @@ function App() {
         reinitStores: async () => {
           await Promise.all([
             useNotesStore.getState().initApp(),
-            useTasksStore.getState().loadTasks(),
           ]);
         },
         getSyncState: () => {
@@ -444,7 +439,14 @@ function App() {
             {bootstrapError ?? "Unknown startup error"}
           </p>
           <button
-            onClick={() => setRunId((v) => v + 1)}
+            onClick={() => {
+              const { lastViewedNoteId, lastViewedFolderId } = useSettingsStore.getState();
+              if (lastViewedNoteId) {
+                navigate(`/notes/${lastViewedFolderId || 'root'}/${lastViewedNoteId}`);
+              } else {
+                navigate('/notes');
+              }
+            }}
             className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
           >
             Retry
@@ -470,11 +472,8 @@ function App() {
         <Route element={<AuthGuard />}>
           <Route path="note-fullscreen/:noteId" element={<NoteFullscreen />} />
           <Route element={<AppShell />}>
-            {/* Default redirect */}
-            <Route index element={<Navigate to="/home" replace />} />
-
-            {/* Home */}
-            <Route path="home" element={<HomePage />} />
+            {/* Default redirect: Instead of /home, go to /notes or last viewed note */}
+            <Route index element={<Navigate to="/notes" replace />} />
 
             {/* Notes */}
             <Route path="notes/trash" element={<TrashPage />} />
@@ -487,7 +486,6 @@ function App() {
             {!locationState?.background && (
               <>
                 <Route path="settings" element={<SettingsDialog />} />
-                <Route path="task/:id" element={<TaskDetailDialog />} />
               </>
             )}
           </Route>
@@ -498,7 +496,6 @@ function App() {
       {locationState?.background && (
         <Routes>
           <Route path="settings" element={<SettingsDialog />} />
-          <Route path="task/:id" element={<TaskDetailDialog />} />
         </Routes>
       )}
       <ChangelogModal />

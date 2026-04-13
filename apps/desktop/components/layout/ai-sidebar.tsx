@@ -20,7 +20,7 @@ import { useAiChat } from "@/hooks/use-ai-chat";
 import { AiChatInput } from "../ai/ai-chat-input";
 import { AiChatError, AiChatMessage } from "../ai/ai-chat-message";
 
-export function AiSidebar() {
+export function AiSidebar({ width }: { width?: number }) {
     const {
         activeProvider,
         isOllamaRunning,
@@ -218,7 +218,7 @@ export function AiSidebar() {
 
     if (!isConfigured) {
         return (
-            <div className="flex flex-col h-full w-full overflow-hidden">
+            <div className="flex flex-col h-full w-full overflow-hidden" style={{ minWidth: width }}>
                 <div className={cn(
                     "flex flex-col h-full w-full items-center justify-center text-center gap-4 p-6 overflow-hidden transition-all duration-300",
                     isFloating
@@ -273,7 +273,11 @@ export function AiSidebar() {
     // ─── Main panel ─────────────────────────────────────────────────────────────
 
     return (
-        <div dir="ltr" className="flex flex-col h-full w-full overflow-hidden">
+        <div
+            dir="ltr"
+            className="flex flex-col h-full w-full overflow-hidden"
+            style={{ minWidth: width }}
+        >
             <div className={cn(
                 "flex flex-col h-full w-full overflow-hidden  transition-all duration-300",
                 isFloating
@@ -319,7 +323,7 @@ export function AiSidebar() {
                                 variant="ghost"
                                 size="icon"
                                 className={cn(
-                                    "h-7 w-7 rounded-lg transition-all",
+                                    "h-7 w-7 rounded-lg transition-all active:scale-95",
                                     general.isAiSidebarSticky
                                         ? "text-primary bg-primary/10"
                                         : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
@@ -327,7 +331,7 @@ export function AiSidebar() {
                                 onClick={() => updateGeneralSettings({ isAiSidebarSticky: !general.isAiSidebarSticky })}
                                 title={general.isAiSidebarSticky ? "Unpin (Auto-hide)" : "Pin (Keep open)"}
                             >
-                                {general.isAiSidebarSticky ? <Pin size={14} className="fill-current" /> : <Pin size={14} />}
+                                <Pin size={14} className={cn("fill-current transition-transform", general.isAiSidebarSticky && "rotate-45")} />
                             </Button>
                         )}
                         {!activeChatId ? (

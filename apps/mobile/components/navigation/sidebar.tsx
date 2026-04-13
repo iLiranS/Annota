@@ -316,11 +316,6 @@ export default function Sidebar({ onNavigate, ...props }: SidebarProps & React.C
         }
     };
 
-    const navigateToTasks = () => {
-        closeDrawer();
-        // Use replace to avoid building up a stack of category screens
-        router.replace('/Tasks');
-    };
 
     const navigateToTrash = () => {
         closeDrawer();
@@ -385,12 +380,6 @@ export default function Sidebar({ onNavigate, ...props }: SidebarProps & React.C
                             iconColor={'#6366F1'}
                         />
 
-                        <SidebarItem
-                            icon="checkmark-circle"
-                            label="Tasks"
-                            onPress={navigateToTasks}
-                            iconColor={'#10B981'}
-                        />
 
                         <SidebarItem
                             renderIcon={() => (

@@ -2,7 +2,6 @@ import { sql } from 'drizzle-orm';
 import * as FilesRepo from '../db/repositories/files.repository';
 import * as FoldersRepo from '../db/repositories/folders.repository';
 import * as NotesRepo from '../db/repositories/notes.repository';
-import * as TasksRepo from '../db/repositories/tasks.repository';
 import { getDb, useDbStore } from '../stores/db.store';
 import { deleteFile } from './files/file.service';
 
@@ -12,7 +11,6 @@ type StorageStats = {
     orphans: number;
     totalFilesSize: number;
     totalNotes: number;
-    totalTasks: number;
     totalFolders: number;
     notesSize: number;
     totalSize: number;
@@ -37,7 +35,6 @@ export const StorageService = {
                 orphans: 0,
                 totalFilesSize: 0,
                 totalNotes: 0,
-                totalTasks: 0,
                 totalFolders: 0,
                 notesSize: 0,
                 totalSize: 0,
@@ -50,7 +47,6 @@ export const StorageService = {
         const dbName = isGuest ? 'local_guest.db' : `user_${currentUserId}.db`;
 
         const totalNotes = await NotesRepo.getNotesCount(tx);
-        const totalTasks = await TasksRepo.getTasksCount(tx);
         const totalFolders = await FoldersRepo.getFoldersCount(tx);
 
         // Get DB size using standard SQLite pragmas
@@ -87,7 +83,6 @@ export const StorageService = {
         return {
             ...stats,
             totalNotes,
-            totalTasks,
             totalFolders,
             notesSize,
             totalSize: stats.totalFilesSize + notesSize,

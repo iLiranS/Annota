@@ -152,7 +152,7 @@ export default function LostKeyScreen() {
 
                 <View style={[styles.dangerContainer, { backgroundColor: (theme.colors.error ?? '#FF3B30') + '15' }]}>
                     <Text style={[styles.dangerText, { color: theme.colors.error ?? '#FF3B30' }]}>
-                        This action is irreversible. Creating a new master key will permanently erase all your encrypted cloud data — notes, tasks, and folders.
+                        This action is irreversible. Creating a new master key will permanently erase all your encrypted cloud data — notes and folders.
                     </Text>
                 </View>
 

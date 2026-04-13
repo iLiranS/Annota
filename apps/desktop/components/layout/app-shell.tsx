@@ -9,7 +9,7 @@ import { AppSidebar } from "./app-sidebar";
 
 /**
  * Main app shell: shadcn SidebarProvider wrapping the primary sidebar + routed content.
- * The AI sidebar floats as an overlay — it doesn't shrink the main content area.
+ * The AI sidebar floats — it doesn't shrink the main content area.
  */
 export default function AppShell() {
     const { general } = useSettingsStore();
@@ -89,13 +89,6 @@ export default function AppShell() {
 
         const handleClickOutside = (e: MouseEvent) => {
             if (sidebarRef.current && !sidebarRef.current.contains(e.target as Node)) {
-                // Check if the click was on the toggle button (to prevent double-toggle if the button also handles closing)
-                // Actually, most of the time the toggle button is the one that opened it.
-                // But let's keep it simple: if click is outside the sidebar, close it.
-
-                // One detail: if the click is on the "Model Selector" dropdown or other portals, 
-                // we should be careful. Usually portals are outside the ref.
-                // However, standard use-click-outside logic usually handles this path.
                 const target = e.target as HTMLElement;
                 if (target.closest('[data-radix-portal]') || target.closest('.ai-sidebar-toggle')) {
                     return;
@@ -105,7 +98,6 @@ export default function AppShell() {
             }
         };
 
-        // Use capture phase to ensure we catch it before other handlers or if they stopPropagation
         document.addEventListener('mousedown', handleClickOutside, true);
         return () => document.removeEventListener('mousedown', handleClickOutside, true);
     }, [general.isAiSidebarOpen, general.aiSidebarMode, general.isAiSidebarSticky]);
@@ -115,27 +107,30 @@ export default function AppShell() {
             className="h-svh"
             dir={general.appDirection}
         >
-            <AppSidebar />
             <div className="flex flex-1 flex-col overflow-hidden bg-sidebar">
                 <MainNavbar />
 
-                {/* Main content area */}
-                <div className={cn(
-                    "flex-1 overflow-hidden flex min-w-0",
-                    general.aiSidebarMode === 'floating' ? "relative" : "flex-row"
-                )}>
-                    <main
-                        className={cn(
-                            "flex-1 overflow-hidden bg-note-bg transition-[border-color] duration-300 ease-in-out",
-                            "m-2 mt-0 rounded-2xl",
-                            "border border-sidebar-border/60"
-                        )}
-                        dir="ltr"
-                    >
-                        <Outlet />
-                    </main>
+                {/* Main page content container */}
+                <div className="flex-1 overflow-hidden flex min-w-0">
 
-                    {/* AI Sidebar Container */}
+                    {/* Primary Note Card (Rounded, Bordered) */}
+                    <div className={cn(
+                        "flex-1 overflow-hidden flex min-w-0 transition-all duration-300",
+                        "m-2 mt-0 rounded-2xl border border-sidebar-border/60 bg-note-bg"
+                    )}>
+                        <AppSidebar />
+
+                        <div
+                            className={cn(
+                                "flex-1 overflow-hidden flex flex-col min-h-0"
+                            )}
+                            dir="ltr"
+                        >
+                            <Outlet />
+                        </div>
+                    </div>
+
+                    {/* AI Sidebar Container (Outside the main note card) */}
                     <div
                         ref={sidebarRef}
                         className={cn(
@@ -143,8 +138,8 @@ export default function AppShell() {
                                 ? "relative h-full"
                                 : cn(
                                     "absolute z-50",
-                                    "top-2 bottom-20",
-                                    general.appDirection === "rtl" ? "left-4" : "right-4"
+                                    "top-10 bottom-4",
+                                    general.appDirection === "rtl" ? "left-6" : "right-6"
                                 ),
                             "flex shrink-0 overflow-hidden",
                             // Only animate on open/close, not during drag
@@ -170,7 +165,7 @@ export default function AppShell() {
                             </div>
                         )}
 
-                        <AiSidebar />
+                        <AiSidebar width={sidebarWidth} />
                     </div>
                 </div>
             </div>

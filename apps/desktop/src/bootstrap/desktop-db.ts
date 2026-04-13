@@ -145,7 +145,6 @@ export async function resetDesktopDatabase(): Promise<void> {
     'note_content',
     'note_versions',
     'folders',
-    'tasks',
     'tags',
     'settings'
   ];

@@ -3,9 +3,8 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useCreateNote } from "@/hooks/use-create-note";
-import { useCreateTask } from "@/hooks/use-create-task";
 import { cn } from "@/lib/utils";
-import { Folder, NoteMetadata, Task, useNotesStore, useSearchStore } from "@annota/core";
+import { Folder, NoteMetadata, useNotesStore, useSearchStore } from "@annota/core";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FolderListItem } from "../notes/folder-list-item";
@@ -32,7 +31,6 @@ export function NotesSearchModal({ open, onOpenChange }: NotesSearchModalProps) 
     } = useSearchStore();
 
     const { createAndNavigate: createNoteAndNavigate } = useCreateNote();
-    const { createAndNavigate: createTaskAndNavigate } = useCreateTask();
 
     const [selectedIndex, setSelectedIndex] = useState(0);
     const [previewNote, setPreviewNote] = useState<NoteMetadata | null>(null);
@@ -79,16 +77,10 @@ export function NotesSearchModal({ open, onOpenChange }: NotesSearchModalProps) 
         handleClose();
     };
 
-    const onTaskClick = (task: Task) => {
-        navigate(`/task/${task.id}`);
-        handleClose();
-    };
 
-    const onActionClick = (actionType: 'create_note' | 'create_task', folderId?: string) => {
+    const onActionClick = (actionType: 'create_note', folderId?: string) => {
         if (actionType === 'create_note') {
             createNoteAndNavigate(folderId);
-        } else if (actionType === 'create_task') {
-            createTaskAndNavigate({ folderId });
         }
         handleClose();
     };
@@ -107,7 +99,6 @@ export function NotesSearchModal({ open, onOpenChange }: NotesSearchModalProps) 
             } else if (e.key === "Enter" && results[selectedIndex]) {
                 const item = results[selectedIndex];
                 if (item.type === "note") onNoteClick(item.data);
-                else if (item.type === "task") onTaskClick(item.data);
                 else if (item.type === "folder") onFolderClick(item.data);
             } else if (e.key === " " && results[selectedIndex]?.type === "note") {
                 e.preventDefault();
@@ -197,40 +188,6 @@ export function NotesSearchModal({ open, onOpenChange }: NotesSearchModalProps) 
                                                                 boxShadow: `inset 0 0 20px -10px ${colors.primary}40`
                                                             } : undefined}
                                                         />
-                                                    ) : result.type === 'task' ? (
-                                                        <div
-                                                            onClick={() => onTaskClick(result.data)}
-                                                            className={cn(
-                                                                "flex items-center gap-3 px-3 py-2 rounded-xl border border-transparent transition-all cursor-pointer",
-                                                                isSelected ? "bg-background shadow-sm border-border/50" : "hover:bg-background/50"
-                                                            )}
-                                                            style={isSelected ? {
-                                                                backgroundColor: `${colors.primary}25`,
-                                                                borderColor: `${colors.primary}40`,
-                                                                boxShadow: `inset 0 0 20px -10px ${colors.primary}40`
-                                                            } : undefined}
-                                                        >
-                                                            <div className={cn(
-                                                                "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
-                                                                result.data.completed ? "bg-green-500/10 text-green-500" : "bg-primary/10 text-primary"
-                                                            )}>
-                                                                <Ionicons name={result.data.completed ? "checkmark-circle" : "checkbox-outline"} size={18} />
-                                                            </div>
-                                                            <div className="flex-1 min-w-0">
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className={cn("text-sm font-bold truncate", result.data.completed && "line-through opacity-50")}>
-                                                                        {result.title}
-                                                                    </span>
-                                                                    <span className="text-[10px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded bg-muted/50 text-muted-foreground">Task</span>
-                                                                </div>
-                                                                {result.subtitle && (
-                                                                    <p className="text-[11px] text-muted-foreground truncate opacity-60 font-medium">
-                                                                        {result.subtitle}
-                                                                    </p>
-                                                                )}
-                                                            </div>
-                                                            <FolderBadge folderId={result.data.folderId} />
-                                                        </div>
                                                     ) : result.type === 'folder' ? (
                                                         <div className="flex items-center gap-2 group/folder-row">
                                                             <FolderListItem
@@ -256,17 +213,6 @@ export function NotesSearchModal({ open, onOpenChange }: NotesSearchModalProps) 
                                                                     }}
                                                                 >
                                                                     <Ionicons name="document-text-outline" size={16} />
-                                                                </Button>
-                                                                <Button
-                                                                    size="icon"
-                                                                    variant="ghost"
-                                                                    className="h-8 w-8 rounded-full hover:bg-primary/10 text-primary shrink-0"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        onActionClick('create_task', result.id);
-                                                                    }}
-                                                                >
-                                                                    <Ionicons name="checkbox-outline" size={16} />
                                                                 </Button>
                                                             </div>
                                                         </div>

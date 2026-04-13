@@ -56,9 +56,9 @@ export function NoteActionsMenu({ note, onRevert, onOpenChange }: NoteActionsMen
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 rounded-lg hover:bg-accent/50"
+                        className="h-8 w-8 rounded-xl hover:bg-white/10 dark:hover:bg-white/5 shrink-0 text-muted-foreground/60 hover:text-foreground transition-colors"
                     >
-                        <MoreVertical className="h-4 w-4" />
+                        <MoreVertical className="h-3.5 w-3.5" />
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56 p-1 rounded-xl">

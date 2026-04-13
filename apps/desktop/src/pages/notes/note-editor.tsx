@@ -3,23 +3,22 @@ import { DesktopNoteLinkCommandMenu } from "@/components/editor/DesktopNoteLinkC
 import { DesktopSlashCommandMenu } from "@/components/editor/DesktopSlashCommandMenu";
 import { DesktopTagCommandMenu } from "@/components/editor/DesktopTagCommandMenu";
 import { DesktopToolbar } from "@/components/editor/DesktopToolbar";
+import { LinkContextMenu } from "@/components/editor/LinkContextMenu";
 import { ImageGallery } from "@/components/notes/image-gallery";
+import { NotePreviewModal } from "@/components/notes/note-preview-modal";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useOpenNoteInNewWindow } from "@/hooks/use-open-note-in-new-window";
 import { copyImageToClipboard, writeText } from "@/lib/clipboard";
-import { generateTitle, normalizeStoredContent, TRASH_FOLDER_ID, useNotesStore, useSettingsStore } from "@annota/core";
+import { generateTitle, normalizeStoredContent, NoteMetadata, TRASH_FOLDER_ID, useNotesStore, useSettingsStore } from "@annota/core";
 import { NoteFileService } from "@annota/core/platform";
 import TipTapEditor, { TipTapEditorRef } from "@annota/editor-ui";
 import { FileText, Loader2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { NoteFloatingActions } from "./components/note-floating-actions";
+import { NoteHeader } from "./components/note-header";
 import { NoteSearch } from "./components/note-search";
-import { NoteTags } from "./components/note-tags";
-import { LinkContextMenu } from "@/components/editor/LinkContextMenu";
-import { NotePreviewModal } from "@/components/notes/note-preview-modal";
-import { useOpenNoteInNewWindow } from "@/hooks/use-open-note-in-new-window";
-import { NoteMetadata } from "@annota/core";
+
 
 export interface NoteEditorProps {
     noteId?: string;
@@ -53,7 +52,7 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
     const pendingRemoteContentRef = useRef<string | null>(null);
     const lastSeenUpdatedAtRef = useRef<number | null>(null);
 
-    const { toggleSidebar: toggleNoteSidebar, open: isNoteSidebarOpen, setOpen: setNoteSidebarOpen } = useSidebar();
+    const { open: isNoteSidebarOpen, setOpen: setNoteSidebarOpen } = useSidebar();
 
     // Search state
     const [isSearching, setIsSearching] = useState(false);
@@ -165,7 +164,7 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
         anchorRect: DOMRect;
         onResolve: () => any;
     } | null>(null);
-    
+
     // Link Context Menu state
     const [linkMenuState, setLinkMenuState] = useState<{
         open: boolean;
@@ -269,11 +268,11 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
                     const src = data.src || "";
                     copyImageToClipboard(src, data.imageId);
                     editorRef.current.onCommand("deleteImage", { pos: data.position });
-                    } else if (["codeBlock", "details", "mermaid"].includes(type)) {
-                        editorRef.current.onCommand("copyToClipboard", { pos: data.pos });
-                        editorRef.current.onCommand("deleteSelection", { pos: data.pos });
-                    }
-                    break;
+                } else if (["codeBlock", "details", "mermaid"].includes(type)) {
+                    editorRef.current.onCommand("copyToClipboard", { pos: data.pos });
+                    editorRef.current.onCommand("deleteSelection", { pos: data.pos });
+                }
+                break;
             case "delete":
                 if (type === "image") {
                     editorRef.current.onCommand("deleteImage", { pos: data.position });
@@ -634,135 +633,131 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
 
     return (
         <div className="flex h-full bg-note-bg flex-col w-full min-h-0 relative ">
-            {/* Floating Action Buttons */}
-            <NoteFloatingActions
-                onToggleSearch={() => setIsSearching(prev => !prev)}
-                isNoteSidebarOpen={isNoteSidebarOpen}
-                toggleNoteSidebar={() => toggleNoteSidebar()}
-                toggleFullScreen={toggleFullScreen}
-                note={note}
-                onRevert={(content) => {
-                    setInitialContent(content);
-                    editorRef.current?.setContent(content);
-                }}
-                isStandalone={isStandalone}
-            />
+            <div className="flex-1 overflow-hidden relative w-full h-full min-h-0 overscroll-none flex flex-col">
+                {/* Note Header (Tags & Actions) */}
 
-            <div className="flex-1 overflow-hidden relative w-full h-full min-h-0 overscroll-none">
-                <NoteSearch
-                    visible={isSearching}
-                    searchTerm={searchTerm}
-                    onSearchTermChange={handleSearchTermChange}
-                    onClose={handleCloseSearch}
-                    resultCount={searchResultCount}
-                    currentResultIndex={currentSearchIndex}
-                    onNext={handleSearchNext}
-                    onPrev={handleSearchPrev}
-                />
 
-                {initialContent !== null ? (
-                    <TipTapEditor
-                        ref={editorRef}
-                        initialContent={initialContent}
-                        onContentChange={handleContentChange}
-                        onSearchResults={handleSearchResults}
-                        autofocus={shouldAutofocus}
-                        editable={true}
-                        noteId={noteId}
-                        isStandalone={isStandalone}
-                        contentPaddingTop={JSON.parse(note.tags || '[]').length > 0 ? 10 : 30}
-                        placeholder="Start typing..."
-                        renderHeader={() => (
-                            <NoteTags
-                                noteId={noteId ?? ''}
-                            />
-                        )}
-                        renderToolbar={(props) => <DesktopToolbar {...props} />}
-                        renderImageGallery={(props) => <ImageGallery {...props} />}
-                        onOpenBlockMenu={handleOpenBlockMenu}
-                        onOpenFileMenu={handleOpenFileMenu}
-                        onOpenTableMenu={handleOpenTableMenu}
-                        onCodeBlockSelected={handleCodeBlockSelected}
-                        onSlashCommand={setSlashCommandState}
-                        onTagCommand={setTagCommandState}
-                        onNoteLinkCommand={setNoteLinkCommandState}
-                        onOpenLinkMenu={handleOpenLinkMenu}
-                        isDark={isDark}
-                        colors={{
-                            primary: colors.primary,
-                            background: colors.background,
-                            text: colors.text
-                        }}
+                <div className="flex-1 relative overflow-hidden flex flex-col min-h-0">
+                    <NoteSearch
+                        visible={isSearching}
+                        searchTerm={searchTerm}
+                        onSearchTermChange={handleSearchTermChange}
+                        onClose={handleCloseSearch}
+                        resultCount={searchResultCount}
+                        currentResultIndex={currentSearchIndex}
+                        onNext={handleSearchNext}
+                        onPrev={handleSearchPrev}
                     />
-                ) : (
-                    <div className="flex h-full w-full items-center justify-center">
-                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                    </div>
-                )}
-                {activeBlockMenu && (
-                    <BlockMenu
-                        open={!!activeBlockMenu}
-                        onOpenChange={(open) => !open && setActiveBlockMenu(null)}
-                        anchorRect={activeBlockMenu.anchorRect}
-                        type={activeBlockMenu.type}
-                        data={activeBlockMenu.data}
-                        onAction={handleBlockAction}
-                    />
-                )}
 
-                {slashCommandState.active && slashCommandState.range && slashCommandState.clientRect && (
-                    <DesktopSlashCommandMenu
-                        query={slashCommandState.query || ''}
-                        range={slashCommandState.range}
-                        clientRect={slashCommandState.clientRect}
-                        sendCommand={(cmd, params) => editorRef.current?.onCommand(cmd, params)}
-                        onClose={() => setSlashCommandState({ active: false })}
-                    />
-                )}
+                    {initialContent !== null ? (
+                        <TipTapEditor
+                            ref={editorRef}
+                            initialContent={initialContent}
+                            onContentChange={handleContentChange}
+                            onSearchResults={handleSearchResults}
+                            autofocus={shouldAutofocus}
+                            editable={true}
+                            noteId={noteId}
+                            isStandalone={isStandalone}
+                            contentPaddingTop={0}
+                            placeholder="Start typing..."
+                            renderHeader={() => (
+                                <NoteHeader
+                                    noteId={noteId ?? ''}
+                                    note={note}
+                                    onToggleSearch={() => setIsSearching(prev => !prev)}
+                                    onRevert={(content) => {
+                                        setInitialContent(content);
+                                        editorRef.current?.setContent(content);
+                                    }}
+                                />
+                            )}
+                            renderToolbar={(props) => <DesktopToolbar {...props} />}
+                            renderImageGallery={(props) => <ImageGallery {...props} />}
+                            onOpenBlockMenu={handleOpenBlockMenu}
+                            onOpenFileMenu={handleOpenFileMenu}
+                            onOpenTableMenu={handleOpenTableMenu}
+                            onCodeBlockSelected={handleCodeBlockSelected}
+                            onSlashCommand={setSlashCommandState}
+                            onTagCommand={setTagCommandState}
+                            onNoteLinkCommand={setNoteLinkCommandState}
+                            onOpenLinkMenu={handleOpenLinkMenu}
+                            isDark={isDark}
+                            colors={{
+                                primary: colors.primary,
+                                background: colors.background,
+                                text: colors.text
+                            }}
+                        />
+                    ) : (
+                        <div className="flex h-full w-full items-center justify-center">
+                            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                        </div>
+                    )}
+                    {activeBlockMenu && (
+                        <BlockMenu
+                            open={!!activeBlockMenu}
+                            onOpenChange={(open) => !open && setActiveBlockMenu(null)}
+                            anchorRect={activeBlockMenu.anchorRect}
+                            type={activeBlockMenu.type}
+                            data={activeBlockMenu.data}
+                            onAction={handleBlockAction}
+                        />
+                    )}
 
-                {noteId && tagCommandState.active && tagCommandState.range && tagCommandState.clientRect && (
-                    <DesktopTagCommandMenu
-                        noteId={noteId}
-                        query={tagCommandState.query || ''}
-                        range={tagCommandState.range}
-                        clientRect={tagCommandState.clientRect}
-                        sendCommand={(cmd, params) => editorRef.current?.onCommand(cmd, params)}
-                        onClose={() => setTagCommandState({ active: false })}
-                    />
-                )}
+                    {slashCommandState.active && slashCommandState.range && slashCommandState.clientRect && (
+                        <DesktopSlashCommandMenu
+                            query={slashCommandState.query || ''}
+                            range={slashCommandState.range}
+                            clientRect={slashCommandState.clientRect}
+                            sendCommand={(cmd, params) => editorRef.current?.onCommand(cmd, params)}
+                            onClose={() => setSlashCommandState({ active: false })}
+                        />
+                    )}
 
-                {noteLinkCommandState.active && noteLinkCommandState.range && noteLinkCommandState.clientRect && (
-                    <DesktopNoteLinkCommandMenu
-                        noteId={noteId ?? ''}
-                        query={noteLinkCommandState.query || ''}
-                        range={noteLinkCommandState.range}
-                        clientRect={noteLinkCommandState.clientRect}
-                        sendCommand={(cmd, params) => editorRef.current?.onCommand(cmd, params)}
-                        onClose={() => setNoteLinkCommandState({ active: false })}
-                    />
-                )}
+                    {noteId && tagCommandState.active && tagCommandState.range && tagCommandState.clientRect && (
+                        <DesktopTagCommandMenu
+                            noteId={noteId}
+                            query={tagCommandState.query || ''}
+                            range={tagCommandState.range}
+                            clientRect={tagCommandState.clientRect}
+                            sendCommand={(cmd, params) => editorRef.current?.onCommand(cmd, params)}
+                            onClose={() => setTagCommandState({ active: false })}
+                        />
+                    )}
 
-                {linkMenuState && (
-                    <LinkContextMenu
-                        open={linkMenuState.open}
-                        onOpenChange={(open) => setLinkMenuState(prev => prev ? { ...prev, open } : null)}
-                        anchorRect={linkMenuState.anchorRect}
-                        url={linkMenuState.url}
-                        onPreview={handlePreviewNote}
-                        onOpenInNewWindow={handleOpenInNewWindow}
-                        onEdit={() => editorRef.current?.onCommand('openLinkModal')}
-                        onDelete={() => editorRef.current?.onCommand('unsetLink')}
-                    />
-                )}
+                    {noteLinkCommandState.active && noteLinkCommandState.range && noteLinkCommandState.clientRect && (
+                        <DesktopNoteLinkCommandMenu
+                            noteId={noteId ?? ''}
+                            query={noteLinkCommandState.query || ''}
+                            range={noteLinkCommandState.range}
+                            clientRect={noteLinkCommandState.clientRect}
+                            sendCommand={(cmd, params) => editorRef.current?.onCommand(cmd, params)}
+                            onClose={() => setNoteLinkCommandState({ active: false })}
+                        />
+                    )}
 
-                {previewNote && (
-                    <NotePreviewModal
-                        open={!!previewNote}
-                        onOpenChange={(open) => !open && setPreviewNote(null)}
-                        note={previewNote}
-                    />
-                )}
+                    {linkMenuState && (
+                        <LinkContextMenu
+                            open={linkMenuState.open}
+                            onOpenChange={(open) => setLinkMenuState(prev => prev ? { ...prev, open } : null)}
+                            anchorRect={linkMenuState.anchorRect}
+                            url={linkMenuState.url}
+                            onPreview={handlePreviewNote}
+                            onOpenInNewWindow={handleOpenInNewWindow}
+                            onEdit={() => editorRef.current?.onCommand('openLinkModal')}
+                            onDelete={() => editorRef.current?.onCommand('unsetLink')}
+                        />
+                    )}
 
+                    {previewNote && (
+                        <NotePreviewModal
+                            open={!!previewNote}
+                            onOpenChange={(open) => !open && setPreviewNote(null)}
+                            note={previewNote}
+                        />
+                    )}
+                </div>
             </div>
         </div>
     );

@@ -1,12 +1,10 @@
-import Calendar from '@/components/calendar';
 import RecentNotesList from '@/components/notes/recent-notes-list';
 import NotesSearchModal from '@/components/search/notes-search-modal';
-import TaskList from '@/components/tasks/task-list';
 import ThemedText from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useSidebar } from '@/context/sidebar-context';
 import { useAppTheme } from '@/hooks/use-app-theme';
-import { useUserStore as useAuthStore, useNotesStore, useSettingsStore, useSyncStore, useTasksStore, type Task } from '@annota/core';
+import { useUserStore as useAuthStore, useNotesStore, useSettingsStore, useSyncStore } from '@annota/core';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BlurView } from 'expo-blur';
@@ -57,13 +55,26 @@ export default function HomeScreen() {
   const fallbackName = session?.user?.user_metadata?.display_name || session?.user?.user_metadata?.full_name || session?.user?.user_metadata?.name || session?.user?.user_metadata?.preferred_username || guestDisplayName;
   // Use storeDisplayName (from cache or fetched), then fallback to metadata, and only show '...' if all else fails
   const displayName = session ? (storeDisplayName || fallbackName || '...') : guestDisplayName;
+  const { createNote, folders } = useNotesStore();
   const { editor } = useSettingsStore();
-
 
   const { colors, dark } = useAppTheme();
   const insets = useSafeAreaInsets();
 
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  // Guest display name
+  useEffect(() => {
+    if (session) return;
+
+    const loadGuestDisplayName = async () => {
+      const value = await AsyncStorage.getItem(GUEST_DISPLAY_NAME_KEY);
+      if (value) {
+        setGuestDisplayName(value);
+      }
+    };
+    loadGuestDisplayName();
+  }, [session]);
+
+
   const [isSearchVisible, setIsSearchVisible] = useState(false);
   const { height: screenHeight } = useWindowDimensions();
   const isSyncing = useSyncStore(state => state.isSyncing);
@@ -110,106 +121,6 @@ export default function HomeScreen() {
     };
   });
 
-  // Use Zustand stores
-  const { tasks, loadTasks } = useTasksStore();
-  const { createNote, folders } = useNotesStore();
-
-  // Guest display name
-  useEffect(() => {
-    if (session) return;
-
-    const loadGuestDisplayName = async () => {
-      const value = await AsyncStorage.getItem(GUEST_DISPLAY_NAME_KEY);
-      if (value) {
-        setGuestDisplayName(value);
-      }
-    };
-    loadGuestDisplayName();
-  }, [session]);
-
-
-  // Load tasks from database on mount
-  useEffect(() => {
-    loadTasks();
-  }, [loadTasks]);
-
-
-  const tasksForSelectedDate = useMemo(() => {
-    return tasks.filter((task) => {
-      const taskDate = new Date(task.deadline);
-      return (
-        taskDate.getDate() === selectedDate.getDate() &&
-        taskDate.getMonth() === selectedDate.getMonth() &&
-        taskDate.getFullYear() === selectedDate.getFullYear()
-      );
-    });
-  }, [selectedDate, tasks]);
-
-  // Get next 3 upcoming tasks excluding today
-  const upcomingTasks = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    return [...tasks]
-      .sort((a, b) => a.deadline.getTime() - b.deadline.getTime())
-      .filter((task) => {
-        const taskDate = new Date(task.deadline);
-        taskDate.setHours(0, 0, 0, 0);
-        return taskDate >= tomorrow && !task.completed;
-      })
-      .slice(0, 3);
-  }, [tasks]);
-
-  const isToday = useMemo(() => {
-    const today = new Date();
-    return (
-      selectedDate.getDate() === today.getDate() &&
-      selectedDate.getMonth() === today.getMonth() &&
-      selectedDate.getFullYear() === today.getFullYear()
-    );
-  }, [selectedDate]);
-
-  const [activeTab, setActiveTab] = useState<'tasks' | 'notes'>('tasks');
-
-  // Animation for tab sliding background
-  const slideAnim = useRef(new RNAnimated.Value(0)).current;
-  const [tabWidth, setTabWidth] = useState(0);
-
-  // Handle tab container layout to get individual tab width
-  const onTabContainerLayout = useCallback((event: LayoutChangeEvent) => {
-    const containerWidth = event.nativeEvent.layout.width;
-    // Account for container padding (4px each side) and gap (4px)
-    const availableWidth = containerWidth - 8 - 4;
-    setTabWidth(availableWidth / 2);
-  }, []);
-
-  // Animate slide when activeTab changes
-  useEffect(() => {
-    const toValue = activeTab === 'tasks' ? 0 : 1;
-    RNAnimated.spring(slideAnim, {
-      toValue,
-      useNativeDriver: true,
-      // Jelly-like spring configuration
-      tension: 68,
-      friction: 10,
-    }).start();
-  }, [activeTab, slideAnim]);
-
-
-
-  const formattedSelectedDate = useMemo(() => {
-    if (isToday) {
-      return 'Today';
-    }
-
-    return selectedDate.toLocaleDateString('en-US', {
-      weekday: 'long',
-      month: 'short',
-      day: 'numeric',
-    });
-  }, [isToday, selectedDate]);
 
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
@@ -218,13 +129,7 @@ export default function HomeScreen() {
     return 'Good Evening';
   }, []);
 
-  const handleDateSelect = useCallback((date: Date) => {
-    setSelectedDate(date);
-  }, []);
 
-  const handleTaskPress = useCallback((task: Task) => {
-    router.push(`/Tasks/${task.id}`);
-  }, [router]);
 
   const handleCreateNote = useCallback(async () => {
     const { data: newNote, error } = await createNote({});
@@ -295,114 +200,10 @@ export default function HomeScreen() {
           paddingBottom: insets.bottom + 20,
         }}
       >
-        {/* Calendar */}
-        <View style={{ paddingHorizontal: 20 }}>
-          <Calendar selectedDate={selectedDate} onDateSelect={handleDateSelect} />
-        </View>
 
         {/* Content Section */}
         <View style={styles.contentSection}>
-          {isToday ? (
-            <>
-              {/* Tab Switcher */}
-              <View style={{ paddingHorizontal: 20 }}>
-                <View
-                  style={[styles.tabContainer, { backgroundColor: colors.card }]}
-                  onLayout={onTabContainerLayout}
-                >
-                  <RNAnimated.View
-                    style={[
-                      styles.tabIndicator,
-                      {
-                        backgroundColor: colors.primary + '80',
-                        shadowColor: colors.primary,
-                        width: tabWidth,
-                        transform: [
-                          {
-                            translateX: slideAnim.interpolate({
-                              inputRange: [0, 1],
-                              outputRange: [0, tabWidth + 4],
-                            }),
-                          },
-                        ],
-                      },
-                    ]}
-                  />
-                  <Pressable
-                    onPress={() => setActiveTab('tasks')}
-                    style={styles.tab}
-                  >
-                    <Ionicons
-                      name="checkbox-outline"
-                      size={20}
-                      style={[
-                        styles.tabIcon,
-                        { left: 12 },
-                        { color: activeTab === 'tasks' ? '#FFFFFF' : colors.text },
-                        { opacity: activeTab === 'tasks' ? 1 : 0.5 }
-                      ]}
-                    />
-                    <ThemedText
-                      style={[
-                        styles.tabText,
-                        activeTab === 'tasks' && styles.activeTabText
-                      ]}
-                    >
-                      Tasks
-                    </ThemedText>
-                  </Pressable>
-                  <Pressable
-                    onPress={() => setActiveTab('notes')}
-                    style={styles.tab}
-                  >
-                    <ThemedText
-                      style={[
-                        styles.tabText,
-                        activeTab === 'notes' && styles.activeTabText
-                      ]}
-                    >
-                      Recent Notes
-                    </ThemedText>
-                    <Ionicons
-                      name="document-text-outline"
-                      size={20}
-                      style={[
-                        styles.tabIcon,
-                        { right: 12 },
-                        { color: activeTab === 'notes' ? '#FFFFFF' : colors.text },
-                        { opacity: activeTab === 'notes' ? 1 : 0.5 }
-                      ]}
-                    />
-                  </Pressable>
-                </View>
-              </View>
-
-              {activeTab === 'tasks' ? (
-                <View style={[styles.tabContentInner, { paddingHorizontal: 20 }]}>
-                  <TaskList
-                    tasks={tasksForSelectedDate}
-                    selectedDate={selectedDate}
-                    onTaskPress={handleTaskPress}
-                    showComingUp={true}
-                    upcomingTasks={upcomingTasks}
-                    scrollEnabled={false}
-                  />
-                </View>
-              ) : (
-                <RecentNotesList onCreateNote={handleCreateNote} scrollEnabled={false} />
-              )}
-            </>
-          ) : (
-            <View style={[styles.tabContentInner, { paddingHorizontal: 20 }]}>
-              <TaskList
-                tasks={tasksForSelectedDate}
-                selectedDate={selectedDate}
-                onTaskPress={handleTaskPress}
-                showComingUp={false}
-                scrollEnabled={false}
-              />
-            </View>
-          )}
+          <RecentNotesList onCreateNote={handleCreateNote} scrollEnabled={false} />
         </View>
       </Animated.ScrollView>
 

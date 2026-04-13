@@ -5,7 +5,7 @@ import {
     DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { AutoClearTasksDays, useSettingsStore } from "@annota/core";
+import { useSettingsStore } from "@annota/core";
 import {
     ArrowRightLeft,
     Calendar,
@@ -13,7 +13,6 @@ import {
     ChevronRight,
     List,
     PanelRight,
-    Trash2
 } from "lucide-react";
 
 import { SettingItem } from "./setting-item";
@@ -39,16 +38,6 @@ export function GeneralSettings() {
         });
     };
 
-    const setAutoClearTasks = (days: AutoClearTasksDays) => {
-        updateGeneralSettings({ autoClearTasksDays: days });
-    };
-
-    const autoClearOptions: { value: AutoClearTasksDays; label: string }[] = [
-        { value: 30, label: "30 Days" },
-        { value: 60, label: "60 Days" },
-        { value: 90, label: "90 Days" },
-        { value: 180, label: "180 Days" },
-    ];
 
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -70,40 +59,6 @@ export function GeneralSettings() {
                 </div>
             </section>
 
-            {/* Tasks Section */}
-            <section className="space-y-3">
-                <h4 className="text-[11px] font-bold text-muted-foreground tracking-wider uppercase px-1">
-                    Tasks
-                </h4>
-                <div className="bg-card border rounded-2xl overflow-hidden shadow-sm">
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <button className="w-full">
-                                <SettingItem
-                                    label="Clear Completed Tasks"
-                                    description="Auto-archive done tasks after a period"
-                                    icon={<Trash2 size={18} />}
-                                    iconBg="bg-rose-500"
-                                    value={`${general.autoClearTasksDays || 30} days`}
-                                    action={<ChevronRight size={16} className="text-muted-foreground" />}
-                                />
-                            </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
-                            {autoClearOptions.map((opt) => (
-                                <DropdownMenuItem
-                                    key={opt.value}
-                                    onClick={() => setAutoClearTasks(opt.value)}
-                                    className="flex items-center justify-between"
-                                >
-                                    <span>{opt.label}</span>
-                                    {general.autoClearTasksDays === opt.value && <Check size={14} className="text-primary" />}
-                                </DropdownMenuItem>
-                            ))}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </div>
-            </section>
 
             {/* Display Section */}
             <section className="space-y-3">
