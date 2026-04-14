@@ -1,15 +1,10 @@
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger
-} from "@/components/ui/dropdown-menu";
+
 import { cn } from "@/lib/utils";
 import { useSettingsStore } from "@annota/core";
 import {
     ArrowRightLeft,
     Calendar,
-    Check,
+
     ChevronRight,
     List,
     PanelRight,

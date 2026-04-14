@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
+import { getPlatformAdapters } from '../adapters';
 import { createStorageAdapter } from './config';
 
 export interface OllamaModel {
@@ -84,12 +85,19 @@ export const useAiStore = create<AiState>()(
 
             checkConnection: async () => {
                 const { ollamaBaseUrl } = get();
+                console.log(`[AI Store] Checking connection to Ollama at: ${ollamaBaseUrl}/api/version`);
                 try {
-                    const response = await fetch(`${ollamaBaseUrl}/api/version`);
+                    const response = await getPlatformAdapters().http.fetch(`${ollamaBaseUrl}/api/version`);
                     const isRunning = response.ok;
+                    if (!isRunning) {
+                        console.warn(`[AI Store] Ollama connection check failed with status: ${response.status} ${response.statusText}`);
+                    } else {
+                        console.log(`[AI Store] Ollama connection successful`);
+                    }
                     set({ isOllamaRunning: isRunning, lastCheckedAt: Date.now() });
                     return isRunning;
                 } catch (error) {
+                    console.error(`[AI Store] Ollama connection check encountered an error:`, error);
                     set({ isOllamaRunning: false, lastCheckedAt: Date.now() });
                     return false;
                 }
@@ -99,9 +107,9 @@ export const useAiStore = create<AiState>()(
                 const { ollamaBaseUrl } = get();
                 set({ isLoadingModels: true });
                 try {
-                    const response = await fetch(`${ollamaBaseUrl}/api/tags`);
+                    const response = await getPlatformAdapters().http.fetch(`${ollamaBaseUrl}/api/tags`);
                     if (response.ok) {
-                        const data = await response.json();
+                        const data = await response.json() as any;
                         set({
                             availableModels: data.models || [],
                             isOllamaRunning: true,

@@ -316,5 +316,8 @@ export function createDesktopAdapters(): PlatformAdapters {
         return Boolean(info);
       },
     },
+    http: {
+      fetch: fetch as any,
+    },
   };
 }

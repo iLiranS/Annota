@@ -46,6 +46,7 @@ export function QuickAccessSection({ notes, activeNoteId, onNoteClick, onDeleteN
                                     onClick={() => onNoteClick(note)}
                                     isActive={activeNoteId === note.id}
                                     isInList={true}
+                                    isInQuickAccess={true}
                                     forceCompact={true}
                                 />
                             </SidebarMenuItem>

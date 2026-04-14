@@ -29,7 +29,6 @@ interface OptionsMenuProps {
     onSortChange: (sortType: SortType) => void;
     onTrash: () => void;
     onSettings: () => void;
-    onNewTask?: () => void;
     containerStyle?: any;
     hideDefaultButton?: boolean;
 }
@@ -40,7 +39,6 @@ export default function OptionsMenu({
     onSortChange,
     onTrash,
     onSettings,
-    onNewTask,
     containerStyle,
     hideDefaultButton = false,
 }: OptionsMenuProps) {
@@ -78,10 +76,6 @@ export default function OptionsMenu({
         onSettings();
     };
 
-    const handleNewTask = () => {
-        handleClose();
-        onNewTask?.();
-    };
 
     return (
         <>
@@ -148,18 +142,6 @@ export default function OptionsMenu({
                                         <Text style={[styles.menuItemText, { color: colors.text }]}>New Folder</Text>
                                     </HapticPressable>
 
-                                    {onNewTask && (
-                                        <HapticPressable
-                                            style={({ pressed }) => [
-                                                styles.menuItem,
-                                                pressed && { backgroundColor: colors.border + '30' },
-                                            ]}
-                                            onPress={handleNewTask}
-                                        >
-                                            <Ionicons name="checkmark-circle-outline" size={20} color={colors.text} />
-                                            <Text style={[styles.menuItemText, { color: colors.text }]}>New Task</Text>
-                                        </HapticPressable>
-                                    )}
 
                                     <HapticPressable
                                         style={({ pressed }) => [

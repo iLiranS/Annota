@@ -48,4 +48,8 @@ export interface PlatformAdapters {
         saveToGallery: (path: string) => Promise<boolean>; // save as in Tauri later
         requestGalleryPermission: () => Promise<boolean>;
     };
+
+    http: {
+        fetch: typeof fetch;
+    };
 }

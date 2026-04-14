@@ -1,4 +1,5 @@
 import { AiMessage, useAiStore } from '@annota/core';
+import { getPlatformAdapters } from '../../adapters';
 import { DEFAULT_SYSTEM_PROMPT } from '../constants';
 import { AiProviderAdapter } from '../types';
 
@@ -25,7 +26,7 @@ export class OllamaProvider implements AiProviderAdapter {
                 .map(m => ({ role: m.role, content: m.content }))
         ];
 
-        const response = await fetch(`${ollamaBaseUrl}/api/chat`, {
+        const response = await getPlatformAdapters().http.fetch(`${ollamaBaseUrl}/api/chat`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -67,7 +68,7 @@ export class OllamaProvider implements AiProviderAdapter {
         const { ollamaBaseUrl, selectedModel } = useAiStore.getState();
         if (!selectedModel) return 'New Chat';
 
-        const response = await fetch(`${ollamaBaseUrl}/api/generate`, {
+        const response = await getPlatformAdapters().http.fetch(`${ollamaBaseUrl}/api/generate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

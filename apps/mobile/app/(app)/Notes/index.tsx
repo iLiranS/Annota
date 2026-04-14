@@ -6,9 +6,11 @@ import NoteCard from '@/components/notes/note-card';
 import OptionsMenu from '@/components/options-menu';
 import NotesSearchModal from '@/components/search/notes-search-modal';
 import ThemedText from '@/components/themed-text';
+import { DailyNoteIcon } from '@/components/ui/daily-note-icon';
 import { HapticPressable } from '@/components/ui/haptic-pressable';
 import { useSidebar } from '@/context/sidebar-context';
 import {
+    DAILY_NOTES_FOLDER_ID,
     NoteMetadata,
     sortFolders,
     sortNotes,
@@ -350,7 +352,7 @@ export default function NotesList() {
 
     const { tags } = useNotesStore();
     const currentTag = useMemo(() => tags.find(t => t.id === tagId), [tags, tagId]);
-    const headerTitle = tagId ? (currentTag?.name ?? 'Tag') : (currentFolder ? currentFolder.name : 'Notes');
+    const headerTitle = tagId ? (currentTag?.name ?? 'Tag') : (currentFolder ? currentFolder.name : 'Annota');
 
     const renderItem = ({ item, index }: { item: ListItem, index: number }) => {
         if (item.type === 'section-header') {
@@ -427,7 +429,24 @@ export default function NotesList() {
             <Stack.Screen
                 options={{
                     headerShown: true,
-                    title: headerTitle,
+                    headerTitle: () => (
+                        <View style={styles.headerTitleContainer}>
+                            {tagId ? (
+                                <Ionicons name="ellipse" size={12} color={currentTag?.color ?? colors.primary} />
+                            ) : currentFolderId === DAILY_NOTES_FOLDER_ID ? (
+                                <DailyNoteIcon size={18} color={currentFolder?.color ?? colors.primary} />
+                            ) : (
+                                <Ionicons
+                                    name={(currentFolder?.icon as any) || (currentFolderId ? 'folder' : 'documents')}
+                                    size={18}
+                                    color={currentFolder?.color ?? colors.primary}
+                                />
+                            )}
+                            <ThemedText style={styles.headerTitleText}>
+                                {headerTitle}
+                            </ThemedText>
+                        </View>
+                    ),
                     gestureEnabled: false,
                     headerLeft: () => {
                         const canGoBack = router.canGoBack();
@@ -584,6 +603,15 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         textTransform: 'uppercase',
         letterSpacing: 0.8,
+    },
+    headerTitleContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    headerTitleText: {
+        fontSize: 18,
+        fontWeight: '700',
     },
     emptyContainer: {
         flex: 1,

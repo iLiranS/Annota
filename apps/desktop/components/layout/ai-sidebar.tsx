@@ -20,7 +20,7 @@ import { useAiChat } from "@/hooks/use-ai-chat";
 import { AiChatInput } from "../ai/ai-chat-input";
 import { AiChatError, AiChatMessage } from "../ai/ai-chat-message";
 
-export function AiSidebar({ width }: { width?: number }) {
+export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: boolean }) {
     const {
         activeProvider,
         isOllamaRunning,
@@ -218,7 +218,7 @@ export function AiSidebar({ width }: { width?: number }) {
 
     if (!isConfigured) {
         return (
-            <div className="flex flex-col h-full w-full overflow-hidden" style={{ minWidth: width }}>
+            <div className="flex flex-col h-full w-full overflow-hidden" style={{ minWidth: isResizing ? undefined : width }}>
                 <div className={cn(
                     "flex flex-col h-full w-full items-center justify-center text-center gap-4 p-6 overflow-hidden transition-all duration-300",
                     isFloating
@@ -276,7 +276,7 @@ export function AiSidebar({ width }: { width?: number }) {
         <div
             dir="ltr"
             className="flex flex-col h-full w-full overflow-hidden"
-            style={{ minWidth: width }}
+            style={{ minWidth: isResizing ? undefined : width }}
         >
             <div className={cn(
                 "flex flex-col h-full w-full overflow-hidden  transition-all duration-300",

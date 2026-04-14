@@ -3,7 +3,7 @@ import type { Tag } from '@annota/core';
 import { DAILY_NOTES_FOLDER_ID, useUserStore as useAuthStore, useNotesStore, useSyncStore, type Folder } from '@annota/core';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter, useSegments } from 'expo-router';
+import { useRouter, useSegments, usePathname, useGlobalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     Pressable,
@@ -178,6 +178,8 @@ export default function Sidebar({ onNavigate, ...props }: SidebarProps & React.C
     const { colors } = useAppTheme();
     const insets = useSafeAreaInsets();
     const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useGlobalSearchParams();
 
     const folders = useNotesStore(s => s.folders);
     const notes = useNotesStore(s => s.notes);
@@ -269,11 +271,7 @@ export default function Sidebar({ onNavigate, ...props }: SidebarProps & React.C
         return sorted;
     }, [folders, rootSortType]);
 
-    useEffect(() => {
-        if (folders.length > 0) {
-            console.log(`[Sidebar] folders store has ${folders.length} items.`);
-        }
-    }, [folders.length]);
+
 
     // Get Filtered Quick Access Notes
     const quickAccessNotes = useMemo(() => {
@@ -285,6 +283,19 @@ export default function Sidebar({ onNavigate, ...props }: SidebarProps & React.C
     };
 
     const navigateToNotes = (folderId?: string) => {
+        // Check if we are already at this location
+        const normalizedPath = pathname.toLowerCase();
+        const isNotesRoot = normalizedPath === '/notes' || normalizedPath === '/notes/';
+        
+        const isCurrentFolder = folderId 
+            ? (isNotesRoot && searchParams.folderId === folderId)
+            : (isNotesRoot && !searchParams.folderId && !searchParams.tagId);
+
+        if (isCurrentFolder) {
+            closeDrawer();
+            return;
+        }
+
         closeDrawer();
         const isInNotes = segments[0] === 'Notes';
 
@@ -306,6 +317,16 @@ export default function Sidebar({ onNavigate, ...props }: SidebarProps & React.C
     };
 
     const navigateToTag = (tagId: string) => {
+        // Check if we are already at this tag
+        const normalizedPath = pathname.toLowerCase();
+        const isNotesRoot = normalizedPath === '/notes' || normalizedPath === '/notes/';
+        const isCurrentTag = isNotesRoot && searchParams.tagId === tagId;
+        
+        if (isCurrentTag) {
+            closeDrawer();
+            return;
+        }
+
         closeDrawer();
         const isInNotes = segments[0] === 'Notes';
 
@@ -318,17 +339,19 @@ export default function Sidebar({ onNavigate, ...props }: SidebarProps & React.C
 
 
     const navigateToTrash = () => {
+        if (pathname.toLowerCase() === '/notes/trash') {
+            closeDrawer();
+            return;
+        }
         closeDrawer();
         router.replace('/Notes/trash');
     };
 
-    const navigateToHome = () => {
-        closeDrawer();
-        // Use replace to avoid building up a stack of category screens
-        router.replace('/');
-    };
-
     const navigateToSettings = () => {
+        if (pathname.toLowerCase() === '/settings') {
+            closeDrawer();
+            return;
+        }
         closeDrawer();
         router.push('/settings');
     };
@@ -374,11 +397,12 @@ export default function Sidebar({ onNavigate, ...props }: SidebarProps & React.C
                     {/* Top Section */}
                     <View style={styles.section}>
                         <SidebarItem
-                            icon="home"
-                            label="Home"
-                            onPress={navigateToHome}
-                            iconColor={'#6366F1'}
+                            icon="documents"
+                            label="All Notes"
+                            iconColor={colors.primary}
+                            onPress={() => navigateToNotes()}
                         />
+
 
 
                         <SidebarItem
@@ -442,8 +466,12 @@ export default function Sidebar({ onNavigate, ...props }: SidebarProps & React.C
                                         <HapticPressable
                                             key={note.id}
                                             onPress={() => {
+                                                const normalizedPath = pathname.toLowerCase();
+                                                const isCurrentNote = normalizedPath === `/notes/${note.id}` || normalizedPath === `/notes/${note.id}/`;
                                                 closeDrawer();
-                                                router.push({ pathname: '/Notes/[id]', params: { id: note.id } });
+                                                if (!isCurrentNote) {
+                                                    router.push({ pathname: '/Notes/[id]', params: { id: note.id } });
+                                                }
                                             }}
                                             style={({ pressed }) => [
                                                 styles.quickAccessItem,
@@ -465,14 +493,8 @@ export default function Sidebar({ onNavigate, ...props }: SidebarProps & React.C
 
                     <Separator />
 
-                    {/* Middle Section: All Notes & Folders */}
+                    {/* Folders Section */}
                     <View style={styles.section}>
-                        <SidebarItem
-                            icon="documents"
-                            label="All Notes"
-                            iconColor={colors.primary}
-                            onPress={() => navigateToNotes()}
-                        />
                         <View style={styles.folderContainer}>
                             {topLevelFolders.map((folder: any) => {
                                 const nested = getFoldersInFolder(folder.id).filter(f => !f.isSystem);

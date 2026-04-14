@@ -22,7 +22,6 @@
     "store:default",
     "sql:default",
     "sql:allow-execute",
-    "http:default",
     "deep-link:default",
     "core:window:default",
     "core:window:allow-start-dragging",
@@ -33,14 +32,25 @@
     "clipboard-manager:allow-read-text",
     "clipboard-manager:allow-write-text",
     "clipboard-manager:allow-write-image",
-    "http:allow-fetch",
     "dialog:default",
     "os:allow-hostname",
     {
       "identifier": "http:default",
       "allow": [
         {
-          "url": "https://*"
+          "url": "http://127.0.0.1:*"
+        },
+        {
+          "url": "http://localhost:*"
+        },
+        {
+          "url": "https://api.anthropic.com"
+        },
+        {
+          "url": "https://api.openai.com"
+        },
+        {
+          "url": "https://generativelanguage.googleapis.com"
         }
       ],
       "deny": []

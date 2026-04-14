@@ -3,9 +3,29 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuAction, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import type { Folder } from "@annota/core";
+import { DAILY_NOTES_FOLDER_ID } from "@annota/core";
 import { ChevronRight, Folder as FolderIcon } from "lucide-react";
 import { useState } from "react";
 import { Ionicons } from "../../ui/ionicons";
+
+const DAILY_NOTES_FOLDER: Folder = {
+    id: DAILY_NOTES_FOLDER_ID,
+    name: "Daily Notes",
+    icon: "calendar",
+    color: "#8B5CF6",
+    sortType: "CREATED_FIRST",
+    deletedAt: null,
+    originalParentId: null,
+    isDirty: false,
+
+    parentId: null,
+    isSystem: true,
+    isDeleted: false,
+    isPermDeleted: false,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+}
+
 
 interface FoldersTreeProps {
     isFoldersOpen: boolean;
@@ -32,7 +52,10 @@ export function FoldersTree({
     general,
     currentFolderId
 }: FoldersTreeProps) {
-    const rootFolders = getFoldersInFolder(currentFolderId).filter(f => !f.isSystem);
+    const rootFolders = getFoldersInFolder(currentFolderId)
+    if (currentFolderId === null) rootFolders.unshift(DAILY_NOTES_FOLDER)
+    if (rootFolders.length === 0) return null;
+
 
     return (
         <Collapsible
@@ -48,7 +71,7 @@ export function FoldersTree({
                     </CollapsibleTrigger>
                 </SidebarGroupLabel>
                 <CollapsibleContent>
-                    <SidebarMenu className="px-1 mt-1 max-h-[160px] overflow-y-auto compact-scrollbar">
+                    <SidebarMenu className="px-1 mt-1  overflow-y-auto compact-scrollbar">
                         {rootFolders.map((folder) => (
                             <FolderTreeItem
                                 key={folder.id}

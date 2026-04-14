@@ -1,4 +1,4 @@
-import { fetch } from '@tauri-apps/plugin-http';
+import { getPlatformAdapters } from '../../adapters';
 import { AiMessage } from '../../db/schema';
 import { useAiStore } from '../../stores/ai.store';
 import { DEFAULT_SYSTEM_PROMPT } from '../constants';
@@ -32,7 +32,7 @@ export class GoogleProvider implements AiProviderAdapter {
                 .map(m => ({ role: m.role, content: m.content }))
         ];
 
-        const response = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
+        const response = await getPlatformAdapters().http.fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -90,7 +90,7 @@ export class GoogleProvider implements AiProviderAdapter {
         if (!googleKey) return 'Untitled Chat';
 
         try {
-            const response = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
+            const response = await getPlatformAdapters().http.fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
-import { Sidebar, SidebarContent, SidebarRail, useSidebar } from "@/components/ui/sidebar";
+import { Sidebar, SidebarContent, useSidebar } from "@/components/ui/sidebar";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useCreateNote } from "@/hooks/use-create-note";
 import { useSmartNavigate } from "@/hooks/use-smart-navigate";
@@ -14,7 +14,7 @@ import { FolderEditModal } from "../notes/folder-edit-modal";
 import { BreadcrumbsSection } from "./sidebar/breadcrumbs";
 import { FoldersTree } from "./sidebar/folders-tree";
 import { NotesList } from "./sidebar/notes-list";
-import { PinnedNotesSection } from "./sidebar/pinned-notes";
+
 import { QuickAccessSection } from "./sidebar/quick-access";
 import { SidebarFooterSection } from "./sidebar/sidebar-footer";
 import { SidebarHeaderSection } from "./sidebar/sidebar-header";
@@ -60,7 +60,7 @@ export function AppSidebar() {
     const currentFolderId = useMemo(() => {
         if (tagId) return undefined;
         const searchFolderId = searchParams.get("folderId");
-        if (searchFolderId) return searchFolderId;
+        if (searchFolderId && !['root', 'null', 'undefined'].includes(searchFolderId)) return searchFolderId;
         if (routeFolderId && !['root', 'null', 'undefined'].includes(routeFolderId)) return routeFolderId;
         return undefined;
     }, [routeFolderId, searchParams, tagId]);
@@ -132,12 +132,7 @@ export function AppSidebar() {
         return sortNotes(list, currentSortType);
     }, [notes, currentFolderId, currentSortType, tagId]);
 
-    const { pinnedNotes, unpinnedNotes } = useMemo(() => {
-        return {
-            pinnedNotes: browseNotes.filter((n) => n.isPinned),
-            unpinnedNotes: browseNotes.filter((n) => !n.isPinned),
-        };
-    }, [browseNotes]);
+
 
     const quickAccessNotes = useMemo(() => {
         return notes.filter((n) => n.isQuickAccess && !n.isDeleted);
@@ -233,7 +228,7 @@ export function AppSidebar() {
         };
     }, [isResizing, width, general.appDirection]);
 
-    const sidebarXPadding = general.appDirection === 'rtl' ? "pr-3 pl-1" : "pl-3 pr-1";
+
 
     return (
         <div
@@ -282,33 +277,7 @@ export function AppSidebar() {
                     onNavigate={handleNavigate}
                 />
 
-                <SidebarContent className={cn("min-w-0 flex flex-col overflow-hidden pt-2", sidebarXPadding)}>
-                    <QuickAccessSection
-                        notes={quickAccessNotes}
-                        activeNoteId={routeNoteId}
-                        onNoteClick={(note) => navigateSmart(`/notes/${note.folderId || "root"}/${note.id}`)}
-                        onDeleteNote={deleteNote}
-                        general={general}
-                    />
-
-                    <PinnedNotesSection
-                        notes={pinnedNotes}
-                        activeNoteId={routeNoteId}
-                        onNoteClick={(note) => navigateSmart(`/notes/${note.folderId || "root"}/${note.id}`)}
-                        onDeleteNote={deleteNote}
-                        general={general}
-                    />
-
-                    <NotesList
-                        notes={unpinnedNotes}
-                        activeNoteId={routeNoteId}
-                        onNoteClick={(note) => navigateSmart(`/notes/${note.folderId || "root"}/${note.id}`)}
-                        onDeleteNote={deleteNote}
-                        general={general}
-                    />
-                </SidebarContent>
-
-                <div className={cn("mt-auto border-t border-border/10 pb-2", sidebarXPadding)}>
+                <SidebarContent className={cn("min-w-0  flex flex-col overflow-hidden px-1 ")}>
                     <FoldersTree
                         isFoldersOpen={isFoldersOpen}
                         setIsFoldersOpen={setIsFoldersOpen}
@@ -321,6 +290,27 @@ export function AppSidebar() {
                         general={general}
                         currentFolderId={currentFolderId ?? null}
                     />
+                    <NotesList
+                        notes={browseNotes}
+                        activeNoteId={routeNoteId}
+                        onNoteClick={(note) => navigateSmart(`/notes/${note.folderId || "root"}/${note.id}`)}
+                        onDeleteNote={deleteNote}
+                        general={general}
+                    />
+
+                </SidebarContent>
+
+                <div className={cn("mt-auto px-1")}>
+
+                    <QuickAccessSection
+                        notes={quickAccessNotes}
+                        activeNoteId={routeNoteId}
+                        onNoteClick={(note) => navigateSmart(`/notes/${note.folderId || "root"}/${note.id}`)}
+                        onDeleteNote={deleteNote}
+                        general={general}
+                    />
+
+
 
                     <TagsList
                         tags={tags}
@@ -337,7 +327,6 @@ export function AppSidebar() {
                         onRetry={handleRetry}
                         onSettingsClick={() => navigate("/settings", { state: { background: location } })}
                         onTrashClick={() => navigateSmart("/notes/trash")}
-                        sidebarXPadding={sidebarXPadding}
                     />
                 </div>
 
@@ -355,7 +344,6 @@ export function AppSidebar() {
                     onConfirm={handleDeleteFolder}
                     variant="destructive"
                 />
-                <SidebarRail />
             </Sidebar>
         </div>
     );

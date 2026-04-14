@@ -1,20 +1,9 @@
 import { AiMessage, useAiStore } from '@annota/core';
+import { getPlatformAdapters } from '../../adapters';
 import { DEFAULT_SYSTEM_PROMPT } from '../constants';
 import { getApiKey } from '../security';
 import { AiProviderAdapter } from '../types';
 
-async function getProxiedFetch() {
-    try {
-        // @ts-ignore
-        if (window.__TAURI_INTERNALS__) {
-            const { fetch } = await import('@tauri-apps/plugin-http');
-            return fetch;
-        }
-    } catch (e) {
-        console.warn('Tauri HTTP plugin not found, falling back to global fetch');
-    }
-    return fetch;
-}
 
 export class OpenAiProvider implements AiProviderAdapter {
     id = 'openai' as const;
@@ -29,8 +18,6 @@ export class OpenAiProvider implements AiProviderAdapter {
         const openAiKey = await getApiKey('openai');
         if (!openAiKey) throw new Error('OpenAI API Key is missing. Please add it in settings.');
 
-        const fetchFn = await getProxiedFetch();
-
         const liveSystemContent = liveNoteContent
             ? `${DEFAULT_SYSTEM_PROMPT}\n\nUse the following live note context to answer accurately:\n${liveNoteContent}`
             : DEFAULT_SYSTEM_PROMPT;
@@ -42,7 +29,7 @@ export class OpenAiProvider implements AiProviderAdapter {
                 .map(m => ({ role: m.role, content: m.content }))
         ];
 
-        const response = await fetchFn('https://api.openai.com/v1/chat/completions', {
+        const response = await getPlatformAdapters().http.fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -96,10 +83,8 @@ export class OpenAiProvider implements AiProviderAdapter {
         const openAiKey = await getApiKey('openai');
         if (!openAiKey) return 'New Chat';
 
-        const fetchFn = await getProxiedFetch();
-
         try {
-            const response = await fetchFn('https://api.openai.com/v1/chat/completions', {
+            const response = await getPlatformAdapters().http.fetch('https://api.openai.com/v1/chat/completions', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

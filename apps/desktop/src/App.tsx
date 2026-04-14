@@ -43,10 +43,6 @@ import NotesViewManager from "./pages/notes/notes-view-manager";
 import TrashPage from "./pages/notes/trash-page";
 
 
-
-// Home Page
-import HomePage from "./pages/home/home-page";
-
 type BootstrapState = "booting" | "ready" | "error";
 
 const STARTUP_NETWORK_TIMEOUT_MS = 5000;
@@ -220,6 +216,8 @@ function App() {
   }, [runId, setSession]);
 
   const navigate = useNavigate();
+  const location = useLocation();
+  const locationState = location.state as { background?: Location };
   const [pendingDeepLink, setPendingDeepLink] = useState<string | null>(null);
 
   // Auth and Deep Link listeners
@@ -336,9 +334,20 @@ function App() {
     };
   }, [setSession, navigate]);
 
-  // Handle pending deep link once ready
+  // Handle startup navigation (deep links or last viewed note)
+  const hasRestoredLastViewRef = useRef(false);
+
+  // Reset restoration flag when user changes (logout/login)
   useEffect(() => {
-    if (bootstrapState === "ready" && pendingDeepLink) {
+    hasRestoredLastViewRef.current = false;
+  }, [session?.user?.id]);
+
+  useEffect(() => {
+    if (bootstrapState !== "ready" || hasRestoredLastViewRef.current) return;
+
+    // 1. Priority: Explicit Deep Link from OS
+    if (pendingDeepLink) {
+      hasRestoredLastViewRef.current = true;
       try {
         const url = pendingDeepLink;
         setPendingDeepLink(null);
@@ -352,14 +361,29 @@ function App() {
             const folderId = note.folderId || "root";
             let routePath = `/notes/${folderId}/${noteId}`;
             if (elementId) routePath += `?elementId=${elementId}`;
-            navigate(routePath);
+            navigate(routePath, { replace: true });
           }
         }
       } catch (err) {
         console.error("Failed to handle pending deep link:", err);
       }
+      return;
     }
-  }, [bootstrapState, pendingDeepLink, navigate]);
+
+    // 2. Priority: Restore Last Viewed Note (only if at root routes)
+    const isAtRoot = location.pathname === "/" || location.pathname === "/notes";
+    if (isAtRoot) {
+      hasRestoredLastViewRef.current = true;
+      const { lastViewedNoteId } = useSettingsStore.getState();
+      if (lastViewedNoteId) {
+        const note = useNotesStore.getState().notes.find((n) => n.id === lastViewedNoteId && !n.isDeleted);
+        if (note) {
+          const folderId = note.folderId || 'root';
+          navigate(`/notes/${folderId}/${lastViewedNoteId}`, { replace: true });
+        }
+      }
+    }
+  }, [bootstrapState, pendingDeepLink, navigate, location.pathname]);
 
 
   // Sync Scheduler
@@ -402,8 +426,7 @@ function App() {
     };
   }, [session?.user?.id, hasMasterKey, saltHex, bootstrapState]);
 
-  const location = useLocation();
-  const locationState = location.state as { background?: Location };
+
 
   // ── Booting ──────────────────────────────────────────────────
   if (bootstrapState === "booting") {

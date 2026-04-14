@@ -20,6 +20,7 @@ import { FolderEditModal } from "./folder-edit-modal";
 import { NotePreviewModal } from "./note-preview-modal";
 
 import { Slot } from "@radix-ui/react-slot";
+import { Pin } from "lucide-react";
 
 interface NoteListItemProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     note: NoteMetadata;
@@ -32,6 +33,7 @@ interface NoteListItemProps extends React.ButtonHTMLAttributes<HTMLButtonElement
     asChild?: boolean;
     children?: React.ReactNode;
     isInList?: boolean;
+    isInQuickAccess?: boolean;
     forceCompact?: boolean;
 }
 
@@ -49,6 +51,7 @@ export function NoteListItem({
     children,
     isInList,
     forceCompact,
+    isInQuickAccess,
     ...props
 }: NoteListItemProps) {
     const { updateNoteMetadata, tags } = useNotesStore();
@@ -180,7 +183,9 @@ export function NoteListItem({
                                     </div>
 
                                     <div className="flex items-center gap-2 shrink-0">
-
+                                        {note.isPinned && !isInQuickAccess && (
+                                            <Pin size={12} className="text-primary/70" />
+                                        )}
                                         {suffix}
                                         {showTimestamp && note.updatedAt && (
                                             <span className="text-[11px] text-muted-foreground/60">

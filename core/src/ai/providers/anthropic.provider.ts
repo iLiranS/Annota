@@ -1,18 +1,9 @@
 import { AiMessage, useAiStore } from '@annota/core';
+import { getPlatformAdapters } from '../../adapters';
 import { DEFAULT_SYSTEM_PROMPT } from '../constants';
 import { getApiKey } from '../security';
 import { AiProviderAdapter } from '../types';
 
-async function getProxiedFetch() {
-    try {
-        // @ts-ignore
-        if (window.__TAURI_INTERNALS__) {
-            const { fetch } = await import('@tauri-apps/plugin-http');
-            return fetch;
-        }
-    } catch (e) { }
-    return fetch;
-}
 
 export class AnthropicProvider implements AiProviderAdapter {
     id = 'anthropic' as const;
@@ -27,8 +18,6 @@ export class AnthropicProvider implements AiProviderAdapter {
         const anthropicKey = await getApiKey('anthropic');
         if (!anthropicKey) throw new Error('Anthropic API Key is missing. Please add it in settings.');
 
-        const fetchFn = await getProxiedFetch();
-
         const systemPrompt = liveNoteContent
             ? `${DEFAULT_SYSTEM_PROMPT}\n\nUse the following live note context to answer accurately:\n${liveNoteContent}`
             : DEFAULT_SYSTEM_PROMPT;
@@ -40,7 +29,7 @@ export class AnthropicProvider implements AiProviderAdapter {
                 content: m.content
             }));
 
-        const response = await fetchFn('https://api.anthropic.com/v1/messages', {
+        const response = await getPlatformAdapters().http.fetch('https://api.anthropic.com/v1/messages', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -98,10 +87,8 @@ export class AnthropicProvider implements AiProviderAdapter {
         const anthropicKey = await getApiKey('anthropic');
         if (!anthropicKey) return 'New Chat';
 
-        const fetchFn = await getProxiedFetch();
-
         try {
-            const response = await fetchFn('https://api.anthropic.com/v1/messages', {
+            const response = await getPlatformAdapters().http.fetch('https://api.anthropic.com/v1/messages', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

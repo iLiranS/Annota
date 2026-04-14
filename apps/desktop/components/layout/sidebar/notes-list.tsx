@@ -52,17 +52,35 @@ export function NotesList({
                                     <p className="text-xs text-muted-foreground italic">No notes here</p>
                                 </div>
                             ) : (
-                                notes.map((note) => (
-                                    <SidebarMenuItem key={note.id}>
-                                        <NoteListItem
-                                            note={note}
-                                            onDelete={() => onDeleteNote(note.id)}
-                                            onClick={() => onNoteClick(note)}
-                                            isActive={activeNoteId === note.id}
-                                            isInList={true}
-                                        />
-                                    </SidebarMenuItem>
-                                ))
+                                <>
+                                    {notes.filter(n => n.isPinned).map((note) => (
+                                        <SidebarMenuItem key={note.id}>
+                                            <NoteListItem
+                                                note={note}
+                                                onDelete={() => onDeleteNote(note.id)}
+                                                onClick={() => onNoteClick(note)}
+                                                isActive={activeNoteId === note.id}
+                                                isInList={true}
+                                            />
+                                        </SidebarMenuItem>
+                                    ))}
+
+                                    {notes.some(n => n.isPinned) && notes.some(n => !n.isPinned) && (
+                                        <div className="my-1" />
+                                    )}
+
+                                    {notes.filter(n => !n.isPinned).map((note) => (
+                                        <SidebarMenuItem key={note.id}>
+                                            <NoteListItem
+                                                note={note}
+                                                onDelete={() => onDeleteNote(note.id)}
+                                                onClick={() => onNoteClick(note)}
+                                                isActive={activeNoteId === note.id}
+                                                isInList={true}
+                                            />
+                                        </SidebarMenuItem>
+                                    ))}
+                                </>
                             )}
                         </SidebarMenu>
                     </div>

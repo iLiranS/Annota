@@ -172,7 +172,11 @@ export default function NoteEditor() {
 
     const handleBack = useCallback(() => {
         editorRef.current?.blur();
-        router.back();
+        if (router.canGoBack()) {
+            router.back();
+        } else {
+            router.replace('/Notes');
+        }
     }, [router]);
 
     // Search handlers
@@ -221,10 +225,10 @@ export default function NoteEditor() {
     const handleDelete = useCallback(async () => {
         if (!id) return;
         await deleteNote(id);
-        if (source === 'home' && router.canGoBack()) {
+        if (source === 'Notes' && router.canGoBack()) {
             router.back();
-        } else if (source === 'home') {
-            router.replace('/');
+        } else if (source === 'Notes') {
+            router.replace('/Notes');
         } else {
             router.back();
         }

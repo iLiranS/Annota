@@ -1,13 +1,13 @@
 import {
     Breadcrumb,
+    BreadcrumbEllipsis,
     BreadcrumbItem,
     BreadcrumbLink,
     BreadcrumbList,
     BreadcrumbSeparator,
-    BreadcrumbEllipsis,
 } from "@/components/ui/breadcrumb";
-import { Ionicons } from "../../ui/ionicons";
 import { cn } from "@/lib/utils";
+import { Ionicons } from "../../ui/ionicons";
 
 interface BreadcrumbData {
     name: string;
@@ -32,7 +32,7 @@ export function BreadcrumbsSection({ breadcrumbs, onNavigate, className }: Bread
                     <div key={i} className="flex items-center gap-1.5 min-w-0">
                         {i > 0 && (
                             <BreadcrumbSeparator className="[&>svg]:size-2.5">
-                                <Ionicons name="chevron-back" />
+                                <Ionicons name="chevron-forward" />
                             </BreadcrumbSeparator>
                         )}
                         <BreadcrumbItem className="min-w-0">
@@ -45,10 +45,10 @@ export function BreadcrumbsSection({ breadcrumbs, onNavigate, className }: Bread
                                 >
                                     <button onClick={() => onNavigate(crumb.id)}>
                                         {crumb.icon && (
-                                            <Ionicons 
-                                                name={crumb.icon} 
-                                                size={10} 
-                                                className="text-muted-foreground/40 shrink-0" 
+                                            <Ionicons
+                                                name={crumb.icon}
+                                                size={10}
+                                                className="text-muted-foreground/40 shrink-0"
                                             />
                                         )}
                                         <span className="truncate max-w-[80px]">{crumb.name}</span>

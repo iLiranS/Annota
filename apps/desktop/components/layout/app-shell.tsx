@@ -146,7 +146,7 @@ export default function AppShell() {
                             !isResizing && "transition-[width,opacity] duration-300 ease-in-out",
                             general.isAiSidebarOpen
                                 ? "opacity-100 pointer-events-auto"
-                                : "opacity-0 pointer-events-none w-0!"
+                                : "opacity-0 pointer-events-none"
                         )}
                         style={{
                             width: general.isAiSidebarOpen ? `${sidebarWidth}px` : '0px',
@@ -165,7 +165,7 @@ export default function AppShell() {
                             </div>
                         )}
 
-                        <AiSidebar width={sidebarWidth} />
+                        <AiSidebar width={sidebarWidth} isResizing={isResizing} />
                     </div>
                 </div>
             </div>

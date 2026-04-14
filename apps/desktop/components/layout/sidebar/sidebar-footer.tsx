@@ -1,8 +1,8 @@
-import { Settings, Trash2 } from "lucide-react";
-import { SidebarFooter, SidebarMenuButton } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { Ionicons } from "../../ui/ionicons";
+import { SidebarFooter, SidebarMenuButton } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
+import { Settings, Trash2 } from "lucide-react";
+import { Ionicons } from "../../ui/ionicons";
 
 interface SidebarFooterSectionProps {
     showOfflineBanner: boolean;
@@ -10,7 +10,6 @@ interface SidebarFooterSectionProps {
     onRetry: () => void;
     onSettingsClick: () => void;
     onTrashClick: () => void;
-    sidebarXPadding: string;
 }
 
 export function SidebarFooterSection({
@@ -19,12 +18,12 @@ export function SidebarFooterSection({
     onRetry,
     onSettingsClick,
     onTrashClick,
-    sidebarXPadding
+
 }: SidebarFooterSectionProps) {
     return (
-        <SidebarFooter className={cn("py-3 gap-1", sidebarXPadding)}>
+        <SidebarFooter className={cn("py-3 px-0")}>
             {showOfflineBanner && (
-                <div className="mb-2 flex items-center gap-2 rounded-lg bg-amber-500/10 px-3 py-1.5 border border-amber-500/20">
+                <div className="mb-2 flex items-center gap-2 rounded-lg bg-amber-500/10  py-1.5 border border-amber-500/20">
                     <Ionicons name="cloud-offline" size={12} className="text-amber-500" />
                     <span className="flex-1 text-[9px] font-bold uppercase tracking-tight">Offline</span>
                     <Button
@@ -44,7 +43,7 @@ export function SidebarFooterSection({
                     onClick={onSettingsClick}
                     tooltip="Settings"
                 >
-                    <Settings size={18} />
+                    <Settings className="opacity-80" size={18} />
                 </SidebarMenuButton>
 
                 <SidebarMenuButton
@@ -52,7 +51,7 @@ export function SidebarFooterSection({
                     onClick={onTrashClick}
                     tooltip="Trash"
                 >
-                    <Trash2 size={18} />
+                    <Trash2 className="opacity-80" size={18} />
                 </SidebarMenuButton>
             </div>
         </SidebarFooter>

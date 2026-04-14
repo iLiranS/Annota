@@ -1,3 +1,5 @@
+import ChangelogModal from '@/components/changelog-modal';
+import { SidebarProvider } from '@/context/sidebar-context';
 import { fileSyncService } from '@annota/core';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ThemeProvider } from '@react-navigation/native';
@@ -11,8 +13,6 @@ import * as TaskManager from 'expo-task-manager';
 import { useEffect, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { SidebarProvider } from '@/context/sidebar-context';
-import ChangelogModal from '@/components/changelog-modal';
 import Toast, { type ToastConfig, type ToastConfigParams } from 'react-native-toast-message';
 import 'react-native-url-polyfill/auto';
 
@@ -31,7 +31,6 @@ import {
   useSearchStore,
   useSettingsStore,
   useSyncStore,
-  useAiStore
 } from '@annota/core';
 import { SyncScheduler, getMasterKey, initPlatformAdapters } from '@annota/core/platform';
 import { createMobileAdapters } from '../bootstrap/mobile-adapters';
@@ -184,8 +183,7 @@ function AppLogicHub() {
         console.log('[RootLayout] Starting auth hydration...');
         await useAuthStore.persist.rehydrate();
         await useSettingsStore.persist.rehydrate();
-        await useAiStore.persist.rehydrate();
-        
+
         const { appConfigService } = require('@annota/core'); // Keep this require if it's truly problematic as top-level due to side effects
         try {
           await withStartupTimeout(appConfigService.init(), 'App config');
@@ -257,7 +255,7 @@ function AppLogicHub() {
       try {
         const userId = session?.user?.id || user?.id || null;
         console.log('[RootLayout] Bootstrapping for identity:', userId || 'guest');
-        
+
         const { expoDb, drizzleDb } = await getOrCreateMobileDb(userId);
         initDb(drizzleDb as any);
         initDB(userId, expoDb);
@@ -267,7 +265,7 @@ function AppLogicHub() {
         await Promise.all([
           useNotesStore.getState().initApp()
         ]);
-        
+
         if (session) {
           checkMasterKey();
           getUserProfile();
@@ -275,7 +273,7 @@ function AppLogicHub() {
         } else if (user) {
           getUserProfile();
         }
-        
+
         console.log('[RootLayout] Bootstrap complete.');
       } catch (e) {
         console.error('[RootLayout] Bootstrap failed:', e);
@@ -354,7 +352,7 @@ function AppLogicHub() {
         }
       }, session.user.id);
 
-      fileSyncService.retryPendingDownloads(key, saltHex, session.user.id).catch(() => {});
+      fileSyncService.retryPendingDownloads(key, saltHex, session.user.id).catch(() => { });
     });
 
     return () => {
@@ -372,7 +370,7 @@ function AppLogicHub() {
         if (!isRegistered) {
           await BackgroundTask.registerTaskAsync(BACKGROUND_SYNC_TASK, { minimumInterval: 15 });
         }
-      } catch (err) {}
+      } catch (err) { }
     };
     registerBackgroundFetch();
   }, [session, dbReady]);
