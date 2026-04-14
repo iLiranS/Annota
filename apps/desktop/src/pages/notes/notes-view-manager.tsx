@@ -1,6 +1,7 @@
-import { DAILY_NOTES_FOLDER_ID } from "@annota/core";
+import { DAILY_NOTES_FOLDER_ID, TRASH_FOLDER_ID } from "@annota/core";
 import { useParams, useSearchParams } from "react-router-dom";
 import { DailyNotesCalendar } from "./components/daily-notes-calendar";
+import { TrashContent } from "./components/trash-content";
 import NoteEditor from "./note-editor";
 import NotesEmpty from "./notes-empty";
 
@@ -16,7 +17,7 @@ export default function NotesViewManager() {
 
     // 1. Priority: Explicit Note in URL
     if (routeNoteId) {
-        return <NoteEditor key={routeNoteId} noteId={routeNoteId} folderId={routeFolderId} />;
+        return <NoteEditor key={`${routeFolderId}-${routeNoteId}`} noteId={routeNoteId} folderId={routeFolderId} />;
     }
 
     // 2. Priority: Daily Notes Calendar
@@ -24,6 +25,11 @@ export default function NotesViewManager() {
         return <DailyNotesCalendar />;
     }
 
-    // 3. Priority: Fallback: Empty State
+    // 3. Priority: Trash Content
+    if (searchFolderId === TRASH_FOLDER_ID) {
+        return <TrashContent />;
+    }
+
+    // 4. Priority: Fallback: Empty State
     return <NotesEmpty />;
 }

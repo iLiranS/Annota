@@ -331,7 +331,7 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
                                 onClick={() => updateGeneralSettings({ isAiSidebarSticky: !general.isAiSidebarSticky })}
                                 title={general.isAiSidebarSticky ? "Unpin (Auto-hide)" : "Pin (Keep open)"}
                             >
-                                <Pin size={14} className={cn("fill-current transition-transform", general.isAiSidebarSticky && "rotate-45")} />
+                                <Pin size={14} className={cn("fill-current transition-transform", general.isAiSidebarSticky && "rotate-45 text-accent-full")} />
                             </Button>
                         )}
                         {!activeChatId ? (

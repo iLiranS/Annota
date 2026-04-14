@@ -54,7 +54,7 @@ export function NoteListItem({
     isInQuickAccess,
     ...props
 }: NoteListItemProps) {
-    const { updateNoteMetadata, tags } = useNotesStore();
+    const { updateNoteMetadata, tags, restoreNote, permanentlyDeleteNote } = useNotesStore();
     const { general } = useSettingsStore();
     const isCompact = (general.compactMode || forceCompact);
 
@@ -62,6 +62,14 @@ export function NoteListItem({
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
     const [isNewFolderModalOpen, setIsNewFolderModalOpen] = useState(false);
     const [newFolderParentId, setNewFolderParentId] = useState<string | null>(null);
+
+    const handleRestoreNote = useCallback(async () => {
+        await restoreNote(note.id);
+    }, [note.id, restoreNote]);
+
+    const handlePermanentlyDelete = useCallback(async () => {
+        await permanentlyDeleteNote(note.id);
+    }, [note.id, permanentlyDeleteNote]);
 
     const handleTogglePin = useCallback(async () => {
         await updateNoteMetadata(note.id, { isPinned: !note.isPinned });
@@ -160,7 +168,8 @@ export function NoteListItem({
                         type="button"
                         onClick={onClick}
                         className={cn(
-                            !asChild && "group/note relative flex w-full flex-col transition-all hover:bg-primary/10",
+                            !asChild && "group/note relative flex w-full flex-col transition-all",
+                            !isActive && 'hover:bg-primary/10',
                             !asChild && (isCompact && !isInList ? "py-1.5" : "py-2"),
                             !asChild && (isInList ? "rounded-lg px-2 py-2" : "px-3 py-2 rounded-lg"),
                             isActive && !asChild && "bg-accent/70",
@@ -238,67 +247,88 @@ export function NoteListItem({
                 </ContextMenuTrigger>
 
                 <ContextMenuContent className="w-52">
-                    <ContextMenuItem
-                        onSelect={() => setIsPreviewOpen(true)}
-                        onPointerUp={(e) => e.button === 2 && e.preventDefault()}
-                    >
-                        <Ionicons name="eye-outline" size={16} />
-                        <span>Preview Note</span>
-                    </ContextMenuItem>
+                    {note.isDeleted ? (
+                        <>
+                            <ContextMenuItem
+                                onSelect={handleRestoreNote}
+                                className="gap-2 focus:text-emerald-600 focus:bg-emerald-500/10"
+                            >
+                                <Ionicons name="arrow-undo-outline" size={16} />
+                                <span>Restore Note</span>
+                            </ContextMenuItem>
+                            <ContextMenuItem
+                                onSelect={handlePermanentlyDelete}
+                                className="gap-2 text-destructive focus:bg-destructive/10 focus:text-destructive"
+                            >
+                                <Ionicons name="trash-outline" size={16} />
+                                <span>Delete Permanently</span>
+                            </ContextMenuItem>
+                        </>
+                    ) : (
+                        <>
+                            <ContextMenuItem
+                                onSelect={() => setIsPreviewOpen(true)}
+                                onPointerUp={(e) => e.button === 2 && e.preventDefault()}
+                            >
+                                <Ionicons name="eye-outline" size={16} />
+                                <span>Preview Note</span>
+                            </ContextMenuItem>
 
-                    <ContextMenuItem
-                        onSelect={handleOpenInNewWindow}
-                        onPointerUp={(e) => e.button === 2 && e.preventDefault()}
-                    >
-                        <Ionicons name="open-outline" size={16} />
-                        <span>Open in New Window</span>
-                    </ContextMenuItem>
+                            <ContextMenuItem
+                                onSelect={handleOpenInNewWindow}
+                                onPointerUp={(e) => e.button === 2 && e.preventDefault()}
+                            >
+                                <Ionicons name="open-outline" size={16} />
+                                <span>Open in New Window</span>
+                            </ContextMenuItem>
 
-                    <ContextMenuItem
-                        onSelect={handleTogglePin}
-                        onPointerUp={(e) => e.button === 2 && e.preventDefault()}
-                    >
-                        <Ionicons name={note.isPinned ? "pin" : "pin-outline"} size={16} />
-                        <span>{note.isPinned ? "Unpin Note" : "Pin Note"}</span>
-                    </ContextMenuItem>
+                            <ContextMenuItem
+                                onSelect={handleTogglePin}
+                                onPointerUp={(e) => e.button === 2 && e.preventDefault()}
+                            >
+                                <Ionicons name={note.isPinned ? "pin" : "pin-outline"} size={16} />
+                                <span>{note.isPinned ? "Unpin Note" : "Pin Note"}</span>
+                            </ContextMenuItem>
 
-                    <ContextMenuItem
-                        onSelect={handleToggleQuickAccess}
-                        onPointerUp={(e) => e.button === 2 && e.preventDefault()}
-                    >
-                        <Ionicons name={note.isQuickAccess ? "star" : "star-outline"} size={16} />
-                        <span>
-                            {note.isQuickAccess ? "Remove Quick Access" : "Quick Access"}
-                        </span>
-                    </ContextMenuItem>
+                            <ContextMenuItem
+                                onSelect={handleToggleQuickAccess}
+                                onPointerUp={(e) => e.button === 2 && e.preventDefault()}
+                            >
+                                <Ionicons name={note.isQuickAccess ? "star" : "star-outline"} size={16} />
+                                <span>
+                                    {note.isQuickAccess ? "Remove Quick Access" : "Quick Access"}
+                                </span>
+                            </ContextMenuItem>
 
-                    <ContextMenuItem
-                        onSelect={handleCopyLink}
-                        onPointerUp={(e) => e.button === 2 && e.preventDefault()}
-                    >
-                        <Ionicons name="link-outline" size={16} />
-                        <span>Copy Link</span>
-                    </ContextMenuItem>
+                            <ContextMenuItem
+                                onSelect={handleCopyLink}
+                                onPointerUp={(e) => e.button === 2 && e.preventDefault()}
+                            >
+                                <Ionicons name="link-outline" size={16} />
+                                <span>Copy Link</span>
+                            </ContextMenuItem>
 
-                    <ContextMenuSeparator />
+                            <ContextMenuSeparator />
 
-                    <ContextMenuItem
-                        onSelect={() => setIsLocationPickerOpen(true)}
-                        onPointerUp={(e) => e.button === 2 && e.preventDefault()}
-                    >
-                        <Ionicons name="folder-outline" size={16} />
-                        <span>Move Note</span>
-                    </ContextMenuItem>
+                            <ContextMenuItem
+                                onSelect={() => setIsLocationPickerOpen(true)}
+                                onPointerUp={(e) => e.button === 2 && e.preventDefault()}
+                            >
+                                <Ionicons name="folder-outline" size={16} />
+                                <span>Move Note</span>
+                            </ContextMenuItem>
 
-                    {onDelete && (
-                        <ContextMenuItem
-                            onSelect={onDelete}
-                            onPointerUp={(e) => e.button === 2 && e.preventDefault()}
-                            className="gap-2 text-destructive focus:bg-destructive/10 focus:text-destructive"
-                        >
-                            <Ionicons name="trash-outline" size={16} />
-                            <span>Delete Note</span>
-                        </ContextMenuItem>
+                            {onDelete && (
+                                <ContextMenuItem
+                                    onSelect={onDelete}
+                                    onPointerUp={(e) => e.button === 2 && e.preventDefault()}
+                                    className="gap-2 text-destructive focus:bg-destructive/10 focus:text-destructive"
+                                >
+                                    <Ionicons name="trash-outline" size={16} />
+                                    <span>Delete Note</span>
+                                </ContextMenuItem>
+                            )}
+                        </>
                     )}
                 </ContextMenuContent>
 

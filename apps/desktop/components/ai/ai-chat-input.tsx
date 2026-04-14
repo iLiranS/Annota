@@ -97,7 +97,7 @@ export function AiChatInput({ onSend, onSummarize, onStop, disabled }: AiChatInp
     const isNearLimit = content.length > MAX_LENGTH * 0.8;
 
     return (
-        <div className="flex flex-col gap-2 mb-2">
+        <div className="flex flex-col gap-2 mb-2 pt-2 border-t border-border/40">
             <div className="flex items-center justify-between px-1">
                 <Button
                     variant="ghost"

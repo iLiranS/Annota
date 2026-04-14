@@ -5,6 +5,7 @@ use tauri::{Emitter, Window};
 use image::imageops::FilterType;
 use webp::Encoder;
 use font_kit::source::SystemSource;
+use argon2::{Algorithm, Argon2, Params, Version};
 
 #[tauri::command]
 fn get_system_fonts() -> Vec<String> {
@@ -12,6 +13,24 @@ fn get_system_fonts() -> Vec<String> {
     let mut fonts = source.all_families().unwrap_or_default();
     fonts.sort(); // alphabetical order
     fonts
+}
+#[tauri::command]
+fn argon2id(
+    message: Vec<u8>,
+    nonce: Vec<u8>,
+    memory: u32,
+    passes: u32,
+    parallelism: u32,
+    tag_length: u32,
+) -> Result<Vec<u8>, String> {
+    let params = Params::new(memory, passes, parallelism, Some(tag_length as usize))
+        .map_err(|e| format!("Invalid Argon2 params: {e}"))?;
+    let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
+    let mut output = vec![0u8; tag_length as usize];
+    argon2
+        .hash_password_into(&message, &nonce, &mut output)
+        .map_err(|e| format!("Argon2id failed: {e}"))?;
+    Ok(output)
 }
 
 #[tauri::command]
@@ -107,7 +126,7 @@ async fn start_auth_listener(window: Window) -> Result<(), String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![start_auth_listener, compress_image_native, get_system_fonts])
+        .invoke_handler(tauri::generate_handler![start_auth_listener, compress_image_native, get_system_fonts,argon2id])
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_clipboard_manager::init())

@@ -26,7 +26,7 @@ export function BreadcrumbsSection({ breadcrumbs, onNavigate, className }: Bread
     if (!breadcrumbs || breadcrumbs.length === 0) return null;
 
     return (
-        <Breadcrumb className={cn("px-4 py-2 border-b border-sidebar-border/5 bg-sidebar-accent/5", className)}>
+        <Breadcrumb className={cn("px-3 py-2 border-b border-sidebar-border/5 bg-sidebar-accent/5", className)}>
             <BreadcrumbList className="flex-nowrap gap-1.5 sm:gap-1.5">
                 {breadcrumbs.map((crumb, i) => (
                     <div key={i} className="flex items-center gap-1.5 min-w-0">

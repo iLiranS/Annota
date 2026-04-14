@@ -20,6 +20,7 @@ interface SidebarHeaderSectionProps {
     onCreateFolder: () => void;
     sortOptions: SortType[];
     getSortTypeLabel: (type: SortType) => string;
+    tagId?: string;
 }
 
 export function SidebarHeaderSection({
@@ -34,6 +35,7 @@ export function SidebarHeaderSection({
     onCreateFolder,
     sortOptions,
     getSortTypeLabel,
+    tagId,
 }: SidebarHeaderSectionProps) {
     return (
         <SidebarHeader
@@ -71,51 +73,52 @@ export function SidebarHeaderSection({
                                 <TooltipContent side="bottom" className="text-[10px] font-bold">New Note</TooltipContent>
                             </Tooltip>
                         )}
+                        {!isTrash && !isDaily && !tagId && (
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 text-muted-foreground/60 hover:bg-primary/10 transition-colors"
+                                        style={{ color: color }}
+                                    >
+                                        <MoreVertical className="h-4.5 w-4.5" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-52">
+                                    <DropdownMenuItem onClick={onCreateFolder} className="gap-2 cursor-pointer">
+                                        <Ionicons name="folder-outline" size={16} />
+                                        <span>New Folder</span>
+                                    </DropdownMenuItem>
 
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 text-muted-foreground/60 hover:bg-primary/10 transition-colors"
-                                    style={{ color: color }}
-                                >
-                                    <MoreVertical className="h-4.5 w-4.5" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-52">
-                                <DropdownMenuItem onClick={onCreateFolder} className="gap-2 cursor-pointer">
-                                    <Ionicons name="folder-outline" size={16} />
-                                    <span>New Folder</span>
-                                </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
 
-                                <DropdownMenuSeparator />
-
-                                <DropdownMenuSub>
-                                    <DropdownMenuSubTrigger className="gap-2 cursor-pointer">
-                                        <Ionicons name="funnel-outline" size={16} />
-                                        <span>Sort by</span>
-                                    </DropdownMenuSubTrigger>
-                                    <DropdownMenuSubContent className="w-52">
-                                        {sortOptions.map((option) => (
-                                            <DropdownMenuItem
-                                                key={option}
-                                                className={cn(
-                                                    "flex items-center justify-between cursor-pointer",
-                                                    currentSortType === option && "bg-primary/10 text-primary font-medium"
-                                                )}
-                                                onClick={() => onSortChange(option)}
-                                            >
-                                                <span>{getSortTypeLabel(option)}</span>
-                                                {currentSortType === option && (
-                                                    <Ionicons name="checkmark" size={14} />
-                                                )}
-                                            </DropdownMenuItem>
-                                        ))}
-                                    </DropdownMenuSubContent>
-                                </DropdownMenuSub>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                                    <DropdownMenuSub>
+                                        <DropdownMenuSubTrigger className="gap-2 cursor-pointer">
+                                            <Ionicons name="funnel-outline" size={16} />
+                                            <span>Sort by</span>
+                                        </DropdownMenuSubTrigger>
+                                        <DropdownMenuSubContent className="w-52">
+                                            {sortOptions.map((option) => (
+                                                <DropdownMenuItem
+                                                    key={option}
+                                                    className={cn(
+                                                        "flex items-center justify-between cursor-pointer",
+                                                        currentSortType === option && "bg-primary/10 text-primary font-medium"
+                                                    )}
+                                                    onClick={() => onSortChange(option)}
+                                                >
+                                                    <span>{getSortTypeLabel(option)}</span>
+                                                    {currentSortType === option && (
+                                                        <Ionicons name="checkmark" size={14} />
+                                                    )}
+                                                </DropdownMenuItem>
+                                            ))}
+                                        </DropdownMenuSubContent>
+                                    </DropdownMenuSub>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        )}
                     </TooltipProvider>
                 </div>
             </div>

@@ -138,8 +138,8 @@ export default function AppShell() {
                                 ? "relative h-full"
                                 : cn(
                                     "absolute z-50",
-                                    "top-10 bottom-4",
-                                    general.appDirection === "rtl" ? "left-6" : "right-6"
+                                    "top-10 bottom-3",
+                                    general.appDirection === "rtl" ? "left-3" : "right-3"
                                 ),
                             "flex shrink-0 overflow-hidden",
                             // Only animate on open/close, not during drag

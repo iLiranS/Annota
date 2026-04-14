@@ -4,5 +4,5 @@
  */
 export function isContentPath(path: string): boolean {
     const cleanPath = path.split('?')[0];
-    return cleanPath.startsWith('/notes') && !cleanPath.startsWith('/notes/trash');
+    return cleanPath.startsWith('/notes');
 }

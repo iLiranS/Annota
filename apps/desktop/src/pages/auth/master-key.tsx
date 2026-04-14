@@ -113,6 +113,7 @@ export default function MasterKeyPage() {
                 setError("Your account needs a new key. Please use the lost key flow to reset.");
             } else {
                 setError("Could not verify your key. Please try again.");
+                console.error(err);
             }
         } finally {
             setImporting(false);

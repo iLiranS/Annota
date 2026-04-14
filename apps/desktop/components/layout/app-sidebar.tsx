@@ -38,6 +38,7 @@ export function AppSidebar() {
     const { colors } = useAppTheme();
     const { general } = useSettingsStore();
 
+    console.log(location.pathname)
     const {
         notes,
         tags,
@@ -260,9 +261,10 @@ export function AppSidebar() {
                     color={headerColor}
                     isDaily={isDaily}
                     isTrash={isTrash}
+                    tagId={tagId || undefined}
                     currentSortType={currentSortType}
                     onSortChange={(type) => setFolderSortType(currentFolderId ?? null, type)}
-                    onCreateNote={() => createNote(currentFolderId || "")}
+                    onCreateNote={() => createNote(currentFolderId || "", tagId || undefined)}
                     onCreateFolder={() => {
                         setEditingFolder(null);
                         setNewFolderParentId(null);
@@ -289,6 +291,7 @@ export function AppSidebar() {
                         getFoldersInFolder={getFoldersInFolder}
                         general={general}
                         currentFolderId={currentFolderId ?? null}
+                        isTag={!!tagId}
                     />
                     <NotesList
                         notes={browseNotes}
@@ -300,7 +303,7 @@ export function AppSidebar() {
 
                 </SidebarContent>
 
-                <div className={cn("mt-auto px-1")}>
+                <div className={cn("mt-auto px-1 border-t")}>
 
                     <QuickAccessSection
                         notes={quickAccessNotes}
@@ -326,7 +329,7 @@ export function AppSidebar() {
                         retryCooldown={retryCooldown}
                         onRetry={handleRetry}
                         onSettingsClick={() => navigate("/settings", { state: { background: location } })}
-                        onTrashClick={() => navigateSmart("/notes/trash")}
+                        onTrashClick={() => navigateSmart(`/notes?folderId=${TRASH_FOLDER_ID}`)}
                     />
                 </div>
 

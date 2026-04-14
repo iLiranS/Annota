@@ -38,6 +38,7 @@ interface FoldersTreeProps {
     getFoldersInFolder: (id: string | null) => Folder[];
     general: any;
     currentFolderId: string | null;
+    isTag: boolean;
 }
 
 export function FoldersTree({
@@ -50,8 +51,10 @@ export function FoldersTree({
     onCreateNote,
     getFoldersInFolder,
     general,
-    currentFolderId
+    currentFolderId,
+    isTag
 }: FoldersTreeProps) {
+    if (isTag) return null;
     const rootFolders = getFoldersInFolder(currentFolderId)
     if (currentFolderId === null) rootFolders.unshift(DAILY_NOTES_FOLDER)
     if (rootFolders.length === 0) return null;

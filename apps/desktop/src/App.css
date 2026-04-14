@@ -237,18 +237,38 @@ body {
 
 }
 
-/* Premium Scrollbar - Hidden but scrollable */
+/* Compact sidebar scrollbar — light */
 .premium-scrollbar {
-  scrollbar-width: none;
-  /* Firefox */
-  -ms-overflow-style: none;
-  /* IE/Edge */
-  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, .1) transparent;
 }
 
 .premium-scrollbar::-webkit-scrollbar {
-  display: none;
-  /* WebKit/Blink */
-  width: 0;
-  height: 0;
+  width: 4px;
+}
+
+.premium-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.premium-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, .1);
+  border-radius: 10px;
+}
+
+.premium-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, .2);
+}
+
+/* Dark variant */
+html[data-theme="dark"] .premium-scrollbar {
+  scrollbar-color: rgba(255, 255, 255, 0.07) transparent;
+}
+
+html[data-theme="dark"] .premium-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+html[data-theme="dark"] .sidebar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.26);
 }

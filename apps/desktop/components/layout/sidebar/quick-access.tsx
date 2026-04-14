@@ -24,14 +24,14 @@ export function QuickAccessSection({ notes, activeNoteId, onNoteClick, onDeleteN
         localStorage.setItem("sidebar_quick_access_open", String(isOpen));
     }, [isOpen]);
 
-    if (notes.length === 0) return null;
+
 
     return (
         <Collapsible open={isOpen} onOpenChange={setIsOpen}>
             <SidebarGroup className="py-1">
                 <SidebarGroupLabel asChild className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
                     <CollapsibleTrigger className="flex w-full items-center gap-1.5 hover:bg-sidebar-accent/50 px-2 py-1 rounded">
-                        <Star size={12} fill="currentColor" strokeWidth={2.5} className="shrink-0" />
+                        <Star size={12} strokeWidth={2.5} className="shrink-0" />
                         <span className="flex-1 text-start">Quick Access</span>
                         <ChevronRight size={10} className={cn("transition-transform text-muted-foreground/50", general?.appDirection === 'rtl' ? (isOpen ? "rotate-90" : "rotate-180") : (isOpen && "rotate-90"))} />
                     </CollapsibleTrigger>

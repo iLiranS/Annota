@@ -21,7 +21,7 @@ import {
 import { useMemo, useState } from "react";
 import { useSmartNavigate } from "@/hooks/use-smart-navigate";
 
-export default function TrashPage() {
+export function TrashContent() {
     const navigate = useSmartNavigate();
     const [currentFolderId, setCurrentFolderId] = useState<string | null>(
         TRASH_FOLDER_ID,
@@ -160,7 +160,7 @@ export default function TrashPage() {
                                                 key={note.id}
                                                 note={note}
                                                 onPress={() =>
-                                                    navigate(`/notes/${note.folderId || "root"}/${note.id}`)
+                                                    navigate(`/notes/${TRASH_FOLDER_ID}/${note.id}`)
                                                 }
                                                 onRestore={() => restoreNote(note.id)}
                                                 onDelete={() => permanentlyDeleteNote(note.id)}

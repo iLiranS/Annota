@@ -17,6 +17,7 @@ import { FileText, Loader2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { NoteHeader } from "./components/note-header";
+import { NoteRestoreButton } from "./components/note-restore-button";
 import { NoteSearch } from "./components/note-search";
 
 
@@ -411,7 +412,7 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
     // search in note / focus mode shortcuts
     useEffect(() => {
         const handleInsertAiContent = async (e: CustomEvent<{ content: string }>) => {
-            if (!editorRef.current) return;
+            if (!editorRef.current || note?.isDeleted) return;
             try {
                 const { convertMarkdownToAnnotaHTML } = await import("@annota/editor-core");
                 const html = await convertMarkdownToAnnotaHTML(e.detail.content);
@@ -656,7 +657,7 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
                             onContentChange={handleContentChange}
                             onSearchResults={handleSearchResults}
                             autofocus={shouldAutofocus}
-                            editable={true}
+                            editable={!note.isDeleted}
                             noteId={noteId}
                             isStandalone={isStandalone}
                             contentPaddingTop={0}
@@ -672,7 +673,11 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
                                     }}
                                 />
                             )}
-                            renderToolbar={(props) => <DesktopToolbar {...props} />}
+                            renderToolbar={(props) => note.isDeleted ? (
+                                <NoteRestoreButton noteId={noteId ?? ''} />
+                            ) : (
+                                <DesktopToolbar {...props} />
+                            )}
                             renderImageGallery={(props) => <ImageGallery {...props} />}
                             onOpenBlockMenu={handleOpenBlockMenu}
                             onOpenFileMenu={handleOpenFileMenu}

@@ -189,7 +189,7 @@ export function FolderEditModal({
                                 Location
                             </Label>
                             <Button
-                                variant="outline"
+                                variant="ghost"
                                 onClick={() => setShowLocationPicker(true)}
                                 className="w-full h-10 justify-between px-3 bg-accent/30 border-border/50 hover:bg-accent/50 transition-colors"
                             >

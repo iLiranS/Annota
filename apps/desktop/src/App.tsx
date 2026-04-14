@@ -40,7 +40,6 @@ import MasterKeyPage from "./pages/auth/master-key";
 import NoteFullscreen from "./pages/notes/note-fullscreen";
 import NotesLayout from "./pages/notes/notes-layout";
 import NotesViewManager from "./pages/notes/notes-view-manager";
-import TrashPage from "./pages/notes/trash-page";
 
 
 type BootstrapState = "booting" | "ready" | "error";
@@ -499,7 +498,6 @@ function App() {
             <Route index element={<Navigate to="/notes" replace />} />
 
             {/* Notes */}
-            <Route path="notes/trash" element={<TrashPage />} />
             <Route path="notes" element={<NotesLayout />}>
               <Route index element={<NotesViewManager />} />
               <Route path=":folderId/:noteId" element={<NotesViewManager />} />
