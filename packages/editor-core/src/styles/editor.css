@@ -785,6 +785,8 @@
     display: inline-table;
 }
 
+
+
 .ProseMirror td,
 .ProseMirror th {
     min-width: var(--table-cell-min-width);
@@ -810,13 +812,7 @@
         padding-right: 16px;
     }
 
-    .ProseMirror table {
-        /* Allow the table to grow beyond its container on mobile for scrolling */
-        width: max-content !important;
-        max-width: none !important;
-        min-width: 0 !important;
-        table-layout: fixed !important;
-    }
+
 
     .ProseMirror td,
     .ProseMirror th {
@@ -868,6 +864,10 @@
     pointer-events: none;
     /* Ensure the handle stays on top of cell borders */
     z-index: 20;
+}
+
+.ProseMirror[dir="rtl"] .column-resize-handle {
+    inset-inline-start: -2px;
 }
 
 /* Ensure that all cells keep their border color when the table is marked as resizing */

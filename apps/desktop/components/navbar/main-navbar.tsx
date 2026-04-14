@@ -32,7 +32,7 @@ export function MainNavbar() {
     const { isSyncing } = useSyncStore()
     const { session } = useUserStore();
     const { general, updateGeneralSettings } = useSettingsStore();
-    const { open, toggleSidebar } = useSidebar();
+    const { toggleSidebar } = useSidebar();
 
     const isMac = useMemo(() => {
         if (typeof navigator === "undefined") {
@@ -50,9 +50,9 @@ export function MainNavbar() {
         return RTL_LANGS.has(base) ? "rtl" : "ltr";
     }, []);
 
-    const sidebarSide = general.appDirection === "rtl" ? "right" : "left";
+    // const sidebarSide = general.appDirection === "rtl" ? "right" : "left";
     const windowControlsSide = isMac ? (localeDir === "rtl" ? "right" : "left") : "right";
-    const needsWindowControlsPadding = windowControlsSide === sidebarSide ? !open : true;
+    const needsWindowControlsPadding = true;
     const windowControlsPaddingClass = needsWindowControlsPadding
         ? (windowControlsSide === "left" ? "pl-20" : "pr-20")
         : undefined;
@@ -101,17 +101,18 @@ export function MainNavbar() {
     return (
         <header
             data-tauri-drag-region
-            dir={general.appDirection}
+            dir="LTR"
             className={cn(
                 "flex h-9 w-full shrink-0 rotate-0 items-center justify-between border-sidebar-border bg-sidebar px-3",
                 "select-none transition-[width,height,transform,opacity,border-color] duration-200 ease-in-out",
                 windowControlsPaddingClass,
+                general.appDirection === 'rtl' ? 'flex-row-reverse' : 'flex-row'
             )}
 
         >
             {/* Left Section: Sidebar Toggle & Search */}
-            <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1">
+            <div className={cn("flex items-center gap-3", general.appDirection === 'rtl' && "flex-row-reverse")}>
+                <div className={cn("flex items-center gap-1", general.appDirection === 'rtl' && "flex-row-reverse")}>
                     <Tooltip>
                         <TooltipTrigger asChild>
                             <Button
@@ -124,37 +125,50 @@ export function MainNavbar() {
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent side="bottom" className="text-[10px]">
-                            Toggle Sidebar
+                            Toggle Sidebar ⌘+⇧+D
                         </TooltipContent>
                     </Tooltip>
 
-                    <div className={`flex items-center gap-0 ${general.appDirection === 'ltr' ? 'flex-row' : 'flex-row-reverse'}`}>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            disabled={!canGoBack}
-                            className={cn(
-                                "h-6 w-6 text-muted-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-foreground",
-                                !canGoBack && "opacity-30 cursor-not-allowed"
-                            )}
-                            onClick={() => navigate(-1)}
-                            title="Back"
-                        >
-                            <Ionicons name="chevron-back" size={15} />
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            disabled={!canGoForward}
-                            className={cn(
-                                "h-6 w-6 text-muted-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-foreground",
-                                !canGoForward && "opacity-30 cursor-not-allowed"
-                            )}
-                            onClick={() => navigate(1)}
-                            title="Forward"
-                        >
-                            <Ionicons name="chevron-forward" size={15} />
-                        </Button>
+                    <div className={cn("flex items-center gap-0")}>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    disabled={general.appDirection === 'rtl' ? !canGoForward : !canGoBack}
+                                    className={cn(
+                                        "h-6 w-6 text-muted-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-foreground",
+                                        (general.appDirection === 'rtl' ? !canGoForward : !canGoBack) && "opacity-30 cursor-not-allowed"
+                                    )}
+                                    onClick={() => navigate(general.appDirection === 'rtl' ? 1 : -1)}
+                                >
+                                    <Ionicons name="chevron-back" size={15} />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom" className="text-[10px]">
+                                {general.appDirection === 'rtl' ? "Forward" : "Back"}
+                            </TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    disabled={general.appDirection === 'rtl' ? !canGoBack : !canGoForward}
+                                    className={cn(
+                                        "h-6 w-6 text-muted-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-foreground",
+                                        (general.appDirection === 'rtl' ? !canGoBack : !canGoForward) && "opacity-30 cursor-not-allowed"
+                                    )}
+                                    onClick={() => navigate(general.appDirection === 'rtl' ? -1 : 1)}
+                                >
+                                    <Ionicons name="chevron-forward" size={15} />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom" className="text-[10px]">
+                                {general.appDirection === 'rtl' ? "Back" : "Forward"}
+                            </TooltipContent>
+                        </Tooltip>
                     </div>
                 </div>
 
@@ -176,7 +190,7 @@ export function MainNavbar() {
             </div>
 
             {/* Right Section: Actions */}
-            <div className="flex items-center gap-1.5">
+            <div className={cn("flex items-center gap-1.5", general.appDirection === 'rtl' && "flex-row-reverse")}>
 
 
                 {session?.user?.id && <div className={cn(

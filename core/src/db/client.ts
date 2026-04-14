@@ -186,8 +186,9 @@ export async function initDatabase(
             );
             console.log(`[DB] Applied migration: ${m.name}`);
           } catch (e: any) {
+            const errorMsg = (e?.message || String(e)).toLowerCase();
             // If the column already exists (from a previous ad-hoc attempt), just record it
-            if (e.message?.includes('duplicate column name') || e.message?.includes('already exists')) {
+            if (errorMsg.includes('duplicate column name') || errorMsg.includes('already exists')) {
                await nativeDb.execAsync(
                 `INSERT INTO _migrations (name, applied_at) VALUES ('${m.name}', ${Date.now()});`
               );

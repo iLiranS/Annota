@@ -237,6 +237,7 @@ export function useAiChat(chatId: string | null) {
         setIsStreaming(true);
         setError(null);
 
+        let timeoutId: any;
         try {
             // Context Preparation with Tiered Trimming
             let liveNoteContent: string | null = null;
@@ -260,11 +261,16 @@ export function useAiChat(chatId: string | null) {
             // Apply sliding window to the updated history
             const history = buildHistoryWindow(updatedHistory, 4000);
 
-            // If it's a summary action, we might want to inject a custom system prompt
-            // However, the adapter might already handle system messages.
-            // For now, let's keep it simple and just rely on the content provided.
+            // 10s timeout for first byte
+            const timeoutPromise = new Promise((_, reject) => {
+                timeoutId = setTimeout(() => {
+                    if (streamingContentRef.current === '') {
+                        reject(new Error('TIMEOUT_ERROR'));
+                    }
+                }, 10000);
+            });
 
-            await adapter.sendMessage(
+            const sendPromise = adapter.sendMessage(
                 history,
                 liveNoteContent,
                 (chunk) => {
@@ -272,6 +278,9 @@ export function useAiChat(chatId: string | null) {
                 },
                 abortControllerRef.current.signal
             );
+
+            await Promise.race([sendPromise, timeoutPromise]);
+            clearTimeout(timeoutId);
 
             // Save assistant message to DB
             const finalAssistantMsg: AiMessage = {
@@ -286,8 +295,12 @@ export function useAiChat(chatId: string | null) {
             await db.update(aiChats).set({ updatedAt: new Date() }).where(eq(aiChats.id, effectiveChatId)).run();
 
         } catch (err: any) {
+            clearTimeout(timeoutId);
             if (err.name === 'AbortError') {
                 console.log('Fetch aborted');
+            } else if (err.message === 'TIMEOUT_ERROR') {
+                abortControllerRef.current?.abort();
+                setError('AI took too long to respond. (10s timeout)');
             } else {
                 setError(err.message);
                 console.error('Chat error:', err);

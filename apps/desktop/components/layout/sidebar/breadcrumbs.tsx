@@ -48,10 +48,16 @@ export function BreadcrumbsSection({ breadcrumbs, onNavigate, className }: Bread
                                             <Ionicons
                                                 name={crumb.icon}
                                                 size={10}
-                                                className="text-muted-foreground/40 shrink-0"
+                                                className={cn("shrink-0", !crumb.color && "text-muted-foreground/40")}
+                                                color={crumb.color}
                                             />
                                         )}
-                                        <span className="truncate max-w-[80px]">{crumb.name}</span>
+                                        <span
+                                            className="truncate max-w-[80px]"
+                                            style={crumb.color ? { color: crumb.color } : undefined}
+                                        >
+                                            {crumb.name}
+                                        </span>
                                     </button>
                                 </BreadcrumbLink>
                             )}

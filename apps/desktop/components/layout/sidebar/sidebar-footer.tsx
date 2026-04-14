@@ -23,7 +23,7 @@ export function SidebarFooterSection({
     return (
         <SidebarFooter className={cn("py-3 px-0")}>
             {showOfflineBanner && (
-                <div className="mb-2 flex items-center gap-2 rounded-lg bg-amber-500/10  py-1.5 border border-amber-500/20">
+                <div className="mb-2 px-2 flex items-center gap-2 rounded-lg bg-amber-500/10  py-1.5 border border-amber-500/20">
                     <Ionicons name="cloud-offline" size={12} className="text-amber-500" />
                     <span className="flex-1 text-[9px] font-bold uppercase tracking-tight">Offline</span>
                     <Button
@@ -37,13 +37,13 @@ export function SidebarFooterSection({
                     </Button>
                 </div>
             )}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between text-muted-foreground/70">
                 <SidebarMenuButton
                     className="w-9 h-9 hover:bg-sidebar-accent rounded-xl justify-center"
                     onClick={onSettingsClick}
                     tooltip="Settings"
                 >
-                    <Settings className="opacity-80" size={18} />
+                    <Settings size={18} />
                 </SidebarMenuButton>
 
                 <SidebarMenuButton
@@ -51,7 +51,7 @@ export function SidebarFooterSection({
                     onClick={onTrashClick}
                     tooltip="Trash"
                 >
-                    <Trash2 className="opacity-80" size={18} />
+                    <Trash2 size={18} />
                 </SidebarMenuButton>
             </div>
         </SidebarFooter>

@@ -193,7 +193,7 @@ export function NoteListItem({
 
                                     <div className="flex items-center gap-2 shrink-0">
                                         {note.isPinned && !isInQuickAccess && (
-                                            <Pin size={12} className="text-primary/70" />
+                                            <Pin size={12} className="text-accent-full" />
                                         )}
                                         {suffix}
                                         {showTimestamp && note.updatedAt && (

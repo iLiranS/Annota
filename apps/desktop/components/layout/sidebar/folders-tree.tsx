@@ -118,7 +118,7 @@ function FolderTreeItem({ folder, onNavigate, onEdit, onDelete, onCreateSubFolde
                     onCreateSubFolder={onCreateSubFolder}
                     onCreateNote={onCreateNote}
                 >
-                    <SidebarMenuButton onClick={() => onNavigate(folder.id)} className="h-8 pr-12">
+                    <SidebarMenuButton onClick={() => onNavigate(folder.id)} className="h-8 ">
                         <FolderListItemContent folder={folder} />
                     </SidebarMenuButton>
                 </FolderListItem>

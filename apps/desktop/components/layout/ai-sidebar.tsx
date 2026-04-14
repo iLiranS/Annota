@@ -58,7 +58,7 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
         if (shouldAutoScroll) {
             scrollEndRef.current?.scrollIntoView({ behavior: 'smooth' });
         }
-    }, [messages, isStreaming, shouldAutoScroll]);
+    }, [messages, isStreaming, shouldAutoScroll, error]);
 
     const handleChatScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
         const target = e.currentTarget;
@@ -154,6 +154,13 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
         handleSendMessage("Please summarize this note. Cover all major sections and key points.", 'summary');
     }, [handleSendMessage]);
 
+    const handleRetry = useCallback(() => {
+        const lastUserMessage = [...messages].reverse().find(m => m.role === 'user');
+        if (lastUserMessage) {
+            handleSendMessage(lastUserMessage.content);
+        }
+    }, [messages, handleSendMessage]);
+
     // Initial connection check & models fetch (Only for Ollama)
     useEffect(() => {
         if (activeProvider === 'ollama') {
@@ -216,7 +223,7 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
                 ? hasAnthropicKey
                 : hasGoogleKey;
 
-    if (!isConfigured) {
+    if (!isConfigured && !activeChatId) {
         return (
             <div className="flex flex-col h-full w-full overflow-hidden" style={{ minWidth: isResizing ? undefined : width }}>
                 <div className={cn(
@@ -360,6 +367,26 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
                     </div>
                 </header>
 
+                {/* Status Banner */}
+                {!isConfigured && activeChatId && (
+                    <div className="bg-destructive/10 text-destructive text-[10px] font-medium px-3 py-1.5 flex items-center justify-between gap-2 border-b border-destructive/20 animate-in slide-in-from-top duration-300">
+                        <div className="flex items-center gap-2">
+                            <div className="h-1.5 w-1.5 rounded-full bg-destructive animate-pulse" />
+                            <span>Connection lost to {activeProvider}</span>
+                        </div>
+                        {activeProvider === 'ollama' && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-5 px-1.5 text-[9px] hover:bg-destructive/10 text-destructive border border-destructive/20 rounded-md"
+                                onClick={() => { checkConnection(); fetchModels(); }}
+                            >
+                                Reconnect
+                            </Button>
+                        )}
+                    </div>
+                )}
+
                 {/* ── Body ── */}
                 {!activeChatId ? (
                     // ── Chat list view ──────────────────────────────────────────
@@ -438,7 +465,7 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
                                     />
                                 ))}
 
-                                {error && <AiChatError error={error} />}
+                                {error && <AiChatError error={error} onRetry={handleRetry} />}
 
                                 {/* Scroll anchor */}
                                 <div ref={scrollEndRef} />

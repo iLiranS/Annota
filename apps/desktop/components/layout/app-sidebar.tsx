@@ -37,8 +37,6 @@ export function AppSidebar() {
     const [searchParams] = useSearchParams();
     const { colors } = useAppTheme();
     const { general } = useSettingsStore();
-
-    console.log(location.pathname)
     const {
         notes,
         tags,
@@ -146,7 +144,7 @@ export function AppSidebar() {
     const breadcrumbs = useMemo(() => {
         if (!currentFolderId && !tagId && !isTrash && !isDaily) return null;
         const crumbs: { name: string; id: string | null; icon?: string; color?: string }[] = [];
-        crumbs.push({ name: "All Notes", id: null, icon: "documents" });
+        crumbs.push({ name: "All Notes", id: null, icon: "documents", color: colors.primary });
 
         if (tagId || isTrash || isDaily) return crumbs;
 
@@ -162,7 +160,7 @@ export function AppSidebar() {
             });
         }
         return crumbs;
-    }, [currentFolderId, tagId, isTrash, isDaily, parentFolder]);
+    }, [currentFolderId, tagId, isTrash, isDaily, parentFolder, colors.primary]);
 
     const handleNavigate = useCallback((id: string | null) => {
         if (id) {

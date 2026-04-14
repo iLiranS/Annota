@@ -69,7 +69,6 @@ export function NoteActionsMenu({ note, onRevert, onOpenChange }: NoteActionsMen
                         <Ionicons
                             name={note.isQuickAccess ? "star" : "star-outline"}
                             size={18}
-                            color="#FBBF24"
                         />
                         <span className="flex-1 text-sm font-medium">Quick access</span>
                         {note.isQuickAccess && <Check className="h-4 w-4 text-primary" />}
@@ -111,7 +110,7 @@ export function NoteActionsMenu({ note, onRevert, onOpenChange }: NoteActionsMen
                     </DropdownMenuItem>
 
                     <DropdownMenuSeparator className="my-1 opacity-50" />
-                    
+
                     <DropdownMenuItem
                         className="rounded-lg gap-3 py-2 cursor-pointer"
                         onClick={async () => {

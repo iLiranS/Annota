@@ -1,10 +1,10 @@
-import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
-import type { EditorView, NodeView, ViewMutationRecord } from '@tiptap/pm/view';
-import { columnResizing, tableEditing } from '@tiptap/pm/tables';
+import type { TableOptions } from '@tiptap/extension-table';
 import { Table, TableView } from '@tiptap/extension-table';
 import { TableCell } from '@tiptap/extension-table-cell';
 import { TableHeader } from '@tiptap/extension-table-header';
-import type { TableOptions } from '@tiptap/extension-table';
+import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
+import { columnResizing, tableEditing } from '@tiptap/pm/tables';
+import type { EditorView, NodeView, ViewMutationRecord } from '@tiptap/pm/view';
 
 interface CustomTableOptions extends TableOptions {
     defaultCellMinWidth: number;

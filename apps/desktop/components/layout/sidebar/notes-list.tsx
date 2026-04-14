@@ -38,10 +38,10 @@ export function NotesList({
         >
             <SidebarGroup className={cn("py-1 flex flex-col min-h-0", isOpen && "flex-1")}>
                 <SidebarGroupLabel asChild className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
-                    <CollapsibleTrigger className="flex w-full items-center gap-1.5 hover:bg-sidebar-accent/50 px-2 py-1 rounded">
+                    <CollapsibleTrigger className="flex w-full items-center gap-2 hover:bg-sidebar-accent/50 px-2 py-1 rounded">
                         <Files size={12} className="shrink-0" />
                         <span className="flex-1 text-start">Notes</span>
-                        <ChevronRight size={10} className={cn("transition-transform text-muted-foreground/50", general?.appDirection === 'rtl' ? (isOpen ? "rotate-90" : "rotate-180") : (isOpen && "rotate-90"))} />
+                        <ChevronRight size={12} className={cn("transition-transform", general?.appDirection === 'rtl' ? (isOpen ? "rotate-90" : "rotate-180") : (isOpen && "rotate-90"))} />
                     </CollapsibleTrigger>
                 </SidebarGroupLabel>
                 <CollapsibleContent className="min-h-0 data-[state=open]:flex-1 data-[state=open]:flex data-[state=open]:flex-col overflow-hidden">

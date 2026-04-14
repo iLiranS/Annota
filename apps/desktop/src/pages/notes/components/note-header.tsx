@@ -11,7 +11,7 @@ interface NoteHeaderProps {
 
 export function NoteHeader({ noteId, note, onToggleSearch, onRevert }: NoteHeaderProps) {
     return (
-        <div className="relative z-40 flex items-center justify-between px-8 py-1.5 bg-note-bg border-b border-sidebar-border/5 overflow-hidden">
+        <div className="relative z-40 flex items-center justify-between  py-1.5 bg-note-bg border-b border-sidebar-border/5 overflow-hidden">
             <div className="flex-1 min-w-0">
                 <NoteTags noteId={noteId} />
             </div>

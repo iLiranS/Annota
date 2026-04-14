@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { cn, isRtl } from "@/lib/utils";
 import { AiMessage } from "@annota/core";
-import { CopyPlus, X } from "lucide-react";
+import { CopyPlus, RotateCcw, X } from "lucide-react";
 import { AiMarkdown } from "./ai-markdown";
 
 interface AiChatMessageProps {
@@ -66,11 +66,24 @@ export function AiChatMessage({ message, isStreaming, onInsertToNote }: AiChatMe
     );
 }
 
-export function AiChatError({ error }: { error: string }) {
+export function AiChatError({ error, onRetry }: { error: string, onRetry?: () => void }) {
     return (
-        <div className="p-3 rounded-xl bg-destructive/10 text-destructive text-[11px] flex items-center gap-2 border border-destructive/20">
-            <X size={13} />
-            {error}
+        <div className="p-3 rounded-xl bg-destructive/10 text-destructive text-[11px] flex flex-col gap-2 border border-destructive/20">
+            <div className="flex items-center gap-2">
+                <X size={13} />
+                {error}
+            </div>
+            {onRetry && (
+                <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={onRetry}
+                    className="h-7 w-fit gap-1.5 text-[10px] bg-destructive/5 border-destructive/20 hover:bg-destructive/10 text-destructive"
+                >
+                    <RotateCcw size={12} />
+                    Retry
+                </Button>
+            )}
         </div>
     );
 }
