@@ -1,5 +1,4 @@
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { AiChat, aiChats, aiMessages, generateId, getDb, useAiStore, useNotesStore, useSettingsStore } from "@annota/core";
 import { desc, eq } from "drizzle-orm";
@@ -391,7 +390,7 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
                 {!activeChatId ? (
                     // ── Chat list view ──────────────────────────────────────────
                     <div className="flex-1 flex flex-col min-h-0">
-                        <ScrollArea className="flex-1 min-h-0 px-2 pt-2">
+                        <div className="flex-1 min-h-0 px-2 pt-2 overflow-y-auto premium-scrollbar">
                             <div className="space-y-0.5 pb-2">
                                 {chats.length === 0 ? (
                                     <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
@@ -437,7 +436,7 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
                                     ))
                                 )}
                             </div>
-                        </ScrollArea>
+                        </div>
 
                         <div className="p-2 pt-1 shrink-0">
                             <AiChatInput
@@ -451,8 +450,8 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
                 ) : (
                     // ── Active chat view ────────────────────────────────────────
                     <>
-                        <ScrollArea
-                            className="flex-1 min-h-0"
+                        <div
+                            className="flex-1 min-h-0 overflow-y-auto premium-scrollbar"
                             onScroll={handleChatScroll}
                         >
                             <div className="flex flex-col gap-4 px-3 py-4">
@@ -470,7 +469,7 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
                                 {/* Scroll anchor */}
                                 <div ref={scrollEndRef} />
                             </div>
-                        </ScrollArea>
+                        </div>
 
                         <div className="p-2 pt-1 shrink-0">
                             <AiChatInput

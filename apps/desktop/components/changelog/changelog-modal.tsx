@@ -5,7 +5,6 @@ import {
   DialogFooter,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useChangelog } from "@annota/core";
 import { Bug, CheckCircle2, Loader2, Sparkles } from "lucide-react";
 
@@ -22,8 +21,8 @@ export default function ChangelogModal() {
           </div>
         ) : !changelogData ? (
           <div className="p-10 flex flex-col items-center justify-center">
-             <p className="text-sm font-medium text-muted-foreground text-center">No changelog data available.</p>
-             <Button className="mt-4" onClick={() => setIsOpen(false)}>Close</Button>
+            <p className="text-sm font-medium text-muted-foreground text-center">No changelog data available.</p>
+            <Button className="mt-4" onClick={() => setIsOpen(false)}>Close</Button>
           </div>
         ) : (
           <>
@@ -40,8 +39,8 @@ export default function ChangelogModal() {
             </div>
 
             {/* Content */}
-            <ScrollArea className="max-h-[55vh] px-8 py-2">
-              <div className="space-y-10">
+            <div className="max-h-[500px] overflow-y-auto premium-scrollbar">
+              <div className="space-y-10  px-8 py-2">
                 {changelogData.features.length > 0 && (
                   <section className="space-y-5">
                     <div className="flex items-center gap-2.5 text-primary">
@@ -80,7 +79,7 @@ export default function ChangelogModal() {
                   </section>
                 )}
               </div>
-            </ScrollArea>
+            </div>
 
             {/* Footer */}
             <DialogFooter className="p-6 bg-muted/20 border-t border-border/50">

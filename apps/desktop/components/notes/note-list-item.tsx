@@ -20,7 +20,7 @@ import { FolderEditModal } from "./folder-edit-modal";
 import { NotePreviewModal } from "./note-preview-modal";
 
 import { Slot } from "@radix-ui/react-slot";
-import { Pin } from "lucide-react";
+import { Pin, Star } from "lucide-react";
 
 interface NoteListItemProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     note: NoteMetadata;
@@ -283,22 +283,24 @@ export function NoteListItem({
                             </ContextMenuItem>
 
                             <ContextMenuItem
-                                onSelect={handleTogglePin}
-                                onPointerUp={(e) => e.button === 2 && e.preventDefault()}
-                            >
-                                <Ionicons name={note.isPinned ? "pin" : "pin-outline"} size={16} />
-                                <span>{note.isPinned ? "Unpin Note" : "Pin Note"}</span>
-                            </ContextMenuItem>
-
-                            <ContextMenuItem
                                 onSelect={handleToggleQuickAccess}
                                 onPointerUp={(e) => e.button === 2 && e.preventDefault()}
                             >
-                                <Ionicons name={note.isQuickAccess ? "star" : "star-outline"} size={16} />
+                                <Star className={note.isQuickAccess ? "fill-accent-full" : ""} size={16} />
                                 <span>
                                     {note.isQuickAccess ? "Remove Quick Access" : "Quick Access"}
                                 </span>
                             </ContextMenuItem>
+
+                            <ContextMenuItem
+                                onSelect={handleTogglePin}
+                                onPointerUp={(e) => e.button === 2 && e.preventDefault()}
+                            >
+                                <Pin className={note.isPinned ? "fill-accent-full" : ""} size={16} />
+                                <span>{note.isPinned ? "Unpin Note" : "Pin Note"}</span>
+                            </ContextMenuItem>
+
+
 
                             <ContextMenuItem
                                 onSelect={handleCopyLink}

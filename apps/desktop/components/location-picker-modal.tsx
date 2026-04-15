@@ -1,6 +1,7 @@
+import { BreadcrumbData, BreadcrumbsSection } from "@/components/layout/sidebar/breadcrumbs";
 import { TRASH_FOLDER_ID, useNotesStore } from "@annota/core";
 import { ArrowLeft, ChevronRight, Folder, Home } from "lucide-react";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -10,9 +11,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { Ionicons } from "@/components/ui/ionicons";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAppTheme } from "@/hooks/use-app-theme";
-import { cn } from "@/lib/utils";
 
 interface LocationPickerModalProps {
     open: boolean;
@@ -79,14 +78,24 @@ export function LocationPickerModal({
 
     // Build breadcrumb path
     const breadcrumbs = useMemo(() => {
-        const crumbs: { id: string | null; name: string }[] = [{ id: null, name: "Notes" }];
+        const crumbs: BreadcrumbData[] = [{
+            id: null,
+            name: "Notes",
+            icon: "home",
+            color: colors.primary
+        }];
         let currentId = browsingFolderId;
-        const path: { id: string; name: string }[] = [];
+        const path: BreadcrumbData[] = [];
 
         while (currentId) {
             const folder = getFolderById(currentId);
             if (folder) {
-                path.unshift({ id: folder.id, name: folder.name });
+                path.unshift({
+                    id: folder.id,
+                    name: folder.name,
+                    icon: folder.icon || "folder",
+                    color: folder.color
+                });
                 currentId = folder.parentId;
             } else {
                 break;
@@ -94,7 +103,7 @@ export function LocationPickerModal({
         }
 
         return [...crumbs, ...path];
-    }, [browsingFolderId, getFolderById]);
+    }, [browsingFolderId, getFolderById, colors.primary]);
 
     // Check if current browsing location is selected
     const isCurrentLocationSelected = browsingFolderId === selectedParentId;
@@ -119,7 +128,7 @@ export function LocationPickerModal({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent showCloseButton={false} className="max-w-md p-0 overflow-hidden flex flex-col h-[500px]">
+            <DialogContent aria-describedby={undefined} showCloseButton={false} className="max-w-md p-0 overflow-hidden flex flex-col h-[500px]">
                 <DialogHeader className="px-6 pt-5 pb-4 border-b">
                     <DialogTitle className="text-lg font-bold flex items-center justify-between">
                         <span>Select Location</span>
@@ -135,41 +144,30 @@ export function LocationPickerModal({
                 </DialogHeader>
 
                 {/* Breadcrumb Navigation */}
-                <div className="px-4 min-h-9 py-2 bg-muted/30 border-b flex items-center overflow-x-auto no-scrollbar whitespace-nowrap">
-                    {breadcrumbs.map((crumb, index) => (
-                        <React.Fragment key={crumb.id ?? "root"}>
-                            {index > 0 && (
-                                <ChevronRight className="h-3.5 w-3.5 mx-1 opacity-30 shrink-0" />
-                            )}
-                            <button
-                                type="button"
-                                onClick={() => setBrowsingFolderId(crumb.id)}
-                                className={cn(
-                                    "text-xs font-medium transition-colors hover:text-primary",
-                                    index === breadcrumbs.length - 1 ? "text-primary" : "text-muted-foreground"
-                                )}
-                            >
-                                {crumb.name}
-                            </button>
-                        </React.Fragment>
-                    ))}
-                    <div className="flex-1" />
+                <div className="min-h-9 bg-muted/30 border-b flex items-center">
+                    <div className="flex-1 overflow-x-auto no-scrollbar">
+                        <BreadcrumbsSection
+                            breadcrumbs={breadcrumbs}
+                            onNavigate={setBrowsingFolderId}
+                            className="border-none bg-transparent"
+                        />
+                    </div>
                     {showCreateButton && (
                         <button
                             type="button"
                             onClick={() => onCreateFolder?.(browsingFolderId)}
-                            className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all ml-2"
+                            className="flex items-center gap-1.5 px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all mr-2 whitespace-nowrap"
                         >
-                            <Ionicons name="plus" size={12} />
+                            <Ionicons name="add-outline" size={12} />
                             New Folder
                         </button>
                     )}
                 </div>
 
                 {/* Current Location Info & Select Button */}
-                <div className="p-4 mx-4 mt-4 rounded-xl bg-accent/50 border border-border/50 flex items-center justify-between gap-3">
+                <div className="p-4 mx-4 mt-4 rounded-xl border border-border/50 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="p-2 rounded-lg bg-background shadow-sm shrink-0">
+                        <div style={{ backgroundColor: browsingFolder?.color + "20" }} className="p-2 bg-accent-full/10 rounded-lg shadow-sm shrink-0">
                             {browsingFolder ? (
                                 <Ionicons
                                     name={browsingFolder.icon || "folder"}
@@ -193,12 +191,12 @@ export function LocationPickerModal({
                         className="font-bold shrink-0"
                         style={{ backgroundColor: colors.primary }}
                     >
-                        {isCurrentLocationSelected ? "Keep Here" : "Select This"}
+                        {isCurrentLocationSelected ? "Keep Here" : "Move Here"}
                     </Button>
                 </div>
 
                 {/* Folder List */}
-                <ScrollArea className="flex-1 p-4">
+                <div className="flex-1 p-4 overflow-y-auto premium-scrollbar">
                     <div className="space-y-1.5">
                         {/* Back button when not at root */}
                         {browsingFolderId !== null && (
@@ -268,7 +266,7 @@ export function LocationPickerModal({
                             </div>
                         )}
                     </div>
-                </ScrollArea>
+                </div>
             </DialogContent>
         </Dialog>
     );

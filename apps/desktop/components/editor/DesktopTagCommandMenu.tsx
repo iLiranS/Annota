@@ -1,5 +1,4 @@
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { useNotesStore } from '@annota/core';
 import { Check, Plus, Tag as TagIcon } from 'lucide-react';
@@ -136,10 +135,10 @@ export function DesktopTagCommandMenu({
                 sideOffset={8}
                 onOpenAutoFocus={(e) => e.preventDefault()}
                 onCloseAutoFocus={(e) => e.preventDefault()}
-                className="z-100 overflow-hidden w-56 p-0 border rounded-xl shadow-md"
+                className="z-50 overflow-hidden w-56 p-0 border rounded-xl shadow-md"
             >
                 <div ref={containerRef} className="flex flex-col bg-popover text-popover-foreground">
-                    <ScrollArea className="h-full max-h-[300px] p-1">
+                    <div className="h-full max-h-[300px] p-1 overflow-y-auto premium-scrollbar">
                         <div className="flex flex-col gap-1">
                             {items.length === 0 && (
                                 <div className="px-2 py-4 text-center text-sm text-muted-foreground">
@@ -173,7 +172,7 @@ export function DesktopTagCommandMenu({
                                 );
                             })}
                         </div>
-                    </ScrollArea>
+                    </div>
                 </div>
             </PopoverContent>
         </Popover>

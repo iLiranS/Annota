@@ -19,7 +19,7 @@ export function NoteFloatingActions({
     onRevert,
     className,
 }: NoteFloatingActionsProps) {
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [_, setIsMenuOpen] = useState(false);
     const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
 
     const isMac = typeof window !== 'undefined' && (/Mac|iPod|iPhone|iPad/.test(navigator.platform) || /Mac/.test(navigator.userAgent));
@@ -62,21 +62,13 @@ export function NoteFloatingActions({
                         </TooltipContent>
                     </Tooltip>
 
-                    <Tooltip
-                        open={activeTooltip === 'more' && !isMenuOpen}
-                        onOpenChange={(o) => setActiveTooltip(o ? 'more' : null)}
-                    >
-                        <TooltipTrigger asChild>
-                            <div className="shrink-0">
-                                <NoteActionsMenu
-                                    note={note}
-                                    onRevert={onRevert}
-                                    onOpenChange={setIsMenuOpen}
-                                />
-                            </div>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom" sideOffset={12} className="text-[10px] font-medium">More Actions</TooltipContent>
-                    </Tooltip>
+                    <div className="shrink-0">
+                        <NoteActionsMenu
+                            note={note}
+                            onRevert={onRevert}
+                            onOpenChange={setIsMenuOpen}
+                        />
+                    </div>
                 </TooltipProvider>
             </div>
         </div>

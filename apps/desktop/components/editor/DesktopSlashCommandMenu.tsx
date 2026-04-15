@@ -1,5 +1,4 @@
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { getFilteredCommands, SharedSlashCommand } from '@annota/editor-ui';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -113,7 +112,7 @@ export function DesktopSlashCommandMenu({
                 className="z-50 overflow-hidden w-56 p-0 border rounded-xl shadow-md"
             >
                 <div ref={containerRef} className="flex flex-col bg-popover text-popover-foreground">
-                    <ScrollArea type="auto" className="max-h-[300px]">
+                    <div className="max-h-[300px] overflow-y-auto premium-scrollbar">
                         <div className="flex flex-col gap-1 p-1">
                             {activeFolder && (
                                 <button
@@ -162,7 +161,7 @@ export function DesktopSlashCommandMenu({
                                 );
                             })}
                         </div>
-                    </ScrollArea>
+                    </div>
                 </div>
             </PopoverContent>
         </Popover>

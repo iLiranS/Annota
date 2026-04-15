@@ -9,7 +9,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Ionicons } from "../../ui/ionicons";
 
-interface BreadcrumbData {
+export interface BreadcrumbData {
     name: string;
     id: string | null;
     icon?: string;

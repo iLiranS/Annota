@@ -10,7 +10,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Ionicons } from "@/components/ui/ionicons";
 import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { cn } from "@/lib/utils";
 import type { Tag } from "@annota/core";
@@ -62,7 +61,7 @@ export function TagEditModal({
                     </DialogTitle>
                 </DialogHeader>
 
-                <ScrollArea className="flex-1 px-6 py-4">
+                <div className="flex-1 px-6 py-4 overflow-y-auto premium-scrollbar">
                     <div className="space-y-4">
                         {/* Name */}
                         <div className="space-y-1.5">
@@ -124,7 +123,7 @@ export function TagEditModal({
                             </div>
                         </div>
                     </div>
-                </ScrollArea>
+                </div>
 
                 <DialogFooter className="p-4 border-t bg-accent/5">
                     <Button

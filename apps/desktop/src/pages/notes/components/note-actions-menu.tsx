@@ -7,10 +7,9 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Ionicons } from "@/components/ui/ionicons";
-import { useAppTheme } from "@/hooks/use-app-theme";
 import { NoteMetadata, useNotesStore, useSettingsStore } from "@annota/core";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
-import { Check, MoreVertical } from "lucide-react";
+import { Check, MoreVertical, Pin, Star } from "lucide-react";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { VersionHistoryDialog } from "./version-history-dialog";
@@ -23,7 +22,6 @@ interface NoteActionsMenuProps {
 
 export function NoteActionsMenu({ note, onRevert, onOpenChange }: NoteActionsMenuProps) {
     const { updateNoteMetadata } = useNotesStore();
-    const { colors } = useAppTheme();
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
     const handleTogglePin = useCallback(async (e: React.MouseEvent) => {
@@ -66,8 +64,8 @@ export function NoteActionsMenu({ note, onRevert, onOpenChange }: NoteActionsMen
                         className="rounded-lg gap-3 py-2 cursor-pointer"
                         onClick={handleToggleQuickAccess}
                     >
-                        <Ionicons
-                            name={note.isQuickAccess ? "star" : "star-outline"}
+                        <Star
+                            className={note.isQuickAccess ? "fill-accent-full" : ""}
                             size={18}
                         />
                         <span className="flex-1 text-sm font-medium">Quick access</span>
@@ -78,10 +76,9 @@ export function NoteActionsMenu({ note, onRevert, onOpenChange }: NoteActionsMen
                         className="rounded-lg gap-3 py-2 cursor-pointer"
                         onClick={handleTogglePin}
                     >
-                        <Ionicons
-                            name={note.isPinned ? "pin" : "pin-outline"}
+                        <Pin
+                            className={note.isPinned ? "fill-accent-full" : ""}
                             size={18}
-                            color={note.isPinned ? colors.primary : undefined}
                         />
                         <span className="flex-1 text-sm font-medium">Pin note</span>
                         {note.isPinned && <Check className="h-4 w-4 text-primary" />}

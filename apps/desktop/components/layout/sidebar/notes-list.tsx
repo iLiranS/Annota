@@ -65,9 +65,7 @@ export function NotesList({
                                         </SidebarMenuItem>
                                     ))}
 
-                                    {notes.some(n => n.isPinned) && notes.some(n => !n.isPinned) && (
-                                        <div className="my-1" />
-                                    )}
+
 
                                     {notes.filter(n => !n.isPinned).map((note) => (
                                         <SidebarMenuItem key={note.id}>

@@ -6,7 +6,6 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { cn } from "@/lib/utils";
 import { NoteMetadata, useNotesStore } from "@annota/core";
@@ -152,7 +151,7 @@ export function VersionHistoryDialog({ note, open, onOpenChange, onRevert }: Ver
                                 Clear History
                             </Button>
                         </div>
-                        <ScrollArea className="flex-1 overflow-y-auto">
+                        <div className="flex-1 overflow-y-auto premium-scrollbar">
                             <div className="p-2 space-y-1">
                                 {isLoading ? (
                                     <div className="flex flex-col items-center justify-center py-10 gap-2 opacity-50">
@@ -211,7 +210,7 @@ export function VersionHistoryDialog({ note, open, onOpenChange, onRevert }: Ver
                                     ))
                                 )}
                             </div>
-                        </ScrollArea>
+                        </div>
                     </div>
 
                     {/* Right Content - Version Preview */}

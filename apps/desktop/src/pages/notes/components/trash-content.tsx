@@ -8,7 +8,6 @@ import {
     ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { Ionicons } from "@/components/ui/ionicons";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatDate } from "@/lib/date-formatter";
 import {
     sortFolders,
@@ -108,7 +107,7 @@ export function TrashContent() {
             </div>
 
             {/* List */}
-            <ScrollArea className="flex-1">
+            <div className="flex-1 overflow-y-auto premium-scrollbar">
                 <div className="mx-auto max-w-4xl p-6">
                     {isEmpty ? (
                         <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -172,7 +171,7 @@ export function TrashContent() {
                         </div>
                     )}
                 </div>
-            </ScrollArea>
+            </div>
         </div>
     );
 }

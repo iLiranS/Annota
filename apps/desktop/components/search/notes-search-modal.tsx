@@ -1,6 +1,5 @@
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useCreateNote } from "@/hooks/use-create-note";
 import { cn } from "@/lib/utils";
@@ -153,7 +152,7 @@ export function NotesSearchModal({ open, onOpenChange }: NotesSearchModalProps) 
                 </div>
 
                 {/* Results Area */}
-                <ScrollArea className="flex-1 min-h-0 bg-muted/40">
+                <div className="flex-1 min-h-0 bg-muted/40 overflow-y-auto premium-scrollbar">
                     <div className="p-4 space-y-4">
                         {results.length > 0 && (
                             <div className="space-y-4">
@@ -244,7 +243,7 @@ export function NotesSearchModal({ open, onOpenChange }: NotesSearchModalProps) 
                             </div>
                         )}
                     </div>
-                </ScrollArea>
+                </div>
 
                 {/* Footer */}
                 <div className="px-4 py-2 border-t bg-muted/20 flex items-center justify-between text-[10px] text-muted-foreground font-bold uppercase tracking-wider shrink-0">

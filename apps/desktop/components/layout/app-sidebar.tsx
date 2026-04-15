@@ -301,7 +301,7 @@ export function AppSidebar() {
 
                 </SidebarContent>
 
-                <div className={cn("mt-auto px-1 border-t")}>
+                <div className={cn("mt-auto px-1 border-t border-border/40")}>
 
                     <QuickAccessSection
                         notes={quickAccessNotes}
