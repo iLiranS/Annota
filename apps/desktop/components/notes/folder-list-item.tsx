@@ -20,7 +20,9 @@ interface FolderListItemProps extends React.ButtonHTMLAttributes<HTMLButtonEleme
     onCreateNote?: (folder: Folder) => void;
     asChild?: boolean;
     isActive?: boolean;
+    searchQuery?: string;
 }
+
 
 export function FolderIcon({ folder, className, isActive, }: { folder: Folder, className?: string, isActive?: boolean }) {
     return (
@@ -47,7 +49,26 @@ export function FolderIcon({ folder, className, isActive, }: { folder: Folder, c
     );
 }
 
-export function FolderListItemContent({ folder, isActive }: { folder: Folder, isActive?: boolean }) {
+export function FolderListItemContent({ folder, isActive, searchQuery }: { folder: Folder, isActive?: boolean, searchQuery?: string }) {
+    const Highlight = ({ text, query }: { text: string; query?: string }) => {
+        if (!query || !text) return <>{text}</>;
+
+        const parts = text.split(new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
+        return (
+            <>
+                {parts.map((part, i) =>
+                    part.toLowerCase() === query.toLowerCase() ? (
+                        <span key={i} className="bg-primary/20 text-primary px-0.5 rounded-sm">
+                            {part}
+                        </span>
+                    ) : (
+                        part
+                    )
+                )}
+            </>
+        );
+    };
+
     return (
         <>
             <FolderIcon
@@ -55,7 +76,9 @@ export function FolderListItemContent({ folder, isActive }: { folder: Folder, is
                 isActive={isActive}
                 className="group-hover/folder:bg-background/50"
             />
-            <span className="truncate font-medium">{folder.name}</span>
+            <span className="truncate font-medium">
+                <Highlight text={folder.name} query={searchQuery} />
+            </span>
         </>
     );
 }
@@ -71,7 +94,9 @@ export function FolderListItem({
     className,
     asChild = false,
     isActive,
+    searchQuery,
     children,
+
     ...props
 }: FolderListItemProps) {
     const { restoreFolder, permanentlyDeleteFolder } = useNotesStore();
@@ -98,7 +123,8 @@ export function FolderListItem({
                 )}
                 {...(props as any)}
             >
-                {asChild ? children : <FolderListItemContent folder={folder} isActive={isActive} />}
+                {asChild ? children : <FolderListItemContent folder={folder} isActive={isActive} searchQuery={searchQuery} />}
+
             </Comp>
         );
     }
@@ -116,7 +142,8 @@ export function FolderListItem({
                     )}
                     {...(props as any)}
                 >
-                    {asChild ? children : <FolderListItemContent folder={folder} isActive={isActive} />}
+                    {asChild ? children : <FolderListItemContent folder={folder} isActive={isActive} searchQuery={searchQuery} />}
+
                 </Comp>
             </ContextMenuTrigger>
 

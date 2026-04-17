@@ -38,7 +38,7 @@
   "bundle": {
     "category": "public.app-category.productivity",
     "macOS": {
-      "bundleVersion": "10",
+      "bundleVersion": "11",
       "minimumSystemVersion": "12.0",
       "files": {
         "embedded.provisionprofile": "./embedded.provisionprofile"

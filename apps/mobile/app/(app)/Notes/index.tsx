@@ -3,8 +3,8 @@ import FolderEditModal from '@/components/folder-edit-modal';
 import FolderCard from '@/components/folders/folder-card';
 import NoteLocationModal from '@/components/note-location-modal';
 import NoteCard from '@/components/notes/note-card';
+import { SectionHeader } from '@/components/notes/section-header';
 import OptionsMenu from '@/components/options-menu';
-import NotesSearchModal from '@/components/search/notes-search-modal';
 import ThemedText from '@/components/themed-text';
 import { DailyNoteIcon } from '@/components/ui/daily-note-icon';
 import { HapticPressable } from '@/components/ui/haptic-pressable';
@@ -14,23 +14,23 @@ import {
     NoteMetadata,
     sortFolders,
     sortNotes,
-    SortType,
     useNotesStore,
+    useSearchStore,
     useSettingsStore,
     useSyncStore,
-    type Folder,
+    type Folder
 } from '@annota/core';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+    ActivityIndicator,
     StyleSheet,
-    Text,
+    TextInput,
     View
 } from 'react-native';
 import Animated, {
-    Easing,
     Extrapolation,
     FadeIn,
     FadeOut,
@@ -47,48 +47,8 @@ import Toast from 'react-native-toast-message';
 
 type ListItem =
     | { type: 'folder'; data: Folder }
-    | { type: 'note'; data: NoteMetadata }
+    | { type: 'note'; data: NoteMetadata; subtitle?: string }
     | { type: 'section-header'; title: string };
-
-interface SectionHeaderProps {
-    title: string;
-    iconName: keyof typeof Ionicons.glyphMap;
-    isCollapsed: boolean;
-    onToggle: () => void;
-    colors: any;
-    isCompact: boolean;
-}
-
-const SectionHeader = ({ title, iconName, isCollapsed, onToggle, colors, isCompact }: SectionHeaderProps) => {
-    const chevronStyle = useAnimatedStyle(() => ({
-        transform: [{
-            rotate: withTiming(!isCollapsed ? '90deg' : '0deg', {
-                duration: 300,
-                easing: Easing.bezier(0.4, 0, 0.2, 1)
-            })
-        }]
-    }));
-
-    return (
-        <HapticPressable
-            onPress={onToggle}
-            style={[
-                styles.sectionHeaderRow,
-            ]}
-        >
-            <Ionicons name={iconName} size={14} color={colors.text + '50'} />
-            <ThemedText style={[
-                styles.sectionHeaderText,
-                { color: colors.text + '50', flex: 1 }
-            ]}>
-                {title}
-            </ThemedText>
-            <Animated.View style={chevronStyle}>
-                <Ionicons name="chevron-forward" size={16} color={colors.text + '50'} />
-            </Animated.View>
-        </HapticPressable>
-    );
-};
 
 export default function NotesList() {
     const router = useRouter();
@@ -96,9 +56,7 @@ export default function NotesList() {
     const insets = useSafeAreaInsets();
     const params = useLocalSearchParams<{ folderId?: string, tagId?: string, source?: string }>();
 
-
-
-    // Zustand store
+    // Stores
     const {
         notes,
         folders,
@@ -111,39 +69,66 @@ export default function NotesList() {
         getSortType,
         setFolderSortType,
         updateNoteMetadata,
+        tags
     } = useNotesStore();
 
-    const { general } = useSettingsStore();
-    const isCompact = general.compactMode;
+    const {
+        setSearchQuery,
+        dbResults,
+        resetSearch,
+        isSearching
+    } = useSearchStore();
 
+
+    const { general } = useSettingsStore();
     const { toggle } = useSidebar();
+    const isSyncing = useSyncStore(state => state.isSyncing);
+
+    // Params & State
     const currentFolderId = params.folderId ?? null;
     const tagId = params.tagId ?? null;
     const currentFolder = currentFolderId ? getFolderById(currentFolderId) : null;
     const currentSortType = getSortType(currentFolderId);
+    const isCompact = general.compactMode;
 
-    const [isSearchVisible, setIsSearchVisible] = useState(false);
+    const [isSearchActive, setIsSearchActive] = useState(false);
+    const [localSearchQuery, setLocalSearchQuery] = useState('');
+
+
+    // Sync local query only when it's cleared from outside
+    useEffect(() => {
+        const unsubscribe = useSearchStore.subscribe(
+            (state) => state.searchQuery,
+            (query) => {
+                if (query === '' && localSearchQuery !== '') {
+                    setLocalSearchQuery('');
+                }
+            }
+        );
+        return unsubscribe;
+    }, [localSearchQuery]);
+
+
     const [isCreatingFolder, setIsCreatingFolder] = useState(false);
-
-    // Collapsed sections state
+    const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
+    const [editingNote, setEditingNote] = useState<NoteMetadata | null>(null);
     const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
 
+    const searchInputRef = useRef<TextInput>(null);
+    const scrollY = useSharedValue(0);
+
+    const currentTag = useMemo(() => tags.find(t => t.id === tagId), [tags, tagId]);
+    const headerTitle = tagId ? (currentTag?.name ?? 'Tag') : (currentFolder ? currentFolder.name : 'Annota');
+
+    // Handlers
     const toggleSection = useCallback((title: string) => {
         setCollapsedSections(prev => {
             const next = new Set(prev);
-            if (next.has(title)) {
-                next.delete(title);
-            } else {
-                next.add(title);
-            }
+            if (next.has(title)) next.delete(title);
+            else next.add(title);
             return next;
         });
     }, []);
-
-
-    // Sync progress tracking
-    const isSyncing = useSyncStore(state => state.isSyncing);
-    const scrollY = useSharedValue(0);
 
     const triggerSync = useCallback(async () => {
         try {
@@ -153,131 +138,34 @@ export default function NotesList() {
         }
     }, []);
 
-    const scrollHandler = useAnimatedScrollHandler({
-        onScroll: (event) => {
-            scrollY.value = event.contentOffset.y;
-        },
-        onEndDrag: (event) => {
-            if (event.contentOffset.y < -80) {
-                runOnJS(triggerSync)();
-            }
-        },
-    });
+    const handleCloseSearch = useCallback(() => {
+        setIsSearchActive(false);
+        setLocalSearchQuery('');
+        resetSearch();
+    }, [resetSearch]);
 
-    const syncIndicatorStyle = useAnimatedStyle(() => {
-        const threshold = -80;
-        const pullProgress = interpolate(
-            scrollY.value,
-            [threshold, 0],
-            [1, 0],
-            Extrapolation.CLAMP
-        );
+    const handleSearchChange = useCallback((text: string) => {
+        setLocalSearchQuery(text);
+        setSearchQuery(text, currentFolderId);
+    }, [setSearchQuery, currentFolderId]);
 
-        return {
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: isSyncing ? '100%' : `${pullProgress * 100}%`,
-            height: 2,
-            backgroundColor: colors.primary,
-            opacity: isSyncing ? withTiming(1) : (pullProgress > 0 ? 1 : 0),
-            zIndex: 1000,
-            transform: [
-                { scaleX: isSyncing ? 1 : 1 } // Not really needed if using width
-            ],
-        };
-    });
+    const handleNotePress = useCallback((noteId: string) => {
+        if (isSearchActive) handleCloseSearch();
+        router.push({ pathname: '/Notes/[id]', params: { id: noteId } });
+    }, [router, isSearchActive, handleCloseSearch]);
 
-    // Edit modal state
-    const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
-    const [editingNote, setEditingNote] = useState<NoteMetadata | null>(null);
+    const handleFolderPress = useCallback((folderId: string) => {
+        if (isSearchActive) handleCloseSearch();
+        router.push({ pathname: '/Notes', params: { folderId } });
+    }, [router, isSearchActive, handleCloseSearch]);
 
-    // Browsing Data (Current Folder) - sorted
-    const browseFolders = useMemo(() => {
-        if (tagId) return [];
-        const folderList = getFoldersInFolder(currentFolderId);
-        const sorted = sortFolders(folderList, currentSortType);
-        const regularFolders = sorted.filter(f => !f.isSystem);
-        return regularFolders as Folder[];
-    }, [folders, currentFolderId, currentSortType, tagId]);
-
-    const browseNotes = useMemo(() => {
-        if (tagId) {
-            const list = notes.filter(n => {
-                if (!n.tags) return false;
-                try {
-                    const tagIds = JSON.parse(n.tags) as string[];
-                    return tagIds.includes(tagId) && !n.isDeleted && !n.isPermDeleted;
-                } catch { return false; }
-            });
-            return sortNotes(list, currentSortType);
-        }
-        const noteList = getNotesInFolder(currentFolderId);
-        return sortNotes(noteList, currentSortType);
-    }, [notes, currentFolderId, currentSortType, tagId]);
-
-    // Split notes into pinned and unpinned
-    const { pinnedNotes, unpinnedNotes } = useMemo(() => {
-        const pinned = browseNotes.filter(n => n.isPinned);
-        const unpinned = browseNotes.filter(n => !n.isPinned);
-        return { pinnedNotes: pinned, unpinnedNotes: unpinned };
-    }, [browseNotes]);
-
-
-    const browseData = useMemo((): ListItem[] => {
-        const items: ListItem[] = [];
-
-        // 1. Folders
-        if (browseFolders.length > 0) {
-            items.push({ type: 'section-header', title: 'Folders' });
-            if (!collapsedSections.has('Folders')) {
-                browseFolders.forEach((f) => items.push({ type: 'folder', data: f }));
-            }
-        }
-
-        // 2. Pinned Notes
-        if (pinnedNotes.length > 0) {
-            items.push({ type: 'section-header', title: 'Pinned' });
-            if (!collapsedSections.has('Pinned')) {
-                pinnedNotes.forEach((n) => items.push({ type: 'note', data: n }));
-            }
-        }
-
-        // 3. Remaining Notes
-        if (unpinnedNotes.length > 0) {
-            items.push({ type: 'section-header', title: 'Notes' });
-            if (!collapsedSections.has('Notes')) {
-                unpinnedNotes.forEach((n) => items.push({ type: 'note', data: n }));
-            }
-        }
-
-        return items;
-    }, [browseFolders, pinnedNotes, unpinnedNotes, collapsedSections]);
-
-    const handleFolderPress = useCallback(
-        (folderId: string) => {
-            router.push({ pathname: '/Notes', params: { folderId } });
-        },
-        [router]
-    );
-
-    const handleNotePress = useCallback(
-        (noteId: string) => {
-            router.push({ pathname: '/Notes/[id]', params: { id: noteId } });
-        },
-        [router]
-    );
-
-
-    // Create new note and navigate to it
     const handleCreateNote = useCallback(async () => {
-        const { data: newNote, error } = await createNote({ folderId: currentFolderId ?? '', tags: tagId ? JSON.stringify([tagId]) : undefined });
+        const { data: newNote, error } = await createNote({
+            folderId: currentFolderId ?? '',
+            tags: tagId ? JSON.stringify([tagId]) : undefined
+        });
         if (error) {
-            Toast.show({
-                type: 'error',
-                text1: 'Failed to create note',
-                text2: error
-            });
+            Toast.show({ type: 'error', text1: 'Failed to create note', text2: error });
             return;
         }
         if (newNote) {
@@ -285,142 +173,135 @@ export default function NotesList() {
         }
     }, [createNote, currentFolderId, router, tagId]);
 
+    // Data filtering & sorting
+    const browseFolders = useMemo(() => {
+        if (tagId || isSearchActive) return [];
+        const folderList = getFoldersInFolder(currentFolderId);
+        return sortFolders(folderList, currentSortType).filter(f => !f.isSystem);
+    }, [folders, currentFolderId, currentSortType, tagId, isSearchActive]);
 
-    // Change sort type
-    const handleSortChange = useCallback(
-        (sortType: SortType) => {
-            setFolderSortType(currentFolderId, sortType);
-        },
-        [currentFolderId, setFolderSortType]
-    );
+    const browseNotes = useMemo(() => {
+        if (tagId) {
+            const list = notes.filter(n => {
+                try {
+                    const tagIds = JSON.parse(n.tags || '[]') as string[];
+                    return tagIds.includes(tagId) && !n.isDeleted && !n.isPermDeleted;
+                } catch { return false; }
+            });
+            return sortNotes(list, currentSortType);
+        }
+        return sortNotes(getNotesInFolder(currentFolderId), currentSortType);
+    }, [notes, currentFolderId, currentSortType, tagId]);
 
-    // Navigate to settings
-    const handleSettings = useCallback(() => {
-        router.push('/settings');
-    }, [router]);
+    const displayData = useMemo((): ListItem[] => {
+        if (isSearchActive) {
+            const items: ListItem[] = [];
+            const searchFolders = dbResults.filter(r => r.type === 'folder');
+            const searchNotes = dbResults.filter(r => r.type === 'note');
 
-
-    // Delete handlers
-    const handleDeleteFolder = useCallback(
-        async (folderId: string) => {
-            const folder = getFolderById(folderId);
-            if (folder?.isSystem) {
-                // Don't allow deleting system folders
-                return;
+            if (searchFolders.length > 0) {
+                items.push({ type: 'section-header', title: 'Folders' });
+                searchFolders.forEach(f => items.push({ type: 'folder', data: f.data }));
             }
-            await deleteFolder(folderId);
-        },
-        [deleteFolder, getFolderById]
-    );
+            if (searchNotes.length > 0) {
+                items.push({ type: 'section-header', title: 'Notes' });
+                searchNotes.forEach(n => items.push({ type: 'note', data: n.data, subtitle: n.subtitle }));
+            }
+            return items;
+        }
 
-    const handleDeleteNote = useCallback(
-        async (noteId: string) => {
-            await deleteNote(noteId);
-        },
-        [deleteNote]
-    );
+        const items: ListItem[] = [];
+        if (browseFolders.length > 0) {
+            items.push({ type: 'section-header', title: 'Folders' });
+            if (!collapsedSections.has('Folders')) {
+                browseFolders.forEach(f => items.push({ type: 'folder', data: f }));
+            }
+        }
 
-    const handleTogglePin = useCallback(
-        async (note: NoteMetadata) => {
-            await updateNoteMetadata(note.id, { isPinned: !note.isPinned });
-        },
-        [updateNoteMetadata]
-    );
+        const pinned = browseNotes.filter(n => n.isPinned);
+        if (pinned.length > 0) {
+            items.push({ type: 'section-header', title: 'Pinned' });
+            if (!collapsedSections.has('Pinned')) {
+                pinned.forEach(n => items.push({ type: 'note', data: n }));
+            }
+        }
 
-    const handleToggleQuickAccess = useCallback(
-        async (note: NoteMetadata) => {
-            await updateNoteMetadata(note.id, { isQuickAccess: !note.isQuickAccess });
-        },
-        [updateNoteMetadata]
-    );
+        const unpinned = browseNotes.filter(n => !n.isPinned);
+        if (unpinned.length > 0) {
+            items.push({ type: 'section-header', title: 'Notes' });
+            if (!collapsedSections.has('Notes')) {
+                unpinned.forEach(n => items.push({ type: 'note', data: n }));
+            }
+        }
+        return items;
+    }, [browseFolders, browseNotes, isSearchActive, dbResults, collapsedSections]);
 
-    // Long press handlers for edit modals
-    const handleFolderLongPress = useCallback(
-        (folder: Folder) => {
-            if (folder.isSystem) return; // Don't allow editing system folders
-            setEditingFolder(folder);
-        },
-        []
-    );
+    // Animations & Scroll
+    const scrollHandler = useAnimatedScrollHandler({
+        onScroll: (event) => { scrollY.value = event.contentOffset.y; },
+        onEndDrag: (event) => { if (event.contentOffset.y < -80) runOnJS(triggerSync)(); },
+    });
 
-    const handleNoteLongPress = useCallback(
-        (note: NoteMetadata) => {
-            setEditingNote(note);
-        },
-        []
-    );
-
-    const { tags } = useNotesStore();
-    const currentTag = useMemo(() => tags.find(t => t.id === tagId), [tags, tagId]);
-    const headerTitle = tagId ? (currentTag?.name ?? 'Tag') : (currentFolder ? currentFolder.name : 'Annota');
+    const syncIndicatorStyle = useAnimatedStyle(() => {
+        const pullProgress = interpolate(scrollY.value, [-80, 0], [1, 0], Extrapolation.CLAMP);
+        return {
+            position: 'absolute', top: 0, left: 0, height: 2, zIndex: 1000,
+            width: isSyncing ? '100%' : `${pullProgress * 100}%`,
+            backgroundColor: colors.primary,
+            opacity: isSyncing ? withTiming(1) : (pullProgress > 0 ? 1 : 0),
+        };
+    });
 
     const renderItem = ({ item, index }: { item: ListItem, index: number }) => {
         if (item.type === 'section-header') {
-            const isCollapsed = collapsedSections.has(item.title);
-            const iconName = item.title === 'Folders' ? 'folder' :
-                item.title === 'Pinned' ? 'pin' : 'document-text';
-
             return (
                 <SectionHeader
                     title={item.title}
-                    iconName={iconName}
-                    isCollapsed={isCollapsed}
+                    iconName={item.title === 'Folders' ? 'folder' : item.title === 'Pinned' ? 'pin' : 'document-text'}
+                    isCollapsed={collapsedSections.has(item.title)}
                     onToggle={() => toggleSection(item.title)}
                     colors={colors}
-                    isCompact={isCompact}
                 />
             );
         }
 
         if (item.type === 'folder') {
-            const isFirstFolder = index === 0 || browseData[index - 1].type !== 'folder';
-            const isLastFolder = index === browseData.length - 1 || browseData[index + 1].type !== 'folder';
-
+            const isFirst = index === 0 || displayData[index - 1].type !== 'folder';
+            const isLast = index === displayData.length - 1 || displayData[index + 1].type !== 'folder';
             return (
-                <Animated.View
-                    entering={FadeIn.duration(200)}
-                    exiting={FadeOut.duration(200)}
-                    layout={LinearTransition.duration(300).easing(Easing.bezier(0.4, 0, 0.2, 1))}
-                >
+                <Animated.View layout={LinearTransition} entering={FadeIn} exiting={FadeOut}>
                     <FolderCard
                         folder={item.data}
                         onPress={() => handleFolderPress(item.data.id)}
-                        onLongPress={() => handleFolderLongPress(item.data)}
-                        onDelete={() => handleDeleteFolder(item.data.id)}
+                        onLongPress={() => !item.data.isSystem && setEditingFolder(item.data)}
+                        onDelete={() => !item.data.isSystem && deleteFolder(item.data.id)}
+                        searchQuery={isSearchActive ? localSearchQuery : undefined}
+
                         swipeable={!item.data.isSystem}
-                        isFirst={isFirstFolder}
-                        isLast={isLastFolder}
+                        isFirst={isFirst} isLast={isLast}
                     />
                 </Animated.View>
             );
         }
 
-        const isFirstNote = index === 0 || browseData[index - 1].type !== 'note';
-        const isLastNote = index === browseData.length - 1 || browseData[index + 1].type !== 'note';
-
+        const isFirst = index === 0 || displayData[index - 1].type !== 'note';
+        const isLast = index === displayData.length - 1 || displayData[index + 1].type !== 'note';
         return (
-            <Animated.View
-                entering={FadeIn.duration(200)}
-                exiting={FadeOut.duration(200)}
-                layout={LinearTransition.duration(300).easing(Easing.bezier(0.4, 0, 0.2, 1))}
-            >
+            <Animated.View layout={LinearTransition} entering={FadeIn} exiting={FadeOut}>
                 <NoteCard
                     note={item.data}
                     onPress={() => handleNotePress(item.data.id)}
-                    onLongPress={() => handleNoteLongPress(item.data)}
-                    onDelete={() => handleDeleteNote(item.data.id)}
-                    onTogglePin={() => handleTogglePin(item.data)}
-                    onToggleQuickAccess={() => handleToggleQuickAccess(item.data)}
-                    isFirst={isFirstNote}
-                    isLast={isLastNote}
+                    onLongPress={() => setEditingNote(item.data)}
+                    onDelete={() => deleteNote(item.data.id)}
+                    onTogglePin={() => updateNoteMetadata(item.data.id, { isPinned: !item.data.isPinned })}
+                    onToggleQuickAccess={() => updateNoteMetadata(item.data.id, { isQuickAccess: !item.data.isQuickAccess })}
+                    searchQuery={isSearchActive ? localSearchQuery : undefined}
+
+                    customPreview={item.subtitle}
+                    isFirst={isFirst} isLast={isLast}
                 />
             </Animated.View>
         );
-    };
-
-    const getItemKey = (item: ListItem, index: number): string => {
-        if (item.type === 'section-header') return `header-${item.title}`;
-        return item.data.id;
     };
 
     return (
@@ -429,223 +310,138 @@ export default function NotesList() {
             <Stack.Screen
                 options={{
                     headerShown: true,
+                    headerBackVisible: false,
                     headerTitle: () => (
-                        <View style={styles.headerTitleContainer}>
-                            {tagId ? (
-                                <Ionicons name="ellipse" size={12} color={currentTag?.color ?? colors.primary} />
-                            ) : currentFolderId === DAILY_NOTES_FOLDER_ID ? (
-                                <DailyNoteIcon size={18} color={currentFolder?.color ?? colors.primary} />
-                            ) : (
-                                <Ionicons
-                                    name={(currentFolder?.icon as any) || (currentFolderId ? 'folder' : 'documents')}
-                                    size={18}
-                                    color={currentFolder?.color ?? colors.primary}
+
+
+                        isSearchActive ? (
+                            <View style={styles.searchInputContainer}>
+                                <TextInput
+                                    ref={searchInputRef}
+                                    style={[styles.searchInput, { color: colors.text }]}
+                                    placeholder="Search notes & folders..."
+                                    placeholderTextColor={colors.text + '50'}
+                                    value={localSearchQuery}
+                                    onChangeText={handleSearchChange}
+                                    autoFocus
                                 />
-                            )}
-                            <ThemedText style={styles.headerTitleText}>
-                                {headerTitle}
-                            </ThemedText>
-                        </View>
+
+                            </View>
+                        ) : (
+                            <View style={styles.headerTitleContainer}>
+                                {tagId ? (
+                                    <Ionicons name="ellipse" size={12} color={currentTag?.color ?? colors.primary} />
+                                ) : currentFolderId === DAILY_NOTES_FOLDER_ID ? (
+                                    <DailyNoteIcon size={18} color={currentFolder?.color ?? colors.primary} />
+                                ) : (
+                                    <Ionicons
+                                        name={(currentFolder?.icon as any) || (currentFolderId ? 'folder' : 'documents')}
+                                        size={18}
+                                        color={currentFolder?.color ?? colors.primary}
+                                    />
+                                )}
+                                <ThemedText style={styles.headerTitleText}>{headerTitle}</ThemedText>
+                            </View>
+                        )
                     ),
-                    gestureEnabled: false,
                     headerLeft: () => {
                         const canGoBack = router.canGoBack();
+                        if (isSearchActive) return null;
                         return (
-                            <HapticPressable
-                                onPress={() => canGoBack ? router.back() : toggle()}
-                                style={styles.headerButton}
-                                hitSlop={8}
-                            >
-                                <Ionicons
-                                    name={canGoBack ? "chevron-back" : "menu-outline"}
-                                    size={26}
-                                    color={colors.primary}
-                                />
+                            <HapticPressable onPress={() => canGoBack ? router.back() : toggle()} style={styles.headerButton}>
+                                <Ionicons name={canGoBack ? "chevron-back" : "menu-outline"} size={26} color={colors.primary} />
                             </HapticPressable>
                         );
                     },
                     headerRight: () => (
-                        <HapticPressable
-                            onPress={() => setIsSearchVisible(true)}
-                            style={styles.headerButton}
-                            hitSlop={8}
-                        >
-                            <Ionicons name="search" size={24} color={colors.primary} />
+                        <HapticPressable onPress={() => isSearchActive ? handleCloseSearch() : setIsSearchActive(true)} style={styles.headerButton}>
+                            <Ionicons name={isSearchActive ? "close" : "search"} size={24} color={colors.primary} />
                         </HapticPressable>
                     ),
                 }}
             />
 
             <Animated.FlatList
-                data={browseData}
-                keyExtractor={getItemKey}
+                data={displayData}
+                keyExtractor={(item, index) => item.type === 'section-header' ? `h-${item.title}` : item.data.id}
                 onScroll={scrollHandler}
                 scrollEventThrottle={16}
-                style={styles.flatList}
-                contentContainerStyle={[
-                    styles.listContent,
-                    { flexGrow: 1 }
-                ]}
-                itemLayoutAnimation={LinearTransition.duration(300).easing(Easing.bezier(0.4, 0, 0.2, 1))}
-                ListEmptyComponent={
-                    <View style={styles.emptyContainer}>
-                        {tagId ? (
-                            <Ionicons name="pricetag-outline" size={48} color={colors.border} />
-                        ) : (
-                            <Ionicons name="folder-open-outline" size={48} color={colors.border} />
-                        )}
-                        <Text style={[styles.emptyText, { color: colors.text }]}>
-                            {tagId ? 'No notes with this tag' : 'This folder is empty'}
-                        </Text>
-                        <Text style={[styles.emptyHint, { color: colors.border }]}>
-                            {tagId ? 'Tag some notes to see them here' : 'Create a note or folder to get started'}
-                        </Text>
-                    </View>
-                }
-                ListFooterComponent={
-                    <View style={{ height: 100 }} />
-                }
+                contentContainerStyle={[styles.listContent, { flexGrow: 1 }]}
+                itemLayoutAnimation={LinearTransition}
                 renderItem={renderItem}
+                ListHeaderComponent={isSearching ? (
+                    <View style={styles.searchLoading}>
+                        <ActivityIndicator size="small" color={colors.primary} />
+                        <ThemedText style={styles.searchLoadingText}>Searching...</ThemedText>
+                    </View>
+                ) : null}
+                ListEmptyComponent={isSearchActive ? (
+                    <View style={styles.emptyContainer}>
+                        <Ionicons name="search-outline" size={48} color={colors.border} />
+                        <ThemedText style={styles.emptyText}>{localSearchQuery ? 'No results found' : 'Type to search...'}</ThemedText>
+                    </View>
+                ) : (
+
+                    <View style={styles.emptyContainer}>
+                        <Ionicons name={tagId ? "pricetag-outline" : "folder-open-outline"} size={48} color={colors.border} />
+                        <ThemedText style={styles.emptyText}>{tagId ? 'No tagged notes' : 'This folder is empty'}</ThemedText>
+                        <ThemedText style={styles.emptyHint}>{tagId ? 'Tag notes to see them here' : 'Create something to get started'}</ThemedText>
+                    </View>
+                )}
+                ListFooterComponent={<View style={{ height: 100 }} />}
             />
-
-
 
             {/* Bottom Footer */}
-            <View style={[
-                styles.footer,
-                {
-                    paddingBottom: Math.max(insets.bottom, 10),
-                    backgroundColor: colors.background,
-                    borderTopColor: colors.border,
-                }
-            ]}>
-                <View style={styles.footerContent}>
-                    <View style={styles.footerSide} />
-
-                    <FloatingActionButton
-                        onPress={handleCreateNote}
-                        isFloating={false}
-                        size={64}
-                        style={{ marginTop: -32 }}
-                    />
-
-                    <View style={styles.footerSide}>
-                        <OptionsMenu
-                            currentSortType={currentSortType}
-                            onNewFolder={() => setIsCreatingFolder(true)}
-                            onSortChange={handleSortChange}
-                            onTrash={() => router.push('/Notes/trash')}
-                            onSettings={handleSettings}
-                        />
+            {!isSearchActive && (
+                <View style={[
+                    styles.footer,
+                    {
+                        paddingBottom: Math.max(insets.bottom, 10),
+                        backgroundColor: colors.background,
+                        borderTopColor: colors.border,
+                    }
+                ]}>
+                    <View style={styles.footerContent}>
+                        <View style={styles.footerSide} />
+                        <FloatingActionButton onPress={handleCreateNote} isFloating={false} size={64} style={{ marginTop: -32 }} />
+                        <View style={styles.footerSide}>
+                            <OptionsMenu
+                                currentSortType={currentSortType}
+                                onNewFolder={() => setIsCreatingFolder(true)}
+                                onSortChange={(s) => setFolderSortType(currentFolderId, s)}
+                                onTrash={() => router.push('/Notes/trash')}
+                                onSettings={() => router.push('/settings')}
+                            />
+                        </View>
                     </View>
                 </View>
-            </View>
+            )}
 
-            {/* Folder Create Modal */}
             <FolderEditModal
-                visible={isCreatingFolder}
-                folder={null}
-                defaultParentId={currentFolderId}
-                onClose={() => setIsCreatingFolder(false)}
-            />
-
-            {/* Folder Edit Modal */}
-            <FolderEditModal
-                visible={editingFolder !== null}
+                visible={isCreatingFolder || !!editingFolder}
                 folder={editingFolder}
-                onClose={() => setEditingFolder(null)}
+                defaultParentId={currentFolderId}
+                onClose={() => { setIsCreatingFolder(false); setEditingFolder(null); }}
             />
-
-            {/* Note Location Modal */}
-            <NoteLocationModal
-                visible={editingNote !== null}
-                note={editingNote}
-                onClose={() => setEditingNote(null)}
-            />
-
-            {/* Search Modal */}
-            <NotesSearchModal
-                visible={isSearchVisible}
-                onClose={() => setIsSearchVisible(false)}
-                onFolderPress={handleFolderPress}
-                onNotePress={handleNotePress}
-                onFolderLongPress={handleFolderLongPress}
-                onNoteLongPress={handleNoteLongPress}
-                allFolders={folders}
-            />
+            <NoteLocationModal visible={!!editingNote} note={editingNote} onClose={() => setEditingNote(null)} />
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-    },
-    flatList: {
-        flex: 1,
-    },
-    headerButton: {
-        padding: 4,
-    },
-    listContent: {
-        paddingTop: 16,
-    },
-    sectionHeaderRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 20,
-        marginVertical: 8,
-        gap: 6,
-
-    },
-    sectionHeaderText: {
-        fontSize: 14,
-        fontWeight: '700',
-        textTransform: 'uppercase',
-        letterSpacing: 0.8,
-    },
-    headerTitleContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-    headerTitleText: {
-        fontSize: 18,
-        fontWeight: '700',
-    },
-    emptyContainer: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 48,
-        gap: 8,
-    },
-    emptyText: {
-        fontSize: 17,
-        fontWeight: '600',
-    },
-    emptyHint: {
-        fontSize: 14,
-    },
-    footer: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        borderTopWidth: 1,
-        paddingTop: 0,
-        paddingHorizontal: 20,
-    },
-    footerContent: {
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-        justifyContent: 'space-between',
-    },
-    footerSide: {
-        flex: 1,
-        alignItems: 'flex-end',
-        paddingTop: 10,
-        minHeight: 48,
-    },
-
+    container: { flex: 1 },
+    headerButton: { padding: 4 },
+    listContent: { paddingTop: 16 },
+    headerTitleContainer: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    headerTitleText: { fontSize: 18, fontWeight: '700' },
+    emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 48, gap: 8 },
+    emptyText: { fontSize: 17, fontWeight: '600' },
+    emptyHint: { fontSize: 14, opacity: 0.5 },
+    footer: { position: 'absolute', bottom: 0, left: 0, right: 0, borderTopWidth: 1 },
+    footerContent: { flexDirection: 'row', justifyContent: 'space-between' },
+    footerSide: { flex: 1, alignItems: 'flex-end', paddingTop: 10, minHeight: 48, marginRight: 15 },
+    searchInputContainer: { flex: 1, height: 40, justifyContent: 'center' },
+    searchInput: { fontSize: 16, fontWeight: '500', paddingHorizontal: 12 },
+    searchLoading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, gap: 8 },
+    searchLoadingText: { fontSize: 13, opacity: 0.6 },
 });

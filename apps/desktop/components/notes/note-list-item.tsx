@@ -26,8 +26,8 @@ interface NoteListItemProps extends React.ButtonHTMLAttributes<HTMLButtonElement
     note: NoteMetadata;
     onDelete?: () => void;
     showDescription?: boolean;
-    showTimestamp?: boolean;
     className?: string;
+
     suffix?: React.ReactNode;
     isActive?: boolean;
     asChild?: boolean;
@@ -35,15 +35,18 @@ interface NoteListItemProps extends React.ButtonHTMLAttributes<HTMLButtonElement
     isInList?: boolean;
     isInQuickAccess?: boolean;
     forceCompact?: boolean;
+    searchQuery?: string;
+    customDescription?: string;
 }
+
 
 export function NoteListItem({
     note,
     onClick,
     onDelete,
     showDescription = false,
-    showTimestamp = false,
     className,
+
     suffix,
     isActive,
     style,
@@ -52,10 +55,13 @@ export function NoteListItem({
     isInList,
     forceCompact,
     isInQuickAccess,
+    searchQuery,
+    customDescription,
     ...props
 }: NoteListItemProps) {
     const { updateNoteMetadata, tags, restoreNote, permanentlyDeleteNote } = useNotesStore();
     const { general } = useSettingsStore();
+
     const isCompact = (general.compactMode || forceCompact);
 
     const [isLocationPickerOpen, setIsLocationPickerOpen] = useState(false);
@@ -160,6 +166,25 @@ export function NoteListItem({
 
     const Comp = asChild ? Slot : "button";
 
+    const Highlight = ({ text, query }: { text: string; query?: string }) => {
+        if (!query || !text) return <>{text}</>;
+
+        const parts = text.split(new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
+        return (
+            <>
+                {parts.map((part, i) =>
+                    part.toLowerCase() === query.toLowerCase() ? (
+                        <span key={i} className="bg-primary/20 text-primary px-0.5 rounded-sm">
+                            {part}
+                        </span>
+                    ) : (
+                        part
+                    )
+                )}
+            </>
+        );
+    };
+
     return (
         <>
             <ContextMenu>
@@ -182,12 +207,12 @@ export function NoteListItem({
                         {asChild ? children : (
                             <>
                                 <div className="flex w-full items-center justify-between gap-2.5">
-                                    <div className="flex min-w-0 items-center gap-2">
+                                    <div className="flex min-w-0 items-center gap-2 flex-1">
                                         <p className={cn(
                                             "truncate text-sm font-medium transition-colors",
                                             isActive ? "text-primary" : "text-foreground/90 group-hover/note:text-primary"
                                         )}>
-                                            {note.title || "Untitled Note"}
+                                            <Highlight text={note.title || "Untitled Note"} query={searchQuery} />
                                         </p>
                                     </div>
 
@@ -196,19 +221,15 @@ export function NoteListItem({
                                             <Pin size={12} className="text-accent-full" />
                                         )}
                                         {suffix}
-                                        {showTimestamp && note.updatedAt && (
-                                            <span className="text-[11px] text-muted-foreground/60">
-                                                {formatRelativeDate(note.updatedAt)}
-                                            </span>
-                                        )}
                                     </div>
                                 </div>
 
-                                {!isCompact && note.preview && (
-                                    <p className={`line-clamp-1 w-full  text-[11px] text-muted-foreground/50 leading-tight ${general.appDirection === 'ltr' ? 'text-left' : 'text-right'}`}>
-                                        {note.preview}
+                                {!isCompact && (customDescription || note.preview) && (
+                                    <p className={`line-clamp-1 w-full text-[11px] text-muted-foreground/50 leading-tight ${general.appDirection === 'ltr' ? 'text-left' : 'text-right'}`}>
+                                        <Highlight text={customDescription || note.preview} query={searchQuery} />
                                     </p>
                                 )}
+
 
                                 {(() => {
                                     if (!note.tags || note.tags === '[]') return null;

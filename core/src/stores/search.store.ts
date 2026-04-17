@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { subscribeWithSelector } from 'zustand/middleware';
 import { SearchService, UnifiedSearchResult } from '../services/search.service';
 
 interface SearchState {
@@ -17,7 +18,9 @@ interface SearchState {
 
 let searchTimeout: ReturnType<typeof setTimeout> | null = null;
 
-export const useSearchStore = create<SearchState>((set, get) => ({
+export const useSearchStore = create<SearchState>()(
+    subscribeWithSelector((set, get) => ({
+
     searchQuery: '',
     searchScope: 'all',
     isSearching: false,
@@ -73,4 +76,5 @@ export const useSearchStore = create<SearchState>((set, get) => ({
     reset: () => {
         get().resetSearch();
     }
-}));
+})));
+

@@ -5,7 +5,7 @@ import { Folder } from '@annota/core';
 import { useSettingsStore } from '@annota/core';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, Text } from 'react-native';
 
 interface FolderCardProps {
     folder: Folder;
@@ -15,7 +15,9 @@ interface FolderCardProps {
     swipeable?: boolean;
     isFirst?: boolean;
     isLast?: boolean;
+    searchQuery?: string;
 }
+
 
 export default function FolderCard({
     folder,
@@ -25,7 +27,9 @@ export default function FolderCard({
     swipeable = true,
     isFirst = false,
     isLast = false,
+    searchQuery,
 }: FolderCardProps) {
+
     const { colors, dark } = useTheme();
     const { general } = useSettingsStore();
     const isCompact = general.compactMode;
@@ -33,6 +37,25 @@ export default function FolderCard({
 
     const showTopBorder = !isFirst;
     const showBottomBorder = !isLast;
+
+    const Highlight = ({ text, query, style, numberOfLines }: { text: string; query?: string; style?: any; numberOfLines?: number }) => {
+        if (!query || !text) return <ThemedText style={style} numberOfLines={numberOfLines}>{text}</ThemedText>;
+
+        const parts = text.split(new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
+        return (
+            <ThemedText style={style} numberOfLines={numberOfLines}>
+                {parts.map((part, i) =>
+                    part.toLowerCase() === query.toLowerCase() ? (
+                        <Text key={i} style={{ backgroundColor: colors.primary + '40', color: colors.primary }}>
+                            {part}
+                        </Text>
+                    ) : (
+                        part
+                    )
+                )}
+            </ThemedText>
+        );
+    };
 
     const CardContent = (
         <ThemedPressable
@@ -64,8 +87,9 @@ export default function FolderCard({
             ]}>
                 <Ionicons name={folder.icon as keyof typeof Ionicons.glyphMap} size={isCompact ? 18 : 22} color={folderColor} />
             </View>
-            <ThemedText style={styles.folderName}>{folder.name}</ThemedText>
+            <Highlight text={folder.name} query={searchQuery} style={styles.folderName} numberOfLines={1} />
             <Ionicons name="chevron-forward" size={18} color={colors.text + '50'} />
+
         </ThemedPressable>
     );
 

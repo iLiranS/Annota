@@ -1,4 +1,4 @@
-import { DAILY_NOTES_FOLDER_ID, TRASH_FOLDER_ID } from "@annota/core";
+import { DAILY_NOTES_FOLDER_ID, TRASH_FOLDER_ID, useSettingsStore } from "@annota/core";
 import { useParams, useSearchParams } from "react-router-dom";
 import { DailyNotesCalendar } from "./components/daily-notes-calendar";
 import { TrashContent } from "./components/trash-content";
@@ -12,6 +12,8 @@ import NotesEmpty from "./notes-empty";
 export default function NotesViewManager() {
     const { folderId: routeFolderId, noteId: routeNoteId } = useParams<{ folderId: string; noteId: string }>();
     const [searchParams] = useSearchParams();
+    const lastViewedNoteId = useSettingsStore(s => s.lastViewedNoteId);
+    const lastViewedFolderId = useSettingsStore(s => s.lastViewedFolderId);
 
     const searchFolderId = searchParams.get("folderId");
 
@@ -30,6 +32,11 @@ export default function NotesViewManager() {
         return <TrashContent />;
     }
 
-    // 4. Priority: Fallback: Empty State
+    // 4. Priority: Fallback: Sticky Note (Last Viewed)
+    if (lastViewedNoteId) {
+        return <NoteEditor key={`${lastViewedFolderId}-${lastViewedNoteId}`} noteId={lastViewedNoteId} folderId={lastViewedFolderId || 'root'} />;
+    }
+
+    // 5. Priority: Fallback: Empty State
     return <NotesEmpty />;
 }

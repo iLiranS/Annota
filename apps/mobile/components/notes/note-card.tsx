@@ -4,7 +4,8 @@ import ThemedPressable from '@/components/ui/themed-pressable';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { formatRelativeDate } from '@/utils/date-formatter';
 import { NoteMetadata, useNotesStore, useSettingsStore } from '@annota/core';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, Text } from 'react-native';
+
 
 interface NoteCardProps {
     note: NoteMetadata;
@@ -19,7 +20,12 @@ interface NoteCardProps {
     showTimestamp?: boolean;
     isFirst?: boolean;
     isLast?: boolean;
+    searchQuery?: string;
+    customPreview?: string;
+    suffix?: React.ReactNode;
 }
+
+
 
 export default function NoteCard({
     note,
@@ -34,7 +40,12 @@ export default function NoteCard({
     swipeable = true,
     isFirst = false,
     isLast = false,
+    searchQuery,
+    customPreview,
+    suffix,
 }: NoteCardProps) {
+
+
     const { colors, dark } = useAppTheme();
     const { general } = useSettingsStore();
     const { tags } = useNotesStore();
@@ -49,6 +60,25 @@ export default function NoteCard({
         if (note.tags) appliedTagIds = JSON.parse(note.tags);
     } catch { }
     const appliedTags = appliedTagIds.map(id => tags.find(t => t.id === id)).filter(Boolean) as any[];
+
+    const Highlight = ({ text, query, style, numberOfLines }: { text: string; query?: string; style?: any; numberOfLines?: number }) => {
+        if (!query || !text) return <ThemedText style={style} numberOfLines={numberOfLines}>{text}</ThemedText>;
+
+        const parts = text.split(new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
+        return (
+            <ThemedText style={style} numberOfLines={numberOfLines}>
+                {parts.map((part, i) =>
+                    part.toLowerCase() === query.toLowerCase() ? (
+                        <Text key={i} style={{ backgroundColor: colors.primary + '40', color: colors.primary }}>
+                            {part}
+                        </Text>
+                    ) : (
+                        part
+                    )
+                )}
+            </ThemedText>
+        );
+    };
 
     const CardContent = (
         <ThemedPressable
@@ -70,10 +100,14 @@ export default function NoteCard({
             <View style={styles.contentContainer}>
                 <View style={[styles.mainRow, isCompact && { alignItems: 'center' }]}>
                     <View style={styles.titleWrapper}>
-                        <ThemedText style={[styles.title, { flex: 0, flexShrink: 1 }]} numberOfLines={1}>
-                            {note.title || 'Untitled Note'}
-                        </ThemedText>
+                        <Highlight
+                            text={note.title || 'Untitled Note'}
+                            query={searchQuery}
+                            style={styles.title}
+                            numberOfLines={1}
+                        />
                         {isCompact && appliedTags.length > 0 && (
+
                             <View style={[styles.tagsContainer, { marginTop: 0, flexWrap: 'nowrap' }]}>
                                 {appliedTags.slice(0, 3).map(tag => (
                                     <View key={tag.id} style={[styles.tagBadge, { backgroundColor: `${tag.color}15`, borderColor: `${tag.color}40` }]}>
@@ -82,7 +116,9 @@ export default function NoteCard({
                                 ))}
                             </View>
                         )}
+                        {suffix}
                     </View>
+
                     {shouldShowTimestamp && (
                         <ThemedText style={[styles.timestamp, { color: colors.text + '50' }]}>
                             {formatRelativeDate(note.updatedAt)}
@@ -102,14 +138,15 @@ export default function NoteCard({
 
                 {(description && showDescription) ? (
                     <View style={styles.descriptionContainer}>{description}</View>
-                ) : (!isCompact && note.preview) ? (
-                    <ThemedText
+                ) : (!isCompact && (customPreview || note.preview)) ? (
+                    <Highlight
+                        text={customPreview || note.preview}
+                        query={searchQuery}
                         style={[styles.preview, { color: colors.text + '60' }]}
                         numberOfLines={1}
-                    >
-                        {note.preview}
-                    </ThemedText>
+                    />
                 ) : null}
+
             </View>
         </ThemedPressable>
     );

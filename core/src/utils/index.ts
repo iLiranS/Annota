@@ -6,4 +6,5 @@ export * from './notes';
 export * from './polyfill';
 export * from './sorts';
 export * from './subscription';
+export * from './html';
 

@@ -99,7 +99,7 @@ export function NotesSearchModal({ open, onOpenChange }: NotesSearchModalProps) 
                 const item = results[selectedIndex];
                 if (item.type === "note") onNoteClick(item.data);
                 else if (item.type === "folder") onFolderClick(item.data);
-            } else if (e.key === " " && results[selectedIndex]?.type === "note") {
+            } else if (e.key === " " && e.shiftKey && results[selectedIndex]?.type === "note") {
                 e.preventDefault();
                 setPreviewNote(results[selectedIndex].data as NoteMetadata);
             }
@@ -176,7 +176,8 @@ export function NotesSearchModal({ open, onOpenChange }: NotesSearchModalProps) 
                                                             note={result.data}
                                                             onClick={() => onNoteClick(result.data)}
                                                             isActive={isSelected}
-                                                            showTimestamp
+                                                            searchQuery={searchQuery}
+                                                            customDescription={result.subtitle}
                                                             suffix={(
                                                                 <FolderBadge folderId={result.data.folderId} />
                                                             )}
@@ -194,6 +195,7 @@ export function NotesSearchModal({ open, onOpenChange }: NotesSearchModalProps) 
                                                                 onClick={() => onFolderClick(result.data)}
                                                                 onEdit={() => { }}
                                                                 isActive={isSelected}
+                                                                searchQuery={searchQuery}
                                                                 className="flex-1 border border-transparent"
                                                                 style={isSelected ? {
                                                                     backgroundColor: `${colors.primary}25`,
@@ -257,7 +259,7 @@ export function NotesSearchModal({ open, onOpenChange }: NotesSearchModalProps) 
                             <span className="opacity-60">to navigate</span>
                         </div>
                         <div className="flex items-center gap-1.5 group">
-                            <span className="px-1 py-0.5 rounded border border-border bg-background shadow-xs text-foreground group-hover:border-primary/30">Space</span>
+                            <span className="px-1 py-0.5 rounded border border-border bg-background shadow-xs text-foreground group-hover:border-primary/30">Shift + Space</span>
                             <span className="opacity-60">to preview</span>
                         </div>
                     </div>

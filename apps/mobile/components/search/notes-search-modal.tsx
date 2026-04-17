@@ -141,6 +141,7 @@ export default function NotesSearchModal({
                                 swipeable={!item.data.isSystem}
                                 isFirst={isFirstFolder}
                                 isLast={isLastFolder}
+                                searchQuery={searchQuery}
                             />
                         </View>
                         <View style={{ flexDirection: 'row', gap: 12, paddingHorizontal: 12 }}>
@@ -175,17 +176,15 @@ export default function NotesSearchModal({
                 const isLastNote = index === searchData.length - 1 || searchData[index + 1].type !== 'note';
 
                 const footer = (
-                    <View style={styles.noteFooter}>
-                        <View style={[styles.folderInfo, { backgroundColor: folder?.color + '10' || colors.background + '10' }]}>
-                            <Ionicons
-                                name={folder ? (folder.icon as any) : 'home'}
-                                size={12}
-                                color={folder?.color || colors.text + '80'}
-                            />
-                            <Text style={[styles.folderName, { color: folder?.color || colors.text + '80' }]}>
-                                {folder ? folder.name : 'Notes'}
-                            </Text>
-                        </View>
+                    <View style={[styles.folderInfo, { backgroundColor: folder?.color + '15' || colors.background + '15', alignSelf: 'flex-start' }]}>
+                        <Ionicons
+                            name={folder ? (folder.icon as any) : 'home'}
+                            size={10}
+                            color={folder?.color || colors.text + '80'}
+                        />
+                        <Text style={[styles.folderName, { color: folder?.color || colors.text + '80' }]}>
+                            {folder ? folder.name : 'Notes'}
+                        </Text>
                     </View>
                 );
 
@@ -197,8 +196,10 @@ export default function NotesSearchModal({
                         onDelete={() => handleDeleteNote(note.id)}
                         onTogglePin={() => handleTogglePin(note)}
                         onToggleQuickAccess={() => handleToggleQuickAccess(note)}
-                        description={footer}
-                        showTimestamp={true}
+                        showTimestamp={false}
+                        searchQuery={searchQuery}
+                        customPreview={item.subtitle}
+                        suffix={footer}
                         isFirst={isFirstNote}
                         isLast={isLastNote}
                     />

@@ -26,6 +26,7 @@ export const SearchRepository = {
             preview: schema.noteMetadata.preview,
             folderId: schema.noteMetadata.folderId,
             updatedAt: schema.noteMetadata.updatedAt,
+            content: schema.noteContent.content,
             score: sql<number>`
                 CASE 
                     WHEN LOWER(${schema.noteMetadata.title}) = LOWER(${exactMatch}) THEN 5
