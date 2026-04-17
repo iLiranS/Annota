@@ -6,7 +6,6 @@ import {
     ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { Ionicons } from "@/components/ui/ionicons";
-import { formatRelativeDate } from "@/lib/date-formatter";
 import { cn } from "@/lib/utils";
 import { NoteMetadata, useNotesStore, useSettingsStore } from "@annota/core";
 import { NoteFileService } from "@annota/core/platform";

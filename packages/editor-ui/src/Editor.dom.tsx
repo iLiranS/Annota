@@ -1,4 +1,4 @@
-import { useSettingsStore } from '@annota/core';
+import { useAiStore, useSettingsStore } from '@annota/core';
 import { NoteFileService } from '@annota/core/platform';
 import { dispatchEditorCommand, getEditorProps, getEditorState, getExtensions, resolveFontFamily } from '@annota/editor-core';
 import '@annota/editor-core/styles.css';
@@ -306,6 +306,10 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
 
                 setCurrentLatex(latex || null);
                 setEditorState(getEditorState(editor) as unknown as EditorState);
+
+                // Sync selection with AI store
+                const selectedText = selection.empty ? null : editor.state.doc.textBetween(selection.from, selection.to, ' ');
+                useAiStore.getState().setHighlightedText(selectedText);
             },
             onTransaction: ({ editor }) => {
                 setEditorState(getEditorState(editor) as unknown as EditorState);

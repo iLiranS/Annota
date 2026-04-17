@@ -58,6 +58,9 @@ const getBlockActions = (blockType: string): BlockAction[] => {
             actions.splice(0, 0, { id: 'background', label: 'Background', icon: 'palette', action: 'background' });
             actions.splice(0, 0, { id: 'copyLink', label: 'Copy Link', icon: 'link', action: 'copyLink' });
             break;
+        case 'quote':
+            actions.splice(0, 0, { id: 'background', label: 'Background', icon: 'palette', action: 'background' });
+            break;
         case 'codeBlock':
             actions.splice(0, 0, { id: 'language', label: 'Language', icon: 'code', action: 'language' });
             break;
@@ -79,7 +82,7 @@ function BlockActionMenu({ blockType, onAction, onClose }: { blockType: string, 
                 marginBottom: 16,
                 textAlign: 'center'
             }}>
-                {blockType === 'codeBlock' ? 'Code Block' : blockType === 'details' ? 'Section' : blockType === 'mermaid' ? 'Diagram' : 'Block Options'}
+                {blockType === 'codeBlock' ? 'Code Block' : blockType === 'details' ? 'Section' : blockType === 'mermaid' ? 'Diagram' : blockType === 'quote' ? 'Quote' : 'Block Options'}
             </Text>
 
             <View style={{ gap: 8 }}>

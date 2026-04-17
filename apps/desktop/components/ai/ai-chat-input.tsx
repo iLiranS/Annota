@@ -7,17 +7,20 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from '@/lib/utils';
 import { ANTHROPIC_MODELS, GOOGLE_MODELS, OPENAI_MODELS, useAiStore } from "@annota/core";
-import { Bot, Check, ChevronDown, Send, Sparkles, Square } from 'lucide-react';
+import { Bot, Check, ChevronDown, Play, RotateCcw, Send, Sparkles, Square } from 'lucide-react';
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 
 interface AiChatInputProps {
     onSend: (content: string) => void;
     onSummarize: () => void;
+    onRewrite?: () => void;
+    onContinue?: () => void;
+    hasSelection?: boolean;
     onStop?: () => void;
     disabled: boolean;
 }
 
-export function AiChatInput({ onSend, onSummarize, onStop, disabled }: AiChatInputProps) {
+export function AiChatInput({ onSend, onSummarize, onRewrite, onContinue, hasSelection, onStop, disabled }: AiChatInputProps) {
     const {
         activeProvider,
         availableModels,
@@ -99,16 +102,43 @@ export function AiChatInput({ onSend, onSummarize, onStop, disabled }: AiChatInp
     return (
         <div className="flex flex-col gap-2 mb-2 pt-2 border-t border-border/40">
             <div className="flex items-center justify-between px-1">
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={onSummarize}
-                    disabled={disabled || !currentModelName}
-                    className="h-7 px-3 rounded-full gap-1.5 text-[10px] font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all border border-border/40 hover:border-primary/20 bg-muted/20"
-                >
-                    <Sparkles size={11} className="text-primary/60" />
-                    Summarize Note
-                </Button>
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={onSummarize}
+                        disabled={disabled || !currentModelName}
+                        className="h-7 px-3 rounded-full gap-1.5 text-[10px] font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all border border-border/40 hover:border-primary/20 bg-muted/20 whitespace-nowrap"
+                    >
+                        <Sparkles size={11} className="text-primary/60" />
+                        {hasSelection ? "Summarize Selection" : "Summarize Note"}
+                    </Button>
+
+                    {hasSelection && (
+                        <>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={onRewrite}
+                                disabled={disabled || !currentModelName}
+                                className="h-7 px-3 rounded-full gap-1.5 text-[10px] font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all border border-border/40 hover:border-primary/20 bg-muted/20"
+                            >
+                                <RotateCcw size={11} className="text-primary/60" />
+                                Rewrite
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={onContinue}
+                                disabled={disabled || !currentModelName}
+                                className="h-7 px-3 rounded-full gap-1.5 text-[10px] font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all border border-border/40 hover:border-primary/20 bg-muted/20"
+                            >
+                                <Play size={11} className="text-primary/60" />
+                                Continue
+                            </Button>
+                        </>
+                    )}
+                </div>
 
                 {isNearLimit && (
                     <span className={cn(

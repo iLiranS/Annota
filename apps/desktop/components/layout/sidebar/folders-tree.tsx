@@ -30,7 +30,7 @@ const DAILY_NOTES_FOLDER: Folder = {
 interface FoldersTreeProps {
     isFoldersOpen: boolean;
     setIsFoldersOpen: (open: boolean) => void;
-    onNavigate: (id: string) => void;
+    onNavigate: (id: string | null) => void;
     onEdit: (folder: Folder) => void;
     onDelete: (folder: Folder) => void;
     onCreateSubFolder: (parent: Folder) => void;
@@ -86,6 +86,7 @@ export function FoldersTree({
                                 onCreateSubFolder={onCreateSubFolder}
                                 onCreateNote={() => onCreateNote(folder.id)}
                                 getFoldersInFolder={getFoldersInFolder}
+                                currentFolderId={currentFolderId}
                             />
                         ))}
                     </SidebarMenu>
@@ -95,10 +96,11 @@ export function FoldersTree({
     );
 }
 
-function FolderTreeItem({ folder, onNavigate, onEdit, onDelete, onCreateSubFolder, onCreateNote, general, getFoldersInFolder }: any) {
+function FolderTreeItem({ folder, onNavigate, onEdit, onDelete, onCreateSubFolder, onCreateNote, general, getFoldersInFolder, currentFolderId }: any) {
     const children = getFoldersInFolder(folder.id).filter((f: any) => !f.isSystem);
     const hasChildren = children.length > 0;
     const [isOpen, setIsOpen] = useState(() => localStorage.getItem(`sidebar_folder_open_${folder.id}`) === "true");
+    const isActive = folder.id === currentFolderId;
 
     const toggle = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -117,9 +119,16 @@ function FolderTreeItem({ folder, onNavigate, onEdit, onDelete, onCreateSubFolde
                     onDelete={onDelete}
                     onCreateSubFolder={onCreateSubFolder}
                     onCreateNote={onCreateNote}
+                    isActive={isActive}
                 >
-                    <SidebarMenuButton onClick={() => onNavigate(folder.id)} className="h-8 ">
-                        <FolderListItemContent folder={folder} />
+                    <SidebarMenuButton
+                        onClick={() => onNavigate(folder.id)}
+                        className={cn(
+                            "h-8",
+                            isActive && "bg-sidebar-accent text-sidebar-accent-foreground font-semibold"
+                        )}
+                    >
+                        <FolderListItemContent folder={folder} isActive={isActive} />
                     </SidebarMenuButton>
                 </FolderListItem>
                 {hasChildren && (
@@ -144,6 +153,7 @@ function FolderTreeItem({ folder, onNavigate, onEdit, onDelete, onCreateSubFolde
                                     onCreateSubFolder={onCreateSubFolder}
                                     onCreateNote={onCreateNote}
                                     getFoldersInFolder={getFoldersInFolder}
+                                    currentFolderId={currentFolderId}
                                 />
                             ))}
                         </SidebarMenuSub>

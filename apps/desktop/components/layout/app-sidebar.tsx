@@ -11,10 +11,10 @@ import { DAILY_NOTES_FOLDER_ID, TRASH_FOLDER_ID, getSortTypeLabel, sortNotes, us
 import { cn } from "@/lib/utils";
 import { ConfirmDialog } from "../custom-ui/confirm-dialog";
 import { FolderEditModal } from "../notes/folder-edit-modal";
-import { BreadcrumbsSection } from "./sidebar/breadcrumbs";
 import { FoldersTree } from "./sidebar/folders-tree";
 import { NotesList } from "./sidebar/notes-list";
 
+import { BreadcrumbsSection } from "./sidebar/breadcrumbs";
 import { QuickAccessSection } from "./sidebar/quick-access";
 import { SidebarFooterSection } from "./sidebar/sidebar-footer";
 import { SidebarHeaderSection } from "./sidebar/sidebar-header";
@@ -265,7 +265,7 @@ export function AppSidebar() {
                     onCreateNote={() => createNote(currentFolderId || "", tagId || undefined)}
                     onCreateFolder={() => {
                         setEditingFolder(null);
-                        setNewFolderParentId(null);
+                        setNewFolderParentId(currentFolderId ?? null);
                         setIsEditModalOpen(true);
                     }}
                     sortOptions={SORT_OPTIONS}

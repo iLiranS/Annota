@@ -31,7 +31,7 @@ export interface BlockMenuProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     anchorRect: DOMRect | null;
-    type: "image" | "file" | "details" | "codeBlock" | "table" | "mermaid";
+    type: "image" | "file" | "details" | "codeBlock" | "table" | "mermaid" | "quote";
     data: any;
     onAction: (action: string, params?: any) => void;
 }
@@ -327,6 +327,49 @@ export function BlockMenu({
                         </DropdownMenuItem>
                     </>
                 )}
+                {type === "quote" && (
+                    <>
+                        <DropdownMenuSub>
+                            <DropdownMenuSubTrigger>
+                                <Palette className="mr-2 h-4 w-4" />
+                                <span>Background Color</span>
+                            </DropdownMenuSubTrigger>
+                            <DropdownMenuSubContent className="p-2 grid grid-cols-5 gap-1 min-w-[200px]">
+                                {COLOR_PALETTE.map((color) => {
+                                    const isActive = data.backgroundColor?.toLowerCase().startsWith(color.value.toLowerCase());
+                                    return (
+                                        <button
+                                            key={color.value}
+                                            className="h-6 w-6 rounded-full border border-black/10 flex items-center justify-center hover:scale-110 transition-transform"
+                                            style={{ backgroundColor: color.value }}
+                                            onClick={() => handleAction("background", { color: isActive ? null : color.value })}
+                                            title={color.name}
+                                        >
+                                            {isActive && <Check className="h-3 w-3 text-white shadow-sm" />}
+                                        </button>
+                                    );
+                                })}
+                            </DropdownMenuSubContent>
+                        </DropdownMenuSub>
+                        <DropdownMenuItem onClick={() => handleAction("copy")}>
+                            <Copy className="mr-2 h-4 w-4" />
+                            <span>Copy Quote</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAction("cut")}>
+                            <Scissors className="mr-2 h-4 w-4" />
+                            <span>Cut Quote</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                            onClick={() => handleAction("delete")}
+                            className="text-destructive focus:text-destructive"
+                        >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            <span>Delete Quote</span>
+                        </DropdownMenuItem>
+                    </>
+                )}
+
             </DropdownMenuContent>
         </DropdownMenu>
     );

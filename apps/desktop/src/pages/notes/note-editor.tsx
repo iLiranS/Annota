@@ -160,7 +160,7 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
 
     // Block Menu state
     const [activeBlockMenu, setActiveBlockMenu] = useState<{
-        type: "image" | "file" | "details" | "codeBlock" | "table";
+        type: "image" | "file" | "details" | "codeBlock" | "table" | "mermaid" | "quote";
         data: any;
         anchorRect: DOMRect;
         onResolve: () => any;
@@ -269,7 +269,7 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
                     const src = data.src || "";
                     copyImageToClipboard(src, data.imageId);
                     editorRef.current.onCommand("deleteImage", { pos: data.position });
-                } else if (["codeBlock", "details", "mermaid"].includes(type)) {
+                } else if (["codeBlock", "details", "mermaid", "quote"].includes(type)) {
                     editorRef.current.onCommand("copyToClipboard", { pos: data.pos });
                     editorRef.current.onCommand("deleteSelection", { pos: data.pos });
                 }
@@ -286,6 +286,8 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
             case "background":
                 if (type === "details") {
                     editorRef.current.onCommand("setDetailsBackground", { pos: data.pos, color: params.color });
+                } else if (type === "quote") {
+                    editorRef.current.onCommand("setQuoteBackground", { pos: data.pos, color: params.color });
                 } else if (type === "table") {
                     if (params.color) {
                         editorRef.current.onCommand("setCellBackground", { color: params.color });

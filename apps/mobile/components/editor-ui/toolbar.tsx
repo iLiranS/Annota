@@ -445,14 +445,22 @@ export function EditorToolbar({
                         if (blockData?.pos !== undefined) {
                             onCommand('setNodeSelection', { pos: blockData.pos });
                         }
-                        onCommand('setDetailsBackground', { color, pos: blockData?.pos });
+                        if (blockData?.blockType === 'quote') {
+                            onCommand('setQuoteBackground', { color, pos: blockData?.pos });
+                        } else {
+                            onCommand('setDetailsBackground', { color, pos: blockData?.pos });
+                        }
                         closePopup();
                     }}
                     onClear={() => {
                         if (blockData?.pos !== undefined) {
                             onCommand('setNodeSelection', { pos: blockData.pos });
                         }
-                        onCommand('unsetDetailsBackground', { pos: blockData?.pos });
+                        if (blockData?.blockType === 'quote') {
+                            onCommand('unsetQuoteBackground', { pos: blockData?.pos });
+                        } else {
+                            onCommand('unsetDetailsBackground', { pos: blockData?.pos });
+                        }
                         closePopup();
                     }}
                     onClose={closePopup}

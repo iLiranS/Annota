@@ -52,7 +52,8 @@ import {
     SlashCommandExtension,
     TagCommandExtension,
     Mermaid,
-    ListItemReorder
+    ListItemReorder,
+    Quote
 } from '../extensions';
 import { CustomYoutube } from '../extensions/custom-yotube';
 
@@ -101,6 +102,7 @@ export const getExtensions = (options: {
         StarterKit.configure({
             heading: false,
             codeBlock: false,
+            blockquote: false,
             // @ts-ignore - Some versions of StarterKit might include these
             link: false,
             // @ts-ignore - Some versions of StarterKit might include these
@@ -169,6 +171,9 @@ export const getExtensions = (options: {
         }),
         // @ts-ignore - Type mismatch due to tiptap version difference between packages
         DetailsContent,
+        Quote.configure({
+            onOpenBlockMenu: options.onOpenBlockMenu,
+        }),
         CustomMathematics.configure({
             katexOptions: {
                 throwOnError: false,

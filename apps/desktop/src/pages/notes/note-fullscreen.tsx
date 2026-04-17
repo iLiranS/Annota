@@ -53,7 +53,7 @@ export default function NoteFullscreen() {
 
     // Block menu state
     const [activeBlockMenu, setActiveBlockMenu] = useState<{
-        type: "image" | "file" | "details" | "codeBlock" | "table";
+        type: "image" | "file" | "details" | "codeBlock" | "table" | "mermaid" | "quote";
         data: any;
         anchorRect: DOMRect;
         onResolve: () => any;
@@ -271,7 +271,7 @@ export default function NoteFullscreen() {
                 if (type === "image") {
                     copyImageToClipboard(data.src || "", data.imageId);
                     editorRef.current.onCommand("deleteImage", { pos: data.position });
-                } else if (type === "codeBlock" || type === "details") {
+                } else if (["codeBlock", "details", "mermaid", "quote"].includes(type)) {
                     editorRef.current.onCommand("copyToClipboard", { pos: data.pos });
                     editorRef.current.onCommand("deleteSelection", { pos: data.pos });
                 }
@@ -288,6 +288,8 @@ export default function NoteFullscreen() {
             case "background":
                 if (type === "details") {
                     editorRef.current.onCommand("setDetailsBackground", { pos: data.pos, color: params.color });
+                } else if (type === "quote") {
+                    editorRef.current.onCommand("setQuoteBackground", { pos: data.pos, color: params.color });
                 } else if (type === "table") {
                     if (params.color) {
                         editorRef.current.onCommand("setCellBackground", { color: params.color });

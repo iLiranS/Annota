@@ -190,6 +190,52 @@ export function dispatchEditorCommand(editor: Editor, command: string, params: R
             chain.unsetDetailsBackground().focus().run();
             return true;
         }
+        case 'setQuoteBackground': {
+            let bgColor = params?.color as string | undefined;
+
+            if (bgColor && bgColor.startsWith('#') && bgColor.length === 7) {
+                const isDark = document.body.classList.contains('dark') || 
+                              document.querySelector('.native-editor-container')?.classList.contains('dark') ||
+                              document.querySelector('#editor-container')?.classList.contains('dark');
+                // Light mode: 30% visibility (4D), Dark mode: 20% visibility (33)
+                bgColor += isDark ? '33' : '4D';
+            }
+
+            const targetPos = params?.pos ?? (typeof window !== 'undefined' ? (window as any)._lastBlockMenuPos : undefined);
+
+            if (typeof targetPos === 'number') {
+                const node = editor.state.doc.nodeAt(targetPos);
+                if (node && node.type.name === 'blockquote') {
+                    editor.view.dispatch(editor.state.tr.setNodeMarkup(targetPos, undefined, {
+                        ...node.attrs,
+                        backgroundColor: bgColor
+                    }));
+                    return true;
+                }
+            }
+
+            chain.setQuoteBackground(bgColor).focus().run();
+            return true;
+        }
+
+        case 'unsetQuoteBackground': {
+            const targetPos = params?.pos ?? (typeof window !== 'undefined' ? (window as any)._lastBlockMenuPos : undefined);
+
+            if (typeof targetPos === 'number') {
+                const node = editor.state.doc.nodeAt(targetPos);
+                if (node && node.type.name === 'blockquote') {
+                    editor.view.dispatch(editor.state.tr.setNodeMarkup(targetPos, undefined, {
+                        ...node.attrs,
+                        backgroundColor: null
+                    }));
+                    return true;
+                }
+            }
+
+            chain.unsetQuoteBackground().focus().run();
+            return true;
+        }
+
         case 'setCodeBlockLanguage':
             if (!params?.language) return true;
             if (params?.pos !== undefined) {

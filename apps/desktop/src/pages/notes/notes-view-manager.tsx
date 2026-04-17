@@ -1,4 +1,4 @@
-import { DAILY_NOTES_FOLDER_ID, TRASH_FOLDER_ID, useSettingsStore } from "@annota/core";
+import { DAILY_NOTES_FOLDER_ID, TRASH_FOLDER_ID, useNotesStore, useSettingsStore } from "@annota/core";
 import { useParams, useSearchParams } from "react-router-dom";
 import { DailyNotesCalendar } from "./components/daily-notes-calendar";
 import { TrashContent } from "./components/trash-content";
@@ -12,13 +12,19 @@ import NotesEmpty from "./notes-empty";
 export default function NotesViewManager() {
     const { folderId: routeFolderId, noteId: routeNoteId } = useParams<{ folderId: string; noteId: string }>();
     const [searchParams] = useSearchParams();
+    const notes = useNotesStore(s => s.notes);
     const lastViewedNoteId = useSettingsStore(s => s.lastViewedNoteId);
     const lastViewedFolderId = useSettingsStore(s => s.lastViewedFolderId);
 
     const searchFolderId = searchParams.get("folderId");
+    const isTrashView = routeFolderId === TRASH_FOLDER_ID || searchFolderId === TRASH_FOLDER_ID;
 
     // 1. Priority: Explicit Note in URL
     if (routeNoteId) {
+        const note = notes.find(n => n.id === routeNoteId);
+        if (note?.isDeleted && !isTrashView) {
+            return <NotesEmpty />;
+        }
         return <NoteEditor key={`${routeFolderId}-${routeNoteId}`} noteId={routeNoteId} folderId={routeFolderId} />;
     }
 
@@ -34,7 +40,10 @@ export default function NotesViewManager() {
 
     // 4. Priority: Fallback: Sticky Note (Last Viewed)
     if (lastViewedNoteId) {
-        return <NoteEditor key={`${lastViewedFolderId}-${lastViewedNoteId}`} noteId={lastViewedNoteId} folderId={lastViewedFolderId || 'root'} />;
+        const note = notes.find(n => n.id === lastViewedNoteId);
+        if (note && !note.isDeleted) {
+            return <NoteEditor key={`${lastViewedFolderId}-${lastViewedNoteId}`} noteId={lastViewedNoteId} folderId={lastViewedFolderId || 'root'} />;
+        }
     }
 
     // 5. Priority: Fallback: Empty State

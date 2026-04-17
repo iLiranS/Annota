@@ -382,16 +382,74 @@
 }
 
 .ProseMirror blockquote {
-    border-inline-start: 3px solid var(--accent-color);
+    border-inline-start: 3px solid var(--quote-border-color, var(--accent-color));
     margin: 0;
     margin-bottom: var(--editor-paragraph-spacing);
     padding-inline-start: 16px;
-    font-style: italic;
+    padding-block: 4px; /* Reduced from 12px */
     opacity: 0.9;
     background-color: var(--quote-bg);
     border-start-end-radius: 4px;
     border-end-end-radius: 4px;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
 }
+
+.ProseMirror .quote-wrapper {
+    position: relative;
+    margin-bottom: var(--editor-paragraph-spacing);
+    border-radius: 8px;
+    transition: background-color 0.2s ease;
+    overflow: hidden;
+    /* Default background color derived from accent for better visibility */
+    background-color: color-mix(in srgb, var(--accent-color), transparent 85%);
+}
+
+.ProseMirror .quote-wrapper blockquote {
+    margin-bottom: 0;
+    width: 100%;
+    /* Remove original background so wrapper handles it and allows full width */
+    background-color: transparent !important;
+}
+
+/* Three-dot menu button on quotes */
+.quote-menu-btn {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    background: transparent;
+    border: none;
+    color: var(--text-color);
+    cursor: pointer;
+    opacity: 0.4; /* Always visible */
+    transition: opacity 0.2s ease, background-color 0.2s ease;
+    z-index: 10;
+}
+
+.quote-wrapper:hover .quote-menu-btn {
+    opacity: 0.8;
+}
+
+.quote-menu-btn:hover {
+    background-color: rgba(128, 128, 128, 0.1);
+    opacity: 1 !important;
+}
+
+@media (max-width: 768px) {
+    .quote-menu-btn {
+        opacity: 0.5;
+        top: 6px;
+        right: 6px;
+        width: 24px;
+        height: 24px;
+    }
+}
+
 
 
 /* Style only inline code (not inside a pre) */

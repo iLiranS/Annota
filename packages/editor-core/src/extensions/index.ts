@@ -13,3 +13,5 @@ export * from './annota-autolink';
 export * from './file-attachment';
 export * from './mermaid';
 export * from './reorder-list-item';
+export * from './quote';
+

@@ -1,3 +1,4 @@
+import { buildHistoryWindow, prepareNoteContext, structuredSample } from '@/lib/ai-utils';
 import {
     AiMessage,
     aiChats,
@@ -9,7 +10,6 @@ import {
 } from '@annota/core';
 import { asc, eq } from 'drizzle-orm';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { buildHistoryWindow, prepareNoteContext, structuredSample } from '@/lib/ai-utils';
 
 export type ContextMode = 'auto' | 'summary' | 'full';
 
@@ -133,9 +133,10 @@ export function useAiChat(chatId: string | null) {
             overrideChatId?: string | null;
             activeNoteId?: string | null;
             mode?: ContextMode;
+            skipHistory?: boolean;
         } = {}
     ) => {
-        const { overrideChatId, activeNoteId, mode = 'auto' } = options;
+        const { overrideChatId, activeNoteId, mode = 'auto', skipHistory = false } = options;
         const effectiveChatId = overrideChatId || chatId;
         if (!effectiveChatId) return;
 
@@ -158,7 +159,7 @@ export function useAiChat(chatId: string | null) {
             .where(eq(aiMessages.chatId, effectiveChatId))
             .orderBy(asc(aiMessages.createdAt))
             .all();
-            
+
         const isFirstMessage = !currentChat || fullHistory.length === 0;
 
         // 2. Handle Context Shifts / First Turn Markers
@@ -245,7 +246,7 @@ export function useAiChat(chatId: string | null) {
                 liveNoteContent = contextNotes.map(n => {
                     const header = `[Note: ${n.title}]\n`;
                     let body = '';
-                    
+
                     if (mode === 'summary') {
                         body = structuredSample(n.content, 12000);
                     } else if (mode === 'full') {
@@ -253,13 +254,13 @@ export function useAiChat(chatId: string | null) {
                     } else {
                         body = prepareNoteContext(n.content, content);
                     }
-                    
+
                     return `${header}${body}`;
                 }).join('\n\n');
             }
 
             // Apply sliding window to the updated history
-            const history = buildHistoryWindow(updatedHistory, 4000);
+            const history = skipHistory ? [] : buildHistoryWindow(updatedHistory, 4000);
 
             // 10s timeout for first byte
             const timeoutPromise = new Promise((_, reject) => {

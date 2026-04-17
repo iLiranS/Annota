@@ -29,7 +29,8 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
         hasOpenAiKey,
         hasAnthropicKey,
         hasGoogleKey,
-        refreshTicket
+        refreshTicket,
+        selectedText
     } = useAiStore();
 
     const { notes, getNoteContent } = useNotesStore();
@@ -78,7 +79,7 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
     }, [isStreaming, shouldAutoScroll]);
 
     // Auto-inject context of current note
-    const handleSendMessage = useCallback(async (content: string, mode: 'auto' | 'summary' = 'auto') => {
+    const handleSendMessage = useCallback(async (content: string, mode: 'auto' | 'summary' | 'rewrite' | 'continue' = 'auto') => {
         let currentId = activeChatId;
         const contextNotes: Array<{ title: string, content: string }> = [];
 
@@ -124,6 +125,15 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
             }
         }
 
+        // 3. APPLY SELECTION CONTEXT (OVERRIDE NOTE CONTEXT)
+        if (selectedText) {
+            contextNotes.length = 0; // Clear full note if selection exists
+            contextNotes.push({
+                title: 'Selection',
+                content: selectedText
+            });
+        }
+
         // ONLY create the database record if it's a new chat
         if (!currentId) {
             const db = getDb();
@@ -143,14 +153,26 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
 
         originalSendMessage(content, contextNotes, {
             overrideChatId: currentId,
-            activeNoteId: noteId,
-            mode
+            activeNoteId: selectedText ? null : noteId, // Don't track note ID if it's just a selection
+            mode: (mode === 'rewrite' || mode === 'continue') ? 'auto' : mode,
+            skipHistory: !!selectedText
         });
         setShouldAutoScroll(true);
-    }, [location.pathname, notes, getNoteContent, originalSendMessage, activeChatId]);
+    }, [location.pathname, notes, getNoteContent, originalSendMessage, activeChatId, selectedText]);
 
     const handleSummarize = useCallback(() => {
-        handleSendMessage("Please summarize this note. Cover all major sections and key points.", 'summary');
+        const prompt = selectedText 
+            ? "Please summarize this selection. Cover all major sections and key points."
+            : "Please summarize this note. Cover all major sections and key points.";
+        handleSendMessage(prompt, 'summary');
+    }, [handleSendMessage, selectedText]);
+
+    const handleRewrite = useCallback(() => {
+        handleSendMessage("Please rewrite this selection. Make it clearer and more professional while preserving the core meaning.", 'rewrite');
+    }, [handleSendMessage]);
+
+    const handleContinue = useCallback(() => {
+        handleSendMessage("Please continue writing based on this selection. Maintain the same style and tone.", 'continue');
     }, [handleSendMessage]);
 
     const handleRetry = useCallback(() => {
@@ -442,6 +464,9 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
                             <AiChatInput
                                 onSend={handleSendMessage}
                                 onSummarize={handleSummarize}
+                                onRewrite={handleRewrite}
+                                onContinue={handleContinue}
+                                hasSelection={!!selectedText}
                                 onStop={stop}
                                 disabled={isStreaming}
                             />
@@ -475,6 +500,9 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
                             <AiChatInput
                                 onSend={handleSendMessage}
                                 onSummarize={handleSummarize}
+                                onRewrite={handleRewrite}
+                                onContinue={handleContinue}
+                                hasSelection={!!selectedText}
                                 onStop={stop}
                                 disabled={isStreaming}
                             />
