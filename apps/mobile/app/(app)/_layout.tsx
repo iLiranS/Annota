@@ -2,7 +2,7 @@ import { useAppTheme } from '@/hooks/use-app-theme';
 import { useSidebar } from '@/context/sidebar-context';
 import Sidebar from '@/components/navigation/sidebar';
 import RevenueCatInitializer from '@/services/RevenueCat';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -18,8 +18,10 @@ import Animated, {
 export default function AppLayout() {
   const theme = useAppTheme();
   const { isOpen, close, open } = useSidebar();
+  const pathname = usePathname();
   const { width: screenWidth } = useWindowDimensions();
   const drawerWidth = Math.min(screenWidth * 0.8, 300);
+  const isNotesDetailRoute = /^\/Notes\/[^/]+(?:\/.*)?$/.test(pathname) && !pathname.startsWith('/Notes/trash');
 
   const translateX = useSharedValue(0);
   const overlayOpacity = useSharedValue(0);
@@ -36,6 +38,7 @@ export default function AppLayout() {
   const startX = useSharedValue(0);
 
   const panGesture = Gesture.Pan()
+    .enabled(!isNotesDetailRoute || isOpen)
     .onBegin((event) => {
       startX.value = event.x;
     })

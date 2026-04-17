@@ -12,7 +12,7 @@ import TipTapEditor, { TipTapEditorRef, ToolbarRenderProps } from '@annota/edito
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
 import * as ExpoClipboard from 'expo-clipboard';
-import { Stack, useFocusEffect, useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
@@ -34,7 +34,6 @@ export default function NoteEditor() {
     const { id, source, scrollToElementId, elementId, blockId } = useLocalSearchParams<{ id: string, source: string, scrollToElementId?: string, elementId?: string, blockId?: string }>();
     const { colors } = useTheme();
     const router = useRouter();
-    const navigation = useNavigation();
     const insets = useSafeAreaInsets();
     const editorRef = useRef<TipTapEditorRef>(null);
     const { general, editor } = useSettingsStore();
@@ -138,19 +137,6 @@ export default function NoteEditor() {
 
         return () => clearTimeout(timer);
     }, [isLoading]);
-
-    // Disable drawer swipe gesture when editor is open
-    useFocusEffect(
-        useCallback(() => {
-            // Find parent drawer navigator and disable swipe
-            navigation.getParent()?.setOptions({ swipeEnabled: false });
-
-            return () => {
-                // Re-enable swipe when leaving
-                navigation.getParent()?.setOptions({ swipeEnabled: true });
-            };
-        }, [navigation])
-    );
 
     // Handle content changes from the editor
     const handleContentChange = useCallback(async (html: string) => {

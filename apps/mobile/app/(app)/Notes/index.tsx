@@ -310,6 +310,7 @@ export default function NotesList() {
             <Stack.Screen
                 options={{
                     headerShown: true,
+                    gestureEnabled: false,
                     headerBackVisible: false,
                     headerTitle: () => (
 
@@ -344,17 +345,24 @@ export default function NotesList() {
                             </View>
                         )
                     ),
-                    headerLeft: () => {
-                        const canGoBack = router.canGoBack();
+                    headerLeft: ({ canGoBack }: { canGoBack?: boolean }) => {
                         if (isSearchActive) return null;
                         return (
-                            <HapticPressable onPress={() => canGoBack ? router.back() : toggle()} style={styles.headerButton}>
-                                <Ionicons name={canGoBack ? "chevron-back" : "menu-outline"} size={26} color={colors.primary} />
+                            <HapticPressable
+                                onPress={() => canGoBack ? router.back() : toggle()}
+                                style={[styles.headerButton, styles.headerLeftButton]}
+                                hitSlop={8}
+                            >
+                                <Ionicons name={canGoBack ? "chevron-back" : "menu-outline"} size={24} color={colors.primary} />
                             </HapticPressable>
                         );
                     },
                     headerRight: () => (
-                        <HapticPressable onPress={() => isSearchActive ? handleCloseSearch() : setIsSearchActive(true)} style={styles.headerButton}>
+                        <HapticPressable
+                            onPress={() => isSearchActive ? handleCloseSearch() : setIsSearchActive(true)}
+                            style={styles.headerButton}
+                            hitSlop={8}
+                        >
                             <Ionicons name={isSearchActive ? "close" : "search"} size={24} color={colors.primary} />
                         </HapticPressable>
                     ),
@@ -430,7 +438,8 @@ export default function NotesList() {
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
-    headerButton: { padding: 4 },
+    headerButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+    headerLeftButton: { marginLeft: -4 },
     listContent: { paddingTop: 16 },
     headerTitleContainer: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     headerTitleText: { fontSize: 18, fontWeight: '700' },

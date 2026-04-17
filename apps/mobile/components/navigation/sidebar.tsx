@@ -1,9 +1,8 @@
 import { useAppTheme } from '@/hooks/use-app-theme';
-import type { Tag } from '@annota/core';
-import { DAILY_NOTES_FOLDER_ID, useUserStore as useAuthStore, useNotesStore, useSyncStore, type Folder } from '@annota/core';
+import { DAILY_NOTES_FOLDER_ID, sortFolders, useUserStore as useAuthStore, useNotesStore, useSyncStore, type Folder, type Tag } from '@annota/core';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter, useSegments, usePathname, useGlobalSearchParams } from 'expo-router';
+import { useRouter, usePathname, useGlobalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     Pressable,
@@ -186,7 +185,6 @@ export default function Sidebar({ onNavigate, ...props }: SidebarProps & React.C
     const tags = useNotesStore(s => s.tags);
     const getFoldersInFolder = useNotesStore(s => s.getFoldersInFolder);
     const rootSortType = useNotesStore(s => s.rootSettings.sortType);
-    const segments = useSegments();
     const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
     const [isQuickAccessExpanded, setIsQuickAccessExpanded] = useState(false);
     const [isTagsExpanded, setIsTagsExpanded] = useState(true);
@@ -264,7 +262,6 @@ export default function Sidebar({ onNavigate, ...props }: SidebarProps & React.C
 
     // Get non-system top-level folders
     const topLevelFolders = useMemo(() => {
-        const { sortFolders } = require('@annota/core');
         const filtered = folders.filter(f => (f.parentId ?? null) === null && !f.isSystem && !f.isDeleted);
         // We use rootSortType here for the top level sorting
         const sorted = sortFolders(filtered, rootSortType || 'UPDATED_LAST');
@@ -278,9 +275,17 @@ export default function Sidebar({ onNavigate, ...props }: SidebarProps & React.C
         return notes.filter(n => n.isQuickAccess && !n.isDeleted);
     }, [notes]);
 
-    const closeDrawer = () => {
+    const closeDrawer = useCallback(() => {
         onNavigate?.();
-    };
+    }, [onNavigate]);
+
+    const resetStackAndReplace = useCallback((target: Parameters<typeof router.replace>[0]) => {
+        closeDrawer();
+        if (router.canDismiss()) {
+            router.dismissAll();
+        }
+        router.replace(target);
+    }, [closeDrawer, router]);
 
     const navigateToNotes = (folderId?: string) => {
         // Check if we are already at this location
@@ -296,19 +301,10 @@ export default function Sidebar({ onNavigate, ...props }: SidebarProps & React.C
             return;
         }
 
-        closeDrawer();
-        const isInNotes = segments[0] === 'Notes';
-
         if (folderId) {
-            // If already in Notes browsing, push so back works folder->folder
-            // If switching from another context, replace stack
-            if (isInNotes) {
-                router.push({ pathname: '/Notes', params: { folderId } });
-            } else {
-                router.replace({ pathname: '/Notes', params: { folderId } });
-            }
+            resetStackAndReplace({ pathname: '/Notes', params: { folderId } });
         } else {
-            router.replace('/Notes');
+            resetStackAndReplace('/Notes');
         }
     };
 
@@ -327,14 +323,7 @@ export default function Sidebar({ onNavigate, ...props }: SidebarProps & React.C
             return;
         }
 
-        closeDrawer();
-        const isInNotes = segments[0] === 'Notes';
-
-        if (isInNotes) {
-            router.push({ pathname: '/Notes', params: { tagId } });
-        } else {
-            router.replace({ pathname: '/Notes', params: { tagId } });
-        }
+        resetStackAndReplace({ pathname: '/Notes', params: { tagId } });
     };
 
 
@@ -343,8 +332,7 @@ export default function Sidebar({ onNavigate, ...props }: SidebarProps & React.C
             closeDrawer();
             return;
         }
-        closeDrawer();
-        router.replace('/Notes/trash');
+        resetStackAndReplace('/Notes/trash');
     };
 
     const navigateToSettings = () => {
@@ -465,13 +453,14 @@ export default function Sidebar({ onNavigate, ...props }: SidebarProps & React.C
                                     quickAccessNotes.map(note => (
                                         <HapticPressable
                                             key={note.id}
-                                            onPress={() => {
-                                                const normalizedPath = pathname.toLowerCase();
-                                                const isCurrentNote = normalizedPath === `/notes/${note.id}` || normalizedPath === `/notes/${note.id}/`;
+                                        onPress={() => {
+                                            const normalizedPath = pathname.toLowerCase();
+                                            const isCurrentNote = normalizedPath === `/notes/${note.id}` || normalizedPath === `/notes/${note.id}/`;
+                                            if (isCurrentNote) {
                                                 closeDrawer();
-                                                if (!isCurrentNote) {
-                                                    router.push({ pathname: '/Notes/[id]', params: { id: note.id } });
-                                                }
+                                                return;
+                                            }
+                                            resetStackAndReplace({ pathname: '/Notes/[id]', params: { id: note.id } });
                                             }}
                                             style={({ pressed }) => [
                                                 styles.quickAccessItem,
