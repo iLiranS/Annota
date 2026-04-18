@@ -309,7 +309,12 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
 
                 // Sync selection with AI store
                 const selectedText = selection.empty ? null : editor.state.doc.textBetween(selection.from, selection.to, ' ');
-                useAiStore.getState().setHighlightedText(selectedText);
+                
+                // Only clear the AI store highlight if the editor is focused
+                // This prevents clearing it when the user clicks into the AI sidebar
+                if (!selection.empty || editor.isFocused) {
+                    useAiStore.getState().setHighlightedText(selectedText);
+                }
             },
             onTransaction: ({ editor }) => {
                 setEditorState(getEditorState(editor) as unknown as EditorState);

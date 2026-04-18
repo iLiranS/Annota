@@ -133,10 +133,9 @@ export function useAiChat(chatId: string | null) {
             overrideChatId?: string | null;
             activeNoteId?: string | null;
             mode?: ContextMode;
-            skipHistory?: boolean;
         } = {}
     ) => {
-        const { overrideChatId, activeNoteId, mode = 'auto', skipHistory = false } = options;
+        const { overrideChatId, activeNoteId, mode = 'auto' } = options;
         const effectiveChatId = overrideChatId || chatId;
         if (!effectiveChatId) return;
 
@@ -260,7 +259,7 @@ export function useAiChat(chatId: string | null) {
             }
 
             // Apply sliding window to the updated history
-            const history = skipHistory ? [] : buildHistoryWindow(updatedHistory, 4000);
+            const history = buildHistoryWindow(updatedHistory, 4000);
 
             // 10s timeout for first byte
             const timeoutPromise = new Promise((_, reject) => {
@@ -269,6 +268,11 @@ export function useAiChat(chatId: string | null) {
                         reject(new Error('TIMEOUT_ERROR'));
                     }
                 }, 10000);
+            });
+
+            console.log('[AI Context]', {
+                history,
+                liveNoteContent
             });
 
             const sendPromise = adapter.sendMessage(

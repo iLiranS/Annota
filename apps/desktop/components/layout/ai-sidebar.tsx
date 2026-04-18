@@ -16,6 +16,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { matchPath, useLocation, useNavigate } from "react-router-dom";
 
 import { useAiChat } from "@/hooks/use-ai-chat";
+import { purifyNoteHtml } from "@/lib/ai-utils";
 import { AiChatInput } from "../ai/ai-chat-input";
 import { AiChatError, AiChatMessage } from "../ai/ai-chat-message";
 
@@ -92,31 +93,7 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
             const currentNote = notes.find(n => n.id === noteId);
             if (currentNote) {
                 const rawHtml = await getNoteContent(noteId);
-                let cleanContent = '';
-
-                if (rawHtml) {
-                    try {
-                        const parser = new DOMParser();
-                        const doc = parser.parseFromString(rawHtml, 'text/html');
-
-                        doc.querySelectorAll('[data-latex]').forEach(el => {
-                            const latex = el.getAttribute('data-latex');
-                            if (latex) {
-                                const isBlock = el.getAttribute('data-type') === 'blockMath';
-                                el.textContent = isBlock ? `\n$$\n${latex}\n$$\n` : ` $${latex}$ `;
-                            }
-                        });
-
-                        doc.querySelectorAll('pre code').forEach(el => {
-                            const lang = el.className.replace('language-', '') || 'text';
-                            el.textContent = `\n\`\`\`${lang}\n${el.textContent}\n\`\`\`\n`;
-                        });
-
-                        cleanContent = doc.body.textContent || '';
-                    } catch (e) {
-                        cleanContent = rawHtml.replace(/<[^>]*>/g, '');
-                    }
-                }
+                const cleanContent = purifyNoteHtml(rawHtml || '');
 
                 contextNotes.push({
                     title: currentNote.title || 'Current Note',
@@ -153,15 +130,14 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
 
         originalSendMessage(content, contextNotes, {
             overrideChatId: currentId,
-            activeNoteId: selectedText ? null : noteId, // Don't track note ID if it's just a selection
+            activeNoteId: noteId,
             mode: (mode === 'rewrite' || mode === 'continue') ? 'auto' : mode,
-            skipHistory: !!selectedText
         });
         setShouldAutoScroll(true);
     }, [location.pathname, notes, getNoteContent, originalSendMessage, activeChatId, selectedText]);
 
     const handleSummarize = useCallback(() => {
-        const prompt = selectedText 
+        const prompt = selectedText
             ? "Please summarize this selection. Cover all major sections and key points."
             : "Please summarize this note. Cover all major sections and key points.";
         handleSendMessage(prompt, 'summary');

@@ -110,3 +110,71 @@ export function prepareNoteContext(noteContent: string, query: string): string {
 
     return extractRelevantChunks(noteContent, query, 8000);
 }
+
+/**
+ * Purifies note HTML for AI consumption.
+ * Trims boilerplate, converts complex nodes (math, code, tables, lists) to 
+ * clear text/markdown representations.
+ */
+export function purifyNoteHtml(html: string): string {
+    if (!html) return '';
+    try {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+
+        // 1. Math
+        doc.querySelectorAll('[data-latex]').forEach(el => {
+            const latex = el.getAttribute('data-latex');
+            if (latex) {
+                const isBlock = el.getAttribute('data-type') === 'blockMath';
+                el.textContent = isBlock ? `\n$$\n${latex}\n$$\n` : ` $${latex}$ `;
+            }
+        });
+
+        // 2. Code
+        doc.querySelectorAll('pre code').forEach(el => {
+            const lang = el.className.replace('language-', '') || 'text';
+            el.textContent = `\n\`\`\`${lang}\n${el.textContent}\n\`\`\`\n`;
+        });
+
+        // 3. Tables - Convert to Markdown representation
+        doc.querySelectorAll('table').forEach(table => {
+            let tableMd = '\n\n';
+            const rows = Array.from(table.querySelectorAll('tr'));
+            if (rows.length === 0) return;
+
+            rows.forEach((row, i) => {
+                const cells = Array.from(row.querySelectorAll('td, th'));
+                const cellTexts = cells.map(c => (c.textContent || '').trim().replace(/\|/g, '\\|'));
+                tableMd += '| ' + cellTexts.join(' | ') + ' |\n';
+
+                if (i === 0) {
+                    tableMd += '| ' + cellTexts.map(() => '---').join(' | ') + ' |\n';
+                }
+            });
+
+            const textNode = doc.createTextNode(tableMd + '\n');
+            table.parentNode?.replaceChild(textNode, table);
+        });
+
+        // 4. Lists (Preserve structure)
+        doc.querySelectorAll('ul').forEach(ul => {
+            const items = Array.from(ul.querySelectorAll(':scope > li'));
+            const listText = '\n' + items.map(li => `- ${li.textContent?.trim()}`).join('\n') + '\n';
+            const textNode = doc.createTextNode(listText);
+            ul.parentNode?.replaceChild(textNode, ul);
+        });
+
+        doc.querySelectorAll('ol').forEach(ol => {
+            const items = Array.from(ol.querySelectorAll(':scope > li'));
+            const listText = '\n' + items.map((li, idx) => `${idx + 1}. ${li.textContent?.trim()}`).join('\n') + '\n';
+            const textNode = doc.createTextNode(listText);
+            ol.parentNode?.replaceChild(textNode, ol);
+        });
+
+        return doc.body.textContent || '';
+    } catch (e) {
+        console.error('[purifyNoteHtml] Error:', e);
+        return html.replace(/<[^>]*>/g, '');
+    }
+}
