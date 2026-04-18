@@ -11,7 +11,7 @@ import { Slice } from '@tiptap/pm/model';
 import { CellSelection } from '@tiptap/pm/tables';
 import { StarterKit } from '@tiptap/starter-kit';
 
-import { Mathematics, InlineMath, BlockMath } from '@tiptap/extension-mathematics';
+import { BlockMath, InlineMath, Mathematics } from '@tiptap/extension-mathematics';
 
 const CustomInlineMath = InlineMath.extend({
     renderText({ node }) {
@@ -45,15 +45,15 @@ import {
     Details,
     DetailsContent,
     DetailsSummary,
-    NoteLinkCommandExtension,
     FileAttachment,
+    ListItemReorder,
+    Mermaid,
+    NoteLinkCommandExtension,
+    Quote,
     SearchExtension,
     ShortcutManager,
     SlashCommandExtension,
-    TagCommandExtension,
-    Mermaid,
-    ListItemReorder,
-    Quote
+    TagCommandExtension
 } from '../extensions';
 import { CustomYoutube } from '../extensions/custom-yotube';
 
@@ -149,7 +149,7 @@ export const getExtensions = (options: {
         CustomTable.configure({
             resizable: true,
             cellMinWidth: 64,
-            defaultCellMinWidth: 104,
+            defaultCellMinWidth: 64,
             renderWrapper: true,
             HTMLAttributes: { class: 'editor-table' },
         }),
@@ -251,8 +251,8 @@ export const getEditorProps = (callbacks: {
         // Strip theme-interfering styles from pasted HTML to ensure consistency
         return html
             .replace(/font-family\s*:[^;"']*(;|(?=["']))/gi, '')
-            .replace(/color\s*:[^;"']*(;|(?=["']))/gi, '')
-            .replace(/background-color\s*:[^;"']*(;|(?=["']))/gi, '')
+            // .replace(/color\s*:[^;"']*(;|(?=["']))/gi, '')
+            // .replace(/background-color\s*:[^;"']*(;|(?=["']))/gi, '')
             .replace(/font-size\s*:[^;"']*(;|(?=["']))/gi, '')
             .replace(/line-height\s*:[^;"']*(;|(?=["']))/gi, '');
     },
@@ -287,7 +287,7 @@ export const getEditorState = (editor: any) => {
     const highlightAttrs = e.getAttributes('highlight');
     const textStyleAttrs = e.getAttributes('textStyle');
     let linkAttrs = e.getAttributes('link');
-    
+
     // Robust fallback: if Tiptap's getAttributes is empty, manually check selection boundaries
     if (!linkAttrs.href) {
         const { selection } = e.state;
@@ -295,7 +295,7 @@ export const getEditorState = (editor: any) => {
         const mark = $pos.marks().find((m: any) => m.type.name === 'link');
         if (mark) linkAttrs = mark.attrs;
     }
-    
+
     const imageAttrs = e.getAttributes('image');
 
     const isInTable = e.isActive('table');

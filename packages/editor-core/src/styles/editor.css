@@ -386,7 +386,8 @@
     margin: 0;
     margin-bottom: var(--editor-paragraph-spacing);
     padding-inline-start: 16px;
-    padding-block: 4px; /* Reduced from 12px */
+    padding-block: 4px;
+    /* Reduced from 12px */
     opacity: 0.9;
     background-color: var(--quote-bg);
     border-start-end-radius: 4px;
@@ -426,7 +427,8 @@
     border: none;
     color: var(--text-color);
     cursor: pointer;
-    opacity: 0.4; /* Always visible */
+    opacity: 0.4;
+    /* Always visible */
     transition: opacity 0.2s ease, background-color 0.2s ease;
     z-index: 10;
 }

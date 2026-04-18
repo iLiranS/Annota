@@ -1,5 +1,5 @@
 import type { TableOptions } from '@tiptap/extension-table';
-import { Table, TableView } from '@tiptap/extension-table';
+import { Table } from '@tiptap/extension-table';
 import { TableCell } from '@tiptap/extension-table-cell';
 import { TableHeader } from '@tiptap/extension-table-header';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
@@ -113,6 +113,11 @@ class CustomTableView implements NodeView {
         }
 
         this.colgroup = this.table.appendChild(document.createElement('colgroup'));
+
+        if (node.attrs.dir) {
+            this.table.setAttribute('dir', node.attrs.dir);
+        }
+
         updateColumns(node, this.colgroup, this.table, this.minCellWidth);
         this.contentDOM = this.table.appendChild(document.createElement('tbody'));
     }
@@ -120,6 +125,14 @@ class CustomTableView implements NodeView {
     update(node: ProseMirrorNode) {
         if (node.type !== this.node.type) {
             return false;
+        }
+
+        if (node.attrs.dir !== this.node.attrs.dir) {
+            if (node.attrs.dir) {
+                this.table.setAttribute('dir', node.attrs.dir);
+            } else {
+                this.table.removeAttribute('dir');
+            }
         }
 
         this.node = node;
@@ -145,23 +158,34 @@ class CustomTableView implements NodeView {
 
 export const CustomTable = Table.extend<CustomTableOptions>({
     addOptions() {
-        const parent = this.parent?.();
-        const base: TableOptions = parent ?? {
-            HTMLAttributes: {},
+        const parentOptions = this.parent?.();
+        return {
             resizable: false,
-            renderWrapper: false,
             handleWidth: 5,
-            cellMinWidth: 25,
-            View: TableView,
+            cellMinWidth: 64,
             lastColumnResizable: true,
             allowTableNodeSelection: false,
+            renderWrapper: false,
+            View: null,
+            ...parentOptions,
+            HTMLAttributes: parentOptions?.HTMLAttributes ?? {},
+            defaultCellMinWidth: 64,
         };
-
+    },
+    addAttributes() {
         return {
-            ...base,
-            HTMLAttributes: base.HTMLAttributes ?? {},
-            defaultCellMinWidth: base.cellMinWidth,
-        };
+            ...this.parent?.(),
+            dir: {
+                default: null,
+                renderHTML: attributes => {
+                    if (!attributes.dir) {
+                        return {}
+                    }
+                    return { dir: attributes.dir }
+                },
+                parseHTML: element => element.getAttribute('dir') || null,
+            },
+        }
     },
     addProseMirrorPlugins() {
         const isResizable = this.options.resizable && this.editor.isEditable;

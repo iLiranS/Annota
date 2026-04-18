@@ -58,14 +58,19 @@ export function dispatchEditorCommand(editor: Editor, command: string, params: R
         case 'toggleCodeBlock':
             finalParams = hasParams(params) ? params : { language: getDefaultCodeLanguage(editor) };
             break;
-        case 'insertTable':
-            finalParams = {
-                rows: params?.rows ?? 3,
-                cols: params?.cols ?? 3,
-                withHeaderRow: params?.withHeaderRow === true,
-                withHeaderColumn: false,
-            };
-            break;
+        case 'insertTable': {
+            const dir = editor.view.dom.getAttribute('dir') || 'ltr';
+            editor.chain()
+                .insertTable({
+                    rows: params?.rows ?? 3,
+                    cols: params?.cols ?? 3,
+                    withHeaderRow: params?.withHeaderRow === true,
+                })
+                .updateAttributes('table', { dir })
+                .focus()
+                .run();
+            return true;
+        }
         case 'insertImage':
             command = 'setImage';
             break;
