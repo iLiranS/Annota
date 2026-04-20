@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { EditorState, initialEditorState } from '../shared/types';
 
 interface WebViewBridgeOptions {
@@ -19,6 +19,7 @@ export function useWebViewBridge({ sendMessage, onMessage }: WebViewBridgeOption
             queuedCommandsRef.current.push({ command, params });
             return;
         }
+        console.log('dispatchCommand', command, params)
         sendMessage(command, params);
     }, [sendMessage]);
 

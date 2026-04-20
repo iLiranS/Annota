@@ -6,7 +6,6 @@ import type { Folder } from "@annota/core";
 import { DAILY_NOTES_FOLDER_ID } from "@annota/core";
 import { ChevronRight, Folder as FolderIcon } from "lucide-react";
 import { useState } from "react";
-import { Ionicons } from "../../ui/ionicons";
 
 const DAILY_NOTES_FOLDER: Folder = {
     id: DAILY_NOTES_FOLDER_ID,
@@ -124,19 +123,19 @@ function FolderTreeItem({ folder, onNavigate, onEdit, onDelete, onCreateSubFolde
                     <SidebarMenuButton
                         onClick={() => onNavigate(folder.id)}
                         className={cn(
-                            "h-8",
+                            "h-8 pr-2!",
                             isActive && "bg-sidebar-accent text-sidebar-accent-foreground font-semibold"
                         )}
                     >
-                        <FolderListItemContent folder={folder} isActive={isActive} />
+                        <FolderListItemContent folder={folder} isActive={isActive} hideCountOnHover={hasChildren} />
                     </SidebarMenuButton>
                 </FolderListItem>
                 {hasChildren && (
                     <SidebarMenuAction
                         onClick={toggle}
-                        className="opacity-0 group-hover/folder:opacity-100 transition-opacity"
+                        className="hidden group-hover/folder:flex items-center justify-center p-0 h-6 w-6"
                     >
-                        <Ionicons name="chevron-forward" size={12} className={cn("transition-transform", general?.appDirection === 'rtl' ? (isOpen ? "rotate-90" : "rotate-180") : (isOpen && "rotate-90"))} />
+                        <ChevronRight size={14} className={cn("text-muted-foreground/70 transition-transform", general?.appDirection === 'rtl' ? (isOpen ? "rotate-90" : "rotate-180") : (isOpen && "rotate-90"))} />
                     </SidebarMenuAction>
                 )}
                 {hasChildren && (

@@ -287,6 +287,7 @@ export function setupEditor(options: any) {
                 onSlashCommand: (data) => sendMessage({ type: 'slashCommand', ...serializeCommandData(data) }),
                 onTagCommand: (data) => sendMessage({ type: 'tagCommand', ...serializeCommandData(data) }),
                 onNoteLinkCommand: (data) => sendMessage({ type: 'noteLinkCommand', ...serializeCommandData(data) }),
+                onSearchResults: (count, currentIndex) => { sendMessage({ type: 'searchResults', count, currentIndex }); console.log('onSearchResults', count, currentIndex) },
             }),
             content: '', // Start empty to ensure view mounts before complex nodes (like fileAttachment) render
 

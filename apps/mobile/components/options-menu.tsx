@@ -31,6 +31,8 @@ interface OptionsMenuProps {
     onSettings: () => void;
     containerStyle?: any;
     hideDefaultButton?: boolean;
+    selectionMode?: boolean;
+    onToggleSelectionMode?: () => void;
 }
 
 export default function OptionsMenu({
@@ -41,6 +43,8 @@ export default function OptionsMenu({
     onSettings,
     containerStyle,
     hideDefaultButton = false,
+    selectionMode,
+    onToggleSelectionMode,
 }: OptionsMenuProps) {
     const { colors, dark } = useAppTheme();
     const insets = useSafeAreaInsets();
@@ -141,6 +145,24 @@ export default function OptionsMenu({
                                         <Ionicons name="folder-open-outline" size={20} color={colors.text} />
                                         <Text style={[styles.menuItemText, { color: colors.text }]}>New Folder</Text>
                                     </HapticPressable>
+
+                                    {onToggleSelectionMode && (
+                                        <HapticPressable
+                                            style={({ pressed }) => [
+                                                styles.menuItem,
+                                                pressed && { backgroundColor: colors.border + '30' },
+                                            ]}
+                                            onPress={() => {
+                                                handleClose();
+                                                onToggleSelectionMode();
+                                            }}
+                                        >
+                                            <Ionicons name="checkbox-outline" size={20} color={colors.text} />
+                                            <Text style={[styles.menuItemText, { color: colors.text }]}>
+                                                {selectionMode ? 'Cancel Selection' : 'Select Notes'}
+                                            </Text>
+                                        </HapticPressable>
+                                    )}
 
 
                                     <HapticPressable

@@ -3,8 +3,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { SidebarHeader } from "@/components/ui/sidebar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import type { SortType } from "@annota/core";
-import { MoreVertical, SquarePen } from "lucide-react";
+import { SortType } from "@annota/core";
+import { MoreVertical, SquarePen, CheckSquare } from "lucide-react";
 import { DailyNoteIcon } from "../../custom-ui/daily-note-icon";
 import { Ionicons } from "../../ui/ionicons";
 
@@ -21,6 +21,8 @@ interface SidebarHeaderSectionProps {
     sortOptions: SortType[];
     getSortTypeLabel: (type: SortType) => string;
     tagId?: string;
+    selectionMode?: boolean;
+    setSelectionMode?: (mode: boolean) => void;
 }
 
 export function SidebarHeaderSection({
@@ -36,7 +38,10 @@ export function SidebarHeaderSection({
     sortOptions,
     getSortTypeLabel,
     tagId,
+    selectionMode,
+    setSelectionMode,
 }: SidebarHeaderSectionProps) {
+
     return (
         <SidebarHeader
             style={{ backgroundColor: color + "20" }}
@@ -57,6 +62,7 @@ export function SidebarHeaderSection({
                 </div>
                 <div className="flex items-center gap-1">
                     <TooltipProvider>
+
                         {!isTrash && (
                             <Tooltip>
                                 <TooltipTrigger asChild>
@@ -90,6 +96,13 @@ export function SidebarHeaderSection({
                                         <Ionicons name="folder-outline" size={16} />
                                         <span>New Folder</span>
                                     </DropdownMenuItem>
+
+                                    {setSelectionMode && (
+                                        <DropdownMenuItem onClick={() => setSelectionMode(!selectionMode)} className="gap-2 cursor-pointer">
+                                            <CheckSquare size={16} />
+                                            <span>{selectionMode ? "Cancel Selection" : "Select Notes"}</span>
+                                        </DropdownMenuItem>
+                                    )}
 
                                     <DropdownMenuSeparator />
 

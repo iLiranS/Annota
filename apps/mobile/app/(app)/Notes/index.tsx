@@ -2,6 +2,7 @@ import FloatingActionButton from '@/components/floating-action-button';
 import FolderEditModal from '@/components/folder-edit-modal';
 import FolderCard from '@/components/folders/folder-card';
 import NoteLocationModal from '@/components/note-location-modal';
+import LocationPickerModal from '@/components/location-picker-modal';
 import NoteCard from '@/components/notes/note-card';
 import { SectionHeader } from '@/components/notes/section-header';
 import OptionsMenu from '@/components/options-menu';
@@ -21,14 +22,15 @@ import {
     type Folder
 } from '@annota/core';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useTheme } from '@react-navigation/native';
+import { useTheme, useFocusEffect } from '@react-navigation/native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     StyleSheet,
     TextInput,
-    View
+    View,
+    Alert
 } from 'react-native';
 import Animated, {
     Extrapolation,
@@ -69,6 +71,8 @@ export default function NotesList() {
         getSortType,
         setFolderSortType,
         updateNoteMetadata,
+        bulkDeleteNotes,
+        bulkMoveNotes,
         tags
     } = useNotesStore();
 
@@ -113,6 +117,55 @@ export default function NotesList() {
     const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
     const [editingNote, setEditingNote] = useState<NoteMetadata | null>(null);
     const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
+
+    const [isBulkMoveVisible, setIsBulkMoveVisible] = useState(false);
+    const [selectionMode, setSelectionMode] = useState(false);
+    const [selectedNoteIds, setSelectedNoteIds] = useState<string[]>([]);
+
+    useEffect(() => {
+        setSelectionMode(false);
+        setSelectedNoteIds([]);
+    }, [currentFolderId, tagId]);
+
+    useFocusEffect(
+        useCallback(() => {
+            setSelectionMode(false);
+            setSelectedNoteIds([]);
+        }, [])
+    );
+
+    const handleToggleSelectionMode = useCallback(() => {
+        setSelectionMode(prev => {
+            if (prev) setSelectedNoteIds([]);
+            return !prev;
+        });
+    }, []);
+
+    const handleToggleSelection = useCallback((noteId: string) => {
+        setSelectedNoteIds(prev => 
+            prev.includes(noteId) ? prev.filter(id => id !== noteId) : [...prev, noteId]
+        );
+    }, []);
+
+    const handleBulkDelete = () => {
+        Alert.alert(
+            "Delete Selected Notes?",
+            `Are you sure you want to delete ${selectedNoteIds.length} notes? They will be moved to the Trash.`,
+            [
+                { text: "Cancel", style: "cancel" },
+                { 
+                    text: "Delete", 
+                    style: "destructive", 
+                    onPress: async () => {
+                        await bulkDeleteNotes(selectedNoteIds);
+                        Toast.show({ type: 'success', text1: `Deleted ${selectedNoteIds.length} notes` });
+                        setSelectionMode(false);
+                        setSelectedNoteIds([]);
+                    }
+                }
+            ]
+        );
+    };
 
     const searchInputRef = useRef<TextInput>(null);
     const scrollY = useSharedValue(0);
@@ -290,13 +343,14 @@ export default function NotesList() {
             <Animated.View layout={LinearTransition} entering={FadeIn} exiting={FadeOut}>
                 <NoteCard
                     note={item.data}
-                    onPress={() => handleNotePress(item.data.id)}
+                    onPress={() => selectionMode ? handleToggleSelection(item.data.id) : handleNotePress(item.data.id)}
                     onLongPress={() => setEditingNote(item.data)}
                     onDelete={() => deleteNote(item.data.id)}
                     onTogglePin={() => updateNoteMetadata(item.data.id, { isPinned: !item.data.isPinned })}
                     onToggleQuickAccess={() => updateNoteMetadata(item.data.id, { isQuickAccess: !item.data.isQuickAccess })}
                     searchQuery={isSearchActive ? localSearchQuery : undefined}
-
+                    selectionMode={selectionMode}
+                    isSelected={selectedNoteIds.includes(item.data.id)}
                     customPreview={item.subtitle}
                     isFirst={isFirst} isLast={isLast}
                 />
@@ -400,7 +454,34 @@ export default function NotesList() {
             />
 
             {/* Bottom Footer */}
-            {!isSearchActive && (
+            {selectionMode && !isSearchActive ? (
+                <Animated.View entering={FadeIn} exiting={FadeOut} style={[
+                    styles.footer,
+                    {
+                        paddingBottom: Math.max(insets.bottom, 12),
+                        backgroundColor: colors.card,
+                        borderTopColor: colors.border,
+                        paddingHorizontal: 20,
+                        paddingTop: 16,
+                    }
+                ]}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <ThemedText style={{ fontWeight: '600', fontSize: 16 }}>{selectedNoteIds.length} selected</ThemedText>
+                        <View style={{ flexDirection: 'row', gap: 20, alignItems: 'center' }}>
+                            <HapticPressable onPress={() => setIsBulkMoveVisible(true)} disabled={selectedNoteIds.length === 0} hitSlop={12}>
+                                <Ionicons name="folder-open-outline" size={24} color={selectedNoteIds.length > 0 ? colors.primary : colors.text + '50'} />
+                            </HapticPressable>
+                            <HapticPressable onPress={handleBulkDelete} disabled={selectedNoteIds.length === 0} hitSlop={12}>
+                                <Ionicons name="trash-outline" size={24} color={selectedNoteIds.length > 0 ? '#EF4444' : colors.text + '50'} />
+                            </HapticPressable>
+                            <View style={{ width: 1, backgroundColor: colors.border, height: 24, marginHorizontal: 4 }} />
+                            <HapticPressable onPress={handleToggleSelectionMode} hitSlop={12}>
+                                <Ionicons name="close" size={26} color={colors.text} />
+                            </HapticPressable>
+                        </View>
+                    </View>
+                </Animated.View>
+            ) : !isSearchActive && (
                 <View style={[
                     styles.footer,
                     {
@@ -419,6 +500,8 @@ export default function NotesList() {
                                 onSortChange={(s) => setFolderSortType(currentFolderId, s)}
                                 onTrash={() => router.push('/Notes/trash')}
                                 onSettings={() => router.push('/settings')}
+                                selectionMode={selectionMode}
+                                onToggleSelectionMode={handleToggleSelectionMode}
                             />
                         </View>
                     </View>
@@ -432,6 +515,18 @@ export default function NotesList() {
                 onClose={() => { setIsCreatingFolder(false); setEditingFolder(null); }}
             />
             <NoteLocationModal visible={!!editingNote} note={editingNote} onClose={() => setEditingNote(null)} />
+            <LocationPickerModal
+                visible={isBulkMoveVisible}
+                selectedParentId={null}
+                onSelect={async (folderId) => {
+                    await bulkMoveNotes(selectedNoteIds, folderId);
+                    Toast.show({ type: 'success', text1: `Moved ${selectedNoteIds.length} notes` });
+                    setIsBulkMoveVisible(false);
+                    setSelectionMode(false);
+                    setSelectedNoteIds([]);
+                }}
+                onClose={() => setIsBulkMoveVisible(false)}
+            />
         </View>
     );
 }

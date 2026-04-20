@@ -46,6 +46,7 @@ import {
     DetailsContent,
     DetailsSummary,
     FileAttachment,
+    Indentation,
     ListItemReorder,
     Mermaid,
     NoteLinkCommandExtension,
@@ -114,6 +115,7 @@ export const getExtensions = (options: {
             // @ts-ignore - Type mismatch between packages
             gapcursor: true,
         }),
+        Indentation,
         ShortcutManager,
         ListItemReorder,
         AnnotaAutolink,
@@ -192,6 +194,7 @@ export const getExtensions = (options: {
         }),
         SearchExtension.configure({
             onResults: (data: any) => {
+                console.log('onSearchResults [editor-core]', data.count, data.currentIndex)
                 options.onSearchResults?.(data.count, data.currentIndex);
             }
         }),

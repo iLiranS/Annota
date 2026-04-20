@@ -49,6 +49,7 @@ export function useEditorBridgeHandlers({
     onReady,
     onOpenLink,
     onHeightChange,
+    onSearchResults,
     contentResolver
 }: BridgeHandlersOptions) {
 
@@ -135,11 +136,18 @@ export function useEditorBridgeHandlers({
                     console.error('Failed to handle pasted image via bridge:', err);
                 });
                 break;
+
+            case 'searchResults':
+                if (typeof data.count === 'number' && typeof data.currentIndex === 'number') {
+                    onSearchResults?.(data.count, data.currentIndex);
+                }
+                break;
         }
     }, [
         sendMessage, noteId, initialContent, placeholder, autofocus,
         contentPaddingTop, editable, isDark, colors, editorSettings,
-        onContentChange, onReady, onOpenLink, onHeightChange, contentResolver
+        onContentChange, onReady, onOpenLink, onHeightChange, contentResolver,
+        onSearchResults
     ]);
 
     return { handleBridgeMessage };

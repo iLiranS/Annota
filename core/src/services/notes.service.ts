@@ -131,6 +131,14 @@ export const NoteService = {
         await notesRepo.softDeleteNote(noteId);
     },
 
+    bulkSoftDelete: async (noteIds: string[]) => {
+        await notesRepo.bulkSoftDeleteNotes(noteIds);
+    },
+
+    bulkMove: async (noteIds: string[], targetFolderId: string | null) => {
+        await notesRepo.bulkMoveNotes(noteIds, targetFolderId);
+    },
+
     // 5. Restore
     restore: async (noteId: string, targetFolderId?: string | null) => {
         await notesRepo.restoreNote(noteId, targetFolderId);

@@ -7,9 +7,10 @@ import {
 } from "@/components/ui/context-menu";
 import { Ionicons } from "@/components/ui/ionicons";
 import { cn } from "@/lib/utils";
-import { Folder, useNotesStore } from "@annota/core";
+import { Folder, TRASH_FOLDER_ID, useNotesStore, useSettingsStore } from "@annota/core";
 import { Slot } from "@radix-ui/react-slot";
-import { useCallback } from "react";
+import { useCallback, useRef, useState } from "react";
+import { toast } from "sonner";
 
 interface FolderListItemProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     folder: Folder;
@@ -49,7 +50,15 @@ export function FolderIcon({ folder, className, isActive, }: { folder: Folder, c
     );
 }
 
-export function FolderListItemContent({ folder, isActive, searchQuery }: { folder: Folder, isActive?: boolean, searchQuery?: string }) {
+export function FolderListItemContent({ folder, isActive, searchQuery, hideCountOnHover }: { folder: Folder, isActive?: boolean, searchQuery?: string, hideCountOnHover?: boolean }) {
+    const { general } = useSettingsStore();
+    const notesCount = useNotesStore(state => {
+        if (folder.id === TRASH_FOLDER_ID) {
+            return state.notes.filter(n => n.isDeleted).length;
+        }
+        return state.notes.filter(n => n.folderId === folder.id && !n.isDeleted).length;
+    });
+
     const Highlight = ({ text, query }: { text: string; query?: string }) => {
         if (!query || !text) return <>{text}</>;
 
@@ -74,10 +83,25 @@ export function FolderListItemContent({ folder, isActive, searchQuery }: { folde
             <FolderIcon
                 folder={folder}
                 isActive={isActive}
-                className="group-hover/folder:bg-background/50"
+                className="group-hover/folder:bg-background/50 group-data-[drag-over=true]/item:bg-emerald-500/20 group-data-[drag-over=true]/item:text-emerald-600"
             />
-            <span className="truncate font-medium">
+            <span className="truncate font-medium flex-1">
                 <Highlight text={folder.name} query={searchQuery} />
+            </span>
+            {general.showNotesCountInFolder && (
+                <span className={cn(
+                    "text-[10px] tabular-nums font-medium text-muted-foreground/40 transition-opacity duration-200",
+                    "group-data-[drag-over=true]/item:hidden",
+                    hideCountOnHover && "group-hover/folder:opacity-0"
+                )}>
+                    {notesCount}
+                </span>
+            )}
+            <span className={cn(
+                "hidden group-data-[drag-over=true]/item:flex",
+                "items-center justify-center bg-emerald-500/20 text-emerald-600 rounded drop-shadow-sm h-5 w-5 mr-1"
+            )}>
+                <Ionicons name="add" size={14} className="text-emerald-600" />
             </span>
         </>
     );
@@ -109,6 +133,54 @@ export function FolderListItem({
         await permanentlyDeleteFolder(folder.id);
     }, [folder.id, permanentlyDeleteFolder]);
 
+    const [isDragOver, setIsDragOver] = useState(false);
+    const dragTimer = useRef<NodeJS.Timeout | null>(null);
+    const canDrop = !folder.isSystem && !folder.isDeleted;
+
+    const handleDragOver = (e: React.DragEvent) => {
+        if (!canDrop) return;
+        if (e.dataTransfer.types.includes("application/annota-note-id")) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "move";
+            if (!isDragOver) setIsDragOver(true);
+            if (dragTimer.current) clearTimeout(dragTimer.current);
+        }
+    };
+
+    const handleDragEnter = (e: React.DragEvent) => {
+        if (!canDrop) return;
+        if (e.dataTransfer.types.includes("application/annota-note-id")) {
+            e.preventDefault();
+            if (!isDragOver) setIsDragOver(true);
+            if (dragTimer.current) clearTimeout(dragTimer.current);
+        }
+    };
+
+    const handleDragLeave = () => {
+        if (!canDrop) return;
+        if (dragTimer.current) clearTimeout(dragTimer.current);
+        dragTimer.current = setTimeout(() => {
+            setIsDragOver(false);
+        }, 50);
+    };
+
+    const handleDrop = async (e: React.DragEvent) => {
+        if (!canDrop) return;
+        const noteId = e.dataTransfer.getData("application/annota-note-id");
+        if (noteId) {
+            e.preventDefault();
+            setIsDragOver(false);
+            if (dragTimer.current) clearTimeout(dragTimer.current);
+
+            const store = useNotesStore.getState();
+            const note = store.notes.find(n => n.id === noteId);
+            if (note && note.folderId !== folder.id) {
+                await store.updateNoteMetadata(noteId, { folderId: folder.id });
+                toast.success(`Moved to ${folder.name}`);
+            }
+        }
+    };
+
     const Comp = asChild ? Slot : "button";
 
     if (folder.isSystem) {
@@ -116,9 +188,16 @@ export function FolderListItem({
             <Comp
                 type="button"
                 onClick={onClick}
+                onDragOver={handleDragOver}
+                onDragEnter={handleDragEnter}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                data-drag-over={isDragOver ? "true" : undefined}
                 className={cn(
-                    !asChild && "flex w-full group/item items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-primary/10",
+                    "group/item transition-all duration-200",
+                    !asChild && "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm hover:bg-primary/10",
                     "active:bg-primary/10",
+                    isDragOver && "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 ring-1 ring-emerald-500/40 z-10",
                     className
                 )}
                 {...(props as any)}
@@ -135,9 +214,16 @@ export function FolderListItem({
                 <Comp
                     type="button"
                     onClick={onClick}
+                    onDragOver={handleDragOver}
+                    onDragEnter={handleDragEnter}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    data-drag-over={isDragOver ? "true" : undefined}
                     className={cn(
-                        !asChild && "flex w-full group/item items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-primary/10",
+                        "group/item transition-all duration-200",
+                        !asChild && "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm hover:bg-primary/10",
                         "active:bg-primary/10",
+                        isDragOver && "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 ring-1 ring-emerald-500/40 z-10",
                         className
                     )}
                     {...(props as any)}

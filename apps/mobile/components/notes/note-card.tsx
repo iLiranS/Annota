@@ -4,7 +4,8 @@ import ThemedPressable from '@/components/ui/themed-pressable';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { formatRelativeDate } from '@/utils/date-formatter';
 import { NoteMetadata, useNotesStore, useSettingsStore } from '@annota/core';
-import { StyleSheet, View, Text } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { StyleSheet, Text, View } from 'react-native';
 
 
 interface NoteCardProps {
@@ -23,6 +24,8 @@ interface NoteCardProps {
     searchQuery?: string;
     customPreview?: string;
     suffix?: React.ReactNode;
+    selectionMode?: boolean;
+    isSelected?: boolean;
 }
 
 
@@ -43,8 +46,9 @@ export default function NoteCard({
     searchQuery,
     customPreview,
     suffix,
+    selectionMode = false,
+    isSelected = false,
 }: NoteCardProps) {
-
 
     const { colors, dark } = useAppTheme();
     const { general } = useSettingsStore();
@@ -97,61 +101,71 @@ export default function NoteCard({
                 <View style={[styles.border, styles.bottomBorder, { backgroundColor: colors.border }]} />
             )}
 
-            <View style={styles.contentContainer}>
-                <View style={[styles.mainRow, isCompact && { alignItems: 'center' }]}>
-                    <View style={styles.titleWrapper}>
-                        <Highlight
-                            text={note.title || 'Untitled Note'}
-                            query={searchQuery}
-                            style={styles.title}
-                            numberOfLines={1}
+            <View style={[styles.contentContainer, selectionMode && { flexDirection: 'row', alignItems: 'center' }]}>
+                {selectionMode && (
+                    <View style={{ marginRight: 12 }}>
+                        <Ionicons
+                            name={isSelected ? "checkbox" : "square-outline"}
+                            size={24}
+                            color={isSelected ? colors.primary : colors.text + '50'}
                         />
-                        {isCompact && appliedTags.length > 0 && (
-
-                            <View style={[styles.tagsContainer, { marginTop: 0, flexWrap: 'nowrap' }]}>
-                                {appliedTags.slice(0, 3).map(tag => (
-                                    <View key={tag.id} style={[styles.tagBadge, { backgroundColor: `${tag.color}15`, borderColor: `${tag.color}40` }]}>
-                                        <ThemedText style={[styles.tagBadgeText, { color: tag.color }]}>{tag.name}</ThemedText>
-                                    </View>
-                                ))}
-                            </View>
-                        )}
-                        {suffix}
-                    </View>
-
-                    {shouldShowTimestamp && (
-                        <ThemedText style={[styles.timestamp, { color: colors.text + '50' }]}>
-                            {formatRelativeDate(note.updatedAt)}
-                        </ThemedText>
-                    )}
-                </View>
-
-                {!isCompact && appliedTags.length > 0 && (
-                    <View style={styles.tagsContainer}>
-                        {appliedTags.map(tag => (
-                            <View key={tag.id} style={[styles.tagBadge, { backgroundColor: `${tag.color}15`, borderColor: `${tag.color}40` }]}>
-                                <ThemedText style={[styles.tagBadgeText, { color: tag.color }]}>{tag.name}</ThemedText>
-                            </View>
-                        ))}
                     </View>
                 )}
+                <View style={{ flex: 1 }}>
+                    <View style={[styles.mainRow, isCompact && { alignItems: 'center' }]}>
+                        <View style={styles.titleWrapper}>
+                            <Highlight
+                                text={note.title || 'Untitled Note'}
+                                query={searchQuery}
+                                style={styles.title}
+                                numberOfLines={1}
+                            />
+                            {isCompact && appliedTags.length > 0 && (
 
-                {(description && showDescription) ? (
-                    <View style={styles.descriptionContainer}>{description}</View>
-                ) : (!isCompact && (customPreview || note.preview)) ? (
-                    <Highlight
-                        text={customPreview || note.preview}
-                        query={searchQuery}
-                        style={[styles.preview, { color: colors.text + '60' }]}
-                        numberOfLines={1}
-                    />
-                ) : null}
+                                <View style={[styles.tagsContainer, { marginTop: 0, flexWrap: 'nowrap' }]}>
+                                    {appliedTags.slice(0, 3).map(tag => (
+                                        <View key={tag.id} style={[styles.tagBadge, { backgroundColor: `${tag.color}15`, borderColor: `${tag.color}40` }]}>
+                                            <ThemedText style={[styles.tagBadgeText, { color: tag.color }]}>{tag.name}</ThemedText>
+                                        </View>
+                                    ))}
+                                </View>
+                            )}
+                            {suffix}
+                        </View>
 
+                        {shouldShowTimestamp && (
+                            <ThemedText style={[styles.timestamp, { color: colors.text + '50' }]}>
+                                {formatRelativeDate(note.updatedAt)}
+                            </ThemedText>
+                        )}
+                    </View>
+
+                    {!isCompact && appliedTags.length > 0 && (
+                        <View style={styles.tagsContainer}>
+                            {appliedTags.map(tag => (
+                                <View key={tag.id} style={[styles.tagBadge, { backgroundColor: `${tag.color}15`, borderColor: `${tag.color}40` }]}>
+                                    <ThemedText style={[styles.tagBadgeText, { color: tag.color }]}>{tag.name}</ThemedText>
+                                </View>
+                            ))}
+                        </View>
+                    )}
+
+                    {(description && showDescription) ? (
+                        <View style={styles.descriptionContainer}>{description}</View>
+                    ) : (!isCompact && (customPreview || note.preview)) ? (
+                        <Highlight
+                            text={customPreview || note.preview}
+                            query={searchQuery}
+                            style={[styles.preview, { color: colors.text + '60' }]}
+                            numberOfLines={1}
+                        />
+                    ) : null}
+                </View>
             </View>
         </ThemedPressable>
     );
 
-    if (swipeable) {
+    if (swipeable && !selectionMode) {
         const rightActions: SwipeAction[] = [];
 
         if (onToggleQuickAccess) {

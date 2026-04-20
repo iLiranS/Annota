@@ -1185,16 +1185,13 @@
     align-items: center !important;
     padding: 10px 8px !important;
     padding-inline-start: 4px !important;
-    background-color: rgba(0, 0, 0, 0.02);
+
     gap: 0px !important;
     transition: background-color 0.15s ease;
     min-height: 32px !important;
 }
 
-html.dark .ProseMirror .details-summary,
-html.dark .ProseMirror [data-type="detailsSummary"] {
-    background-color: rgba(0, 0, 0, 0.05);
-}
+
 
 /* Summary Content alignment and placeholder */
 .details-summary-content {

@@ -372,6 +372,37 @@ export async function softDeleteNote(noteId: string): Promise<void> {
         .run();
 }
 
+export async function bulkSoftDeleteNotes(noteIds: string[]): Promise<void> {
+    if (noteIds.length === 0) return;
+    const now = new Date();
+    await getDb()
+        .update(schema.noteMetadata)
+        .set({
+            isDeleted: true,
+            deletedAt: now,
+            originalFolderId: sql`${schema.noteMetadata.folderId}`,
+            folderId: 'system-trash',
+            isDirty: true,
+            updatedAt: now,
+        })
+        .where(inArray(schema.noteMetadata.id, noteIds))
+        .run();
+}
+
+export async function bulkMoveNotes(noteIds: string[], targetFolderId: string | null): Promise<void> {
+    if (noteIds.length === 0) return;
+    const now = new Date();
+    await getDb()
+        .update(schema.noteMetadata)
+        .set({
+            folderId: targetFolderId,
+            isDirty: true,
+            updatedAt: now,
+        })
+        .where(inArray(schema.noteMetadata.id, noteIds))
+        .run();
+}
+
 export async function restoreNote(noteId: string, targetFolderId?: string | null): Promise<void> {
     const note = await getNoteMetadataById(noteId);
     if (!note) return;

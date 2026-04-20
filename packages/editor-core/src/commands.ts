@@ -42,38 +42,39 @@ export function setupCommands() {
 
         const e = window.editor;
 
-        if (dispatchEditorCommand(e, command, params)) {
-            if (command !== 'getContent') {
-                setTimeout(() => sendMessage({ type: 'state', state: getEditorState(window.editor) }), 50);
-            }
-            return;
-        }
+        let handled = false;
 
         switch (command) {
             case 'setFontFamily':
                 applyFontFamily(params?.fontFamily);
-                return;
+                handled = true;
+                break;
             case 'setKeyboardHeight':
                 if (params?.height && params.height > 0) {
                     scrollCursorIntoView();
                 }
-                return;
+                handled = true;
+                break;
             case 'blur':
                 e.commands.blur();
                 if (e.view && e.view.dom instanceof HTMLElement) {
                     e.view.dom.blur();
                 }
                 document.getElementById('editor-content')?.blur();
-                return;
+                handled = true;
+                break;
             case 'focus':
                 e.commands.focus('end');
+                handled = true;
                 break;
             case 'setContent':
                 e.commands.setContent(params?.content);
+                handled = true;
                 break;
             case 'getContent':
                 sendMessage({ type: 'contentResponse', html: e.getHTML() });
-                return;
+                handled = true;
+                break;
             case 'insertLocalImage':
                 if (params?.imageId) {
                     e.chain().focus().insertContent({
@@ -84,16 +85,19 @@ export function setupCommands() {
                         }
                     }).run();
                 }
+                handled = true;
                 break;
             case 'insertFileAttachment':
                 if (params?.fileId) {
                     (e.commands as any).insertFileAttachment(params);
                 }
+                handled = true;
                 break;
             case 'resolveImages':
                 if (params?.imageMap) {
                     window.resolveImages?.(params.imageMap);
                 }
+                handled = true;
                 break;
             case 'replaceImageId':
                 if (params?.oldId && params?.newId) {
@@ -113,6 +117,7 @@ export function setupCommands() {
                         e.view.dispatch(tr);
                     }
                 }
+                handled = true;
                 break;
             case 'cutImage': {
                 const cutPos = params?.pos as number | undefined;
@@ -121,6 +126,7 @@ export function setupCommands() {
                         e.chain().focus().setNodeSelection(cutPos).deleteSelection().run();
                     }
                 }
+                handled = true;
                 break;
             }
             case 'copyImage': {
@@ -128,41 +134,43 @@ export function setupCommands() {
                 if (typeof copyPos === 'number') {
                     copyImageAtPosition(copyPos);
                 }
+                handled = true;
                 break;
             }
             case 'copyToClipboard':
-                if (typeof params?.pos === 'number') {
-                    e.chain().focus().setNodeSelection(params.pos).run();
-                } else {
-                    e.chain().focus().run();
-                }
-                document.execCommand('copy');
+                // We let command-dispatcher handle copyToClipboard as it has better rich-text support!
                 break;
             case 'copyBlockLink':
                 if (params?.id) {
                     sendMessage({ type: 'copyBlockLink', id: params.id });
                 }
+                handled = true;
                 break;
             case 'selectImageAtPosition':
                 if (typeof params?.position === 'number') {
                     e.chain().setNodeSelection(params.position).run();
                 }
+                handled = true;
                 break;
             case 'search':
                 e.commands.search(params?.term || '');
+                handled = true;
                 break;
             case 'searchNext':
                 e.commands.searchNext();
+                handled = true;
                 break;
             case 'searchPrev':
                 e.commands.searchPrev();
+                handled = true;
                 break;
             case 'clearSearch':
                 e.commands.clearSearch();
+                handled = true;
                 break;
-            case 'scrollToElement':
+            case 'scrollToElement': {
                 const { id } = params;
-                if (!window.editor) return;
+                if (!window.editor) { handled = true; break; }
 
                 let attempts = 0;
                 const maxAttempts = 120; // ~2 seconds
@@ -214,11 +222,16 @@ export function setupCommands() {
                 };
 
                 tryFindAndScroll();
-                return;
-
+                handled = true;
+                break;
+            }
         }
 
-        if (command !== 'getContent') {
+        if (!handled) {
+            handled = dispatchEditorCommand(e, command, params);
+        }
+
+        if (handled && command !== 'getContent') {
             setTimeout(() => sendMessage({ type: 'state', state: getEditorState(window.editor) }), 50);
         }
     };

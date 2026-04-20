@@ -83,6 +83,28 @@ export function AppSidebar() {
     const [folderToDelete, setFolderToDelete] = useState<Folder | null>(null);
     const [newFolderParentId, setNewFolderParentId] = useState<string | null>(null);
 
+    const [selectionMode, setSelectionMode] = useState(false);
+    const [selectedNoteIds, setSelectedNoteIds] = useState<string[]>([]);
+
+    const isTrash = currentFolderId === TRASH_FOLDER_ID;
+    const isDaily = currentFolderId === DAILY_NOTES_FOLDER_ID;
+
+    useEffect(() => {
+        setSelectionMode(false);
+        setSelectedNoteIds([]);
+    }, [currentFolderId, tagId, isTrash, isDaily]);
+
+    const handleSetSelectionMode = useCallback((mode: boolean) => {
+        setSelectionMode(mode);
+        if (!mode) setSelectedNoteIds([]);
+    }, []);
+
+    const handleToggleSelection = useCallback((noteId: string) => {
+        setSelectedNoteIds(prev => 
+            prev.includes(noteId) ? prev.filter(id => id !== noteId) : [...prev, noteId]
+        );
+    }, []);
+
     const handleRetry = useCallback(() => {
         if (retryCooldown) return;
         setRetryCooldown(true);
@@ -138,8 +160,6 @@ export function AppSidebar() {
     }, [notes]);
 
     const currentTag = useMemo(() => tags.find(t => t.id === tagId), [tags, tagId]);
-    const isTrash = currentFolderId === TRASH_FOLDER_ID;
-    const isDaily = currentFolderId === DAILY_NOTES_FOLDER_ID;
 
     const breadcrumbs = useMemo(() => {
         if (!currentFolderId && !tagId && !isTrash && !isDaily) return null;
@@ -270,6 +290,8 @@ export function AppSidebar() {
                     }}
                     sortOptions={SORT_OPTIONS}
                     getSortTypeLabel={getSortTypeLabel}
+                    selectionMode={selectionMode}
+                    setSelectionMode={handleSetSelectionMode}
                 />
 
                 <BreadcrumbsSection
@@ -297,6 +319,12 @@ export function AppSidebar() {
                         onNoteClick={(note) => navigateSmart(`/notes/${note.folderId || "root"}/${note.id}`)}
                         onDeleteNote={deleteNote}
                         general={general}
+                        selectionMode={selectionMode}
+                        selectedNoteIds={selectedNoteIds}
+                        onToggleSelection={handleToggleSelection}
+                        onClearSelection={() => {
+                            handleSetSelectionMode(false);
+                        }}
                     />
 
                 </SidebarContent>

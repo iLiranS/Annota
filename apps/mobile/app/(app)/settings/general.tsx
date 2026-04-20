@@ -45,6 +45,14 @@ export default function GeneralSettings() {
                         description="Show more items in lists"
                     />
                     <SettingItem
+                        label="Folder Note Count"
+                        type="toggle"
+                        value={general.showNotesCountInFolder}
+                        onToggle={(val) => updateGeneralSettings({ showNotesCountInFolder: val })}
+                        icon="document-text-outline"
+                        description="Show number of notes in folders"
+                    />
+                    <SettingItem
                         label="Haptic Feedback"
                         type="toggle"
                         value={general.hapticFeedback}

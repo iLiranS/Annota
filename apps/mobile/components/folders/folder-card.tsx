@@ -1,11 +1,10 @@
 import SwipeableItem from '@/components/swipeable-item';
 import ThemedText from '@/components/themed-text';
 import ThemedPressable from '@/components/ui/themed-pressable';
-import { Folder } from '@annota/core';
-import { useSettingsStore } from '@annota/core';
+import { Folder, TRASH_FOLDER_ID, useNotesStore, useSettingsStore } from '@annota/core';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
-import { StyleSheet, View, Text } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 interface FolderCardProps {
     folder: Folder;
@@ -32,6 +31,12 @@ export default function FolderCard({
 
     const { colors, dark } = useTheme();
     const { general } = useSettingsStore();
+    const notesCount = useNotesStore(state => {
+        if (folder.id === TRASH_FOLDER_ID) {
+            return state.notes.filter(n => n.isDeleted).length;
+        }
+        return state.notes.filter(n => n.folderId === folder.id && !n.isDeleted).length;
+    });
     const isCompact = general.compactMode;
     const folderColor = folder.color || '#F59E0B'; // Fallback to amber if no color set
 
@@ -88,7 +93,12 @@ export default function FolderCard({
                 <Ionicons name={folder.icon as keyof typeof Ionicons.glyphMap} size={isCompact ? 18 : 22} color={folderColor} />
             </View>
             <Highlight text={folder.name} query={searchQuery} style={styles.folderName} numberOfLines={1} />
-            <Ionicons name="chevron-forward" size={18} color={colors.text + '50'} />
+            {general.showNotesCountInFolder && (
+                <View style={styles.countBadge}>
+                    <Text style={[styles.countText, { color: colors.text + '40' }]}>{notesCount}</Text>
+                </View>
+            )}
+
 
         </ThemedPressable>
     );
@@ -146,5 +156,14 @@ const styles = StyleSheet.create({
     pressed: {
         opacity: 0.7,
         backgroundColor: 'rgba(0,0,0,0.02)',
+    },
+    countBadge: {
+        paddingHorizontal: 4,
+        paddingVertical: 2,
+        marginRight: 2,
+    },
+    countText: {
+        fontSize: 13,
+        fontWeight: '500',
     },
 });

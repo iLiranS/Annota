@@ -29,6 +29,9 @@ interface NotesState {
     rootSettings: RootSettings;
     isInitialized: boolean;
 
+    bulkDeleteNotes: (noteIds: string[]) => Promise<void>;
+    bulkMoveNotes: (noteIds: string[], targetFolderId: string | null) => Promise<void>;
+
     // Initialization
     initApp: () => Promise<void>;
 
@@ -87,6 +90,31 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     tags: [],
     rootSettings: { sortType: 'UPDATED_LAST' },
     isInitialized: false,
+
+    bulkDeleteNotes: async (noteIds) => {
+        await NoteService.bulkSoftDelete(noteIds);
+        set(state => {
+            const now = new Date();
+            return {
+                notes: state.notes.map(n => 
+                    noteIds.includes(n.id) 
+                        ? { ...n, isDeleted: true, folderId: 'system-trash', originalFolderId: n.folderId, deletedAt: now, updatedAt: now } 
+                        : n
+                )
+            };
+        });
+        SyncScheduler.instance?.notifyContentChange();
+    },
+
+    bulkMoveNotes: async (noteIds, targetFolderId) => {
+        await NoteService.bulkMove(noteIds, targetFolderId);
+        set(state => ({
+            notes: state.notes.map(n =>
+                noteIds.includes(n.id) ? { ...n, folderId: targetFolderId, updatedAt: new Date() } : n
+            )
+        }));
+        SyncScheduler.instance?.notifyContentChange();
+    },
 
     // Initialize App - Load ALL data on startup
     initApp: async () => {

@@ -412,7 +412,7 @@ export function DesktopToolbar({
 
                         <DropdownMenu onOpenChange={handleOpenChange} modal={false}>
                             <DropdownMenuTrigger asChild>
-                                <Button key="plus" variant="ghost" size="icon" className="h-9 w-9 shrink-0 outline-none">
+                                <Button key="plus" variant="ghost" size="icon" className="h-9 w-9 shrink-0 outline-none" style={activeStyle(false)}>
                                     <EditorIcons.Plus className="w-5 h-5" />
                                 </Button>
                             </DropdownMenuTrigger>
@@ -451,7 +451,7 @@ export function DesktopToolbar({
                         >
                             <TooltipTrigger asChild>
                                 <div className="flex shrink-0">
-                                    <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('undo')} disabled={!editorState.canUndo} style={activeStyle(false)}>
+                                    <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('undo')} disabled={!editorState.canUndo} style={{ ...activeStyle(false), opacity: editorState.canUndo ? 0.7 : 0.3 }}>
                                         <EditorIcons.Undo className="w-5 h-5" />
                                     </Button>
                                 </div>
@@ -468,7 +468,7 @@ export function DesktopToolbar({
                         >
                             <TooltipTrigger asChild>
                                 <div className="flex shrink-0">
-                                    <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('redo')} disabled={!editorState.canRedo} style={activeStyle(false)}>
+                                    <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('redo')} disabled={!editorState.canRedo} style={{ ...activeStyle(false), opacity: editorState.canRedo ? 0.7 : 0.3 }}>
                                         <EditorIcons.Redo className="w-5 h-5" />
                                     </Button>
                                 </div>

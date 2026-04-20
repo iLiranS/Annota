@@ -8,6 +8,7 @@ import {
     ChevronRight,
     List,
     PanelRight,
+    Hash,
 } from "lucide-react";
 
 import { SettingItem } from "./setting-item";
@@ -80,6 +81,15 @@ export function GeneralSettings() {
                         iconBg="bg-emerald-500"
                         onClick={() => updateGeneralSettings({ compactMode: !general.compactMode })}
                         action={<Toggle enabled={general.compactMode} />}
+                    />
+                    <div className="h-[2px] bg-border/50 mx-4" />
+                    <SettingItem
+                        label="Folder Note Count"
+                        description="Show the number of notes inside each folder"
+                        icon={<Hash size={18} />}
+                        iconBg="bg-blue-500"
+                        onClick={() => updateGeneralSettings({ showNotesCountInFolder: !general.showNotesCountInFolder })}
+                        action={<Toggle enabled={general.showNotesCountInFolder} />}
                     />
                     <div className="h-[2px] bg-border/50 mx-4" />
                     <SettingItem

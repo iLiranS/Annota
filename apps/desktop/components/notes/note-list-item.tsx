@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { LocationPickerModal } from "../location-picker-modal";
 import { FolderEditModal } from "./folder-edit-modal";
 import { NotePreviewModal } from "./note-preview-modal";
+import { Checkbox } from "@/components/ui/checkbox";
 
 import { Slot } from "@radix-ui/react-slot";
 import { Pin, Star } from "lucide-react";
@@ -36,6 +37,10 @@ interface NoteListItemProps extends React.ButtonHTMLAttributes<HTMLButtonElement
     forceCompact?: boolean;
     searchQuery?: string;
     customDescription?: string;
+
+    selectionMode?: boolean;
+    isSelected?: boolean;
+    onToggleSelection?: (noteId: string) => void;
 }
 
 
@@ -56,6 +61,9 @@ export function NoteListItem({
     isInQuickAccess,
     searchQuery,
     customDescription,
+    selectionMode = false,
+    isSelected = false,
+    onToggleSelection,
     ...props
 }: NoteListItemProps) {
     const { updateNoteMetadata, tags, restoreNote, permanentlyDeleteNote } = useNotesStore();
@@ -100,6 +108,11 @@ export function NoteListItem({
             toast.error("Failed to copy link to clipboard");
         }
     }, [note.id]);
+
+    const handleDragStart = (e: React.DragEvent<HTMLButtonElement>) => {
+        e.dataTransfer.setData("application/annota-note-id", note.id);
+        e.dataTransfer.effectAllowed = "move";
+    };
 
     const handleOpenInNewWindow = useCallback(async () => {
         const label = `note-${note.id}-${Math.random().toString(36).substring(7)}`;
@@ -189,14 +202,17 @@ export function NoteListItem({
             <ContextMenu>
                 <ContextMenuTrigger asChild>
                     <Comp
+                        draggable={!selectionMode}
+                        onDragStart={!selectionMode ? handleDragStart : undefined}
                         type="button"
-                        onClick={onClick}
+                        onClick={selectionMode ? (e) => { e.preventDefault(); onToggleSelection?.(note.id); } : onClick}
                         className={cn(
                             !asChild && "group/note relative flex w-full flex-col transition-all",
-                            !isActive && 'hover:bg-primary/10',
+                            !isActive && !isSelected && 'hover:bg-primary/10',
                             !asChild && (isCompact && !isInList ? "py-1.5" : "py-2"),
                             !asChild && (isInList ? "rounded-lg px-2 py-2" : "px-3 py-2 rounded-lg"),
                             isActive && !asChild && "bg-accent/70",
+                            isSelected && !asChild && "bg-primary/10 ring-1 ring-primary/30",
                             "relative",
                             className
                         )}
@@ -205,7 +221,16 @@ export function NoteListItem({
                     >
                         {asChild ? children : (
                             <>
-                                <div className="flex w-full items-center justify-between gap-2.5">
+                                <div className="flex w-full items-start justify-between gap-2.5">
+                                    {selectionMode && isInList && (
+                                        <div className={cn("shrink-0 mt-0.5", general.appDirection === 'rtl' ? "ml-2" : "mr-2")}>
+                                            <Checkbox 
+                                                checked={isSelected}
+                                                onCheckedChange={() => onToggleSelection?.(note.id)}
+                                                onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                                            />
+                                        </div>
+                                    )}
                                     <div className="flex min-w-0 items-center gap-2 flex-1">
                                         <p className={cn(
                                             "truncate text-sm font-medium transition-colors",

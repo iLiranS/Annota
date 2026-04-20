@@ -38,6 +38,7 @@ export function SearchOverlay({
     const translateY = useRef(new Animated.Value(-100)).current;
     const opacity = useRef(new Animated.Value(0)).current;
 
+
     useEffect(() => {
         if (visible) {
             Animated.parallel([
