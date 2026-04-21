@@ -114,8 +114,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    fontSize: 24,
-    fontWeight: '800',
+    fontSize: 20,
+    fontWeight: '700',
     flex: 1,
   },
   badge: {
@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '700',
     textTransform: 'uppercase',
   },
   content: {

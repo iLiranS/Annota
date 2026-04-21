@@ -1,5 +1,5 @@
-import { DailyNoteIcon } from "@/components/custom-ui/daily-note-icon";
 import { Button } from "@/components/ui/button";
+import { Ionicons } from "@/components/ui/ionicons";
 import { cn } from "@/lib/utils";
 import {
     DAILY_NOTES_FOLDER_ID,
@@ -81,7 +81,7 @@ export function DailyNotesCalendar() {
                     <div className="flex items-center gap-4">
                         <div className="flex items-center gap-2.5">
                             <div className="p-1.5 rounded-lg bg-[#8B5CF6]/10 text-accent-full">
-                                <DailyNoteIcon className="text-[#8B5CF6]" />
+                                <Ionicons name="calendar" className="text-[#8B5CF6]" size={18} />
                             </div>
                             <h1 className="text-lg font-bold tracking-tight">Daily Notes</h1>
                         </div>

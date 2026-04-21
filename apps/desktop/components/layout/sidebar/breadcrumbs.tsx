@@ -7,6 +7,7 @@ import {
     BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { cn } from "@/lib/utils";
+import { AnnotaIcon } from "../../custom-ui/annota-icon";
 import { Ionicons } from "../../ui/ionicons";
 
 export interface BreadcrumbData {
@@ -44,7 +45,13 @@ export function BreadcrumbsSection({ breadcrumbs, onNavigate, className }: Bread
                                     className="cursor-pointer hover:text-primary transition-colors text-[9px] font-bold uppercase tracking-wider text-muted-foreground/60 flex items-center gap-1.5 min-w-0"
                                 >
                                     <button onClick={() => onNavigate(crumb.id)}>
-                                        {crumb.icon && (
+                                        {crumb.icon === "annota" ? (
+                                            <AnnotaIcon
+                                                size={14}
+                                                className={cn("shrink-0")}
+                                                color={crumb.color}
+                                            />
+                                        ) : crumb.icon && (
                                             <Ionicons
                                                 name={crumb.icon}
                                                 size={10}

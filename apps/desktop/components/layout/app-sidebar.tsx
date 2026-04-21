@@ -88,6 +88,7 @@ export function AppSidebar() {
 
     const isTrash = currentFolderId === TRASH_FOLDER_ID;
     const isDaily = currentFolderId === DAILY_NOTES_FOLDER_ID;
+    const isRoot = !currentFolderId && !tagId && !isTrash && !isDaily;
 
     useEffect(() => {
         setSelectionMode(false);
@@ -100,7 +101,7 @@ export function AppSidebar() {
     }, []);
 
     const handleToggleSelection = useCallback((noteId: string) => {
-        setSelectedNoteIds(prev => 
+        setSelectedNoteIds(prev =>
             prev.includes(noteId) ? prev.filter(id => id !== noteId) : [...prev, noteId]
         );
     }, []);
@@ -164,7 +165,7 @@ export function AppSidebar() {
     const breadcrumbs = useMemo(() => {
         if (!currentFolderId && !tagId && !isTrash && !isDaily) return null;
         const crumbs: { name: string; id: string | null; icon?: string; color?: string }[] = [];
-        crumbs.push({ name: "All Notes", id: null, icon: "documents", color: colors.primary });
+        crumbs.push({ name: "All Notes", id: null, icon: "annota", color: colors.primary });
 
         if (tagId || isTrash || isDaily) return crumbs;
 
@@ -200,7 +201,7 @@ export function AppSidebar() {
     const headerIcon = useMemo(() => {
         if (tagId && currentTag) return "ellipse";
         if (isTrash) return "trash";
-        if (isDaily) return "calendar-clear-outline";
+        if (isDaily) return "calendar";
         return currentFolder ? currentFolder.icon : "documents";
     }, [tagId, currentTag, isTrash, isDaily, currentFolder]);
 
@@ -279,6 +280,7 @@ export function AppSidebar() {
                     color={headerColor}
                     isDaily={isDaily}
                     isTrash={isTrash}
+                    isRoot={isRoot}
                     tagId={tagId || undefined}
                     currentSortType={currentSortType}
                     onSortChange={(type) => setFolderSortType(currentFolderId ?? null, type)}

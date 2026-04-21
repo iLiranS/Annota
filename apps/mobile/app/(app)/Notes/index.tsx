@@ -1,13 +1,13 @@
 import FloatingActionButton from '@/components/floating-action-button';
 import FolderEditModal from '@/components/folder-edit-modal';
 import FolderCard from '@/components/folders/folder-card';
-import NoteLocationModal from '@/components/note-location-modal';
 import LocationPickerModal from '@/components/location-picker-modal';
+import NoteLocationModal from '@/components/note-location-modal';
 import NoteCard from '@/components/notes/note-card';
 import { SectionHeader } from '@/components/notes/section-header';
 import OptionsMenu from '@/components/options-menu';
 import ThemedText from '@/components/themed-text';
-import { DailyNoteIcon } from '@/components/ui/daily-note-icon';
+import { AnnotaIcon } from '@/components/ui/annota-icon';
 import { HapticPressable } from '@/components/ui/haptic-pressable';
 import { useSidebar } from '@/context/sidebar-context';
 import {
@@ -22,15 +22,15 @@ import {
     type Folder
 } from '@annota/core';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useTheme, useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useTheme } from '@react-navigation/native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
+    Alert,
     StyleSheet,
     TextInput,
-    View,
-    Alert
+    View
 } from 'react-native';
 import Animated, {
     Extrapolation,
@@ -142,7 +142,7 @@ export default function NotesList() {
     }, []);
 
     const handleToggleSelection = useCallback((noteId: string) => {
-        setSelectedNoteIds(prev => 
+        setSelectedNoteIds(prev =>
             prev.includes(noteId) ? prev.filter(id => id !== noteId) : [...prev, noteId]
         );
     }, []);
@@ -153,9 +153,9 @@ export default function NotesList() {
             `Are you sure you want to delete ${selectedNoteIds.length} notes? They will be moved to the Trash.`,
             [
                 { text: "Cancel", style: "cancel" },
-                { 
-                    text: "Delete", 
-                    style: "destructive", 
+                {
+                    text: "Delete",
+                    style: "destructive",
                     onPress: async () => {
                         await bulkDeleteNotes(selectedNoteIds);
                         Toast.show({ type: 'success', text1: `Deleted ${selectedNoteIds.length} notes` });
@@ -387,10 +387,12 @@ export default function NotesList() {
                                 {tagId ? (
                                     <Ionicons name="ellipse" size={12} color={currentTag?.color ?? colors.primary} />
                                 ) : currentFolderId === DAILY_NOTES_FOLDER_ID ? (
-                                    <DailyNoteIcon size={18} color={currentFolder?.color ?? colors.primary} />
+                                    <Ionicons name="calendar" size={18} color={currentFolder?.color ?? colors.primary} />
+                                ) : !currentFolderId ? (
+                                    <AnnotaIcon size={24} color={colors.primary} />
                                 ) : (
                                     <Ionicons
-                                        name={(currentFolder?.icon as any) || (currentFolderId ? 'folder' : 'documents')}
+                                        name={(currentFolder?.icon as any) || 'folder'}
                                         size={18}
                                         color={currentFolder?.color ?? colors.primary}
                                     />

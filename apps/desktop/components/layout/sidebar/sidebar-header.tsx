@@ -4,8 +4,8 @@ import { SidebarHeader } from "@/components/ui/sidebar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { SortType } from "@annota/core";
-import { MoreVertical, SquarePen, CheckSquare } from "lucide-react";
-import { DailyNoteIcon } from "../../custom-ui/daily-note-icon";
+import { CheckSquare, MoreVertical, SquarePen } from "lucide-react";
+import { AnnotaIcon } from "../../custom-ui/annota-icon";
 import { Ionicons } from "../../ui/ionicons";
 
 interface SidebarHeaderSectionProps {
@@ -21,6 +21,7 @@ interface SidebarHeaderSectionProps {
     sortOptions: SortType[];
     getSortTypeLabel: (type: SortType) => string;
     tagId?: string;
+    isRoot?: boolean;
     selectionMode?: boolean;
     setSelectionMode?: (mode: boolean) => void;
 }
@@ -38,9 +39,11 @@ export function SidebarHeaderSection({
     sortOptions,
     getSortTypeLabel,
     tagId,
+    isRoot,
     selectionMode,
     setSelectionMode,
 }: SidebarHeaderSectionProps) {
+
 
     return (
         <SidebarHeader
@@ -50,8 +53,10 @@ export function SidebarHeaderSection({
             <div className="flex items-center justify-between gap-2 w-full">
                 <div className="flex items-center gap-2 overflow-hidden flex-1">
                     <div className="flex h-6 w-6 shrink-0 items-center justify-center">
-                        {isDaily ? (
-                            <DailyNoteIcon color={color} size={16} />
+                        {isRoot ? (
+                            <AnnotaIcon color={color} size={20} />
+                        ) : isDaily ? (
+                            <Ionicons name="calendar" color={color} size={16} />
                         ) : (
                             <Ionicons name={icon} color={color} size={16} />
                         )}

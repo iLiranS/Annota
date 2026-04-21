@@ -2,7 +2,7 @@ import { useAppTheme } from '@/hooks/use-app-theme';
 import { DAILY_NOTES_FOLDER_ID, sortFolders, useUserStore as useAuthStore, useNotesStore, useSyncStore, type Folder, type Tag } from '@annota/core';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter, usePathname, useGlobalSearchParams } from 'expo-router';
+import { useGlobalSearchParams, usePathname, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     Pressable,
@@ -22,7 +22,6 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FolderEditModal from '../folder-edit-modal';
 import TagEditModal from '../tag-edit-modal';
-import { DailyNoteIcon } from '../ui/daily-note-icon';
 import { HapticPressable } from '../ui/haptic-pressable';
 
 
@@ -291,8 +290,8 @@ export default function Sidebar({ onNavigate, ...props }: SidebarProps & React.C
         // Check if we are already at this location
         const normalizedPath = pathname.toLowerCase();
         const isNotesRoot = normalizedPath === '/notes' || normalizedPath === '/notes/';
-        
-        const isCurrentFolder = folderId 
+
+        const isCurrentFolder = folderId
             ? (isNotesRoot && searchParams.folderId === folderId)
             : (isNotesRoot && !searchParams.folderId && !searchParams.tagId);
 
@@ -317,7 +316,7 @@ export default function Sidebar({ onNavigate, ...props }: SidebarProps & React.C
         const normalizedPath = pathname.toLowerCase();
         const isNotesRoot = normalizedPath === '/notes' || normalizedPath === '/notes/';
         const isCurrentTag = isNotesRoot && searchParams.tagId === tagId;
-        
+
         if (isCurrentTag) {
             closeDrawer();
             return;
@@ -385,9 +384,8 @@ export default function Sidebar({ onNavigate, ...props }: SidebarProps & React.C
                     {/* Top Section */}
                     <View style={styles.section}>
                         <SidebarItem
-                            icon="documents"
+                            renderIcon={() => <Ionicons name="documents" size={22} color={colors.primary} />}
                             label="All Notes"
-                            iconColor={colors.primary}
                             onPress={() => navigateToNotes()}
                         />
 
@@ -395,7 +393,8 @@ export default function Sidebar({ onNavigate, ...props }: SidebarProps & React.C
 
                         <SidebarItem
                             renderIcon={() => (
-                                <DailyNoteIcon
+                                <Ionicons
+                                    name="calendar"
                                     size={22}
                                     color={folders.find(f => f.id === DAILY_NOTES_FOLDER_ID)?.color || '#8B5CF6'}
                                 />
@@ -453,14 +452,14 @@ export default function Sidebar({ onNavigate, ...props }: SidebarProps & React.C
                                     quickAccessNotes.map(note => (
                                         <HapticPressable
                                             key={note.id}
-                                        onPress={() => {
-                                            const normalizedPath = pathname.toLowerCase();
-                                            const isCurrentNote = normalizedPath === `/notes/${note.id}` || normalizedPath === `/notes/${note.id}/`;
-                                            if (isCurrentNote) {
-                                                closeDrawer();
-                                                return;
-                                            }
-                                            resetStackAndReplace({ pathname: '/Notes/[id]', params: { id: note.id } });
+                                            onPress={() => {
+                                                const normalizedPath = pathname.toLowerCase();
+                                                const isCurrentNote = normalizedPath === `/notes/${note.id}` || normalizedPath === `/notes/${note.id}/`;
+                                                if (isCurrentNote) {
+                                                    closeDrawer();
+                                                    return;
+                                                }
+                                                resetStackAndReplace({ pathname: '/Notes/[id]', params: { id: note.id } });
                                             }}
                                             style={({ pressed }) => [
                                                 styles.quickAccessItem,

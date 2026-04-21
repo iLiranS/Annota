@@ -12,6 +12,7 @@ export * from '../constants/editor';
 export * from '../constants/editor-fonts';
 export * from '../constants/theme';
 export * from '../constants/config';
+export * from '../constants/icons';
 export * from './hooks/useChangelog';
 export * from './ai/types';
 export * from './ai/providers';
