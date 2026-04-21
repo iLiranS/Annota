@@ -321,6 +321,8 @@ export const getEditorState = (editor: any) => {
         isOrderedList: e.isActive('orderedList'),
         canSinkListItem: e.can().sinkListItem('listItem'),
         canLiftListItem: e.can().liftListItem('listItem'),
+        canIndent: e.can().indent(),
+        canOutdent: e.can().outdent(),
         isBlockquote: e.isActive('blockquote'),
         isCodeBlock,
         currentCodeLanguage: isCodeBlock ? (codeBlockAttrs.language || null) : null,

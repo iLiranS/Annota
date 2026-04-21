@@ -151,6 +151,8 @@ export function setupEditor(options: any) {
     container.style.setProperty('--bg-color', colors.background);
     container.style.setProperty('--text-color', colors.text);
     container.style.setProperty('--accent-color', colors.primary);
+    container.style.setProperty('--accent', colors.primary + "65");
+    container.style.setProperty('--accent-full', colors.primary);
     container.style.setProperty('--placeholder-color', isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)');
     container.style.setProperty('--code-bg', isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)');
     container.style.setProperty('--code-block-bg', isDark ? '#1E1E1E' : '#F5F5F5');

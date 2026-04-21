@@ -123,7 +123,12 @@ function FolderTreeItem({ folder, onNavigate, onEdit, onDelete, onCreateSubFolde
                     <SidebarMenuButton
                         onClick={() => onNavigate(folder.id)}
                         className={cn(
-                            "h-8 pr-2!",
+                            "h-8 ps-2!",
+                            general?.appDirection === 'rtl' ? (
+                                "group-has-data-[sidebar=menu-action]/menu-item:pr-2! group-has-data-[sidebar=menu-action]/menu-item:pl-8!"
+                            ) : (
+                                "group-has-data-[sidebar=menu-action]/menu-item:pr-8!"
+                            ),
                             isActive && "bg-sidebar-accent text-sidebar-accent-foreground font-semibold"
                         )}
                     >
@@ -133,14 +138,17 @@ function FolderTreeItem({ folder, onNavigate, onEdit, onDelete, onCreateSubFolde
                 {hasChildren && (
                     <SidebarMenuAction
                         onClick={toggle}
-                        className="hidden group-hover/folder:flex items-center justify-center p-0 h-6 w-6"
+                        className={cn(
+                            "hidden group-hover/folder:flex items-center justify-center p-0 h-6 w-6",
+                            general?.appDirection === 'rtl' && "right-auto left-1"
+                        )}
                     >
                         <ChevronRight size={14} className={cn("text-muted-foreground/70 transition-transform", general?.appDirection === 'rtl' ? (isOpen ? "rotate-90" : "rotate-180") : (isOpen && "rotate-90"))} />
                     </SidebarMenuAction>
                 )}
                 {hasChildren && (
                     <CollapsibleContent>
-                        <SidebarMenuSub className="ml-4 border-l border-border/10 pl-2">
+                        <SidebarMenuSub className="ms-4 border-s border-border/10 ps-2">
                             {children.map((child: any) => (
                                 <FolderTreeItem
                                     key={child.id}

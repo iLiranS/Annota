@@ -79,31 +79,34 @@ export function FolderListItemContent({ folder, isActive, searchQuery, hideCount
     };
 
     return (
-        <>
-            <FolderIcon
-                folder={folder}
-                isActive={isActive}
-                className="group-hover/folder:bg-background/50 group-data-[drag-over=true]/item:bg-emerald-500/20 group-data-[drag-over=true]/item:text-emerald-600"
-            />
-            <span className="truncate font-medium flex-1">
-                <Highlight text={folder.name} query={searchQuery} />
-            </span>
+        <div className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-2.5">
+                <FolderIcon
+                    folder={folder}
+                    isActive={isActive}
+                    className="group-hover/folder:bg-background/50 group-data-[drag-over=true]/item:bg-emerald-500/20 group-data-[drag-over=true]/item:text-emerald-600"
+                />
+                <span className="truncate font-medium flex-1">
+                    <Highlight text={folder.name} query={searchQuery} />
+                </span>
+            </div>
             {general.showNotesCountInFolder && (
                 <span className={cn(
                     "text-[10px] tabular-nums font-medium text-muted-foreground/40 transition-opacity duration-200",
                     "group-data-[drag-over=true]/item:hidden",
-                    hideCountOnHover && "group-hover/folder:opacity-0"
+                    hideCountOnHover && "group-hover/folder:opacity-0 group-hover:pointer-events-none",
+                    general.appDirection === 'rtl' ? "absolute left-1.5 top-2" : "absolute right-1.5 top-2"
                 )}>
                     {notesCount}
                 </span>
             )}
             <span className={cn(
                 "hidden group-data-[drag-over=true]/item:flex",
-                "items-center justify-center bg-emerald-500/20 text-emerald-600 rounded drop-shadow-sm h-5 w-5 mr-1"
+                "items-center justify-center bg-emerald-500/20 text-emerald-600 rounded drop-shadow-sm h-5 w-5 me-1"
             )}>
                 <Ionicons name="add" size={14} className="text-emerald-600" />
             </span>
-        </>
+        </div>
     );
 }
 
@@ -195,7 +198,7 @@ export function FolderListItem({
                 data-drag-over={isDragOver ? "true" : undefined}
                 className={cn(
                     "group/item transition-all duration-200",
-                    !asChild && "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm hover:bg-primary/10",
+                    !asChild && "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-start text-sm hover:bg-primary/10",
                     "active:bg-primary/10",
                     isDragOver && "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 ring-1 ring-emerald-500/40 z-10",
                     className
@@ -221,7 +224,7 @@ export function FolderListItem({
                     data-drag-over={isDragOver ? "true" : undefined}
                     className={cn(
                         "group/item transition-all duration-200",
-                        !asChild && "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm hover:bg-primary/10",
+                        !asChild && "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-start text-sm hover:bg-primary/10",
                         "active:bg-primary/10",
                         isDragOver && "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 ring-1 ring-emerald-500/40 z-10",
                         className

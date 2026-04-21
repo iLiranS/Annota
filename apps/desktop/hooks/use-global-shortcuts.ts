@@ -18,7 +18,7 @@ export function useGlobalShortcuts() {
                 if (key === 'n' && !e.shiftKey) {
                     e.preventDefault();
                     createAndNavigate();
-                } else if (key === 'f' && !e.shiftKey) {
+                } else if (key === 'p' && !e.shiftKey) {
                     e.preventDefault();
                     setIsSearchOpen(true);
                 } else if (key === 'e' && !e.shiftKey) {

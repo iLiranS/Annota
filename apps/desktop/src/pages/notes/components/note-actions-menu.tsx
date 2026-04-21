@@ -18,9 +18,10 @@ interface NoteActionsMenuProps {
     note: NoteMetadata;
     onRevert?: (content: string) => void;
     onOpenChange?: (open: boolean) => void;
+    direction: 'ltr' | 'rtl';
 }
 
-export function NoteActionsMenu({ note, onRevert, onOpenChange }: NoteActionsMenuProps) {
+export function NoteActionsMenu({ note, onRevert, onOpenChange, direction }: NoteActionsMenuProps) {
     const { updateNoteMetadata } = useNotesStore();
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
@@ -54,12 +55,12 @@ export function NoteActionsMenu({ note, onRevert, onOpenChange }: NoteActionsMen
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 rounded-xl hover:bg-white/10 dark:hover:bg-white/5 shrink-0 text-muted-foreground/60 hover:text-foreground transition-colors"
+                        className="h-8 w-8 rounded-xl hover:bg-white/10 dark:hover:bg-white/5 shrink-0 text-muted-foreground/60 hover:text-foreground"
                     >
                         <MoreVertical className="h-3.5 w-3.5" />
                     </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 p-1 rounded-xl">
+                <DropdownMenuContent align={direction === 'rtl' ? "start" : "end"} className="w-56 p-1 mt-1 rounded-xl">
                     <DropdownMenuItem
                         className="rounded-lg gap-3 py-2 cursor-pointer"
                         onClick={handleToggleQuickAccess}

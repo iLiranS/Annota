@@ -11,6 +11,7 @@ interface NoteFloatingActionsProps {
     note: NoteMetadata;
     onRevert: (content: string) => void;
     className?: string;
+    direction: 'ltr' | 'rtl';
 }
 
 export function NoteFloatingActions({
@@ -18,13 +19,13 @@ export function NoteFloatingActions({
     note,
     onRevert,
     className,
+    direction
 }: NoteFloatingActionsProps) {
     const [_, setIsMenuOpen] = useState(false);
     const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
 
     const isMac = typeof window !== 'undefined' && (/Mac|iPod|iPhone|iPad/.test(navigator.platform) || /Mac/.test(navigator.userAgent));
     const MOD = isMac ? '⌘' : 'Ctrl';
-    const SHIFT = isMac ? '⇧' : 'Shift';
 
     return (
         <div className={cn(
@@ -32,11 +33,13 @@ export function NoteFloatingActions({
             "p-1",
             "rounded-2xl",
             "z-30",
-            "backdrop-blur-xl",
-            "border border-white/10 dark:border-white/5",
+            "bg-note-bg",
+            "border border-border",
             "shadow-sm",
+            "will-change-transform",
             className
-        )}>
+        )}
+        >
             <div className="flex items-center gap-1 flex-nowrap">
                 <TooltipProvider delayDuration={0}>
                     <Tooltip
@@ -47,7 +50,7 @@ export function NoteFloatingActions({
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8 rounded-xl hover:bg-white/10 dark:hover:bg-white/5 shrink-0 text-muted-foreground/60 hover:text-foreground transition-colors"
+                                className="h-8 w-8 rounded-xl hover:bg-white/10 dark:hover:bg-white/5 shrink-0 text-muted-foreground/60 hover:text-foreground"
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     onToggleSearch();
@@ -58,7 +61,7 @@ export function NoteFloatingActions({
                         </TooltipTrigger>
                         <TooltipContent side="bottom" sideOffset={12} className="text-[10px] font-medium">
                             Search
-                            <span className="ml-2 text-[10px] opacity-60 bg-white/10 px-1 rounded-sm border border-white/10"> {MOD + ' + ' + SHIFT + ' + F'}</span>
+                            <span className="ml-2 text-[10px] opacity-60 bg-white/10 px-1 rounded-sm border border-white/10"> {MOD + ' + ' + 'F'}</span>
                         </TooltipContent>
                     </Tooltip>
 
@@ -67,6 +70,7 @@ export function NoteFloatingActions({
                             note={note}
                             onRevert={onRevert}
                             onOpenChange={setIsMenuOpen}
+                            direction={direction}
                         />
                     </div>
                 </TooltipProvider>

@@ -9,6 +9,7 @@ import 'katex/dist/katex.min.css';
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { useSharedEditorUI } from './hooks/useSharedEditorUI';
 import { EditorState, initialEditorState, PopupType, TipTapEditorProps, TipTapEditorRef } from './shared/types';
+import { AutoShowHeader } from './shared/AutoShowHeader';
 
 function extractImageIds(html: string): string[] {
     const regex = /data-image-id\s*=\s*(["'])(.*?)\1/gi;
@@ -45,6 +46,7 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
         onOpenLinkMenu,
         renderToolbar,
         renderHeader,
+        renderStaticHeader,
         renderImageGallery,
         isDark: propIsDark,
         colors: propColors,
@@ -58,6 +60,7 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
         const [currentLatex, setCurrentLatex] = useState<string | null>(null);
         const { gallery, openGallery, closeGallery, setGalleryIndex } = useSharedEditorUI(onGalleryVisibilityChange);
         const containerRef = useRef<HTMLDivElement>(null);
+        const scrollerRef = useRef<HTMLDivElement>(null);
         const isHydrating = useRef(false);
         const editorRef = useRef<any>(null);
         // Use a ref so the contextmenu handler always calls the latest callback (avoids stale closure)
@@ -309,7 +312,7 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
 
                 // Sync selection with AI store
                 const selectedText = selection.empty ? null : editor.state.doc.textBetween(selection.from, selection.to, ' ');
-                
+
                 // Only clear the AI store highlight if the editor is focused
                 // This prevents clearing it when the user clicks into the AI sidebar
                 if (!selection.empty || editor.isFocused) {
@@ -330,6 +333,8 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
             root.style.setProperty('--bg-color', finalBg);
             root.style.setProperty('--text-color', finalTextColor);
             root.style.setProperty('--accent-color', colors.primary);
+            root.style.setProperty('--accent', colors.primary + "65");
+            root.style.setProperty('--accent-full', colors.primary);
             root.style.setProperty('--editor-font-size', `${editorSettings.fontSize}px`);
             root.style.setProperty('--editor-font-family', resolveFontFamily(editorSettings.fontFamily));
             root.style.setProperty('--editor-line-height', `${editorSettings.lineSpacing}`);
@@ -719,7 +724,7 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                         setActivePopup('math');
                     }
                 })}
-                <div className="editor-scroller" dir={editorSettings.direction} style={{
+                <div className="editor-scroller" ref={scrollerRef} dir={editorSettings.direction} style={{
                     flex: 1,
                     overflowY: 'auto',
                     padding: isStandalone ? '0 12px' : '0 24px',
@@ -730,7 +735,12 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                         margin: '0 auto',
                         minHeight: '100%'
                     }}>
-                        {renderHeader?.()}
+                        {renderHeader && (
+                            <AutoShowHeader scrollContainerRef={scrollerRef}>
+                                {renderHeader()}
+                            </AutoShowHeader>
+                        )}
+                        {renderStaticHeader && renderStaticHeader()}
                         <EditorContent editor={editor} style={{ outline: 'none', paddingTop: contentPaddingTop, paddingBottom: initialContent && initialContent.length > 100 ? 100 : 0 }} />
                     </div>
                 </div>

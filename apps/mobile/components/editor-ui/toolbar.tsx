@@ -144,16 +144,16 @@ export function EditorToolbar({
                             onPress={() => onCommand('toggleTaskList')}
                         />
 
-                        {/* Tab In/Out for nested lists */}
+                        {/* Tab In/Out for nested lists & normal text */}
                         <ToolbarButton
                             icon="format-indent-increase"
-                            onPress={() => onCommand('sinkListItem')}
-                            disabled={!editorState.canSinkListItem}
+                            onPress={() => onCommand('indent')}
+                            disabled={!editorState.canIndent}
                         />
                         <ToolbarButton
                             icon="format-indent-decrease"
-                            onPress={() => onCommand('liftListItem')}
-                            disabled={!editorState.canLiftListItem}
+                            onPress={() => onCommand('outdent')}
+                            disabled={!editorState.canOutdent}
                         />
 
                         <View style={styles.separator} />

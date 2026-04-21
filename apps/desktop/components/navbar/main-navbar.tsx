@@ -125,7 +125,7 @@ export function MainNavbar() {
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent side="bottom" className="text-[10px]">
-                            Toggle Sidebar ⌘+⇧+D
+                            Toggle Sidebar <span className="opacity-50 ml-1"> ⌘+⇧+D</span>
                         </TooltipContent>
                     </Tooltip>
 
@@ -184,7 +184,7 @@ export function MainNavbar() {
                         </Button>
                     </TooltipTrigger>
                     <TooltipContent side="bottom" className="text-[10px]">
-                        Search <span className="opacity-50 ml-1">⌘F</span>
+                        Search <span className="opacity-50 ml-1">⌘+P</span>
                     </TooltipContent>
                 </Tooltip>
             </div>

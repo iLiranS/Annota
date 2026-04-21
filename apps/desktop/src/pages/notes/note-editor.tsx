@@ -10,15 +10,17 @@ import { useSidebar } from "@/components/ui/sidebar";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useOpenNoteInNewWindow } from "@/hooks/use-open-note-in-new-window";
 import { copyImageToClipboard, writeText } from "@/lib/clipboard";
+import { cn } from "@/lib/utils";
 import { generateTitle, normalizeStoredContent, NoteMetadata, TRASH_FOLDER_ID, useNotesStore, useSettingsStore } from "@annota/core";
 import { NoteFileService } from "@annota/core/platform";
 import TipTapEditor, { TipTapEditorRef } from "@annota/editor-ui";
 import { FileText, Loader2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { NoteHeader } from "./components/note-header";
+import { NoteFloatingActions } from "./components/note-floating-actions";
 import { NoteRestoreButton } from "./components/note-restore-button";
 import { NoteSearch } from "./components/note-search";
+import { NoteTags } from "./components/note-tags";
 
 
 export interface NoteEditorProps {
@@ -43,6 +45,7 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
     const getNoteContent = useNotesStore((s) => s.getNoteContent);
     const { updateNoteContent, updateNoteMetadata } = useNotesStore();
     const setLastViewed = useSettingsStore((s) => s.setLastViewed);
+    const direction = useSettingsStore((s) => s.editor.direction);
     const note = notes.find((n) => n.id === noteId);
     const { isDark, colors } = useAppTheme();
 
@@ -430,7 +433,7 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "f") {
+            if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "f") {
                 e.preventDefault();
                 handleOpenSearch();
             }
@@ -664,15 +667,24 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
                             isStandalone={isStandalone}
                             contentPaddingTop={0}
                             placeholder="Start typing..."
+                            renderStaticHeader={() => (
+                                <div className={cn("py-2 px-1", direction === 'rtl' ? "pl-20" : "pr-20")}>
+                                    <NoteTags noteId={noteId ?? ''} />
+                                </div>
+                            )}
                             renderHeader={() => (
-                                <NoteHeader
-                                    noteId={noteId ?? ''}
+                                <NoteFloatingActions
                                     note={note}
+                                    direction={direction === 'auto' ? 'ltr' : direction}
                                     onToggleSearch={() => setIsSearching(prev => !prev)}
                                     onRevert={(content) => {
                                         setInitialContent(content);
                                         editorRef.current?.setContent(content);
                                     }}
+                                    className={cn(
+                                        "absolute top-2  pointer-events-auto shadow-md",
+                                        direction === 'rtl' ? "left-4" : "right-4"
+                                    )}
                                 />
                             )}
                             renderToolbar={(props) => note.isDeleted ? (

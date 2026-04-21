@@ -1,43 +1,54 @@
 import { Extension } from '@tiptap/core';
 
+declare module '@tiptap/core' {
+  interface Commands<ReturnType> {
+    indent: () => ReturnType,
+    outdent: () => ReturnType,
+  }
+}
+
 export const Indentation = Extension.create({
   name: 'indentation',
 
   priority: 1100, // Higher priority to ensure it catches Tab before other extensions or browser defaults
 
-  addKeyboardShortcuts() {
+  addCommands() {
     return {
-      'Tab': () => {
-        const { editor } = this;
-
+      indent: () => ({ dispatch, editor }: { dispatch: any, editor: any }) => {
         if (editor.isActive('table')) {
           return false;
         }
 
         // Try sinking list item first (standard list then task list)
-        return editor.commands.sinkListItem('listItem')
-          || editor.commands.sinkListItem('taskItem')
-          || editor.commands.insertContent('  ');
+        if (editor.can().sinkListItem('listItem')) {
+          return dispatch ? editor.commands.sinkListItem('listItem') : true;
+        }
+        if (editor.can().sinkListItem('taskItem')) {
+          return dispatch ? editor.commands.sinkListItem('taskItem') : true;
+        }
+
+        if (dispatch) {
+          return editor.commands.insertContent('  ');
+        }
+
+        return true;
       },
 
-      'Shift-Tab': () => {
-        const { editor } = this;
-
+      outdent: () => ({ state, dispatch, editor }: { state: any, dispatch: any, editor: any }) => {
         if (editor.isActive('table')) {
           return false;
         }
 
         // Try lifting list item first
         if (editor.can().liftListItem('listItem')) {
-          return editor.commands.liftListItem('listItem');
+          return dispatch ? editor.commands.liftListItem('listItem') : true;
         }
 
         if (editor.can().liftListItem('taskItem')) {
-          return editor.commands.liftListItem('taskItem');
+          return dispatch ? editor.commands.liftListItem('taskItem') : true;
         }
 
         // Handle outdenting CodeBlocks or normal text
-        const { state } = editor.view;
         const { selection } = state;
         const { $from, empty } = selection;
 
@@ -47,16 +58,27 @@ export const Indentation = Extension.create({
 
           // If the text before cursor ends with spaces, remove up to 2 of them
           if (textBefore.endsWith('  ')) {
-            editor.commands.deleteRange({ from: selection.from - 2, to: selection.from });
+            if (dispatch) {
+              return editor.commands.deleteRange({ from: selection.from - 2, to: selection.from });
+            }
             return true;
           } else if (textBefore.endsWith(' ')) {
-            editor.commands.deleteRange({ from: selection.from - 1, to: selection.from });
+            if (dispatch) {
+              return editor.commands.deleteRange({ from: selection.from - 1, to: selection.from });
+            }
             return true;
           }
         }
 
-        return true; // Prevent focus jump
+        return false;
       },
+    } as any;
+  },
+
+  addKeyboardShortcuts() {
+    return {
+      'Tab': () => (this.editor.commands as any).indent(),
+      'Shift-Tab': () => (this.editor.commands as any).outdent(),
     };
   },
 });

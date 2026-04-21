@@ -135,14 +135,14 @@ export function DesktopToolbar({
         {
             id: 'outdent',
             label: 'Outdent',
-            render: <Button key="outdent" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('liftListItem')} disabled={!editorState.canLiftListItem}><EditorIcons.Outdent className="w-5 h-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="outdent-dropdown" onClick={() => sendCommand('liftListItem')} disabled={!editorState.canLiftListItem} className="gap-2"><EditorIcons.Outdent className="w-4 h-4" /> Outdent</DropdownMenuItem>
+            render: <Button key="outdent" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('outdent')} disabled={!editorState.canOutdent}><EditorIcons.Outdent className="w-5 h-5" /></Button>,
+            dropdownRender: <DropdownMenuItem key="outdent-dropdown" onClick={() => sendCommand('outdent')} disabled={!editorState.canOutdent} className="gap-2"><EditorIcons.Outdent className="w-4 h-4" /> Outdent</DropdownMenuItem>
         },
         {
             id: 'indent',
             label: 'Indent',
-            render: <Button key="indent" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('sinkListItem')} disabled={!editorState.canSinkListItem}><EditorIcons.Indent className="w-5 h-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="indent-dropdown" onClick={() => sendCommand('sinkListItem')} disabled={!editorState.canSinkListItem} className="gap-2"><EditorIcons.Indent className="w-4 h-4" /> Indent</DropdownMenuItem>
+            render: <Button key="indent" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('indent')} disabled={!editorState.canIndent}><EditorIcons.Indent className="w-5 h-5" /></Button>,
+            dropdownRender: <DropdownMenuItem key="indent-dropdown" onClick={() => sendCommand('indent')} disabled={!editorState.canIndent} className="gap-2"><EditorIcons.Indent className="w-4 h-4" /> Indent</DropdownMenuItem>
         },
         {
             id: 'code',

@@ -70,7 +70,9 @@ export interface TipTapEditorProps {
     onCodeBlockSelected?: (e: MouseEvent, resolve: () => { pos: number; message: Record<string, unknown> } | null) => void;
     /** Render prop for customizing the toolbar and its popup menus */
     renderToolbar?: (props: ToolbarRenderProps) => React.ReactNode;
-    /** Render prop for content to appear above the editor within the scroll container */
+    /** Render prop for content that stays at the top of the scroll container (not sticky) */
+    renderStaticHeader?: () => React.ReactNode;
+    /** Render prop for content to appear above the editor within the scroll container (sticky/floating) */
     renderHeader?: () => React.ReactNode;
     /** Render prop for full-screen image gallery and zoom */
     renderImageGallery?: (props: {
@@ -105,6 +107,8 @@ export interface EditorState {
     isTaskList: boolean;
     canSinkListItem: boolean;
     canLiftListItem: boolean;
+    canIndent: boolean;
+    canOutdent: boolean;
 
     // Blocks
     isBlockquote: boolean;
@@ -162,6 +166,8 @@ export const initialEditorState: EditorState = {
     isTaskList: false,
     canSinkListItem: false,
     canLiftListItem: false,
+    canIndent: false,
+    canOutdent: false,
     isBlockquote: false,
     isCodeBlock: false,
     currentCodeLanguage: null,
@@ -206,6 +212,8 @@ export type EditorCommand =
     | 'toggleTaskList'
     | 'sinkListItem'
     | 'liftListItem'
+    | 'indent'
+    | 'outdent'
     | 'toggleBlockquote'
     | 'toggleCodeBlock'
     | 'toggleHeading'
