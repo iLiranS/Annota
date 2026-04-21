@@ -63,7 +63,7 @@ export function BreadcrumbsSection({ breadcrumbs, onNavigate, className }: Bread
                                             className="truncate max-w-[80px]"
                                             style={crumb.color ? { color: crumb.color } : undefined}
                                         >
-                                            {crumb.name}
+                                            {crumb.name === "All Notes" ? "Annota" : crumb.name}
                                         </span>
                                     </button>
                                 </BreadcrumbLink>

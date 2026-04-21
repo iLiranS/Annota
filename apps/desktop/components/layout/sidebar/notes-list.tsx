@@ -1,14 +1,14 @@
+import { ConfirmDialog } from "@/components/custom-ui/confirm-dialog";
+import { LocationPickerModal } from "@/components/location-picker-modal";
 import { NoteListItem } from "@/components/notes/note-list-item";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuItem } from "@/components/ui/sidebar";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { NoteMetadata, useNotesStore } from "@annota/core";
 import { ChevronRight, Files, FolderEdit, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { LocationPickerModal } from "@/components/location-picker-modal";
-import { ConfirmDialog } from "@/components/custom-ui/confirm-dialog";
 import { toast } from "sonner";
-import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 interface NotesListProps {
     notes: NoteMetadata[];
@@ -20,6 +20,7 @@ interface NotesListProps {
     selectedNoteIds?: string[];
     onToggleSelection?: (noteId: string) => void;
     onClearSelection?: () => void;
+    currentFolderId?: string | null;
 }
 
 export function NotesList({
@@ -31,7 +32,8 @@ export function NotesList({
     selectionMode = false,
     selectedNoteIds = [],
     onToggleSelection,
-    onClearSelection
+    onClearSelection,
+    currentFolderId
 }: NotesListProps) {
     const bulkDeleteNotes = useNotesStore(state => state.bulkDeleteNotes);
     const bulkMoveNotes = useNotesStore(state => state.bulkMoveNotes);
@@ -50,6 +52,11 @@ export function NotesList({
     };
 
     const handleBulkMove = async (folderId: string | null) => {
+        if (folderId === currentFolderId) {
+            setIsLocationPickerOpen(false);
+            onClearSelection?.();
+            return;
+        }
         try {
             await bulkMoveNotes(selectedNoteIds, folderId);
             toast.success(`Moved ${selectedNoteIds.length} notes`);
@@ -83,7 +90,7 @@ export function NotesList({
                         <ChevronRight size={12} className={cn("transition-transform", general?.appDirection === 'rtl' ? (isOpen ? "rotate-90" : "rotate-180") : (isOpen && "rotate-90"))} />
                     </CollapsibleTrigger>
                 </SidebarGroupLabel>
-                
+
                 {selectionMode && isOpen && (
                     <div className="flex items-center justify-between px-2 py-1 bg-accent/50 rounded-md mx-2 mb-1 border border-border/50">
                         <span className="text-[10px] font-medium font-mono text-muted-foreground whitespace-nowrap">
@@ -93,7 +100,7 @@ export function NotesList({
                             <TooltipProvider delayDuration={0}>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
-                                        <button 
+                                        <button
                                             onClick={(e) => { e.stopPropagation(); setIsLocationPickerOpen(true); }}
                                             className="hover:bg-primary/20 text-foreground hover:text-primary p-1.5 rounded transition-colors disabled:opacity-50"
                                             disabled={selectedNoteIds.length === 0}
@@ -105,7 +112,7 @@ export function NotesList({
                                 </Tooltip>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
-                                        <button 
+                                        <button
                                             onClick={(e) => { e.stopPropagation(); setIsDeleteModalOpen(true); }}
                                             className="hover:bg-destructive/10 text-destructive/80 hover:text-destructive p-1.5 rounded transition-colors disabled:opacity-50"
                                             disabled={selectedNoteIds.length === 0}
@@ -118,7 +125,7 @@ export function NotesList({
                                 <div className="w-px h-3 bg-border mx-0.5" />
                                 <Tooltip>
                                     <TooltipTrigger asChild>
-                                        <button 
+                                        <button
                                             onClick={(e) => { e.stopPropagation(); onClearSelection?.(); }}
                                             className="hover:bg-accent/80 text-muted-foreground hover:text-foreground p-1.5 rounded transition-colors"
                                         >
@@ -131,7 +138,7 @@ export function NotesList({
                         </div>
                     </div>
                 )}
-                
+
                 <CollapsibleContent className="min-h-0 data-[state=open]:flex-1 data-[state=open]:flex data-[state=open]:flex-col overflow-hidden">
                     <div className="flex-1 overflow-y-auto premium-scrollbar px-1 mt-0.5">
                         <SidebarMenu className="gap-0.5">
@@ -178,17 +185,17 @@ export function NotesList({
                     </div>
                 </CollapsibleContent>
             </SidebarGroup>
-            
+
             {isLocationPickerOpen && (
                 <LocationPickerModal
                     open={isLocationPickerOpen}
                     onOpenChange={setIsLocationPickerOpen}
                     onClose={() => setIsLocationPickerOpen(false)}
-                    selectedParentId={null}
+                    selectedParentId={currentFolderId ?? null}
                     onSelect={handleBulkMove}
                 />
             )}
-            
+
             <ConfirmDialog
                 open={isDeleteModalOpen}
                 onOpenChange={setIsDeleteModalOpen}

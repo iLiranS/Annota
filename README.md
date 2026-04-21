@@ -36,13 +36,28 @@ To run Annota, you will need to add the following environment variables to your 
 
 `VITE_SUPABASE_KEY`
 
+## ☁️ Supabase Setup
+
+To enable sync and backup features, follow these setup guides in order:
+
+1. [Initial Setup](./docs/Supabase_setup/1__initial_setup.md)
+2. [Required Tables](./docs/Supabase_setup/2__required_tables.md)
+3. [Row Level Security](./docs/Supabase_setup/3__rls___row_level_security.md)
+4. [Database Functions & Triggers](./docs/Supabase_setup/4__database_functions___triggers.md)
+5. [Edge Functions](./docs/Supabase_setup/5__edge_functions.md)
+6. [Roles & Indexes](./docs/Supabase_setup/6__roles___indexes.md)
+7. [Storage Buckets](./docs/Supabase_setup/7__storage_buckets.md)
+8. [Scheduled Tasks & Cron Jobs](./docs/Supabase_setup/8__scheduled_tasks__cron_jobs_.md)
+
+*Note: Full local support without any Supabase setup is coming soon.*
+
 
 ## Run Locally
 
 Annota is built with a local-first architecture. You can clone the repository and run it locally with minimal effort and knowledge—no server is strictly required for the core experience.
 
-> [!NOTE]
-> While a Supabase setup is required for cross-device synchronization and backups, detailed initialization instructions and automated setup scripts are coming soon. For now, you can easily get it working in offline mode but it will require some changes to disable supabase in the code.
+
+
 
 ### 1. Clone the project
 

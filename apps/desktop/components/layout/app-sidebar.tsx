@@ -327,6 +327,7 @@ export function AppSidebar() {
                         onClearSelection={() => {
                             handleSetSelectionMode(false);
                         }}
+                        currentFolderId={currentFolderId ?? null}
                     />
 
                 </SidebarContent>
