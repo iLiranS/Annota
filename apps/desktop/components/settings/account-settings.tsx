@@ -10,7 +10,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { useUserStore } from "@annota/core";
+import { useUserStore, isCloudEnabled } from "@annota/core";
 import { getMasterKey } from "@annota/core/platform";
 import { useEffect, useState } from "react";
 import { Ionicons } from "../ui/ionicons";
@@ -186,15 +186,19 @@ export function AccountSettings() {
                         </>
                     ) : (
                         <>
-                            <SettingItem
-                                label="Sign In"
-                                description="Enable cloud sync and multi-device access"
-                                icon={<Ionicons name="log-in" size={20} />}
-                                iconBg="bg-blue-600"
-                                onClick={() => setGuest(false)}
-                                action={<Ionicons name="chevron-forward" size={16} className="text-muted-foreground" />}
-                            />
-                            <Separator />
+                            {isCloudEnabled && (
+                                <>
+                                    <SettingItem
+                                        label="Sign In"
+                                        description="Enable cloud sync and multi-device access"
+                                        icon={<Ionicons name="log-in" size={20} />}
+                                        iconBg="bg-blue-600"
+                                        onClick={() => setGuest(false)}
+                                        action={<Ionicons name="chevron-forward" size={16} className="text-muted-foreground" />}
+                                    />
+                                    <Separator />
+                                </>
+                            )}
                             <SettingItem
                                 label="Display Name"
                                 description={displayName}

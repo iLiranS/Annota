@@ -10,7 +10,8 @@ import {
   useSearchStore,
   useSettingsStore,
   useSyncStore,
-  useUserStore
+  useUserStore,
+  isCloudEnabled
 } from "@annota/core";
 import {
   SyncScheduler,
@@ -139,34 +140,39 @@ function App() {
         // 3. Optimistically grab the persisted user ID FIRST
         let activeUserId: string | null = useUserStore.getState().user?.id ?? null;
 
-        // Populate master key early so offline mode doesn't redirect to /auth/master-key
-        // since authApi.onAuthStateChange might not provide a session when offline.
-        if (activeUserId) {
-          await useUserStore.getState().checkMasterKey();
-        }
-
-        // 3. Attempt session restore with a safety timeout
-        try {
-          const { data } = await withStartupTimeout(
-            authApi.getSession(),
-            "Session restore",
-          ) as any;
-
-          if (data?.session) {
-            setSession(data.session);
-            activeUserId = data.session.user.id;
-            // Fetch profile to sync role, sub_exp_date, etc.
-            await useUserStore.getState().getUserProfile();
+        if (!isCloudEnabled) {
+          useUserStore.getState().setGuest(true);
+          activeUserId = null;
+        } else {
+          // Populate master key early so offline mode doesn't redirect to /auth/master-key
+          // since authApi.onAuthStateChange might not provide a session when offline.
+          if (activeUserId) {
+            await useUserStore.getState().checkMasterKey();
           }
-        } catch (error) {
-          console.warn(
-            "[DesktopBootstrap] Session restore delayed/failed (offline likely). Falling back to local user state.",
-            error,
-          );
-          if (isStartupTimeout(error)) {
-            useSyncStore.getState().setOnline(false);
+
+          // 3. Attempt session restore with a safety timeout
+          try {
+            const { data } = await withStartupTimeout(
+              authApi.getSession(),
+              "Session restore",
+            ) as any;
+
+            if (data?.session) {
+              setSession(data.session);
+              activeUserId = data.session.user.id;
+              // Fetch profile to sync role, sub_exp_date, etc.
+              await useUserStore.getState().getUserProfile();
+            }
+          } catch (error) {
+            console.warn(
+              "[DesktopBootstrap] Session restore delayed/failed (offline likely). Falling back to local user state.",
+              error,
+            );
+            if (isStartupTimeout(error)) {
+              useSyncStore.getState().setOnline(false);
+            }
+            // We gracefully catch this. activeUserId still holds the persisted ID!
           }
-          // We gracefully catch this. activeUserId still holds the persisted ID!
         }
 
         // 4. Initialise (or switch to) the per-user SQLite database.

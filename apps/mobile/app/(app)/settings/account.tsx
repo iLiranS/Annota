@@ -1,7 +1,7 @@
 import SettingItem from '@/components/settings/setting-item';
 import UpdateDisplayNameForm from '@/components/user/updateDisplayNameForm';
 import { useAppTheme } from '@/hooks/use-app-theme';
-import { isPremiumUser, useUserStore as useAuthStore } from '@annota/core';
+import { isPremiumUser, useUserStore as useAuthStore, isCloudEnabled } from '@annota/core';
 import { getMasterKey } from '@annota/core/platform';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -239,14 +239,16 @@ export default function AccountSettingsScreen() {
                         </>
                     ) : (
                         <>
-                            <SettingItem
-                                label="Sign In"
-                                icon="log-in-outline"
-                                onPress={handleSignIn}
-                                description="Enable cloud sync"
-                                iconColor="#FFFFFF"
-                                iconBackgroundColor="#007AFF"
-                            />
+                            {isCloudEnabled && (
+                                <SettingItem
+                                    label="Sign In"
+                                    icon="log-in-outline"
+                                    onPress={handleSignIn}
+                                    description="Enable cloud sync"
+                                    iconColor="#FFFFFF"
+                                    iconBackgroundColor="#007AFF"
+                                />
+                            )}
                             <SettingItem
                                 label="Update Display Name"
                                 icon="person-outline"

@@ -1,13 +1,13 @@
 import { HapticPressable } from '@/components/ui/haptic-pressable';
 import { useAppTheme } from '@/hooks/use-app-theme';
-import { authApi, useUserStore as useAuthStore } from '@annota/core';
+import { authApi, useUserStore as useAuthStore, isCloudEnabled } from '@annota/core';
 import { getMasterKey } from '@annota/core/platform';
 import { Ionicons } from '@expo/vector-icons';
 import { makeRedirectUri } from 'expo-auth-session';
 import * as QueryParams from 'expo-auth-session/build/QueryParams';
 import { router, Stack } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ActivityIndicator, Alert, Image, StyleSheet, Text, View } from 'react-native';
 import Animated, {
     FadeInDown,
@@ -94,6 +94,12 @@ export default function LoginScreen() {
         setGuest(true);
         router.replace('/(app)');
     };
+
+    useEffect(() => {
+        if (!isCloudEnabled) {
+            continueAsGuest();
+        }
+    }, []);
 
     const renderProviderButton = (provider: 'google' | 'apple' | 'github', icon: keyof typeof Ionicons.glyphMap, label: string, index: number) => {
         const isLoading = loadingProvider === provider;

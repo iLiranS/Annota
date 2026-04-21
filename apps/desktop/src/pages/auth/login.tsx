@@ -1,9 +1,9 @@
-import { authApi, useUserStore } from "@annota/core";
+import { authApi, useUserStore, isCloudEnabled } from "@annota/core";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
@@ -89,6 +89,12 @@ export default function LoginPage() {
         useUserStore.getState().setGuest(true);
         navigate("/", { replace: true });
     };
+
+    useEffect(() => {
+        if (!isCloudEnabled) {
+            continueAsGuest();
+        }
+    }, []);
 
     const providerButton = (
         provider: OAuthProvider,

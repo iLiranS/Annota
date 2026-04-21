@@ -1,4 +1,4 @@
-import { supabase } from '../supabase';
+import { supabase, isCloudEnabled } from '../supabase';
 
 // Helper type based on what the sync uses
 export type SyncPayload = {
@@ -48,6 +48,8 @@ export const syncApi = {
 
     /** Fetch remote app configuration */
     getAppConfig: async () => {
+        if (!isCloudEnabled) return { sync_disabled: false };
+
         try {
             // 1. Get the public URL for the file (this doesn't make a network request, just formats the string)
             const { data } = supabase.storage.from('app-config').getPublicUrl('flags.json');

@@ -31,6 +31,7 @@ import {
   useSearchStore,
   useSettingsStore,
   useSyncStore,
+  isCloudEnabled,
 } from '@annota/core';
 import { SyncScheduler, getMasterKey, initPlatformAdapters } from '@annota/core/platform';
 import { createMobileAdapters } from '../bootstrap/mobile-adapters';
@@ -184,52 +185,59 @@ function AppLogicHub() {
         await useAuthStore.persist.rehydrate();
         await useSettingsStore.persist.rehydrate();
 
-        const { appConfigService } = require('@annota/core'); // Keep this require if it's truly problematic as top-level due to side effects
-        try {
-          await withStartupTimeout(appConfigService.init(), 'App config');
-        } catch (err) {
-          console.warn('[RootLayout] App config init timed out/failed. Proceeding offline.', err);
-          if (isStartupTimeout(err)) {
-            useSyncStore.getState().setOnline(false);
-          }
-        }
-
-        subscription = authApi.onAuthStateChange((event, session) => {
-          if (!isMounted) return;
-          console.log('[RootLayout] Auth state change:', event);
-          if (session) {
-            setSession(session);
-            getUserProfile();
-            logInRevenueCat(session.user.id);
-          } else if (event === 'SIGNED_OUT') {
-            setSession(null);
-            logOutRevenueCat();
-            useNotesStore.getState().reset();
-            useSearchStore.getState().reset();
-            useSyncStore.getState().reset();
-          } else if (!useAuthStore.getState().initialized) {
-            useAuthStore.setState({ initialized: true });
-          }
-        });
-
-        try {
-          const { data: { session: currentSession } } = await withStartupTimeout(
-            authApi.getSession(),
-            'Session restore',
-          );
-          if (isMounted) {
-            if (currentSession) {
-              setSession(currentSession);
-            }
-          }
-        } catch (err) {
-          console.warn('[RootLayout] Session restore delayed/failed (offline likely).', err);
-          if (isStartupTimeout(err)) {
-            useSyncStore.getState().setOnline(false);
-          }
-        } finally {
+        if (!isCloudEnabled) {
+          useAuthStore.getState().setGuest(true);
           if (isMounted && !useAuthStore.getState().initialized) {
             useAuthStore.setState({ initialized: true });
+          }
+        } else {
+          const { appConfigService } = require('@annota/core'); // Keep this require if it's truly problematic as top-level due to side effects
+          try {
+            await withStartupTimeout(appConfigService.init(), 'App config');
+          } catch (err) {
+            console.warn('[RootLayout] App config init timed out/failed. Proceeding offline.', err);
+            if (isStartupTimeout(err)) {
+              useSyncStore.getState().setOnline(false);
+            }
+          }
+
+          subscription = authApi.onAuthStateChange((event, session) => {
+            if (!isMounted) return;
+            console.log('[RootLayout] Auth state change:', event);
+            if (session) {
+              setSession(session);
+              getUserProfile();
+              logInRevenueCat(session.user.id);
+            } else if (event === 'SIGNED_OUT') {
+              setSession(null);
+              logOutRevenueCat();
+              useNotesStore.getState().reset();
+              useSearchStore.getState().reset();
+              useSyncStore.getState().reset();
+            } else if (!useAuthStore.getState().initialized) {
+              useAuthStore.setState({ initialized: true });
+            }
+          });
+
+          try {
+            const { data: { session: currentSession } } = await withStartupTimeout(
+              authApi.getSession(),
+              'Session restore',
+            );
+            if (isMounted) {
+              if (currentSession) {
+                setSession(currentSession);
+              }
+            }
+          } catch (err) {
+            console.warn('[RootLayout] Session restore delayed/failed (offline likely).', err);
+            if (isStartupTimeout(err)) {
+              useSyncStore.getState().setOnline(false);
+            }
+          } finally {
+            if (isMounted && !useAuthStore.getState().initialized) {
+              useAuthStore.setState({ initialized: true });
+            }
           }
         }
       } catch (err) {

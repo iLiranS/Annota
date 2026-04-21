@@ -28,15 +28,14 @@ A private, local-first mobile note-taking application designed for speed, privac
 
 To run Annota, you will need to add the following environment variables to your mobile .env and desktop .env relatively **(unless fully offline)** :
 
-`EXPO_PUBLIC_SUPABASE_KEY`
 
-`EXPO_PUBLIC_SUPABASE_UR`
-
-`VITE_SUPABASE_URL`
-
-`VITE_SUPABASE_KEY`
 
 ## ☁️ Supabase Setup
+If you are only interested in local mode, you can skip this section, but make sure to set the `VITE_ENABLE_CLOUD` and `EXPO_PUBLIC_ENABLE_CLOUD` environment variables to `false`. if you do decide to use cloud you need to have those in .env (of desktop / mobile relatively)
+`EXPO_PUBLIC_SUPABASE_KEY`
+`EXPO_PUBLIC_SUPABASE_UR`
+`VITE_SUPABASE_URL`
+`VITE_SUPABASE_KEY`
 
 To enable sync and backup features, follow these setup guides in order:
 
