@@ -19,7 +19,6 @@ export function useWebViewBridge({ sendMessage, onMessage }: WebViewBridgeOption
             queuedCommandsRef.current.push({ command, params });
             return;
         }
-        console.log('dispatchCommand', command, params)
         sendMessage(command, params);
     }, [sendMessage]);
 

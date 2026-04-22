@@ -417,7 +417,7 @@
 .quote-menu-btn {
     position: absolute;
     top: 4px;
-    right: 4px;
+    inset-inline-end: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -447,7 +447,7 @@
     .quote-menu-btn {
         opacity: 0.5;
         top: 6px;
-        right: 6px;
+        inset-inline-end: 6px;
         width: 24px;
         height: 24px;
     }

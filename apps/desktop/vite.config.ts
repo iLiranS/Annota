@@ -12,10 +12,9 @@ export default defineConfig(({ mode }): UserConfig => {
     plugins: [react(), tailwindcss()] as any,
     define: {
       "process.env": {
-        EXPO_PUBLIC_SUPABASE_URL: env.VITE_SUPABASE_URL ?? "",
-        EXPO_PUBLIC_SUPABASE_KEY: env.VITE_SUPABASE_KEY ?? "",
         VITE_SUPABASE_URL: env.VITE_SUPABASE_URL ?? "",
         VITE_SUPABASE_KEY: env.VITE_SUPABASE_KEY ?? "",
+        VITE_ENABLE_CLOUD: env.VITE_ENABLE_CLOUD ?? "false",
       },
     },
     resolve: {

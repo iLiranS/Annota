@@ -21,6 +21,7 @@
         "@react-native-community/hooks": "^100.1.0",
         "@react-native-community/netinfo": "11.5.2",
         "@react-native-community/slider": "5.1.2",
+        "@react-native-menu/menu": "^2.0.0",
         "@react-navigation/bottom-tabs": "7.15.2",
         "@react-navigation/drawer": "7.9.7",
         "@react-navigation/elements": "2.9.8",

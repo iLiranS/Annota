@@ -301,7 +301,7 @@ export default function NoteEditor() {
                     headerTransparent: editor.floatingNoteHeader,
                     headerBackground: editor.floatingNoteHeader ? () => <View style={{ flex: 1, backgroundColor: 'transparent' }} /> : undefined,
                     headerBlurEffect: undefined,
-                    headerShadowVisible: !editor.floatingNoteHeader,
+                    headerShadowVisible: false,
                     headerTitle: editor.floatingNoteHeader ? '' : () => (
                         <Text
                             style={[styles.headerTitle, { color: colors.text }]}

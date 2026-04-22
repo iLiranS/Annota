@@ -2,6 +2,12 @@ import { Blockquote } from '@tiptap/extension-blockquote';
 import { mergeAttributes } from '@tiptap/core';
 import { createBlockMenuButton } from './block-menu-button';
 
+/** Strip the `dir` attribute so quote nodes inherit direction from the editor root */
+function stripDir(attrs: Record<string, any>): Record<string, any> {
+    const { dir, ...rest } = attrs;
+    return rest;
+}
+
 declare module '@tiptap/core' {
     interface Commands<ReturnType> {
         quote: {
@@ -45,7 +51,7 @@ export const Quote = Blockquote.extend<any>({
 
             const content = document.createElement('blockquote');
             // We use mergeAttributes to ensure any other blockquote attributes are preserved
-            const attrs = mergeAttributes(HTMLAttributes, { 'data-type': 'quote' });
+            const attrs = mergeAttributes(stripDir(HTMLAttributes), { 'data-type': 'quote' });
             Object.entries(attrs).forEach(([key, value]) => {
                 if (value !== null && value !== undefined) {
                     content.setAttribute(key as string, value as string);

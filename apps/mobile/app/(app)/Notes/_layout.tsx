@@ -14,7 +14,6 @@ export default function NotesLayout() {
                 name="[id]/index"
                 options={{
                     title: 'Note',
-                    // Drawer swipe disabled for editor (default Stack gesture only)
                 }}
             />
             <Stack.Screen

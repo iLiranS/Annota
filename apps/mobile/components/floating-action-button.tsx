@@ -2,6 +2,7 @@ import { useAppTheme } from '@/hooks/use-app-theme';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { HapticPressable } from './ui/haptic-pressable';
 
 interface FloatingActionButtonProps {
@@ -14,17 +15,18 @@ interface FloatingActionButtonProps {
 
 export default function FloatingActionButton({
     onPress,
-    icon = 'add',
+    icon = 'create-outline',
     size = 56,
     isFloating = true,
     style,
 }: FloatingActionButtonProps) {
     const theme = useAppTheme();
+    const insets = useSafeAreaInsets();
 
     return (
         <View style={[
             isFloating && styles.floatingContainer,
-            isFloating && { bottom: 16 },
+            isFloating && { bottom: Math.max(insets.bottom, 16) + 16, right: 24 },
             style
         ]}>
             <HapticPressable
@@ -37,10 +39,10 @@ export default function FloatingActionButton({
                         borderRadius: size / 2,
                         backgroundColor: theme.colors.primary,
                         shadowColor: theme.colors.primary,
-                        shadowOffset: { width: 0, height: isFloating ? 8 : 4 },
+                        shadowOffset: { width: 0, height: isFloating ? 2 : 2 },
                         shadowOpacity: isFloating ? 0.6 : 0.4,
-                        shadowRadius: isFloating ? 12 : 8,
-                        elevation: isFloating ? 12 : 6,
+                        shadowRadius: isFloating ? 4 : 2,
+                        elevation: isFloating ? 4 : 2,
                         borderWidth: 1.5,
                         borderColor: theme.colors.card + '30',
                     },
@@ -56,9 +58,6 @@ export default function FloatingActionButton({
 const styles = StyleSheet.create({
     floatingContainer: {
         position: 'absolute',
-        left: 0,
-        right: 0,
-        alignItems: 'center',
         zIndex: 100,
     },
     button: {

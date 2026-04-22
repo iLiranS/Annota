@@ -15,6 +15,7 @@ import {
     NoteMetadata,
     sortFolders,
     sortNotes,
+    SortType,
     useNotesStore,
     useSearchStore,
     useSettingsStore,
@@ -365,7 +366,9 @@ export default function NotesList() {
                 options={{
                     headerShown: true,
                     gestureEnabled: false,
+                    headerTransparent: false,
                     headerBackVisible: false,
+                    headerTitleAlign: 'center',
                     headerTitle: () => (
 
 
@@ -406,21 +409,35 @@ export default function NotesList() {
                         return (
                             <HapticPressable
                                 onPress={() => canGoBack ? router.back() : toggle()}
-                                style={[styles.headerButton, styles.headerLeftButton]}
+                                style={[styles.headerButton]}
                                 hitSlop={8}
                             >
-                                <Ionicons name={canGoBack ? "chevron-back" : "menu-outline"} size={24} color={colors.primary} />
+                                <Ionicons name={canGoBack ? "chevron-back" : "menu"} size={24} color={colors.primary} />
                             </HapticPressable>
                         );
                     },
                     headerRight: () => (
-                        <HapticPressable
-                            onPress={() => isSearchActive ? handleCloseSearch() : setIsSearchActive(true)}
-                            style={styles.headerButton}
-                            hitSlop={8}
-                        >
-                            <Ionicons name={isSearchActive ? "close" : "search"} size={24} color={colors.primary} />
-                        </HapticPressable>
+                        <View style={styles.headerRightContainer}>
+                            {!isSearchActive && (
+                                <OptionsMenu
+                                    currentSortType={currentSortType}
+                                    onNewFolder={() => setIsCreatingFolder(true)}
+                                    onSortChange={(s: SortType) => setFolderSortType(currentFolderId, s)}
+                                    onTrash={() => router.push('/Notes/trash')}
+                                    onSettings={() => router.push('/settings')}
+                                    selectionMode={selectionMode}
+                                    onToggleSelectionMode={handleToggleSelectionMode}
+                                    isHeader
+                                />
+                            )}
+                            <HapticPressable
+                                onPress={() => isSearchActive ? handleCloseSearch() : setIsSearchActive(true)}
+                                style={styles.headerButton}
+                                hitSlop={8}
+                            >
+                                <Ionicons name={isSearchActive ? "close" : "search"} size={24} color={colors.primary} />
+                            </HapticPressable>
+                        </View>
                     ),
                 }}
             />
@@ -484,30 +501,7 @@ export default function NotesList() {
                     </View>
                 </Animated.View>
             ) : !isSearchActive && (
-                <View style={[
-                    styles.footer,
-                    {
-                        paddingBottom: Math.max(insets.bottom, 10),
-                        backgroundColor: colors.background,
-                        borderTopColor: colors.border,
-                    }
-                ]}>
-                    <View style={styles.footerContent}>
-                        <View style={styles.footerSide} />
-                        <FloatingActionButton onPress={handleCreateNote} isFloating={false} size={64} style={{ marginTop: -32 }} />
-                        <View style={styles.footerSide}>
-                            <OptionsMenu
-                                currentSortType={currentSortType}
-                                onNewFolder={() => setIsCreatingFolder(true)}
-                                onSortChange={(s) => setFolderSortType(currentFolderId, s)}
-                                onTrash={() => router.push('/Notes/trash')}
-                                onSettings={() => router.push('/settings')}
-                                selectionMode={selectionMode}
-                                onToggleSelectionMode={handleToggleSelectionMode}
-                            />
-                        </View>
-                    </View>
-                </View>
+                <FloatingActionButton onPress={handleCreateNote} />
             )}
 
             <FolderEditModal
@@ -536,9 +530,9 @@ export default function NotesList() {
 const styles = StyleSheet.create({
     container: { flex: 1 },
     headerButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-    headerLeftButton: { marginLeft: -4 },
+    headerRightContainer: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     listContent: { paddingTop: 16 },
-    headerTitleContainer: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    headerTitleContainer: { flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'center' },
     headerTitleText: { fontSize: 18, fontWeight: '700' },
     emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 48, gap: 8 },
     emptyText: { fontSize: 17, fontWeight: '600' },
