@@ -18,5 +18,5 @@ export * from './ai/types';
 export * from './ai/providers';
 export * from './ai/constants';
 export * from './ai/security';
-
-
+export * from './ai/utils';
+export * from './hooks/use-ai-chat';

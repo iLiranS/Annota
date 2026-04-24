@@ -141,6 +141,7 @@ export const CREATE_TABLES_SQL = `
 export async function initDatabase(
   nativeDb: { 
     execAsync: (sql: string) => Promise<void>,
+    executeRawAsync?: (sql: string) => Promise<void>,
     selectAsync?: (sql: string, params: any[]) => Promise<any[]>
   }, 
   drizzleDb: DbType
@@ -167,6 +168,28 @@ export async function initDatabase(
       {
         name: '002_remove_tasks_table',
         sql: 'DROP TABLE IF EXISTS tasks;'
+      },
+      {
+        name: '003_add_fts5',
+        sql: [
+          // 1. Create the unified FTS5 virtual table
+          `CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(id UNINDEXED, title, preview, content);`,
+
+          // 2. Trigger: sync new notes (joins note_metadata for title/preview)
+          `CREATE TRIGGER IF NOT EXISTS notes_fts_ai AFTER INSERT ON note_content BEGIN INSERT INTO notes_fts(id, title, preview, content) SELECT new.id, m.title, m.preview, new.content FROM note_metadata m WHERE m.id = new.id; END;`,
+
+          // 3. Trigger: sync updated content
+          `CREATE TRIGGER IF NOT EXISTS notes_fts_au_content AFTER UPDATE ON note_content BEGIN UPDATE notes_fts SET content = new.content WHERE id = new.id; END;`,
+
+          // 4. Trigger: sync updated metadata (title/preview)
+          `CREATE TRIGGER IF NOT EXISTS notes_fts_au_metadata AFTER UPDATE OF title, preview ON note_metadata BEGIN UPDATE notes_fts SET title = new.title, preview = new.preview WHERE id = new.id; END;`,
+
+          // 5. Trigger: sync deleted notes
+          `CREATE TRIGGER IF NOT EXISTS notes_fts_ad AFTER DELETE ON note_content BEGIN DELETE FROM notes_fts WHERE id = old.id; END;`,
+
+          // 6. Backfill existing data
+          `INSERT OR IGNORE INTO notes_fts(id, title, preview, content) SELECT nc.id, nm.title, nm.preview, nc.content FROM note_content nc JOIN note_metadata nm ON nc.id = nm.id;`
+        ]
       }
     ];
 
@@ -180,7 +203,16 @@ export async function initDatabase(
 
         if (!alreadyApplied || alreadyApplied.length === 0) {
           try {
-            await nativeDb.execAsync(m.sql);
+            // Support array-based migrations (e.g. triggers with internal semicolons)
+            // Each element is executed as a standalone statement, bypassing naive ";" splitting.
+            const statements = Array.isArray(m.sql) ? m.sql : [m.sql];
+            for (const stmt of statements) {
+              if (nativeDb.executeRawAsync) {
+                await nativeDb.executeRawAsync(stmt);
+              } else {
+                await nativeDb.execAsync(stmt);
+              }
+            }
             await nativeDb.execAsync(
               `INSERT INTO _migrations (name, applied_at) VALUES ('${m.name}', ${Date.now()});`
             );
@@ -237,6 +269,11 @@ export async function resetAll(): Promise<void> {
     //    signOut() must come AFTER this because it triggers onAuthStateChange which
     //    may switch the active database (e.g. to guest), invalidating nativeDb/drizzleDb.
     const dropStatements = `
+      DROP TRIGGER IF EXISTS notes_fts_ai;
+      DROP TRIGGER IF EXISTS notes_fts_au_content;
+      DROP TRIGGER IF EXISTS notes_fts_au_metadata;
+      DROP TRIGGER IF EXISTS notes_fts_ad;
+      DROP TABLE IF EXISTS notes_fts;
       DROP TABLE IF EXISTS files;
       DROP TABLE IF EXISTS note_metadata;
       DROP TABLE IF EXISTS note_content;
@@ -298,6 +335,11 @@ export async function deleteDatabase(): Promise<void> {
 
     // 2. Batch the drops into a single statement
     const dropStatements = `
+      DROP TRIGGER IF EXISTS notes_fts_ai;
+      DROP TRIGGER IF EXISTS notes_fts_au_content;
+      DROP TRIGGER IF EXISTS notes_fts_au_metadata;
+      DROP TRIGGER IF EXISTS notes_fts_ad;
+      DROP TABLE IF EXISTS notes_fts;
       DROP TABLE IF EXISTS files;
       DROP TABLE IF EXISTS note_metadata;
       DROP TABLE IF EXISTS note_content;

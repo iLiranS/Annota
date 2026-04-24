@@ -186,31 +186,35 @@ export function createDesktopAdapters(): PlatformAdapters {
         return new Uint8Array(decrypted);
       },
     },
+    encoding: {
+      base64Encode: (data: Uint8Array) => btoa(String.fromCharCode(...data)),
+      base64Decode: (str: string) => Uint8Array.from(atob(str), c => c.charCodeAt(0)),
+    },
     fileSystem: {
-      ensureDir: async (scope) => {
+      ensureDir: async (scope: Scope) => {
         return await ensureScopedDir(scope);
       },
-      copyFile: async (from, to) => {
+      copyFile: async (from: string, to: string) => {
         await copyFile(from, to);
       },
-      deleteFile: async (path) => {
+      deleteFile: async (path: string) => {
         await remove(path);
       },
-      readBase64: async (path) => {
+      readBase64: async (path: string) => {
         const bytes = await readFileBytes(path);
         return encodeArrayBuffer(toArrayBuffer(bytes));
       },
-      readBytes: async (path) => {
+      readBytes: async (path: string) => {
         return await readFileBytes(path);
       },
-      writeBytes: async (path, bytes) => {
+      writeBytes: async (path: string, bytes: Uint8Array) => {
         await writeFileBytes(path, bytes);
       },
-      getSize: async (path) => {
+      getSize: async (path: string) => {
         const info = await stat(path);
         return typeof info.size === 'number' ? info.size : 0;
       },
-      downloadToTemp: async (url) => {
+      downloadToTemp: async (url: string) => {
         const MAX_SIZE = 5 * 1024 * 1024; // 5MB limit
         const tempDir = await ensureScopedDir('cache');
         const path = await join(tempDir, makeTempFilename('bin'));
@@ -311,13 +315,51 @@ export function createDesktopAdapters(): PlatformAdapters {
       requestGalleryPermission: async () => {
         return true;
       },
-      saveToGallery: async (path) => {
+      saveToGallery: async (path: string) => {
         const info = await stat(path);
         return Boolean(info);
       },
     },
     http: {
       fetch: fetch as any,
+      streamRequest: async (url: string, options: any, onChunk: (chunk: string) => void) => {
+        const response = await fetch(url, options);
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error?.message || response.statusText);
+        }
+
+        const reader = response.body?.getReader();
+        if (!reader) throw new Error('No response body');
+
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            const cleanLine = line.trim();
+            if (!cleanLine || cleanLine === 'data: [DONE]') continue;
+            if (cleanLine.startsWith('data: ')) {
+              try {
+                const json = JSON.parse(cleanLine.slice(6));
+                // This is a generic SSE parser, providers will handle specific formats if needed
+                // But most AI APIs follow this OpenAI-like format for the delta
+                const content = json.choices?.[0]?.delta?.content || json.delta?.text || json.content;
+                if (content) onChunk(content);
+              } catch (e) {
+                // Ignore parse errors for non-JSON SSE lines
+              }
+            }
+          }
+        }
+      }
     },
   };
 }

@@ -45,6 +45,14 @@ export default function SettingsIndex() {
                         iconColor="#FFFFFF"
                         iconBackgroundColor="#8E8E93"
                     />
+                    <SettingItem
+                        label="AI Models"
+                        icon="sparkles-outline"
+                        onPress={() => router.push('/settings/ai')}
+                        description="Configure OpenAI, Anthropic, Gemini"
+                        iconColor="#FFFFFF"
+                        iconBackgroundColor="#FF3B30"
+                    />
                 </View>
             </View>
 

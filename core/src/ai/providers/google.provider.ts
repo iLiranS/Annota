@@ -32,7 +32,7 @@ export class GoogleProvider implements AiProviderAdapter {
                 .map(m => ({ role: m.role, content: m.content }))
         ];
 
-        const response = await getPlatformAdapters().http.fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
+        await getPlatformAdapters().http.streamRequest('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -46,41 +46,7 @@ export class GoogleProvider implements AiProviderAdapter {
                 max_tokens: 4096
             }),
             signal
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error?.message || `Google API error: ${response.statusText}`);
-        }
-
-        const reader = response.body?.getReader();
-        if (!reader) return;
-
-        const decoder = new TextDecoder();
-        let buffer = '';
-
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split('\n');
-            buffer = lines.pop() || '';
-
-            for (const line of lines) {
-                const cleanLine = line.trim();
-                if (!cleanLine || cleanLine === 'data: [DONE]') continue;
-                if (cleanLine.startsWith('data: ')) {
-                    try {
-                        const parsed = JSON.parse(cleanLine.slice(6));
-                        const content = parsed.choices[0]?.delta?.content;
-                        if (content) onChunk(content);
-                    } catch (e) {
-                        console.error('Error parsing Google stream:', e);
-                    }
-                }
-            }
-        }
+        }, onChunk);
     }
 
     async generateTitle(firstMessage: string): Promise<string> {

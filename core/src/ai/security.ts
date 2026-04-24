@@ -1,80 +1,86 @@
-import { load } from '@tauri-apps/plugin-store';
-import { hostname } from '@tauri-apps/plugin-os';
+import { getPlatformAdapters } from '../adapters';
 
 export type SecureProviderKey = 'openai' | 'anthropic' | 'google';
 
-// Derive a CryptoKey from the machine hostname using PBKDF2
-async function getDerivedKey(): Promise<CryptoKey> {
-    const machineName = await hostname().catch(() => 'annota-fallback');
-    const enc = new TextEncoder();
-    const keyMaterial = await crypto.subtle.importKey(
-        'raw',
-        enc.encode(`annota-${machineName}`),
-        'PBKDF2',
-        false,
-        ['deriveKey']
-    );
-    return crypto.subtle.deriveKey(
-        {
-            name: 'PBKDF2',
-            salt: enc.encode('annota-salt-v1'),
-            iterations: 100000,
-            hash: 'SHA-256',
-        },
-        keyMaterial,
-        { name: 'AES-GCM', length: 256 },
-        false,
-        ['encrypt', 'decrypt']
-    );
+// Simple hex to bytes helper
+function hexToBytes(hex: string): Uint8Array {
+    const bytes = new Uint8Array(hex.length / 2);
+    for (let i = 0; i < hex.length; i += 2) {
+        bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
+    }
+    return bytes;
 }
 
-async function encrypt(key: CryptoKey, value: string): Promise<string> {
-    const iv = crypto.getRandomValues(new Uint8Array(12));
-    const enc = new TextEncoder();
-    const ciphertext = await crypto.subtle.encrypt(
-        { name: 'AES-GCM', iv },
-        key,
-        enc.encode(value)
-    );
-    // Store iv + ciphertext as base64
-    const combined = new Uint8Array(iv.byteLength + ciphertext.byteLength);
-    combined.set(iv, 0);
-    combined.set(new Uint8Array(ciphertext), iv.byteLength);
-    return btoa(String.fromCharCode(...combined));
+// Derive a 256-bit key using SHA-256 of a fixed context.
+// The primary security on mobile comes from the SecureStore itself.
+// On desktop, this adds a layer of protection to the JSON store.
+async function getDerivedKeyBytes(): Promise<Uint8Array> {
+    const context = 'annota-secure-context-v1';
+    const { crypto } = getPlatformAdapters();
+    const hex = await crypto.sha256HexUtf8(`annota-${context}`);
+    return hexToBytes(hex);
 }
 
-async function decrypt(key: CryptoKey, encoded: string): Promise<string> {
-    const combined = Uint8Array.from(atob(encoded), c => c.charCodeAt(0));
-    const iv = combined.slice(0, 12);
-    const ciphertext = combined.slice(12);
-    const plaintext = await crypto.subtle.decrypt(
-        { name: 'AES-GCM', iv },
+async function encrypt(value: string): Promise<string> {
+    const { crypto } = getPlatformAdapters();
+    const key = await getDerivedKeyBytes();
+    const nonce = crypto.randomBytes(12);
+    const plaintext = new TextEncoder().encode(value);
+    
+    const { ciphertext, authTag } = await crypto.aes256GcmEncrypt({
         key,
-        ciphertext
-    );
+        nonce,
+        plaintext
+    });
+
+    // Combined format: [nonce (12)] [authTag (16)] [ciphertext (n)]
+    const combined = new Uint8Array(nonce.length + authTag.length + ciphertext.length);
+    combined.set(nonce, 0);
+    combined.set(authTag, nonce.length);
+    combined.set(ciphertext, nonce.length + authTag.length);
+    
+    const { encoding } = getPlatformAdapters();
+    return encoding.base64Encode(combined);
+}
+
+async function decrypt(encoded: string): Promise<string> {
+    const { crypto, encoding } = getPlatformAdapters();
+    const combined = encoding.base64Decode(encoded);
+    
+    const nonce = combined.slice(0, 12);
+    const authTag = combined.slice(12, 28);
+    const ciphertext = combined.slice(28);
+    const key = await getDerivedKeyBytes();
+
+    const plaintext = await crypto.aes256GcmDecrypt({
+        key,
+        nonce,
+        ciphertext,
+        authTag
+    });
+
     return new TextDecoder().decode(plaintext);
 }
 
 export async function saveApiKey(provider: SecureProviderKey, value: string) {
-    const key = await getDerivedKey();
-    const encrypted = await encrypt(key, value);
-    const store = await load('annota_keys.json', { autoSave: true, defaults: {} });
-    await store.set(provider, encrypted);
+    const encrypted = await encrypt(value);
+    const { secureStore } = getPlatformAdapters();
+    await secureStore.setItem(`ai_key_${provider}`, encrypted);
 }
 
 export async function getApiKey(provider: SecureProviderKey): Promise<string | null> {
     try {
-        const store = await load('annota_keys.json', { autoSave: true, defaults: {} });
-        const encrypted = await store.get<string>(provider);
+        const { secureStore } = getPlatformAdapters();
+        const encrypted = await secureStore.getItem(`ai_key_${provider}`);
         if (!encrypted) return null;
-        const key = await getDerivedKey();
-        return await decrypt(key, encrypted);
-    } catch {
+        return await decrypt(encrypted);
+    } catch (e) {
+        console.error(`Failed to decrypt key for ${provider}:`, e);
         return null;
     }
 }
 
 export async function removeApiKey(provider: SecureProviderKey) {
-    const store = await load('annota_keys.json', { autoSave: true, defaults: {} });
-    await store.delete(provider);
+    const { secureStore } = getPlatformAdapters();
+    await secureStore.removeItem(`ai_key_${provider}`);
 }

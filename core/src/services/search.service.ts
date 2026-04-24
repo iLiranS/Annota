@@ -29,30 +29,9 @@ export const SearchService = {
         const safeNotes = safeGetAll<any>(notesRaw);
         const safeFolders = safeGetAll<any>(foldersRaw);
 
-        const queryLower = query.toLowerCase();
-
         const normalizedNotes: UnifiedSearchResult[] = safeNotes.map(n => {
-            const plainText = stripHtml(n.content || '');
-            const textLower = plainText.toLowerCase();
-            const titleLower = n.title.toLowerCase();
-
-            // Perform post-search filtering in JS to ignore false matches in HTML tags
-            if (!titleLower.includes(queryLower) && !textLower.includes(queryLower)) {
-                return null;
-            }
-
-            let subtitle = n.preview;
-            const index = textLower.indexOf(queryLower);
-            if (index !== -1) {
-                const maxLength = 120;
-                const half = Math.floor(maxLength / 2);
-                const start = Math.max(0, index - half);
-                const end = Math.min(plainText.length, index + query.length + half);
-
-                subtitle = plainText.slice(start, end);
-                if (start > 0) subtitle = '...' + subtitle;
-                if (end < plainText.length) subtitle = subtitle + '...';
-            }
+            // FTS handles relevance — use the snippet if available, otherwise fallback to preview
+            let subtitle = n.matchedSnippet ? stripHtml(n.matchedSnippet) : n.preview;
 
             return {
                 type: 'note',
@@ -63,8 +42,7 @@ export const SearchService = {
                 updatedAt: n.updatedAt,
                 data: n
             };
-        }).filter(Boolean) as UnifiedSearchResult[];
-
+        });
 
         const normalizedFolders: UnifiedSearchResult[] = safeFolders.map(f => ({
             type: 'folder',

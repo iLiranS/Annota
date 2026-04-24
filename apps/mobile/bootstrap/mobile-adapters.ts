@@ -9,6 +9,7 @@ import * as SecureStore from 'expo-secure-store';
 import * as Sharing from 'expo-sharing';
 import { AppState, Image, Platform } from 'react-native';
 import crypto from 'react-native-quick-crypto';
+import EventSource from 'react-native-sse';
 import Toast from 'react-native-toast-message';
 
 export function createMobileAdapters(): PlatformAdapters {
@@ -107,6 +108,10 @@ export function createMobileAdapters(): PlatformAdapters {
 
                 return new Uint8Array(Buffer.concat([decryptedContent, decryptedFinal]));
             },
+        },
+        encoding: {
+            base64Encode: (data: Uint8Array) => Buffer.from(data).toString('base64'),
+            base64Decode: (str: string) => new Uint8Array(Buffer.from(str, 'base64')),
         },
         fileSystem: {
             ensureDir: async (scope: 'images' | 'cache' | 'files') => {
@@ -215,6 +220,60 @@ export function createMobileAdapters(): PlatformAdapters {
                 } catch {
                     return false;
                 }
+            },
+        },
+        http: {
+            fetch: fetch as any,
+            streamRequest: async (url: string, options: any, onChunk: (chunk: string) => void) => {
+                return new Promise<void>((resolve, reject) => {
+                    const es = new EventSource(url, {
+                        method: options.method || 'POST',
+                        headers: options.headers,
+                        body: options.body,
+                    });
+
+                    let hasError = false;
+
+                    es.addEventListener('open', () => {
+                        console.log('[SSE] Connection opened');
+                    });
+
+                    es.addEventListener('message', (event) => {
+                        if (event.data === '[DONE]') {
+                            es.close();
+                            resolve();
+                            return;
+                        }
+
+                        if (!event.data) return;
+
+                        try {
+                            const json = JSON.parse(event.data);
+                            const content = json.choices?.[0]?.delta?.content || json.delta?.text || json.content;
+                            if (content) {
+                                console.log('[SSE] Received chunk:', content.length, 'chars');
+                                onChunk(content);
+                            }
+                        } catch (e) {
+                            // Non-JSON or malformed data, ignore
+                        }
+                    });
+
+                    es.addEventListener('error', (event: any) => {
+                        console.error('[SSE] Error:', event);
+                        hasError = true;
+                        es.close();
+                        reject(new Error(event.message || event.error || 'SSE request failed'));
+                    });
+
+                    // Handle abort signal
+                    if (options.signal) {
+                        options.signal.addEventListener('abort', () => {
+                            es.close();
+                            resolve();
+                        });
+                    }
+                });
             },
         },
     };

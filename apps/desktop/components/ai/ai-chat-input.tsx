@@ -7,20 +7,35 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from '@/lib/utils';
 import { ANTHROPIC_MODELS, GOOGLE_MODELS, OPENAI_MODELS, useAiStore } from "@annota/core";
-import { Bot, Check, ChevronDown, Play, RotateCcw, Send, Sparkles, Square } from 'lucide-react';
+import { Bot, Check, ChevronDown, Send, Sparkles, Square } from 'lucide-react';
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import { ContextSelector } from './context-selector';
 
 interface AiChatInputProps {
     onSend: (content: string) => void;
     onSummarize: () => void;
-    onRewrite?: () => void;
-    onContinue?: () => void;
-    hasSelection?: boolean;
+    notes: any[];
+    folders: any[];
+    selectedNotes: any[];
+    onToggleNote: (note: any) => void;
+    onToggleFolder: (folderId: string) => void;
+    onClearAll: () => void;
     onStop?: () => void;
     disabled: boolean;
 }
 
-export function AiChatInput({ onSend, onSummarize, onRewrite, onContinue, hasSelection, onStop, disabled }: AiChatInputProps) {
+export function AiChatInput({
+    onSend,
+    onSummarize,
+    notes,
+    folders,
+    selectedNotes,
+    onToggleNote,
+    onToggleFolder,
+    onClearAll,
+    onStop,
+    disabled
+}: AiChatInputProps) {
     const {
         activeProvider,
         availableModels,
@@ -103,6 +118,15 @@ export function AiChatInput({ onSend, onSummarize, onRewrite, onContinue, hasSel
         <div className="flex flex-col gap-2 mb-2 pt-2 border-t border-border/40">
             <div className="flex items-center justify-between px-1">
                 <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+                    <ContextSelector
+                        notes={notes}
+                        folders={folders}
+                        selectedNotes={selectedNotes}
+                        onToggleNote={onToggleNote}
+                        onToggleFolder={onToggleFolder}
+                        onClearAll={onClearAll}
+                    />
+
                     <Button
                         variant="ghost"
                         size="sm"
@@ -111,32 +135,13 @@ export function AiChatInput({ onSend, onSummarize, onRewrite, onContinue, hasSel
                         className="h-7 px-3 rounded-full gap-1.5 text-[10px] font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all border border-border/40 hover:border-primary/20 bg-muted/20 whitespace-nowrap"
                     >
                         <Sparkles size={11} className="text-primary/60" />
-                        {hasSelection ? "Summarize Selection" : "Summarize Note"}
+                        {selectedNotes.length > 0 ? `Summarize (${selectedNotes.length})` : "Summarize"}
                     </Button>
 
-                    {hasSelection && (
-                        <>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={onRewrite}
-                                disabled={disabled || !currentModelName}
-                                className="h-7 px-3 rounded-full gap-1.5 text-[10px] font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all border border-border/40 hover:border-primary/20 bg-muted/20"
-                            >
-                                <RotateCcw size={11} className="text-primary/60" />
-                                Rewrite
-                            </Button>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={onContinue}
-                                disabled={disabled || !currentModelName}
-                                className="h-7 px-3 rounded-full gap-1.5 text-[10px] font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all border border-border/40 hover:border-primary/20 bg-muted/20"
-                            >
-                                <Play size={11} className="text-primary/60" />
-                                Continue
-                            </Button>
-                        </>
+                    {selectedNotes.length > 0 && (
+                        <span className="text-[10px] text-primary font-semibold px-2 py-0.5 rounded-full bg-primary/5 border border-primary/10 animate-in fade-in zoom-in duration-200">
+                            {selectedNotes.length} Selected
+                        </span>
                     )}
                 </div>
 
@@ -158,7 +163,7 @@ export function AiChatInput({ onSend, onSummarize, onRewrite, onContinue, hasSel
                     onKeyDown={handleKeyDown}
                     rows={1}
                     dir="auto"
-                    placeholder={!currentModelName ? "Select a model to start..." : "Ask AI about current note..."}
+                    placeholder={!currentModelName ? "Select a model to start..." : (selectedNotes.length > 0 ? `Ask about ${selectedNotes.length} notes...` : "Ask AI about current note...")}
                     disabled={disabled || !currentModelName}
                     className="w-full bg-transparent border-none outline-none resize-none px-3 pt-2 pb-1 text-[14px] leading-relaxed max-h-[160px] min-h-[44px] overflow-y-auto custom-scrollbar disabled:opacity-50"
                 />

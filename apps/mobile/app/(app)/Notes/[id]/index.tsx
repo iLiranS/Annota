@@ -1,3 +1,4 @@
+import AiChatModal from '@/components/ai/AiChatModal';
 import { ImageGallery } from '@/components/editor-ui/image-gallery';
 import { NoteLinkCommandMenu } from '@/components/editor-ui/note-link-command-menu';
 import { NoteTags } from '@/components/editor-ui/note-tags';
@@ -7,7 +8,7 @@ import { EditorToolbar } from '@/components/editor-ui/toolbar';
 import NoteHeaderMenu from '@/components/notes/note-header-menu';
 import { SearchOverlay } from '@/components/notes/search-overlay';
 import { HapticPressable } from '@/components/ui/haptic-pressable';
-import { generateTitle, useNotesStore, useSettingsStore } from '@annota/core';
+import { generateTitle, purifyNoteHtml, useNotesStore, useSettingsStore } from '@annota/core';
 import TipTapEditor, { TipTapEditorRef, ToolbarRenderProps } from '@annota/editor-ui';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
@@ -63,6 +64,7 @@ export default function NoteEditor() {
     const [slashCommandState, setSlashCommandState] = useState<{ active: boolean; query?: string; range?: { from: number; to: number } }>({ active: false });
     const [tagCommandState, setTagCommandState] = useState<{ active: boolean; query?: string; range?: { from: number; to: number } }>({ active: false });
     const [noteLinkCommandState, setNoteLinkCommandState] = useState<{ active: boolean; query?: string; range?: { from: number; to: number } }>({ active: false });
+    const [isAiChatVisible, setIsAiChatVisible] = useState(false);
 
     const appliedTagIds = useMemo(() => {
         if (!currentNote || !currentNote.tags) return [];
@@ -248,6 +250,15 @@ export default function NoteEditor() {
         }, 500);
     }, [id]);
 
+    const activeNoteContext = useMemo(() => {
+        if (!id || !currentNote || content === null) return undefined;
+        return {
+            id: id,
+            title: displayTitle,
+            content: purifyNoteHtml(content)
+        };
+    }, [id, currentNote, content, displayTitle]);
+
 
     // Handle case where note doesn't exist
     if (!currentNote) {
@@ -331,19 +342,34 @@ export default function NoteEditor() {
                     ),
                     headerBackVisible: false,
                     headerRight: () => (
-                        <NoteHeaderMenu
-                            noteId={id}
-                            isPinned={currentNote?.isPinned}
-                            isQuickAccess={currentNote?.isQuickAccess}
-                            onSearch={handleOpenSearch}
-                            onDelete={handleDelete}
-                            onTogglePin={handleTogglePin}
-                            onToggleQuickAccess={handleToggleQuickAccess}
-                            onVersionHistory={handleVersionHistory}
-                            onCopyLink={handleCopyLink}
-                        />
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <HapticPressable
+                                onPress={() => setIsAiChatVisible(true)}
+                                style={[styles.headerButton, { marginLeft: 8 }]}
+                                hitSlop={8}
+                            >
+                                <Ionicons name="sparkles" size={22} color={colors.primary} />
+                            </HapticPressable>
+                            <NoteHeaderMenu
+                                noteId={id}
+                                isPinned={currentNote?.isPinned}
+                                isQuickAccess={currentNote?.isQuickAccess}
+                                onSearch={handleOpenSearch}
+                                onDelete={handleDelete}
+                                onTogglePin={handleTogglePin}
+                                onToggleQuickAccess={handleToggleQuickAccess}
+                                onVersionHistory={handleVersionHistory}
+                                onCopyLink={handleCopyLink}
+                            />
+                        </View>
                     ),
                 }}
+            />
+
+            <AiChatModal
+                visible={isAiChatVisible}
+                onClose={() => setIsAiChatVisible(false)}
+                initialContext={activeNoteContext}
             />
 
             {isLoading || !isContentReady ? (

@@ -105,6 +105,9 @@ export async function initDesktopSqlite(userId: string | null): Promise<void> {
             await db.execute(statement);
           }
         },
+        executeRawAsync: async (sql: string) => {
+          await db.execute(sql);
+        },
         selectAsync: async (sql: string, params: any[]) => {
           return await db.select(sql, params);
         }
@@ -136,6 +139,18 @@ export async function resetDesktopDatabase(): Promise<void> {
   const dbName = userId ? `user_${userId}.db` : "local_guest.db";
 
   const db = await Database.load(`sqlite:${dbName}`);
+
+  // Drop FTS triggers and table first
+  const ftsTriggers = [
+    'notes_fts_ai',
+    'notes_fts_au_content',
+    'notes_fts_au_metadata',
+    'notes_fts_ad'
+  ];
+  for (const trigger of ftsTriggers) {
+    await db.execute(`DROP TRIGGER IF EXISTS ${trigger}`);
+  }
+  await db.execute('DROP TABLE IF EXISTS notes_fts');
 
   const tables = [
     'files',

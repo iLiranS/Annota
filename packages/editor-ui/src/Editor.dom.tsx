@@ -1,4 +1,4 @@
-import { useAiStore, useSettingsStore } from '@annota/core';
+import { useSettingsStore } from '@annota/core';
 import { NoteFileService } from '@annota/core/platform';
 import { dispatchEditorCommand, getEditorProps, getEditorState, getExtensions, resolveFontFamily } from '@annota/editor-core';
 import '@annota/editor-core/styles.css';
@@ -8,8 +8,8 @@ import 'highlight.js/styles/atom-one-dark.css';
 import 'katex/dist/katex.min.css';
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { useSharedEditorUI } from './hooks/useSharedEditorUI';
-import { EditorState, initialEditorState, PopupType, TipTapEditorProps, TipTapEditorRef } from './shared/types';
 import { AutoShowHeader } from './shared/AutoShowHeader';
+import { EditorState, initialEditorState, PopupType, TipTapEditorProps, TipTapEditorRef } from './shared/types';
 
 function extractImageIds(html: string): string[] {
     const regex = /data-image-id\s*=\s*(["'])(.*?)\1/gi;
@@ -309,15 +309,6 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
 
                 setCurrentLatex(latex || null);
                 setEditorState(getEditorState(editor) as unknown as EditorState);
-
-                // Sync selection with AI store
-                const selectedText = selection.empty ? null : editor.state.doc.textBetween(selection.from, selection.to, ' ');
-
-                // Only clear the AI store highlight if the editor is focused
-                // This prevents clearing it when the user clicks into the AI sidebar
-                if (!selection.empty || editor.isFocused) {
-                    useAiStore.getState().setHighlightedText(selectedText);
-                }
             },
             onTransaction: ({ editor }) => {
                 setEditorState(getEditorState(editor) as unknown as EditorState);

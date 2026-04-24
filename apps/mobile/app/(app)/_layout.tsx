@@ -1,18 +1,18 @@
-import { useAppTheme } from '@/hooks/use-app-theme';
-import { useSidebar } from '@/context/sidebar-context';
 import Sidebar from '@/components/navigation/sidebar';
+import { useSidebar } from '@/context/sidebar-context';
+import { useAppTheme } from '@/hooks/use-app-theme';
 import RevenueCatInitializer from '@/services/RevenueCat';
 import { Stack, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { 
-    interpolate, 
-    runOnJS, 
-    useAnimatedStyle, 
-    useSharedValue, 
-    withTiming,
-    Easing
+import Animated, {
+  Easing,
+  interpolate,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming
 } from 'react-native-reanimated';
 
 export default function AppLayout() {

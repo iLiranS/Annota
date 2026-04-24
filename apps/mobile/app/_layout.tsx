@@ -184,6 +184,8 @@ function AppLogicHub() {
         console.log('[RootLayout] Starting auth hydration...');
         await useAuthStore.persist.rehydrate();
         await useSettingsStore.persist.rehydrate();
+        const { useAiStore } = require('@annota/core');
+        await useAiStore.persist.rehydrate();
 
         if (!isCloudEnabled) {
           useAuthStore.getState().setGuest(true);

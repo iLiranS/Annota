@@ -1,7 +1,6 @@
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useAppTheme } from "@/hooks/use-app-theme";
-import { useCreateNote } from "@/hooks/use-create-note";
 import { cn } from "@/lib/utils";
 import { Folder, NoteMetadata, useNotesStore, useSearchStore } from "@annota/core";
 import { useEffect, useRef, useState } from "react";
@@ -9,7 +8,6 @@ import { useNavigate } from "react-router-dom";
 import { FolderListItem } from "../notes/folder-list-item";
 import { NoteListItem } from "../notes/note-list-item";
 import { NotePreviewModal } from "../notes/note-preview-modal";
-import { Button } from "../ui/button";
 import { Ionicons } from "../ui/ionicons";
 
 interface NotesSearchModalProps {
@@ -29,7 +27,6 @@ export function NotesSearchModal({ open, onOpenChange }: NotesSearchModalProps) 
         resetSearch
     } = useSearchStore();
 
-    const { createAndNavigate: createNoteAndNavigate } = useCreateNote();
 
     const [selectedIndex, setSelectedIndex] = useState(0);
     const [previewNote, setPreviewNote] = useState<NoteMetadata | null>(null);
@@ -77,12 +74,7 @@ export function NotesSearchModal({ open, onOpenChange }: NotesSearchModalProps) 
     };
 
 
-    const onActionClick = (actionType: 'create_note', folderId?: string) => {
-        if (actionType === 'create_note') {
-            createNoteAndNavigate(folderId);
-        }
-        handleClose();
-    };
+
 
     // Keyboard navigation
     useEffect(() => {
@@ -196,6 +188,7 @@ export function NotesSearchModal({ open, onOpenChange }: NotesSearchModalProps) 
                                                                 onEdit={() => { }}
                                                                 isActive={isSelected}
                                                                 searchQuery={searchQuery}
+                                                                isSearchResult
                                                                 className="flex-1 border border-transparent"
                                                                 style={isSelected ? {
                                                                     backgroundColor: `${colors.primary}25`,
@@ -203,19 +196,6 @@ export function NotesSearchModal({ open, onOpenChange }: NotesSearchModalProps) 
                                                                     boxShadow: `inset 0 0 20px -10px ${colors.primary}40`
                                                                 } : undefined}
                                                             />
-                                                            <div className="flex items-center gap-1 pr-2">
-                                                                <Button
-                                                                    size="icon"
-                                                                    variant="ghost"
-                                                                    className="h-8 w-8 rounded-full hover:bg-primary/10 text-primary shrink-0"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        onActionClick('create_note', result.id);
-                                                                    }}
-                                                                >
-                                                                    <Ionicons name="document-text-outline" size={16} />
-                                                                </Button>
-                                                            </div>
                                                         </div>
                                                     ) : null}
                                                 </div>

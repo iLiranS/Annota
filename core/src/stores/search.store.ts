@@ -70,7 +70,7 @@ export const useSearchStore = create<SearchState>()(
 
     resetSearch: () => {
         if (searchTimeout) clearTimeout(searchTimeout);
-        set({ searchQuery: '', searchScope: 'all', dbResults: [], isSearching: false });
+        set({ searchQuery: '', searchScope: 'all', dbResults: [], isSearching: false, isOpen: false });
     },
 
     reset: () => {

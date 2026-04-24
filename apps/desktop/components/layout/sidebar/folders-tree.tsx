@@ -125,10 +125,11 @@ function FolderTreeItem({ folder, onNavigate, onEdit, onDelete, onCreateSubFolde
                         className={cn(
                             "h-8 ps-2!",
                             general?.appDirection === 'rtl' ? (
-                                "group-has-data-[sidebar=menu-action]/menu-item:pr-2! group-has-data-[sidebar=menu-action]/menu-item:pl-8!"
+                                "group-has-data-[sidebar=menu-action]/menu-item:pr-2! group-has-data-[sidebar=menu-action]/menu-item:pl-8! data-[drag-over=true]:pl-1!"
                             ) : (
-                                "group-has-data-[sidebar=menu-action]/menu-item:pr-8!"
+                                "group-has-data-[sidebar=menu-action]/menu-item:pr-8! data-[drag-over=true]:pr-1!"
                             ),
+                            "data-[drag-over=true]:transition-none",
                             isActive && "bg-sidebar-accent text-sidebar-accent-foreground font-semibold"
                         )}
                     >
@@ -140,6 +141,7 @@ function FolderTreeItem({ folder, onNavigate, onEdit, onDelete, onCreateSubFolde
                         onClick={toggle}
                         className={cn(
                             "hidden group-hover/folder:flex items-center justify-center p-0 h-6 w-6",
+                            "peer-data-[drag-over=true]/menu-button:hidden!",
                             general?.appDirection === 'rtl' && "right-auto left-1"
                         )}
                     >

@@ -22,6 +22,7 @@ interface FolderListItemProps extends React.ButtonHTMLAttributes<HTMLButtonEleme
     asChild?: boolean;
     isActive?: boolean;
     searchQuery?: string;
+    isSearchResult?: boolean;
 }
 
 
@@ -50,7 +51,7 @@ export function FolderIcon({ folder, className, isActive, }: { folder: Folder, c
     );
 }
 
-export function FolderListItemContent({ folder, isActive, searchQuery, hideCountOnHover }: { folder: Folder, isActive?: boolean, searchQuery?: string, hideCountOnHover?: boolean }) {
+export function FolderListItemContent({ folder, isActive, searchQuery, hideCountOnHover, isSearchResult }: { folder: Folder, isActive?: boolean, searchQuery?: string, hideCountOnHover?: boolean, isSearchResult?: boolean }) {
     const { general } = useSettingsStore();
     const notesCount = useNotesStore(state => {
         if (folder.id === TRASH_FOLDER_ID) {
@@ -90,7 +91,7 @@ export function FolderListItemContent({ folder, isActive, searchQuery, hideCount
                     <Highlight text={folder.name} query={searchQuery} />
                 </span>
             </div>
-            {general.showNotesCountInFolder && (
+            {general.showNotesCountInFolder && !isSearchResult && (
                 <span className={cn(
                     "text-[10px] tabular-nums font-medium text-muted-foreground/40 transition-opacity duration-200",
                     "group-data-[drag-over=true]/item:hidden",
@@ -123,6 +124,7 @@ export function FolderListItem({
     isActive,
     searchQuery,
     children,
+    isSearchResult = false,
 
     ...props
 }: FolderListItemProps) {
@@ -231,7 +233,7 @@ export function FolderListItem({
                     )}
                     {...(props as any)}
                 >
-                    {asChild ? children : <FolderListItemContent folder={folder} isActive={isActive} searchQuery={searchQuery} />}
+                    {asChild ? children : <FolderListItemContent folder={folder} isActive={isActive} searchQuery={searchQuery} isSearchResult={isSearchResult} />}
 
                 </Comp>
             </ContextMenuTrigger>

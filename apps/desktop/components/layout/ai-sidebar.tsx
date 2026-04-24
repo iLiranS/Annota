@@ -15,8 +15,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 import { matchPath, useLocation, useNavigate } from "react-router-dom";
 
-import { useAiChat } from "@/hooks/use-ai-chat";
-import { purifyNoteHtml } from "@/lib/ai-utils";
+import { purifyNoteHtml, useAiChat } from "@annota/core";
 import { AiChatInput } from "../ai/ai-chat-input";
 import { AiChatError, AiChatMessage } from "../ai/ai-chat-message";
 
@@ -30,15 +29,32 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
         hasOpenAiKey,
         hasAnthropicKey,
         hasGoogleKey,
-        refreshTicket,
-        selectedText
+        refreshTicket
     } = useAiStore();
 
-    const { notes, getNoteContent } = useNotesStore();
+    const { notes, getNoteContent, folders } = useNotesStore();
     const location = useLocation();
     const navigate = useNavigate();
     const [activeChatId, setActiveChatId] = useState<string | null>(null);
     const [chats, setChats] = useState<AiChat[]>([]);
+    const [selectedFolderNotes, setSelectedFolderNotes] = useState<any[]>([]);
+
+    const prevChatIdRef = useRef<string | null>(activeChatId);
+
+    // Reset context selection when switching chats or returning to list
+    // But NOT when assigning the first ID to a new chat
+    useEffect(() => {
+        const prevId = prevChatIdRef.current;
+        const currentId = activeChatId;
+
+        // If we switched from one chat to another, or went back to the list
+        if (prevId !== currentId && (currentId === null || (prevId !== null && currentId !== null))) {
+            setSelectedFolderNotes([]);
+        }
+        
+        prevChatIdRef.current = currentId;
+    }, [activeChatId]);
+
     const activeChat = activeChatId ? chats.find(c => c.id === activeChatId) : null;
     const scrollEndRef = useRef<HTMLDivElement>(null);
 
@@ -80,38 +96,29 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
     }, [isStreaming, shouldAutoScroll]);
 
     // Auto-inject context of current note
-    const handleSendMessage = useCallback(async (content: string, mode: 'auto' | 'summary' | 'rewrite' | 'continue' = 'auto') => {
+    const handleSendMessage = useCallback(async (content: string, mode: 'auto' | 'summary' = 'auto') => {
         let currentId = activeChatId;
-        const contextNotes: Array<{ title: string, content: string }> = [];
 
-        // ALWAYS extract the live note state, regardless of whether it's a new chat
         const match = matchPath({ path: "/notes/:folderId/:noteId" }, location.pathname)
             || matchPath({ path: "/notes/:noteId" }, location.pathname);
 
         const noteId = match?.params?.noteId;
-        if (noteId) {
+        let activeNote: { title: string, content: string, id: string } | undefined;
+
+        if (noteId && selectedFolderNotes.length === 0) {
             const currentNote = notes.find(n => n.id === noteId);
             if (currentNote) {
                 const rawHtml = await getNoteContent(noteId);
                 const cleanContent = purifyNoteHtml(rawHtml || '');
 
-                contextNotes.push({
+                activeNote = {
+                    id: noteId,
                     title: currentNote.title || 'Current Note',
-                    content: cleanContent // Don't slice here, let useAiChat handle trimming
-                });
+                    content: cleanContent
+                };
             }
         }
 
-        // 3. APPLY SELECTION CONTEXT (OVERRIDE NOTE CONTEXT)
-        if (selectedText) {
-            contextNotes.length = 0; // Clear full note if selection exists
-            contextNotes.push({
-                title: 'Selection',
-                content: selectedText
-            });
-        }
-
-        // ONLY create the database record if it's a new chat
         if (!currentId) {
             const db = getDb();
             currentId = generateId();
@@ -128,27 +135,18 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
             setActiveChatId(currentId);
         }
 
-        originalSendMessage(content, contextNotes, {
+        originalSendMessage(content, {
             overrideChatId: currentId,
-            activeNoteId: noteId,
-            mode: (mode === 'rewrite' || mode === 'continue') ? 'auto' : mode,
+            activeNote,
+            selectedFolderNotes: selectedFolderNotes.length > 0 ? selectedFolderNotes : undefined,
+            mode,
         });
         setShouldAutoScroll(true);
-    }, [location.pathname, notes, getNoteContent, originalSendMessage, activeChatId, selectedText]);
+    }, [location.pathname, notes, getNoteContent, originalSendMessage, activeChatId, selectedFolderNotes]);
 
     const handleSummarize = useCallback(() => {
-        const prompt = selectedText
-            ? "Please summarize this selection. Cover all major sections and key points."
-            : "Please summarize this note. Cover all major sections and key points.";
+        const prompt = "Please summarize this context. Cover all major sections and key points.";
         handleSendMessage(prompt, 'summary');
-    }, [handleSendMessage, selectedText]);
-
-    const handleRewrite = useCallback(() => {
-        handleSendMessage("Please rewrite this selection. Make it clearer and more professional while preserving the core meaning.", 'rewrite');
-    }, [handleSendMessage]);
-
-    const handleContinue = useCallback(() => {
-        handleSendMessage("Please continue writing based on this selection. Maintain the same style and tone.", 'continue');
     }, [handleSendMessage]);
 
     const handleRetry = useCallback(() => {
@@ -157,6 +155,29 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
             handleSendMessage(lastUserMessage.content);
         }
     }, [messages, handleSendMessage]);
+
+    const handleToggleNote = useCallback((note: any) => {
+        setSelectedFolderNotes(prev => {
+            const exists = prev.find(n => n.id === note.id);
+            if (exists) return prev.filter(n => n.id !== note.id);
+            return [...prev, note];
+        });
+    }, []);
+
+    const handleToggleFolder = useCallback((folderId: string) => {
+        const folderNotes = notes.filter(n => n.folderId === folderId);
+        setSelectedFolderNotes(prev => {
+            const allInPrev = folderNotes.length > 0 && folderNotes.every(fn => prev.find(pn => pn.id === fn.id));
+            if (allInPrev) {
+                const folderNoteIds = new Set(folderNotes.map(n => n.id));
+                return prev.filter(n => !folderNoteIds.has(n.id));
+            } else {
+                const existingIds = new Set(prev.map(n => n.id));
+                const toAdd = folderNotes.filter(n => !existingIds.has(n.id));
+                return [...prev, ...toAdd];
+            }
+        });
+    }, [notes]);
 
     // Initial connection check & models fetch (Only for Ollama)
     useEffect(() => {
@@ -209,8 +230,6 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
 
     const { general, updateGeneralSettings } = useSettingsStore();
     const isFloating = general.aiSidebarMode === 'floating';
-
-    // ─── Connectivity State Checks ──────────────────────────────────────────
 
     const isConfigured = activeProvider === 'ollama'
         ? isOllamaRunning
@@ -274,8 +293,6 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
         );
     }
 
-    // ─── Main panel ─────────────────────────────────────────────────────────────
-
     return (
         <div
             dir="ltr"
@@ -286,12 +303,9 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
                 "flex flex-col h-full w-full overflow-hidden  transition-all duration-300",
                 isFloating
                     ? "rounded-2xl  border border-border/40 bg-sidebar"
-                    : "bg-sidebar/50" // Subtle background when pinned
+                    : "bg-sidebar/50"
             )}>
-
-                {/* ── Header ── */}
                 <header className="flex items-center justify-between shrink-0 h-12 px-3 border-b border-border/30 bg-sidebar/60">
-                    {/* Left: back button or logo */}
                     <div className="flex items-center gap-2 min-w-0">
                         {activeChatId ? (
                             <Button
@@ -308,7 +322,6 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
                             </div>
                         )}
 
-                        {/* Title */}
                         {activeChatId && activeChat ? (
                             <span dir="auto" className="text-[12px] font-semibold truncate text-foreground/80">
                                 {activeChat.title}
@@ -320,7 +333,6 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
                         )}
                     </div>
 
-                    {/* Right actions */}
                     <div className="flex items-center gap-0.5 shrink-0">
                         {isFloating && (
                             <Button
@@ -364,7 +376,6 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
                     </div>
                 </header>
 
-                {/* Status Banner */}
                 {!isConfigured && activeChatId && (
                     <div className="bg-destructive/10 text-destructive text-[10px] font-medium px-3 py-1.5 flex items-center justify-between gap-2 border-b border-destructive/20 animate-in slide-in-from-top duration-300">
                         <div className="flex items-center gap-2">
@@ -384,9 +395,7 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
                     </div>
                 )}
 
-                {/* ── Body ── */}
                 {!activeChatId ? (
-                    // ── Chat list view ──────────────────────────────────────────
                     <div className="flex-1 flex flex-col min-h-0">
                         <div className="flex-1 min-h-0 px-2 pt-2 overflow-y-auto premium-scrollbar">
                             <div className="space-y-0.5 pb-2">
@@ -440,16 +449,18 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
                             <AiChatInput
                                 onSend={handleSendMessage}
                                 onSummarize={handleSummarize}
-                                onRewrite={handleRewrite}
-                                onContinue={handleContinue}
-                                hasSelection={!!selectedText}
+                                notes={notes}
+                                folders={folders}
+                                selectedNotes={selectedFolderNotes}
+                                onToggleNote={handleToggleNote}
+                                onToggleFolder={handleToggleFolder}
+                                onClearAll={() => setSelectedFolderNotes([])}
                                 onStop={stop}
                                 disabled={isStreaming}
                             />
                         </div>
                     </div>
                 ) : (
-                    // ── Active chat view ────────────────────────────────────────
                     <>
                         <div
                             className="flex-1 min-h-0 overflow-y-auto premium-scrollbar"
@@ -464,10 +475,7 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
                                         onInsertToNote={handleInsertToNote}
                                     />
                                 ))}
-
                                 {error && <AiChatError error={error} onRetry={handleRetry} />}
-
-                                {/* Scroll anchor */}
                                 <div ref={scrollEndRef} />
                             </div>
                         </div>
@@ -476,9 +484,12 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
                             <AiChatInput
                                 onSend={handleSendMessage}
                                 onSummarize={handleSummarize}
-                                onRewrite={handleRewrite}
-                                onContinue={handleContinue}
-                                hasSelection={!!selectedText}
+                                notes={notes}
+                                folders={folders}
+                                selectedNotes={selectedFolderNotes}
+                                onToggleNote={handleToggleNote}
+                                onToggleFolder={handleToggleFolder}
+                                onClearAll={() => setSelectedFolderNotes([])}
                                 onStop={stop}
                                 disabled={isStreaming}
                             />

@@ -29,7 +29,7 @@ export class OpenAiProvider implements AiProviderAdapter {
                 .map(m => ({ role: m.role, content: m.content }))
         ];
 
-        const response = await getPlatformAdapters().http.fetch('https://api.openai.com/v1/chat/completions', {
+        await getPlatformAdapters().http.streamRequest('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -41,41 +41,7 @@ export class OpenAiProvider implements AiProviderAdapter {
                 stream: true,
             }),
             signal
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(`OpenAI error: ${errorData.error?.message || response.statusText}`);
-        }
-
-        const reader = response.body?.getReader();
-        if (!reader) throw new Error('No response body');
-
-        const decoder = new TextDecoder();
-        let buffer = '';
-
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split('\n');
-            buffer = lines.pop() || '';
-
-            for (const line of lines) {
-                const cleanLine = line.trim();
-                if (!cleanLine || cleanLine === 'data: [DONE]') continue;
-                if (cleanLine.startsWith('data: ')) {
-                    try {
-                        const json = JSON.parse(cleanLine.slice(6));
-                        const content = json.choices[0]?.delta?.content;
-                        if (content) onChunk(content);
-                    } catch (e) {
-                        console.error('Error parsing SSE chunk', e);
-                    }
-                }
-            }
-        }
+        }, onChunk);
     }
 
     async generateTitle(firstMessage: string): Promise<string> {

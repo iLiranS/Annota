@@ -29,6 +29,7 @@ export async function resetMasterKey(userId: string): Promise<void> {
 export * from './repositories/files.repository';
 export * from './repositories/folders.repository';
 export * from './repositories/notes.repository';
+export * from './repositories/search.repository';
 export * from './repositories/tags.repository';
 export * from './schema';
 export * from './types';

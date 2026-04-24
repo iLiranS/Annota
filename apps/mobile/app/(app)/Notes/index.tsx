@@ -1,3 +1,4 @@
+import AiChatModal from '@/components/ai/AiChatModal';
 import FloatingActionButton from '@/components/floating-action-button';
 import FolderEditModal from '@/components/folder-edit-modal';
 import FolderCard from '@/components/folders/folder-card';
@@ -16,6 +17,7 @@ import {
     sortFolders,
     sortNotes,
     SortType,
+    useUserStore as useAuthStore,
     useNotesStore,
     useSearchStore,
     useSettingsStore,
@@ -78,16 +80,20 @@ export default function NotesList() {
     } = useNotesStore();
 
     const {
+        searchQuery,
         setSearchQuery,
         dbResults,
         resetSearch,
-        isSearching
+        isSearching,
+        isOpen: isSearchActive,
+        setIsOpen: setIsSearchActive
     } = useSearchStore();
 
 
     const { general } = useSettingsStore();
     const { toggle } = useSidebar();
     const isSyncing = useSyncStore(state => state.isSyncing);
+    const { isGuest } = useAuthStore();
 
     // Params & State
     const currentFolderId = params.folderId ?? null;
@@ -96,8 +102,7 @@ export default function NotesList() {
     const currentSortType = getSortType(currentFolderId);
     const isCompact = general.compactMode;
 
-    const [isSearchActive, setIsSearchActive] = useState(false);
-    const [localSearchQuery, setLocalSearchQuery] = useState('');
+    const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
 
 
     // Sync local query only when it's cleared from outside
@@ -122,6 +127,7 @@ export default function NotesList() {
     const [isBulkMoveVisible, setIsBulkMoveVisible] = useState(false);
     const [selectionMode, setSelectionMode] = useState(false);
     const [selectedNoteIds, setSelectedNoteIds] = useState<string[]>([]);
+    const [isAiChatVisible, setIsAiChatVisible] = useState(false);
 
     useEffect(() => {
         setSelectionMode(false);
@@ -185,12 +191,13 @@ export default function NotesList() {
     }, []);
 
     const triggerSync = useCallback(async () => {
+        if (isGuest) return;
         try {
             await useSyncStore.getState().forceSync();
         } catch (e) {
             console.error('[Manual Sync]', e);
         }
-    }, []);
+    }, [isGuest]);
 
     const handleCloseSearch = useCallback(() => {
         setIsSearchActive(false);
@@ -204,9 +211,8 @@ export default function NotesList() {
     }, [setSearchQuery, currentFolderId]);
 
     const handleNotePress = useCallback((noteId: string) => {
-        if (isSearchActive) handleCloseSearch();
         router.push({ pathname: '/Notes/[id]', params: { id: noteId } });
-    }, [router, isSearchActive, handleCloseSearch]);
+    }, [router]);
 
     const handleFolderPress = useCallback((folderId: string) => {
         if (isSearchActive) handleCloseSearch();
@@ -293,10 +299,13 @@ export default function NotesList() {
     // Animations & Scroll
     const scrollHandler = useAnimatedScrollHandler({
         onScroll: (event) => { scrollY.value = event.contentOffset.y; },
-        onEndDrag: (event) => { if (event.contentOffset.y < -80) runOnJS(triggerSync)(); },
+        onEndDrag: (event) => {
+            if (!isGuest && event.contentOffset.y < -80) runOnJS(triggerSync)();
+        },
     });
 
     const syncIndicatorStyle = useAnimatedStyle(() => {
+        if (isGuest) return { opacity: 0 };
         const pullProgress = interpolate(scrollY.value, [-80, 0], [1, 0], Extrapolation.CLAMP);
         return {
             position: 'absolute', top: 0, left: 0, height: 2, zIndex: 1000,
@@ -368,7 +377,7 @@ export default function NotesList() {
                     gestureEnabled: false,
                     headerTransparent: false,
                     headerBackVisible: false,
-                    headerTitleAlign: 'center',
+                    headerTitleAlign: 'left',
                     headerTitle: () => (
 
 
@@ -419,6 +428,15 @@ export default function NotesList() {
                     headerRight: () => (
                         <View style={styles.headerRightContainer}>
                             {!isSearchActive && (
+                                <HapticPressable
+                                    onPress={() => setIsAiChatVisible(true)}
+                                    style={styles.headerButton}
+                                    hitSlop={8}
+                                >
+                                    <Ionicons name="sparkles" size={22} color={colors.primary} />
+                                </HapticPressable>
+                            )}
+                            {!isSearchActive && (
                                 <OptionsMenu
                                     currentSortType={currentSortType}
                                     onNewFolder={() => setIsCreatingFolder(true)}
@@ -440,6 +458,13 @@ export default function NotesList() {
                         </View>
                     ),
                 }}
+            />
+
+            <AiChatModal
+                visible={isAiChatVisible}
+                onClose={() => setIsAiChatVisible(false)}
+                initialFolderId={currentFolderId}
+                initialTagId={tagId}
             />
 
             <Animated.FlatList
@@ -532,7 +557,7 @@ const styles = StyleSheet.create({
     headerButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
     headerRightContainer: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     listContent: { paddingTop: 16 },
-    headerTitleContainer: { flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'center' },
+    headerTitleContainer: { flexDirection: 'row', alignItems: 'center', gap: 8, marginLeft: -8 },
     headerTitleText: { fontSize: 18, fontWeight: '700' },
     emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 48, gap: 8 },
     emptyText: { fontSize: 17, fontWeight: '600' },

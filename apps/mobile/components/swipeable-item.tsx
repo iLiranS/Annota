@@ -115,6 +115,7 @@ export default function SwipeableItem({
                     navigation.setOptions({ gestureEnabled: true });
                 }
             }}
+            hitSlop={{ left: -50 }}
             containerStyle={[styles.container]}
         >
             {children}

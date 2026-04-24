@@ -40,13 +40,9 @@ export interface AiState {
     selectedModelAnthropic: string;
     selectedModelGoogle: string;
     isLoadingModels: boolean;
-
-    // Selection context
-    selectedText: string | null;
     refreshTicket: number;
 
     // Actions
-    setHighlightedText: (text: string | null) => void;
     triggerChatRefresh: () => void;
     setOllamaBaseUrl: (url: string) => void;
     checkConnection: () => Promise<boolean>;
@@ -80,11 +76,9 @@ export const useAiStore = create<AiState>()(
             selectedModelGoogle: 'gemini-2.5-flash-lite',
             isLoadingModels: false,
             refreshTicket: 0,
-            selectedText: null,
-            triggerChatRefresh: () => set((state) => ({ refreshTicket: state.refreshTicket + 1 })),
+            triggerChatRefresh: () => set((state: AiState) => ({ refreshTicket: state.refreshTicket + 1 })),
 
             // Actions
-            setHighlightedText: (text) => set({ selectedText: text }),
             setOllamaBaseUrl: (url) => set({ ollamaBaseUrl: url }),
 
             checkConnection: async () => {

@@ -29,6 +29,10 @@ export interface PlatformAdapters {
         aes256GcmEncrypt: (params: { key: Uint8Array; nonce: Uint8Array; plaintext: Uint8Array }) => Promise<{ ciphertext: Uint8Array; authTag: Uint8Array }>;
         aes256GcmDecrypt: (params: { key: Uint8Array; nonce: Uint8Array; ciphertext: Uint8Array; authTag: Uint8Array }) => Promise<Uint8Array>;
     };
+    encoding: {
+        base64Encode: (data: Uint8Array) => string;
+        base64Decode: (str: string) => Uint8Array;
+    };
 
     fileSystem: {
         ensureDir: (scope: 'images' | 'cache' | 'files') => Promise<string>;
@@ -51,5 +55,6 @@ export interface PlatformAdapters {
 
     http: {
         fetch: typeof fetch;
+        streamRequest: (url: string, options: any, onChunk: (chunk: string) => void) => Promise<void>;
     };
 }

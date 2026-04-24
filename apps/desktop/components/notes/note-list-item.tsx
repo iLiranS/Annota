@@ -1,3 +1,4 @@
+import { Checkbox } from "@/components/ui/checkbox";
 import {
     ContextMenu,
     ContextMenuContent,
@@ -17,7 +18,6 @@ import { toast } from "sonner";
 import { LocationPickerModal } from "../location-picker-modal";
 import { FolderEditModal } from "./folder-edit-modal";
 import { NotePreviewModal } from "./note-preview-modal";
-import { Checkbox } from "@/components/ui/checkbox";
 
 import { Slot } from "@radix-ui/react-slot";
 import { Pin, Star } from "lucide-react";
@@ -224,7 +224,7 @@ export function NoteListItem({
                                 <div className="flex w-full items-start justify-between gap-2.5">
                                     {selectionMode && isInList && (
                                         <div className={cn("shrink-0 mt-0.5", general.appDirection === 'rtl' ? "ml-2" : "mr-2")}>
-                                            <Checkbox 
+                                            <Checkbox
                                                 checked={isSelected}
                                                 onCheckedChange={() => onToggleSelection?.(note.id)}
                                                 onClick={(e: React.MouseEvent) => e.stopPropagation()}
@@ -256,7 +256,7 @@ export function NoteListItem({
 
 
                                 {(() => {
-                                    if (!note.tags || note.tags === '[]') return null;
+                                    if (!note.tags || note.tags === '[]' || (forceCompact && isInQuickAccess)) return null;
                                     try {
                                         const tagIds: string[] = JSON.parse(note.tags);
                                         if (tagIds.length === 0) return null;

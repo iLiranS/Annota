@@ -26,6 +26,14 @@ export const noteContent = sqliteTable('note_content', {
     content: text('content').notNull().default(''), // Heavy content, loaded lazily
 });
 
+// ============ NOTE FTS5 (Virtual table, created via raw SQL migration) ============
+export const notesFts = sqliteTable('notes_fts', {
+    id: text('id'),
+    title: text('title'),
+    preview: text('preview'),
+    content: text('content'),
+});
+
 // ============ NOTE VERSIONS ============
 export const noteVersions = sqliteTable('note_versions', {
     id: text('id').primaryKey(),

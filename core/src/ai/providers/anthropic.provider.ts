@@ -29,7 +29,7 @@ export class AnthropicProvider implements AiProviderAdapter {
                 content: m.content
             }));
 
-        const response = await getPlatformAdapters().http.fetch('https://api.anthropic.com/v1/messages', {
+        await getPlatformAdapters().http.streamRequest('https://api.anthropic.com/v1/messages', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -44,42 +44,7 @@ export class AnthropicProvider implements AiProviderAdapter {
                 stream: true,
                 max_tokens: 4096,
             }),
-            signal
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(`Anthropic error: ${errorData.error?.message || response.statusText}`);
-        }
-
-        const reader = response.body?.getReader();
-        if (!reader) throw new Error('No response body');
-
-        const decoder = new TextDecoder();
-        let buffer = '';
-
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split('\n');
-            buffer = lines.pop() || '';
-
-            for (const line of lines) {
-                const cleanLine = line.trim();
-                if (!cleanLine.startsWith('data: ')) continue;
-
-                try {
-                    const json = JSON.parse(cleanLine.slice(6));
-                    if (json.type === 'content_block_delta' && json.delta?.text) {
-                        onChunk(json.delta.text);
-                    }
-                } catch (e) {
-                    // Ignore non-json or incomplete chunks
-                }
-            }
-        }
+        }, onChunk);
     }
 
     async generateTitle(firstMessage: string): Promise<string> {
