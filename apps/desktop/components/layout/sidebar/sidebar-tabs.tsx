@@ -13,7 +13,7 @@ interface SidebarTabsProps {
 
 export function SidebarTabs({ activeTab, setActiveTab, colors }: SidebarTabsProps) {
     return (
-        <div data-tauri-drag-region className="flex items-center justify-center gap-1.5 p-1 w-fit mt-1 mx-auto rounded-xl bg-sidebar-accent/10 dark:bg-sidebar-accent/30 border border-sidebar-border/40 shadow-sm">
+        <div data-tauri-drag-region className="flex items-center justify-center gap-1 p-1 rounded-xl bg-sidebar-accent/20 dark:bg-sidebar-accent/40 border border-sidebar-border/40 shadow-sm">
             <TabButton
                 active={activeTab === 'folders'}
                 onClick={() => setActiveTab('folders')}

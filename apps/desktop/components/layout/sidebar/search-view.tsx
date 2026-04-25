@@ -11,9 +11,22 @@ import { Ionicons } from "../../ui/ionicons";
 interface SearchViewProps {
     onNoteClick: (note: any) => void;
     onFolderClick: (folder: any) => void;
+    onDeleteNote: (id: string) => void;
+    onEditFolder: (folder: any) => void;
+    onDeleteFolder: (folder: any) => void;
+    onCreateSubFolder: (parent: any) => void;
+    onCreateNote: (folderId: string) => void;
 }
 
-export function SearchView({ onNoteClick, onFolderClick }: SearchViewProps) {
+export function SearchView({
+    onNoteClick,
+    onFolderClick,
+    onDeleteNote,
+    onEditFolder,
+    onDeleteFolder,
+    onCreateSubFolder,
+    onCreateNote
+}: SearchViewProps) {
     const { colors } = useAppTheme();
     const { getFolderById } = useNotesStore();
     const {
@@ -64,10 +77,10 @@ export function SearchView({ onNoteClick, onFolderClick }: SearchViewProps) {
                     />
                     <Input
                         autoFocus
-                        placeholder="Search..."
+                        placeholder="Search Your Notes..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value, null)}
-                        className="flex h-9 w-full rounded-md border border-input/40 bg-transparent pl-7 pr-7 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50" />
+                        className="flex h-9 w-full rounded-md border border-input/40 bg-transparent pl-7 pr-7 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground/60 placeholder:text-[12px] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50" />
                     {searchQuery && (
                         <button
                             onClick={() => setSearchQuery("", null)}
@@ -102,7 +115,10 @@ export function SearchView({ onNoteClick, onFolderClick }: SearchViewProps) {
                                             <FolderListItem
                                                 folder={result.data}
                                                 onClick={() => onFolderClick(result.data)}
-                                                onEdit={() => { }}
+                                                onEdit={onEditFolder}
+                                                onDelete={onDeleteFolder}
+                                                onCreateSubFolder={onCreateSubFolder}
+                                                onCreateNote={(f) => onCreateNote(f.id)}
                                                 searchQuery={searchQuery}
                                                 isSearchResult
                                                 className="hover:bg-primary/5 border-none"
@@ -125,6 +141,7 @@ export function SearchView({ onNoteClick, onFolderClick }: SearchViewProps) {
                                             <NoteListItem
                                                 note={result.data}
                                                 onClick={() => onNoteClick(result.data)}
+                                                onDelete={() => onDeleteNote(result.data.id)}
                                                 isActive={false}
                                                 searchQuery={searchQuery}
                                                 isInList={true}

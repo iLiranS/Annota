@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
 
 import { Sidebar, SidebarContent, useSidebar } from "@/components/ui/sidebar";
 import { useAppTheme } from "@/hooks/use-app-theme";
@@ -18,7 +18,7 @@ import { NotesList } from "./sidebar/notes-list";
 import { QuickAccessSection } from "./sidebar/quick-access";
 import { SearchView } from "./sidebar/search-view";
 import { SidebarFooterSection } from "./sidebar/sidebar-footer";
-import { SidebarTabs } from "./sidebar/sidebar-tabs";
+import { SidebarHeaderSection } from "./sidebar/sidebar-header";
 import { TagsList } from "./sidebar/tags-list";
 
 type SidebarTab = 'folders' | 'notes' | 'tags' | 'search';
@@ -33,7 +33,6 @@ const SORT_OPTIONS: SortType[] = [
 ];
 
 export function AppSidebar() {
-    const navigate = useNavigate();
     const navigateSmart = useSmartNavigate();
     const location = useLocation();
     const { folderId: routeFolderId, noteId: routeNoteId } = useParams();
@@ -176,8 +175,9 @@ export function AppSidebar() {
             return sortNotes(list, currentSortType);
         }
         const list = getNotesInFolder(currentFolderId ?? null);
-        return sortNotes(list, currentSortType);
-    }, [notes, currentFolderId, currentSortType, tagId]);
+        const sortType = (isDaily || isTrash) ? 'CREATED_LAST' : currentSortType;
+        return sortNotes(list, sortType);
+    }, [notes, currentFolderId, currentSortType, tagId, isDaily, isTrash]);
 
 
 
@@ -299,10 +299,30 @@ export function AppSidebar() {
                     )}
                 />
 
-                <SidebarTabs
-                    activeTab={activeTab}
-                    setActiveTab={setActiveTab}
-                    colors={colors}
+                <SidebarHeaderSection
+                    title={headerTitle}
+                    icon={headerIcon}
+                    color={headerColor}
+                    isDaily={isDaily}
+                    isTrash={isTrash}
+                    currentSortType={(isDaily || isTrash) ? 'CREATED_LAST' : currentSortType}
+                    onSortChange={(type) => setFolderSortType(currentFolderId ?? null, type)}
+                    onCreateNote={() => {
+                        createNote(currentFolderId ?? "", tagId || undefined);
+                        setActiveTab('notes');
+                    }}
+                    onCreateFolder={() => {
+                        setEditingFolder(null);
+                        setNewFolderParentId(currentFolderId ?? null);
+                        setIsEditModalOpen(true);
+                    }}
+                    sortOptions={SORT_OPTIONS}
+                    getSortTypeLabel={getSortTypeLabel}
+                    tagId={tagId || undefined}
+                    isRoot={isRoot}
+                    selectionMode={selectionMode}
+                    setSelectionMode={handleSetSelectionMode}
+                    onHeaderClick={() => setActiveTab('notes')}
                 />
 
                 <SidebarContent data-tauri-drag-region className={cn("min-w-0 flex flex-col overflow-hidden px-1")}>
@@ -318,7 +338,10 @@ export function AppSidebar() {
                             onEdit={handleEditFolder}
                             onDelete={setFolderToDelete}
                             onCreateSubFolder={handleCreateSubFolder}
-                            onCreateNote={createNote}
+                            onCreateNote={(id) => {
+                                createNote(id);
+                                setActiveTab('notes');
+                            }}
                             getFoldersInFolder={getFoldersInFolder}
                             general={general}
                             currentFolderId={currentFolderId ?? null}
@@ -333,6 +356,14 @@ export function AppSidebar() {
                             /> */}
 
                             <div className="flex-1 overflow-hidden flex flex-col">
+                                <QuickAccessSection
+                                    notes={quickAccessNotes}
+                                    activeNoteId={routeNoteId}
+                                    onNoteClick={(note) => navigateSmart(`/notes/${note.folderId || "root"}/${note.id}`)}
+                                    onDeleteNote={deleteNote}
+                                    general={general}
+                                />
+
                                 <NotesList
                                     key={currentFolderId ?? tagId ?? 'root'}
                                     notes={browseNotes}
@@ -347,34 +378,10 @@ export function AppSidebar() {
                                         handleSetSelectionMode(false);
                                     }}
                                     currentFolderId={currentFolderId ?? null}
-                                    // New Header Props
-                                    title={headerTitle}
-                                    icon={headerIcon}
-                                    color={headerColor}
-                                    isDaily={isDaily}
                                     isTrash={isTrash}
-                                    isRoot={isRoot}
-                                    tagId={tagId || undefined}
-                                    currentSortType={currentSortType}
-                                    onSortChange={(type) => setFolderSortType(currentFolderId ?? null, type)}
-                                    onCreateNote={() => createNote(currentFolderId || "", tagId || undefined)}
-                                    onCreateFolder={() => {
-                                        setEditingFolder(null);
-                                        setNewFolderParentId(currentFolderId ?? null);
-                                        setIsEditModalOpen(true);
-                                    }}
-                                    sortOptions={SORT_OPTIONS}
-                                    getSortTypeLabel={getSortTypeLabel}
                                     setSelectionMode={handleSetSelectionMode}
                                 />
                             </div>
-                            <QuickAccessSection
-                                notes={quickAccessNotes}
-                                activeNoteId={routeNoteId}
-                                onNoteClick={(note) => navigateSmart(`/notes/${note.folderId || "root"}/${note.id}`)}
-                                onDeleteNote={deleteNote}
-                                general={general}
-                            />
                         </>
                     )}
 
@@ -401,20 +408,26 @@ export function AppSidebar() {
                                 navigateSmart(`/notes?folderId=${folder.id}`);
                                 setActiveTab('notes');
                             }}
+                            onDeleteNote={deleteNote}
+                            onEditFolder={handleEditFolder}
+                            onDeleteFolder={setFolderToDelete}
+                            onCreateSubFolder={handleCreateSubFolder}
+                            onCreateNote={(id) => {
+                                createNote(id);
+                                setActiveTab('notes');
+                            }}
                         />
                     )}
                 </SidebarContent>
 
-                <div className={cn("mt-auto px-1 border-t border-border/40 ")}>
+                <div className={cn("mt-auto  ")}>
                     <SidebarFooterSection
                         showOfflineBanner={showOfflineBanner}
                         retryCooldown={retryCooldown}
                         onRetry={handleRetry}
-                        onSettingsClick={() => navigate("/settings", { state: { background: location } })}
-                        onTrashClick={() => {
-                            navigateSmart(`/notes?folderId=${TRASH_FOLDER_ID}`);
-                            setActiveTab('notes');
-                        }}
+                        activeTab={activeTab}
+                        setActiveTab={setActiveTab}
+                        colors={colors}
                     />
                 </div>
 

@@ -24,6 +24,7 @@ interface SidebarHeaderSectionProps {
     isRoot?: boolean;
     selectionMode?: boolean;
     setSelectionMode?: (mode: boolean) => void;
+    onHeaderClick?: () => void;
 }
 
 export function SidebarHeaderSection({
@@ -42,6 +43,7 @@ export function SidebarHeaderSection({
     isRoot,
     selectionMode,
     setSelectionMode,
+    onHeaderClick,
 }: SidebarHeaderSectionProps) {
 
 
@@ -51,7 +53,10 @@ export function SidebarHeaderSection({
             className="h-14 px-4 py-0 justify-center border-b border-border/10"
         >
             <div className="flex items-center justify-between gap-2 w-full">
-                <div className="flex items-center gap-2 overflow-hidden flex-1">
+                <div
+                    className="flex items-center gap-2 overflow-hidden flex-1 cursor-pointer hover:opacity-80 transition-opacity"
+                    onClick={onHeaderClick}
+                >
                     <div className="flex h-6 w-6 shrink-0 items-center justify-center">
                         {isRoot ? (
                             <AnnotaIcon color={color} size={20} />

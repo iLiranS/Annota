@@ -112,15 +112,17 @@ export function FolderEditModal({
     }, [parentId, getFolderById]);
 
     const getParentName = useCallback((id: string | null) => {
-        if (id === null) return 'Notes (Root)';
+        if (!id || id === 'root') return 'Annota';
         return parentFolder?.name ?? 'Unknown';
     }, [parentFolder]);
 
     const handleSave = async () => {
         if (!name.trim()) return;
 
+        const normalizedParentId = (parentId === 'root' || !parentId) ? null : parentId;
+
         if (isCreateMode) {
-            const { error } = await createFolder({ parentId, name: name.trim(), icon, color });
+            const { error } = await createFolder({ parentId: normalizedParentId, name: name.trim(), icon, color });
             if (error) {
                 toast.error(error);
                 return;
@@ -130,7 +132,7 @@ export function FolderEditModal({
                 name: name.trim(),
                 icon,
                 color,
-                parentId,
+                parentId: normalizedParentId,
             });
         }
         onOpenChange(false);

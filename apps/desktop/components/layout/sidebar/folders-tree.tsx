@@ -3,7 +3,7 @@ import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
 import { SidebarGroup, SidebarMenu, SidebarMenuAction, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import type { Folder } from "@annota/core";
-import { DAILY_NOTES_FOLDER_ID } from "@annota/core";
+import { DAILY_NOTES_FOLDER_ID, TRASH_FOLDER_ID } from "@annota/core";
 import { ChevronRight } from "lucide-react";
 import { useState } from "react";
 
@@ -24,9 +24,26 @@ const DAILY_NOTES_FOLDER: Folder = {
     updatedAt: new Date(),
 }
 
+const TRASH_FOLDER: Folder = {
+    id: TRASH_FOLDER_ID,
+    name: "Trash",
+    icon: "trash",
+    color: "#EF4444",
+    sortType: "CREATED_FIRST",
+    deletedAt: null,
+    originalParentId: null,
+    isDirty: false,
+    parentId: null,
+    isSystem: true,
+    isDeleted: false,
+    isPermDeleted: false,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+}
+
 const ALL_NOTES_FOLDER: Folder = {
     id: "root",
-    name: "All Notes",
+    name: "Annota",
     icon: "documents",
     color: "#6366F1",
     sortType: "UPDATED_LAST",
@@ -65,11 +82,13 @@ export function FoldersTree({
     general,
     currentFolderId,
 }: FoldersTreeProps) {
-
     // Always get root folders for global view
     const rootFolders = getFoldersInFolder(null);
 
     // Add System Folders to the root
+    if (!rootFolders.find(f => f.id === TRASH_FOLDER_ID)) {
+        rootFolders.unshift(TRASH_FOLDER);
+    }
     if (!rootFolders.find(f => f.id === DAILY_NOTES_FOLDER_ID)) {
         rootFolders.unshift(DAILY_NOTES_FOLDER);
     }
@@ -77,12 +96,15 @@ export function FoldersTree({
         rootFolders.unshift(ALL_NOTES_FOLDER);
     }
 
+    const systemFolders = rootFolders.filter(f => f.isSystem);
+    const regularFolders = rootFolders.filter(f => !f.isSystem);
+
     if (rootFolders.length === 0) return null;
 
     return (
         <SidebarGroup className="py-2 px-0">
             <SidebarMenu className="px-1 overflow-y-auto compact-scrollbar">
-                {rootFolders.map((folder) => (
+                {systemFolders.map((folder) => (
                     <FolderTreeItem
                         key={folder.id}
                         folder={folder}
@@ -91,7 +113,26 @@ export function FoldersTree({
                         onEdit={onEdit}
                         onDelete={onDelete}
                         onCreateSubFolder={onCreateSubFolder}
-                        onCreateNote={() => onCreateNote(folder.id)}
+                        onCreateNote={() => onCreateNote(folder.id === 'root' ? '' : folder.id)}
+                        getFoldersInFolder={getFoldersInFolder}
+                        currentFolderId={currentFolderId}
+                    />
+                ))}
+
+                {regularFolders.length > 0 && (
+                    <div className="h-px bg-border/40 mx-2 my-1 shrink-0" />
+                )}
+
+                {regularFolders.map((folder) => (
+                    <FolderTreeItem
+                        key={folder.id}
+                        folder={folder}
+                        general={general}
+                        onNavigate={onNavigate}
+                        onEdit={onEdit}
+                        onDelete={onDelete}
+                        onCreateSubFolder={onCreateSubFolder}
+                        onCreateNote={() => onCreateNote(folder.id === 'root' ? '' : folder.id)}
                         getFoldersInFolder={getFoldersInFolder}
                         currentFolderId={currentFolderId}
                     />
@@ -129,12 +170,7 @@ function FolderTreeItem({ folder, onNavigate, onEdit, onDelete, onCreateSubFolde
                     <SidebarMenuButton
                         onClick={() => onNavigate(folder.id)}
                         className={cn(
-                            "h-8 ps-2!",
-                            general?.appDirection === 'rtl' ? (
-                                "group-has-data-[sidebar=menu-action]/menu-item:pr-2! group-has-data-[sidebar=menu-action]/menu-item:pl-8! data-[drag-over=true]:pl-1!"
-                            ) : (
-                                "group-has-data-[sidebar=menu-action]/menu-item:pr-8! data-[drag-over=true]:pr-1!"
-                            ),
+                            "h-8 px-2!",
                             "data-[drag-over=true]:transition-none",
                             isActive && "bg-sidebar-accent text-sidebar-accent-foreground font-semibold"
                         )}

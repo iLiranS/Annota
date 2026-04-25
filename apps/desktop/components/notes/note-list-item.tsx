@@ -232,6 +232,9 @@ export function NoteListItem({
                                         </div>
                                     )}
                                     <div className="flex min-w-0 items-center gap-2 flex-1">
+                                        {isInQuickAccess && (
+                                            <Star size={12} className="shrink-0 text-amber-400 fill-amber-400" />
+                                        )}
                                         <p className={cn(
                                             "truncate text-sm font-medium transition-colors",
                                             isActive ? "text-primary" : "text-foreground/90 group-hover/note:text-primary"

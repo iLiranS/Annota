@@ -83,23 +83,22 @@ export function FolderListItemContent({ folder, isActive, searchQuery, hideCount
     };
 
     return (
-        <div className="flex items-center justify-between w-full">
-            <div className="flex items-center gap-2.5">
+        <div className="flex items-center justify-between w-full min-w-0 gap-2">
+            <div className="flex items-center gap-2.5 min-w-0 flex-1">
                 <FolderIcon
                     folder={folder}
                     isActive={isActive}
                     className="group-hover/folder:bg-background/50 group-data-[drag-over=true]/item:bg-emerald-500/20 group-data-[drag-over=true]/item:text-emerald-600"
                 />
-                <span className="truncate font-medium flex-1">
+                <span className="truncate font-medium">
                     <Highlight text={folder.name} query={searchQuery} />
                 </span>
             </div>
             {general.showNotesCountInFolder && !isSearchResult && (
                 <span className={cn(
-                    "text-[10px] tabular-nums font-medium text-muted-foreground/40 transition-opacity duration-200",
+                    "text-[10px] tabular-nums font-medium text-muted-foreground/40 transition-opacity duration-200 shrink-0",
                     "group-data-[drag-over=true]/item:hidden",
-                    hideCountOnHover && "group-hover/folder:opacity-0 group-hover:pointer-events-none",
-                    general.appDirection === 'rtl' ? "absolute left-1.5 top-2" : "absolute right-1.5 top-2"
+                    hideCountOnHover && "group-hover/folder:opacity-0 group-hover:pointer-events-none"
                 )}>
                     {notesCount}
                 </span>
@@ -191,30 +190,8 @@ export function FolderListItem({
 
     const Comp = asChild ? Slot : "button";
 
-    if (folder.isSystem) {
-        return (
-            <Comp
-                type="button"
-                onClick={onClick}
-                onDragOver={handleDragOver}
-                onDragEnter={handleDragEnter}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                data-drag-over={isDragOver ? "true" : undefined}
-                className={cn(
-                    "group/item transition-all duration-200",
-                    !asChild && "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-start text-sm hover:bg-primary/10",
-                    "active:bg-primary/10",
-                    isDragOver && "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 ring-1 ring-emerald-500/40 z-10",
-                    className
-                )}
-                {...(props as any)}
-            >
-                {asChild ? children : <FolderListItemContent folder={folder} isActive={isActive} searchQuery={searchQuery} />}
-
-            </Comp>
-        );
-    }
+    const isRoot = folder.id === 'root';
+    const isTrash = folder.id === TRASH_FOLDER_ID;
 
     return (
         <ContextMenu>
@@ -237,7 +214,6 @@ export function FolderListItem({
                     {...(props as any)}
                 >
                     {asChild ? children : <FolderListItemContent folder={folder} isActive={isActive} searchQuery={searchQuery} isSearchResult={isSearchResult} />}
-
                 </Comp>
             </ContextMenuTrigger>
 
@@ -261,35 +237,37 @@ export function FolderListItem({
                     </>
                 ) : (
                     <>
-                        {onCreateNote && (
-                            <ContextMenuItem onSelect={() => onCreateNote(folder)} className="gap-2">
+                        {onCreateNote && !isTrash && (
+                            <ContextMenuItem onSelect={() => onCreateNote(isRoot ? { ...folder, id: '' } : folder)} className="gap-2">
                                 <Ionicons name="document-outline" size={16} />
                                 <span>New Note</span>
                             </ContextMenuItem>
                         )}
 
-                        {onCreateTask && (
-                            <ContextMenuItem onSelect={() => onCreateTask(folder)} className="gap-2">
+                        {onCreateTask && !folder.isSystem && (
+                            <ContextMenuItem onSelect={() => onCreateTask(isRoot ? { ...folder, id: '' } : folder)} className="gap-2">
                                 <Ionicons name="checkmark-circle-outline" size={16} />
                                 <span>New Task</span>
                             </ContextMenuItem>
                         )}
 
-                        {onCreateSubFolder && (
-                            <ContextMenuItem onSelect={() => onCreateSubFolder(folder)} className="gap-2">
+                        {onCreateSubFolder && (!folder.isSystem || isRoot) && (
+                            <ContextMenuItem onSelect={() => onCreateSubFolder(isRoot ? { ...folder, id: '' } : folder)} className="gap-2">
                                 <Ionicons name="folder-outline" size={16} />
-                                <span>New Sub Folder</span>
+                                <span>New Folder</span>
                             </ContextMenuItem>
                         )}
 
-                        <ContextMenuSeparator />
+                        {!folder.isSystem && <ContextMenuSeparator />}
 
-                        <ContextMenuItem onSelect={() => onEdit(folder)} className="gap-2">
-                            <Ionicons name="create-outline" size={16} />
-                            <span>Edit Folder</span>
-                        </ContextMenuItem>
+                        {!folder.isSystem && (
+                            <ContextMenuItem onSelect={() => onEdit(folder)} className="gap-2">
+                                <Ionicons name="create-outline" size={16} />
+                                <span>Edit Folder</span>
+                            </ContextMenuItem>
+                        )}
 
-                        {onDelete && (
+                        {onDelete && !folder.isSystem && (
                             <ContextMenuItem
                                 onSelect={() => onDelete(folder)}
                                 className="gap-2 text-destructive focus:bg-destructive/10 focus:text-destructive"
@@ -297,6 +275,12 @@ export function FolderListItem({
                                 <Ionicons name="trash-outline" size={16} />
                                 <span>Delete Folder</span>
                             </ContextMenuItem>
+                        )}
+                        
+                        {isTrash && (
+                            <div className="px-2 py-1.5 text-xs text-muted-foreground italic text-center">
+                                Trash folder
+                            </div>
                         )}
                     </>
                 )}

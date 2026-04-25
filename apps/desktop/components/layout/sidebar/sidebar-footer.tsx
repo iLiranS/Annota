@@ -1,27 +1,33 @@
 import { Button } from "@/components/ui/button";
-import { SidebarFooter, SidebarMenuButton } from "@/components/ui/sidebar";
+import { SidebarFooter } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
-import { Settings, Trash2 } from "lucide-react";
 import { Ionicons } from "../../ui/ionicons";
+
+import { SidebarTabs } from "./sidebar-tabs";
+
+type SidebarTab = 'folders' | 'notes' | 'tags' | 'search';
 
 interface SidebarFooterSectionProps {
     showOfflineBanner: boolean;
     retryCooldown: boolean;
     onRetry: () => void;
-    onSettingsClick: () => void;
-    onTrashClick: () => void;
+    activeTab: SidebarTab;
+    setActiveTab: (tab: SidebarTab) => void;
+    colors: {
+        primary: string;
+    };
 }
 
 export function SidebarFooterSection({
     showOfflineBanner,
     retryCooldown,
     onRetry,
-    onSettingsClick,
-    onTrashClick,
-
+    activeTab,
+    setActiveTab,
+    colors
 }: SidebarFooterSectionProps) {
     return (
-        <SidebarFooter className={cn("py-3 px-0")}>
+        <SidebarFooter className={cn(" px-0")}>
             {showOfflineBanner && (
                 <div className="mb-2 px-2 flex items-center gap-2 rounded-lg bg-amber-500/10  py-1.5 border border-amber-500/20">
                     <Ionicons name="cloud-offline" size={12} className="text-amber-500" />
@@ -37,22 +43,12 @@ export function SidebarFooterSection({
                     </Button>
                 </div>
             )}
-            <div data-tauri-drag-region className="flex items-center justify-between text-muted-foreground/70">
-                <SidebarMenuButton
-                    className="w-9 h-9 hover:bg-sidebar-accent rounded-xl justify-center"
-                    onClick={onSettingsClick}
-                    tooltip="Settings"
-                >
-                    <Settings size={18} />
-                </SidebarMenuButton>
-
-                <SidebarMenuButton
-                    className="w-9 h-9 hover:bg-destructive/10 hover:text-destructive rounded-xl justify-center"
-                    onClick={onTrashClick}
-                    tooltip="Trash"
-                >
-                    <Trash2 size={18} />
-                </SidebarMenuButton>
+            <div data-tauri-drag-region className="flex items-center justify-center text-muted-foreground/70">
+                <SidebarTabs
+                    activeTab={activeTab}
+                    setActiveTab={setActiveTab}
+                    colors={colors}
+                />
             </div>
         </SidebarFooter>
     );

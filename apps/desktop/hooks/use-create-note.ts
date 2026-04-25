@@ -12,7 +12,7 @@ export function useCreateNote() {
     const createAndNavigate = useCallback(async (folderId: string = "", tagId?: string) => {
         try {
             const { data: note, error } = await createNote({ 
-                folderId,
+                folderId: folderId || undefined as any,
                 tags: tagId ? JSON.stringify([tagId]) : undefined
             });
 

@@ -80,7 +80,7 @@ export function LocationPickerModal({
     const breadcrumbs = useMemo(() => {
         const crumbs: BreadcrumbData[] = [{
             id: null,
-            name: "Notes",
+            name: "Annota",
             icon: "home",
             color: colors.primary
         }];
@@ -180,7 +180,7 @@ export function LocationPickerModal({
                         </div>
                         <div className="min-w-0">
                             <p className="text-sm font-semibold truncate">
-                                {browsingFolder?.name ?? "Notes (Root)"}
+                                {browsingFolder?.name ?? "Annota"}
                             </p>
 
                         </div>
@@ -209,7 +209,7 @@ export function LocationPickerModal({
                                     <ArrowLeft className="h-4.5 w-4.5" />
                                 </div>
                                 <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">
-                                    Back to {browsingFolder?.parentId ? getFolderById(browsingFolder.parentId)?.name : "Notes"}
+                                    Back to {browsingFolder?.parentId ? getFolderById(browsingFolder.parentId)?.name : "Annota"}
                                 </span>
                             </Button>
                         )}
