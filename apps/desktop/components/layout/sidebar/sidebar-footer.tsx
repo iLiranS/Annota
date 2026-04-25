@@ -37,7 +37,7 @@ export function SidebarFooterSection({
                     </Button>
                 </div>
             )}
-            <div className="flex items-center justify-between text-muted-foreground/70">
+            <div data-tauri-drag-region className="flex items-center justify-between text-muted-foreground/70">
                 <SidebarMenuButton
                     className="w-9 h-9 hover:bg-sidebar-accent rounded-xl justify-center"
                     onClick={onSettingsClick}

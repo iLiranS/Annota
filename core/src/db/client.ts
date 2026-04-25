@@ -190,6 +190,10 @@ export async function initDatabase(
           // 6. Backfill existing data
           `INSERT OR IGNORE INTO notes_fts(id, title, preview, content) SELECT nc.id, nm.title, nm.preview, nc.content FROM note_content nc JOIN note_metadata nm ON nc.id = nm.id;`
         ]
+      },
+      {
+        name: '004_add_pinned_to_ai_chats',
+        sql: 'ALTER TABLE ai_chats ADD COLUMN is_pinned INTEGER NOT NULL DEFAULT 0;'
       }
     ];
 

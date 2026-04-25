@@ -57,6 +57,9 @@ export function FolderListItemContent({ folder, isActive, searchQuery, hideCount
         if (folder.id === TRASH_FOLDER_ID) {
             return state.notes.filter(n => n.isDeleted).length;
         }
+        if (folder.id === 'root') {
+            return state.notes.filter(n => !n.folderId && !n.isDeleted).length;
+        }
         return state.notes.filter(n => n.folderId === folder.id && !n.isDeleted).length;
     });
 

@@ -2,11 +2,10 @@ import { Button } from "@/components/ui/button"
 import { useSidebar } from "@/components/ui/sidebar"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
-import { useSearchStore, useSettingsStore, useSyncStore, useUserStore } from "@annota/core"
+import { useSettingsStore, useSyncStore, useUserStore } from "@annota/core"
 import { PanelLeft, PanelRight } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
-import { NotesSearchModal } from "../search/notes-search-modal"
 import { Ionicons } from "../ui/ionicons"
 
 
@@ -62,7 +61,6 @@ export function MainNavbar() {
     const [canSync, setCanSync] = useState(true);
     const [canGoBack, setCanGoBack] = useState(false);
     const [canGoForward, setCanGoForward] = useState(false);
-    const { isOpen: isSearchOpen, setIsOpen: setIsSearchOpen } = useSearchStore();
     const maxIdxRef = useRef(0);
 
     useEffect(() => {
@@ -172,21 +170,6 @@ export function MainNavbar() {
                     </div>
                 </div>
 
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 rounded-full text-muted-foreground/60 transition-all hover:bg-sidebar-accent hover:text-foreground active:scale-95"
-                            onClick={() => setIsSearchOpen(true)}
-                        >
-                            <Ionicons name="search" size={15} />
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="text-[10px]">
-                        Search <span className="opacity-50 ml-1">⌘+P</span>
-                    </TooltipContent>
-                </Tooltip>
             </div>
 
             {/* Right Section: Actions */}
@@ -261,10 +244,6 @@ export function MainNavbar() {
                 </Tooltip>
 
             </div>
-            <NotesSearchModal
-                open={isSearchOpen}
-                onOpenChange={setIsSearchOpen}
-            />
         </header>
     );
 }

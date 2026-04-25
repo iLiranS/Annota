@@ -1,5 +1,6 @@
-import { AiChat, aiChats, aiMessages, generateId, getDb, useAiChat, useAiStore, useNotesStore } from '@annota/core';
+import { AiChat, aiChats, aiMessages, generateId, getDb, useAiChat, useAiStore, useNotesStore, ANTHROPIC_MODELS, GOOGLE_MODELS, OPENAI_MODELS } from '@annota/core';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { MenuView } from '@react-native-menu/menu';
 import { useTheme } from '@react-navigation/native';
 import { desc, eq } from 'drizzle-orm';
 import { useRouter } from 'expo-router';
@@ -28,33 +29,57 @@ export default function AiChatModal({ visible, onClose, initialContext, initialF
     const { colors } = useTheme();
     const insets = useSafeAreaInsets();
     const router = useRouter();
-    const { activeProvider, hasOpenAiKey, hasAnthropicKey, hasGoogleKey, refreshTicket } = useAiStore();
+    const { 
+        activeProvider, 
+        hasOpenAiKey, 
+        hasAnthropicKey, 
+        hasGoogleKey, 
+        refreshTicket,
+        availableModels,
+        selectedModel,
+        setSelectedModel,
+        selectedModelOpenAi,
+        selectedModelAnthropic,
+        selectedModelGoogle,
+        setSelectedModelOpenAi,
+        setSelectedModelAnthropic,
+        setSelectedModelGoogle
+    } = useAiStore();
     const [input, setInput] = useState('');
     const [chatId, setChatId] = useState<string | null>(null);
     const [chats, setChats] = useState<AiChat[]>([]);
-    const [showHistory, setShowHistory] = useState(false);
+    const [showHistory, setShowHistory] = useState(true);
     const [selectedContextNotes, setSelectedContextNotes] = useState<any[]>([]);
     const { notes } = useNotesStore();
 
-    // Auto-select folder/tag notes on first open for new chat
+    // Auto-select folder/tag/note context on first open for new chat
     useEffect(() => {
-        if (visible && !chatId && (initialFolderId || initialTagId)) {
-            let initialNotes: any[] = [];
-            if (initialFolderId) {
-                initialNotes = notes.filter(n => n.folderId === initialFolderId && !n.isDeleted && !n.isPermDeleted);
-            } else if (initialTagId) {
-                initialNotes = notes.filter(n => {
-                    try {
-                        const tags = JSON.parse(n.tags || '[]') as string[];
-                        return tags.includes(initialTagId) && !n.isDeleted && !n.isPermDeleted;
-                    } catch { return false; }
-                });
-            }
-            if (initialNotes.length > 0) {
-                setSelectedContextNotes(initialNotes);
+        if (visible) {
+            if (!chatId) {
+                setShowHistory(true);
+                if (initialFolderId || initialTagId) {
+                    let initialNotes: any[] = [];
+                    if (initialFolderId) {
+                        initialNotes = notes.filter(n => n.folderId === initialFolderId && !n.isDeleted && !n.isPermDeleted);
+                    } else if (initialTagId) {
+                        initialNotes = notes.filter(n => {
+                            try {
+                                const tags = JSON.parse(n.tags || '[]') as string[];
+                                return tags.includes(initialTagId) && !n.isDeleted && !n.isPermDeleted;
+                            } catch { return false; }
+                        });
+                    }
+                    if (initialNotes.length > 0) {
+                        setSelectedContextNotes(initialNotes);
+                        setShowHistory(false); // If we have specific context, maybe go straight to chat?
+                    }
+                } else if (initialContext && selectedContextNotes.length === 0) {
+                    setSelectedContextNotes([initialContext]);
+                    setShowHistory(false);
+                }
             }
         }
-    }, [visible, chatId, initialFolderId, initialTagId]);
+    }, [visible, chatId, initialFolderId, initialTagId, initialContext]);
 
     const handleToggleNote = useCallback((note: any) => {
         setSelectedContextNotes(prev => {
@@ -108,6 +133,7 @@ export default function AiChatModal({ visible, onClose, initialContext, initialF
         setChatId(null);
         setShowHistory(false);
         setSelectedContextNotes([]);
+        setInput('');
         clearError();
     };
 
@@ -134,6 +160,10 @@ export default function AiChatModal({ visible, onClose, initialContext, initialF
     };
 
     const handleDeleteChat = async (id: string) => {
+        if (id === 'ALL') {
+            handleClearAllChats();
+            return;
+        }
         const db = getDb();
         await db.delete(aiMessages).where(eq(aiMessages.chatId, id)).run();
         await db.delete(aiChats).where(eq(aiChats.id, id)).run();
@@ -143,9 +173,53 @@ export default function AiChatModal({ visible, onClose, initialContext, initialF
         }
     };
 
+    const handleTogglePinChat = async (id: string) => {
+        const chat = chats.find(c => c.id === id);
+        if (!chat) return;
+
+        const db = getDb();
+        const newPinned = !chat.isPinned;
+        await db.update(aiChats).set({ isPinned: newPinned }).where(eq(aiChats.id, id)).run();
+        setChats(prev => prev.map(c => c.id === id ? { ...c, isPinned: newPinned } : c));
+    };
+
     const handleSelectChat = (id: string) => {
         setChatId(id);
         setShowHistory(false);
+    };
+
+    const handleSetModel = (model: string) => {
+        if (OPENAI_MODELS.some(m => m.value === model)) {
+            useAiStore.getState().setActiveProvider('openai');
+            setSelectedModelOpenAi(model);
+        } else if (ANTHROPIC_MODELS.some(m => m.value === model)) {
+            useAiStore.getState().setActiveProvider('anthropic');
+            setSelectedModelAnthropic(model);
+        } else if (GOOGLE_MODELS.some(m => m.value === model)) {
+            useAiStore.getState().setActiveProvider('google');
+            setSelectedModelGoogle(model);
+        } else {
+            useAiStore.getState().setActiveProvider('ollama');
+            setSelectedModel(model);
+        }
+    };
+
+    const currentModelName = activeProvider === 'ollama'
+        ? selectedModel
+        : activeProvider === 'openai'
+            ? selectedModelOpenAi
+            : activeProvider === 'anthropic'
+                ? selectedModelAnthropic
+                : selectedModelGoogle;
+
+    const getProviderModels = () => {
+        switch (activeProvider) {
+            case 'ollama': return availableModels.map(m => ({ label: m.name, value: m.name }));
+            case 'openai': return OPENAI_MODELS;
+            case 'anthropic': return ANTHROPIC_MODELS;
+            case 'google': return GOOGLE_MODELS;
+            default: return [];
+        }
     };
 
     const handleSend = async () => {
@@ -156,12 +230,12 @@ export default function AiChatModal({ visible, onClose, initialContext, initialF
             currentChatId = generateId();
             const db = getDb();
             const now = new Date();
-            const newChat = {
+            const newChat: AiChat = {
                 id: currentChatId,
                 title: 'New Chat',
+                isPinned: false,
                 createdAt: now,
                 updatedAt: now,
-                currentContextId: initialContext?.id || null,
             };
             await db.insert(aiChats).values(newChat).run();
             setChats(prev => [newChat, ...prev]);
@@ -173,7 +247,6 @@ export default function AiChatModal({ visible, onClose, initialContext, initialF
 
         await sendMessage(text, {
             overrideChatId: currentChatId,
-            activeNote: initialContext,
             selectedFolderNotes: selectedContextNotes.length > 0 ? selectedContextNotes : undefined
         });
     };
@@ -188,12 +261,9 @@ export default function AiChatModal({ visible, onClose, initialContext, initialF
             <View style={[styles.container, { backgroundColor: colors.background }]}>
                 <View style={[styles.header, { borderBottomColor: colors.border }]}>
                     <View style={styles.headerLeft}>
-                        {chatId || showHistory ? (
+                        {!showHistory ? (
                             <TouchableOpacity
-                                onPress={() => {
-                                    if (showHistory) setShowHistory(false);
-                                    else setShowHistory(true);
-                                }}
+                                onPress={() => setShowHistory(true)}
                                 style={styles.backButton}
                             >
                                 <Ionicons name="chevron-back" size={24} color={colors.text} />
@@ -203,22 +273,33 @@ export default function AiChatModal({ visible, onClose, initialContext, initialF
                                 <Ionicons name="sparkles" size={16} color={colors.primary} />
                             </View>
                         )}
-                        <Text style={[styles.headerTitle, { color: colors.text }]}>
-                            {showHistory ? 'History' : (chatId ? (chats.find(c => c.id === chatId)?.title || 'Chat') : 'AI Assistant')}
+                        <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
+                            {showHistory ? 'AI Chats' : (chatId ? (chats.find(c => c.id === chatId)?.title || 'Chat') : 'New Chat')}
                         </Text>
                     </View>
                     <View style={styles.headerRight}>
-                        {!showHistory && chats.length > 0 && (
-                            <TouchableOpacity onPress={() => setShowHistory(true)} style={styles.headerButton}>
-                                <Ionicons name="time-outline" size={22} color={colors.text + '60'} />
-                            </TouchableOpacity>
-                        )}
-                        {showHistory && chats.length > 0 && (
-                            <TouchableOpacity onPress={handleClearAllChats} style={styles.headerButton}>
-                                <Ionicons name="trash-outline" size={22} color="#EF4444" />
-                            </TouchableOpacity>
-                        )}
-                        {(chatId || showHistory) && (
+                        {!showHistory ? (
+                            <MenuView
+                                title="Select Model"
+                                onPressAction={({ nativeEvent }) => handleSetModel(nativeEvent.event)}
+                                actions={[
+                                    ...(availableModels.length > 0 ? [
+                                        { id: 'header-ollama', title: 'Ollama', attributes: { disabled: true } },
+                                        ...availableModels.map(m => ({ id: m.name, title: m.name, state: (activeProvider === 'ollama' && selectedModel === m.name) ? 'on' as const : 'off' as const })),
+                                    ] : []),
+                                    { id: 'header-openai', title: 'OpenAI', attributes: { disabled: true } },
+                                    ...OPENAI_MODELS.map(m => ({ id: m.value, title: m.label, state: (activeProvider === 'openai' && selectedModelOpenAi === m.value) ? 'on' as const : 'off' as const })),
+                                    { id: 'header-anthropic', title: 'Anthropic', attributes: { disabled: true } },
+                                    ...ANTHROPIC_MODELS.map(m => ({ id: m.value, title: m.label, state: (activeProvider === 'anthropic' && selectedModelAnthropic === m.value) ? 'on' as const : 'off' as const })),
+                                    { id: 'header-google', title: 'Google', attributes: { disabled: true } },
+                                    ...GOOGLE_MODELS.map(m => ({ id: m.value, title: m.label, state: (activeProvider === 'google' && selectedModelGoogle === m.value) ? 'on' as const : 'off' as const })),
+                                ]}
+                            >
+                                <TouchableOpacity style={styles.headerButton}>
+                                    <Ionicons name="hardware-chip-outline" size={22} color={colors.primary} />
+                                </TouchableOpacity>
+                            </MenuView>
+                        ) : (
                             <TouchableOpacity onPress={handleNewChat} style={styles.headerButton}>
                                 <Ionicons name="add" size={26} color={colors.primary} />
                             </TouchableOpacity>
@@ -231,9 +312,15 @@ export default function AiChatModal({ visible, onClose, initialContext, initialF
 
                 {showHistory ? (
                     <AiChatHistory
-                        chats={chats}
+                        chats={[...chats].sort((a, b) => {
+                            if (a.isPinned && !b.isPinned) return -1;
+                            if (!a.isPinned && b.isPinned) return 1;
+                            return (b.updatedAt?.getTime() || 0) - (a.updatedAt?.getTime() || 0);
+                        })}
                         onSelectChat={handleSelectChat}
                         onDeleteChat={handleDeleteChat}
+                        onTogglePin={handleTogglePinChat}
+                        onNewChat={handleNewChat}
                     />
                 ) : (
                     <AiChatView
@@ -250,6 +337,8 @@ export default function AiChatModal({ visible, onClose, initialContext, initialF
                         onToggleNote={handleToggleNote}
                         onToggleFolder={handleToggleFolder}
                         onClearAllContext={handleClearAllContext}
+                        currentModelName={currentModelName ?? undefined}
+                        activeProvider={activeProvider ?? undefined}
                     />
                 )}
             </View>
@@ -270,9 +359,11 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
     },
     headerLeft: {
+        flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         gap: 10,
+        marginRight: 12,
     },
     aiIcon: {
         width: 28,
@@ -282,13 +373,15 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     headerTitle: {
+        flex: 1,
         fontSize: 17,
         fontWeight: '700',
     },
     headerRight: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8,
+        gap: 4,
+        flexShrink: 0,
     },
     headerButton: {
         padding: 6,

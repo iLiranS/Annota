@@ -40,11 +40,22 @@ export function AiContextSelector({
             n.folderId !== TRASH_FOLDER_ID
         );
         const searchLower = search.toLowerCase();
-        if (!search.trim()) return activeNotes.slice(0, 20);
-        return activeNotes.filter(n =>
-            (n.title || '').toLowerCase().includes(searchLower)
-        ).slice(0, 30);
-    }, [notes, search]);
+        const matches = search.trim()
+            ? activeNotes.filter(n => (n.title || '').toLowerCase().includes(searchLower))
+            : activeNotes;
+
+        const sorted = [...matches].sort((a, b) => {
+            const aSelected = selectedNotes.some(sn => sn.id === a.id);
+            const bSelected = selectedNotes.some(sn => sn.id === b.id);
+            if (aSelected && !bSelected) return -1;
+            if (!aSelected && bSelected) return 1;
+            return 0;
+        });
+
+        const selectedCount = sorted.filter(n => selectedNotes.some(sn => sn.id === n.id)).length;
+        const limit = Math.max(10, Math.min(20, selectedCount));
+        return sorted.slice(0, limit);
+    }, [notes, selectedNotes, search]);
 
     const filteredFolders = useMemo(() => {
         const activeFolders = folders.filter(f => 
@@ -53,11 +64,22 @@ export function AiContextSelector({
             f.id !== TRASH_FOLDER_ID
         );
         const searchLower = search.toLowerCase();
-        if (!search.trim()) return activeFolders.slice(0, 10);
-        return activeFolders.filter(f =>
-            (f.name || '').toLowerCase().includes(searchLower)
-        ).slice(0, 20);
-    }, [folders, search]);
+        const matches = search.trim()
+            ? activeFolders.filter(f => (f.name || '').toLowerCase().includes(searchLower))
+            : activeFolders;
+
+        const sorted = [...matches].sort((a, b) => {
+            const aHasSelected = notes.filter(n => n.folderId === a.id).some(n => selectedNotes.some(sn => sn.id === n.id));
+            const bHasSelected = notes.filter(n => n.folderId === b.id).some(n => selectedNotes.some(sn => sn.id === n.id));
+            if (aHasSelected && !bHasSelected) return -1;
+            if (!aHasSelected && bHasSelected) return 1;
+            return 0;
+        });
+
+        const selectedInFolders = sorted.filter(f => notes.filter(n => n.folderId === f.id).some(n => selectedNotes.some(sn => sn.id === n.id))).length;
+        const limit = Math.max(5, Math.min(10, selectedInFolders));
+        return sorted.slice(0, limit);
+    }, [folders, notes, selectedNotes, search]);
 
     const renderFolderItem = ({ item: folder }: { item: any }) => {
         const folderNotes = notes.filter(n => n.folderId === folder.id && !n.isDeleted && !n.isPermDeleted);

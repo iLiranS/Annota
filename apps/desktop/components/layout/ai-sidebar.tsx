@@ -7,15 +7,27 @@ import {
     ChevronLeft,
     MessageSquare,
     Pin,
+    PinOff,
     Plus,
     Settings2,
     Sparkles,
     Trash2
 } from "lucide-react";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { matchPath, useLocation, useNavigate } from "react-router-dom";
 
-import { purifyNoteHtml, useAiChat } from "@annota/core";
+import { useAiChat } from "@annota/core";
 import { AiChatInput } from "../ai/ai-chat-input";
 import { AiChatError, AiChatMessage } from "../ai/ai-chat-message";
 
@@ -32,7 +44,7 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
         refreshTicket
     } = useAiStore();
 
-    const { notes, getNoteContent, folders } = useNotesStore();
+    const { notes, folders } = useNotesStore();
     const location = useLocation();
     const navigate = useNavigate();
     const [activeChatId, setActiveChatId] = useState<string | null>(null);
@@ -40,6 +52,7 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
     const [selectedFolderNotes, setSelectedFolderNotes] = useState<any[]>([]);
 
     const prevChatIdRef = useRef<string | null>(activeChatId);
+    const prevNoteIdRef = useRef<string | null>(null);
 
     // Reset context selection when switching chats or returning to list
     // But NOT when assigning the first ID to a new chat
@@ -47,13 +60,38 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
         const prevId = prevChatIdRef.current;
         const currentId = activeChatId;
 
+        const match = matchPath({ path: "/notes/:folderId/:noteId" }, location.pathname)
+            || matchPath({ path: "/notes/:noteId" }, location.pathname);
+        const noteId = match?.params?.noteId || null;
+
         // If we switched from one chat to another, or went back to the list
         if (prevId !== currentId && (currentId === null || (prevId !== null && currentId !== null))) {
             setSelectedFolderNotes([]);
         }
-        
+
+        // If we switched from one chat to another, or went back to the list
+        if (prevId !== currentId && (currentId === null || (prevId !== null && currentId !== null))) {
+            setSelectedFolderNotes([]);
+        }
+
+        // Auto-select current note if it's a new chat OR an existing chat with only the default note selected
+        // If the note changed while viewing the chat, update selection
+        if (noteId !== prevNoteIdRef.current) {
+            if (currentId === null || selectedFolderNotes.length <= 1) {
+                if (noteId) {
+                    const currentNote = notes.find(n => n.id === noteId);
+                    if (currentNote) {
+                        setSelectedFolderNotes([currentNote]);
+                    }
+                } else {
+                    setSelectedFolderNotes([]);
+                }
+            }
+        }
+
         prevChatIdRef.current = currentId;
-    }, [activeChatId]);
+        prevNoteIdRef.current = noteId;
+    }, [activeChatId, location.pathname, notes]);
 
     const activeChat = activeChatId ? chats.find(c => c.id === activeChatId) : null;
     const scrollEndRef = useRef<HTMLDivElement>(null);
@@ -99,26 +137,6 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
     const handleSendMessage = useCallback(async (content: string, mode: 'auto' | 'summary' = 'auto') => {
         let currentId = activeChatId;
 
-        const match = matchPath({ path: "/notes/:folderId/:noteId" }, location.pathname)
-            || matchPath({ path: "/notes/:noteId" }, location.pathname);
-
-        const noteId = match?.params?.noteId;
-        let activeNote: { title: string, content: string, id: string } | undefined;
-
-        if (noteId && selectedFolderNotes.length === 0) {
-            const currentNote = notes.find(n => n.id === noteId);
-            if (currentNote) {
-                const rawHtml = await getNoteContent(noteId);
-                const cleanContent = purifyNoteHtml(rawHtml || '');
-
-                activeNote = {
-                    id: noteId,
-                    title: currentNote.title || 'Current Note',
-                    content: cleanContent
-                };
-            }
-        }
-
         if (!currentId) {
             const db = getDb();
             currentId = generateId();
@@ -126,9 +144,9 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
             const newChat: AiChat = {
                 id: currentId,
                 title: mode === 'summary' ? "Note Summary" : "New Chat",
+                isPinned: false,
                 createdAt: now,
                 updatedAt: now,
-                currentContextId: noteId || null,
             };
             await db.insert(aiChats).values(newChat).run();
             setChats(prev => [newChat, ...prev]);
@@ -137,12 +155,11 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
 
         originalSendMessage(content, {
             overrideChatId: currentId,
-            activeNote,
             selectedFolderNotes: selectedFolderNotes.length > 0 ? selectedFolderNotes : undefined,
             mode,
         });
         setShouldAutoScroll(true);
-    }, [location.pathname, notes, getNoteContent, originalSendMessage, activeChatId, selectedFolderNotes]);
+    }, [location.pathname, originalSendMessage, activeChatId, selectedFolderNotes]);
 
     const handleSummarize = useCallback(() => {
         const prompt = "Please summarize this context. Cover all major sections and key points.";
@@ -221,6 +238,17 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
         setChats(prev => prev.filter(c => c.id !== id));
         if (activeChatId === id) setActiveChatId(null);
     }, [activeChatId]);
+
+    const handleTogglePinChat = useCallback(async (id: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        const chat = chats.find(c => c.id === id);
+        if (!chat) return;
+
+        const db = getDb();
+        const newPinned = !chat.isPinned;
+        await db.update(aiChats).set({ isPinned: newPinned }).where(eq(aiChats.id, id)).run();
+        setChats(prev => prev.map(c => c.id === id ? { ...c, isPinned: newPinned } : c));
+    }, [chats]);
 
     const handleInsertToNote = useCallback((content: string) => {
         window.dispatchEvent(new CustomEvent('annota-insert-ai-content', {
@@ -352,15 +380,35 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
                         )}
                         {!activeChatId ? (
                             chats.length > 0 && (
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-7 px-2 text-[10px] text-muted-foreground hover:text-destructive hover:bg-primary/10  rounded-lg gap-1.5 transition-all"
-                                    onClick={handleClearAllChats}
-                                >
-                                    <Trash2 size={11} />
-                                    Clear all
-                                </Button>
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-7 px-2 text-[10px] text-muted-foreground hover:text-destructive hover:bg-primary/10 rounded-lg gap-1.5 transition-all"
+                                        >
+                                            <Trash2 size={11} />
+                                            Clear all
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent className="rounded-2xl">
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Clear all conversations?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                This will permanently delete all your AI chat history. This action cannot be undone.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
+                                            <AlertDialogAction 
+                                                onClick={handleClearAllChats}
+                                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl"
+                                            >
+                                                Clear All
+                                            </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
                             )
                         ) : (
                             <Button
@@ -409,18 +457,28 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
                                         </p>
                                     </div>
                                 ) : (
-                                    chats.map(chat => (
+                                    [...chats].sort((a, b) => {
+                                        if (a.isPinned && !b.isPinned) return -1;
+                                        if (!a.isPinned && b.isPinned) return 1;
+                                        return (b.updatedAt?.getTime() || 0) - (a.updatedAt?.getTime() || 0);
+                                    }).map(chat => (
                                         <div
                                             key={chat.id}
                                             onClick={() => setActiveChatId(chat.id)}
                                             className={cn(
                                                 "w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left text-xs",
-                                                "transition-all group cursor-pointer border border-transparent",
-                                                "hover:bg-muted/50 hover:border-border/40 text-muted-foreground hover:text-foreground"
+                                                "transition-all group cursor-pointer border border-transparent relative",
+                                                "hover:bg-muted/50 hover:border-border/40 text-muted-foreground hover:text-foreground",
+                                                chat.id === activeChatId && "bg-muted/50 border-border/40 text-foreground"
                                             )}
                                         >
                                             <div className="flex-1 flex flex-col min-w-0 pr-2 gap-0.5">
-                                                <span dir="auto" className="truncate font-medium text-[12px]">{chat.title}</span>
+                                                <div className="flex items-center gap-1.5">
+                                                    {chat.isPinned && <Pin size={10} className="text-accent-full shrink-0 fill-current" />}
+                                                    <span dir="auto" className="truncate font-medium text-[12px]">
+                                                        {chat.title}
+                                                    </span>
+                                                </div>
                                                 <span className="text-[9px] opacity-40 tracking-wide">
                                                     {new Date(chat.updatedAt).toLocaleString(undefined, {
                                                         month: 'numeric',
@@ -431,14 +489,29 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
                                                     })}
                                                 </span>
                                             </div>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 hover:text-destructive hover:bg-destructive/10 transition-all rounded-lg"
-                                                onClick={(e) => handleDeleteChat(chat.id, e)}
-                                            >
-                                                <Trash2 size={11} />
-                                            </Button>
+                                            <div className="flex items-center gap-1">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className={cn(
+                                                        "h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 transition-all rounded-lg",
+                                                        chat.isPinned ? "text-primary hover:bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                                                    )}
+                                                    onClick={(e) => handleTogglePinChat(chat.id, e)}
+                                                    title={chat.isPinned ? "Unpin chat" : "Pin chat"}
+                                                >
+                                                    {chat.isPinned ? <PinOff size={11} /> : <Pin size={11} />}
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 hover:text-destructive hover:bg-destructive/10 transition-all rounded-lg"
+                                                    onClick={(e) => handleDeleteChat(chat.id, e)}
+                                                    title="Delete chat"
+                                                >
+                                                    <Trash2 size={11} />
+                                                </Button>
+                                            </div>
                                         </div>
                                     ))
                                 )}

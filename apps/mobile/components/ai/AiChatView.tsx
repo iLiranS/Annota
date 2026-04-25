@@ -35,6 +35,8 @@ interface AiChatViewProps {
     onToggleNote?: (note: any) => void;
     onToggleFolder?: (folderId: string) => void;
     onClearAllContext?: () => void;
+    currentModelName?: string;
+    activeProvider?: string;
 }
 
 type ContentSegment =
@@ -313,7 +315,9 @@ export function AiChatView({
     selectedContextNotes = [],
     onToggleNote,
     onToggleFolder,
-    onClearAllContext
+    onClearAllContext,
+    currentModelName,
+    activeProvider
 }: AiChatViewProps) {
     const { colors } = useTheme();
     const insets = useSafeAreaInsets();
@@ -321,11 +325,25 @@ export function AiChatView({
     const flatListRef = useRef<FlatList>(null);
     const [isContextSelectorVisible, setIsContextSelectorVisible] = useState(false);
 
+    const initialScrollDone = useRef(false);
+
     useEffect(() => {
         if (messages.length > 0) {
-            setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+            if (!initialScrollDone.current) {
+                // First load of messages for this chat: snap to bottom after a tiny delay
+                const timer = setTimeout(() => {
+                    flatListRef.current?.scrollToEnd({ animated: false });
+                    initialScrollDone.current = true;
+                }, 100);
+                return () => clearTimeout(timer);
+            } else if (isStreaming) {
+                // Ongoing stream: scroll smoothly
+                flatListRef.current?.scrollToEnd({ animated: true });
+            }
+        } else {
+            initialScrollDone.current = false;
         }
-    }, [messages]);
+    }, [messages, isStreaming]);
 
     return (
         <KeyboardAvoidingView
@@ -392,7 +410,7 @@ export function AiChatView({
                         <View style={styles.placeholderContainer}>
                             <Ionicons name="sparkles-outline" size={48} color={colors.text + '10'} />
                             <Text style={[styles.placeholderText, { color: colors.text + '40' }]}>
-                                Ask anything about your notes.{'\n'}I can search and synthesize information.
+                                Ask {activeProvider ? activeProvider.charAt(0).toUpperCase() + activeProvider.slice(1) : 'Annota AI'} anything about your notes.{'\n'}Using {currentModelName || 'default model'}.
                             </Text>
                         </View>
                     )
@@ -421,14 +439,14 @@ export function AiChatView({
                         activeOpacity={0.7}
                     >
                         <Ionicons 
-                            name={selectedContextNotes.length > 0 ? "layers" : "document-text"} 
+                            name={selectedContextNotes.length > 0 ? "layers" : "search"} 
                             size={14} 
                             color={colors.primary} 
                         />
                         <Text style={[styles.activeContextTitle, { color: colors.text + '80' }]} numberOfLines={1}>
                             {selectedContextNotes.length > 0 
-                                ? `Using ${selectedContextNotes.length} selected notes as context`
-                                : `Using context: ${initialContext?.title}`
+                                ? `Using ${selectedContextNotes.length} selected ${selectedContextNotes.length === 1 ? 'note' : 'notes'} as context`
+                                : `Using global search context`
                             }
                         </Text>
                         {selectedContextNotes.length > 0 && (
@@ -442,7 +460,7 @@ export function AiChatView({
                         )}
                     </TouchableOpacity>
                 )}
-                <View style={styles.inputContainer}>
+                <View style={[styles.inputContainer, { backgroundColor: colors.background + '80', borderColor: colors.border }]}>
                     <TouchableOpacity
                         style={styles.contextButton}
                         onPress={() => setIsContextSelectorVisible(true)}
@@ -454,8 +472,8 @@ export function AiChatView({
                         />
                     </TouchableOpacity>
                     <TextInput
-                        style={[styles.input, { color: colors.text, backgroundColor: colors.background + '80', borderColor: colors.border }]}
-                        placeholder="Ask Annota AI..."
+                        style={[styles.input, { color: colors.text }]}
+                        placeholder={`Ask ${activeProvider ? activeProvider.charAt(0).toUpperCase() + activeProvider.slice(1) : 'Annota AI'} (${currentModelName || ''})...`}
                         placeholderTextColor={colors.text + '40'}
                         value={input}
                         onChangeText={setInput}
@@ -643,10 +661,14 @@ const styles = StyleSheet.create({
     inputContainer: {
         flexDirection: 'row',
         alignItems: 'flex-end',
-        paddingHorizontal: 12,
-        paddingTop: 12,
-        paddingBottom: 0,
-        gap: 8,
+        marginHorizontal: 12,
+        marginTop: 12,
+        marginBottom: 4,
+        paddingHorizontal: 4,
+        paddingVertical: 4,
+        borderRadius: 24,
+        borderWidth: 1,
+        gap: 2,
     },
     contextButton: {
         padding: 6,
@@ -656,19 +678,18 @@ const styles = StyleSheet.create({
         flex: 1,
         minHeight: 40,
         maxHeight: 120,
-        borderRadius: 20,
-        borderWidth: 1,
-        paddingHorizontal: 16,
+        paddingHorizontal: 8,
         paddingTop: 10,
         paddingBottom: 10,
         fontSize: 15,
     },
     sendButton: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
+        width: 32,
+        height: 32,
+        borderRadius: 16,
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: 2,
+        marginBottom: 4,
+        marginRight: 4,
     }
 });

@@ -12,7 +12,7 @@ export class AnthropicProvider implements AiProviderAdapter {
         history: AiMessage[],
         liveNoteContent: string | null,
         onChunk: (text: string) => void,
-        signal?: AbortSignal
+        _signal?: AbortSignal
     ): Promise<void> {
         const { selectedModelAnthropic } = useAiStore.getState();
         const anthropicKey = await getApiKey('anthropic');

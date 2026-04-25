@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { Sidebar, SidebarContent, useSidebar } from "@/components/ui/sidebar";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useCreateNote } from "@/hooks/use-create-note";
 import { useSmartNavigate } from "@/hooks/use-smart-navigate";
-import { DAILY_NOTES_FOLDER_ID, TRASH_FOLDER_ID, getSortTypeLabel, sortNotes, useNotesStore, useSettingsStore, useSyncStore, useUserStore, type Folder, type SortType } from "@annota/core";
+import { DAILY_NOTES_FOLDER_ID, TRASH_FOLDER_ID, getSortTypeLabel, sortNotes, useNotesStore, useSearchStore, useSettingsStore, useSyncStore, useUserStore, type Folder, type SortType } from "@annota/core";
 
 // Modular Components
 import { cn } from "@/lib/utils";
@@ -14,11 +14,14 @@ import { FolderEditModal } from "../notes/folder-edit-modal";
 import { FoldersTree } from "./sidebar/folders-tree";
 import { NotesList } from "./sidebar/notes-list";
 
-import { BreadcrumbsSection } from "./sidebar/breadcrumbs";
+
 import { QuickAccessSection } from "./sidebar/quick-access";
+import { SearchView } from "./sidebar/search-view";
 import { SidebarFooterSection } from "./sidebar/sidebar-footer";
-import { SidebarHeaderSection } from "./sidebar/sidebar-header";
+import { SidebarTabs } from "./sidebar/sidebar-tabs";
 import { TagsList } from "./sidebar/tags-list";
+
+type SidebarTab = 'folders' | 'notes' | 'tags' | 'search';
 
 const SORT_OPTIONS: SortType[] = [
     'UPDATED_LAST',
@@ -34,7 +37,6 @@ export function AppSidebar() {
     const navigateSmart = useSmartNavigate();
     const location = useLocation();
     const { folderId: routeFolderId, noteId: routeNoteId } = useParams();
-    const [searchParams] = useSearchParams();
     const { colors } = useAppTheme();
     const { general } = useSettingsStore();
     const {
@@ -54,28 +56,44 @@ export function AppSidebar() {
     const showOfflineBanner = !isOnline && !isGuest;
     const { createAndNavigate: createNote } = useCreateNote();
 
-    const tagId = searchParams.get("tagId");
+    const [pendingFolderId, setPendingFolderId] = useState<string | undefined | null>(null);
+
+    const { tagId, searchFolderId } = useMemo(() => {
+        const params = new URLSearchParams(location.search);
+        return {
+            tagId: params.get("tagId"),
+            searchFolderId: params.get("folderId")
+        };
+    }, [location.search]);
 
     const currentFolderId = useMemo(() => {
+        // Optimistic update for tab switching
+        if (pendingFolderId !== null) return pendingFolderId === 'root' ? undefined : (pendingFolderId as string);
+
         if (tagId) return undefined;
-        const searchFolderId = searchParams.get("folderId");
         if (searchFolderId && !['root', 'null', 'undefined'].includes(searchFolderId)) return searchFolderId;
         if (routeFolderId && !['root', 'null', 'undefined'].includes(routeFolderId)) return routeFolderId;
         return undefined;
-    }, [routeFolderId, searchParams, tagId]);
+    }, [routeFolderId, searchFolderId, tagId, pendingFolderId]);
+
+    // Clear pending ID once URL catches up
+    useEffect(() => {
+        const normalizedActual = searchFolderId || routeFolderId || 'root';
+        const normalizedPending = pendingFolderId === null ? null : (pendingFolderId || 'root');
+
+        if (normalizedPending && normalizedActual === normalizedPending) {
+            setPendingFolderId(null);
+        }
+    }, [searchFolderId, routeFolderId, pendingFolderId]);
 
     const currentFolder = currentFolderId ? getFolderById(currentFolderId) : null;
-    const parentFolder = currentFolder?.parentId ? getFolderById(currentFolder.parentId) : null;
+    // const parentFolder = currentFolder?.parentId ? getFolderById(currentFolder.parentId) : null;
     const currentSortType = getSortType(currentFolderId ?? null);
 
     const [retryCooldown, setRetryCooldown] = useState(false);
-    const [isFoldersOpen, setIsFoldersOpen] = useState(() => {
-        const saved = localStorage.getItem("sidebar_folders_open");
-        return saved !== null ? saved === "true" : true;
-    });
-    const [isTagsOpen, setIsTagsOpen] = useState(() => {
-        const saved = localStorage.getItem("sidebar_tags_open");
-        return saved !== null ? saved === "true" : true;
+    const [activeTab, setActiveTab] = useState<SidebarTab>(() => {
+        const saved = localStorage.getItem("sidebar_active_tab");
+        return (saved as SidebarTab) || "notes";
     });
 
     const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
@@ -109,17 +127,24 @@ export function AppSidebar() {
     const handleRetry = useCallback(() => {
         if (retryCooldown) return;
         setRetryCooldown(true);
-        useSyncStore.getState().forceSync().catch(console.error);
         setTimeout(() => setRetryCooldown(false), 10_000);
     }, [retryCooldown]);
 
-    useEffect(() => {
-        localStorage.setItem("sidebar_folders_open", String(isFoldersOpen));
-    }, [isFoldersOpen]);
+    const { open, setOpen } = useSidebar();
+
+    const { isOpen: isSearchOpen, setIsOpen: setIsSearchOpen } = useSearchStore();
 
     useEffect(() => {
-        localStorage.setItem("sidebar_tags_open", String(isTagsOpen));
-    }, [isTagsOpen]);
+        if (isSearchOpen) {
+            setActiveTab('search');
+            setOpen(true);
+            setIsSearchOpen(false);
+        }
+    }, [isSearchOpen, setOpen, setIsSearchOpen]);
+
+    useEffect(() => {
+        localStorage.setItem("sidebar_active_tab", activeTab);
+    }, [activeTab]);
 
     const handleEditFolder = useCallback((folder: Folder) => {
         setEditingFolder(folder);
@@ -162,34 +187,34 @@ export function AppSidebar() {
 
     const currentTag = useMemo(() => tags.find(t => t.id === tagId), [tags, tagId]);
 
-    const breadcrumbs = useMemo(() => {
-        if (!currentFolderId && !tagId && !isTrash && !isDaily) return null;
-        const crumbs: { name: string; id: string | null; icon?: string; color?: string }[] = [];
-        crumbs.push({ name: "All Notes", id: null, icon: "annota", color: colors.primary });
+    // const breadcrumbs = useMemo(() => {
+    //     if (!currentFolderId && !tagId && !isTrash && !isDaily) return null;
+    //     const crumbs: { name: string; id: string | null; icon?: string; color?: string }[] = [];
+    //     crumbs.push({ name: "All Notes", id: null, icon: "annota", color: colors.primary });
 
-        if (tagId || isTrash || isDaily) return crumbs;
+    //     if (tagId || isTrash || isDaily) return crumbs;
 
-        if (currentFolderId && parentFolder) {
-            if (parentFolder.parentId) {
-                crumbs.push({ name: "...", id: null });
-            }
-            crumbs.push({
-                name: parentFolder.name,
-                id: parentFolder.id,
-                icon: parentFolder.icon || "folder",
-                color: parentFolder.color
-            });
-        }
-        return crumbs;
-    }, [currentFolderId, tagId, isTrash, isDaily, parentFolder, colors.primary]);
+    //     if (currentFolderId && parentFolder) {
+    //         if (parentFolder.parentId) {
+    //             crumbs.push({ name: "...", id: null });
+    //         }
+    //         crumbs.push({
+    //             name: parentFolder.name,
+    //             id: parentFolder.id,
+    //             icon: parentFolder.icon || "folder",
+    //             color: parentFolder.color
+    //         });
+    //     }
+    //     return crumbs;
+    // }, [currentFolderId, tagId, isTrash, isDaily, parentFolder, colors.primary]);
 
-    const handleNavigate = useCallback((id: string | null) => {
-        if (id) {
-            navigateSmart(`/notes?folderId=${id}`);
-        } else {
-            navigateSmart("/notes");
-        }
-    }, [navigateSmart]);
+    // const handleNavigate = useCallback((id: string | null) => {
+    //     if (id) {
+    //         navigateSmart(`/notes?folderId=${id}`);
+    //     } else {
+    //         navigateSmart("/notes");
+    //     }
+    // }, [navigateSmart]);
 
     const headerTitle = useMemo(() => {
         if (tagId) return currentTag?.name ?? "Tag";
@@ -212,7 +237,6 @@ export function AppSidebar() {
         return currentFolder?.color || colors.primary;
     }, [tagId, currentTag, isTrash, isDaily, currentFolder, colors.primary]);
 
-    const { open } = useSidebar();
     const [width, setWidth] = useState(() => {
         const saved = localStorage.getItem("sidebar_width");
         return saved ? parseInt(saved, 10) : 260;
@@ -249,7 +273,6 @@ export function AppSidebar() {
     }, [isResizing, width, general.appDirection]);
 
 
-
     return (
         <div
             className={cn(
@@ -263,6 +286,7 @@ export function AppSidebar() {
             }}
         >
             <Sidebar
+
                 collapsible="none"
                 className="border-none select-none bg-transparent w-full "
                 side={general.appDirection === 'rtl' ? 'right' : 'left'}
@@ -274,91 +298,123 @@ export function AppSidebar() {
                         general.appDirection === "rtl" ? "left-0" : "right-0"
                     )}
                 />
-                <SidebarHeaderSection
-                    title={headerTitle}
-                    icon={headerIcon}
-                    color={headerColor}
-                    isDaily={isDaily}
-                    isTrash={isTrash}
-                    isRoot={isRoot}
-                    tagId={tagId || undefined}
-                    currentSortType={currentSortType}
-                    onSortChange={(type) => setFolderSortType(currentFolderId ?? null, type)}
-                    onCreateNote={() => createNote(currentFolderId || "", tagId || undefined)}
-                    onCreateFolder={() => {
-                        setEditingFolder(null);
-                        setNewFolderParentId(currentFolderId ?? null);
-                        setIsEditModalOpen(true);
-                    }}
-                    sortOptions={SORT_OPTIONS}
-                    getSortTypeLabel={getSortTypeLabel}
-                    selectionMode={selectionMode}
-                    setSelectionMode={handleSetSelectionMode}
+
+                <SidebarTabs
+                    activeTab={activeTab}
+                    setActiveTab={setActiveTab}
+                    colors={colors}
                 />
 
-                <BreadcrumbsSection
-                    breadcrumbs={breadcrumbs}
-                    onNavigate={handleNavigate}
-                />
+                <SidebarContent data-tauri-drag-region className={cn("min-w-0 flex flex-col overflow-hidden px-1")}>
+                    {activeTab === 'folders' && (
+                        <FoldersTree
+                            isFoldersOpen={true}
+                            setIsFoldersOpen={() => { }}
+                            onNavigate={(id) => {
+                                setPendingFolderId(id || 'root');
+                                setActiveTab('notes');
+                                navigateSmart(`/notes?folderId=${id}`);
+                            }}
+                            onEdit={handleEditFolder}
+                            onDelete={setFolderToDelete}
+                            onCreateSubFolder={handleCreateSubFolder}
+                            onCreateNote={createNote}
+                            getFoldersInFolder={getFoldersInFolder}
+                            general={general}
+                            currentFolderId={currentFolderId ?? null}
+                        />
+                    )}
 
-                <SidebarContent className={cn("min-w-0  flex flex-col overflow-hidden px-1 ")}>
-                    <FoldersTree
-                        isFoldersOpen={isFoldersOpen}
-                        setIsFoldersOpen={setIsFoldersOpen}
-                        onNavigate={(id) => navigateSmart(`/notes?folderId=${id}`)}
-                        onEdit={handleEditFolder}
-                        onDelete={setFolderToDelete}
-                        onCreateSubFolder={handleCreateSubFolder}
-                        onCreateNote={createNote}
-                        getFoldersInFolder={getFoldersInFolder}
-                        general={general}
-                        currentFolderId={currentFolderId ?? null}
-                        isTag={!!tagId}
-                    />
-                    <NotesList
-                        notes={browseNotes}
-                        activeNoteId={routeNoteId}
-                        onNoteClick={(note) => navigateSmart(`/notes/${note.folderId || "root"}/${note.id}`)}
-                        onDeleteNote={deleteNote}
-                        general={general}
-                        selectionMode={selectionMode}
-                        selectedNoteIds={selectedNoteIds}
-                        onToggleSelection={handleToggleSelection}
-                        onClearSelection={() => {
-                            handleSetSelectionMode(false);
-                        }}
-                        currentFolderId={currentFolderId ?? null}
-                    />
+                    {activeTab === 'notes' && (
+                        <>
+                            {/* <BreadcrumbsSection
+                                breadcrumbs={breadcrumbs}
+                                onNavigate={handleNavigate}
+                            /> */}
 
+                            <div className="flex-1 overflow-hidden flex flex-col">
+                                <NotesList
+                                    key={currentFolderId ?? tagId ?? 'root'}
+                                    notes={browseNotes}
+                                    activeNoteId={routeNoteId}
+                                    onNoteClick={(note) => navigateSmart(`/notes/${note.folderId || "root"}/${note.id}`)}
+                                    onDeleteNote={deleteNote}
+                                    general={general}
+                                    selectionMode={selectionMode}
+                                    selectedNoteIds={selectedNoteIds}
+                                    onToggleSelection={handleToggleSelection}
+                                    onClearSelection={() => {
+                                        handleSetSelectionMode(false);
+                                    }}
+                                    currentFolderId={currentFolderId ?? null}
+                                    // New Header Props
+                                    title={headerTitle}
+                                    icon={headerIcon}
+                                    color={headerColor}
+                                    isDaily={isDaily}
+                                    isTrash={isTrash}
+                                    isRoot={isRoot}
+                                    tagId={tagId || undefined}
+                                    currentSortType={currentSortType}
+                                    onSortChange={(type) => setFolderSortType(currentFolderId ?? null, type)}
+                                    onCreateNote={() => createNote(currentFolderId || "", tagId || undefined)}
+                                    onCreateFolder={() => {
+                                        setEditingFolder(null);
+                                        setNewFolderParentId(currentFolderId ?? null);
+                                        setIsEditModalOpen(true);
+                                    }}
+                                    sortOptions={SORT_OPTIONS}
+                                    getSortTypeLabel={getSortTypeLabel}
+                                    setSelectionMode={handleSetSelectionMode}
+                                />
+                            </div>
+                            <QuickAccessSection
+                                notes={quickAccessNotes}
+                                activeNoteId={routeNoteId}
+                                onNoteClick={(note) => navigateSmart(`/notes/${note.folderId || "root"}/${note.id}`)}
+                                onDeleteNote={deleteNote}
+                                general={general}
+                            />
+                        </>
+                    )}
+
+                    {activeTab === 'tags' && (
+                        <TagsList
+                            tags={tags}
+                            isTagsOpen={true}
+                            setIsTagsOpen={() => { }}
+                            activeTagId={tagId}
+                            onTagClick={(id) => {
+                                navigateSmart(`/notes?tagId=${id}`);
+                                setActiveTab('notes');
+                            }}
+                            general={general}
+                        />
+                    )}
+
+                    {activeTab === 'search' && (
+                        <SearchView
+                            onNoteClick={(note) => {
+                                navigateSmart(`/notes/${note.folderId || "root"}/${note.id}`);
+                            }}
+                            onFolderClick={(folder) => {
+                                navigateSmart(`/notes?folderId=${folder.id}`);
+                                setActiveTab('notes');
+                            }}
+                        />
+                    )}
                 </SidebarContent>
 
-                <div className={cn("mt-auto px-1 border-t border-border/40")}>
-
-                    <QuickAccessSection
-                        notes={quickAccessNotes}
-                        activeNoteId={routeNoteId}
-                        onNoteClick={(note) => navigateSmart(`/notes/${note.folderId || "root"}/${note.id}`)}
-                        onDeleteNote={deleteNote}
-                        general={general}
-                    />
-
-
-
-                    <TagsList
-                        tags={tags}
-                        isTagsOpen={isTagsOpen}
-                        setIsTagsOpen={setIsTagsOpen}
-                        activeTagId={tagId}
-                        onTagClick={(id) => navigateSmart(`/notes?tagId=${id}`)}
-                        general={general}
-                    />
-
+                <div className={cn("mt-auto px-1 border-t border-border/40 ")}>
                     <SidebarFooterSection
                         showOfflineBanner={showOfflineBanner}
                         retryCooldown={retryCooldown}
                         onRetry={handleRetry}
                         onSettingsClick={() => navigate("/settings", { state: { background: location } })}
-                        onTrashClick={() => navigateSmart(`/notes?folderId=${TRASH_FOLDER_ID}`)}
+                        onTrashClick={() => {
+                            navigateSmart(`/notes?folderId=${TRASH_FOLDER_ID}`);
+                            setActiveTab('notes');
+                        }}
                     />
                 </div>
 

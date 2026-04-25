@@ -118,9 +118,9 @@ export const settings = sqliteTable('settings', {
 export const aiChats = sqliteTable('ai_chats', {
     id: text('id').primaryKey(),
     title: text('title').notNull().default('New Chat'),
+    isPinned: integer('is_pinned', { mode: 'boolean' }).notNull().default(false),
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
     updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
-    currentContextId: text('current_context_id'),
 });
 
 // ============ AI MESSAGES (Local Only) ============

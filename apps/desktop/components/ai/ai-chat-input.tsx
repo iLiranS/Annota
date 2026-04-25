@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from '@/lib/utils';
 import { ANTHROPIC_MODELS, GOOGLE_MODELS, OPENAI_MODELS, useAiStore } from "@annota/core";
-import { Bot, Check, ChevronDown, Send, Sparkles, Square } from 'lucide-react';
+import { Bot, Check, ChevronDown, Send, Square } from 'lucide-react';
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { ContextSelector } from './context-selector';
 
@@ -26,7 +26,6 @@ interface AiChatInputProps {
 
 export function AiChatInput({
     onSend,
-    onSummarize,
     notes,
     folders,
     selectedNotes,
@@ -116,45 +115,6 @@ export function AiChatInput({
 
     return (
         <div className="flex flex-col gap-2 mb-2 pt-2 border-t border-border/40">
-            <div className="flex items-center justify-between px-1">
-                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
-                    <ContextSelector
-                        notes={notes}
-                        folders={folders}
-                        selectedNotes={selectedNotes}
-                        onToggleNote={onToggleNote}
-                        onToggleFolder={onToggleFolder}
-                        onClearAll={onClearAll}
-                    />
-
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={onSummarize}
-                        disabled={disabled || !currentModelName}
-                        className="h-7 px-3 rounded-full gap-1.5 text-[10px] font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all border border-border/40 hover:border-primary/20 bg-muted/20 whitespace-nowrap"
-                    >
-                        <Sparkles size={11} className="text-primary/60" />
-                        {selectedNotes.length > 0 ? `Summarize (${selectedNotes.length})` : "Summarize"}
-                    </Button>
-
-                    {selectedNotes.length > 0 && (
-                        <span className="text-[10px] text-primary font-semibold px-2 py-0.5 rounded-full bg-primary/5 border border-primary/10 animate-in fade-in zoom-in duration-200">
-                            {selectedNotes.length} Selected
-                        </span>
-                    )}
-                </div>
-
-                {isNearLimit && (
-                    <span className={cn(
-                        "text-[10px] font-medium",
-                        content.length >= MAX_LENGTH ? "text-destructive" : "text-muted-foreground/60"
-                    )}>
-                        {content.length}/{MAX_LENGTH}
-                    </span>
-                )}
-            </div>
-
             <div className="w-full bg-background border rounded-[24px] shadow-sm focus-within:shadow-md focus-within:border-primary/30 group p-1.5 flex flex-col gap-1">
                 <textarea
                     ref={textareaRef}
@@ -169,59 +129,80 @@ export function AiChatInput({
                 />
 
                 <div className="flex items-center justify-between px-1.5 pb-0.5">
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 px-2 rounded-full gap-1.5 text-[10px] font-bold text-muted-foreground hover:text-foreground bg-muted/30 hover:bg-muted/50 transition-all border border-transparent hover:border-border/50"
-                            >
-                                <Bot size={12} className={cn("transition-colors", currentModelName ? "text-primary" : "text-muted-foreground")} />
-                                <span className="max-w-[120px] truncate">
-                                    {currentModelName ? (getProviderModels().find(m => m.value === currentModelName)?.label || currentModelName) : "Select Model"}
-                                </span>
-                                <ChevronDown size={10} className="opacity-50" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="w-max rounded-xl border-border/50 shadow-xl bg-popover/95 backdrop-blur-md">
-                            {getProviderModels().length === 0 ? (
-                                <div className="p-2 text-xs text-muted-foreground text-center font-medium">No models found</div>
-                            ) : (
-                                getProviderModels().map(m => (
-                                    <DropdownMenuItem
-                                        key={m.value}
-                                        className={cn(
-                                            "text-xs rounded-lg cursor-pointer flex items-center gap-2",
-                                            currentModelName === m.value && "bg-primary/10 text-primary focus:bg-primary/20 focus:text-primary"
-                                        )}
-                                        onClick={() => handleSetModel(m.value)}
-                                    >
-                                        <span className="flex w-3 h-3 items-center justify-center">
-                                            {currentModelName === m.value && <Check size={12} strokeWidth={3} />}
-                                        </span>
-                                        <span className={cn("truncate", currentModelName === m.value && "font-semibold")}>{m.label}</span>
-                                    </DropdownMenuItem>
-                                ))
-                            )}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                    <div className="flex items-center gap-1">
+                        <ContextSelector
+                            notes={notes}
+                            folders={folders}
+                            selectedNotes={selectedNotes}
+                            onToggleNote={onToggleNote}
+                            onToggleFolder={onToggleFolder}
+                            onClearAll={onClearAll}
+                        />
 
-                    <Button
-                        onClick={() => disabled ? onStop?.() : handleSend()}
-                        disabled={(!disabled && !content.trim()) || (!disabled && !currentModelName)}
-                        size="icon"
-                        className={cn(
-                            "h-7 w-7 rounded-full transition-all shrink-0 shadow-sm",
-                            disabled ? "bg-foreground text-background hover:bg-foreground/90" :
-                                (content.trim() && currentModelName) ? "bg-primary text-primary-foreground shadow-md hover:scale-105 active:scale-95" : "bg-muted text-muted-foreground/30"
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 px-2 rounded-full gap-1.5 text-[10px] font-bold text-muted-foreground hover:text-foreground bg-muted/30 hover:bg-muted/50 transition-all border border-transparent hover:border-border/50"
+                                >
+                                    <Bot size={12} className={cn("transition-colors", currentModelName ? "text-primary" : "text-muted-foreground")} />
+                                    <span className="max-w-[120px] truncate">
+                                        {currentModelName ? (getProviderModels().find(m => m.value === currentModelName)?.label || currentModelName) : "Select Model"}
+                                    </span>
+                                    <ChevronDown size={10} className="opacity-50" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" className="w-max rounded-xl border-border/50 shadow-xl bg-popover/95 backdrop-blur-md">
+                                {getProviderModels().length === 0 ? (
+                                    <div className="p-2 text-xs text-muted-foreground text-center font-medium">No models found</div>
+                                ) : (
+                                    getProviderModels().map(m => (
+                                        <DropdownMenuItem
+                                            key={m.value}
+                                            className={cn(
+                                                "text-xs rounded-lg cursor-pointer flex items-center gap-2",
+                                                currentModelName === m.value && "bg-primary/10 text-primary focus:bg-primary/20 focus:text-primary"
+                                            )}
+                                            onClick={() => handleSetModel(m.value)}
+                                        >
+                                            <span className="flex w-3 h-3 items-center justify-center">
+                                                {currentModelName === m.value && <Check size={12} strokeWidth={3} />}
+                                            </span>
+                                            <span className={cn("truncate", currentModelName === m.value && "font-semibold")}>{m.label}</span>
+                                        </DropdownMenuItem>
+                                    ))
+                                )}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        {isNearLimit && (
+                            <span className={cn(
+                                "text-[10px] font-medium",
+                                content.length >= MAX_LENGTH ? "text-destructive" : "text-muted-foreground/60"
+                            )}>
+                                {content.length}/{MAX_LENGTH}
+                            </span>
                         )}
-                    >
-                        {disabled ? (
-                            <Square size={10} fill="currentColor" />
-                        ) : (
-                            <Send size={10} className="-ml-0.5 mt-0.5" />
-                        )}
-                    </Button>
+                        <Button
+                            onClick={() => disabled ? onStop?.() : handleSend()}
+                            disabled={(!disabled && !content.trim()) || (!disabled && !currentModelName)}
+                            size="icon"
+                            className={cn(
+                                "h-7 w-7 rounded-full transition-all shrink-0 shadow-sm",
+                                disabled ? "bg-foreground text-background hover:bg-foreground/90" :
+                                    (content.trim() && currentModelName) ? "bg-primary text-primary-foreground shadow-md hover:scale-105 active:scale-95" : "bg-muted text-muted-foreground/30"
+                            )}
+                        >
+                            {disabled ? (
+                                <Square size={10} fill="currentColor" />
+                            ) : (
+                                <Send size={10} className="-ml-0.5 mt-0.5" />
+                            )}
+                        </Button>
+                    </div>
                 </div>
             </div>
         </div>

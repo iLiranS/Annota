@@ -1,4 +1,6 @@
-import { buildBulkContext, buildHistoryWindow, prepareNoteContext, purifyNoteHtml, structuredSample } from '../ai/utils';
+import { asc, eq } from 'drizzle-orm';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { buildBulkContext, buildHistoryWindow, prepareNoteContext, purifyNoteHtml } from '../ai/utils';
 import {
     aiChats,
     AiMessage,
@@ -11,8 +13,6 @@ import {
     SearchRepository,
     useAiStore
 } from '../index';
-import { asc, eq } from 'drizzle-orm';
-import { useCallback, useEffect, useRef, useState } from 'react';
 
 export type ContextMode = 'auto' | 'summary' | 'full';
 
@@ -132,12 +132,11 @@ export function useAiChat(chatId: string | null) {
         content: string,
         options: {
             overrideChatId?: string | null;
-            activeNote?: { title: string, content: string, id: string }; // Single note mode
             selectedFolderNotes?: any[]; // Bulk/Folder mode (pass noteMetadata array here)
             mode?: ContextMode;
         } = {}
     ) => {
-        const { overrideChatId, activeNote, selectedFolderNotes, mode = 'auto' } = options;
+        const { overrideChatId, selectedFolderNotes, mode = 'auto' } = options;
         const effectiveChatId = overrideChatId || chatId;
         if (!effectiveChatId) return;
 
@@ -163,37 +162,8 @@ export function useAiChat(chatId: string | null) {
 
         const isFirstMessage = !currentChat || fullHistory.length === 0;
 
-        // 2. Handle Context Shifts / First Turn Markers
+        // 2. Handle First Turn Markers (If needed)
         const updatedHistory = [...fullHistory];
-
-        if (activeNote) {
-            let systemMarker: string | null = null;
-
-            if (isFirstMessage) {
-                systemMarker = `[SYSTEM: Initial Context - Note: "${activeNote.title}"]`;
-            } else if (activeNote.id !== currentChat?.currentContextId) {
-                systemMarker = `[SYSTEM: Context shifted to note: "${activeNote.title}"]`;
-            }
-
-            if (systemMarker) {
-                const markerMsg: AiMessage = {
-                    id: generateId(),
-                    chatId: effectiveChatId,
-                    role: 'system',
-                    content: systemMarker,
-                    model: null,
-                    createdAt: new Date(timestamp.getTime() - 1), // Slightly before
-                };
-                await db.insert(aiMessages).values(markerMsg).run();
-                setMessages(prev => [...prev, markerMsg]);
-                updatedHistory.push(markerMsg);
-
-                // Update chat's currentContextId
-                await db.update(aiChats).set({
-                    currentContextId: activeNote.id
-                }).where(eq(aiChats.id, effectiveChatId)).run();
-            }
-        }
 
         // 3. User Message
         const userMessageId = generateId();
@@ -242,7 +212,7 @@ export function useAiChat(chatId: string | null) {
             // Context Preparation with Tiered Trimming
             let liveNoteContext = '';
 
-            // Route A: Bulk/Folder Selection (user explicitly picked notes via "+")
+            // Route A: Explicit Selection (user explicitly picked notes)
             if (selectedFolderNotes && selectedFolderNotes.length > 0) {
                 // Define how to lazily fetch heavy content
                 const fetchContent = async (noteId: string) => {
@@ -261,16 +231,6 @@ export function useAiChat(chatId: string | null) {
                     fetchContent,
                     (q, ids) => SearchRepository.findRelevantNoteIds(q, ids)
                 );
-            }
-            // Route B: Single Active Note (Your current behavior)
-            else if (activeNote) {
-                const header = `[Note: ${activeNote.title}]\n`;
-                let body = '';
-                if (mode === 'summary') body = structuredSample(activeNote.content, 12000);
-                else if (mode === 'full') body = activeNote.content;
-                else body = prepareNoteContext(activeNote.content, content);
-
-                liveNoteContext = `${header}${body}`;
             }
             // Route C: FTS Auto-Discovery — no explicit context, search entire database
             else {

@@ -28,19 +28,45 @@ export function ContextSelector({
     const [search, setSearch] = useState("");
 
     const filteredNotes = useMemo(() => {
-        if (!search.trim()) return notes.slice(0, 10);
-        return notes.filter(n =>
-            n.title.toLowerCase().includes(search.toLowerCase()) ||
-            n.preview.toLowerCase().includes(search.toLowerCase())
-        ).slice(0, 20);
-    }, [notes, search]);
+        const matches = search.trim()
+            ? notes.filter(n =>
+                (n.title || "").toLowerCase().includes(search.toLowerCase()) ||
+                (n.preview || "").toLowerCase().includes(search.toLowerCase())
+            )
+            : notes;
+
+        const sorted = [...matches].sort((a, b) => {
+            const aSelected = selectedNotes.some(sn => sn.id === a.id);
+            const bSelected = selectedNotes.some(sn => sn.id === b.id);
+            if (aSelected && !bSelected) return -1;
+            if (!aSelected && bSelected) return 1;
+            return 0;
+        });
+
+        const selectedCount = sorted.filter(n => selectedNotes.some(sn => sn.id === n.id)).length;
+        const limit = Math.max(10, Math.min(20, selectedCount));
+        return sorted.slice(0, limit);
+    }, [notes, selectedNotes, search]);
 
     const filteredFolders = useMemo(() => {
-        if (!search.trim()) return folders.slice(0, 5);
-        return folders.filter(f =>
-            f.name.toLowerCase().includes(search.toLowerCase())
-        ).slice(0, 10);
-    }, [folders, search]);
+        const matches = search.trim()
+            ? folders.filter(f =>
+                (f.name || "").toLowerCase().includes(search.toLowerCase())
+            )
+            : folders;
+
+        const sorted = [...matches].sort((a, b) => {
+            const aHasSelected = notes.filter(n => n.folderId === a.id).some(n => selectedNotes.some(sn => sn.id === n.id));
+            const bHasSelected = notes.filter(n => n.folderId === b.id).some(n => selectedNotes.some(sn => sn.id === n.id));
+            if (aHasSelected && !bHasSelected) return -1;
+            if (!aHasSelected && bHasSelected) return 1;
+            return 0;
+        });
+
+        const selectedInFolders = sorted.filter(f => notes.filter(n => n.folderId === f.id).some(n => selectedNotes.some(sn => sn.id === n.id))).length;
+        const limit = Math.max(5, Math.min(10, selectedInFolders));
+        return sorted.slice(0, limit);
+    }, [folders, notes, selectedNotes, search]);
 
     return (
         <Popover open={isOpen} onOpenChange={setIsOpen}>
@@ -49,12 +75,20 @@ export function ContextSelector({
                     variant="ghost"
                     size="sm"
                     className={cn(
-                        "h-7 w-7 p-0 rounded-full flex items-center justify-center transition-all border border-border/40 bg-muted/20 hover:bg-primary/10 hover:border-primary/20",
-                        selectedNotes.length > 0 && "bg-primary/10 border-primary/30 text-primary"
+                        "h-7 flex items-center justify-center transition-all border border-transparent hover:border-border/50 bg-muted/30 hover:bg-muted/50 rounded-full",
+                        selectedNotes.length > 0
+                            ? "px-2 bg-primary/10 text-primary min-w-[28px] border-primary/20 hover:bg-primary/20"
+                            : "w-7 p-0"
                     )}
                     title="Select notes or folders"
                 >
-                    <Plus size={14} className={cn(selectedNotes.length > 0 && "rotate-45")} />
+                    {selectedNotes.length > 0 ? (
+                        <span className="text-[10px] font-bold whitespace-nowrap">
+                            {selectedNotes.length} notes
+                        </span>
+                    ) : (
+                        <Plus size={14} className="text-muted-foreground/60" />
+                    )}
                 </Button>
             </PopoverTrigger>
             <PopoverContent side="top" align="start" className="w-[280px] p-0 rounded-2xl border-border/40 shadow-2xl bg-popover/95 backdrop-blur-md overflow-hidden">
