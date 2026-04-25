@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { NotebookTabs } from "lucide-react";
 import { Ionicons } from "../../ui/ionicons";
 
 type SidebarTab = 'folders' | 'notes' | 'tags' | 'search';
@@ -24,7 +25,7 @@ export function SidebarTabs({ activeTab, setActiveTab, colors }: SidebarTabsProp
             <TabButton
                 active={activeTab === 'notes'}
                 onClick={() => setActiveTab('notes')}
-                icon={<Ionicons name="document-text-outline" size={16} />}
+                icon={<NotebookTabs name="document-text-outline" size={16} />}
                 label="Notes"
                 color={colors.primary}
             />

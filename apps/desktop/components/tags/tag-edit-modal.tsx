@@ -29,35 +29,41 @@ export function TagEditModal({
     tag,
 }: TagEditModalProps) {
     const { colors } = useAppTheme();
-    const { updateTag } = useNotesStore();
-
+    const { updateTag, createTag } = useNotesStore();
     const [name, setName] = useState('');
     const [color, setColor] = useState(COLOR_PALETTE[0].value);
 
     useEffect(() => {
-        if (open && tag) {
-            setName(tag.name);
-            setColor(tag.color || COLOR_PALETTE[0].value);
+        if (open) {
+            setName(tag?.name || '');
+            setColor(tag?.color || COLOR_PALETTE[0].value);
         }
     }, [tag, open]);
 
-    const handleSave = () => {
-        if (!name.trim() || !tag) return;
+    const handleSave = async () => {
+        if (!name.trim()) return;
 
-        updateTag(tag.id, {
-            name: name.trim(),
-            color,
-        });
+        if (tag) {
+            updateTag(tag.id, {
+                name: name.trim(),
+                color,
+            });
+        } else {
+            await createTag({
+                name: name.trim(),
+                color,
+            });
+        }
         onOpenChange(false);
     };
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-md p-0 overflow-hidden flex flex-col max-h-[85vh]">
-                <DialogDescription className="sr-only">Tag Edit</DialogDescription>
+                <DialogDescription className="sr-only">Tag {tag ? "Edit" : "Create"}</DialogDescription>
                 <DialogHeader className="px-6 py-3 border-b">
                     <DialogTitle className="text-base font-bold">
-                        Edit Tag
+                        {tag ? "Edit Tag" : "Create Tag"}
                     </DialogTitle>
                 </DialogHeader>
 

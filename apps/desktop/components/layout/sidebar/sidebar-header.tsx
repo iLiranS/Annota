@@ -50,11 +50,11 @@ export function SidebarHeaderSection({
     return (
         <SidebarHeader
             style={{ backgroundColor: color + "20" }}
-            className="h-14 px-4 py-0 justify-center border-b border-border/10"
+            className="h-14  py-0 justify-center border-b border-border/10"
         >
-            <div className="flex items-center justify-between gap-2 w-full">
+            <div className="flex items-center justify-between gap-1 w-full">
                 <div
-                    className="flex items-center gap-2 overflow-hidden flex-1 cursor-pointer hover:opacity-80 transition-opacity"
+                    className="flex items-center gap-1 overflow-hidden flex-1 cursor-pointer  transition-opacity"
                     onClick={onHeaderClick}
                 >
                     <div className="flex h-6 w-6 shrink-0 items-center justify-center">
@@ -70,7 +70,7 @@ export function SidebarHeaderSection({
                         {title}
                     </h2>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-0.5">
                     <TooltipProvider>
 
                         {!isTrash && (
@@ -79,11 +79,11 @@ export function SidebarHeaderSection({
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-8 w-8 hover:bg-primary/10 transition-colors"
+                                        className="h-7 w-7 hover:bg-primary/10 transition-colors"
                                         onClick={onCreateNote}
                                         style={{ color: color }}
                                     >
-                                        <SquarePen className="h-4.5 w-4.5" />
+                                        <SquarePen className="h-4 w-4" />
                                     </Button>
                                 </TooltipTrigger>
                                 <TooltipContent side="bottom" className="text-[10px] font-bold">New Note</TooltipContent>
@@ -95,10 +95,10 @@ export function SidebarHeaderSection({
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-8 w-8 text-muted-foreground/60 hover:bg-primary/10 transition-colors"
+                                        className="h-7 w-7 text-muted-foreground/60 hover:bg-primary/10 transition-colors"
                                         style={{ color: color }}
                                     >
-                                        <MoreVertical className="h-4.5 w-4.5" />
+                                        <MoreVertical className="h-4 w-4" />
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="w-52">

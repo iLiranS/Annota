@@ -6,6 +6,7 @@ import { NoteService } from '../services/notes.service';
 import { TagService } from '../services/tags.service';
 import { SyncScheduler } from '../sync/sync-scheduler';
 import { SortType, sortFolders, sortNotes } from '../utils/sorts';
+import { COLOR_PALETTE } from '../../constants/colors';
 import { generateRandomHexColor } from '../utils/tags';
 import { createStorageAdapter } from './config';
 import { useUserStore } from './user.store';
@@ -48,6 +49,7 @@ interface NotesState {
     addTagToNote: (noteId: string, tag: { id?: string, name: string, color?: string }) => Promise<{ error: string | null }>;
     removeTagFromNote: (noteId: string, tagId: string) => Promise<void>;
     updateTag: (tagId: string, updates: Partial<Omit<Tag, 'id'>>) => Promise<void>;
+    createTag: (data: { name: string, color?: string }) => Promise<{ data: Tag | null, error: string | null }>;
     deleteTag: (tagId: string) => Promise<void>;
 
     // Content operations (lazy loaded)
@@ -319,7 +321,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
     addTagToNote: async (noteId, tag) => {
         try {
-            const color = tag.color ?? generateRandomHexColor();
+            const color = tag.color ?? COLOR_PALETTE[Math.floor(Math.random() * COLOR_PALETTE.length)].value;
             const userState = useUserStore.getState();
             const result = await NoteService.addTag(noteId, { ...tag, color }, userState.role, userState.sub_exp_date);
             if (result) {
@@ -357,6 +359,29 @@ export const useNotesStore = create<NotesState>((set, get) => ({
             tags: state.tags.map(t => t.id === tagId ? updatedTag : t)
         }));
         SyncScheduler.instance?.notifyContentChange();
+    },
+
+    createTag: async (data: { name: string, color?: string }) => {
+        try {
+            const color = data.color ?? COLOR_PALETTE[Math.floor(Math.random() * COLOR_PALETTE.length)].value;
+            const userState = useUserStore.getState();
+            const newTag = await TagService.create({
+                name: data.name,
+                color,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+            }, userState.role, userState.sub_exp_date);
+
+            set(state => ({
+                tags: [...state.tags, newTag]
+            }));
+
+            SyncScheduler.instance?.notifyContentChange();
+            return { data: newTag, error: null };
+        } catch (error) {
+            console.error('[Store] Failed to create tag:', error);
+            return { data: null, error: error instanceof Error ? error.message : String(error) };
+        }
     },
 
     deleteTag: async (tagId) => {

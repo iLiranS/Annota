@@ -2,8 +2,10 @@ import {
     Baseline,
     Bold,
     CheckSquare,
+    ChevronDown,
     ChevronLeft,
     ChevronRight,
+    ChevronUp,
     Code,
     FilePlusCorner,
     Highlighter,
@@ -19,6 +21,7 @@ import {
     Paperclip,
     Plus,
     Redo2,
+    Settings,
     Sigma,
     SquarePlay,
     SquareTerminal,
@@ -68,7 +71,10 @@ export const EditorIcons = {
     Underline,
     Undo: Undo2,
     Youtube: SquarePlay,
-    Mermaid: Workflow
+    Mermaid: Workflow,
+    Settings,
+    ChevronUp,
+    ChevronDown
 };
 
 export const DesktopIconMap: Record<string, any> = {
@@ -89,6 +95,10 @@ export const DesktopIconMap: Record<string, any> = {
     'quote': EditorIcons.Quote,
     'codeblock': EditorIcons.CodeBlock,
     'code': EditorIcons.Code,
+    'textColor': EditorIcons.Baseline,
+    'highlight': EditorIcons.Highlighter,
+    'outdent': EditorIcons.Outdent,
+    'indent': EditorIcons.Indent,
     'details': EditorIcons.Details,
     'plus': EditorIcons.Plus,
     'math': EditorIcons.Math,
@@ -97,4 +107,5 @@ export const DesktopIconMap: Record<string, any> = {
     'youtube': EditorIcons.Youtube,
     'table': EditorIcons.Table,
     'mermaid': EditorIcons.Mermaid,
+    'settings': EditorIcons.Settings,
 };

@@ -10,12 +10,23 @@ import type { ToolbarRenderProps } from '@annota/editor-ui';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '../ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
+import { Separator } from '../ui/separator';
 import { EditorIcons } from './EditorIcons';
 import { ColorPicker } from './toolbar/toolbar-color-picker';
+import { ToolbarEditModal } from './toolbar/toolbar-edit-modal';
 import { ToolbarFileUpload } from './toolbar/toolbar-file-upload';
 import { HeadingSelector } from './toolbar/toolbar-heading-selector';
 import { LinkPopover } from './toolbar/toolbar-link-popover';
 import { MathPopover } from './toolbar/toolbar-math-popover';
+
+const DEFAULT_ORDER = [
+    'heading', 'bold', 'italic', 'underline', 'strike', 'textColor', 'highlight',
+    'bulletList', 'orderedList', 'taskList', 'outdent', 'indent', 'code', 'codeBlock',
+    'quote', 'table', 'math', 'link', 'details', 'mermaid', 'file', 'youtube'
+];
+const DEFAULT_HIDDEN = ['details', 'mermaid', 'file', 'youtube'];
+const STORAGE_KEY = 'annota-desktop-toolbar-order';
+const STORAGE_KEY_HIDDEN = 'annota-desktop-toolbar-hidden';
 
 type ToolbarItem = {
     id: string;
@@ -47,6 +58,42 @@ export function DesktopToolbar({
     const MOD = isMac ? '⌘' : 'Ctrl';
     const ALT = isMac ? '⌥' : 'Alt';
     const SHIFT = isMac ? '⇧' : 'Shift';
+
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [toolbarOrder, setToolbarOrder] = useState<string[]>(DEFAULT_ORDER);
+    const [hiddenIds, setHiddenIds] = useState<string[]>(DEFAULT_HIDDEN);
+
+    useEffect(() => {
+        const savedOrder = localStorage.getItem(STORAGE_KEY);
+        if (savedOrder) {
+            try {
+                const parsed = JSON.parse(savedOrder);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    setToolbarOrder(parsed);
+                }
+            } catch (e) { }
+        }
+
+        const savedHidden = localStorage.getItem(STORAGE_KEY_HIDDEN);
+        if (savedHidden) {
+            try {
+                const parsed = JSON.parse(savedHidden);
+                if (Array.isArray(parsed)) {
+                    setHiddenIds(parsed);
+                }
+            } catch (e) { }
+        }
+    }, []);
+
+    const saveOrder = useCallback((newOrder: string[]) => {
+        setToolbarOrder(newOrder);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(newOrder));
+    }, []);
+
+    const saveHidden = useCallback((newHidden: string[]) => {
+        setHiddenIds(newHidden);
+        localStorage.setItem(STORAGE_KEY_HIDDEN, JSON.stringify(newHidden));
+    }, []);
 
     const [openMenusCount, setOpenMenusCount] = useState(0);
     const handleOpenChange = useCallback((open: boolean) => {
@@ -135,14 +182,14 @@ export function DesktopToolbar({
         {
             id: 'outdent',
             label: 'Outdent',
-            render: <Button key="outdent" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('outdent')} disabled={!editorState.canOutdent}><EditorIcons.Outdent className="w-5 h-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="outdent-dropdown" onClick={() => sendCommand('outdent')} disabled={!editorState.canOutdent} className="gap-2"><EditorIcons.Outdent className="w-4 h-4" /> Outdent</DropdownMenuItem>
+            render: <Button key="outdent" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('outdent')} style={activeStyle(false)}><EditorIcons.Outdent className="w-5 h-5" /></Button>,
+            dropdownRender: <DropdownMenuItem key="outdent-dropdown" onClick={() => sendCommand('outdent')} className="gap-2"><EditorIcons.Outdent className="w-4 h-4" /> Outdent</DropdownMenuItem>
         },
         {
             id: 'indent',
             label: 'Indent',
-            render: <Button key="indent" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('indent')} disabled={!editorState.canIndent}><EditorIcons.Indent className="w-5 h-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="indent-dropdown" onClick={() => sendCommand('indent')} disabled={!editorState.canIndent} className="gap-2"><EditorIcons.Indent className="w-4 h-4" /> Indent</DropdownMenuItem>
+            render: <Button key="indent" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('indent')} style={activeStyle(false)}><EditorIcons.Indent className="w-5 h-5" /></Button>,
+            dropdownRender: <DropdownMenuItem key="indent-dropdown" onClick={() => sendCommand('indent')} className="gap-2"><EditorIcons.Indent className="w-4 h-4" /> Indent</DropdownMenuItem>
         },
         {
             id: 'code',
@@ -244,22 +291,128 @@ export function DesktopToolbar({
                 />
             )
         },
+        {
+            id: 'details',
+            label: 'Details',
+            shortcut: `${MOD}.`,
+            render: <Button key="details" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('toggleDetails')} style={activeStyle(editorState.isDetails)}><EditorIcons.Details className="w-5 h-5" /></Button>,
+            dropdownRender: <DropdownMenuItem key="details-dropdown" onClick={() => sendCommand('toggleDetails')} className={cn("gap-2", editorState.isDetails && "text-primary")}><EditorIcons.Details className="w-4 h-4" /> Details <span className="ml-auto text-[10px] opacity-50">{MOD}.</span></DropdownMenuItem>
+        },
+        {
+            id: 'mermaid',
+            label: 'Mermaid Diagram',
+            render: <Button key="mermaid" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('insertMermaid')} style={activeStyle(false)}><EditorIcons.Mermaid className="w-5 h-5" /></Button>,
+            dropdownRender: <DropdownMenuItem key="mermaid-dropdown" onClick={() => sendCommand('insertMermaid')} className="gap-2"><EditorIcons.Mermaid className="w-4 h-4" /> Mermaid Diagram</DropdownMenuItem>
+        },
+        {
+            id: 'file',
+            label: 'File',
+            render: <ToolbarFileUpload key="file" onInsertFile={onInsertFile} onOpenChange={handleOpenChange} />,
+            dropdownRender: <ToolbarFileUpload key="file-dropdown" onInsertFile={onInsertFile} onOpenChange={handleOpenChange} isMenu />
+        },
+        {
+            id: 'youtube',
+            label: 'YouTube Video',
+            render: (
+                <LinkPopover
+                    key="youtube"
+                    title="YouTube Video"
+                    description="Enter a YouTube video URL"
+                    icon={EditorIcons.Youtube}
+                    placeholder="https://youtube.com/watch?v=..."
+                    saveLabel="Insert"
+                    onSave={(href) => sendCommand('setYoutubeVideo', { src: href })}
+                    onOpenChange={handleOpenChange}
+                    hideTitle
+                />
+            ),
+            dropdownRender: (
+                <LinkPopover
+                    key="youtube-dropdown"
+                    title="YouTube Video"
+                    description="Enter a YouTube video URL"
+                    icon={EditorIcons.Youtube}
+                    placeholder="https://youtube.com/watch?v=..."
+                    saveLabel="Insert"
+                    onSave={(href) => sendCommand('setYoutubeVideo', { src: href })}
+                    onOpenChange={handleOpenChange}
+                    isMenu
+                    hideTitle
+                />
+            )
+        },
     ], [editorState, sendCommand, colors.primary, activeStyle, handleOpenChange, onInsertFile, activePopup, onActivePopupChange, MOD, ALT, SHIFT]);
+
+    const orderedItems = React.useMemo(() => {
+        const itemMap = new Map(items.map(item => [item.id, item]));
+
+        // Ensure all items from 'items' are included
+        const currentOrder = [...toolbarOrder];
+        items.forEach(item => {
+            if (!currentOrder.includes(item.id)) {
+                currentOrder.push(item.id);
+            }
+        });
+
+        return currentOrder
+            .map(id => itemMap.get(id))
+            .filter((item): item is ToolbarItem => !!item);
+    }, [items, toolbarOrder]);
+
+    const activeToolbarItems = React.useMemo(() => {
+        return orderedItems.filter(item => !hiddenIds.includes(item.id));
+    }, [orderedItems, hiddenIds]);
+
+    const plusButtonToolbarItems = React.useMemo(() => {
+        return orderedItems.filter(item => hiddenIds.includes(item.id));
+    }, [orderedItems, hiddenIds]);
+
+    const moveItem = useCallback((id: string, direction: 'up' | 'down') => {
+        const currentOrder = orderedItems.map(item => item.id);
+        const index = currentOrder.indexOf(id);
+        if (index === -1) return;
+
+        const targetIndex = direction === 'up' ? index - 1 : index + 1;
+        if (targetIndex < 0 || targetIndex >= currentOrder.length) return;
+
+        const newOrder = [...currentOrder];
+        [newOrder[index], newOrder[targetIndex]] = [newOrder[targetIndex], newOrder[index]];
+        saveOrder(newOrder);
+    }, [orderedItems, saveOrder]);
+
+    const toggleItemVisibility = useCallback((id: string) => {
+        if (hiddenIds.includes(id)) {
+            saveHidden(hiddenIds.filter(hid => hid !== id));
+        } else {
+            saveHidden([...hiddenIds, id]);
+        }
+    }, [hiddenIds, saveHidden]);
+
+    const resetToolbar = useCallback(() => {
+        saveOrder(DEFAULT_ORDER);
+        saveHidden(DEFAULT_HIDDEN);
+    }, [saveOrder, saveHidden]);
 
     const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
     const [resetKey, setResetKey] = useState(0);
 
-    const itemsLength = items.length;
+    const itemsLength = activeToolbarItems.length;
     const recomputeVisibleCount = useCallback(() => {
         const rowEl = rowRef.current;
-        if (!rowEl) return;
+        const containerEl = containerRef.current;
+        if (!rowEl || !containerEl || !containerEl.parentElement) return;
 
         const rowStyles = getComputedStyle(rowEl);
         const rowGapRaw = rowStyles.columnGap || rowStyles.gap || '0';
         const rowGap = Number.parseFloat(rowGapRaw) || 0;
         const paddingLeft = Number.parseFloat(rowStyles.paddingLeft || '0') || 0;
         const paddingRight = Number.parseFloat(rowStyles.paddingRight || '0') || 0;
-        const rowContentWidth = rowEl.clientWidth - paddingLeft - paddingRight;
+
+        // Use parent's width instead of rowEl.clientWidth because rowEl is w-max
+        const parentWidth = containerEl.parentElement.clientWidth;
+        const availableToolbarWidth = Math.min(parentWidth * 0.9, 825);
+        const rowContentWidth = availableToolbarWidth - paddingLeft - paddingRight;
+
         if (rowContentWidth <= 0) return;
 
         const HEADING_WIDTH = 48; // w-12
@@ -335,8 +488,8 @@ export function DesktopToolbar({
         };
     }, [recomputeVisibleCount]);
 
-    const visibleItems = items.slice(0, visibleCount);
-    const overflowItems = items.slice(visibleCount);
+    const visibleItems = activeToolbarItems.slice(0, visibleCount);
+    const overflowItems = activeToolbarItems.slice(visibleCount);
 
     return (
         <TooltipProvider key={resetKey}>
@@ -349,7 +502,7 @@ export function DesktopToolbar({
                 }}
                 className="
                             absolute bottom-6 left-1/2 -translate-x-1/2
-                            w-[90%] max-w-[825px]
+                            w-max max-w-[90%] md:max-w-[825px]
                             flex items-center
                             p-0.5
                             rounded-2xl
@@ -417,31 +570,22 @@ export function DesktopToolbar({
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-56">
-                                <DropdownMenuItem key="details-plus" onClick={() => sendCommand('toggleDetails')} className={cn("gap-2", editorState.isDetails && "text-primary")}>
-                                    <EditorIcons.Details className="w-4 h-4" />
-                                    Details
-                                    <span className="ml-auto text-[10px] opacity-50">{MOD}.</span>
+                                {plusButtonToolbarItems.length > 0 && (
+                                    <>
+                                        {plusButtonToolbarItems.map((item) => (
+                                            <React.Fragment key={item.id + '-plus'}>
+                                                {item.dropdownRender}
+                                            </React.Fragment>
+                                        ))}
+                                    </>
+                                )}
+
+                                <Separator className="my-1 opacity-50" />
+
+                                <DropdownMenuItem key="edit-toolbar" onClick={() => setIsEditModalOpen(true)} className="gap-2">
+                                    <EditorIcons.Settings className="w-4 h-4" />
+                                    Edit Toolbar
                                 </DropdownMenuItem>
-
-                                <DropdownMenuItem key="mermaid-plus" onClick={() => sendCommand('insertMermaid')} className="gap-2">
-                                    <EditorIcons.Mermaid className="w-4 h-4" />
-                                    Mermaid Diagram
-                                </DropdownMenuItem>
-
-                                <ToolbarFileUpload key="file-plus" onInsertFile={onInsertFile} onOpenChange={handleOpenChange} isMenu />
-
-                                <LinkPopover
-                                    key="youtube-plus"
-                                    title="YouTube Video"
-                                    description="Enter a YouTube video URL"
-                                    icon={EditorIcons.Youtube}
-                                    placeholder="https://youtube.com/watch?v=..."
-                                    saveLabel="Insert"
-                                    onSave={(href) => sendCommand('setYoutubeVideo', { src: href })}
-                                    onOpenChange={handleOpenChange}
-                                    isMenu
-                                    hideTitle
-                                />
                             </DropdownMenuContent>
                         </DropdownMenu>
 
@@ -537,6 +681,16 @@ export function DesktopToolbar({
                 onInsertFile={onInsertFile}
                 visible={activePopup === 'file'}
                 onClose={() => onActivePopupChange(null)}
+            />
+
+            <ToolbarEditModal
+                isOpen={isEditModalOpen}
+                onOpenChange={setIsEditModalOpen}
+                visibleItems={activeToolbarItems}
+                hiddenItems={plusButtonToolbarItems}
+                onMoveItem={moveItem}
+                onToggleVisibility={toggleItemVisibility}
+                onReset={resetToolbar}
             />
         </TooltipProvider>
     );

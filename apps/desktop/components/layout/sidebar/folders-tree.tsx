@@ -184,7 +184,7 @@ function FolderTreeItem({ folder, onNavigate, onEdit, onDelete, onCreateSubFolde
                         className={cn(
                             "hidden group-hover/folder:flex items-center justify-center p-0 h-6 w-6",
                             "peer-data-[drag-over=true]/menu-button:hidden!",
-                            general?.appDirection === 'rtl' && "right-auto left-1"
+                            general?.appDirection === 'rtl' ? "right-auto left-2" : "right-0"
                         )}
                     >
                         <ChevronRight size={14} className={cn("text-muted-foreground/70 transition-transform", general?.appDirection === 'rtl' ? (isOpen ? "rotate-90" : "rotate-180") : (isOpen && "rotate-90"))} />

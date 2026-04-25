@@ -7,9 +7,9 @@ import {
 } from "@/components/ui/context-menu";
 import { SidebarGroup, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import type { Tag as TagType } from "@annota/core";
-import { useNotesStore } from "@annota/core";
-import { Edit2, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useNotesStore, useSettingsStore } from "@annota/core";
+import { Edit2, Plus, Trash2 } from "lucide-react";
+import { useMemo, useState } from "react";
 import { Ionicons } from "../../ui/ionicons";
 
 interface TagsListProps {
@@ -26,22 +26,56 @@ export function TagsList({
     activeTagId,
     onTagClick,
 }: TagsListProps) {
-    const { deleteTag } = useNotesStore();
+    const { notes, deleteTag } = useNotesStore();
+    const { general } = useSettingsStore();
     const [tagToEdit, setTagToEdit] = useState<TagType | null>(null);
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+    const tagCounts = useMemo(() => {
+        const counts: Record<string, number> = {};
+        notes.forEach(note => {
+            if (note.isDeleted || note.isPermDeleted) return;
+            try {
+                const tagIds = JSON.parse(note.tags || '[]') as string[];
+                tagIds.forEach(id => {
+                    counts[id] = (counts[id] || 0) + 1;
+                });
+            } catch (e) { }
+        });
+        return counts;
+    }, [notes]);
+
+    const sortedTags = useMemo(() => {
+        return [...tags].sort((a, b) => (tagCounts[b.id] || 0) - (tagCounts[a.id] || 0));
+    }, [tags, tagCounts]);
 
     return (
         <>
             <TagEditModal
-                open={!!tagToEdit}
-                onOpenChange={(open) => !open && setTagToEdit(null)}
+                open={!!tagToEdit || isCreateModalOpen}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setTagToEdit(null);
+                        setIsCreateModalOpen(false);
+                    }
+                }}
                 tag={tagToEdit}
             />
             <SidebarGroup className="py-2 px-0">
                 <SidebarMenu className="px-1 overflow-y-auto compact-scrollbar">
-                    {tags.length === 0 && (
-                        <p className="px-3 py-2 text-[10px] italic text-muted-foreground">No tags</p>
+                    <SidebarMenuItem className="px-1">
+                        <SidebarMenuButton
+                            onClick={() => setIsCreateModalOpen(true)}
+                            className="h-8 text-[11px] font-medium text-muted-foreground/60 hover:text-muted-foreground transition-colors justify-start gap-2.5 px-2"
+                        >
+                            <Plus size={14} className="opacity-50" />
+                            <span>Create Tag</span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    {sortedTags.length === 0 && (
+                        <p className="px-3 py-2 text-[10px] italic text-muted-foreground text-center">No tags yet</p>
                     )}
-                    {tags.map((tag) => (
+                    {sortedTags.map((tag) => (
                         <SidebarMenuItem key={tag.id}>
                             <ContextMenu>
                                 <ContextMenuTrigger asChild>
@@ -49,10 +83,17 @@ export function TagsList({
                                         onClick={() => onTagClick(tag.id)}
                                         isActive={activeTagId === tag.id}
                                         style={{ "--tag-color": tag.color } as React.CSSProperties}
-                                        className="h-8 text-xs hover:bg-(--tag-color)/5 active:bg-(--tag-color)/10 "
+                                        className="h-8 text-xs hover:bg-(--tag-color)/5 active:bg-(--tag-color)/10 flex items-center justify-between group"
                                     >
-                                        <Ionicons name="ellipse" size={10} style={{ color: tag.color }} />
-                                        <span style={{ color: tag.color }} className="truncate lowercase font-mono">{tag.name}</span>
+                                        <div className="flex items-center gap-2.5 truncate">
+                                            <Ionicons name="ellipse" size={10} style={{ color: tag.color }} />
+                                            <span style={{ color: tag.color }} className="truncate lowercase font-mono">{tag.name}</span>
+                                        </div>
+                                        {general.showNotesCountInFolder && (
+                                            <span className="text-[9px] font-bold opacity-40 group-hover:opacity-70 transition-opacity ml-auto tabular-nums">
+                                                {tagCounts[tag.id] || 0}
+                                            </span>
+                                        )}
                                     </SidebarMenuButton>
                                 </ContextMenuTrigger>
                                 <ContextMenuContent className="w-40">
