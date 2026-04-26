@@ -1,6 +1,6 @@
 import { Bot, Brush, Cog, Database, HelpCircle, Type, User } from "lucide-react";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { AccountSettings } from "./account-settings";
 import { AppearanceSettings } from "./appearance-settings";
 import { EditorSettings } from "./editor-settings";
@@ -73,12 +73,20 @@ const tabs: SettingsTab[] = [
 ];
 
 export default function SettingsDialog() {
+    const location = useLocation();
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState("appearance");
     const { openManual } = useChangelog("desktop");
 
     const handleClose = () => {
-        navigate(-1);
+        const background = (location.state as { background?: { pathname: string; search?: string; hash?: string } } | null)?.background;
+
+        if (background) {
+            navigate(`${background.pathname}${background.search || ""}${background.hash || ""}`, { replace: true });
+            return;
+        }
+
+        navigate("/notes", { replace: true });
     };
 
     return (

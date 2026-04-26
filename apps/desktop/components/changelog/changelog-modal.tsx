@@ -5,7 +5,7 @@ import {
   DialogFooter,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useChangelog } from "@annota/core";
+import { APP_RELEASE_VERSION, useChangelog } from "@annota/core";
 import { Bug, CheckCircle2, Loader2, Sparkles } from "lucide-react";
 
 export default function ChangelogModal() {
@@ -13,34 +13,33 @@ export default function ChangelogModal() {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && (isLoading ? setIsOpen(false) : markAsSeen())}>
-      <DialogContent aria-describedby={undefined} className="max-w-2xl p-0 overflow-hidden border-none bg-note-bg backdrop-blur-xl shadow-2xl">
+      <DialogTitle className="sr-only">Changelog</DialogTitle>
+      <DialogContent aria-describedby={undefined} className="max-w-2xl p-0 overflow-hidden border-none bg-note-bg backdrop-blur-xl shadow-2xl flex flex-col max-h-[90vh]">
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-20 space-y-4">
+          <div className="flex-1 flex flex-col items-center justify-center py-20 space-y-4">
             <Loader2 className="h-8 w-8 animate-spin text-accent-full" />
             <p className="text-sm font-medium text-muted-foreground">Fetching latest updates...</p>
           </div>
         ) : !changelogData ? (
-          <div className="p-10 flex flex-col items-center justify-center">
+          <div className="flex-1 p-10 flex flex-col items-center justify-center">
             <p className="text-sm font-medium text-muted-foreground text-center">No changelog data available.</p>
             <Button className="mt-4" onClick={() => setIsOpen(false)}>Close</Button>
           </div>
         ) : (
           <>
             {/* Header Hero */}
-            <div className="relative h-fill bg-linear-to-br from-accent-full/10 via-accent-full/5 to-transparent flex items-end p-8 border-b border-border/50">
+            <div className="relative shrink-0 bg-linear-to-br from-accent-full/10 via-accent-full/5 to-transparent flex items-end p-8 border-b border-border/50">
               <div className="absolute top-6 right-8 bg-primary/10 text-primary px-3 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase border border-primary/20">
                 Released {changelogData.date}
               </div>
               <div className="space-y-1">
-                <DialogTitle asChild>
-                  <h2 className="text-3xl font-bold tracking-tight text-foreground">{changelogData.title}</h2>
-                </DialogTitle>
+                <h2 className="text-3xl font-bold tracking-tight text-foreground">{changelogData.title}</h2>
               </div>
             </div>
 
             {/* Content */}
-            <div className="max-h-[500px] overflow-y-auto premium-scrollbar">
-              <div className="space-y-10  px-8 py-2">
+            <div className="flex-1 overflow-y-auto premium-scrollbar">
+              <div className="space-y-10 px-8 py-6">
                 {changelogData.features.length > 0 && (
                   <section className="space-y-5">
                     <div className="flex items-center gap-2.5 text-primary">
@@ -82,12 +81,13 @@ export default function ChangelogModal() {
             </div>
 
             {/* Footer */}
-            <DialogFooter className="p-6 bg-muted/20 border-t border-border/50">
+            <DialogFooter className="p-3 w-full bg-muted/20 border-t border-border/50 flex flex-row items-center justify-between sm:justify-between">
+              <p className="text-sm font-medium text-muted-foreground">Build v{APP_RELEASE_VERSION}</p>
               <Button
                 onClick={() => markAsSeen()}
-                className="w-full sm:w-auto px-10 bg-accent-full text-white hover:bg-accent-full/80 h-11 font-bold rounded-xl shadow-lg shadow-primary/10 transition-all hover:scale-[1.02] active:scale-95"
+                className="w-auto px-10 bg-accent-full text-white hover:bg-accent-full/80 h-11 font-bold rounded-xl shadow-lg shadow-primary/10 transition-all hover:scale-[1.02] active:scale-95"
               >
-                Done
+                Awesome
               </Button>
             </DialogFooter>
           </>

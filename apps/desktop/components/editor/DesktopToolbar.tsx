@@ -418,8 +418,7 @@ export function DesktopToolbar({
         const HEADING_WIDTH = 48; // w-12
         const ITEM_WIDTH = 36; // w-9
         const ITEM_GAP = 2; // gap-0.5
-        const RIGHT_GROUP_WIDTH = 112; // plus + undo + redo + gaps
-        const RIGHT_GROUP_WITH_OVERFLOW = 150; // overflow + plus + undo + redo + gaps
+        const RIGHT_GROUP_WIDTH = 112; // overflow + undo + redo + gaps
         const ROW_GAP_COUNT = 2; // items->spacer, spacer->right group  
 
         const itemsWidthFor = (count: number) => {
@@ -428,21 +427,15 @@ export function DesktopToolbar({
             return HEADING_WIDTH + rest * ITEM_WIDTH + rest * ITEM_GAP;
         };
 
-        const availableNoOverflow = rowContentWidth - ROW_GAP_COUNT * rowGap - RIGHT_GROUP_WIDTH;
-        if (itemsWidthFor(itemsLength) <= availableNoOverflow) {
-            setVisibleCount(itemsLength);
-            return;
-        }
-
-        const availableWithOverflow = rowContentWidth - ROW_GAP_COUNT * rowGap - RIGHT_GROUP_WITH_OVERFLOW;
-        if (availableWithOverflow <= HEADING_WIDTH) {
+        const availableWidth = rowContentWidth - ROW_GAP_COUNT * rowGap - RIGHT_GROUP_WIDTH;
+        if (availableWidth <= HEADING_WIDTH) {
             setVisibleCount(1);
             return;
         }
 
         let count = 1;
         for (let i = 1; i <= itemsLength; i++) {
-            if (itemsWidthFor(i) <= availableWithOverflow) {
+            if (itemsWidthFor(i) <= availableWidth) {
                 count = i;
             } else {
                 break;
@@ -490,6 +483,9 @@ export function DesktopToolbar({
 
     const visibleItems = activeToolbarItems.slice(0, visibleCount);
     const overflowItems = activeToolbarItems.slice(visibleCount);
+
+    // The overflow menu is always shown if there are overflow items, hidden items, 
+    // or simply for the "Edit" option.
 
     return (
         <TooltipProvider key={resetKey}>
@@ -546,39 +542,28 @@ export function DesktopToolbar({
                     <div className="flex-1" />
 
                     <div className="flex items-center gap-0.5 ml-auto">
-                        {overflowItems.length > 0 && (
-                            <DropdownMenu onOpenChange={handleOpenChange} modal={false}>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0">
-                                        <EditorIcons.More className="w-5 h-5" />
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-56">
-                                    {overflowItems.map((item) => (
-                                        <React.Fragment key={item.id + '-overflow'}>
-                                            {item.dropdownRender}
-                                        </React.Fragment>
-                                    ))}
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        )}
-
                         <DropdownMenu onOpenChange={handleOpenChange} modal={false}>
                             <DropdownMenuTrigger asChild>
-                                <Button key="plus" variant="ghost" size="icon" className="h-9 w-9 shrink-0 outline-none" style={activeStyle(false)}>
-                                    <EditorIcons.Plus className="w-5 h-5" />
+                                <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 outline-none" style={activeStyle(false)}>
+                                    <EditorIcons.More className="w-5 h-5" />
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-56">
-                                {plusButtonToolbarItems.length > 0 && (
-                                    <>
-                                        {plusButtonToolbarItems.map((item) => (
-                                            <React.Fragment key={item.id + '-plus'}>
-                                                {item.dropdownRender}
-                                            </React.Fragment>
-                                        ))}
-                                    </>
+                                {overflowItems.map((item) => (
+                                    <React.Fragment key={item.id + '-overflow'}>
+                                        {item.dropdownRender}
+                                    </React.Fragment>
+                                ))}
+
+                                {overflowItems.length > 0 && plusButtonToolbarItems.length > 0 && (
+                                    <Separator className="my-1 opacity-50" />
                                 )}
+
+                                {plusButtonToolbarItems.map((item) => (
+                                    <React.Fragment key={item.id + '-plus'}>
+                                        {item.dropdownRender}
+                                    </React.Fragment>
+                                ))}
 
                                 <Separator className="my-1 opacity-50" />
 

@@ -20,11 +20,11 @@ interface SidebarHeaderSectionProps {
     onCreateFolder: () => void;
     sortOptions: SortType[];
     getSortTypeLabel: (type: SortType) => string;
+    onEditFolder?: () => void;
     tagId?: string;
     isRoot?: boolean;
     selectionMode?: boolean;
     setSelectionMode?: (mode: boolean) => void;
-    onHeaderClick?: () => void;
 }
 
 export function SidebarHeaderSection({
@@ -37,13 +37,13 @@ export function SidebarHeaderSection({
     onSortChange,
     onCreateNote,
     onCreateFolder,
+    onEditFolder,
     sortOptions,
     getSortTypeLabel,
     tagId,
     isRoot,
     selectionMode,
     setSelectionMode,
-    onHeaderClick,
 }: SidebarHeaderSectionProps) {
 
 
@@ -51,11 +51,11 @@ export function SidebarHeaderSection({
         <SidebarHeader
             style={{ backgroundColor: color + "20" }}
             className="h-14  py-0 justify-center border-b border-border/10"
+
         >
             <div className="flex items-center justify-between gap-1 w-full">
-                <div
-                    className="flex items-center gap-1 overflow-hidden flex-1 cursor-pointer  transition-opacity"
-                    onClick={onHeaderClick}
+                <div data-tauri-drag-region
+                    className="flex items-center gap-1 overflow-hidden flex-1  transition-opacity"
                 >
                     <div className="flex h-6 w-6 shrink-0 items-center justify-center">
                         {isRoot ? (
@@ -106,6 +106,13 @@ export function SidebarHeaderSection({
                                         <Ionicons name="folder-outline" size={16} />
                                         <span>New Folder</span>
                                     </DropdownMenuItem>
+
+                                    {!isRoot && onEditFolder && (
+                                        <DropdownMenuItem onClick={onEditFolder} className="gap-2 cursor-pointer">
+                                            <Ionicons name="create-outline" size={16} />
+                                            <span>Edit Folder</span>
+                                        </DropdownMenuItem>
+                                    )}
 
                                     {setSelectionMode && (
                                         <DropdownMenuItem onClick={() => setSelectionMode(!selectionMode)} className="gap-2 cursor-pointer">

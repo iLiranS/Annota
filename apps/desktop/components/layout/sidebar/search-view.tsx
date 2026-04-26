@@ -64,7 +64,7 @@ export function SearchView({
     };
 
     return (
-        <div className="flex flex-col flex-1 min-h-0">
+        <div className="flex flex-col flex-1 min-h-0 animate-content-from-left">
             <div className="px-3 py-2 sticky top-0  z-10">
                 <div className="relative group">
                     <Ionicons

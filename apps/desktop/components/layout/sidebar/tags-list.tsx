@@ -61,15 +61,15 @@ export function TagsList({
                 }}
                 tag={tagToEdit}
             />
-            <SidebarGroup className="py-2 px-0">
+            <SidebarGroup className="py-2 px-0 animate-content-from-left">
                 <SidebarMenu className="px-1 overflow-y-auto compact-scrollbar">
-                    <SidebarMenuItem className="px-1">
+                    <SidebarMenuItem className="">
                         <SidebarMenuButton
                             onClick={() => setIsCreateModalOpen(true)}
-                            className="h-8 text-[11px] font-medium text-muted-foreground/60 hover:text-muted-foreground transition-colors justify-start gap-2.5 px-2"
+                            className="h-8 px-0 text-[11px] font-medium text-muted-foreground/60 hover:text-muted-foreground transition-colors justify-start"
                         >
                             <Plus size={14} className="opacity-50" />
-                            <span>Create Tag</span>
+                            <span>Create New Tag</span>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                     {sortedTags.length === 0 && (

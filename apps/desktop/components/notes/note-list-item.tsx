@@ -243,7 +243,7 @@ export function NoteListItem({
                                         </p>
                                     </div>
 
-                                    <div className="flex items-center gap-2 shrink-0">
+                                    <div className="flex items-center gap-2 shrink-0 my-auto">
                                         {note.isPinned && !isInQuickAccess && (
                                             <Pin size={12} className="text-accent-full" />
                                         )}

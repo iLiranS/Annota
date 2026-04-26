@@ -91,7 +91,7 @@ export function ToolbarEditModal({
                     {hiddenItems.length > 0 && (
                         <section>
                             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3 px-1">
-                                In "+" Button Menu
+                                Always in "..." More Menu
                             </h3>
                             <div className="space-y-1 opacity-60">
                                 {hiddenItems.map((item) => {

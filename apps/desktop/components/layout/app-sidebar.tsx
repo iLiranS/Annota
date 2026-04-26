@@ -5,7 +5,7 @@ import { Sidebar, SidebarContent, useSidebar } from "@/components/ui/sidebar";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useCreateNote } from "@/hooks/use-create-note";
 import { useSmartNavigate } from "@/hooks/use-smart-navigate";
-import { DAILY_NOTES_FOLDER_ID, TRASH_FOLDER_ID, getSortTypeLabel, sortNotes, useNotesStore, useSearchStore, useSettingsStore, useSyncStore, useUserStore, type Folder, type SortType } from "@annota/core";
+import { DAILY_NOTES_FOLDER_ID, TRASH_FOLDER_ID, getSortTypeLabel, sortNotes, useNavigationStore, useNotesStore, useSearchStore, useSettingsStore, useSyncStore, useUserStore, type Folder, type SortType } from "@annota/core";
 
 // Modular Components
 import { cn } from "@/lib/utils";
@@ -38,6 +38,9 @@ export function AppSidebar() {
     const { folderId: routeFolderId, noteId: routeNoteId } = useParams();
     const { colors } = useAppTheme();
     const { general } = useSettingsStore();
+    const quickAccessNoteId = useNavigationStore((s) => s.quickAccessNoteId);
+    const setQuickAccessView = useNavigationStore((s) => s.setQuickAccessView);
+    const clearQuickAccessView = useNavigationStore((s) => s.clearQuickAccessView);
     const {
         notes,
         tags,
@@ -164,6 +167,11 @@ export function AppSidebar() {
         setFolderToDelete(null);
     }, [deleteFolder, folderToDelete]);
 
+    const navigateWithHistory = useCallback((to: string) => {
+        clearQuickAccessView();
+        navigateSmart(to);
+    }, [clearQuickAccessView, navigateSmart]);
+
     const browseNotes = useMemo(() => {
         if (tagId) {
             const list = notes.filter(n => {
@@ -187,35 +195,6 @@ export function AppSidebar() {
     }, [notes]);
 
     const currentTag = useMemo(() => tags.find(t => t.id === tagId), [tags, tagId]);
-
-    // const breadcrumbs = useMemo(() => {
-    //     if (!currentFolderId && !tagId && !isTrash && !isDaily) return null;
-    //     const crumbs: { name: string; id: string | null; icon?: string; color?: string }[] = [];
-    //     crumbs.push({ name: "All Notes", id: null, icon: "annota", color: colors.primary });
-
-    //     if (tagId || isTrash || isDaily) return crumbs;
-
-    //     if (currentFolderId && parentFolder) {
-    //         if (parentFolder.parentId) {
-    //             crumbs.push({ name: "...", id: null });
-    //         }
-    //         crumbs.push({
-    //             name: parentFolder.name,
-    //             id: parentFolder.id,
-    //             icon: parentFolder.icon || "folder",
-    //             color: parentFolder.color
-    //         });
-    //     }
-    //     return crumbs;
-    // }, [currentFolderId, tagId, isTrash, isDaily, parentFolder, colors.primary]);
-
-    // const handleNavigate = useCallback((id: string | null) => {
-    //     if (id) {
-    //         navigateSmart(`/notes?folderId=${id}`);
-    //     } else {
-    //         navigateSmart("/notes");
-    //     }
-    // }, [navigateSmart]);
 
     const headerTitle = useMemo(() => {
         if (tagId) return currentTag?.name ?? "Tag";
@@ -318,13 +297,13 @@ export function AppSidebar() {
                             setNewFolderParentId(currentFolderId ?? null);
                             setIsEditModalOpen(true);
                         }}
+                        onEditFolder={() => currentFolder && handleEditFolder(currentFolder)}
                         sortOptions={SORT_OPTIONS}
                         getSortTypeLabel={getSortTypeLabel}
                         tagId={tagId || undefined}
                         isRoot={isRoot}
                         selectionMode={selectionMode}
                         setSelectionMode={handleSetSelectionMode}
-                        onHeaderClick={() => setActiveTab('notes')}
                     />
                 )}
 
@@ -336,7 +315,7 @@ export function AppSidebar() {
                             onNavigate={(id) => {
                                 setPendingFolderId(id || 'root');
                                 setActiveTab('notes');
-                                navigateSmart(`/notes?folderId=${id}`);
+                                navigateWithHistory(`/notes?folderId=${id}`);
                             }}
                             onEdit={handleEditFolder}
                             onDelete={setFolderToDelete}
@@ -353,27 +332,15 @@ export function AppSidebar() {
 
                     {activeTab === 'notes' && (
                         <>
-                            {/* <BreadcrumbsSection
-                                breadcrumbs={breadcrumbs}
-                                onNavigate={handleNavigate}
-                            /> */}
 
-                            <div className="flex-1 overflow-hidden flex flex-col">
-                                {!isTrash && !tagId && (
-                                    <QuickAccessSection
-                                        notes={quickAccessNotes}
-                                        activeNoteId={routeNoteId}
-                                        onNoteClick={(note) => navigateSmart(`/notes/${note.folderId || "root"}/${note.id}`)}
-                                        onDeleteNote={deleteNote}
-                                        general={general}
-                                    />
-                                )}
+                            <div className="flex-1 overflow-hidden flex flex-col animate-content-from-left">
+
 
                                 <NotesList
                                     key={currentFolderId ?? tagId ?? 'root'}
                                     notes={browseNotes}
-                                    activeNoteId={routeNoteId}
-                                    onNoteClick={(note) => navigateSmart(`/notes/${note.folderId || "root"}/${note.id}`)}
+                                    activeNoteId={quickAccessNoteId || routeNoteId}
+                                    onNoteClick={(note) => navigateWithHistory(`/notes/${note.folderId || "root"}/${note.id}`)}
                                     onDeleteNote={deleteNote}
                                     general={general}
                                     selectionMode={selectionMode}
@@ -386,6 +353,15 @@ export function AppSidebar() {
                                     isTrash={isTrash}
                                     setSelectionMode={handleSetSelectionMode}
                                 />
+                                {!isTrash && !tagId && (
+                                    <QuickAccessSection
+                                        notes={quickAccessNotes}
+                                        activeNoteId={quickAccessNoteId || routeNoteId}
+                                        onNoteClick={(note) => setQuickAccessView(note.id, note.folderId || "root")}
+                                        onDeleteNote={deleteNote}
+                                        general={general}
+                                    />
+                                )}
                             </div>
                         </>
                     )}
@@ -397,7 +373,7 @@ export function AppSidebar() {
                             setIsTagsOpen={() => { }}
                             activeTagId={tagId}
                             onTagClick={(id) => {
-                                navigateSmart(`/notes?tagId=${id}`);
+                                navigateWithHistory(`/notes?tagId=${id}`);
                                 setActiveTab('notes');
                             }}
                             general={general}
@@ -407,10 +383,10 @@ export function AppSidebar() {
                     {activeTab === 'search' && (
                         <SearchView
                             onNoteClick={(note) => {
-                                navigateSmart(`/notes/${note.folderId || "root"}/${note.id}`);
+                                navigateWithHistory(`/notes/${note.folderId || "root"}/${note.id}`);
                             }}
                             onFolderClick={(folder) => {
-                                navigateSmart(`/notes?folderId=${folder.id}`);
+                                navigateWithHistory(`/notes?folderId=${folder.id}`);
                                 setActiveTab('notes');
                             }}
                             onDeleteNote={deleteNote}
