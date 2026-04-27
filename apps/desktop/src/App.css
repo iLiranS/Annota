@@ -233,12 +233,25 @@ body {
   }
 
   --animate-content-from-left: content-from-left 0.3s ease-out;
+  --animate-content-from-right: content-from-right 0.3s ease-out;
 
 
   @keyframes content-from-left {
     from {
       opacity: 0;
       transform: translateX(-6px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes content-from-right {
+    from {
+      opacity: 0;
+      transform: translateX(6px);
     }
 
     to {

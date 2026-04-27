@@ -11,6 +11,7 @@ import { Folder, TRASH_FOLDER_ID, useNotesStore, useSettingsStore } from "@annot
 import { Slot } from "@radix-ui/react-slot";
 import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
+import { AnnotaIcon } from "../custom-ui/annota-icon";
 
 interface FolderListItemProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     folder: Folder;
@@ -27,26 +28,30 @@ interface FolderListItemProps extends React.ButtonHTMLAttributes<HTMLButtonEleme
 
 
 export function FolderIcon({ folder, className, isActive, }: { folder: Folder, className?: string, isActive?: boolean }) {
+    const isRoot = folder.id === 'root';
     return (
         <div
             className={cn(
                 "flex h-6 w-6 shrink-0 items-center justify-center rounded transition-colors shadow-sm",
                 className,
-                isActive && "bg-background/50"
+                isActive && "bg-background/50",
+                isRoot && "bg-accent-full/20!",
             )}
             style={{
-                backgroundColor: folder.color ? `${folder.color}20` : undefined,
+                backgroundColor: folder.color && !isRoot ? `${folder.color}20` : '',
             }}
         >
-            <Ionicons
-                name={(folder.icon as any) || "folder"}
-                size={16}
-                style={{ color: folder.color || undefined }}
-                className={cn(
-                    "transition-transform duration-300 group-hover/item:animate-folder-jump",
-                    isActive && "animate-folder-jump"
-                )}
-            />
+            {isRoot ? <AnnotaIcon size={20} color={'var(--accent-full'} className="transition-transform duration-300 group-hover/item:animate-folder-jump" /> :
+                <Ionicons
+                    name={(folder.icon as any) || "folder"}
+                    size={16}
+                    style={{ color: folder.color || undefined }}
+                    className={cn(
+                        "transition-transform duration-300 group-hover/item:animate-folder-jump",
+                        isActive && "animate-folder-jump"
+                    )}
+                />
+            }
         </div>
     );
 }
@@ -276,7 +281,7 @@ export function FolderListItem({
                                 <span>Delete Folder</span>
                             </ContextMenuItem>
                         )}
-                        
+
                         {isTrash && (
                             <div className="px-2 py-1.5 text-xs text-muted-foreground italic text-center">
                                 Trash folder

@@ -112,13 +112,13 @@ export default function AppShell() {
 
                 {/* Main page content container */}
                 <div className="flex-1 overflow-hidden flex min-w-0">
+                    <AppSidebar />
 
                     {/* Primary Note Card (Rounded, Bordered) */}
                     <div className={cn(
                         "flex-1 overflow-hidden flex min-w-0 transition-all duration-300",
                         "m-2 mt-0 rounded-2xl border border-sidebar-border/60 bg-note-bg"
                     )}>
-                        <AppSidebar />
 
                         <div
                             className={cn(

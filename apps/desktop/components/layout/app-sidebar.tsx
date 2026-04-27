@@ -256,7 +256,7 @@ export function AppSidebar() {
     return (
         <div
             className={cn(
-                "relative flex shrink-0 flex-col bg-transparent transition-all duration-300 ease-in-out border-e border-sidebar-border/60 overflow-hidden",
+                "relative ms-2 flex shrink-0 flex-col bg-transparent transition-all duration-300 ease-in-out  overflow-hidden",
                 !open && "w-0! opacity-0 pointer-events-none border-none",
                 isResizing && "transition-none"
             )}
@@ -282,6 +282,7 @@ export function AppSidebar() {
                 {activeTab === 'notes' && (
                     <SidebarHeaderSection
                         title={headerTitle}
+                        dir={general.appDirection}
                         icon={headerIcon}
                         color={headerColor}
                         isDaily={isDaily}
@@ -307,7 +308,7 @@ export function AppSidebar() {
                     />
                 )}
 
-                <SidebarContent data-tauri-drag-region className={cn("min-w-0 flex flex-col overflow-hidden px-1")}>
+                <SidebarContent data-tauri-drag-region className={cn("min-w-0 flex flex-col overflow-hidden ")}>
                     {activeTab === 'folders' && (
                         <FoldersTree
                             isFoldersOpen={true}
@@ -333,7 +334,10 @@ export function AppSidebar() {
                     {activeTab === 'notes' && (
                         <>
 
-                            <div className="flex-1 overflow-hidden flex flex-col animate-content-from-left">
+                            <div className={cn(
+                                "flex-1 overflow-hidden flex flex-col",
+                                general.appDirection === 'rtl' ? "animate-content-from-right" : "animate-content-from-left"
+                            )}>
 
 
                                 <NotesList

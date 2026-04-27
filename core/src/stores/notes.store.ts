@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { COLOR_PALETTE } from '../../constants/colors';
+import { getPlatformAdapters } from '../adapters';
 import { purgeGuestTombstones } from '../db';
 import type { Folder, FolderInsert, NoteMetadata, Tag } from '../db/schema';
 import { DAILY_NOTES_FOLDER_ID, FolderService, TRASH_FOLDER_ID } from '../services/folders.service';
@@ -6,11 +8,8 @@ import { NoteService } from '../services/notes.service';
 import { TagService } from '../services/tags.service';
 import { SyncScheduler } from '../sync/sync-scheduler';
 import { SortType, sortFolders, sortNotes } from '../utils/sorts';
-import { COLOR_PALETTE } from '../../constants/colors';
-import { generateRandomHexColor } from '../utils/tags';
 import { createStorageAdapter } from './config';
 import { useUserStore } from './user.store';
-import { getPlatformAdapters } from '../adapters';
 
 
 // Re-export types for convenience
@@ -98,9 +97,9 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         set(state => {
             const now = new Date();
             return {
-                notes: state.notes.map(n => 
-                    noteIds.includes(n.id) 
-                        ? { ...n, isDeleted: true, folderId: 'system-trash', originalFolderId: n.folderId, deletedAt: now, updatedAt: now } 
+                notes: state.notes.map(n =>
+                    noteIds.includes(n.id)
+                        ? { ...n, isDeleted: true, folderId: 'system-trash', originalFolderId: n.folderId, deletedAt: now, updatedAt: now }
                         : n
                 )
             };
@@ -240,10 +239,10 @@ export const useNotesStore = create<NotesState>((set, get) => ({
                 set(state => {
                     const existingIds = new Set(state.notes.map(n => n.id));
                     const filteredNewNotes = newNotes.filter(n => !existingIds.has(n.id));
-                    
+
                     const existingFolderIds = new Set(state.folders.map(f => f.id));
-                    const updatedFolders = newFolder && !existingFolderIds.has(newFolder.id) 
-                        ? [...state.folders, newFolder] 
+                    const updatedFolders = newFolder && !existingFolderIds.has(newFolder.id)
+                        ? [...state.folders, newFolder]
                         : state.folders;
 
                     return {

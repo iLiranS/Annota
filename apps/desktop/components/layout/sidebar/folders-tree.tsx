@@ -102,7 +102,7 @@ export function FoldersTree({
     if (rootFolders.length === 0) return null;
 
     return (
-        <SidebarGroup className="py-2 px-0 animate-content-from-left">
+        <SidebarGroup className={cn("py-2 px-0", general?.appDirection === 'rtl' ? "animate-content-from-right" : "animate-content-from-left")}>
             <SidebarMenu className="px-1 overflow-y-auto compact-scrollbar">
                 {systemFolders.map((folder) => (
                     <FolderTreeItem
@@ -120,7 +120,8 @@ export function FoldersTree({
                 ))}
 
                 {regularFolders.length > 0 && (
-                    <div className="h-px bg-border/40 mx-2 my-1 shrink-0" />
+                    <div className="h-px bg-border/80 mx-2 my-1 shrink-0 relative">
+                    </div>
                 )}
 
                 {regularFolders.map((folder) => (
@@ -184,7 +185,7 @@ function FolderTreeItem({ folder, onNavigate, onEdit, onDelete, onCreateSubFolde
                         className={cn(
                             "hidden group-hover/folder:flex items-center justify-center p-0 h-6 w-6",
                             "peer-data-[drag-over=true]/menu-button:hidden!",
-                            general?.appDirection === 'rtl' ? "right-auto left-2" : "right-0"
+                            general?.appDirection === 'rtl' ? "right-auto left-0" : "right-0"
                         )}
                     >
                         <ChevronRight size={14} className={cn("text-muted-foreground/70 transition-transform", general?.appDirection === 'rtl' ? (isOpen ? "rotate-90" : "rotate-180") : (isOpen && "rotate-90"))} />

@@ -6,6 +6,7 @@ import {
     ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { SidebarGroup, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
 import type { Tag as TagType } from "@annota/core";
 import { useNotesStore, useSettingsStore } from "@annota/core";
 import { Edit2, Plus, Trash2 } from "lucide-react";
@@ -61,7 +62,7 @@ export function TagsList({
                 }}
                 tag={tagToEdit}
             />
-            <SidebarGroup className="py-2 px-0 animate-content-from-left">
+            <SidebarGroup className={cn("py-2 px-0", general.appDirection === 'rtl' ? "animate-content-from-right" : "animate-content-from-left")}>
                 <SidebarMenu className="px-1 overflow-y-auto compact-scrollbar">
                     <SidebarMenuItem className="">
                         <SidebarMenuButton
@@ -90,7 +91,7 @@ export function TagsList({
                                             <span style={{ color: tag.color }} className="truncate lowercase font-mono">{tag.name}</span>
                                         </div>
                                         {general.showNotesCountInFolder && (
-                                            <span className="text-[9px] font-bold opacity-40 group-hover:opacity-70 transition-opacity ml-auto tabular-nums">
+                                            <span className="text-[9px] font-bold opacity-40 group-hover:opacity-70 transition-opacity float-end tabular-nums">
                                                 {tagCounts[tag.id] || 0}
                                             </span>
                                         )}

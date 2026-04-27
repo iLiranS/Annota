@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { useSettingsStore } from "@annota/core";
 import { NotebookTabs } from "lucide-react";
 import { Ionicons } from "../../ui/ionicons";
 
@@ -13,14 +14,18 @@ interface SidebarTabsProps {
 }
 
 export function SidebarTabs({ activeTab, setActiveTab, colors }: SidebarTabsProps) {
+    const { general } = useSettingsStore();
+    const isRtl = general.appDirection === 'rtl';
+
     const tabs: { id: SidebarTab; icon: React.ReactNode; label: string }[] = [
-        { id: 'notes', icon: <NotebookTabs size={16} />, label: 'Notes' },
         { id: 'folders', icon: <Ionicons name="folder-outline" size={16} />, label: 'Folders' },
+        { id: 'notes', icon: <NotebookTabs size={16} />, label: 'Notes' },
         { id: 'tags', icon: <Ionicons name="pricetag-outline" size={16} />, label: 'Tags' },
         { id: 'search', icon: <Ionicons name="search-outline" size={16} />, label: 'Search' },
     ];
 
     const activeIndex = tabs.findIndex(t => t.id === activeTab);
+    const displayIndex = isRtl ? tabs.length - 1 - activeIndex : activeIndex;
 
     return (
         <div
@@ -31,7 +36,7 @@ export function SidebarTabs({ activeTab, setActiveTab, colors }: SidebarTabsProp
             <div
                 className="absolute left-1 top-1 h-8 w-8 rounded-lg bg-background shadow-sm border border-border/40 transition-all duration-400 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
                 style={{
-                    transform: `translateX(${activeIndex * (32 + 4)}px)`,
+                    transform: `translateX(${displayIndex * (32 + 4)}px)`,
                 }}
             />
 

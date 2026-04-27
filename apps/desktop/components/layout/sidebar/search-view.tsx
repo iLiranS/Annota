@@ -2,7 +2,7 @@ import { Input } from "@/components/ui/input";
 import { SidebarMenu, SidebarMenuItem } from "@/components/ui/sidebar";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { cn } from "@/lib/utils";
-import { useNotesStore, useSearchStore } from "@annota/core";
+import { useNotesStore, useSearchStore, useSettingsStore } from "@annota/core";
 import { useMemo } from "react";
 import { FolderListItem } from "../../notes/folder-list-item";
 import { NoteListItem } from "../../notes/note-list-item";
@@ -29,6 +29,7 @@ export function SearchView({
 }: SearchViewProps) {
     const { colors } = useAppTheme();
     const { getFolderById } = useNotesStore();
+    const { general } = useSettingsStore();
     const {
         searchQuery,
         isSearching,
@@ -64,7 +65,10 @@ export function SearchView({
     };
 
     return (
-        <div className="flex flex-col flex-1 min-h-0 animate-content-from-left">
+        <div className={cn(
+            "flex flex-col flex-1 min-h-0",
+            general.appDirection === 'rtl' ? "animate-content-from-right" : "animate-content-from-left"
+        )}>
             <div className="px-3 py-2 sticky top-0  z-10">
                 <div className="relative group">
                     <Ionicons

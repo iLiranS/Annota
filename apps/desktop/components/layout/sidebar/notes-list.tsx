@@ -120,7 +120,7 @@ export function NotesList({
                     </div>
                 )}
 
-                <div className="flex-1 overflow-y-auto premium-scrollbar px-1 mt-0.5 ">
+                <div className="flex-1 overflow-y-auto premium-scrollbar  mt-0.5 ">
                     <SidebarMenu data-tauri-drag-region className="gap-0.5 min-h-full">
                         {notes.length === 0 ? (
                             <div className="px-4 py-8 text-center">

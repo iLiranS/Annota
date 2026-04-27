@@ -25,6 +25,7 @@ interface SidebarHeaderSectionProps {
     isRoot?: boolean;
     selectionMode?: boolean;
     setSelectionMode?: (mode: boolean) => void;
+    dir: "ltr" | "rtl"
 }
 
 export function SidebarHeaderSection({
@@ -44,14 +45,20 @@ export function SidebarHeaderSection({
     isRoot,
     selectionMode,
     setSelectionMode,
+    dir,
 }: SidebarHeaderSectionProps) {
 
 
     return (
         <SidebarHeader
-            style={{ backgroundColor: color + "20" }}
-            className="h-14  py-0 justify-center border-b border-border/10"
-
+            style={{
+                backgroundColor: color + "30",
+            }}
+            className={cn(
+                "py-2 justify-center rounded-lg shadow",
+                dir === "rtl" && "animate-content-from-right",
+                dir === "ltr" && "animate-content-from-left"
+            )}
         >
             <div className="flex items-center justify-between gap-1 w-full">
                 <div data-tauri-drag-region
