@@ -90,6 +90,8 @@ export interface TipTapEditorProps {
         text: string;
     };
     isStandalone?: boolean;
+    /** Editor direction override */
+    direction?: 'ltr' | 'rtl' | 'auto';
 }
 
 export interface EditorState {

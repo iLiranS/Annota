@@ -5,7 +5,8 @@ import { Sidebar, SidebarContent, useSidebar } from "@/components/ui/sidebar";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useCreateNote } from "@/hooks/use-create-note";
 import { useSmartNavigate } from "@/hooks/use-smart-navigate";
-import { DAILY_NOTES_FOLDER_ID, TRASH_FOLDER_ID, getSortTypeLabel, sortNotes, useNavigationStore, useNotesStore, useSearchStore, useSettingsStore, useSyncStore, useUserStore, type Folder, type SortType } from "@annota/core";
+import { DAILY_NOTES_FOLDER_ID, TRASH_FOLDER_ID, getSortTypeLabel, sortNotes, useNavigationStore, useNotesStore, useSearchStore, useSettingsStore, useSyncStore, useUserStore, type Folder, type SidebarTab, type SortType } from "@annota/core";
+
 
 // Modular Components
 import { cn } from "@/lib/utils";
@@ -21,7 +22,8 @@ import { SidebarFooterSection } from "./sidebar/sidebar-footer";
 import { SidebarHeaderSection } from "./sidebar/sidebar-header";
 import { TagsList } from "./sidebar/tags-list";
 
-type SidebarTab = 'folders' | 'notes' | 'tags' | 'search';
+// type SidebarTab = 'folders' | 'notes' | 'tags' | 'search';
+
 
 const SORT_OPTIONS: SortType[] = [
     'UPDATED_LAST',
@@ -41,6 +43,9 @@ export function AppSidebar() {
     const quickAccessNoteId = useNavigationStore((s) => s.quickAccessNoteId);
     const setQuickAccessView = useNavigationStore((s) => s.setQuickAccessView);
     const clearQuickAccessView = useNavigationStore((s) => s.clearQuickAccessView);
+    const activeTab = useNavigationStore((s) => s.sidebarTab);
+    const setActiveTab = useNavigationStore((s) => s.setSidebarTab);
+
     const {
         notes,
         tags,
@@ -93,10 +98,16 @@ export function AppSidebar() {
     const currentSortType = getSortType(currentFolderId ?? null);
 
     const [retryCooldown, setRetryCooldown] = useState(false);
-    const [activeTab, setActiveTab] = useState<SidebarTab>(() => {
+
+
+    useEffect(() => {
         const saved = localStorage.getItem("sidebar_active_tab");
-        return (saved as SidebarTab) || "notes";
-    });
+        if (saved) {
+            setActiveTab(saved as SidebarTab);
+        }
+
+    }, [setActiveTab]);
+
 
     const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);

@@ -95,7 +95,7 @@ export function FolderListItemContent({ folder, isActive, searchQuery, hideCount
                     isActive={isActive}
                     className="group-hover/folder:bg-background/50 group-data-[drag-over=true]/item:bg-emerald-500/20 group-data-[drag-over=true]/item:text-emerald-600"
                 />
-                <span className="truncate font-medium">
+                <span className="truncate font-medium" style={folder.id === 'root' ? { color: 'var(--accent-full)' } : undefined}>
                     <Highlight text={folder.name} query={searchQuery} />
                 </span>
             </div>

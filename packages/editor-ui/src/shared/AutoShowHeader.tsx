@@ -15,23 +15,16 @@ export const AutoShowHeader: React.FC<AutoShowHeaderProps> = ({ children, scroll
 
         const handleScroll = () => {
             const currentScrollY = container.scrollTop;
-
-            // Hide on scroll down, show on scroll up
-            if (currentScrollY <= 50) {
-                // Always show near top
+            
+            if (currentScrollY <= 20) {
                 setVisible(true);
-            } else if (Math.abs(currentScrollY - lastScrollY.current) < 10) {
-                // Ignore small scroll jitters
-                return;
-            } else if (currentScrollY > lastScrollY.current) {
-                // Scrolling down
-                setVisible(false);
             } else {
-                // Scrolling up
-                setVisible(true);
-            }
+                const delta = currentScrollY - lastScrollY.current;
+                if (Math.abs(delta) < 10) return;
 
-            lastScrollY.current = currentScrollY;
+                setVisible(delta < 0); // Show when scrolling up
+                lastScrollY.current = currentScrollY;
+            }
         };
 
         container.addEventListener('scroll', handleScroll, { passive: true });
@@ -46,15 +39,20 @@ export const AutoShowHeader: React.FC<AutoShowHeaderProps> = ({ children, scroll
                 top: 0,
                 width: '100%',
                 height: 0,
+                zIndex: 50,
                 overflow: 'visible',
-                zIndex: 30,
-                transition: 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.5s ease',
-                transform: visible ? 'translateY(0)' : 'translateY(-80px)',
-                opacity: visible ? 1 : 0,
                 pointerEvents: 'none',
             }}
         >
-            <div style={{ pointerEvents: 'auto' }}>
+            <div
+                style={{
+                    width: '100%',
+                    transition: 'all 0.3s ease-in-out',
+                    transform: visible ? 'translateY(0)' : 'translateY(-20px)',
+                    opacity: visible ? 1 : 0,
+                    pointerEvents: visible ? 'auto' : 'none',
+                }}
+            >
                 {children}
             </div>
         </div>

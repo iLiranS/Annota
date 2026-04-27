@@ -665,6 +665,7 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
                             editable={!note.isDeleted}
                             noteId={noteId}
                             isStandalone={isStandalone}
+                            direction={direction}
                             contentPaddingTop={0}
                             placeholder="Start typing..."
                             renderStaticHeader={() => (

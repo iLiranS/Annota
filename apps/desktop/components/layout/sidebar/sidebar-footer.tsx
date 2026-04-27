@@ -3,11 +3,12 @@ import { SidebarFooter } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { Ionicons } from "../../ui/ionicons";
 
+import { type SidebarTab } from "@annota/core";
+
 import { SidebarTabs } from "./sidebar-tabs";
 
-type SidebarTab = 'folders' | 'notes' | 'tags' | 'search';
-
 interface SidebarFooterSectionProps {
+
     showOfflineBanner: boolean;
     retryCooldown: boolean;
     onRetry: () => void;

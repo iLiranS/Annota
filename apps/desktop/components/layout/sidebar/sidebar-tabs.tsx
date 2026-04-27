@@ -1,9 +1,9 @@
 import { cn } from "@/lib/utils";
-import { useSettingsStore } from "@annota/core";
+import { useSettingsStore, type SidebarTab } from "@annota/core";
 import { NotebookTabs } from "lucide-react";
 import { Ionicons } from "../../ui/ionicons";
 
-type SidebarTab = 'folders' | 'notes' | 'tags' | 'search';
+
 
 interface SidebarTabsProps {
     activeTab: SidebarTab;

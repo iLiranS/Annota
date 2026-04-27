@@ -51,10 +51,12 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
         isDark: propIsDark,
         colors: propColors,
         isStandalone,
+        direction: propDirection,
     }, ref) => {
         const colors = propColors || { primary: '#007AFF', background: '#FFFFFF', text: '#000000' };
         const dark = propIsDark ?? false;
-        const { editor: editorSettings } = useSettingsStore();
+        const editorSettings = useSettingsStore(s => s.editor);
+        const direction = propDirection || editorSettings.direction;
         const [editorState, setEditorState] = useState<EditorState>(initialEditorState);
         const [activePopup, setActivePopup] = useState<PopupType>(null);
         const [currentLatex, setCurrentLatex] = useState<string | null>(null);
@@ -96,7 +98,7 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                     NoteFileService.resolveFileSources(data.imageIds).then((fileMap) => {
                         if (Object.keys(fileMap).length > 0) {
                             isHydrating.current = true;
-                            (editor.commands as any).resolveImages({ imageMap: fileMap });
+                            (editorRef.current.commands as any).resolveImages({ imageMap: fileMap });
                             isHydrating.current = false;
                         }
                     });
@@ -124,7 +126,7 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
 
         const editorProps = useMemo(() => {
             const baseProps = getEditorProps({
-                direction: editorSettings.direction,
+                direction: direction,
                 onContextMenu: (view, event) => {
                     const linkElement = event.composedPath().find((el: any) => el.nodeName === 'A') as HTMLAnchorElement | undefined;
 
@@ -252,14 +254,15 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                 handleScrollToSelection: () => {
                     // If we are in RTL, completely kill ProseMirror's auto-scroll.
                     // This stops the desktop micro-jumps entirely.
-                    if (editorSettings.direction === 'rtl') {
+                    if (direction === 'rtl') {
                         return true;
                     }
                     return false;
                 }
             };
             // eslint-disable-next-line react-hooks/exhaustive-deps
-        }, [editorSettings.direction]); // callbacks are accessed via refs, no need to re-create
+        }, [direction]); // callbacks are accessed via refs, no need to re-create
+
 
         const editor = useEditor({
             editable,
@@ -314,6 +317,15 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                 setEditorState(getEditorState(editor) as unknown as EditorState);
             },
         }, [noteId]);
+
+        // Update editor options when they change
+        useEffect(() => {
+            if (editor && !editor.isDestroyed) {
+                editor.setOptions({
+                    editorProps: editorProps as any,
+                });
+            }
+        }, [editor, editorProps]);
 
         // Theme sync logic
         useEffect(() => {
@@ -642,7 +654,7 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
         }, [noteId, handleCommand]);
 
         return (
-            <div dir={editorSettings.direction} ref={containerRef} className="editor-dom-container" style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
+            <div dir={direction} ref={containerRef} className="editor-dom-container" style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
                 <style>{`
                     .editor-dom-container ::selection {
                         background-color: var(--selection-bg, rgba(0, 122, 255, 0.2)) !important;
@@ -715,7 +727,7 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                         setActivePopup('math');
                     }
                 })}
-                <div className="editor-scroller" ref={scrollerRef} dir={editorSettings.direction} style={{
+                <div className="editor-scroller" ref={scrollerRef} dir={direction} style={{
                     flex: 1,
                     overflowY: 'auto',
                     padding: isStandalone ? '0 12px' : '0 24px',

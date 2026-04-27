@@ -1,13 +1,24 @@
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { useNotesStore, type Tag } from '@annota/core';
+import { useNavigationStore, useNotesStore, type Tag } from '@annota/core';
 import { Tag as TagIcon, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export function NoteTags({ noteId, className, onTagClick }: { noteId: string, className?: string, onTagClick?: (tagId: string) => void }) {
     const { tags, notes, removeTagFromNote } = useNotesStore();
+    const setSidebarTab = useNavigationStore(s => s.setSidebarTab);
     const navigate = useNavigate();
     const note = notes.find(n => n.id === noteId);
+
+    const handleTagClick = (tagId: string) => {
+        setSidebarTab('notes');
+        if (onTagClick) {
+            onTagClick(tagId);
+        } else {
+            navigate(`/notes?tagId=${tagId}`);
+        }
+    };
+
 
     if (!note || !note.tags) return null;
 
@@ -31,8 +42,9 @@ export function NoteTags({ noteId, className, onTagClick }: { noteId: string, cl
             {appliedTags.map(tag => (
                 <Badge
                     key={tag.id}
-                    onClick={() => onTagClick ? onTagClick(tag.id) : navigate(`/notes?tagId=${tag.id}`)}
+                    onClick={() => handleTagClick(tag.id)}
                     variant="outline"
+
                     className="flex cursor-pointer hover:scale-105 items-center gap-1.5 px-2 py-0.5 bg-opacity-10 dark:bg-opacity-10 backdrop-blur-md border-opacity-50 transition-all hover:bg-opacity-20 text-xs font-semibold rounded-md shadow-sm"
                     style={{
                         backgroundColor: `${tag.color}1A`,
