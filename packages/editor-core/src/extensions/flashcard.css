@@ -3,7 +3,7 @@
    ======================================== */
 
 .flashcard-block {
-    margin: 1.5em 0;
+    margin: var(--editor-paragraph-spacing) 0;
     border: 1.5px solid var(--border-color);
     border-radius: 12px;
     background: var(--bg-color);
@@ -96,17 +96,18 @@
 .flashcard-card-container {
     padding: 0;
     cursor: pointer;
-    perspective: 1000px;
     height: 200px;
     display: flex;
     flex-direction: column;
+    position: relative;
 }
+
 
 /* Slide Animations */
 @keyframes flashcardSlideInRight {
     from {
-        transform: translateX(20px);
-        opacity: 0.6;
+        transform: translateX(14px);
+        opacity: 0.72;
     }
 
     to {
@@ -117,8 +118,8 @@
 
 @keyframes flashcardSlideInLeft {
     from {
-        transform: translateX(-20px);
-        opacity: 0.6;
+        transform: translateX(-14px);
+        opacity: 0.72;
     }
 
     to {
@@ -127,12 +128,12 @@
     }
 }
 
-.slide-in-right {
-    animation: flashcardSlideInRight 0.3s cubic-bezier(0.2, 0, 0, 1);
+.slide-in-right .flashcard-card-inner {
+    animation: flashcardSlideInRight 0.22s cubic-bezier(0.22, 0.8, 0.24, 1);
 }
 
-.slide-in-left {
-    animation: flashcardSlideInLeft 0.3s cubic-bezier(0.2, 0, 0, 1);
+.slide-in-left .flashcard-card-inner {
+    animation: flashcardSlideInLeft 0.22s cubic-bezier(0.22, 0.8, 0.24, 1);
 }
 
 .flashcard-card-inner {
@@ -147,14 +148,14 @@
 
 .flashcard-card-inner.is-flipped .flashcard-card-front {
     opacity: 0;
-    transform: scale(0.98);
+    transform: translateY(-4px);
     pointer-events: none;
     z-index: 1;
 }
 
 .flashcard-card-inner.is-flipped .flashcard-card-back {
     opacity: 1;
-    transform: scale(1);
+    transform: translateY(0);
     pointer-events: auto;
     z-index: 2;
 }
@@ -165,7 +166,7 @@
     left: 0;
     width: 100%;
     height: 100%;
-    transition: opacity 0.25s ease, transform 0.25s ease;
+    transition: opacity 0.18s ease, transform 0.18s ease;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -192,7 +193,8 @@
     font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    opacity: 0.4;
+    color: var(--accent-full, var(--accent-color));
+    opacity: 0.7;
     user-select: none;
     pointer-events: none;
     margin-bottom: 12px;
@@ -212,18 +214,16 @@
 
 .flashcard-card-front {
     background: var(--bg-color, #fff);
-    border-top: 3px solid color-mix(in srgb, var(--accent-color), transparent 40%);
     font-weight: 500;
     opacity: 1;
-    transform: scale(1);
+    transform: translateY(0);
     z-index: 2;
 }
 
 .flashcard-card-back {
     background: var(--bg-color, #fff);
-    border-top: 3px solid color-mix(in srgb, var(--border-color), transparent 20%);
     opacity: 0;
-    transform: scale(0.98);
+    transform: translateY(4px);
     pointer-events: none;
     z-index: 1;
 }
@@ -333,8 +333,8 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: var(--text-color);
-    opacity: 0.4;
+    color: var(--accent-full, var(--accent-color));
+    opacity: 0.6;
     user-select: none;
     margin-bottom: -4px;
 }

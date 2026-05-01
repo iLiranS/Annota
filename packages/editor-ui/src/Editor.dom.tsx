@@ -1,14 +1,17 @@
 import { useSettingsStore } from '@annota/core';
 import { NoteFileService } from '@annota/core/platform';
-import { dispatchEditorCommand, getEditorProps, getEditorState, getExtensions, resolveFontFamily } from '@annota/editor-core';
+import { dispatchEditorCommand, getEditorProps, getEditorState, getExtensions } from '@annota/editor-core';
 import '@annota/editor-core/styles.css';
 import { TextSelection } from '@tiptap/pm/state';
 import { EditorContent, useEditor } from '@tiptap/react';
 import 'highlight.js/styles/atom-one-dark.css';
 import 'katex/dist/katex.min.css';
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { useDesktopEditorSelection } from './hooks/useDesktopEditorSelection';
+import { useEditorThemeVariables } from './hooks/useEditorThemeVariables';
 import { useSharedEditorUI } from './hooks/useSharedEditorUI';
 import { AutoShowHeader } from './shared/AutoShowHeader';
+import { DESKTOP_SELECTION_STYLES } from './shared/desktopSelectionStyles';
 import { EditorState, initialEditorState, PopupType, TipTapEditorProps, TipTapEditorRef } from './shared/types';
 
 function extractImageIds(html: string): string[] {
@@ -53,7 +56,7 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
         isStandalone,
         direction: propDirection,
     }, ref) => {
-        const colors = propColors || { primary: '#007AFF', background: '#FFFFFF', text: '#000000' };
+        const colors = useMemo(() => propColors || { primary: '#007AFF', background: '#FFFFFF', text: '#000000' }, [propColors]);
         const dark = propIsDark ?? false;
         const editorSettings = useSettingsStore(s => s.editor);
         const direction = propDirection || editorSettings.direction;
@@ -260,7 +263,6 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                     return false;
                 }
             };
-            // eslint-disable-next-line react-hooks/exhaustive-deps
         }, [direction]); // callbacks are accessed via refs, no need to re-create
 
 
@@ -327,36 +329,9 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
             }
         }, [editor, editorProps]);
 
-        // Theme sync logic
-        useEffect(() => {
-            const root = containerRef.current;
-            if (!root) return;
-            const finalBg = dark ? 'transparent' : colors.background;
-            const finalTextColor = dark ? 'rgba(255, 255, 255, 0.85)' : colors.text;
-            root.style.setProperty('--bg-color', finalBg);
-            root.style.setProperty('--text-color', finalTextColor);
-            root.style.setProperty('--accent-color', colors.primary);
-            root.style.setProperty('--accent', colors.primary + "65");
-            root.style.setProperty('--accent-full', colors.primary);
-            root.style.setProperty('--editor-font-size', `${editorSettings.fontSize}px`);
-            root.style.setProperty('--editor-font-family', resolveFontFamily(editorSettings.fontFamily));
-            root.style.setProperty('--editor-line-height', `${editorSettings.lineSpacing}`);
-            root.style.setProperty('--editor-paragraph-spacing', `${editorSettings.paragraphSpacing}px`);
-            root.style.setProperty('--editor-max-width', editorSettings.noteWidth > 0 ? `${editorSettings.noteWidth}px` : '100%');
-            root.style.setProperty('--placeholder-color', dark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)');
-            root.style.setProperty('--code-bg', dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)');
-            root.style.setProperty('--code-block-bg', dark ? '#1E1E1E' : '#F5F5F5');
-            root.style.setProperty('--border-color', dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)');
+        useDesktopEditorSelection({ editor, containerRef });
 
-            // Refined selection background (approx 25% opacity)
-            let selectionColor = colors.primary;
-            if (selectionColor.startsWith('#')) {
-                selectionColor = selectionColor + "40"; // 25% opacity in hex
-            } else {
-                selectionColor = `rgba(var(--accent-color), 0.25)`;
-            }
-            root.style.setProperty('--selection-bg', selectionColor);
-        }, [colors, dark, editorSettings]);
+        useEditorThemeVariables({ colors, dark, editorSettings, rootRef: containerRef });
 
         // Capture-phase contextmenu handler for links.
         // Attaches on `document` in capture phase to guarantee it fires before
@@ -665,6 +640,7 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                         background-color: var(--selection-bg, rgba(0, 122, 255, 0.2)) !important;
                         color: inherit !important;
                     }
+                    ${DESKTOP_SELECTION_STYLES}
                     .ProseMirror[dir="rtl"] {
                         unicode-bidi: bidi-override;
                         unicode-bidi: isolate; 

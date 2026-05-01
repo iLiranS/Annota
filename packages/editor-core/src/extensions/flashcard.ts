@@ -16,6 +16,7 @@ declare module '@tiptap/core' {
 }
 
 const DEFAULT_CARDS: FlashcardData[] = [{ front: 'Front', back: 'Back' }];
+const DEFAULT_TITLE = 'Flashcards';
 
 const EDIT_SVG = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>`;
 const ADD_SVG = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
@@ -26,12 +27,37 @@ const ARROW_UP_SVG = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none
 const ARROW_DOWN_SVG = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>`;
 const DONE_SVG = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>`;
 
-function parseCards(value: any): FlashcardData[] {
-    if (Array.isArray(value)) return value;
+function normalizeCard(value: unknown): FlashcardData | null {
+    if (Array.isArray(value)) {
+        return {
+            front: typeof value[0] === 'string' ? value[0] : String(value[0] ?? ''),
+            back: typeof value[1] === 'string' ? value[1] : String(value[1] ?? ''),
+        };
+    }
+
+    if (value && typeof value === 'object') {
+        const card = value as Record<string, unknown>;
+        return {
+            front: typeof card.front === 'string' ? card.front : String(card.front ?? ''),
+            back: typeof card.back === 'string' ? card.back : String(card.back ?? ''),
+        };
+    }
+
+    return null;
+}
+
+function parseCards(value: unknown): FlashcardData[] {
+    if (Array.isArray(value)) {
+        return value.map(normalizeCard).filter((card): card is FlashcardData => card !== null);
+    }
     if (typeof value === 'string') {
-        try { return JSON.parse(value); } catch { return DEFAULT_CARDS; }
+        try { return parseCards(JSON.parse(value)); } catch { return DEFAULT_CARDS; }
     }
     return DEFAULT_CARDS;
+}
+
+function serializeCards(cards: FlashcardData[]): string {
+    return JSON.stringify(cards.map(({ front, back }) => [front, back]));
 }
 
 export const FlashcardBlock = Node.create({
@@ -49,25 +75,32 @@ export const FlashcardBlock = Node.create({
         return {
             id: {
                 default: null,
-                parseHTML: element => element.getAttribute('data-id'),
+                parseHTML: element => element.getAttribute('id') || element.getAttribute('data-id'),
                 renderHTML: attributes => {
                     if (!attributes.id) return {};
-                    return { 'data-id': attributes.id };
+                    return { id: attributes.id };
                 },
             },
             title: {
-                default: 'Flashcards',
-                parseHTML: element => element.getAttribute('data-title') || 'Flashcards',
-                renderHTML: attributes => ({ 'data-title': attributes.title }),
+                default: DEFAULT_TITLE,
+                parseHTML: element => {
+                    if (element.hasAttribute('data-t')) return element.getAttribute('data-t') ?? '';
+                    if (element.hasAttribute('data-title')) return element.getAttribute('data-title') ?? '';
+                    return DEFAULT_TITLE;
+                },
+                renderHTML: attributes => {
+                    if (attributes.title === DEFAULT_TITLE) return {};
+                    return { 'data-t': attributes.title ?? '' };
+                },
             },
             cards: {
                 default: DEFAULT_CARDS,
                 parseHTML: element => {
-                    const raw = element.getAttribute('data-cards');
+                    const raw = element.getAttribute('data-c') || element.getAttribute('data-cards');
                     return raw ? parseCards(raw) : DEFAULT_CARDS;
                 },
                 renderHTML: attributes => ({
-                    'data-cards': JSON.stringify(attributes.cards),
+                    'data-c': serializeCards(parseCards(attributes.cards)),
                 }),
             },
         };
@@ -80,7 +113,7 @@ export const FlashcardBlock = Node.create({
                     .insertContent({
                         type: this.name,
                         attrs: {
-                            title: options.title || 'Flashcards',
+                            title: options.title ?? DEFAULT_TITLE,
                             cards: options.cards || DEFAULT_CARDS,
                         },
                     })
@@ -90,16 +123,16 @@ export const FlashcardBlock = Node.create({
     },
 
     parseHTML() {
-        return [{ tag: 'div[data-type="flashcardBlock"]' }];
+        return [
+            { tag: 'div[data-fc]' },
+            { tag: 'div[data-type="flashcardBlock"]' },
+        ];
     },
 
-    renderHTML({ HTMLAttributes, node }) {
-        const cards = (node.attrs.cards || []) as FlashcardData[];
-        const content = cards.map(c => `Q: ${c.front}\nA: ${c.back}`).join('\n\n');
+    renderHTML({ HTMLAttributes }) {
         return [
             'div',
-            mergeAttributes(HTMLAttributes, { 'data-type': 'flashcardBlock' }),
-            ['pre', { style: 'white-space: pre-wrap; display: none;' }, content]
+            mergeAttributes(HTMLAttributes, { 'data-fc': '' }),
         ];
     },
 
@@ -131,7 +164,7 @@ export const FlashcardBlock = Node.create({
         return ({ node, getPos, editor }) => {
             // --- State ---
             let cards = parseCards(node.attrs.cards);
-            let currentTitle = node.attrs.title ?? 'Flashcards';
+            let currentTitle = node.attrs.title ?? DEFAULT_TITLE;
             let currentIndex = 0;
             let isEditing = false;
             let isFlipped = false;
@@ -383,6 +416,7 @@ export const FlashcardBlock = Node.create({
                     editPane.appendChild(editHeader);
 
                     const frontLabel = document.createElement('label');
+                    frontLabel.className = 'flashcard-edit-label';
                     frontLabel.textContent = 'Front (Question)';
                     const frontInput = document.createElement('textarea');
                     frontInput.className = 'flashcard-edit-input';
@@ -391,6 +425,7 @@ export const FlashcardBlock = Node.create({
                     frontInput.oninput = () => { card.front = frontInput.value; updateNode(); };
 
                     const backLabel = document.createElement('label');
+                    backLabel.className = 'flashcard-edit-label';
                     backLabel.textContent = 'Back (Answer)';
                     const backInput = document.createElement('textarea');
                     backInput.className = 'flashcard-edit-input';
@@ -489,13 +524,23 @@ export const FlashcardBlock = Node.create({
                 update: (newNode) => {
                     if (newNode.type.name !== 'flashcardBlock') return false;
                     dom.dataset.id = newNode.attrs.id;
+                    const activeElement = document.activeElement as HTMLElement | null;
+                    const isEditingCardInput = isEditing && !!activeElement && editPane.contains(activeElement);
+
+                    node = newNode;
+
+                    if (isEditingCardInput) {
+                        return true;
+                    }
+
                     const newCards = parseCards(newNode.attrs.cards);
-                    const newTitle = newNode.attrs.title ?? 'Flashcards';
+                    const newTitle = newNode.attrs.title ?? DEFAULT_TITLE;
 
                     cards = newCards;
                     currentTitle = newTitle;
-                    titleInput.value = newTitle;
-                    node = newNode;
+                    if (titleInput.value !== newTitle) {
+                        titleInput.value = newTitle;
+                    }
 
                     if (currentIndex >= cards.length) {
                         currentIndex = Math.max(0, cards.length - 1);

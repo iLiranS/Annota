@@ -50,9 +50,6 @@
     z-index: 10;
 }
 
-.quote-wrapper:hover .quote-menu-btn {
-    opacity: 0.8;
-}
 
 .quote-menu-btn:hover {
     background-color: rgba(128, 128, 128, 0.1);
