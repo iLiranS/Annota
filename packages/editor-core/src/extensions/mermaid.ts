@@ -1,3 +1,4 @@
+import './mermaid.css';
 import { mergeAttributes, Node } from '@tiptap/core';
 import { Plugin } from '@tiptap/pm/state';
 import mermaid from 'mermaid';
@@ -34,6 +35,9 @@ export const Mermaid = Node.create({
             },
             code: {
                 default: 'graph TD;\n  A-->B;\n  A-->C;\n  B-->D;\n  C-->D;',
+            },
+            zoom: {
+                default: 1,
             },
         };
     },
@@ -176,7 +180,7 @@ export const Mermaid = Node.create({
             let isEditing = false;
             let currentRenderId = 0;
             let themeOverride: boolean | null = null;
-            let currentZoom = 1;
+            let currentZoom = node.attrs.zoom ?? 1;
             const ZOOM_STEP = 0.15;
             const MIN_ZOOM = 0.3;
             const MAX_ZOOM = 3;
@@ -197,11 +201,26 @@ export const Mermaid = Node.create({
                 zoomResetBtn.textContent = `${Math.round(currentZoom * 100)}%`;
             };
 
+            const saveZoom = () => {
+                if (typeof getPos === 'function') {
+                    const pos = getPos();
+                    if (typeof pos === 'number') {
+                        // Use tr.setNodeMarkup so it doesn't trigger a full doc re-render unnecessarily,
+                        // but it will trigger nodeView.update().
+                        editor.view.dispatch(editor.view.state.tr.setNodeMarkup(pos, undefined, {
+                            ...node.attrs,
+                            zoom: currentZoom
+                        }));
+                    }
+                }
+            };
+
             zoomInBtn.onclick = (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 currentZoom = Math.min(MAX_ZOOM, currentZoom + ZOOM_STEP);
                 applyZoom();
+                saveZoom();
             };
 
             zoomOutBtn.onclick = (e) => {
@@ -209,21 +228,15 @@ export const Mermaid = Node.create({
                 e.stopPropagation();
                 currentZoom = Math.max(MIN_ZOOM, currentZoom - ZOOM_STEP);
                 applyZoom();
+                saveZoom();
             };
 
             zoomResetBtn.onclick = (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 currentZoom = 1;
-                // Clear explicit sizing so it returns to natural layout
-                const svg = preview.querySelector('svg');
-                if (svg) {
-                    svg.style.width = '';
-                    svg.style.height = '';
-                    svg.style.minWidth = '';
-                    svg.style.maxWidth = '';
-                }
-                zoomResetBtn.textContent = '100%';
+                applyZoom();
+                saveZoom();
             };
 
             // Prevent these zoom buttons from triggering ProseMirror interactions
@@ -379,10 +392,21 @@ export const Mermaid = Node.create({
                         startOnLoad: false,
                         theme: isDark ? 'dark' : 'default',
                         securityLevel: 'loose',
+                        logLevel: 'fatal',
                     });
 
                     // Generate a unique ID for the mermaid div
                     const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
+
+                    // Try to parse first to avoid Mermaid's global error overlay
+                    try {
+                        await mermaid.parse(codeToRender, { suppressErrors: true });
+                    } catch (parseError) {
+                        if (myRenderId === currentRenderId) {
+                            preview.innerHTML = '<div class="mermaid-error">Syntax Error - Click to edit</div>';
+                        }
+                        return;
+                    }
 
                     // Render (id, text, container)
                     const { svg } = await mermaid.render(id, codeToRender);
@@ -390,12 +414,13 @@ export const Mermaid = Node.create({
                     // Only update if no other render started after this one
                     if (myRenderId === currentRenderId) {
                         preview.innerHTML = applyInlineFallbackStyles(svg, isDark);
+                        // Ensure zoom is applied to the new SVG
+                        applyZoom();
                     }
                 } catch (error) {
-                    console.error("Mermaid syntax error:", error);
-                    // Standard mermaid error behavior: it might have already rendered an error SVG
+                    console.warn("Mermaid render error:", error);
                     if (myRenderId === currentRenderId) {
-                        preview.innerHTML = '<div class="mermaid-error">Syntax Error - Click to edit</div>';
+                        preview.innerHTML = '<div class="mermaid-error">Render Error - Click to edit</div>';
                     }
                 }
             };
@@ -422,8 +447,8 @@ export const Mermaid = Node.create({
                 zoomToolbar.style.display = '';
                 editor_div.style.display = 'none';
 
-                // Reset zoom on re-render
-                currentZoom = 1;
+                // Don't reset zoom on re-render, keep the user's preference
+                // currentZoom = 1;
                 const svg = preview.querySelector('svg');
                 if (svg) {
                     svg.style.width = '';
@@ -431,10 +456,16 @@ export const Mermaid = Node.create({
                     svg.style.minWidth = '';
                     svg.style.maxWidth = '';
                 }
-                zoomResetBtn.textContent = '100%';
+                // zoomResetBtn.textContent = '100%';
 
                 if (typeof getPos === 'function') {
-                    editor.commands.updateAttributes('mermaid', { code: newCode });
+                    const pos = getPos();
+                    if (typeof pos === 'number') {
+                        editor.view.dispatch(editor.view.state.tr.setNodeMarkup(pos, undefined, {
+                            ...node.attrs,
+                            code: newCode
+                        }));
+                    }
                 } else {
                     render();
                 }

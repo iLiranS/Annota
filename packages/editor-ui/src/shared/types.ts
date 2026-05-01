@@ -257,6 +257,7 @@ export type EditorCommand =
     | 'openLinkModal'
     | 'openYoutubeModal'
     | 'insertMermaid'
+    | 'insertFlashcardBlock'
 
 // ============================================================================
 // Popup Types

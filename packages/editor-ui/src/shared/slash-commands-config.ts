@@ -53,6 +53,7 @@ export const SHARED_SLASH_COMMANDS: SharedSlashCommand[] = [
             { id: 'codeblock', title: 'Code Block', iconKey: 'codeblock', action: 'toggleCodeBlock' },
             { id: 'code', title: 'Inline Code', iconKey: 'code', action: 'toggleCode' },
             { id: 'details', title: 'Details', iconKey: 'details', action: 'toggleDetails' },
+            { id: 'flashcard', title: 'Flashcards', iconKey: 'flashcard', action: 'insertFlashcardBlock' },
         ]
     },
     {

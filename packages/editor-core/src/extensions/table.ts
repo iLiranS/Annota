@@ -1,3 +1,4 @@
+import './table.css';
 import type { TableOptions } from '@tiptap/extension-table';
 import { Table } from '@tiptap/extension-table';
 import { TableCell } from '@tiptap/extension-table-cell';

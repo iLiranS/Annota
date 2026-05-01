@@ -1,4 +1,5 @@
 import Youtube from '@tiptap/extension-youtube';
+import './custom-youtube.css';
 
 function extractVideoId(urlOrId: string) {
     if (!urlOrId) return null;

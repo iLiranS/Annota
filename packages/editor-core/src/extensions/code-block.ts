@@ -1,6 +1,7 @@
 import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight';
 import { common, createLowlight } from 'lowlight';
 import { sendMessage } from '../bridge';
+import './code-block.css';
 
 // Initialize lowlight
 export const lowlight = createLowlight(common);

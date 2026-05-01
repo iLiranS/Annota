@@ -73,7 +73,7 @@ const DEFAULT_GENERAL_SETTINGS: GeneralSettings = {
     hapticFeedback: true,
     appDirection: 'ltr',
     isAiSidebarOpen: false,
-    aiSidebarMode: 'floating',
+    aiSidebarMode: 'pinned',
     isAiSidebarSticky: true,
     showNotesCountInFolder: true,
 };

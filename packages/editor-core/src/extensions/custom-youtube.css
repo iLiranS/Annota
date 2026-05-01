@@ -1,0 +1,19 @@
+.ProseMirror div[data-youtube-video] {
+    margin: var(--editor-paragraph-spacing) 0;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.yt-embed-link:hover .yt-play-button {
+    transform: translate(-50%, -50%) scale(1.15) !important;
+    border-color: rgba(255, 255, 255, 0.6) !important;
+}
+
+.ProseMirror iframe {
+    width: 100% !important;
+    height: auto !important;
+    aspect-ratio: 16 / 9;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}

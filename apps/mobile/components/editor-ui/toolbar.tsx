@@ -229,6 +229,11 @@ export function EditorToolbar({
                             onPress={() => onCommand('insertMermaid')}
                         />
 
+                        <ToolbarButton
+                            icon="style"
+                            onPress={() => onCommand('insertFlashcardBlock')}
+                        />
+
                         <View style={styles.separator} />
 
                         {/* Undo/Redo */}

@@ -1,3 +1,4 @@
+import './quote.css';
 import { Blockquote } from '@tiptap/extension-blockquote';
 import { mergeAttributes } from '@tiptap/core';
 import { createBlockMenuButton } from './block-menu-button';

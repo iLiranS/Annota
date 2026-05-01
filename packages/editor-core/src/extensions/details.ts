@@ -1,3 +1,4 @@
+import './details.css';
 import { mergeAttributes } from '@tiptap/core';
 import { Details as TiptapDetails, DetailsContent as TiptapDetailsContent, DetailsSummary as TiptapDetailsSummary } from '@tiptap/extension-details';
 import { Slice } from '@tiptap/pm/model';

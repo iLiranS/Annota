@@ -134,7 +134,7 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
     }, [isStreaming, shouldAutoScroll]);
 
     // Auto-inject context of current note
-    const handleSendMessage = useCallback(async (content: string, mode: 'auto' | 'summary' = 'auto') => {
+    const handleSendMessage = useCallback(async (content: string, mode: 'auto' | 'summary' = 'auto', isRetry = false) => {
         let currentId = activeChatId;
 
         if (!currentId) {
@@ -157,6 +157,7 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
             overrideChatId: currentId,
             selectedFolderNotes: selectedFolderNotes.length > 0 ? selectedFolderNotes : undefined,
             mode,
+            isRetry,
         });
         setShouldAutoScroll(true);
     }, [location.pathname, originalSendMessage, activeChatId, selectedFolderNotes]);
@@ -169,7 +170,7 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
     const handleRetry = useCallback(() => {
         const lastUserMessage = [...messages].reverse().find(m => m.role === 'user');
         if (lastUserMessage) {
-            handleSendMessage(lastUserMessage.content);
+            handleSendMessage(lastUserMessage.content, 'auto', true);
         }
     }, [messages, handleSendMessage]);
 

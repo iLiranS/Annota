@@ -15,4 +15,8 @@ export * from './mermaid';
 export * from './reorder-list-item';
 export * from './quote';
 export * from './indentation';
+export * from './flashcard';
+
+import './task-list.css';
+import './math.css';
 

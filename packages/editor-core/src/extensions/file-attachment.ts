@@ -1,3 +1,4 @@
+import './file-attachment.css';
 import { Node, mergeAttributes, type NodeViewRenderer } from '@tiptap/core';
 import { NodeSelection } from '@tiptap/pm/state';
 import { sendMessage } from '../bridge';

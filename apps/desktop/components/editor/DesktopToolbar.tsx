@@ -22,9 +22,9 @@ import { MathPopover } from './toolbar/toolbar-math-popover';
 const DEFAULT_ORDER = [
     'heading', 'bold', 'italic', 'underline', 'strike', 'textColor', 'highlight',
     'bulletList', 'orderedList', 'taskList', 'outdent', 'indent', 'code', 'codeBlock',
-    'quote', 'table', 'math', 'link', 'details', 'mermaid', 'file', 'youtube'
+    'quote', 'table', 'math', 'link', 'details', 'mermaid', 'flashcard', 'file', 'youtube'
 ];
-const DEFAULT_HIDDEN = ['details', 'mermaid', 'file', 'youtube'];
+const DEFAULT_HIDDEN = ['details', 'mermaid', 'flashcard', 'file', 'youtube'];
 const STORAGE_KEY = 'annota-desktop-toolbar-order';
 const STORAGE_KEY_HIDDEN = 'annota-desktop-toolbar-hidden';
 
@@ -303,6 +303,12 @@ export function DesktopToolbar({
             label: 'Mermaid Diagram',
             render: <Button key="mermaid" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('insertMermaid')} style={activeStyle(false)}><EditorIcons.Mermaid className="w-5 h-5" /></Button>,
             dropdownRender: <DropdownMenuItem key="mermaid-dropdown" onClick={() => sendCommand('insertMermaid')} className="gap-2"><EditorIcons.Mermaid className="w-4 h-4" /> Mermaid Diagram</DropdownMenuItem>
+        },
+        {
+            id: 'flashcard',
+            label: 'Flashcards',
+            render: <Button key="flashcard" variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => sendCommand('insertFlashcardBlock')} style={activeStyle(false)}><EditorIcons.Flashcard className="w-5 h-5" /></Button>,
+            dropdownRender: <DropdownMenuItem key="flashcard-dropdown" onClick={() => sendCommand('insertFlashcardBlock')} className="gap-2"><EditorIcons.Flashcard className="w-4 h-4" /> Flashcards</DropdownMenuItem>
         },
         {
             id: 'file',

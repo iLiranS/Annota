@@ -1,0 +1,75 @@
+/* Task List */
+.ProseMirror ul[data-type="taskList"] {
+    list-style: none;
+    padding-inline-start: 0;
+    margin: 0;
+    margin-bottom: var(--editor-paragraph-spacing);
+}
+
+.ProseMirror ul[data-type="taskList"] li {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 0;
+    margin-bottom: var(--editor-list-item-spacing);
+}
+
+.ProseMirror ul[data-type="taskList"] li>label {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: calc(var(--editor-font-size) * var(--editor-line-height));
+    margin-top: calc(var(--editor-paragraph-spacing) * 0.5);
+    /* Better alignment with first line of text */
+}
+
+.ProseMirror ul[data-type="taskList"] li>label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    appearance: none;
+    -webkit-appearance: none;
+    border: 2px solid var(--placeholder-color);
+    border-radius: 4px;
+    background: transparent;
+    cursor: pointer;
+    position: relative;
+    display: block;
+}
+
+.ProseMirror ul[data-type="taskList"] li>label input[type="checkbox"]:checked {
+    background: var(--accent-color);
+    border-color: var(--accent-color);
+}
+
+.ProseMirror ul[data-type="taskList"] li>label input[type="checkbox"]:checked::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 48%;
+    width: 4px;
+    height: 8px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.ProseMirror ul[data-type="taskList"] li>div {
+    flex: 1;
+}
+
+.ProseMirror ul[data-type="taskList"] li[data-checked="true"]>div {
+    opacity: 0.5;
+    filter: saturate(0.4) brightness(0.95);
+}
+
+
+.ProseMirror ul[data-type="taskList"] li[data-checked="true"] li[data-checked="true"]>div {
+    opacity: 1;
+    filter: none;
+}
+
+.ProseMirror ul[data-type="taskList"] li[data-checked="true"]>div ::selection {
+    background-color: var(--accent-color);
+    color: white;
+}

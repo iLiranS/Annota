@@ -20,7 +20,7 @@
         "transparent": false,
         "decorations": true,
         "titleBarStyle": "Overlay",
-        "dragDropEnabled": false,
+        "dragDropEnabled": true,
         "additionalBrowserArgs": "--enable-features=OverlayScrollbar"
       }
     ],
@@ -40,9 +40,6 @@
     "macOS": {
       "bundleVersion": "17",
       "minimumSystemVersion": "12.0",
-      "files": {
-        "embedded.provisionprofile": "./embedded.provisionprofile"
-      },
       "entitlements": "./entitlements.mas.plist"
     },
     "active": true,

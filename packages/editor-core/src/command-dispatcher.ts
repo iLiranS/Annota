@@ -317,9 +317,15 @@ export function dispatchEditorCommand(editor: Editor, command: string, params: R
 
             let text = fragment.textBetween(0, fragment.size, ' ');
 
-            // Fallback for atom nodes with code (like mermaid)
-            if (isNodeSelection && !text.trim() && (editor.state.selection as NodeSelection).node.attrs.code) {
-                text = (editor.state.selection as NodeSelection).node.attrs.code;
+            // Fallback for atom nodes with code (like mermaid) or cards (flashcards)
+            if (isNodeSelection && !text.trim()) {
+                const node = (editor.state.selection as NodeSelection).node;
+                if (node.attrs.code) {
+                    text = node.attrs.code;
+                } else if (node.type.name === 'flashcardBlock' && node.attrs.cards) {
+                    const cards = node.attrs.cards as any[];
+                    text = cards.map(c => `Q: ${c.front}\nA: ${c.back}`).join('\n\n');
+                }
             }
 
             // Generate HTML for the selected block/content

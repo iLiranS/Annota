@@ -46,6 +46,7 @@ import {
     DetailsContent,
     DetailsSummary,
     FileAttachment,
+    FlashcardBlock,
     Indentation,
     ListItemReorder,
     Mermaid,
@@ -208,6 +209,9 @@ export const getExtensions = (options: {
             onNoteLinkCommand: options.onNoteLinkCommand,
         }),
         Mermaid.configure({
+            onOpenBlockMenu: options.onOpenBlockMenu,
+        }),
+        FlashcardBlock.configure({
             onOpenBlockMenu: options.onOpenBlockMenu,
         }),
     ];

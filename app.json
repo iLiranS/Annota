@@ -1,5 +1,10 @@
 {
   "ios": {
     "bundleIdentifier": "com.anonymous.annota-monorepo"
+  },
+  "extra": {
+    "eas": {
+      "projectId": "c61d5080-c07e-4191-9738-34fc96a169d2"
+    }
   }
 }

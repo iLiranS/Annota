@@ -272,7 +272,7 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
                     const src = data.src || "";
                     copyImageToClipboard(src, data.imageId);
                     editorRef.current.onCommand("deleteImage", { pos: data.position });
-                } else if (["codeBlock", "details", "mermaid", "quote"].includes(type)) {
+                } else if (["codeBlock", "details", "mermaid", "quote", "flashcard"].includes(type)) {
                     editorRef.current.onCommand("copyToClipboard", { pos: data.pos });
                     editorRef.current.onCommand("deleteSelection", { pos: data.pos });
                 }

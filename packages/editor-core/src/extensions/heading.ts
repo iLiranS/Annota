@@ -1,5 +1,6 @@
 import { Heading as TiptapHeading } from '@tiptap/extension-heading';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
+import './heading.css';
 
 function generateId() {
     return Math.random().toString(36).substring(2, 10);

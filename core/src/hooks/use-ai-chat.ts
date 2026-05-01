@@ -134,9 +134,10 @@ export function useAiChat(chatId: string | null) {
             overrideChatId?: string | null;
             selectedFolderNotes?: any[]; // Bulk/Folder mode (pass noteMetadata array here)
             mode?: ContextMode;
+            isRetry?: boolean;
         } = {}
     ) => {
-        const { overrideChatId, selectedFolderNotes, mode = 'auto' } = options;
+        const { overrideChatId, selectedFolderNotes, mode = 'auto', isRetry = false } = options;
         const effectiveChatId = overrideChatId || chatId;
         if (!effectiveChatId) return;
 
@@ -166,19 +167,28 @@ export function useAiChat(chatId: string | null) {
         const updatedHistory = [...fullHistory];
 
         // 3. User Message
-        const userMessageId = generateId();
-        const userMsg: AiMessage = {
-            id: userMessageId,
-            chatId: effectiveChatId,
-            role: 'user',
-            content,
-            model: null,
-            createdAt: timestamp,
-        };
+        if (!isRetry) {
+            const userMessageId = generateId();
+            const userMsg: AiMessage = {
+                id: userMessageId,
+                chatId: effectiveChatId,
+                role: 'user',
+                content,
+                model: null,
+                createdAt: timestamp,
+            };
 
-        setMessages(prev => [...prev, userMsg]);
-        await db.insert(aiMessages).values(userMsg).run();
-        updatedHistory.push(userMsg);
+            setMessages(prev => [...prev, userMsg]);
+            await db.insert(aiMessages).values(userMsg).run();
+            updatedHistory.push(userMsg);
+        } else {
+            // Clean up state from any failed assistant placeholder
+            setMessages(prev => {
+                const lastUserIndex = [...prev].reverse().findIndex(m => m.role === 'user');
+                if (lastUserIndex === -1) return prev;
+                return prev.slice(0, prev.length - lastUserIndex);
+            });
+        }
 
         // Update chat's updatedAt
         await db.update(aiChats).set({

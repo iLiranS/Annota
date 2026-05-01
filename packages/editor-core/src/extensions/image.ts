@@ -1,3 +1,4 @@
+import './image.css';
 import type { NodeViewRenderer } from '@tiptap/core';
 import { Image } from '@tiptap/extension-image';
 import { Node as PMNode } from '@tiptap/pm/model';

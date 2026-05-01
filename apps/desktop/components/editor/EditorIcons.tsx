@@ -11,6 +11,7 @@ import {
     Highlighter,
     Indent,
     Italic,
+    Layers,
     Layout,
     Link,
     List,
@@ -72,6 +73,7 @@ export const EditorIcons = {
     Undo: Undo2,
     Youtube: SquarePlay,
     Mermaid: Workflow,
+    Flashcard: Layers,
     Settings,
     ChevronUp,
     ChevronDown
@@ -107,5 +109,6 @@ export const DesktopIconMap: Record<string, any> = {
     'youtube': EditorIcons.Youtube,
     'table': EditorIcons.Table,
     'mermaid': EditorIcons.Mermaid,
+    'flashcard': EditorIcons.Flashcard,
     'settings': EditorIcons.Settings,
 };
