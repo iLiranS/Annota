@@ -178,6 +178,7 @@ class FileSyncService {
      */
     async queueFilesForDownload(items: QueueItem[]) {
         if (items.length === 0) return;
+        console.log(`[FileSync] queueFilesForDownload called with ${items.length} items`);
 
         // 1. Persist intention to local DB FIRST (Safety Net)
         const dbQueueItems = items.map(({ fileId, noteId, nonce, userId }) => ({
@@ -189,12 +190,22 @@ class FileSyncService {
         const existingIds = new Set(this.downloadQueue.map(q => q.fileId));
         const newItems = items.filter(item => !existingIds.has(item.fileId));
 
+        console.log(`[FileSync] Added ${newItems.length} new items to in-memory queue. Total: ${this.downloadQueue.length + newItems.length}`);
+
         this.downloadQueue.push(...newItems);
         this.processQueue();
     }
 
     private async processQueue() {
-        if (this.isDownloading || this.downloadQueue.length === 0) return;
+        if (this.isDownloading) {
+            console.log(`[FileSync] processQueue skipped: already downloading`);
+            return;
+        }
+        if (this.downloadQueue.length === 0) {
+            console.log(`[FileSync] processQueue skipped: queue is empty`);
+            return;
+        }
+        console.log(`[FileSync] processQueue started. Queue size: ${this.downloadQueue.length}`);
         this.isDownloading = true;
 
         while (this.downloadQueue.length > 0) {

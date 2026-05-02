@@ -64,24 +64,48 @@ export const storageApi = {
             return { data: [], error: null };
         }
 
-        return await supabase
-            .from('note_files')
-            .select(`
-            note_id,
-            file_id,
-            user_id
-        `)
-            .eq('user_id', userId)
-            .in('note_id', noteIds);
+        const CHUNK_SIZE = 100;
+        let allData: any[] = [];
+
+        for (let i = 0; i < noteIds.length; i += CHUNK_SIZE) {
+            const chunk = noteIds.slice(i, i + CHUNK_SIZE);
+            const { data, error } = await supabase
+                .from('note_files')
+                .select(`
+                note_id,
+                file_id,
+                user_id
+            `)
+                .eq('user_id', userId)
+                .in('note_id', chunk);
+
+            if (error) return { data: null, error };
+            if (data) allData = allData.concat(data);
+        }
+
+        return { data: allData, error: null };
     },
 
     /** Fetch encrypted metadata for a specific list of file IDs */
     getEncryptedFilesMetadata: async (userId: string, fileIds: string[]) => {
-        return await supabase
-            .from('encrypted_files')
-            .select('id, nonce')
-            .in('id', fileIds)
-            .eq('user_id', userId);
+        if (!fileIds || fileIds.length === 0) return { data: [], error: null };
+
+        const CHUNK_SIZE = 100;
+        let allData: any[] = [];
+
+        for (let i = 0; i < fileIds.length; i += CHUNK_SIZE) {
+            const chunk = fileIds.slice(i, i + CHUNK_SIZE);
+            const { data, error } = await supabase
+                .from('encrypted_files')
+                .select('id, nonce')
+                .in('id', chunk)
+                .eq('user_id', userId);
+
+            if (error) return { data: null, error };
+            if (data) allData = allData.concat(data);
+        }
+
+        return { data: allData, error: null };
     },
 
     /** Insert a new encrypted file record */

@@ -375,7 +375,12 @@ export function useDesktopEditorSelection({ editor, containerRef }: UseDesktopEd
 
             if (!selection.eq(state.selection)) {
                 view.dispatch(state.tr.setSelection(selection));
-                window.getSelection()?.removeAllRanges();
+                // Only clear the DOM selection when a rich-block boundary was used.
+                // For plain inline text, the native highlight should remain intact so
+                // the user can see what is selected.
+                if (drag.anchorPrefersRichBoundary || headPrefersRichBoundary) {
+                    window.getSelection()?.removeAllRanges();
+                }
             }
         };
 

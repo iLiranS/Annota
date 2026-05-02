@@ -227,6 +227,12 @@ export async function performSyncPull(masterKey: string, saltHex: string) {
                     }
                     const decryptedJson = await decryptPayload(row.encrypted_data, row.nonce, notesKey);
                     const folderData = JSON.parse(decryptedJson);
+                    
+                    if (!folderData || !folderData.id) {
+                        console.warn("[Sync] Skipping corrupted/empty folder payload from cloud", row.id);
+                        continue;
+                    }
+
                     folderData.createdAt = new Date(folderData.createdAt);
                     folderData.updatedAt = new Date(folderData.updatedAt);
                     folderData.deletedAt = folderData.deletedAt ? new Date(folderData.deletedAt) : null;
@@ -281,6 +287,12 @@ export async function performSyncPull(masterKey: string, saltHex: string) {
                     }
                     const decryptedJson = await decryptPayload(row.encrypted_data, row.nonce, notesKey);
                     const tagData = JSON.parse(decryptedJson);
+
+                    if (!tagData || !tagData.id) {
+                        console.warn("[Sync] Skipping corrupted/empty tag payload from cloud", row.id);
+                        continue;
+                    }
+
                     tagData.createdAt = new Date(tagData.createdAt);
                     tagData.updatedAt = new Date(tagData.updatedAt);
                     tagData.deletedAt = tagData.deletedAt ? new Date(tagData.deletedAt) : null;
@@ -335,6 +347,12 @@ export async function performSyncPull(masterKey: string, saltHex: string) {
                     }
                     const decryptedJson = await decryptPayload(row.encrypted_data, row.nonce, notesKey);
                     const noteFullData = JSON.parse(decryptedJson);
+
+                    if (!noteFullData || !noteFullData.id) {
+                        console.warn("[Sync] Skipping corrupted/empty note payload from cloud", row.id);
+                        continue;
+                    }
+
                     noteFullData.createdAt = new Date(noteFullData.createdAt);
                     noteFullData.updatedAt = new Date(noteFullData.updatedAt);
                     noteFullData.deletedAt = noteFullData.deletedAt ? new Date(noteFullData.deletedAt) : null;
@@ -399,16 +417,20 @@ export async function performSyncPull(masterKey: string, saltHex: string) {
         await StorageService.runGarbageCollection(true);
     }
 
-    // Background Image Pull
+    // Background Files Pull
+    console.log(`[Sync] Requesting file links for ${fetchedNoteIds.length} notes`);
     const { data: cloudLinks, error: linkError } = await storageApi.getUserFileLinks(userId, fetchedNoteIds);
+    console.log(`[Sync] cloudLinks:`, cloudLinks?.length, 'error:', linkError);
     if (!linkError && cloudLinks && cloudLinks.length > 0) {
         const uniqueFileIds = Array.from(new Set(cloudLinks.map(l => l.file_id as string)));
         const localFiles = await getFilesByIds(uniqueFileIds);
         const localFileIds = new Set(localFiles.map((i: any) => i.id));
         const missingIds = uniqueFileIds.filter(id => !localFileIds.has(id));
+        console.log(`[Sync] Found ${uniqueFileIds.length} unique file links, ${missingIds.length} missing locally`);
 
         if (missingIds.length > 0) {
             const { data: cloudMeta, error: metaError } = await storageApi.getEncryptedFilesMetadata(userId, missingIds);
+            console.log(`[Sync] getEncryptedFilesMetadata cloudMeta:`, cloudMeta?.length, 'error:', metaError);
             if (!metaError && cloudMeta) {
                 const downloadQueue = cloudMeta.map(meta => ({
                     fileId: meta.id,
@@ -418,9 +440,12 @@ export async function performSyncPull(masterKey: string, saltHex: string) {
                     saltHex,
                     userId
                 }));
+                console.log(`[Sync] Queuing ${downloadQueue.length} files for download`);
                 fileSyncService.queueFilesForDownload(downloadQueue);
             }
         }
+    } else if (linkError) {
+        console.error(`[Sync] Error fetching user file links:`, linkError);
     }
 }
 
