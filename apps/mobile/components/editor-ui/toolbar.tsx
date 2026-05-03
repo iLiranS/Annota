@@ -15,6 +15,7 @@ import { ContextMode } from '@annota/core';
 interface EditorToolbarProps extends ToolbarRenderProps {
     onAIAction?: (mode: ContextMode, instructions?: string) => void;
     isAIStreaming?: boolean;
+    onStopAI?: () => void;
 }
 
 /**
@@ -35,6 +36,7 @@ export function EditorToolbar({
     onInsertFile,
     onAIAction,
     isAIStreaming,
+    onStopAI,
 }: EditorToolbarProps) {
     const { dark, colors } = useTheme();
     const [isLoading, setIsLoading] = useState(false);
@@ -94,7 +96,13 @@ export function EditorToolbar({
                         <AIToolbarButton 
                             isVisible={!!editorState.selectedText} 
                             isLoading={isAIStreaming}
-                            onPress={() => openPopup('ai')} 
+                            onPress={() => {
+                                if (isAIStreaming) {
+                                    onStopAI?.();
+                                } else {
+                                    openPopup('ai');
+                                }
+                            }} 
                         />
 
                         {/* Headings - Single button with popup (FIRST) */}
@@ -290,6 +298,7 @@ export function EditorToolbar({
                     onAction={(action, instructions) => {
                         onAIAction?.(action as ContextMode, instructions);
                     }}
+                    onStop={onStopAI}
                     onClose={closePopup}
                 />
             )}

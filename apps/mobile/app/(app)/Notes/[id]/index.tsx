@@ -262,7 +262,7 @@ export default function NoteEditor() {
     }, [id, currentNote, content, displayTitle]);
 
 
-    const { sendMessage: sendAiMessage, isStreaming: isAiStreaming } = useAiChat('inline-assistant');
+    const { sendMessage: sendAiMessage, isStreaming: isAiStreaming, stop: stopAiMessage } = useAiChat('inline-assistant');
     const handleAIAction = useCallback(async (mode: ContextMode, instructions?: string) => {
         const editor = editorRef.current;
         if (!editor) return;
@@ -295,6 +295,14 @@ export default function NoteEditor() {
             }
         });
     }, [sendAiMessage]);
+
+    const handleInsertFromAi = useCallback((content: string) => {
+        const editor = editorRef.current;
+        if (!editor) return;
+        
+        editor.onCommand('insertContent', { content });
+        setIsAiChatVisible(false);
+    }, []);
 
     // Handle case where note doesn't exist
     if (!currentNote) {
@@ -408,6 +416,7 @@ export default function NoteEditor() {
                 visible={isAiChatVisible}
                 onClose={() => setIsAiChatVisible(false)}
                 initialContext={activeNoteContext}
+                onInsertToNote={handleInsertFromAi}
             />
 
             {isLoading || !isContentReady ? (
@@ -456,7 +465,7 @@ export default function NoteEditor() {
                                 </View>
                             );
                         }}
-                        renderToolbar={(props: ToolbarRenderProps) => <EditorToolbar {...props} onAIAction={handleAIAction} isAIStreaming={isAiStreaming} />}
+                        renderToolbar={(props: ToolbarRenderProps) => <EditorToolbar {...props} onAIAction={handleAIAction} isAIStreaming={isAiStreaming} onStopAI={stopAiMessage} />}
                         renderImageGallery={(props: any) => <ImageGallery {...props} />}
                         renderSlashCommandMenu={() => {
                             if (tagCommandState.active && tagCommandState.range) {

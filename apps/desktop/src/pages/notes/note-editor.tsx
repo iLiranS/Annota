@@ -106,6 +106,7 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
         handleAIAction,
         handleSelectionChange,
         handleScroll,
+        stopAiChat,
     } = useNoteEditorAI({ editorRef });
 
     const {
@@ -371,6 +372,7 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
                         anchorRect={aiSelection.anchorRect}
                         direction={direction}
                         onAction={handleAIAction}
+                        onStop={stopAiChat}
                     />
                 </div>
             </div>

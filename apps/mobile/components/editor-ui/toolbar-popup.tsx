@@ -238,6 +238,7 @@ export function ToolbarPopup(props: ToolbarPopupProps) {
                         onAction={(props as any).onAction}
                         onClose={onClose}
                         isLoading={isLoading}
+                        onStop={(props as any).onStop}
                     />
                 );
             case 'blockMenu':

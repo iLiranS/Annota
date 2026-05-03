@@ -44,7 +44,6 @@ export function AIToolbarButton({
         <Animated.View style={animatedStyle}>
             <Pressable
                 onPress={onPress}
-                disabled={isLoading}
                 style={({ pressed }) => [
                     styles.button,
                     {
@@ -55,7 +54,7 @@ export function AIToolbarButton({
             >
                 <View style={styles.iconContainer}>
                     {isLoading ? (
-                        <ActivityIndicator size="small" color="white" />
+                        <MaterialIcons name="stop" size={20} color="white" />
                     ) : (
                         <MaterialIcons name="auto-awesome" size={20} color="white" />
                     )}

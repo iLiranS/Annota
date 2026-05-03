@@ -377,6 +377,7 @@ export interface FileMenuPopupProps extends BasePopupProps {
 export interface AIPopupProps extends BasePopupProps {
     type: 'ai';
     onAction: (action: string, instructions: string) => void;
+    onStop?: () => void;
 }
 
 

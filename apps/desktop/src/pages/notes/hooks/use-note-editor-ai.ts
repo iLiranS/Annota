@@ -8,7 +8,7 @@ interface UseNoteEditorAIProps {
 }
 
 export function useNoteEditorAI({ editorRef }: UseNoteEditorAIProps) {
-    const { sendMessage: sendAiMessage, isStreaming: isAiStreaming } = useAiChat('inline-assistant');
+    const { sendMessage: sendAiMessage, isStreaming: isAiStreaming, stop: stopAiChat } = useAiChat('inline-assistant');
     
     const [aiSelection, setAiSelection] = useState<{ isVisible: boolean; anchorRect: DOMRect | null }>({
         isVisible: false,
@@ -74,5 +74,6 @@ export function useNoteEditorAI({ editorRef }: UseNoteEditorAIProps) {
         handleAIAction,
         handleSelectionChange,
         handleScroll,
+        stopAiChat,
     };
 }

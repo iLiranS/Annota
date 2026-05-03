@@ -37,14 +37,16 @@ interface AiChatViewProps {
     onClearAllContext?: () => void;
     currentModelName?: string;
     activeProvider?: string;
+    onInsertToNote?: (content: string) => void;
 }
 
 type ContentSegment =
     | { type: 'markdown'; content: string }
     | { type: 'code'; language: string; content: string }
-    | { type: 'math'; content: string };
+    | { type: 'math'; content: string }
+    | { type: 'flashcard'; content: string };
 
-const BLOCK_SEGMENT_REGEX = /```([\w-]*)\n([\s\S]*?)```|\$\$([\s\S]*?)\$\$/g;
+const BLOCK_SEGMENT_REGEX = /```([\w-]*)\n([\s\S]*?)```|\$\$([\s\S]*?)\$\$|<div[^>]*class=[^>]*flashcard-(?:block|card-container)[^>]*>([\s\S]*)/gi;
 
 function parseAssistantContent(content: string): ContentSegment[] {
     if (!content) return [];
@@ -54,7 +56,7 @@ function parseAssistantContent(content: string): ContentSegment[] {
     let match: RegExpExecArray | null;
 
     while ((match = BLOCK_SEGMENT_REGEX.exec(content)) !== null) {
-        const [fullMatch, codeLanguage = '', codeContent, mathContent] = match;
+        const [fullMatch, codeLanguage = '', codeContent, mathContent, flashcardContent] = match;
         const matchIndex = match.index;
 
         if (matchIndex > lastIndex) {
@@ -74,6 +76,11 @@ function parseAssistantContent(content: string): ContentSegment[] {
             segments.push({
                 type: 'math',
                 content: mathContent.trim(),
+            });
+        } else if (typeof flashcardContent === 'string') {
+            segments.push({
+                type: 'flashcard',
+                content: flashcardContent.trim(),
             });
         }
 
@@ -186,6 +193,76 @@ function LatexBlock({ latex, textColor, backgroundColor }: { latex: string; text
     );
 }
 
+function FlashcardBlock({ content, colors }: { content: string, colors: any }) {
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const [isFlipped, setIsFlipped] = useState(false);
+
+    // Indestructible parsing: globally extract all fronts and backs
+    // Use highly lenient regexes to tolerate extra spaces or additional classes
+    const fronts = Array.from(content.matchAll(/class=[^>]*flashcard-card-front[^>]*>([\s\S]*?)(?:<\/div>|(?=<div[^>]*class=[^>]*flashcard-card-back))/gi));
+    const backs = Array.from(content.matchAll(/class=[^>]*flashcard-card-back[^>]*>([\s\S]*?)(?:<\/div>|(?=<div[^>]*class=[^>]*flashcard-card-(?:container|front)|$))/gi));
+    
+    const cardsCount = Math.max(fronts.length, backs.length);
+    const cards = useMemo(() => {
+        const c = [];
+        for (let j = 0; j < cardsCount; j++) {
+            const f = fronts[j] ? fronts[j][1].replace(/<[^>]*>?/gm, '').trim() : '';
+            const b = backs[j] ? backs[j][1].replace(/<[^>]*>?/gm, '').trim() : '';
+            if (f || b) c.push({ front: f, back: b });
+        }
+        return c;
+    }, [content]);
+
+    if (cards.length === 0) return null;
+    const card = cards[currentIndex];
+    if (!card) return null;
+
+    return (
+        <View style={{ gap: 10, marginVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: colors.primary + '30', backgroundColor: colors.primary + '08', overflow: 'hidden' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.primary + '15', backgroundColor: colors.card + '50' }}>
+                <Text style={{ fontSize: 10, fontWeight: 'bold', color: colors.text + '80', textTransform: 'uppercase' }}>
+                    Flashcards ({currentIndex + 1} of {cards.length})
+                </Text>
+                <View style={{ flexDirection: 'row', gap: 4 }}>
+                    <TouchableOpacity 
+                        onPress={() => { setCurrentIndex(c => Math.max(0, c - 1)); setIsFlipped(false); }}
+                        disabled={currentIndex === 0}
+                        style={{ padding: 4, opacity: currentIndex === 0 ? 0.3 : 1 }}
+                    >
+                        <Ionicons name="chevron-back" size={16} color={colors.text} />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                        onPress={() => { setCurrentIndex(c => Math.min(cards.length - 1, c + 1)); setIsFlipped(false); }}
+                        disabled={currentIndex === cards.length - 1}
+                        style={{ padding: 4, opacity: currentIndex === cards.length - 1 ? 0.3 : 1 }}
+                    >
+                        <Ionicons name="chevron-forward" size={16} color={colors.text} />
+                    </TouchableOpacity>
+                </View>
+            </View>
+
+            <TouchableOpacity 
+                activeOpacity={0.8}
+                onPress={() => setIsFlipped(!isFlipped)}
+                style={{ padding: 16, minHeight: 120, justifyContent: 'center', backgroundColor: colors.card + (isFlipped ? '50' : '20') }}
+            >
+                <Text style={{ fontSize: 10, fontWeight: 'bold', color: colors.primary + '80', textTransform: 'uppercase', marginBottom: 8, textAlign: 'center' }}>
+                    {isFlipped ? 'Answer' : 'Question'}
+                </Text>
+                <Text style={{ fontSize: 15, fontWeight: isFlipped ? 'normal' : '600', color: colors.text, textAlign: 'center', lineHeight: 22 }}>
+                    {isFlipped ? card.back : card.front}
+                </Text>
+            </TouchableOpacity>
+
+            <View style={{ paddingVertical: 6, paddingHorizontal: 12, backgroundColor: colors.primary + '05', borderTopWidth: 1, borderTopColor: colors.primary + '10' }}>
+                <Text style={{ fontSize: 9, textAlign: 'center', color: colors.text + '60', textTransform: 'uppercase', fontWeight: 'bold' }}>
+                    Tap card to flip
+                </Text>
+            </View>
+        </View>
+    );
+}
+
 function AssistantMessageContent({
     content,
     colors,
@@ -289,6 +366,16 @@ function AssistantMessageContent({
                     );
                 }
 
+                if (segment.type === 'flashcard') {
+                    return (
+                        <FlashcardBlock
+                            key={`fc-${index}`}
+                            content={segment.content}
+                            colors={colors}
+                        />
+                    );
+                }
+
                 return (
                     <LatexBlock
                         key={`math-${index}`}
@@ -317,7 +404,8 @@ export function AiChatView({
     onToggleFolder,
     onClearAllContext,
     currentModelName,
-    activeProvider
+    activeProvider,
+    onInsertToNote
 }: AiChatViewProps) {
     const { colors } = useTheme();
     const insets = useSafeAreaInsets();
@@ -330,20 +418,51 @@ export function AiChatView({
     useEffect(() => {
         if (messages.length > 0) {
             if (!initialScrollDone.current) {
-                // First load of messages for this chat: snap to bottom after a tiny delay
                 const timer = setTimeout(() => {
                     flatListRef.current?.scrollToEnd({ animated: false });
                     initialScrollDone.current = true;
                 }, 100);
                 return () => clearTimeout(timer);
             } else if (isStreaming) {
-                // Ongoing stream: scroll smoothly
                 flatListRef.current?.scrollToEnd({ animated: true });
             }
         } else {
             initialScrollDone.current = false;
         }
     }, [messages, isStreaming]);
+
+    const handleInsert = useCallback((content: string) => {
+        if (!onInsertToNote) return;
+        
+        const fronts = Array.from(content.matchAll(/class=[^>]*flashcard-card-front[^>]*>([\s\S]*?)(?:<\/div>|(?=<div[^>]*class=[^>]*flashcard-card-back))/gi));
+        const backs = Array.from(content.matchAll(/class=[^>]*flashcard-card-back[^>]*>([\s\S]*?)(?:<\/div>|(?=<div[^>]*class=[^>]*flashcard-card-(?:container|front)|$))/gi));
+        
+        const cardsCount = Math.max(fronts.length, backs.length);
+        const cards = [];
+        for (let j = 0; j < cardsCount; j++) {
+            const f = fronts[j] ? fronts[j][1].replace(/<[^>]*>?/gm, '').trim() : '';
+            const b = backs[j] ? backs[j][1].replace(/<[^>]*>?/gm, '').trim() : '';
+            if (f || b) cards.push({ front: f, back: b });
+        }
+
+        let finalHtml = content;
+        
+        if (cards.length > 0) {
+            const firstFlashcardIndex = content.search(/<div[^>]*class=[^>]*flashcard-(?:block|card-container)/i);
+            const markdownContent = firstFlashcardIndex !== -1 
+                ? content.slice(0, firstFlashcardIndex).trim() 
+                : '';
+                
+            finalHtml = markdownContent ? markdownContent + '\n\n' : '';
+            finalHtml += '<div class="flashcard-block" data-fc="true">\n';
+            cards.forEach(c => {
+                finalHtml += `  <div class="flashcard-card-container">\n    <div class="flashcard-card-front">${c.front}</div>\n    <div class="flashcard-card-back">${c.back}</div>\n  </div>\n`;
+            });
+            finalHtml += '</div>';
+        }
+        
+        onInsertToNote(finalHtml);
+    }, [onInsertToNote]);
 
     return (
         <KeyboardAvoidingView
@@ -386,6 +505,15 @@ export function AiChatView({
                         </View>
                         {!item.content && isStreaming && item.role === 'assistant' && (
                             <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 8 }} />
+                        )}
+                        {item.role === 'assistant' && item.content && !isStreaming && onInsertToNote && (
+                            <TouchableOpacity 
+                                style={{ flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginTop: 8, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: colors.primary + '15', borderRadius: 8 }}
+                                onPress={() => handleInsert(item.content)}
+                            >
+                                <Ionicons name="copy-outline" size={14} color={colors.primary} />
+                                <Text style={{ fontSize: 12, fontWeight: '600', color: colors.primary }}>Insert into note</Text>
+                            </TouchableOpacity>
                         )}
                     </View>
                 )}

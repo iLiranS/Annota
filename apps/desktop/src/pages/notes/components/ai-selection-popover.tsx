@@ -1,10 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
-import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { useAiConfiguration } from "@annota/core";
-import { Layers, Loader2, Send, Sparkles } from "lucide-react";
+import { Send, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 
 interface AISelectionPopoverProps {
@@ -12,10 +11,11 @@ interface AISelectionPopoverProps {
     isVisible: boolean;
     isLoading?: boolean;
     onAction?: (action: string, instructions?: string) => void;
+    onStop?: () => void;
     direction?: 'ltr' | 'rtl' | 'auto';
 }
 
-export function AISelectionPopover({ anchorRect, isVisible, isLoading, onAction, direction = 'ltr' }: AISelectionPopoverProps) {
+export function AISelectionPopover({ anchorRect, isVisible, isLoading, onAction, onStop, direction = 'ltr' }: AISelectionPopoverProps) {
     const { isAiAvailable } = useAiConfiguration();
     const [open, setOpen] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
@@ -69,11 +69,18 @@ export function AISelectionPopover({ anchorRect, isVisible, isLoading, onAction,
             >
                 {isLoading ? (
                     <div className="flex items-center gap-3 px-3 py-2 animate-in fade-in zoom-in-95 duration-300">
-                        <div className="relative flex items-center justify-center">
-                            <Sparkles className="h-4 w-4 text-primary animate-pulse" />
-                            <Loader2 className="absolute h-7 w-7 text-primary/20 animate-spin" />
-                        </div>
-                        <span className="text-sm font-medium text-primary animate-pulse">AI is working...</span>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 rounded-full text-primary hover:text-destructive hover:bg-destructive/10 shrink-0"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onStop?.();
+                            }}
+                        >
+                            <div className="h-3 w-3 bg-current rounded-[2px] animate-pulse" />
+                        </Button>
+                        <span className="text-sm font-medium text-primary animate-pulse pr-2">AI is working...</span>
                     </div>
                 ) : !isExpanded ? (
                     <Button
@@ -125,16 +132,6 @@ export function AISelectionPopover({ anchorRect, isVisible, isLoading, onAction,
                                 <Send className="h-4 w-4" />
                             </Button>
                         </div>
-
-                        <Separator className="opacity-50" />
-
-                        <div className="flex flex-col gap-1">
-                            <AIActionItem
-                                icon={<Layers className="h-3.5 w-3.5" />}
-                                label="Generate Flashcards"
-                                onClick={() => onAction?.('flashcard', instructions)}
-                            />
-                        </div>
                     </div>
                 )}
             </PopoverContent>
@@ -142,16 +139,3 @@ export function AISelectionPopover({ anchorRect, isVisible, isLoading, onAction,
     );
 }
 
-function AIActionItem({ icon, label, onClick }: { icon: React.ReactNode, label: string, onClick: () => void }) {
-    return (
-        <Button
-            variant="ghost"
-            size="sm"
-            className="justify-start h-8 px-2 gap-2 text-xs font-medium hover:bg-primary/10 hover:text-primary transition-colors rounded-lg"
-            onClick={onClick}
-        >
-            {icon}
-            {label}
-        </Button>
-    );
-}

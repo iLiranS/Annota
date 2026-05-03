@@ -1,7 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { cn, isRtl } from "@/lib/utils";
 import { AiMessage } from "@annota/core";
-import { CopyPlus, RotateCcw, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, CopyPlus, RotateCcw, X } from "lucide-react";
+import React from "react";
 import { AiMarkdown } from "./ai-markdown";
 
 interface AiChatMessageProps {
@@ -13,6 +14,12 @@ interface AiChatMessageProps {
 export function AiChatMessage({ message, isStreaming, onInsertToNote }: AiChatMessageProps) {
     const isUser = message.role === 'user';
     const _isRtl = isRtl(message.content);
+
+    // Extremely lenient detection for flashcard content
+    const hasFlashcards = !isUser && (
+        /data-fc=["']?true["']?/.test(message.content) ||
+        /class=["']flashcard-card-container["']/.test(message.content)
+    );
 
     return (
         <div
@@ -35,7 +42,11 @@ export function AiChatMessage({ message, isStreaming, onInsertToNote }: AiChatMe
                     <span className="whitespace-pre-wrap">{message.content}</span>
                 ) : (
                     <div className="flex flex-col gap-2">
-                        <AiMarkdown content={message.content} />
+                        {hasFlashcards ? (
+                            <FlashcardRenderer content={message.content} isStreaming={isStreaming} onInsertToNote={onInsertToNote} />
+                        ) : (
+                            <AiMarkdown content={message.content} />
+                        )}
 
                         {/* Typing indicator */}
                         {!message.content && isStreaming && (
@@ -46,7 +57,7 @@ export function AiChatMessage({ message, isStreaming, onInsertToNote }: AiChatMe
                             </span>
                         )}
 
-                        {!isStreaming && message.content && onInsertToNote && (
+                        {!hasFlashcards && !isStreaming && message.content && onInsertToNote && (
                             <div className="flex justify-start pt-0.5  transition-opacity">
                                 <Button
                                     variant="ghost"
@@ -66,6 +77,118 @@ export function AiChatMessage({ message, isStreaming, onInsertToNote }: AiChatMe
     );
 }
 
+function InteractiveFlashcardBlock({ cards }: { cards: { front: string; back: string }[] }) {
+    const [currentIndex, setCurrentIndex] = React.useState(0);
+    const [isFlipped, setIsFlipped] = React.useState(false);
+
+    const card = cards[currentIndex];
+    if (!card) return null;
+
+    return (
+        <div className="flex flex-col border border-primary/20 rounded-xl overflow-hidden bg-primary/5 shadow-sm my-2">
+            <div className="flex items-center justify-between px-3 py-2 border-b border-primary/10 bg-background/50">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                    Flashcards ({currentIndex + 1} of {cards.length})
+                </span>
+                <div className="flex gap-1">
+                    <button
+                        onClick={() => { setCurrentIndex(c => Math.max(0, c - 1)); setIsFlipped(false); }}
+                        disabled={currentIndex === 0}
+                        className="p-1 rounded hover:bg-primary/10 disabled:opacity-30 disabled:hover:bg-transparent transition-colors cursor-pointer"
+                    >
+                        <ChevronLeft size={14} />
+                    </button>
+                    <button
+                        onClick={() => { setCurrentIndex(c => Math.min(cards.length - 1, c + 1)); setIsFlipped(false); }}
+                        disabled={currentIndex === cards.length - 1}
+                        className="p-1 rounded hover:bg-primary/10 disabled:opacity-30 disabled:hover:bg-transparent transition-colors cursor-pointer"
+                    >
+                        <ChevronRight size={14} />
+                    </button>
+                </div>
+            </div>
+
+            <div
+                className="p-4 bg-background/40 min-h-[120px] flex flex-col justify-center cursor-pointer transition-colors hover:bg-background/60"
+                onClick={() => setIsFlipped(!isFlipped)}
+            >
+                <div className="text-[10px] font-bold text-primary/60 uppercase tracking-wider mb-2 text-center">
+                    {isFlipped ? 'Answer' : 'Question'}
+                </div>
+                <div className="text-sm font-medium text-center leading-relaxed">
+                    {isFlipped ? card.back : card.front}
+                </div>
+            </div>
+            <div className="px-3 py-1.5 bg-primary/5 border-t border-primary/10 text-[9px] text-center text-muted-foreground/70 uppercase tracking-wider font-semibold">
+                Click card to flip
+            </div>
+        </div>
+    );
+}
+
+function FlashcardRenderer({ content, isStreaming, onInsertToNote }: { content: string, isStreaming?: boolean, onInsertToNote?: (content: string) => void }) {
+    // 1. Extract all fronts and backs globally from the entire content
+    // Use highly lenient regexes to tolerate extra spaces or additional classes
+    const fronts = Array.from(content.matchAll(/class=[^>]*flashcard-card-front[^>]*>([\s\S]*?)(?:<\/div>|(?=<div[^>]*class=[^>]*flashcard-card-back))/gi));
+    const backs = Array.from(content.matchAll(/class=[^>]*flashcard-card-back[^>]*>([\s\S]*?)(?:<\/div>|(?=<div[^>]*class=[^>]*flashcard-card-(?:container|front)|$))/gi));
+
+    const cardsCount = Math.max(fronts.length, backs.length);
+    const cards: { front: string; back: string }[] = [];
+    for (let j = 0; j < cardsCount; j++) {
+        const f = fronts[j] ? fronts[j][1].replace(/<[^>]*>?/gm, '').trim() : '';
+        const b = backs[j] ? backs[j][1].replace(/<[^>]*>?/gm, '').trim() : '';
+        if (f || b) cards.push({ front: f, back: b });
+    }
+
+    // 2. Extract markdown text before the flashcards begin
+    // This safely hides all the raw HTML from the Markdown renderer
+    const firstFlashcardIndex = content.search(/<div[^>]*class=[^>]*flashcard-(?:block|card-container)/i);
+    const markdownContent = firstFlashcardIndex !== -1
+        ? content.slice(0, firstFlashcardIndex).trim()
+        : (cards.length === 0 ? content.trim() : '');
+
+    // Reconstruct perfect HTML for insertion
+    const handleInsert = () => {
+        if (!onInsertToNote) return;
+
+        let finalHtml = markdownContent ? markdownContent + '\n\n' : '';
+
+        if (cards.length > 0) {
+            finalHtml += '<div class="flashcard-block" data-fc="true">\n';
+            cards.forEach(c => {
+                finalHtml += `  <div class="flashcard-card-container">\n    <div class="flashcard-card-front">${c.front}</div>\n    <div class="flashcard-card-back">${c.back}</div>\n  </div>\n`;
+            });
+            finalHtml += '</div>';
+        }
+
+        onInsertToNote(finalHtml);
+    };
+
+    return (
+        <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-4">
+                {markdownContent ? <AiMarkdown content={markdownContent} /> : null}
+                {cards.length > 0 && <InteractiveFlashcardBlock cards={cards} />}
+            </div>
+
+            {/* Custom insert button for sanitized content */}
+            {!isStreaming && cards.length > 0 && onInsertToNote && (
+                <div className="flex justify-start pt-0.5 transition-opacity">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 gap-1.5 px-2 text-[11px] rounded-lg opacity-60 hover:opacity-100"
+                        onClick={handleInsert}
+                    >
+                        <CopyPlus size={12} />
+                        Insert into note
+                    </Button>
+                </div>
+            )}
+        </div>
+    );
+}
+
 export function AiChatError({ error, onRetry }: { error: string, onRetry?: () => void }) {
     return (
         <div className="p-3 rounded-xl bg-destructive/10 text-destructive text-[11px] flex flex-col gap-2 border border-destructive/20">
@@ -74,9 +197,9 @@ export function AiChatError({ error, onRetry }: { error: string, onRetry?: () =>
                 {error}
             </div>
             {onRetry && (
-                <Button 
-                    variant="outline" 
-                    size="sm" 
+                <Button
+                    variant="outline"
+                    size="sm"
                     onClick={onRetry}
                     className="h-7 w-fit gap-1.5 text-[10px] bg-destructive/5 border-destructive/20 hover:bg-destructive/10 text-destructive"
                 >

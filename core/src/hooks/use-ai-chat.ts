@@ -23,22 +23,27 @@ export const AI_ACTION_PROMPTS = {
     - Be succinct: Don't extend the text or add fluff unless necessary for clarity.
     - Rich Formatting: Use Markdown tables for data, bold/italics for emphasis, and lists for readability.
     - Diagrams: Use \`\`\`mermaid blocks for any flowcharts or diagrams.
-    - Flashcards: If the user asks for flashcards or study material, use this EXACT structure:
+    - Flashcards: If the user asks for flashcards or study material, ALWAYS use this EXACT structure:
       <div class="flashcard-block" data-fc="true">
         <div class="flashcard-card-container">
-          <div class="flashcard-card-front">Question?</div>
-          <div class="flashcard-card-back">Answer.</div>
+          <div class="flashcard-card-front">Short Question?</div>
+          <div class="flashcard-card-back">Concise Answer.</div>
         </div>
       </div>
+      PURE TEXT ONLY: DO NOT use Markdown, code blocks , or LaTeX ($) inside flashcards.
     Output ONLY the rewritten/improved content. No conversational filler, intro, or explanations.`,
-    flashcard: `You are a study assistant. Generate concise and effective flashcards from the following text. 
-    Wrap ALL flashcards in a single <div class="flashcard-block" data-fc="true"> container.
-    Each individual flashcard inside should be formatted as:
-    <div class="flashcard-card-container">
-      <div class="flashcard-card-front">Question</div>
-      <div class="flashcard-card-back">Answer</div>
-    </div>
-    Output ONLY the single flashcard block, no conversational filler.`
+    flashcard: `You are a study assistant. Generate concise and effective flashcards from the provided text.
+    
+    CRITICAL RULES:
+    1. Output ONLY a single <div class="flashcard-block" data-fc="true"> container.
+    2. Inside that container, for EACH flashcard, use EXACTLY this structure:
+       <div class="flashcard-card-container">
+         <div class="flashcard-card-front">Short Question</div>
+         <div class="flashcard-card-back">Concise Answer</div>
+       </div>
+    3. PURE TEXT ONLY: DO NOT use Markdown, code blocks, or LaTeX ($) inside the flashcards.
+    4. DO NOT include any introductory text, titles, or conversational filler.
+    5. Output ONLY the raw HTML block. If you include ANY other text, the system will fail.`
 };
 
 export function useAiChat(chatId: string | null) {
@@ -66,6 +71,7 @@ export function useAiChat(chatId: string | null) {
         // Cleanup leaked messages for the ephemeral inline assistant
         if (chatId === 'inline-assistant') {
             getDb().delete(aiMessages).where(eq(aiMessages.chatId, 'inline-assistant')).run();
+            getDb().delete(aiChats).where(eq(aiChats.id, 'inline-assistant')).run();
         }
 
         let cancelled = false;
@@ -175,6 +181,13 @@ export function useAiChat(chatId: string | null) {
         } = {}
     ) => {
         const { overrideChatId, selectedFolderNotes, mode = 'auto', isRetry = false, manualContext, onFinish } = options;
+
+        // Auto-detect flashcard intent if mode is auto and "flashcard" is in the text
+        let effectiveMode = mode;
+        if (effectiveMode === 'auto' && content.toLowerCase().includes('flashcard')) {
+            effectiveMode = 'flashcard';
+        }
+
         const effectiveChatId = overrideChatId || chatId;
         if (!effectiveChatId) return;
 
@@ -325,14 +338,14 @@ export function useAiChat(chatId: string | null) {
 
             console.groupCollapsed('🤖 AI Request Debug');
             console.log('Query:', content);
-            console.log('Context Mode:', mode);
+            console.log('Context Mode:', effectiveMode);
             console.log('History Messages:', history.length);
             console.log('Context Size:', liveNoteContext.length, 'chars');
             console.log('Full History Payload:', history);
             console.log('Full Context Payload:', liveNoteContext);
             console.groupEnd();
 
-            const systemInstructions = AI_ACTION_PROMPTS[mode as keyof typeof AI_ACTION_PROMPTS] || null;
+            const systemInstructions = AI_ACTION_PROMPTS[effectiveMode as keyof typeof AI_ACTION_PROMPTS] || null;
 
             await adapter.sendMessage(
                 history,

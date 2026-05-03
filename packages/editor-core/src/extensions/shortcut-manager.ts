@@ -50,9 +50,11 @@ export const ShortcutManager = Extension.create({
             const colorKey = `Mod-Alt-${key}`;
             shortcuts[colorKey] = () => {
                 if (this.editor.isActive('textStyle', { color: color.value })) {
-                    return dispatchEditorCommand(this.editor, 'unsetColor');
+                    dispatchEditorCommand(this.editor, 'unsetColor');
+                } else {
+                    dispatchEditorCommand(this.editor, 'setColor', { color: color.value });
                 }
-                return dispatchEditorCommand(this.editor, 'setColor', { color: color.value });
+                return true;
             };
 
             // --- Highlights (Mod-Alt-[1-0]) ---

@@ -23,9 +23,10 @@ interface AiChatModalProps {
     initialContext?: { title: string, id: string, content: string };
     initialFolderId?: string | null;
     initialTagId?: string | null;
+    onInsertToNote?: (content: string) => void;
 }
 
-export default function AiChatModal({ visible, onClose, initialContext, initialFolderId, initialTagId }: AiChatModalProps) {
+export default function AiChatModal({ visible, onClose, initialContext, initialFolderId, initialTagId, onInsertToNote }: AiChatModalProps) {
     const { colors } = useTheme();
     const insets = useSafeAreaInsets();
     const router = useRouter();
@@ -339,6 +340,7 @@ export default function AiChatModal({ visible, onClose, initialContext, initialF
                         onClearAllContext={handleClearAllContext}
                         currentModelName={currentModelName ?? undefined}
                         activeProvider={activeProvider ?? undefined}
+                        onInsertToNote={onInsertToNote}
                     />
                 )}
             </View>
