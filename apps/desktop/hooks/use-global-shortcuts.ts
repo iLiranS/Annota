@@ -21,7 +21,7 @@ export function useGlobalShortcuts() {
                 } else if (key === 'p' && !e.shiftKey) {
                     e.preventDefault();
                     setIsSearchOpen(true);
-                } else if (key === 'e' && !e.shiftKey) {
+                } else if (key === 'e' && !e.shiftKey && general.isAiEnabled) {
                     e.preventDefault();
                     updateGeneralSettings({ isAiSidebarOpen: !general.isAiSidebarOpen });
                 } else if (key === '=' || key === '+') {

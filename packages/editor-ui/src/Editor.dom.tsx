@@ -2,6 +2,7 @@ import { useSettingsStore } from '@annota/core';
 import { NoteFileService } from '@annota/core/platform';
 import { dispatchEditorCommand, getEditorProps, getEditorState, getExtensions } from '@annota/editor-core';
 import '@annota/editor-core/styles.css';
+import { DOMSerializer } from '@tiptap/pm/model';
 import { TextSelection } from '@tiptap/pm/state';
 import { EditorContent, useEditor } from '@tiptap/react';
 import 'highlight.js/styles/atom-one-dark.css';
@@ -47,6 +48,7 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
         onTagCommand,
         onNoteLinkCommand,
         onOpenLinkMenu,
+        onSelectionChange,
         renderToolbar,
         renderHeader,
         renderStaticHeader,
@@ -55,6 +57,7 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
         colors: propColors,
         isStandalone,
         direction: propDirection,
+        onScroll,
     }, ref) => {
         const colors = useMemo(() => propColors || { primary: '#007AFF', background: '#FFFFFF', text: '#000000' }, [propColors]);
         const dark = propIsDark ?? false;
@@ -314,6 +317,28 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
 
                 setCurrentLatex(latex || null);
                 setEditorState(getEditorState(editor) as unknown as EditorState);
+
+                if (onSelectionChange) {
+                    let rect: DOMRect | null = null;
+                    if (!selection.empty) {
+                        try {
+                            const { view } = editor;
+                            const head = view.coordsAtPos(selection.head);
+                            rect = new DOMRect(
+                                head.left,
+                                head.top,
+                                head.right - head.left,
+                                head.bottom - head.top
+                            );
+                        } catch (e) { }
+                    }
+                    onSelectionChange({
+                        empty: selection.empty,
+                        range: { from: selection.from, to: selection.to },
+                        clientRect: rect,
+                        text: editor.state.doc.textBetween(selection.from, selection.to, ' ')
+                    });
+                }
             },
             onTransaction: ({ editor }) => {
                 setEditorState(getEditorState(editor) as unknown as EditorState);
@@ -425,7 +450,7 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
         }, [editor]);
 
         // Inside Editor.dom.tsx
-        const handleCommand = useCallback((cmd: string, params?: any) => {
+        const handleCommand = useCallback(async (cmd: string, params?: any) => {
             // Intercept UI commands and open popups
             if (['openMathModal', 'openFileModal', 'openLinkModal', 'openYoutubeModal'].includes(cmd)) {
                 switch (cmd) {
@@ -446,7 +471,7 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
             }
 
             // Otherwise, dispatch to TipTap
-            if (editor) dispatchEditorCommand(editor as any, cmd, params || {});
+            if (editor) await dispatchEditorCommand(editor as any, cmd, params || {});
         }, [editor]);
 
         useImperativeHandle(ref, () => ({
@@ -455,6 +480,27 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
             focus: () => editor?.commands.focus(),
             blur: () => editor?.commands.blur(),
             onCommand: handleCommand,
+            getSelection: () => {
+                if (!editor) return { text: '', html: '', range: { from: 0, to: 0 } };
+                const { selection } = editor.state;
+                const { from, to } = selection;
+
+                // Get HTML of selection
+                let html = '';
+                if (from !== to) {
+                    const slice = editor.state.doc.slice(from, to);
+                    const fragment = DOMSerializer.fromSchema(editor.schema).serializeFragment(slice.content);
+                    const div = document.createElement('div');
+                    div.appendChild(fragment);
+                    html = div.innerHTML;
+                }
+
+                return {
+                    text: editor.state.doc.textBetween(from, to, ' '),
+                    html,
+                    range: { from, to }
+                };
+            },
             search: (term: string) => (editor?.commands as any).search(term),
             searchNext: () => (editor?.commands as any).searchNext(),
             searchPrev: () => (editor?.commands as any).searchPrev(),
@@ -703,7 +749,11 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                         setActivePopup('math');
                     }
                 })}
-                <div className="editor-scroller" ref={scrollerRef} dir={direction} style={{
+                <div 
+                    className="editor-scroller" 
+                    ref={scrollerRef} 
+                    onScroll={onScroll}
+                    dir={direction} style={{
                     flex: 1,
                     overflowY: 'auto',
                     padding: isStandalone ? '0 12px' : '0 24px',

@@ -14,6 +14,7 @@ import { ColorSelector } from './popups/color-selector';
 import { HeadingSelector } from './popups/heading-selector';
 
 import {
+    AIPopupProps,
     BlockMenuPopupProps,
     CodeLanguagePopupProps,
     ColorPopupProps,
@@ -27,6 +28,7 @@ import {
     ToolbarPopupProps,
     YouTubePopupProps
 } from '@annota/editor-ui';
+import { AIMenu } from './popups/ai-menu';
 import { FileInput } from './popups/file-input';
 import { LinkInput } from './popups/link-input';
 import { MathInput } from './popups/math-input';
@@ -230,6 +232,14 @@ export function ToolbarPopup(props: ToolbarPopupProps) {
 
     const renderContent = () => {
         switch (type) {
+            case 'ai':
+                return (
+                    <AIMenu 
+                        onAction={(props as any).onAction}
+                        onClose={onClose}
+                        isLoading={isLoading}
+                    />
+                );
             case 'blockMenu':
                 return (
                     <BlockActionMenu

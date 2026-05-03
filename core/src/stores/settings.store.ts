@@ -27,6 +27,7 @@ export interface GeneralSettings {
     aiSidebarMode: 'floating' | 'pinned';
     isAiSidebarSticky: boolean;
     showNotesCountInFolder: boolean;
+    isAiEnabled: boolean;
 }
 
 export interface SettingsState {
@@ -76,6 +77,7 @@ const DEFAULT_GENERAL_SETTINGS: GeneralSettings = {
     aiSidebarMode: 'pinned',
     isAiSidebarSticky: true,
     showNotesCountInFolder: true,
+    isAiEnabled: true,
 };
 
 export const useSettingsStore = create<SettingsState>()(

@@ -97,7 +97,40 @@ export const FlashcardBlock = Node.create({
                 default: DEFAULT_CARDS,
                 parseHTML: element => {
                     const raw = element.getAttribute('data-c') || element.getAttribute('data-cards');
-                    return raw ? parseCards(raw) : DEFAULT_CARDS;
+                    if (raw) return parseCards(raw);
+
+                    // Fallback: Parse HTML children to reconstruct cards
+                    const foundCards: FlashcardData[] = [];
+
+                    const parseContainer = (container: Element) => {
+                        const frontEl = container.querySelector('.flashcard-card-front');
+                        const backEl = container.querySelector('.flashcard-card-back');
+
+                        const front = frontEl?.querySelector('.flashcard-card-text')?.textContent 
+                            || frontEl?.textContent 
+                            || '';
+                        const back = backEl?.querySelector('.flashcard-card-text')?.textContent 
+                            || backEl?.textContent 
+                            || '';
+
+                        if (front.trim() || back.trim()) {
+                            // Strip labels if present (e.g. "QUESTION", "ANSWER")
+                            const cleanFront = front.replace(/^QUESTION\s*/i, '').trim();
+                            const cleanBack = back.replace(/^ANSWER\s*/i, '').trim();
+                            foundCards.push({ front: cleanFront, back: cleanBack });
+                        }
+                    };
+
+                    // Check if the element itself is a card container
+                    if (element.classList.contains('flashcard-card-container')) {
+                        parseContainer(element);
+                    }
+
+                    // Check for nested card containers
+                    const containers = element.querySelectorAll('.flashcard-card-container');
+                    containers.forEach(parseContainer);
+
+                    return foundCards.length > 0 ? foundCards : DEFAULT_CARDS;
                 },
                 renderHTML: attributes => ({
                     'data-c': serializeCards(parseCards(attributes.cards)),
@@ -242,7 +275,6 @@ export const FlashcardBlock = Node.create({
                 onClick: this.options.onOpenBlockMenu || undefined,
             });
 
-            headerRight.appendChild(counter);
             headerRight.appendChild(editBtn);
             headerRight.appendChild(menuBtn);
             header.appendChild(titleInput);
@@ -305,6 +337,24 @@ export const FlashcardBlock = Node.create({
             cardInner.appendChild(cardFront);
             cardInner.appendChild(cardBack);
             cardContainer.appendChild(cardInner);
+
+            // --- Footer Nav ---
+            const footerNav = document.createElement('div');
+            footerNav.className = 'flashcard-footer-nav';
+
+            const editPrevBtn = document.createElement('button');
+            editPrevBtn.className = 'flashcard-nav-btn flashcard-edit-nav-btn';
+            editPrevBtn.innerHTML = CHEVRON_LEFT_SVG;
+            editPrevBtn.title = 'Previous card';
+
+            const editNextBtn = document.createElement('button');
+            editNextBtn.className = 'flashcard-nav-btn flashcard-edit-nav-btn';
+            editNextBtn.innerHTML = CHEVRON_RIGHT_SVG;
+            editNextBtn.title = 'Next card';
+
+            footerNav.appendChild(editPrevBtn);
+            footerNav.appendChild(counter);
+            footerNav.appendChild(editNextBtn);
 
             const MAX_CARD_TEXT = 500;
 
@@ -388,6 +438,7 @@ export const FlashcardBlock = Node.create({
             cardArea.appendChild(cardContainer);
             cardArea.appendChild(nextBtn);
             cardArea.appendChild(editPane);
+            cardArea.appendChild(footerNav);
             dom.appendChild(header);
             dom.appendChild(cardArea);
 
@@ -398,9 +449,26 @@ export const FlashcardBlock = Node.create({
                 else if (currentIndex >= cards.length) currentIndex = cards.length - 1;
 
                 const card = cards[currentIndex];
-                counter.textContent = cards.length > 0 ? `${currentIndex + 1}/${cards.length}` : '0/0';
+                counter.textContent = cards.length > 0 ? `${currentIndex + 1} / ${cards.length}` : '0 / 0';
                 prevBtn.style.display = (cards.length > 1 && !isEditing) ? '' : 'none';
                 nextBtn.style.display = (cards.length > 1 && !isEditing) ? '' : 'none';
+
+                const hasMultipleCards = cards.length > 1;
+                editPrevBtn.style.display = (isEditing && hasMultipleCards) ? '' : 'none';
+                editNextBtn.style.display = (isEditing && hasMultipleCards) ? '' : 'none';
+
+                editPrevBtn.onclick = (e) => {
+                    e.preventDefault(); e.stopPropagation();
+                    currentIndex = (currentIndex - 1 + cards.length) % cards.length;
+                    isFlipped = false;
+                    renderCard();
+                };
+                editNextBtn.onclick = (e) => {
+                    e.preventDefault(); e.stopPropagation();
+                    currentIndex = (currentIndex + 1) % cards.length;
+                    isFlipped = false;
+                    renderCard();
+                };
 
                 if (isEditing && card) {
                     cardContainer.style.display = 'none';
@@ -410,7 +478,7 @@ export const FlashcardBlock = Node.create({
                     const editHeader = document.createElement('div');
                     editHeader.className = 'flashcard-edit-header';
                     const indexText = document.createElement('span');
-                    indexText.textContent = `Card ${currentIndex + 1} of ${cards.length}`;
+                    indexText.textContent = `Order: ${currentIndex + 1} of ${cards.length}`;
                     editHeader.appendChild(indexText);
                     editHeader.appendChild(orderControls);
                     editPane.appendChild(editHeader);

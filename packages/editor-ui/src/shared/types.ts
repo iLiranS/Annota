@@ -28,6 +28,7 @@ export interface TipTapEditorRef {
     searchPrev: () => void;
     clearSearch: () => void;
     scrollToElement: (id: string) => void;
+    getSelection: () => { text: string; html: string; range: { from: number; to: number } };
 }
 
 export interface TipTapEditorProps {
@@ -64,6 +65,8 @@ export interface TipTapEditorProps {
     onNoteLinkCommand?: (data: { active: boolean; query?: string; range?: { from: number; to: number }; clientRect?: any }) => void;
     /** Callback for opening a link-specific menu */
     onOpenLinkMenu?: (e: MouseEvent, url: string) => void;
+    /** Callback for selection changes, provides the bounding rect of the selection */
+    onSelectionChange?: (data: { empty: boolean; range: { from: number; to: number }; clientRect: DOMRect | null; text: string }) => void;
     /** Render prop for customizing the slash command menu */
     renderSlashCommandMenu?: () => React.ReactNode;
     /** Callback for when the code block language selector is clicked */
@@ -92,6 +95,8 @@ export interface TipTapEditorProps {
     isStandalone?: boolean;
     /** Editor direction override */
     direction?: 'ltr' | 'rtl' | 'auto';
+    /** Callback for when the editor scroller scrolls */
+    onScroll?: (event: React.UIEvent<HTMLDivElement>) => void;
 }
 
 export interface EditorState {
@@ -131,6 +136,8 @@ export interface EditorState {
     isLink: boolean;
     linkHref: string | null;
     selectedText: string;
+    selectedHtml: string;
+    selectionRange: { from: number; to: number };
 
     // Colors
     highlightColor: string | null;
@@ -184,6 +191,8 @@ export const initialEditorState: EditorState = {
     isLink: false,
     linkHref: null,
     selectedText: '',
+    selectedHtml: '',
+    selectionRange: { from: 0, to: 0 },
     highlightColor: null,
     textColor: null,
     canUndo: false,
@@ -263,7 +272,7 @@ export type EditorCommand =
 // Popup Types
 // ============================================================================
 
-export type PopupType = 'headings' | 'highlight' | 'textColor' | 'youtube' | 'link' | 'file' | 'table' | 'codeLanguage' | 'math' | 'detailsBackground' | 'blockMenu' | 'fileMenu' | null;
+export type PopupType = 'headings' | 'highlight' | 'textColor' | 'youtube' | 'link' | 'file' | 'table' | 'codeLanguage' | 'math' | 'detailsBackground' | 'blockMenu' | 'fileMenu' | 'ai' | null;
 
 export interface BasePopupProps {
     visible: boolean;
@@ -365,7 +374,12 @@ export interface FileMenuPopupProps extends BasePopupProps {
     mimeType?: string;
 }
 
+export interface AIPopupProps extends BasePopupProps {
+    type: 'ai';
+    onAction: (action: string, instructions: string) => void;
+}
 
-export type ToolbarPopupProps = HeadingPopupProps | ColorPopupProps | YouTubePopupProps | LinkPopupProps | FilePopupProps | TablePopupProps | CodeLanguagePopupProps | MathPopupProps | DetailsBackgroundPopupProps | BlockMenuPopupProps | FileMenuPopupProps;
+
+export type ToolbarPopupProps = HeadingPopupProps | ColorPopupProps | YouTubePopupProps | LinkPopupProps | FilePopupProps | TablePopupProps | CodeLanguagePopupProps | MathPopupProps | DetailsBackgroundPopupProps | BlockMenuPopupProps | FileMenuPopupProps | AIPopupProps;
 
 

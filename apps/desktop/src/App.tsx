@@ -93,7 +93,9 @@ function App() {
   // Prevent default browser navigation for global drag and drop
   useEffect(() => {
     const preventNavigation = (e: any) => {
-      e.preventDefault();
+      if (e.dataTransfer?.types?.includes('Files')) {
+        e.preventDefault();
+      }
     };
 
     // You must prevent default on 'dragover' to allow the 'drop' event to fire

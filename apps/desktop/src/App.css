@@ -9,9 +9,6 @@ html,
 body {
   overscroll-behavior: none;
   overflow: hidden;
-  -webkit-font-smoothing: antialiased !important;
-  text-rendering: optimizeLegibility !important;
-  font-optical-sizing: auto !important;
 }
 
 

@@ -267,9 +267,10 @@ export function AppSidebar() {
     return (
         <div
             className={cn(
-                "relative ms-2 flex shrink-0 flex-col bg-transparent transition-all duration-300 ease-in-out  overflow-hidden",
+                "relative 2  flex shrink-0 flex-col bg-transparent transition-all duration-300 ease-in-out  overflow-hidden",
                 !open && "w-0! opacity-0 pointer-events-none border-none",
-                isResizing && "transition-none"
+                isResizing && "transition-none",
+                open && 'ms-2'
             )}
             style={{
                 width: open ? `${width}px` : 0,

@@ -9,19 +9,22 @@ import { NotePreviewModal } from "@/components/notes/note-preview-modal";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useOpenNoteInNewWindow } from "@/hooks/use-open-note-in-new-window";
-import { copyImageToClipboard, writeText } from "@/lib/clipboard";
 import { cn } from "@/lib/utils";
-import { generateTitle, normalizeStoredContent, NoteMetadata, TRASH_FOLDER_ID, useNotesStore, useSettingsStore } from "@annota/core";
-import { NoteFileService } from "@annota/core/platform";
+import { NoteMetadata, TRASH_FOLDER_ID, useNotesStore, useSettingsStore } from "@annota/core";
 import TipTapEditor, { TipTapEditorRef } from "@annota/editor-ui";
 import { FileText, Loader2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { AISelectionPopover } from "./components/ai-selection-popover";
 import { NoteFloatingActions } from "./components/note-floating-actions";
 import { NoteRestoreButton } from "./components/note-restore-button";
 import { NoteSearch } from "./components/note-search";
 import { NoteTags } from "./components/note-tags";
-
+import { useNoteEditorContent } from "./hooks/use-note-editor-content";
+import { useNoteEditorSearch } from "./hooks/use-note-editor-search";
+import { useBlockMenuHandler } from "./hooks/use-block-menu-handler";
+import { useNoteEditorAI } from "./hooks/use-note-editor-ai";
+import { useNoteEditorCommands } from "./hooks/use-note-editor-commands";
 
 export interface NoteEditorProps {
     noteId?: string;
@@ -42,134 +45,79 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
 
     const notes = useNotesStore((s) => s.notes);
     const folders = useNotesStore((s) => s.folders);
-    const getNoteContent = useNotesStore((s) => s.getNoteContent);
-    const { updateNoteContent, updateNoteMetadata } = useNotesStore();
     const setLastViewed = useSettingsStore((s) => s.setLastViewed);
     const direction = useSettingsStore((s) => s.editor.direction);
     const note = notes.find((n) => n.id === noteId);
     const { isDark, colors } = useAppTheme();
 
     const editorRef = useRef<TipTapEditorRef>(null);
-    const hasScrolledRef = useRef(false);
-    const [initialContent, setInitialContent] = useState<string | null>(null);
-    const isApplyingRemoteRef = useRef(false);
-    const pendingRemoteContentRef = useRef<string | null>(null);
-    const lastSeenUpdatedAtRef = useRef<number | null>(null);
-
     const { open: isNoteSidebarOpen, setOpen: setNoteSidebarOpen } = useSidebar();
 
-    // Search state
-    const [isSearching, setIsSearching] = useState(false);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [searchResultCount, setSearchResultCount] = useState(0);
-    const [currentSearchIndex, setCurrentSearchIndex] = useState(-1);
-
-    // Slash commands state
-    const [slashCommandState, setSlashCommandState] = useState<{ active: boolean; query?: string; range?: { from: number; to: number }; clientRect?: any }>({ active: false });
-    const [tagCommandState, setTagCommandState] = useState<{ active: boolean; query?: string; range?: { from: number; to: number }; clientRect?: any }>({ active: false });
-    const [noteLinkCommandState, setNoteLinkCommandState] = useState<{ active: boolean; query?: string; range?: { from: number; to: number }; clientRect?: any }>({ active: false });
-
-    const isEmptyContent = (html: string) => {
-        const normalized = html
-            .replace(/&nbsp;/gi, '')
-            .replace(/\s/g, '')
-            .toLowerCase();
-        return normalized === '' || normalized === '<p></p>' || normalized === '<p><br></p>';
-    };
-
-    const extractImageIds = useCallback((html: string): string[] => {
-        const regex = /data-image-id\s*=\s*(["'])(.*?)\1/gi;
-        const ids = new Set<string>();
-        let match;
-        while ((match = regex.exec(html)) !== null) {
-            const id = match[2];
-            if (!id.startsWith('temp-')) {
-                ids.add(id);
-            }
-        }
-        return Array.from(ids);
+    const toggleMainSidebar = useCallback((open?: boolean) => {
+        window.dispatchEvent(new CustomEvent('annota-toggle-main-sidebar', {
+            detail: { open }
+        }));
     }, []);
 
-    const hydrateImageSrcs = useCallback(async (html: string): Promise<string> => {
-        const ids = extractImageIds(html);
-        if (ids.length === 0) return html;
-
-        const imageMap = await NoteFileService.resolveFileSources(ids);
-        if (!imageMap || Object.keys(imageMap).length === 0) return html;
-
-        if (typeof DOMParser !== "undefined") {
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, "text/html");
-            const imgs = doc.querySelectorAll("img[data-image-id]");
-            imgs.forEach((img) => {
-                const id = img.getAttribute("data-image-id");
-                if (id && imageMap[id]) {
-                    img.setAttribute("src", imageMap[id]);
-                }
-            });
-            return doc.body.innerHTML;
+    const toggleFullScreen = useCallback(() => {
+        if (!isNoteSidebarOpen) {
+            setNoteSidebarOpen(true);
+            toggleMainSidebar(true);
+        } else {
+            setNoteSidebarOpen(false);
+            toggleMainSidebar(false);
         }
+    }, [isNoteSidebarOpen, setNoteSidebarOpen, toggleMainSidebar]);
 
-        const escapeAttr = (value: string) => value.replace(/"/g, "&quot;");
-        return html.replace(/<img\b[^>]*>/gi, (tag) => {
-            const idMatch = tag.match(/data-image-id\s*=\s*["']([^"']+)["']/i);
-            const id = idMatch?.[1];
-            if (!id || !imageMap[id]) return tag;
-            const src = escapeAttr(imageMap[id]);
-            if (/src\s*=\s*["'][^"']*["']/i.test(tag)) {
-                return tag.replace(/src\s*=\s*["'][^"']*["']/i, `src="${src}"`);
-            }
-            return tag.replace(/\s*\/?>$/, (end) => ` src="${src}"${end}`);
-        });
-    }, [extractImageIds]);
+    // Hooks
+    const { initialContent, setInitialContent, handleContentChange } = useNoteEditorContent({
+        noteId,
+        editorRef,
+        onNoteSync,
+        elementId
+    });
 
-    const resolveImagesForContent = useCallback(async (html: string) => {
-        if (!editorRef.current) return;
-        const ids = extractImageIds(html);
-        if (ids.length === 0) return;
+    const {
+        isSearching,
+        setIsSearching,
+        searchTerm,
+        searchResultCount,
+        currentSearchIndex,
+        handleCloseSearch,
+        handleSearchTermChange,
+        handleSearchResults,
+        handleSearchNext,
+        handleSearchPrev,
+    } = useNoteEditorSearch({ editorRef, toggleFullScreen });
 
-        const resolveWithIds = async (imageIds: string[], attempt: number) => {
-            if (!editorRef.current || imageIds.length === 0) return;
-            try {
-                const imageMap = await NoteFileService.resolveFileSources(imageIds);
-                if (Object.keys(imageMap).length > 0) {
-                    editorRef.current.onCommand("resolveImages", { imageMap });
-                }
+    const {
+        activeBlockMenu,
+        setActiveBlockMenu,
+        handleOpenBlockMenu,
+        handleCodeBlockSelected,
+        handleOpenFileMenu,
+        handleOpenTableMenu,
+        handleBlockAction,
+    } = useBlockMenuHandler({ editorRef, noteId });
 
-                const unresolved = imageIds.filter((id) => !imageMap[id]);
-                if (unresolved.length > 0 && attempt < 2) {
-                    setTimeout(() => {
-                        resolveWithIds(unresolved, attempt + 1);
-                    }, 1200);
-                }
-            } catch (err) {
-                console.error("Failed to resolve image sources", err);
-            }
-        };
+    const {
+        aiSelection,
+        isAiStreaming,
+        handleAIAction,
+        handleSelectionChange,
+        handleScroll,
+    } = useNoteEditorAI({ editorRef });
 
-        void resolveWithIds(ids, 0);
-    }, [extractImageIds]);
+    const {
+        slashCommandState,
+        setSlashCommandState,
+        tagCommandState,
+        setTagCommandState,
+        noteLinkCommandState,
+        setNoteLinkCommandState,
+    } = useNoteEditorCommands();
 
-    const fetchNoteContent = useCallback(async (targetNoteId: string): Promise<string | null> => {
-        try {
-            return await getNoteContent(targetNoteId);
-        } catch (err) {
-            console.error("Failed to load note content", err);
-            return null;
-        }
-    }, [getNoteContent]);
-
-    const shouldAutofocus = initialContent !== null && isEmptyContent(initialContent);
-
-    // Block Menu state
-    const [activeBlockMenu, setActiveBlockMenu] = useState<{
-        type: "image" | "file" | "details" | "codeBlock" | "table" | "mermaid" | "quote";
-        data: any;
-        anchorRect: DOMRect;
-        onResolve: () => any;
-    } | null>(null);
-
-    // Link Context Menu state
+    // Link & Preview state
     const [linkMenuState, setLinkMenuState] = useState<{
         open: boolean;
         url: string;
@@ -179,7 +127,6 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
     const [previewNote, setPreviewNote] = useState<NoteMetadata | null>(null);
 
     const handleOpenLinkMenu = useCallback((e: MouseEvent, url: string) => {
-        // Use the full <a> element's rect, not e.target which may be a partial text node
         const linkEl = e.composedPath().find((el: any) => el?.tagName === 'A') as HTMLAnchorElement | undefined;
         const anchorEl = linkEl ?? (e.target as HTMLElement);
         setLinkMenuState({
@@ -198,223 +145,17 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
 
     const handleOpenInNewWindow = useOpenNoteInNewWindow();
 
-    const handleOpenBlockMenu = useCallback((e: MouseEvent, resolve: () => any) => {
-        const result = resolve();
-        if (!result) return;
+    const isEmptyContent = (html: string) => {
+        const normalized = html
+            .replace(/&nbsp;/gi, '')
+            .replace(/\s/g, '')
+            .toLowerCase();
+        return normalized === '' || normalized === '<p></p>' || normalized === '<p><br></p>';
+    };
 
-        setActiveBlockMenu({
-            type: result.message.blockType || "details",
-            data: result.message,
-            anchorRect: (e.target as HTMLElement).getBoundingClientRect(),
-            onResolve: resolve,
-        });
-    }, []);
+    const shouldAutofocus = initialContent !== null && isEmptyContent(initialContent);
 
-    const handleCodeBlockSelected = useCallback((e: MouseEvent, resolve: () => any) => {
-        const result = resolve();
-        if (!result) return;
-
-        setActiveBlockMenu({
-            type: "codeBlock",
-            data: result.message,
-            anchorRect: (e.target as HTMLElement).getBoundingClientRect(),
-            onResolve: resolve,
-        });
-    }, []);
-
-    const handleOpenFileMenu = useCallback((e: MouseEvent, resolve: () => any) => {
-        const result = resolve();
-        if (!result) return;
-
-        setActiveBlockMenu({
-            type: result.message.type === 'openOpenFileMenu' && (result.message as any).fileId ? "file" : "image",
-            data: result.message,
-            anchorRect: (e.target as HTMLElement).getBoundingClientRect(),
-            onResolve: resolve,
-        });
-    }, []);
-
-    const handleOpenTableMenu = useCallback((e: MouseEvent, resolve: () => any) => {
-        const result = resolve();
-        if (!result) return;
-
-        setActiveBlockMenu({
-            type: "table",
-            data: result.message,
-            anchorRect: (e.target as HTMLElement).getBoundingClientRect(),
-            onResolve: resolve,
-        });
-    }, []);
-
-
-
-    const handleBlockAction = useCallback(async (action: string, params?: any) => {
-        if (!activeBlockMenu || !editorRef.current) return;
-
-        const { data, type } = activeBlockMenu;
-
-        switch (action) {
-            case "resize":
-                editorRef.current.onCommand("updateImage", { pos: data.position, width: params.width });
-                break;
-            case "copy":
-                if (type === "image") {
-                    const src = data.src || "";
-                    copyImageToClipboard(src, data.imageId);
-                }
-                else {
-                    console.log("copying to clipboard")
-                    editorRef.current.onCommand("copyToClipboard", { pos: data.pos });
-                }
-                break;
-            case "cut":
-                if (type === "image") {
-                    const src = data.src || "";
-                    copyImageToClipboard(src, data.imageId);
-                    editorRef.current.onCommand("deleteImage", { pos: data.position });
-                } else if (["codeBlock", "details", "mermaid", "quote", "flashcard"].includes(type)) {
-                    editorRef.current.onCommand("copyToClipboard", { pos: data.pos });
-                    editorRef.current.onCommand("deleteSelection", { pos: data.pos });
-                }
-                break;
-            case "delete":
-                if (type === "image") {
-                    editorRef.current.onCommand("deleteImage", { pos: data.position });
-                } else if (type === "table") {
-                    editorRef.current.onCommand("deleteTable", {});
-                } else {
-                    editorRef.current.onCommand("deleteSelection", { pos: data.pos });
-                }
-                break;
-            case "background":
-                if (type === "details") {
-                    editorRef.current.onCommand("setDetailsBackground", { pos: data.pos, color: params.color });
-                } else if (type === "quote") {
-                    editorRef.current.onCommand("setQuoteBackground", { pos: data.pos, color: params.color });
-                } else if (type === "table") {
-                    if (params.color) {
-                        editorRef.current.onCommand("setCellBackground", { color: params.color });
-                    } else {
-                        editorRef.current.onCommand("unsetCellBackground", {});
-                    }
-                }
-                break;
-            case "addRowBefore":
-                editorRef.current.onCommand("addRowBefore", {});
-                break;
-            case "addRowAfter":
-                editorRef.current.onCommand("addRowAfter", {});
-                break;
-            case "addColumnBefore":
-                editorRef.current.onCommand("addColumnBefore", {});
-                break;
-            case "addColumnAfter":
-                editorRef.current.onCommand("addColumnAfter", {});
-                break;
-            case "deleteRow":
-                editorRef.current.onCommand("deleteRow", {});
-                break;
-            case "deleteColumn":
-                editorRef.current.onCommand("deleteColumn", {});
-                break;
-            case "mergeCells":
-                editorRef.current.onCommand("mergeCells", {});
-                break;
-            case "splitCell":
-                editorRef.current.onCommand("splitCell", {});
-                break;
-            case "copyLink":
-                const id = data.id || (data.attrs && data.attrs.id);
-                if (id) {
-                    const link = `annota://note/${noteId}?blockId=${id}`;
-                    await writeText(link);
-                } else {
-                }
-                break;
-            case "language":
-                editorRef.current.onCommand("setCodeBlockLanguage", { pos: data.pos, language: params.language });
-                break;
-            case "download":
-                if (type === "image" && data.src) {
-                    try {
-                        const response = await fetch(data.src);
-                        const blob = await response.blob();
-                        const url = window.URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        // Use imageId as filename if available
-                        a.download = data.imageId ? `${data.imageId}.webp` : 'image_download';
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
-                        window.URL.revokeObjectURL(url);
-                    } catch (err) {
-                        console.error("Download failed:", err);
-                    }
-                }
-                break;
-            case "open":
-                if (type === "file" && data.localPath) {
-                    editorRef.current.onCommand("openFile", { localPath: data.localPath, mimeType: data.mimeType });
-                }
-                break;
-        }
-    }, [activeBlockMenu, noteId]);
-
-    const toggleMainSidebar = useCallback((open?: boolean) => {
-        window.dispatchEvent(new CustomEvent('annota-toggle-main-sidebar', {
-            detail: { open }
-        }));
-    }, []);
-
-    const toggleFullScreen = useCallback(() => {
-        if (!isNoteSidebarOpen) {
-            setNoteSidebarOpen(true);
-            toggleMainSidebar(true);
-        } else {
-            setNoteSidebarOpen(false);
-            toggleMainSidebar(false);
-        }
-    }, [isNoteSidebarOpen, setNoteSidebarOpen, toggleMainSidebar]);
-
-    // Search handlers
-    const handleOpenSearch = useCallback(() => {
-        setIsSearching(true);
-    }, []);
-
-    const handleCloseSearch = useCallback(() => {
-        setIsSearching(false);
-        setSearchTerm('');
-        setSearchResultCount(0);
-        setCurrentSearchIndex(-1);
-        editorRef.current?.clearSearch();
-    }, []);
-
-    const handleSearchTermChange = useCallback((term: string) => {
-        setSearchTerm(term);
-        if (term.length > 0) {
-            editorRef.current?.search(term);
-        } else {
-            editorRef.current?.clearSearch();
-            setSearchResultCount(0);
-            setCurrentSearchIndex(-1);
-        }
-    }, []);
-
-    const handleSearchResults = useCallback((count: number, currentIndex: number) => {
-        setSearchResultCount(count);
-        setCurrentSearchIndex(currentIndex);
-    }, []);
-
-    const handleSearchNext = useCallback(() => {
-        editorRef.current?.searchNext();
-    }, []);
-
-    const handleSearchPrev = useCallback(() => {
-        editorRef.current?.searchPrev();
-    }, []);
-
-    // search in note / focus mode shortcuts
+    // AI Insert Effect
     useEffect(() => {
         const handleInsertAiContent = async (e: CustomEvent<{ content: string }>) => {
             if (!editorRef.current || note?.isDeleted) return;
@@ -429,48 +170,26 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
 
         window.addEventListener('annota-insert-ai-content' as any, handleInsertAiContent);
         return () => window.removeEventListener('annota-insert-ai-content' as any, handleInsertAiContent);
-    }, []);
+    }, [note?.isDeleted]);
 
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "f") {
-                e.preventDefault();
-                handleOpenSearch();
-            }
-            if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "d") {
-                e.preventDefault();
-                toggleFullScreen();
-            }
-        };
-
-        window.addEventListener("keydown", handleKeyDown);
-        return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [handleOpenSearch, toggleFullScreen]);
-
-
+    // Navigation logic
     useEffect(() => {
         if (!noteId) return;
-
-        // 1. Note was permanently deleted (removed from store)
         if (!note) {
             navigate('/notes', { replace: true });
             return;
         }
 
-        // 2. Only redirect if we are NOT intentionally in the trash view
         if (routeFolderId !== TRASH_FOLDER_ID) {
-            // Note itself was moved to trash
             if (note.isDeleted) {
                 const targetFolderId = note.originalFolderId || "root";
                 const isTargetStillValid = folders.find(f => f.id === targetFolderId && !f.isDeleted);
                 const finalFolder = isTargetStillValid ? targetFolderId : "root";
-
                 const path = finalFolder === "root" ? "/notes" : `/notes?folderId=${finalFolder}`;
                 navigate(path, { replace: true });
                 return;
             }
 
-            // Parent folder was moved to trash
             if (routeFolderId && routeFolderId !== 'root') {
                 const currentFolder = folders.find(f => f.id === routeFolderId);
                 if (currentFolder?.isDeleted) {
@@ -485,138 +204,6 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
             setLastViewed(noteId, routeFolderId || 'root');
         }
     }, [noteId, routeFolderId, setLastViewed]);
-
-    useEffect(() => {
-        if (!noteId) return;
-        setInitialContent(null);
-        let cancelled = false;
-
-        (async () => {
-            const content = await fetchNoteContent(noteId);
-            if (cancelled) return;
-            if (content === null) {
-                setInitialContent("");
-                return;
-            }
-            const html = content || "";
-            const hydrated = await hydrateImageSrcs(html);
-            if (cancelled) return;
-            setInitialContent(hydrated);
-            lastSeenUpdatedAtRef.current = note?.updatedAt ? new Date(note.updatedAt).getTime() : null;
-        })();
-
-        return () => {
-            cancelled = true;
-        };
-    }, [noteId, fetchNoteContent, hydrateImageSrcs]);
-
-    useEffect(() => {
-        lastSeenUpdatedAtRef.current = null;
-        pendingRemoteContentRef.current = null;
-        isApplyingRemoteRef.current = false;
-    }, [noteId]);
-
-    const handleContentChange = useCallback(async (html: string) => {
-        if (!noteId) return;
-        if (isApplyingRemoteRef.current) {
-            const normalized = normalizeStoredContent(html || '');
-            if (pendingRemoteContentRef.current) {
-                const matches =
-                    normalized === pendingRemoteContentRef.current ||
-                    (isEmptyContent(normalized) && isEmptyContent(pendingRemoteContentRef.current));
-                if (matches) {
-                    isApplyingRemoteRef.current = false;
-                    pendingRemoteContentRef.current = null;
-                }
-            }
-            return;
-        }
-        const title = generateTitle(html);
-
-        if (onNoteSync) {
-            onNoteSync(noteId, html, title);
-            return;
-        }
-
-        const { error } = await updateNoteContent(noteId, html);
-        if (!error) {
-            updateNoteMetadata(noteId, { title });
-        }
-    }, [noteId, updateNoteContent, updateNoteMetadata, onNoteSync]);
-
-    useEffect(() => {
-        if (!noteId || !note?.updatedAt) return;
-        if (initialContent === null) return;
-
-        const updatedAtMs = new Date(note.updatedAt).getTime();
-        if (lastSeenUpdatedAtRef.current === updatedAtMs) return;
-
-        if (note.isDirty) {
-            lastSeenUpdatedAtRef.current = updatedAtMs;
-            return;
-        }
-
-        let cancelled = false;
-        let resetTimer: ReturnType<typeof setTimeout> | null = null;
-
-        (async () => {
-            const latest = await fetchNoteContent(noteId);
-            if (cancelled || latest === null) return;
-
-            const normalizedLatest = normalizeStoredContent(latest);
-            const currentHtml = editorRef.current ? await editorRef.current.getContent() : (initialContent ?? '');
-            if (cancelled) return;
-
-            const normalizedCurrent = normalizeStoredContent(currentHtml || '');
-            if (normalizedLatest === normalizedCurrent) {
-                lastSeenUpdatedAtRef.current = updatedAtMs;
-                return;
-            }
-
-            const hydrated = await hydrateImageSrcs(latest);
-            if (cancelled) return;
-
-            setInitialContent(hydrated);
-
-            if (editorRef.current) {
-                pendingRemoteContentRef.current = normalizeStoredContent(latest);
-                isApplyingRemoteRef.current = true;
-                editorRef.current.setContent(hydrated);
-            }
-
-            await resolveImagesForContent(latest);
-            if (cancelled) return;
-
-            resetTimer = setTimeout(() => {
-                if (isApplyingRemoteRef.current) {
-                    isApplyingRemoteRef.current = false;
-                    pendingRemoteContentRef.current = null;
-                }
-            }, 3000);
-
-            lastSeenUpdatedAtRef.current = updatedAtMs;
-        })();
-
-        return () => {
-            cancelled = true;
-            if (resetTimer) clearTimeout(resetTimer);
-        };
-    }, [noteId, note?.updatedAt, note?.isDirty, initialContent, fetchNoteContent, hydrateImageSrcs, resolveImagesForContent]);
-
-    useEffect(() => {
-        // 1. Wait until we have the ID, the ref, and the content
-        if (!elementId || !editorRef.current || !initialContent) return;
-
-        // 2. If we already handled this deep link, do nothing!
-        if (hasScrolledRef.current) return;
-
-        const timer = setTimeout(() => {
-            editorRef.current?.scrollToElement(elementId);
-            hasScrolledRef.current = true; // Mark it as completed so it never fires again
-        }, 150);
-
-        return () => clearTimeout(timer);
-    }, [elementId, initialContent]);
 
     const isInitialized = useNotesStore((s) => s.isInitialized);
 
@@ -640,9 +227,6 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
     return (
         <div className="flex h-full bg-note-bg flex-col w-full min-h-0 relative ">
             <div className="flex-1 overflow-hidden relative w-full h-full min-h-0 overscroll-none flex flex-col">
-                {/* Note Header (Tags & Actions) */}
-
-
                 <div className="flex-1 relative overflow-hidden flex flex-col min-h-0">
                     <NoteSearch
                         visible={isSearching}
@@ -702,6 +286,8 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
                             onTagCommand={setTagCommandState}
                             onNoteLinkCommand={setNoteLinkCommandState}
                             onOpenLinkMenu={handleOpenLinkMenu}
+                            onSelectionChange={handleSelectionChange}
+                            onScroll={handleScroll}
                             isDark={isDark}
                             colors={{
                                 primary: colors.primary,
@@ -714,6 +300,7 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
                             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                         </div>
                     )}
+
                     {activeBlockMenu && (
                         <BlockMenu
                             open={!!activeBlockMenu}
@@ -777,8 +364,18 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
                             note={previewNote}
                         />
                     )}
+
+                    <AISelectionPopover
+                        isVisible={aiSelection.isVisible || isAiStreaming}
+                        isLoading={isAiStreaming}
+                        anchorRect={aiSelection.anchorRect}
+                        direction={direction}
+                        onAction={handleAIAction}
+                    />
                 </div>
             </div>
         </div>
     );
 }
+
+

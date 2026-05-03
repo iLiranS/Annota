@@ -7,7 +7,7 @@ import { TaskItem } from '@tiptap/extension-task-item';
 import { TaskList } from '@tiptap/extension-task-list';
 import { FontFamily, TextStyle } from '@tiptap/extension-text-style';
 import { Underline } from '@tiptap/extension-underline';
-import { Slice } from '@tiptap/pm/model';
+import { Slice, DOMSerializer } from '@tiptap/pm/model';
 import { CellSelection } from '@tiptap/pm/tables';
 import { StarterKit } from '@tiptap/starter-kit';
 
@@ -232,9 +232,6 @@ export const getEditorProps = (callbacks: {
         return false; // Allow default Prosemirror scroll with margin
     },
     handleDOMEvents: {
-        drop: () => false,
-        dragover: () => false,
-        dragstart: () => false,
         mousedown: (view: any, event: MouseEvent) => {
             // Check if the mouse event is a right-click (button 2)
             if (event.button === 2) {
@@ -311,6 +308,17 @@ export const getEditorState = (editor: any) => {
 
     const { from, to } = e.state.selection;
     const selectedText = from !== to ? e.state.doc.textBetween(from, to, ' ') : '';
+
+    // Get HTML of selection
+    let selectedHtml = '';
+    if (from !== to) {
+        const slice = e.state.doc.slice(from, to);
+        const fragment = DOMSerializer.fromSchema(e.schema).serializeFragment(slice.content);
+        const div = document.createElement('div');
+        div.appendChild(fragment);
+        selectedHtml = div.innerHTML;
+    }
+
     const headingAttrs = e.isActive('heading') ? e.getAttributes('heading') : null;
 
     return {
@@ -341,6 +349,8 @@ export const getEditorState = (editor: any) => {
         isLink: e.isActive('link'),
         linkHref: linkAttrs.href || null,
         selectedText,
+        selectedHtml,
+        selectionRange: { from, to },
         highlightColor: highlightAttrs.color || null,
         textColor: textStyleAttrs.color || null,
         canUndo: e.can().undo(),

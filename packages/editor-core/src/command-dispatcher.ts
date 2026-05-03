@@ -1,6 +1,7 @@
 import { Editor } from "@tiptap/core";
 import { DOMSerializer } from "@tiptap/pm/model";
 import { NodeSelection } from "@tiptap/pm/state";
+import { convertMarkdownToAnnotaHTML } from "./markdown-parser";
 
 
 function getDefaultCodeLanguage(editor: any): string {
@@ -40,7 +41,7 @@ function hasParams(params: any): boolean {
     return Object.keys(params).length > 0;
 }
 
-export function dispatchEditorCommand(editor: Editor, command: string, params: Record<string, any> = {}): boolean {
+export async function dispatchEditorCommand(editor: Editor, command: string, params: Record<string, any> = {}): Promise<boolean> {
     if (!editor) return false;
 
     const chain = editor.chain() as any;
@@ -277,15 +278,26 @@ export function dispatchEditorCommand(editor: Editor, command: string, params: R
             }
             return true;
         case 'insertContent': {
-            const content = params?.content;
+            let content = params?.content;
             if (!content) return true;
+            
+            // If it looks like Markdown (contains common markers and doesn't look like HTML), convert it.
+            if (typeof content === 'string' && !content.trim().startsWith('<')) {
+                content = await convertMarkdownToAnnotaHTML(content);
+            }
+            
             chain.insertContent(content, params?.options).focus().run();
             return true;
         }
         case 'insertContentAt': {
             const pos = params?.pos;
-            const content = params?.content;
+            let content = params?.content;
             if (pos === undefined || content === undefined) return true;
+            
+            if (typeof content === 'string' && !content.trim().startsWith('<')) {
+                content = await convertMarkdownToAnnotaHTML(content);
+            }
+            
             const options = params?.options;
             chain.insertContentAt(pos, content, options).focus().run();
             return true;

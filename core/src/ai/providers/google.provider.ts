@@ -11,6 +11,7 @@ export class GoogleProvider implements AiProviderAdapter {
     async sendMessage(
         history: AiMessage[],
         liveNoteContent: string | null,
+        systemInstructions: string | null,
         onChunk: (text: string) => void,
         signal?: AbortSignal
     ): Promise<void> {
@@ -21,9 +22,10 @@ export class GoogleProvider implements AiProviderAdapter {
             throw new Error('Google API key not configured');
         }
 
+        const baseSystemPrompt = systemInstructions || DEFAULT_SYSTEM_PROMPT;
         const liveSystemContent = liveNoteContent
-            ? `${DEFAULT_SYSTEM_PROMPT}\n\nUse the following live note context to answer accurately:\n${liveNoteContent}`
-            : DEFAULT_SYSTEM_PROMPT;
+            ? `${baseSystemPrompt}\n\nUse the following live note context to answer accurately:\n${liveNoteContent}`
+            : baseSystemPrompt;
 
         const messages = [
             { role: 'system', content: liveSystemContent },

@@ -227,21 +227,23 @@ export function MainNavbar() {
                     </TooltipContent>
                 </Tooltip>
 
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className={cn("h-7 w-7 rounded-full transition-all active:scale-95 text-muted-foreground/60 hover:bg-sidebar-accent hover:text-foreground ai-sidebar-toggle", general.isAiSidebarOpen && "text-accent-full")}
-                            onClick={() => updateGeneralSettings({ isAiSidebarOpen: !general.isAiSidebarOpen })}
-                        >
-                            {general.appDirection === 'rtl' ? <PanelLeft size={16} /> : <PanelRight size={16} />}
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="text-[10px]">
-                        AI Sidebar <span className="opacity-50 ml-1">⌘E</span>
-                    </TooltipContent>
-                </Tooltip>
+                {general.isAiEnabled && (
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className={cn("h-7 w-7 rounded-full transition-all active:scale-95 text-muted-foreground/60 hover:bg-sidebar-accent hover:text-foreground ai-sidebar-toggle", general.isAiSidebarOpen && "text-accent-full")}
+                                onClick={() => updateGeneralSettings({ isAiSidebarOpen: !general.isAiSidebarOpen })}
+                            >
+                                {general.appDirection === 'rtl' ? <PanelLeft size={16} /> : <PanelRight size={16} />}
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="text-[10px]">
+                            AI Sidebar <span className="opacity-50 ml-1">⌘E</span>
+                        </TooltipContent>
+                    </Tooltip>
+                )}
 
             </div>
         </header>

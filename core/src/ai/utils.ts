@@ -161,7 +161,16 @@ export function purifyNoteHtml(html: string): string {
                 table.parentNode?.replaceChild(textNode, table);
             });
 
-            // 4. Lists (Preserve structure)
+            // 4. Mermaid Diagrams
+            doc.querySelectorAll('div[data-type="mermaid"]').forEach(el => {
+                const code = el.getAttribute('code');
+                if (code) {
+                    const textNode = doc.createTextNode(`\n\`\`\`mermaid\n${code}\n\`\`\`\n`);
+                    el.parentNode?.replaceChild(textNode, el);
+                }
+            });
+
+            // 5. Lists (Preserve structure)
             doc.querySelectorAll('ul').forEach(ul => {
                 const items = Array.from(ul.querySelectorAll(':scope > li'));
                 const listText = '\n' + items.map(li => `- ${li.textContent?.trim()}`).join('\n') + '\n';
@@ -174,6 +183,43 @@ export function purifyNoteHtml(html: string): string {
                 const listText = '\n' + items.map((li, idx) => `${idx + 1}. ${li.textContent?.trim()}`).join('\n') + '\n';
                 const textNode = doc.createTextNode(listText);
                 ol.parentNode?.replaceChild(textNode, ol);
+            });
+
+            // 6. Flashcards
+            doc.querySelectorAll('[data-fc]').forEach(fc => {
+                const title = fc.getAttribute('data-t') || 'Flashcards';
+                const cardsRaw = fc.getAttribute('data-c');
+                let cardsText = `### ${title}\n`;
+                if (cardsRaw) {
+                    try {
+                        const cards = JSON.parse(cardsRaw);
+                        cards.forEach((card: any) => {
+                            const front = Array.isArray(card) ? card[0] : card.front;
+                            const back = Array.isArray(card) ? card[1] : card.back;
+                            cardsText += `- Q: ${front}\n  A: ${back}\n`;
+                        });
+                    } catch (e) {
+                        cardsText += fc.textContent || '';
+                    }
+                } else {
+                    cardsText += fc.textContent || '';
+                }
+                const textNode = doc.createTextNode('\n' + cardsText + '\n');
+                fc.parentNode?.replaceChild(textNode, fc);
+            });
+
+            // 7. Details (Collapsible blocks)
+            const detailsNodes = Array.from(doc.querySelectorAll('div[data-type="details"], div.details-wrapper, details')).reverse();
+            detailsNodes.forEach(details => {
+                const summaryEl = details.querySelector('div[data-type="detailsSummary"], div.details-summary, summary');
+                const contentEl = details.querySelector('div[data-type="detailsContent"], div.details-content');
+
+                const summaryText = summaryEl?.textContent?.trim() || 'Details';
+                const contentText = contentEl?.textContent?.trim() || '';
+
+                const detailsText = `\n[DETAILS: ${summaryText}]\n${contentText}\n[END DETAILS]\n`;
+                const textNode = doc.createTextNode(detailsText);
+                details.parentNode?.replaceChild(textNode, details);
             });
 
             return doc.body.textContent || '';

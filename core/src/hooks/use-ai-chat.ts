@@ -14,7 +14,32 @@ import {
     useAiStore
 } from '../index';
 
-export type ContextMode = 'auto' | 'summary' | 'full';
+export type ContextMode = 'auto' | 'summary' | 'full' | 'rewrite' | 'flashcard';
+
+export const AI_ACTION_PROMPTS = {
+    rewrite: `You are an expert editor and technical writer. Rewrite the following content to be clear, concise, and professional.
+    - Correct any factual, grammatical, or structural errors.
+    - Maintain the original meaning and tone unless instructions specify otherwise.
+    - Be succinct: Don't extend the text or add fluff unless necessary for clarity.
+    - Rich Formatting: Use Markdown tables for data, bold/italics for emphasis, and lists for readability.
+    - Diagrams: Use \`\`\`mermaid blocks for any flowcharts or diagrams.
+    - Flashcards: If the user asks for flashcards or study material, use this EXACT structure:
+      <div class="flashcard-block" data-fc="true">
+        <div class="flashcard-card-container">
+          <div class="flashcard-card-front">Question?</div>
+          <div class="flashcard-card-back">Answer.</div>
+        </div>
+      </div>
+    Output ONLY the rewritten/improved content. No conversational filler, intro, or explanations.`,
+    flashcard: `You are a study assistant. Generate concise and effective flashcards from the following text. 
+    Wrap ALL flashcards in a single <div class="flashcard-block" data-fc="true"> container.
+    Each individual flashcard inside should be formatted as:
+    <div class="flashcard-card-container">
+      <div class="flashcard-card-front">Question</div>
+      <div class="flashcard-card-back">Answer</div>
+    </div>
+    Output ONLY the single flashcard block, no conversational filler.`
+};
 
 export function useAiChat(chatId: string | null) {
     const [messages, setMessages] = useState<AiMessage[]>([]);
@@ -36,6 +61,11 @@ export function useAiChat(chatId: string | null) {
             assistantMessageIdRef.current = null;
             streamingContentRef.current = '';
             return;
+        }
+
+        // Cleanup leaked messages for the ephemeral inline assistant
+        if (chatId === 'inline-assistant') {
+            getDb().delete(aiMessages).where(eq(aiMessages.chatId, 'inline-assistant')).run();
         }
 
         let cancelled = false;
@@ -80,6 +110,11 @@ export function useAiChat(chatId: string | null) {
     }, [chatId]);
 
     const lastUpdateTimeRef = useRef(0);
+    const messagesRef = useRef<AiMessage[]>(messages);
+
+    useEffect(() => {
+        messagesRef.current = messages;
+    }, [messages]);
 
     const updateStreamingMessage = useCallback((content: string) => {
         const assistantId = assistantMessageIdRef.current;
@@ -135,14 +170,17 @@ export function useAiChat(chatId: string | null) {
             selectedFolderNotes?: any[]; // Bulk/Folder mode (pass noteMetadata array here)
             mode?: ContextMode;
             isRetry?: boolean;
+            manualContext?: string;
+            onFinish?: (text: string) => void;
         } = {}
     ) => {
-        const { overrideChatId, selectedFolderNotes, mode = 'auto', isRetry = false } = options;
+        const { overrideChatId, selectedFolderNotes, mode = 'auto', isRetry = false, manualContext, onFinish } = options;
         const effectiveChatId = overrideChatId || chatId;
         if (!effectiveChatId) return;
 
         const { activeProvider } = useAiStore.getState();
         const adapter = createAiProvider(activeProvider);
+        const isEphemeral = effectiveChatId === 'inline-assistant';
 
         // Abort any existing request
         if (abortControllerRef.current) {
@@ -154,8 +192,8 @@ export function useAiChat(chatId: string | null) {
         const timestamp = new Date();
 
         // 1. Get current history and chat state to check for first message
-        const currentChat = await db.select().from(aiChats).where(eq(aiChats.id, effectiveChatId)).get();
-        const fullHistory = await db.select()
+        const currentChat = isEphemeral ? null : await db.select().from(aiChats).where(eq(aiChats.id, effectiveChatId)).get();
+        const fullHistory = isEphemeral ? messagesRef.current : await db.select()
             .from(aiMessages)
             .where(eq(aiMessages.chatId, effectiveChatId))
             .orderBy(asc(aiMessages.createdAt))
@@ -179,7 +217,7 @@ export function useAiChat(chatId: string | null) {
             };
 
             setMessages(prev => [...prev, userMsg]);
-            await db.insert(aiMessages).values(userMsg).run();
+            if (!isEphemeral) await db.insert(aiMessages).values(userMsg).run();
             updatedHistory.push(userMsg);
         } else {
             // Clean up state from any failed assistant placeholder
@@ -191,12 +229,14 @@ export function useAiChat(chatId: string | null) {
         }
 
         // Update chat's updatedAt
-        await db.update(aiChats).set({
-            updatedAt: timestamp,
-        }).where(eq(aiChats.id, effectiveChatId)).run();
+        if (!isEphemeral) {
+            await db.update(aiChats).set({
+                updatedAt: timestamp,
+            }).where(eq(aiChats.id, effectiveChatId)).run();
+        }
 
         // 4. Generate title in background if first message
-        if (isFirstMessage) {
+        if (isFirstMessage && !isEphemeral) {
             generateTitleInBackground(content, effectiveChatId);
         }
 
@@ -222,8 +262,12 @@ export function useAiChat(chatId: string | null) {
             // Context Preparation with Tiered Trimming
             let liveNoteContext = '';
 
+            // Route C: Manual Context Only (e.g. Highlighted text)
+            if (manualContext) {
+                liveNoteContext = `[SELECTED TEXT CONTEXT]\n${purifyNoteHtml(manualContext)}`;
+            }
             // Route A: Explicit Selection (user explicitly picked notes)
-            if (selectedFolderNotes && selectedFolderNotes.length > 0) {
+            else if (selectedFolderNotes && selectedFolderNotes.length > 0) {
                 // Define how to lazily fetch heavy content
                 const fetchContent = async (noteId: string) => {
                     const result = await db.select({ content: noteContent.content })
@@ -242,7 +286,7 @@ export function useAiChat(chatId: string | null) {
                     (q, ids) => SearchRepository.findRelevantNoteIds(q, ids)
                 );
             }
-            // Route C: FTS Auto-Discovery — no explicit context, search entire database
+            // Route B: FTS Auto-Discovery — no explicit context, search entire database
             else {
                 try {
                     const relevantIds = await SearchRepository.findRelevantNoteIds(content);
@@ -288,14 +332,17 @@ export function useAiChat(chatId: string | null) {
             console.log('Full Context Payload:', liveNoteContext);
             console.groupEnd();
 
+            const systemInstructions = AI_ACTION_PROMPTS[mode as keyof typeof AI_ACTION_PROMPTS] || null;
+
             await adapter.sendMessage(
                 history,
                 liveNoteContext,
-                (chunk) => {
+                systemInstructions,
+                (chunk: string) => {
                     streamingContentRef.current += chunk;
 
                     const now = Date.now();
-                    if (now - lastUpdateTimeRef.current > 64) { // ~15fps is plenty for text on mobile
+                    if (now - lastUpdateTimeRef.current > 64) {
                         updateStreamingMessage(streamingContentRef.current);
                         lastUpdateTimeRef.current = now;
                     }
@@ -305,6 +352,7 @@ export function useAiChat(chatId: string | null) {
 
             // Final UI update to ensure the last chunk is rendered
             updateStreamingMessage(streamingContentRef.current);
+            if (onFinish) onFinish(streamingContentRef.current);
 
             // Save assistant message to DB
             const finalAssistantMsg: AiMessage = {
@@ -313,10 +361,12 @@ export function useAiChat(chatId: string | null) {
                 model: adapter.id, // Or get specific model name from store if needed
                 createdAt: new Date(),
             };
-            await db.insert(aiMessages).values(finalAssistantMsg).run();
+            if (!isEphemeral) {
+                await db.insert(aiMessages).values(finalAssistantMsg).run();
 
-            // Update chat updatedAt again
-            await db.update(aiChats).set({ updatedAt: new Date() }).where(eq(aiChats.id, effectiveChatId)).run();
+                // Update chat updatedAt again
+                await db.update(aiChats).set({ updatedAt: new Date() }).where(eq(aiChats.id, effectiveChatId)).run();
+            }
 
         } catch (err: any) {
             if (err.name === 'AbortError') {

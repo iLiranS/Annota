@@ -19,7 +19,7 @@ function copyImageAtPosition(pos: number): boolean {
 }
 
 export function setupCommands() {
-    window.handleCommand = function (command, params) {
+    window.handleCommand = async function (command, params) {
         // Handle 'setOptions' command first, as it might initialize the editor
         if (command === 'setOptions') {
             if (params) {
@@ -37,8 +37,6 @@ export function setupCommands() {
         if (!window.editor) {
             return;
         }
-
-
 
         const e = window.editor;
 
@@ -228,7 +226,7 @@ export function setupCommands() {
         }
 
         if (!handled) {
-            handled = dispatchEditorCommand(e, command, params);
+            handled = await dispatchEditorCommand(e, command, params);
         }
 
         if (handled && command !== 'getContent') {

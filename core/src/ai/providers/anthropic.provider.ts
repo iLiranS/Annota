@@ -11,6 +11,7 @@ export class AnthropicProvider implements AiProviderAdapter {
     async sendMessage(
         history: AiMessage[],
         liveNoteContent: string | null,
+        systemInstructions: string | null,
         onChunk: (text: string) => void,
         _signal?: AbortSignal
     ): Promise<void> {
@@ -18,9 +19,10 @@ export class AnthropicProvider implements AiProviderAdapter {
         const anthropicKey = await getApiKey('anthropic');
         if (!anthropicKey) throw new Error('Anthropic API Key is missing. Please add it in settings.');
 
+        const baseSystemPrompt = systemInstructions || DEFAULT_SYSTEM_PROMPT;
         const systemPrompt = liveNoteContent
-            ? `${DEFAULT_SYSTEM_PROMPT}\n\nUse the following live note context to answer accurately:\n${liveNoteContent}`
-            : DEFAULT_SYSTEM_PROMPT;
+            ? `${baseSystemPrompt}\n\nUse the following live note context to answer accurately:\n${liveNoteContent}`
+            : baseSystemPrompt;
 
         const messages = history
             .filter(m => m.role !== 'system')

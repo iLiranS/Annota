@@ -9,15 +9,17 @@ export class OllamaProvider implements AiProviderAdapter {
     async sendMessage(
         history: AiMessage[],
         liveNoteContent: string | null,
+        systemInstructions: string | null,
         onChunk: (text: string) => void,
         signal?: AbortSignal
     ): Promise<void> {
         const { ollamaBaseUrl, selectedModel } = useAiStore.getState();
         if (!selectedModel) throw new Error('No model selected');
 
+        const baseSystemPrompt = systemInstructions || DEFAULT_SYSTEM_PROMPT;
         const liveSystemContent = liveNoteContent
-            ? `${DEFAULT_SYSTEM_PROMPT}\n\nUse the following live note context to answer accurately:\n${liveNoteContent}`
-            : DEFAULT_SYSTEM_PROMPT;
+            ? `${baseSystemPrompt}\n\nUse the following live note context to answer accurately:\n${liveNoteContent}`
+            : baseSystemPrompt;
 
         const messages = [
             { role: 'system', content: liveSystemContent },
@@ -33,6 +35,7 @@ export class OllamaProvider implements AiProviderAdapter {
                 model: selectedModel,
                 messages,
                 stream: true,
+                think: false
             }),
             signal
         });
@@ -43,17 +46,22 @@ export class OllamaProvider implements AiProviderAdapter {
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
 
+        let buffer = '';
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
 
-            const chunk = decoder.decode(value, { stream: true });
-            const lines = chunk.split('\n');
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+
+            // Keep the last (potentially incomplete) line in the buffer
+            buffer = lines.pop() ?? '';
 
             for (const line of lines) {
                 if (!line.trim()) continue;
                 try {
                     const json = JSON.parse(line);
+                    if (json.done) break;
                     if (json.message?.content) {
                         onChunk(json.message.content);
                     }
@@ -75,7 +83,8 @@ export class OllamaProvider implements AiProviderAdapter {
                 model: selectedModel,
                 prompt: `Summarize the following text into a 3 to 5 word title. Do not use quotes, punctuation, or conversational filler. Output ONLY the title.\n\nText: ${firstMessage}`,
                 stream: false,
-                system: 'You are a title generator. Output only the requested words.'
+                think: false,
+                system: 'You are a title generator. Output only the requested words.',
             }),
         });
 

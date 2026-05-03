@@ -8,8 +8,14 @@ import { FileService } from '@annota/core/platform';
 import type { PopupType, ToolbarRenderProps } from '@annota/editor-ui';
 import { ToolbarButton } from './toolbar-button';
 import { ToolbarPopup } from './toolbar-popup';
+import { AIToolbarButton } from './ai-toolbar-button';
 
-interface EditorToolbarProps extends ToolbarRenderProps { }
+import { ContextMode } from '@annota/core';
+
+interface EditorToolbarProps extends ToolbarRenderProps {
+    onAIAction?: (mode: ContextMode, instructions?: string) => void;
+    isAIStreaming?: boolean;
+}
 
 /**
  * Scrollable formatting toolbar for the TipTap editor.
@@ -27,6 +33,8 @@ export function EditorToolbar({
     blockData,
     onInsertMath,
     onInsertFile,
+    onAIAction,
+    isAIStreaming,
 }: EditorToolbarProps) {
     const { dark, colors } = useTheme();
     const [isLoading, setIsLoading] = useState(false);
@@ -46,6 +54,16 @@ export function EditorToolbar({
         onActivePopupChange(null);
         onPopupStateChange?.(false);
     };
+
+    const [wasStreaming, setWasStreaming] = useState(false);
+    React.useEffect(() => {
+        if (isAIStreaming) setWasStreaming(true);
+        if (wasStreaming && !isAIStreaming && activePopup === 'ai') {
+            onActivePopupChange(null);
+            onPopupStateChange?.(false);
+            setWasStreaming(false);
+        }
+    }, [isAIStreaming, wasStreaming, activePopup, onActivePopupChange, onPopupStateChange]);
 
     // Check if any heading is active
     const isAnyHeadingActive =
@@ -73,6 +91,12 @@ export function EditorToolbar({
                         contentContainerStyle={styles.toolbarScrollContent}
                         keyboardShouldPersistTaps="always"
                     >
+                        <AIToolbarButton 
+                            isVisible={!!editorState.selectedText} 
+                            isLoading={isAIStreaming}
+                            onPress={() => openPopup('ai')} 
+                        />
+
                         {/* Headings - Single button with popup (FIRST) */}
                         <ToolbarButton
                             label="H"
@@ -258,6 +282,18 @@ export function EditorToolbar({
             </View>
 
             {/* Popup Modals - rendered outside the toolbar layout */}
+            {activePopup === 'ai' && (
+                <ToolbarPopup
+                    visible={true}
+                    type="ai"
+                    isLoading={isAIStreaming}
+                    onAction={(action, instructions) => {
+                        onAIAction?.(action as ContextMode, instructions);
+                    }}
+                    onClose={closePopup}
+                />
+            )}
+
             {activePopup === 'headings' && (
                 <ToolbarPopup
                     visible={true}

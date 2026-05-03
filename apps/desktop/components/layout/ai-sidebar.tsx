@@ -69,11 +69,6 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
             setSelectedFolderNotes([]);
         }
 
-        // If we switched from one chat to another, or went back to the list
-        if (prevId !== currentId && (currentId === null || (prevId !== null && currentId !== null))) {
-            setSelectedFolderNotes([]);
-        }
-
         // Auto-select current note if it's a new chat OR an existing chat with only the default note selected
         // If the note changed while viewing the chat, update selection
         if (noteId !== prevNoteIdRef.current) {

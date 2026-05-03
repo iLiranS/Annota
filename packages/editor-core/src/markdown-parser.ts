@@ -33,6 +33,19 @@ function processNodes(node: any) {
         }
     }
 
+    // Convert code blocks with 'mermaid' language to Mermaid nodes
+    if (node.type === 'codeBlock' && node.attrs?.language === 'mermaid') {
+        const code = node.content?.[0]?.text || '';
+        node.type = 'mermaid';
+        node.attrs = {
+            id: generateBlockId(),
+            code: code.trim(),
+            zoom: 1
+        };
+        delete node.content; // Mermaid is an atom node
+        return; // Don't recurse into an atom
+    }
+
     // Recurse
     if (node.content && Array.isArray(node.content)) {
         node.content.forEach(processNodes);

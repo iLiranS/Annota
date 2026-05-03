@@ -256,7 +256,12 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
             searchPrev: () => dispatchCommand('searchPrev'),
             clearSearch: () => dispatchCommand('clearSearch'),
             scrollToElement: (id) => dispatchCommand('scrollToElement', { id }),
-        }), [dispatchCommand]);
+            getSelection: () => ({
+                text: editorState.selectedText,
+                html: editorState.selectedHtml,
+                range: editorState.selectionRange
+            }),
+        }), [dispatchCommand, editorState.selectedText, editorState.selectedHtml, editorState.selectionRange]);
 
         const handleInsertFile = useCallback(async (source: 'url' | 'library' | 'camera' | 'document', value?: string) => {
             if (!noteId) return false;

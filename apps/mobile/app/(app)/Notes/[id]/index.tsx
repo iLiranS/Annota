@@ -8,7 +8,7 @@ import { EditorToolbar } from '@/components/editor-ui/toolbar';
 import NoteHeaderMenu from '@/components/notes/note-header-menu';
 import { SearchOverlay } from '@/components/notes/search-overlay';
 import { HapticPressable } from '@/components/ui/haptic-pressable';
-import { generateTitle, purifyNoteHtml, useNotesStore, useSettingsStore } from '@annota/core';
+import { ContextMode, generateTitle, purifyNoteHtml, useAiChat, useNotesStore, useSettingsStore } from '@annota/core';
 import TipTapEditor, { TipTapEditorRef, ToolbarRenderProps } from '@annota/editor-ui';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
@@ -18,6 +18,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
     ActivityIndicator,
     Alert,
+    BackHandler,
+    Keyboard,
     Platform,
     StyleSheet,
     Text,
@@ -260,6 +262,40 @@ export default function NoteEditor() {
     }, [id, currentNote, content, displayTitle]);
 
 
+    const { sendMessage: sendAiMessage, isStreaming: isAiStreaming } = useAiChat('inline-assistant');
+    const handleAIAction = useCallback(async (mode: ContextMode, instructions?: string) => {
+        const editor = editorRef.current;
+        if (!editor) return;
+
+        const selection = editor.getSelection();
+        const selectedText = selection.text;
+        const selectedHtml = selection.html;
+
+        if (!selectedText && !selectedHtml) {
+            Alert.alert('No selection', 'Please select some text first to use AI actions.');
+            return;
+        }
+
+        await sendAiMessage(instructions || selectedHtml || selectedText, {
+            mode: mode,
+            manualContext: selectedHtml || selectedText,
+            onFinish: async (text) => {
+                if (mode === 'rewrite') {
+                    // Replace selection
+                    editor.onCommand('insertContent', { content: text });
+                } else if (mode === 'flashcard') {
+                    // Insert after selection
+                    const insertPos = selection?.range?.to;
+                    if (typeof insertPos === 'number') {
+                        // Collapse selection to the end to prevent replacement
+                        editor.onCommand('setTextSelection', { from: insertPos, to: insertPos });
+                    }
+                    editor.onCommand('insertContent', { content: text });
+                }
+            }
+        });
+    }, [sendAiMessage]);
+
     // Handle case where note doesn't exist
     if (!currentNote) {
         return (
@@ -343,13 +379,15 @@ export default function NoteEditor() {
                     headerBackVisible: false,
                     headerRight: () => (
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                            <HapticPressable
-                                onPress={() => setIsAiChatVisible(true)}
-                                style={[styles.headerButton, { marginLeft: 8 }]}
-                                hitSlop={8}
-                            >
-                                <Ionicons name="sparkles" size={22} color={colors.primary} />
-                            </HapticPressable>
+                            {general.isAiEnabled && (
+                                <HapticPressable
+                                    onPress={() => setIsAiChatVisible(true)}
+                                    style={[styles.headerButton, { marginLeft: 8 }]}
+                                    hitSlop={8}
+                                >
+                                    <Ionicons name="sparkles" size={22} color={colors.primary} />
+                                </HapticPressable>
+                            )}
                             <NoteHeaderMenu
                                 noteId={id}
                                 isPinned={currentNote?.isPinned}
@@ -418,7 +456,7 @@ export default function NoteEditor() {
                                 </View>
                             );
                         }}
-                        renderToolbar={(props: ToolbarRenderProps) => <EditorToolbar {...props} />}
+                        renderToolbar={(props: ToolbarRenderProps) => <EditorToolbar {...props} onAIAction={handleAIAction} isAIStreaming={isAiStreaming} />}
                         renderImageGallery={(props: any) => <ImageGallery {...props} />}
                         renderSlashCommandMenu={() => {
                             if (tagCommandState.active && tagCommandState.range) {

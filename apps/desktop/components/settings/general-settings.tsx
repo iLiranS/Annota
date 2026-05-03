@@ -6,9 +6,10 @@ import {
     Calendar,
 
     ChevronRight,
+    Hash,
     List,
     PanelRight,
-    Hash,
+    Sparkles,
 } from "lucide-react";
 
 import { SettingItem } from "./setting-item";
@@ -16,11 +17,11 @@ import { SettingItem } from "./setting-item";
 const Toggle = ({ enabled }: { enabled: boolean }) => (
     <div className={cn(
         "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-        enabled ? "bg-primary" : "bg-accent"
+        enabled ? "bg-accent-full" : "bg-muted-foreground/60"
     )}>
         <span className={cn(
-            "pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg ring-0 transition-transform duration-200 ease-in-out",
-            enabled ? "translate-x-4" : "translate-x-0"
+            "pointer-events-none block h-4 w-4 rounded-full  shadow-lg ring-0 transition-transform duration-200 ease-in-out",
+            enabled ? "translate-x-4 bg-foreground" : "translate-x-0 bg-background"
         )} />
     </div>
 );
@@ -37,6 +38,23 @@ export function GeneralSettings() {
 
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            {/* AI Features Section */}
+            <section className="space-y-3">
+                <h4 className="text-[11px] font-bold text-muted-foreground tracking-wider uppercase px-1">
+                    AI Features
+                </h4>
+                <div className="bg-card border rounded-2xl overflow-hidden shadow-sm">
+                    <SettingItem
+                        label="Enable AI Features"
+                        description="Access AI writing assistant, summaries, and flashcards"
+                        icon={<Sparkles size={18} />}
+                        iconBg="bg-indigo-600"
+                        onClick={() => updateGeneralSettings({ isAiEnabled: !general.isAiEnabled })}
+                        action={<Toggle enabled={general.isAiEnabled} />}
+                    />
+                </div>
+            </section>
+
             {/* Calendar & Date Section */}
             <section className="space-y-3">
                 <h4 className="text-[11px] font-bold text-muted-foreground tracking-wider uppercase px-1">

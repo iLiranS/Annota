@@ -427,7 +427,7 @@ export default function NotesList() {
                     },
                     headerRight: () => (
                         <View style={styles.headerRightContainer}>
-                            {!isSearchActive && (
+                            {!isSearchActive && general.isAiEnabled && (
                                 <HapticPressable
                                     onPress={() => setIsAiChatVisible(true)}
                                     style={styles.headerButton}

@@ -48,6 +48,7 @@ const RICH_CHROME_SELECTOR = [
 
 const RICH_TEXT_SURFACE_SELECTOR = [
     'code',
+    'pre',
     'td',
     'th',
     'p',
@@ -403,6 +404,21 @@ export function useDesktopEditorSelection({ editor, containerRef }: UseDesktopEd
             const anchorRichHit = findRichHitAtPoint(editor, event);
             const anchorPos = posAtMouse(event, anchorPrefersRichBoundary);
             if (anchorPos === null) return;
+
+            // Allow native drag-and-drop if clicking inside an existing text selection.
+            // We use the native DOM selection because the browser relies on it to initiate drag-and-drop.
+            const domSelection = window.getSelection();
+            if (domSelection && !domSelection.isCollapsed && event.target instanceof Node) {
+                if (domSelection.containsNode(event.target, true)) {
+                    return;
+                }
+            }
+
+            // Fallback to ProseMirror selection check for NodeSelections (like images)
+            const { selection } = editor.state;
+            if (!selection.empty && anchorPos >= selection.from && anchorPos <= selection.to) {
+                return;
+            }
 
             selectionDragRef.current = {
                 active: true,

@@ -122,9 +122,9 @@ export const CREATE_TABLES_SQL = `
   CREATE TABLE IF NOT EXISTS ai_chats (
     id TEXT PRIMARY KEY,
     title TEXT NOT NULL DEFAULT 'New Chat',
+    is_pinned INTEGER NOT NULL DEFAULT 0,
     created_at INTEGER NOT NULL,
-    updated_at INTEGER NOT NULL,
-    current_context_id TEXT
+    updated_at INTEGER NOT NULL
   );
 
   CREATE TABLE IF NOT EXISTS ai_messages (
@@ -135,6 +135,9 @@ export const CREATE_TABLES_SQL = `
     model TEXT,
     created_at INTEGER NOT NULL
   );
+
+  -- Virtual table for search
+  CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(id UNINDEXED, title, preview, content);
 `;
 
 // Initialize database (create tables and seed system data)
@@ -170,7 +173,7 @@ export async function initDatabase(
         sql: 'DROP TABLE IF EXISTS tasks;'
       },
       {
-        name: '003_add_fts5',
+        name: '003_add_fts5_v2',
         sql: [
           // 1. Create the unified FTS5 virtual table
           `CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(id UNINDEXED, title, preview, content);`,
@@ -192,7 +195,7 @@ export async function initDatabase(
         ]
       },
       {
-        name: '004_add_pinned_to_ai_chats',
+        name: '004_add_is_pinned_to_ai_chats',
         sql: 'ALTER TABLE ai_chats ADD COLUMN is_pinned INTEGER NOT NULL DEFAULT 0;'
       }
     ];

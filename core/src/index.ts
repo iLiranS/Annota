@@ -20,3 +20,4 @@ export * from './ai/constants';
 export * from './ai/security';
 export * from './ai/utils';
 export * from './hooks/use-ai-chat';
+export * from './hooks/use-ai-configuration';

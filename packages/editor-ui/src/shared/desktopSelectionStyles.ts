@@ -7,6 +7,11 @@ export const DESKTOP_SELECTION_STYLES = `
     .editor-dom-container.annota-pretty-selection .annota-selection-covered::-moz-selection {
         background-color: transparent !important;
     }
+    .editor-dom-container .code-block-wrapper ::selection,
+    .editor-dom-container .code-block-wrapper::-moz-selection {
+        background-color: var(--code-selection-bg, rgba(120, 160, 255, 0.35)) !important;
+        color: inherit !important;
+    }
     .editor-dom-container .annota-selection-covered {
         outline: 2px solid var(--accent-color, var(--block-selection-border, rgba(0, 122, 255, 0.6)));
         outline-offset: -2px;
