@@ -242,6 +242,28 @@ export async function initDatabase(
     // Seed system data (Trash folder, Daily Notes folder, default settings)
     seedSystemData(drizzleDb);
 
+    // 5. FTS Health Check: Ensure FTS is populated if metadata exists
+    // This is a safety net for cases where virtual tables weren't correctly migrated (e.g. sqlcipher_export)
+    if (nativeDb.selectAsync) {
+      const ftsCheck = await nativeDb.selectAsync('SELECT COUNT(*) FROM notes_fts', []);
+      const ftsCount = Number(ftsCheck?.[0]?.[0] ?? ftsCheck?.[0]?.['COUNT(*)'] ?? 0);
+      
+      if (ftsCount === 0) {
+        const metaCheck = await nativeDb.selectAsync('SELECT COUNT(*) FROM note_metadata', []);
+        const metaCount = Number(metaCheck?.[0]?.[0] ?? metaCheck?.[0]?.['COUNT(*)'] ?? 0);
+        
+        if (metaCount > 0) {
+          console.log(`[DB] FTS table is empty but ${metaCount} notes exist. Running emergency backfill...`);
+          await nativeDb.execAsync(`
+            INSERT OR IGNORE INTO notes_fts(id, title, preview, content) 
+            SELECT nc.id, nm.title, nm.preview, nc.content 
+            FROM note_content nc 
+            JOIN note_metadata nm ON nc.id = nm.id;
+          `);
+        }
+      }
+    }
+
     console.log('Database initialized successfully');
   } catch (error) {
     console.error('Database initialization failed:', error);

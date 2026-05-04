@@ -113,7 +113,7 @@ export default function AiChatModal({ visible, onClose, initialContext, initialF
         activeProvider === 'anthropic' ? hasAnthropicKey :
             hasGoogleKey;
 
-    const { messages, sendMessage, isStreaming, error, clearError } = useAiChat(chatId);
+    const { messages, sendMessage, stop, isStreaming, error, clearError } = useAiChat(chatId);
 
     const loadChats = useCallback(async () => {
         const db = getDb();
@@ -341,6 +341,7 @@ export default function AiChatModal({ visible, onClose, initialContext, initialF
                         currentModelName={currentModelName ?? undefined}
                         activeProvider={activeProvider ?? undefined}
                         onInsertToNote={onInsertToNote}
+                        onStop={stop}
                     />
                 )}
             </View>

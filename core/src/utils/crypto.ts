@@ -34,24 +34,112 @@ export function validateMasterKey(mnemonic: string): boolean {
 }
 
 /**
+ * Internal cache for the decrypted master key to avoid repeated decryption or secure store access.
+ * The master key is used frequently for data encryption/decryption.
+ */
+let masterKeyCache: { userId: string; mnemonic: string } | null = null;
+
+/**
  * Store the master key securely in the device's keychain.
+ * The key is encrypted at rest using a derived device-specific key.
  */
 export async function storeMasterKey(userId: string, mnemonic: string) {
-    await getPlatformAdapters().secureStore.setItem(getMasterKeyAlias(userId), mnemonic);
+    const encrypted = await encryptAtRest(mnemonic);
+    await getPlatformAdapters().secureStore.setItem(getMasterKeyAlias(userId), encrypted);
+    masterKeyCache = { userId, mnemonic };
 }
 
 /**
  * Retrieve the master key from the device's keychain.
+ * Uses an in-memory cache to avoid repeated decryption.
+ * Handles migration of legacy plain-text keys.
  */
 export async function getMasterKey(userId: string): Promise<string | null> {
-    return await getPlatformAdapters().secureStore.getItem(getMasterKeyAlias(userId));
+    if (masterKeyCache && masterKeyCache.userId === userId) {
+        return masterKeyCache.mnemonic;
+    }
+
+    const value = await getPlatformAdapters().secureStore.getItem(getMasterKeyAlias(userId));
+    if (!value) return null;
+
+    try {
+        const decrypted = await decryptAtRest(value);
+        masterKeyCache = { userId, mnemonic: decrypted };
+        return decrypted;
+    } catch (e) {
+        // Fallback for legacy plain-text keys
+        if (validateMasterKey(value)) {
+            // Migrate to encrypted at rest
+            const encrypted = await encryptAtRest(value);
+            await getPlatformAdapters().secureStore.setItem(getMasterKeyAlias(userId), encrypted);
+            masterKeyCache = { userId, mnemonic: value };
+            return value;
+        }
+        console.error('[crypto] Failed to decrypt master key:', e);
+        return null;
+    }
 }
 
 /**
- * Remove the master key from the device's keychain.
+ * Remove the master key from the device's keychain and clear the cache.
  */
 export async function removeMasterKey(userId: string) {
     await getPlatformAdapters().secureStore.removeItem(getMasterKeyAlias(userId));
+    if (masterKeyCache && masterKeyCache.userId === userId) {
+        masterKeyCache = null;
+    }
+}
+
+// --- Encryption/Decryption helpers for "At Rest" protection ---
+
+async function getDerivedKeyBytes(): Promise<Uint8Array> {
+    const context = 'annota-secure-context-v1';
+    const { crypto } = getPlatformAdapters();
+    const hex = await crypto.sha256HexUtf8(`annota-${context}`);
+    return new Uint8Array(Buffer.from(hex, 'hex'));
+}
+
+async function encryptAtRest(value: string): Promise<string> {
+    const { crypto, encoding } = getPlatformAdapters();
+    const key = await getDerivedKeyBytes();
+    const nonce = crypto.randomBytes(12);
+    const plaintext = Buffer.from(value, 'utf8');
+
+    const { ciphertext, authTag } = await crypto.aes256GcmEncrypt({
+        key,
+        nonce,
+        plaintext
+    });
+
+    const combined = new Uint8Array(nonce.length + authTag.length + ciphertext.length);
+    combined.set(nonce, 0);
+    combined.set(authTag, nonce.length);
+    combined.set(ciphertext, nonce.length + authTag.length);
+
+    return encoding.base64Encode(combined);
+}
+
+async function decryptAtRest(encoded: string): Promise<string> {
+    const { crypto, encoding } = getPlatformAdapters();
+    const combined = encoding.base64Decode(encoded);
+
+    if (combined.length < 28) {
+        throw new Error('Invalid encrypted payload');
+    }
+
+    const nonce = combined.slice(0, 12);
+    const authTag = combined.slice(12, 28);
+    const ciphertext = combined.slice(28);
+    const key = await getDerivedKeyBytes();
+
+    const plaintext = await crypto.aes256GcmDecrypt({
+        key,
+        nonce,
+        ciphertext,
+        authTag
+    });
+
+    return Buffer.from(plaintext).toString('utf8');
 }
 
 

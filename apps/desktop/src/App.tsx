@@ -178,7 +178,11 @@ function App() {
         }
 
         // 4. Initialise (or switch to) the per-user SQLite database.
-        await initDesktopSqlite(activeUserId);
+        const dbKey = activeUserId 
+          ? await getMasterKey(activeUserId) 
+          : "annota-guest-db-key";
+        
+        await initDesktopSqlite(activeUserId, dbKey || "");
 
         // 5. Initialize stores only for the main window.
         //    Child windows (standalone note editors) read directly from the DB

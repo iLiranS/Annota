@@ -1,8 +1,7 @@
 import { CREATE_TABLES_SQL, initDb, resetDb, useDbStore } from "@annota/core";
-import Database from "@tauri-apps/plugin-sql";
+import { invoke } from '@tauri-apps/api/core';
+import { appDataDir, join } from '@tauri-apps/api/path';
 import { drizzle } from "drizzle-orm/sqlite-proxy";
-
-
 
 /** Per-user bootstrap cache — avoids re-initialising for the same user. */
 const userDbCache = new Map<string, Promise<void>>();
@@ -20,12 +19,9 @@ function splitSqlStatements(sql: string): string[] {
 
 /**
  * Initialise (or switch to) a per-user SQLite database.
- *
- * `tauri-plugin-sql` resolves the relative `sqlite:` URI to the correct
- * sandboxed Application Support directory automatically, so we only need to
- * vary the filename per user.
+ * Uses SQLCipher for encryption via Rust side invokes.
  */
-export async function initDesktopSqlite(userId: string | null): Promise<void> {
+export async function initDesktopSqlite(userId: string | null, dbKey: string): Promise<void> {
   const cacheKey = userId ?? "__guest__";
   const dbName = userId ? `user_${userId}.db` : "local_guest.db";
 
@@ -42,52 +38,41 @@ export async function initDesktopSqlite(userId: string | null): Promise<void> {
 
   if (!userDbCache.has(cacheKey)) {
     const bootstrapPromise = (async () => {
-      const db = await Database.load(`sqlite:${dbName}`);
+      // 1. Resolve full path (Tauri official plugin did this automatically, we must do it manually)
+      const appDataDirPath = await appDataDir();
+      const fullDbPath = await join(appDataDirPath, dbName);
 
-      // tauri-plugin-sql uses sqlx with a connection pool — each execute() call
-      // may hit a different connection, so SQL-level transactions (BEGIN/COMMIT/ROLLBACK)
-      // cannot work across separate IPC calls. We skip them and rely on auto-commit.
-      const TX_CONTROL_RE =
-        /^\s*(begin|commit|rollback|savepoint|release savepoint)\b/i;
+      // 2. Init the Rust connection pool
+      await invoke('open_encrypted_db', { 
+        dbPath: fullDbPath, 
+        encryptionKey: dbKey 
+      });
+
+      const TX_CONTROL_RE = /^\s*(begin|commit|rollback|savepoint|release savepoint)\b/i;
 
       const drizzleDb = drizzle(async (sql, params, method) => {
         try {
-          // Skip transaction control statements — they can't work across IPC calls.
-          if (TX_CONTROL_RE.test(sql)) {
-            return { rows: [] };
-          }
+          if (TX_CONTROL_RE.test(sql)) return { rows: [] };
 
-          // tauri-plugin-sql expects undefined or non-empty arrays for bind values.
-          const bindParams = params.length > 0 ? params : undefined;
-
-          // Detect if the query expects data back (e.g. INSERT ... RETURNING *)
           const isReturning = /\bRETURNING\b/i.test(sql);
 
-          // Pure write with no returning clause — execute and discard.
+          // Writes
           if (method === "run" && !isReturning) {
-            await db.execute(sql, bindParams);
+            await invoke('execute_sql', { sql, params });
             return { rows: [] };
           }
 
-          // Read query OR write-with-RETURNING — fetch the rows.
-          const result = await db.select<Record<string, unknown>[]>(
-            sql,
-            bindParams,
-          );
-
-          // Drizzle's mapResultRow accesses values by column *index* (row[columnIndex]),
-          // so we must convert objects → arrays. Object.values() preserves insertion
-          // order in V8/JSC, and tauri-plugin-sql returns keys in SQLite's column order
-          // which matches Drizzle's schema field order.
+          // Reads (returns any[][] directly from Rust)
+          const result: any[][] = await invoke('select_sql', { sql, params });
 
           if (method === "get") {
-            // For .get(), Drizzle expects `rows` to be the single row directly,
-            // NOT wrapped in an outer array.
-            return { rows: result[0] ? Object.values(result[0]) : [] };
+            // Drizzle .get() expects the single row array directly
+            return { rows: result[0] || [] };
           }
 
-          // For .all() / .values() / write-with-RETURNING
-          return { rows: result.map((row) => Object.values(row)) };
+          // Drizzle .all() expects the array of arrays
+          return { rows: result };
+          
         } catch (error) {
           console.error(`[DesktopDB] Failed query: ${sql}`, params, error);
           throw error;
@@ -95,21 +80,20 @@ export async function initDesktopSqlite(userId: string | null): Promise<void> {
       });
 
       initDb(drizzleDb as any);
-      await db.execute("PRAGMA journal_mode = WAL;");
-      await db.execute("PRAGMA foreign_keys = ON;");
 
+      // 3. Define the native wrapper
       const nativeDbWrapper = {
         execAsync: async (rawSql: string) => {
           const statements = splitSqlStatements(rawSql);
           for (const statement of statements) {
-            await db.execute(statement);
+            await invoke('execute_sql', { sql: statement, params: [] });
           }
         },
         executeRawAsync: async (sql: string) => {
-          await db.execute(sql);
+          await invoke('execute_sql', { sql, params: [] });
         },
         selectAsync: async (sql: string, params: any[]) => {
-          return await db.select(sql, params);
+          return await invoke('select_sql', { sql, params });
         }
       };
 
@@ -135,11 +119,6 @@ export async function initDesktopSqlite(userId: string | null): Promise<void> {
 }
 
 export async function resetDesktopDatabase(): Promise<void> {
-  const userId = activeUserKey === "__guest__" ? null : activeUserKey;
-  const dbName = userId ? `user_${userId}.db` : "local_guest.db";
-
-  const db = await Database.load(`sqlite:${dbName}`);
-
   // Drop FTS triggers and table first
   const ftsTriggers = [
     'notes_fts_ai',
@@ -148,9 +127,9 @@ export async function resetDesktopDatabase(): Promise<void> {
     'notes_fts_ad'
   ];
   for (const trigger of ftsTriggers) {
-    await db.execute(`DROP TRIGGER IF EXISTS ${trigger}`);
+    await invoke('execute_sql', { sql: `DROP TRIGGER IF EXISTS ${trigger}`, params: [] });
   }
-  await db.execute('DROP TABLE IF EXISTS notes_fts');
+  await invoke('execute_sql', { sql: 'DROP TABLE IF EXISTS notes_fts', params: [] });
 
   const tables = [
     'files',
@@ -164,13 +143,12 @@ export async function resetDesktopDatabase(): Promise<void> {
     'settings'
   ];
 
-
   for (const table of tables) {
-    await db.execute(`DROP TABLE IF EXISTS ${table}`);
+    await invoke('execute_sql', { sql: `DROP TABLE IF EXISTS ${table}`, params: [] });
   }
 
   const statements = splitSqlStatements(CREATE_TABLES_SQL);
   for (const statement of statements) {
-    await db.execute(statement);
+    await invoke('execute_sql', { sql: statement, params: [] });
   }
 }

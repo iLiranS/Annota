@@ -1,4 +1,4 @@
-use std::fs; // Changed from std::fs::File
+use std::fs;
 use std::io::{Read, Write};
 use std::net::TcpListener;
 use tauri::{Emitter, Window};
@@ -6,14 +6,169 @@ use image::imageops::FilterType;
 use webp::Encoder;
 use font_kit::source::SystemSource;
 use argon2::{Algorithm, Argon2, Params, Version};
+use r2d2::Pool;
+use r2d2_sqlite::SqliteConnectionManager;
+use rusqlite::types::Value as SqlValue;
+use std::sync::Mutex;
+use base64::prelude::*; // Fix 1: added missing semicolon
+
+// The Tauri state holding our connection pool
+struct DbState(Mutex<Option<Pool<SqliteConnectionManager>>>);
+
+// Helper to convert JSON values to SQLite values
+fn json_to_sql(v: &serde_json::Value) -> SqlValue {
+    match v {
+        serde_json::Value::Null => SqlValue::Null,
+        serde_json::Value::Bool(b) => SqlValue::Integer(if *b { 1 } else { 0 }),
+        serde_json::Value::Number(n) => {
+            if let Some(i) = n.as_i64() { SqlValue::Integer(i) }
+            else if let Some(f) = n.as_f64() { SqlValue::Real(f) }
+            else { SqlValue::Null }
+        },
+        serde_json::Value::String(s) => SqlValue::Text(s.clone()),
+        _ => SqlValue::Text(v.to_string()),
+    }
+}
+
+#[tauri::command]
+async fn open_encrypted_db(
+    state: tauri::State<'_, DbState>,
+    db_path: String,
+    encryption_key: String,
+) -> Result<(), String> {
+    // 1. Ensure directory exists
+    if let Some(parent) = std::path::Path::new(&db_path).parent() {
+        std::fs::create_dir_all(parent).map_err(|e| format!("Failed to create DB directory: {}", e))?;
+    }
+
+    // 2. Check if the database exists AND is unencrypted
+    if std::path::Path::new(&db_path).exists() {
+        let is_unencrypted = {
+            if let Ok(test_conn) = rusqlite::Connection::open(&db_path) {
+                // If we can query the schema without a key, the database is plaintext
+                test_conn.query_row("SELECT 1 FROM sqlite_master LIMIT 1", [], |_| Ok(())).is_ok()
+            } else {
+                false
+            }
+        };
+
+        if is_unencrypted {
+            println!("[DB] Unencrypted database detected. Running SQLCipher migration...");
+            
+            // Backup the plaintext file
+            let backup_path = format!("{}.bak", db_path);
+            std::fs::rename(&db_path, &backup_path).map_err(|e| e.to_string())?;
+
+            // Open a NEW database at the original path and immediately encrypt it
+            let new_conn = rusqlite::Connection::open(&db_path).map_err(|e| e.to_string())?;
+            new_conn.pragma_update(None, "key", &encryption_key).map_err(|e| e.to_string())?;
+
+            // Attach the plaintext backup (using an empty key)
+            new_conn.execute(
+                &format!("ATTACH DATABASE '{}' AS plaintext KEY '';", backup_path),
+                []
+            ).map_err(|e| e.to_string())?;
+
+            // Export all data, schema, and FTS triggers into the new encrypted database
+            new_conn.query_row("SELECT sqlcipher_export('main')", [], |_| Ok(()))
+                .map_err(|e| e.to_string())?;
+            new_conn.execute("DETACH DATABASE plaintext", [], ).map_err(|e| e.to_string())?;
+            
+            // Close the setup connection so the pool can take over
+            new_conn.close().map_err(|_| "Failed to close migration connection".to_string())?;
+            
+            println!("[DB] Migration complete.");
+            
+            // Optional: You can delete the .bak file here, or leave it for safety during alpha
+            // let _ = std::fs::remove_file(&backup_path); 
+        }
+    }
+
+    // 3. Standard Pool Initialization
+    let manager = SqliteConnectionManager::file(&db_path)
+        .with_init(move |conn| {
+            // This now safely unlocks the database for every connection in the pool
+            conn.pragma_update(None, "key", &encryption_key)?;
+            conn.pragma_update(None, "journal_mode", "WAL")?;
+            conn.pragma_update(None, "foreign_keys", "ON")?;
+            Ok(())
+        });
+
+    let pool = Pool::new(manager).map_err(|e| format!("Failed to create pool: {}", e))?;
+    *state.0.lock().unwrap() = Some(pool);
+    Ok(())
+}
+
+#[tauri::command]
+async fn execute_sql(
+    state: tauri::State<'_, DbState>,
+    sql: String,
+    params: Vec<serde_json::Value>,
+) -> Result<(), String> {
+    let sql_params: Vec<SqlValue> = params.iter().map(json_to_sql).collect();
+
+    // Clone the pool reference out of the Mutex so we don't lock the state during the query
+    let pool = {
+        let pool_guard = state.0.lock().unwrap();
+        pool_guard.as_ref().ok_or("Database not initialized")?.clone()
+    };
+
+    let conn = pool.get().map_err(|e| e.to_string())?;
+
+    conn.execute(&sql, rusqlite::params_from_iter(sql_params))
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[tauri::command]
+async fn select_sql(
+    state: tauri::State<'_, DbState>,
+    sql: String,
+    params: Vec<serde_json::Value>,
+) -> Result<Vec<Vec<serde_json::Value>>, String> {
+    let sql_params: Vec<SqlValue> = params.iter().map(json_to_sql).collect();
+
+    let pool = {
+        let pool_guard = state.0.lock().unwrap();
+        pool_guard.as_ref().ok_or("Database not initialized")?.clone()
+    };
+
+    let conn = pool.get().map_err(|e| e.to_string())?;
+    let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
+
+    let col_count = stmt.column_count();
+
+    let rows = stmt.query_map(rusqlite::params_from_iter(sql_params), |row| {
+        let mut row_arr = Vec::with_capacity(col_count);
+        for i in 0..col_count {
+            let val: serde_json::Value = match row.get_ref(i)? {
+                rusqlite::types::ValueRef::Null => serde_json::Value::Null,
+                rusqlite::types::ValueRef::Integer(n) => n.into(),
+                rusqlite::types::ValueRef::Real(f) => f.into(),
+                rusqlite::types::ValueRef::Text(s) => {
+                    String::from_utf8_lossy(s).into_owned().into()
+                }
+                rusqlite::types::ValueRef::Blob(b) => {
+                    serde_json::Value::String(BASE64_STANDARD.encode(b))
+                }
+            };
+            row_arr.push(val);
+        }
+        Ok(row_arr)
+    }).map_err(|e| e.to_string())?;
+
+    rows.collect::<Result<Vec<_>, _>>().map_err(|e| e.to_string())
+}
 
 #[tauri::command]
 fn get_system_fonts() -> Vec<String> {
     let source = SystemSource::new();
     let mut fonts = source.all_families().unwrap_or_default();
-    fonts.sort(); // alphabetical order
+    fonts.sort();
     fonts
 }
+
 #[tauri::command]
 fn argon2id(
     message: Vec<u8>,
@@ -40,8 +195,6 @@ async fn compress_image_native(
     max_dimension: u32,
     quality: u8,
 ) -> Result<(u32, u32), String> {
-    
-    // Read the file and let the `image` crate guess the format from the bytes
     let img = image::ImageReader::open(&source_path)
         .map_err(|e| format!("Failed to open file: {}", e))?
         .with_guessed_format()
@@ -49,7 +202,6 @@ async fn compress_image_native(
         .decode()
         .map_err(|e| format!("Failed to decode image: {}", e))?;
 
-    // Downscale if necessary
     let resized = if img.width() > max_dimension || img.height() > max_dimension {
         img.resize(max_dimension, max_dimension, FilterType::Triangle)
     } else {
@@ -59,56 +211,43 @@ async fn compress_image_native(
     let out_width = resized.width();
     let out_height = resized.height();
 
-    // Create the WebP encoder
     let encoder: Encoder = Encoder::from_image(&resized)
         .map_err(|e| format!("Failed to create WebP encoder: {:?}", e))?;
 
-    // Encode
     let webp_memory = if quality == 100 {
         encoder.encode_lossless()
     } else {
         encoder.encode(quality as f32)
     };
 
-    // Save directly to disk
     fs::write(&output_path, &*webp_memory)
         .map_err(|e| format!("Failed to save WebP to disk: {}", e))?;
 
     Ok((out_width, out_height))
 }
 
-
 #[tauri::command]
 async fn start_auth_listener(window: Window) -> Result<(), String> {
-    // We run this in a new thread so it doesn't freeze the app while waiting
     std::thread::spawn(move || {
-        // Listen on the port we set in our OAuth provider
         let listener = TcpListener::bind("127.0.0.1:8484").expect("Failed to bind to port 8484");
-        
-        // Wait for the browser to redirect here in a loop so we can handle multiple requests
+
         for stream in listener.incoming() {
             if let Ok(mut stream) = stream {
                 let mut buffer = [0; 4096];
                 if stream.read(&mut buffer).is_ok() {
                     let request = String::from_utf8_lossy(&buffer[..]).to_string();
-                    
-                    // If the browser is sending back the JS extracted hash
+
                     if request.starts_with("GET /_tauri_callback") {
                         let response = "HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\n\r\n";
                         let _ = stream.write_all(response.as_bytes());
                         let _ = window.emit("oauth-callback", request);
                         break;
-                    } 
-                    // If Supabase gave us query parameters directly (PKCE flow)
-                    else if request.contains("GET /?code=") || request.contains("GET /?error=") {
+                    } else if request.contains("GET /?code=") || request.contains("GET /?error=") {
                         let response = "HTTP/1.1 200 OK\r\n\r\n<html><body><h2>Authentication successful!</h2><p>You can close this tab and return to Annota.</p><script>window.close()</script></body></html>";
                         let _ = stream.write_all(response.as_bytes());
                         let _ = window.emit("oauth-callback", request);
                         break;
-                    } 
-                    // Otherwise, the tokens are likely trapped in the URL Hash fragment! 
-                    // We return HTML that extracts the hash and calls /_tauri_callback
-                    else {
+                    } else {
                         let response = "HTTP/1.1 200 OK\r\n\r\n<html><body><h2>Completing authentication...</h2><script>
                             let data = window.location.hash.substring(1) || window.location.search.substring(1);
                             fetch('/_tauri_callback?' + data).then(() => { window.close() });
@@ -126,7 +265,6 @@ async fn start_auth_listener(window: Window) -> Result<(), String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![start_auth_listener, compress_image_native, get_system_fonts,argon2id])
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_clipboard_manager::init())
@@ -134,9 +272,18 @@ pub fn run() {
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_os::init())
-        .plugin(tauri_plugin_sql::Builder::default().build())
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_window_state::Builder::default().with_state_flags(tauri_plugin_window_state::StateFlags::all()).build())
+        .manage(DbState(Mutex::new(None)))
+        .invoke_handler(tauri::generate_handler![
+            start_auth_listener,
+            compress_image_native,
+            get_system_fonts,
+            argon2id,
+            open_encrypted_db,
+            execute_sql,
+            select_sql
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

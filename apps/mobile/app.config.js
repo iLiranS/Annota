@@ -54,6 +54,13 @@ export default {
       "expo-document-picker",
       "expo-apple-authentication",
       [
+        "expo-sqlite",
+        {
+          enableFTS: true,
+          useSQLCipher: true,
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",

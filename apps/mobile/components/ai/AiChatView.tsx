@@ -38,6 +38,7 @@ interface AiChatViewProps {
     currentModelName?: string;
     activeProvider?: string;
     onInsertToNote?: (content: string) => void;
+    onStop?: () => void;
 }
 
 type ContentSegment =
@@ -405,7 +406,8 @@ export function AiChatView({
     onClearAllContext,
     currentModelName,
     activeProvider,
-    onInsertToNote
+    onInsertToNote,
+    onStop
 }: AiChatViewProps) {
     const { colors } = useTheme();
     const insets = useSafeAreaInsets();
@@ -609,12 +611,12 @@ export function AiChatView({
                         editable={!isStreaming}
                     />
                     <TouchableOpacity
-                        style={[styles.sendButton, { backgroundColor: input.trim() && !isStreaming && isConfigured ? colors.primary : colors.text + '10' }]}
-                        onPress={onSend}
-                        disabled={!input.trim() || isStreaming || !isConfigured}
+                        style={[styles.sendButton, { backgroundColor: (input.trim() && !isStreaming) || isStreaming ? colors.primary : colors.text + '10' }]}
+                        onPress={isStreaming ? onStop : onSend}
+                        disabled={(!input.trim() && !isStreaming) || !isConfigured}
                     >
                         {isStreaming ? (
-                            <ActivityIndicator size="small" color="#FFF" />
+                            <Ionicons name="stop" size={20} color="#FFF" />
                         ) : (
                             <Ionicons name="arrow-up" size={20} color={input.trim() ? '#FFF' : colors.text + '30'} />
                         )}
