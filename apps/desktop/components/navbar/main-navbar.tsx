@@ -51,7 +51,7 @@ export function MainNavbar() {
 
     // const sidebarSide = general.appDirection === "rtl" ? "right" : "left";
     const windowControlsSide = isMac ? (localeDir === "rtl" ? "right" : "left") : "right";
-    const needsWindowControlsPadding = true;
+    const needsWindowControlsPadding = isMac;
     const windowControlsPaddingClass = needsWindowControlsPadding
         ? (windowControlsSide === "left" ? "pl-20" : "pr-20")
         : undefined;

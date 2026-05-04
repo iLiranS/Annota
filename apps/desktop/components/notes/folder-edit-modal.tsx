@@ -56,6 +56,7 @@ interface FolderEditModalProps {
     onOpenChange: (open: boolean) => void;
     folder: Folder | null; // null = create mode
     defaultParentId?: string | null;
+    onSuccess?: (folderId: string) => void;
 }
 
 export function FolderEditModal({
@@ -63,6 +64,7 @@ export function FolderEditModal({
     onOpenChange,
     folder,
     defaultParentId = null,
+    onSuccess,
 }: FolderEditModalProps) {
     const { colors } = useAppTheme();
     const { createFolder, updateFolder, getFolderById } = useNotesStore();
@@ -122,10 +124,13 @@ export function FolderEditModal({
         const normalizedParentId = (parentId === 'root' || !parentId) ? null : parentId;
 
         if (isCreateMode) {
-            const { error } = await createFolder({ parentId: normalizedParentId, name: name.trim(), icon, color });
+            const { data, error } = await createFolder({ parentId: normalizedParentId, name: name.trim(), icon, color });
             if (error) {
                 toast.error(error);
                 return;
+            }
+            if (data?.id) {
+                onSuccess?.(data.id);
             }
         } else {
             await updateFolder(folder!.id, {
@@ -315,6 +320,7 @@ export function FolderEditModal({
                     onOpenChange={(open) => setSubFolderCreationId(prev => ({ ...prev, open }))}
                     folder={null}
                     defaultParentId={subFolderCreationId.parentId}
+                    onSuccess={onSuccess}
                 />
             )}
         </Dialog>

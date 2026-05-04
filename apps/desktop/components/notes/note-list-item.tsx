@@ -212,7 +212,7 @@ export function NoteListItem({
                             !asChild && (isCompact && !isInList ? "py-1.5" : "py-2"),
                             !asChild && (isInList ? "rounded-lg px-2 py-2" : "px-3 py-2 rounded-lg"),
                             isActive && !asChild && "bg-accent/70",
-                            isSelected && !asChild && "bg-primary/10 ring-1 ring-primary/30",
+                            isSelected && !asChild && "bg-primary/10",
                             "relative",
                             className
                         )}
@@ -222,7 +222,7 @@ export function NoteListItem({
                         {asChild ? children : (
                             <>
                                 <div className="flex w-full items-start justify-between gap-2.5">
-                                    {selectionMode && isInList && (
+                                    {(selectionMode || isSelected) && isInList && (
                                         <div className={cn("shrink-0 mt-0.5", general.appDirection === 'rtl' ? "ml-2" : "mr-2")}>
                                             <Checkbox
                                                 checked={isSelected}

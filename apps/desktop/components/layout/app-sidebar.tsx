@@ -183,6 +183,12 @@ export function AppSidebar() {
         navigateSmart(to);
     }, [clearQuickAccessView, navigateSmart]);
 
+    const handleFolderCreated = useCallback((id: string) => {
+        setPendingFolderId(id);
+        setActiveTab('notes');
+        navigateWithHistory(`/notes?folderId=${id}`);
+    }, [navigateWithHistory, setActiveTab]);
+
     const browseNotes = useMemo(() => {
         if (tagId) {
             const list = notes.filter(n => {
@@ -433,6 +439,7 @@ export function AppSidebar() {
                     onOpenChange={setIsEditModalOpen}
                     folder={editingFolder}
                     defaultParentId={newFolderParentId}
+                    onSuccess={handleFolderCreated}
                 />
                 <ConfirmDialog
                     open={!!folderToDelete}

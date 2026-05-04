@@ -182,28 +182,32 @@ function App() {
           ? await getMasterKey(activeUserId) 
           : "annota-guest-db-key";
         
-        await initDesktopSqlite(activeUserId, dbKey || "");
+        if (activeUserId && !dbKey) {
+          console.warn("[DesktopBootstrap] Missing master key. Deferring DB init until key is provided.");
+        } else {
+          await initDesktopSqlite(activeUserId, dbKey || "");
 
-        // 5. Initialize stores only for the main window.
-        //    Child windows (standalone note editors) read directly from the DB
-        //    via NoteService and don't need the full store to be populated.
-        const isMain = getCurrentWindow().label === "main";
-        if (isMain) {
-          try {
-            const storesPromise = Promise.all([
-              useNotesStore.getState().initApp(),
-            ]);
-            const storesTimeoutPromise = new Promise<never>((_, reject) =>
-              setTimeout(() => reject(new Error("Stores init timeout")), 5000)
-            );
+          // 5. Initialize stores only for the main window.
+          //    Child windows (standalone note editors) read directly from the DB
+          //    via NoteService and don't need the full store to be populated.
+          const isMain = getCurrentWindow().label === "main";
+          if (isMain) {
+            try {
+              const storesPromise = Promise.all([
+                useNotesStore.getState().initApp(),
+              ]);
+              const storesTimeoutPromise = new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error("Stores init timeout")), 5000)
+              );
 
-            await Promise.race([storesPromise, storesTimeoutPromise]);
-          } catch (error) {
-            console.warn(
-              "[DesktopBootstrap] Stores sync timed out/failed. Proceeding with local DB data.",
-              error
-            );
-            // Don't throw here! We want the app to finish booting so the user can access local SQLite data.
+              await Promise.race([storesPromise, storesTimeoutPromise]);
+            } catch (error) {
+              console.warn(
+                "[DesktopBootstrap] Stores sync timed out/failed. Proceeding with local DB data.",
+                error
+              );
+              // Don't throw here! We want the app to finish booting so the user can access local SQLite data.
+            }
           }
         }
 
@@ -225,6 +229,14 @@ function App() {
       cancelled = true;
     };
   }, [runId, setSession]);
+
+  const prevHasMasterKeyRef = useRef(hasMasterKey);
+  useEffect(() => {
+    if (hasMasterKey && !prevHasMasterKeyRef.current) {
+      setRunId((v) => v + 1);
+    }
+    prevHasMasterKeyRef.current = hasMasterKey;
+  }, [hasMasterKey]);
 
   const navigate = useNavigate();
   const location = useLocation();
