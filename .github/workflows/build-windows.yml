@@ -50,9 +50,13 @@ jobs:
       - name: Set version
         run: pnpm version ${{ inputs.version }} --no-git-tag-version
 
+      - name: Install OpenSSL (Windows)
+        run: choco install openssl --yes --limit-output
+
       - name: Build Tauri (Windows)
         run: pnpm tauri build
         env:
+          OPENSSL_DIR: "C:\\Program Files\\OpenSSL-Win64"
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_KEY: ${{ secrets.VITE_SUPABASE_KEY }}
           VITE_ENABLE_CLOUD: true
