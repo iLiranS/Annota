@@ -1,5 +1,5 @@
-name: annota-windows-v${{ inputs.version }}
-
+name: Build Windows (manual)
+run-name: annota-windows-v${{ inputs.version }}
 on:
   workflow_dispatch:
     inputs:
