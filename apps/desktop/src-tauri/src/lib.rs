@@ -265,10 +265,11 @@ async fn start_auth_listener(window: Window) -> Result<(), String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+        .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.show();
                 let _ = window.set_focus();
+                let _ = window.emit("deep-link-windows", args);
             }
         }))
         .plugin(tauri_plugin_dialog::init())
