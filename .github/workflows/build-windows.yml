@@ -10,14 +10,17 @@ on:
 jobs:
   build:
     runs-on: windows-latest
-
     defaults:
       run:
         working-directory: apps/desktop
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
 
       - name: Setup Node + cache
         uses: actions/setup-node@v4
@@ -26,16 +29,12 @@ jobs:
           cache: "pnpm"
           cache-dependency-path: apps/desktop/pnpm-lock.yaml
 
-      - name: Install pnpm
-        run: npm install -g pnpm
-
       - name: Install deps
         run: pnpm install
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
-      # (Optional) set version dynamically if you want it reflected in build
       - name: Set version
         run: pnpm version ${{ inputs.version }} --no-git-tag-version
 
