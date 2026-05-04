@@ -1,0 +1,53 @@
+name: annota-windows-v${{ inputs.version }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version (e.g. 1.2.0)"
+        required: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    defaults:
+      run:
+        working-directory: apps/desktop
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node + cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: "pnpm"
+          cache-dependency-path: apps/desktop/pnpm-lock.yaml
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install deps
+        run: pnpm install
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      # (Optional) set version dynamically if you want it reflected in build
+      - name: Set version
+        run: pnpm version ${{ inputs.version }} --no-git-tag-version
+
+      - name: Build Tauri (Windows)
+        run: pnpm tauri build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_KEY: ${{ secrets.VITE_SUPABASE_KEY }}
+          VITE_ENABLE_CLOUD: true
+
+      - name: Upload .exe
+        uses: actions/upload-artifact@v4
+        with:
+          name: annota-windows-v${{ inputs.version }}
+          path: apps/desktop/src-tauri/target/release/bundle/nsis/*.exe

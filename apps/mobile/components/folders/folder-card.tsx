@@ -1,9 +1,9 @@
 import SwipeableItem from '@/components/swipeable-item';
 import ThemedText from '@/components/themed-text';
 import ThemedPressable from '@/components/ui/themed-pressable';
+import { useAppTheme } from '@/hooks/use-app-theme';
 import { Folder, TRASH_FOLDER_ID, useNotesStore, useSettingsStore } from '@annota/core';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useTheme } from '@react-navigation/native';
 import { StyleSheet, Text, View } from 'react-native';
 
 interface FolderCardProps {
@@ -29,7 +29,7 @@ export default function FolderCard({
     searchQuery,
 }: FolderCardProps) {
 
-    const { colors, dark } = useTheme();
+    const { colors, dark } = useAppTheme();
     const { general } = useSettingsStore();
     const notesCount = useNotesStore(state => {
         if (folder.id === TRASH_FOLDER_ID) {
@@ -155,7 +155,6 @@ const styles = StyleSheet.create({
     },
     pressed: {
         opacity: 0.7,
-        backgroundColor: 'rgba(0,0,0,0.02)',
     },
     countBadge: {
         paddingHorizontal: 4,
