@@ -1,6 +1,5 @@
 .ProseMirror img {
     max-width: 100%;
-    max-height: 350px;
     height: auto;
     border-radius: 8px;
     display: block;
@@ -10,10 +9,17 @@
 /* Image node wrapper */
 .image-node-wrapper {
     position: relative;
-    display: inline-block;
+    display: block; /* Changed from inline-block */
     max-width: 100%;
     margin: 8px 0;
     width: fit-content;
+    line-height: 0;
+}
+
+.image-node-wrapper img {
+    width: 100% !important;
+    height: auto !important;
+    display: block;
 }
 
 .image-node-wrapper.ProseMirror-selectednode {
@@ -23,22 +29,20 @@
 
 .image-node-wrapper.img-center {
     margin: 8px auto;
-    display: table;
 }
 
 .image-node-wrapper.img-left {
     margin: 8px auto 8px 0;
-    display: table;
 }
 
 .image-node-wrapper.img-right {
     margin: 8px 0 8px auto;
-    display: table;
 }
 
 /* Three-dot menu button on images */
 .image-menu-btn {
     position: absolute;
+    display: none;
     top: 8px;
     right: 8px;
     width: 28px;
@@ -49,7 +53,6 @@
     color: #fff;
     cursor: pointer;
     z-index: 5;
-    display: flex;
     align-items: center;
     justify-content: center;
     padding: 0;
@@ -60,6 +63,11 @@
     touch-action: manipulation;
 }
 
+.image-node-wrapper:hover .image-menu-btn,
+.image-node-wrapper.ProseMirror-selectednode .image-menu-btn {
+    display: flex !important;
+}
+
 .image-menu-btn:hover,
 .image-menu-btn:active {
     opacity: 1;
@@ -68,4 +76,56 @@
 
 .image-menu-btn svg {
     flex-shrink: 0;
+}
+
+body.is-resizing-image {
+    cursor: nwse-resize !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+}
+
+/* Resize handle */
+.image-resize-handle {
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    width: 12px;
+    height: 12px;
+    background: var(--accent-color, #007aff);
+    border: 2px solid #fff;
+    border-radius: 50%;
+    cursor: nwse-resize;
+    z-index: 10;
+    opacity: 0;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    touch-action: none;
+}
+
+.image-node-wrapper:hover .image-resize-handle,
+.image-node-wrapper.ProseMirror-selectednode .image-resize-handle {
+    opacity: 1;
+}
+
+.image-resize-handle:hover {
+    transform: scale(1.2);
+}
+
+.image-resize-handle::after {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    right: -10px;
+    bottom: -10px;
+}
+
+/* On mobile, make the handle slightly larger for better touch target */
+@media (max-width: 768px) {
+    .image-resize-handle {
+        width: 20px;
+        height: 20px;
+        bottom: 6px;
+        right: 6px;
+    }
 }

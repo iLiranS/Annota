@@ -57,7 +57,7 @@ export interface SettingsState {
 }
 
 const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
-    direction: 'auto',
+    direction: 'ltr',
     fontSize: 16,
     lineSpacing: 1.5,
     paragraphSpacing: 8,

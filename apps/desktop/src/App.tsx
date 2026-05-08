@@ -5,23 +5,25 @@ import { useNoteWindowSync } from "@/hooks/use-note-window-sync";
 import {
   authApi,
   fileSyncService,
+  isCloudEnabled,
   useAiStore,
   useNotesStore,
   useSearchStore,
   useSettingsStore,
   useSyncStore,
-  useUserStore,
-  isCloudEnabled
+  useUserStore
 } from "@annota/core";
 import {
   SyncScheduler,
+  areAdaptersInitialized,
   getMasterKey,
+  getPlatformAdapters,
 } from "@annota/core/platform";
 import { emit, listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { Location, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import "./App.css";
 import { initDesktopSqlite } from "./bootstrap/desktop-db";
 import { initDeepLinkListener } from "./lib/auth-listener";
@@ -152,36 +154,32 @@ function App() {
             await useUserStore.getState().checkMasterKey();
           }
 
-          // 3. Attempt session restore with a safety timeout
-          try {
-            const { data } = await withStartupTimeout(
-              authApi.getSession(),
-              "Session restore",
-            ) as any;
-
-            if (data?.session) {
-              setSession(data.session);
-              activeUserId = data.session.user.id;
-              // Fetch profile to sync role, sub_exp_date, etc.
-              await useUserStore.getState().getUserProfile();
+          // 3. Background session revalidation (Stale-While-Revalidate)
+          // We don't await this because we want the app to boot instantly with rehydrated state.
+          void (async () => {
+            try {
+              const { data } = await authApi.getSession();
+              if (data?.session) {
+                setSession(data.session);
+                activeUserId = data.session.user.id;
+                await useUserStore.getState().getUserProfile();
+              } else {
+                // If no session is found by Supabase, we MUST clear the rehydrated user
+                // to avoid the "half-logged in" trap.
+                setSession(null);
+              }
+            } catch (error) {
+              console.warn("[DesktopBootstrap] Background session revalidation failed:", error);
+              // We don't logout on network errors, only on explicit "no session" from Supabase.
             }
-          } catch (error) {
-            console.warn(
-              "[DesktopBootstrap] Session restore delayed/failed (offline likely). Falling back to local user state.",
-              error,
-            );
-            if (isStartupTimeout(error)) {
-              useSyncStore.getState().setOnline(false);
-            }
-            // We gracefully catch this. activeUserId still holds the persisted ID!
-          }
+          })();
         }
 
         // 4. Initialise (or switch to) the per-user SQLite database.
-        const dbKey = activeUserId 
-          ? await getMasterKey(activeUserId) 
+        const dbKey = activeUserId
+          ? await getMasterKey(activeUserId)
           : "annota-guest-db-key";
-        
+
         if (activeUserId && !dbKey) {
           console.warn("[DesktopBootstrap] Missing master key. Deferring DB init until key is provided.");
         } else {
@@ -240,7 +238,6 @@ function App() {
 
   const navigate = useNavigate();
   const location = useLocation();
-  const locationState = location.state as { background?: Location };
   const [pendingDeepLink, setPendingDeepLink] = useState<string | null>(null);
 
   // Auth and Deep Link listeners
@@ -335,7 +332,6 @@ function App() {
         setSession(newSession);
         useUserStore.getState().checkMasterKey();
         useUserStore.getState().getUserProfile();
-
         if (newSession.user.id !== prevUserId) {
           setRunId((v) => v + 1);
         }
@@ -348,9 +344,18 @@ function App() {
       }
     });
 
+    // 4. NEW: Listen for auth changes from other windows
+    let unlistenAuth: (() => void) | undefined;
+    if (areAdaptersInitialized()) {
+      getPlatformAdapters().events.subscribe('annota:auth-changed', (newSession: any) => {
+        setSession(newSession, true); // true = skipEmit
+      }).then(un => unlistenAuth = un);
+    }
+
     return () => {
       if (unlistenDeepLink) unlistenDeepLink();
       if (unlistenRequest) unlistenRequest();
+      if (unlistenAuth) unlistenAuth();
       subscription.unsubscribe();
       // Clean up the click listener when unmounting
       document.removeEventListener("click", handleGlobalClick);
@@ -505,7 +510,7 @@ function App() {
   // ── Ready — Route tree ───────────────────────────────────────
   return (
     <>
-      <Routes location={locationState?.background || location}>
+      <Routes>
         {/* Auth routes (no sidebar) */}
         <Route path="/auth" element={<AuthLayout />}>
           <Route index element={<Navigate to="login" replace />} />
@@ -526,23 +531,11 @@ function App() {
               <Route index element={<NotesViewManager />} />
               <Route path=":folderId/:noteId" element={<NotesViewManager />} />
             </Route>
-
-            {/* Modal-style routes as regular routes (fallback if no background) */}
-            {!locationState?.background && (
-              <>
-                <Route path="settings" element={<SettingsDialog />} />
-              </>
-            )}
           </Route>
         </Route>
       </Routes>
 
-      {/* Modal routes */}
-      {locationState?.background && (
-        <Routes>
-          <Route path="settings" element={<SettingsDialog />} />
-        </Routes>
-      )}
+      <SettingsDialog />
       <ChangelogModal />
     </>
   );

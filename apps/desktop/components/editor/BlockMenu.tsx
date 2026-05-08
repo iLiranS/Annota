@@ -71,19 +71,6 @@ export function BlockMenu({
             <DropdownMenuContent align="start" className="w-56">
                 {type === "image" && (
                     <>
-                        <DropdownMenuItem onClick={() => handleAction("resize", { width: "25%" })}>
-                            <Maximize className="mr-2 h-4 w-4" />
-                            <span>Resize 25%</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleAction("resize", { width: "50%" })}>
-                            <Maximize className="mr-2 h-4 w-4" />
-                            <span>Resize 50%</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleAction("resize", { width: "100%" })}>
-                            <Maximize className="mr-2 h-4 w-4" />
-                            <span>Full Width</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => handleAction("copy")}>
                             <Copy className="mr-2 h-4 w-4" />
                             <span>Copy Image</span>

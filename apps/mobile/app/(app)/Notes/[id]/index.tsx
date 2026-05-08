@@ -142,6 +142,19 @@ export default function NoteEditor() {
         return () => clearTimeout(timer);
     }, [isLoading]);
 
+    useEffect(() => {
+        const onBackPress = () => {
+            if (!router.canGoBack()) {
+                router.replace('/Notes');
+                return true;
+            }
+            return false;
+        };
+
+        const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+        return () => subscription.remove();
+    }, [router]);
+
     // Handle content changes from the editor
     const handleContentChange = useCallback(async (html: string) => {
         if (!id) return;

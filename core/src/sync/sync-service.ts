@@ -421,7 +421,13 @@ export async function performSyncPull(masterKey: string, saltHex: string) {
     console.log(`[Sync] Requesting file links for ${fetchedNoteIds.length} notes`);
     const { data: cloudLinks, error: linkError } = await storageApi.getUserFileLinks(userId, fetchedNoteIds);
     console.log(`[Sync] cloudLinks:`, cloudLinks?.length, 'error:', linkError);
-    if (!linkError && cloudLinks && cloudLinks.length > 0) {
+    
+    if (linkError) {
+        console.error(`[Sync] Error fetching user file links:`, linkError);
+        throw linkError;
+    }
+
+    if (cloudLinks && cloudLinks.length > 0) {
         const uniqueFileIds = Array.from(new Set(cloudLinks.map(l => l.file_id as string)));
         const localFiles = await getFilesByIds(uniqueFileIds);
         const localFileIds = new Set(localFiles.map((i: any) => i.id));
@@ -431,7 +437,13 @@ export async function performSyncPull(masterKey: string, saltHex: string) {
         if (missingIds.length > 0) {
             const { data: cloudMeta, error: metaError } = await storageApi.getEncryptedFilesMetadata(userId, missingIds);
             console.log(`[Sync] getEncryptedFilesMetadata cloudMeta:`, cloudMeta?.length, 'error:', metaError);
-            if (!metaError && cloudMeta) {
+            
+            if (metaError) {
+                console.error(`[Sync] Error fetching encrypted files metadata:`, metaError);
+                throw metaError;
+            }
+
+            if (cloudMeta) {
                 const downloadQueue = cloudMeta.map(meta => ({
                     fileId: meta.id,
                     noteId: '',
@@ -444,8 +456,6 @@ export async function performSyncPull(masterKey: string, saltHex: string) {
                 fileSyncService.queueFilesForDownload(downloadQueue);
             }
         }
-    } else if (linkError) {
-        console.error(`[Sync] Error fetching user file links:`, linkError);
     }
 }
 
@@ -465,7 +475,6 @@ export async function syncPush(masterKey: string, saltHex: string): Promise<bool
     store.setSyncing(true);
     try {
         await performSyncPush(masterKey, saltHex);
-        store.setLastSyncAt(new Date());
         return true;
     } catch (err) {
         const msg = err instanceof Error ? err.message : 'Unknown error';
@@ -490,9 +499,10 @@ export async function syncPull(masterKey: string, saltHex: string): Promise<bool
     }
 
     store.setSyncing(true);
+    const syncStartTime = new Date();
     try {
         await performSyncPull(masterKey, saltHex);
-        store.setLastSyncAt(new Date());
+        store.setLastSyncAt(syncStartTime);
         return true;
     } catch (err) {
         const msg = err instanceof Error ? err.message : 'Unknown error';

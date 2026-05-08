@@ -8,9 +8,10 @@ interface UseNoteEditorContentProps {
     editorRef: React.RefObject<TipTapEditorRef | null>;
     onNoteSync?: (noteId: string, content: string, title: string) => void;
     elementId?: string | null;
+    initialContent?: string;
 }
 
-export function useNoteEditorContent({ noteId, editorRef, onNoteSync, elementId }: UseNoteEditorContentProps) {
+export function useNoteEditorContent({ noteId, editorRef, onNoteSync, elementId, initialContent: propInitialContent }: UseNoteEditorContentProps) {
     const getNoteContent = useNotesStore((s) => s.getNoteContent);
     const { updateNoteContent, updateNoteMetadata } = useNotesStore();
     const notes = useNotesStore((s) => s.notes);
@@ -111,6 +112,12 @@ export function useNoteEditorContent({ noteId, editorRef, onNoteSync, elementId 
         let cancelled = false;
 
         (async () => {
+            if (propInitialContent !== undefined) {
+                setInitialContent(propInitialContent);
+                lastSeenUpdatedAtRef.current = note?.updatedAt ? new Date(note.updatedAt).getTime() : null;
+                return;
+            }
+
             const content = await fetchNoteContent(noteId);
             if (cancelled) return;
             if (content === null) {
@@ -127,7 +134,7 @@ export function useNoteEditorContent({ noteId, editorRef, onNoteSync, elementId 
         return () => {
             cancelled = true;
         };
-    }, [noteId, fetchNoteContent, hydrateImageSrcs]);
+    }, [noteId, fetchNoteContent, hydrateImageSrcs, propInitialContent]);
 
     // Remote updates
     useEffect(() => {

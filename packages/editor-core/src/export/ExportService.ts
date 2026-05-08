@@ -639,7 +639,6 @@ export class ExportService {
             [data-type="detailsSummary"],
             summary {
                 padding:     6px 14px;
-                background:  rgba(0,0,0,.03);
                 font-weight: 700;
                 display:     flex;
                 align-items: center;
@@ -658,7 +657,6 @@ export class ExportService {
             [data-type="detailsContent"],
             .details-content {
                 padding: 0px 14px;
-                border-top: 1px solid var(--border);
             }
 
             /* ── Mermaid ────────────────────────────────────────────────────── */
@@ -715,7 +713,7 @@ export class ExportService {
             .page-break { page-break-after: always; }
         `;
 
-    return `<!DOCTYPE html>
+        return `<!DOCTYPE html>
 <html lang="en" dir="auto">
 <head>
     <meta charset="utf-8">

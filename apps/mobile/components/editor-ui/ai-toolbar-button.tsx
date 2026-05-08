@@ -38,7 +38,7 @@ export function AIToolbarButton({
         display: opacity.value === 0 ? 'none' : 'flex',
     }));
 
-    if (!effectiveVisibility && opacity.value === 0) return null;
+    if (!effectiveVisibility) return null;
 
     return (
         <Animated.View style={animatedStyle}>

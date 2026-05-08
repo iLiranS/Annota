@@ -19,7 +19,7 @@ import 'react-native-url-polyfill/auto';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { useDailyCleanup } from '@/hooks/use-daily-cleanup';
 import { useDisplayNameSync } from '@/hooks/use-display-name-sync';
-import { logInRevenueCat, logOutRevenueCat } from '@/services/RevenueCat';
+import RevenueCatInitializer, { logInRevenueCat, logOutRevenueCat } from '@/services/RevenueCat';
 import {
   authApi,
   initDatabase,
@@ -408,6 +408,7 @@ function AppLogicHub() {
       </Stack>
       <StatusBar style={theme.dark ? 'light' : 'dark'} />
       <Toast config={toastConfig} />
+      <RevenueCatInitializer />
       <ChangelogModal />
     </ThemeProvider>
   );

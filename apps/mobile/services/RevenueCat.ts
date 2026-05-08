@@ -9,7 +9,7 @@ const ANDROID_API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY || ''
  * Flag to easily enable/disable RevenueCat across the app.
  * Set to false to disable RevenueCat (e.g. for testing without production API keys).
  */
-export const ENABLE_REVENUECAT = false;
+export const ENABLE_REVENUECAT = process.env.EXPO_PUBLIC_ENABLE_REVENUECAT === 'true';
 
 export const useRevenueCatInitialization = () => {
   useEffect(() => {

@@ -30,10 +30,12 @@ export interface NoteEditorProps {
     noteId?: string;
     folderId?: string;
     onNoteSync?: (noteId: string, content: string, title: string) => void;
+    onTagClick?: (tagId: string) => void;
     isStandalone?: boolean;
+    initialContent?: string;
 }
 
-export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId, onNoteSync, isStandalone }: NoteEditorProps) {
+export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId, onNoteSync, onTagClick, isStandalone, initialContent: propInitialContent }: NoteEditorProps) {
     const navigate = useNavigate();
     const params = useParams<{ folderId: string; noteId: string }>();
     const location = useLocation()
@@ -74,7 +76,8 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
         noteId,
         editorRef,
         onNoteSync,
-        elementId
+        elementId,
+        initialContent: propInitialContent
     });
 
     const {
@@ -255,7 +258,7 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
                             placeholder="Start typing..."
                             renderStaticHeader={() => (
                                 <div className={cn("py-2 px-1", direction === 'rtl' ? "pl-20" : "pr-20")}>
-                                    <NoteTags noteId={noteId ?? ''} />
+                                    <NoteTags noteId={noteId ?? ''} onTagClick={onTagClick} />
                                 </div>
                             )}
                             renderHeader={() => (

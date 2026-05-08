@@ -1,13 +1,12 @@
+import { APP_RELEASE_VERSION, useChangelog, useNavigationStore } from "@annota/core";
 import { Bot, Brush, Cog, Database, HelpCircle, Type, User } from "lucide-react";
 import { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
 import { AccountSettings } from "./account-settings";
+import { AiSettings } from "./ai-settings";
 import { AppearanceSettings } from "./appearance-settings";
 import { EditorSettings } from "./editor-settings";
 import { GeneralSettings } from "./general-settings";
 import { HelpSettings } from "./help-settings";
-import { AiSettings } from "./ai-settings";
-import { APP_RELEASE_VERSION, useChangelog } from "@annota/core";
 
 import {
     Dialog,
@@ -73,24 +72,16 @@ const tabs: SettingsTab[] = [
 ];
 
 export default function SettingsDialog() {
-    const location = useLocation();
-    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState("appearance");
     const { openManual } = useChangelog("desktop");
+    const { isSettingsOpen, setSettingsOpen } = useNavigationStore();
 
     const handleClose = () => {
-        const background = (location.state as { background?: { pathname: string; search?: string; hash?: string } } | null)?.background;
-
-        if (background) {
-            navigate(`${background.pathname}${background.search || ""}${background.hash || ""}`, { replace: true });
-            return;
-        }
-
-        navigate("/notes", { replace: true });
+        setSettingsOpen(false);
     };
 
     return (
-        <Dialog open onOpenChange={(open) => !open && handleClose()}>
+        <Dialog open={isSettingsOpen} onOpenChange={(open) => !open && handleClose()}>
             <DialogContent className="max-w-4xl h-[75vh] min-h-[500px] w-[90vw] gap-0 overflow-hidden p-0 shadow-2xl flex flex-col">
                 <DialogDescription className="sr-only">Settings</DialogDescription>
                 <DialogHeader className="px-6 pt-5 pb-0 shrink-0">
@@ -157,7 +148,7 @@ export default function SettingsDialog() {
                                     </button>
                                 ))}
                         </div>
-                        <p 
+                        <p
                             onClick={openManual}
                             className="mt-auto pt-4 px-3 text-[10px] font-mono text-center text-muted-foreground/80 uppercase tracking-tighter cursor-pointer hover:text-primary transition-colors"
                         >

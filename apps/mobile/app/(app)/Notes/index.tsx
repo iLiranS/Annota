@@ -31,6 +31,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
+    Platform,
     StyleSheet,
     TextInput,
     View
@@ -180,6 +181,14 @@ export default function NotesList() {
     const currentTag = useMemo(() => tags.find(t => t.id === tagId), [tags, tagId]);
     const headerTitle = tagId ? (currentTag?.name ?? 'Tag') : (currentFolder ? currentFolder.name : 'Annota');
 
+    const titleFontSize = useMemo(() => {
+        const length = headerTitle.length;
+        if (length > 25) return 13;
+        if (length > 20) return 14;
+        if (length > 14) return 16;
+        return 18;
+    }, [headerTitle]);
+
     // Handlers
     const toggleSection = useCallback((title: string) => {
         setCollapsedSections(prev => {
@@ -315,6 +324,21 @@ export default function NotesList() {
         };
     });
 
+    const spinnerStyle = useAnimatedStyle(() => {
+        if (isGuest) return { opacity: 0 };
+        return {
+            position: 'absolute',
+            top: 20,
+            left: '50%',
+            zIndex: 1001,
+            transform: [
+                { translateX: -16 },
+                { scale: isSyncing ? withTiming(1) : withTiming(0) }
+            ],
+            opacity: isSyncing ? withTiming(1) : withTiming(0),
+        };
+    });
+
     const renderItem = ({ item, index }: { item: ListItem, index: number }) => {
         if (item.type === 'section-header') {
             return (
@@ -371,6 +395,11 @@ export default function NotesList() {
     return (
         <View style={styles.container}>
             <Animated.View style={syncIndicatorStyle} />
+            <Animated.View style={spinnerStyle}>
+                <View style={[styles.spinnerContainer, { backgroundColor: colors.card }]}>
+                    <ActivityIndicator size="small" color={colors.primary} />
+                </View>
+            </Animated.View>
             <Stack.Screen
                 options={{
                     headerShown: true,
@@ -409,7 +438,13 @@ export default function NotesList() {
                                         color={currentFolder?.color ?? colors.primary}
                                     />
                                 )}
-                                <ThemedText style={styles.headerTitleText}>{headerTitle}</ThemedText>
+                                <ThemedText
+                                    style={[styles.headerTitleText, { fontSize: titleFontSize }]}
+                                    numberOfLines={1}
+                                    ellipsizeMode="tail"
+                                >
+                                    {headerTitle}
+                                </ThemedText>
                             </View>
                         )
                     ),
@@ -557,8 +592,15 @@ const styles = StyleSheet.create({
     headerButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
     headerRightContainer: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     listContent: { paddingTop: 16 },
-    headerTitleContainer: { flexDirection: 'row', alignItems: 'center', gap: 8, marginLeft: -8 },
-    headerTitleText: { fontSize: 18, fontWeight: '700' },
+    headerTitleContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginLeft: -8,
+        flex: 1,
+        marginRight: 8
+    },
+    headerTitleText: { fontSize: 18, fontWeight: '700', flexShrink: 1 },
     emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 48, gap: 8 },
     emptyText: { fontSize: 17, fontWeight: '600' },
     emptyHint: { fontSize: 14, opacity: 0.5 },
@@ -569,4 +611,22 @@ const styles = StyleSheet.create({
     searchInput: { fontSize: 16, fontWeight: '500', paddingHorizontal: 12 },
     searchLoading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, gap: 8 },
     searchLoadingText: { fontSize: 13, opacity: 0.6 },
+    spinnerContainer: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+        ...Platform.select({
+            ios: {
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.15,
+                shadowRadius: 4,
+            },
+            android: {
+                elevation: 4,
+            },
+        }),
+    },
 });

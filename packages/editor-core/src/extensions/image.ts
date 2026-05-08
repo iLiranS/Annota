@@ -1,4 +1,3 @@
-import './image.css';
 import type { NodeViewRenderer } from '@tiptap/core';
 import { Image } from '@tiptap/extension-image';
 import { Node as PMNode } from '@tiptap/pm/model';
@@ -6,6 +5,7 @@ import { NodeSelection, Plugin, type EditorState, type Transaction } from '@tipt
 import { sendMessage } from '../bridge';
 import '../types'; // Import global window types
 import { createBlockMenuButton } from './block-menu-button';
+import './image.css';
 
 const INTERNAL_IMAGE_ID_MIME = 'application/x-note-image-id';
 
@@ -233,10 +233,10 @@ export const CustomImage = Image.extend<any>({
                 img.style.minHeight = '100px';
             }
             const nodeWidth = currentNode.attrs.width || '100%';
-            img.style.maxWidth = '100%';
-            img.style.width = 'auto';
-            wrapper.style.maxWidth = nodeWidth;
-            wrapper.style.width = 'fit-content';
+            img.style.width = '100%';
+            img.style.height = 'auto';
+            wrapper.style.width = nodeWidth;
+            wrapper.style.minWidth = '50px';
             img.draggable = false;
 
             // Helper: collect all images in the document
@@ -317,13 +317,95 @@ export const CustomImage = Image.extend<any>({
             wrapper.appendChild(img);
             wrapper.appendChild(menuBtn);
 
+            // Resize handle
+            const resizeHandle = document.createElement('div');
+            resizeHandle.className = 'image-resize-handle';
+            wrapper.appendChild(resizeHandle);
+
+            let isResizing = false;
+            let startX = 0;
+            let startWidth = 0;
+
+            const onPointerMove = (e: PointerEvent) => {
+                if (!isResizing) return;
+                e.preventDefault();
+
+                const deltaX = e.clientX - startX;
+                const newWidth = Math.max(50, startWidth + deltaX);
+
+                const parentWidth = wrapper.parentElement?.clientWidth || window.innerWidth;
+                const cappedWidth = Math.min(newWidth, parentWidth);
+
+                wrapper.style.width = `${cappedWidth}px`;
+            };
+
+            const onPointerUp = (e: PointerEvent) => {
+                if (!isResizing) return;
+                isResizing = false;
+
+                resizeHandle.releasePointerCapture(e.pointerId);
+                document.body.classList.remove('is-resizing-image');
+
+                if (typeof getPos !== 'function') return;
+                const pos = getPos();
+                if (typeof pos !== 'number') return;
+
+                const finalWidth = wrapper.style.width;
+                editor.view.dispatch(
+                    editor.state.tr.setNodeMarkup(pos, undefined, {
+                        ...currentNode.attrs,
+                        width: finalWidth,
+                    })
+                );
+            };
+
+            const onPointerDown = (e: PointerEvent) => {
+                if (e.pointerType === 'mouse' && e.button !== 0) return;
+
+                e.preventDefault();
+                e.stopPropagation();
+
+                isResizing = true;
+                startX = e.clientX;           // use clientX, not pageX (consistent with move)
+                startWidth = wrapper.offsetWidth;
+
+                // Capture pointer to this element so move/up fire even if cursor leaves
+                resizeHandle.setPointerCapture(e.pointerId);
+
+                document.body.classList.add('is-resizing-image');
+            };
+
+            resizeHandle.addEventListener('pointerdown', onPointerDown as EventListener);
+            resizeHandle.addEventListener('pointermove', onPointerMove as EventListener);
+            resizeHandle.addEventListener('pointerup', onPointerUp as EventListener);
+            resizeHandle.addEventListener('pointercancel', onPointerUp as EventListener);
+            resizeHandle.contentEditable = 'false';
+
             return {
                 dom: wrapper,
+                stopEvent: (event: Event) => {
+                    // Block ALL events originating from the resize handle,
+                    // and block all events while a resize is in progress.
+                    if (event.target === resizeHandle || resizeHandle.contains(event.target as Node)) {
+                        return true;
+                    }
+                    return isResizing;
+                },
                 ignoreMutation: (mutation: MutationRecord) => {
-                    return mutation.target === menuBtn || menuBtn.contains(mutation.target as Node);
+                    // Ignore style changes on the wrapper itself during resizing
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'style' && mutation.target === wrapper) {
+                        return true;
+                    }
+                    return mutation.target === menuBtn || menuBtn.contains(mutation.target as Node) ||
+                        mutation.target === resizeHandle || resizeHandle.contains(mutation.target as Node);
                 },
                 update: (updatedNode) => {
                     if (updatedNode.type.name !== 'image') return false;
+                    
+                    // CRITICAL: If we are actively resizing, don't let Tiptap's update cycle
+                    // overwrite our temporary drag width.
+                    if (isResizing) return true;
+
                     currentNode = updatedNode;
 
                     if (updatedNode.attrs.src) {
@@ -332,10 +414,10 @@ export const CustomImage = Image.extend<any>({
                         img.style.minHeight = '';
                     }
                     const nodeWidth = updatedNode.attrs.width || '100%';
-                    img.style.maxWidth = '100%';
-                    img.style.width = 'auto';
-                    wrapper.style.maxWidth = nodeWidth;
-                    wrapper.style.width = 'fit-content';
+                    img.style.width = '100%';
+                    img.style.height = 'auto';
+                    wrapper.style.width = nodeWidth;
+                    wrapper.style.minWidth = '50px';
                     wrapper.className = `image-node-wrapper img-${updatedNode.attrs.align || 'center'}`;
                     return true;
                 },
@@ -488,21 +570,10 @@ export function setupImageUpdater() {
             // Convert percent to pixels relative to available space (editor width)
             // This prevents images from breaking tables or exceeding editor bounds
             const editorWidth = e.view.dom.clientWidth || window.innerWidth;
-            // The selected node is now the wrapper div — find the img inside it
-            const selectedWrapper = document.querySelector('.ProseMirror-selectednode');
-            const selectedImg = (selectedWrapper?.tagName === 'IMG'
-                ? selectedWrapper
-                : selectedWrapper?.querySelector('img')) as HTMLImageElement | null;
 
-            let baseWidth = editorWidth;
-
-            // Trust natural width if it's smaller than editor width to avoid upscaling
-            if (selectedImg && selectedImg.tagName === 'IMG' && selectedImg.naturalWidth) {
-                baseWidth = Math.min(editorWidth, selectedImg.naturalWidth);
-            } else if (selectedImg && selectedImg.tagName === 'IMG' && selectedImg.width) {
-                // Fallback to current render width if natural not available (rare)
-                baseWidth = Math.min(editorWidth, selectedImg.width);
-            }
+            // We use the editor width as the base for percentages to allow upscaling
+            // and to ensure "100%" really means "full width of the editor".
+            const baseWidth = editorWidth;
 
             // Calculate final pixel width
             const pxWidth = Math.floor((baseWidth * percent) / 100);

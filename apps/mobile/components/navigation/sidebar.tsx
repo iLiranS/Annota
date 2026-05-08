@@ -286,6 +286,25 @@ export default function Sidebar({ onNavigate, ...props }: SidebarProps & React.C
         router.replace(target);
     }, [closeDrawer, router]);
 
+    const navigateToNote = useCallback((noteId: string) => {
+        closeDrawer();
+        const normalizedPath = pathname.toLowerCase();
+        const isCurrentNote = normalizedPath === `/notes/${noteId}` || normalizedPath === `/notes/${noteId}/`;
+
+        if (isCurrentNote) return;
+
+        // If we are already at the Notes root list, we just push the note.
+        // Otherwise, we replace the stack with the Notes root list first, 
+        // then push the note. This ensures the swipe-back gesture always 
+        // leads back to the "All Notes" list.
+        if (normalizedPath === '/notes' || normalizedPath === '/notes/') {
+            router.push({ pathname: '/Notes/[id]', params: { id: noteId } });
+        } else {
+            router.replace('/Notes');
+            router.push({ pathname: '/Notes/[id]', params: { id: noteId } });
+        }
+    }, [closeDrawer, pathname, router]);
+
     const navigateToNotes = (folderId?: string) => {
         // Check if we are already at this location
         const normalizedPath = pathname.toLowerCase();
@@ -452,15 +471,7 @@ export default function Sidebar({ onNavigate, ...props }: SidebarProps & React.C
                                     quickAccessNotes.map(note => (
                                         <HapticPressable
                                             key={note.id}
-                                            onPress={() => {
-                                                const normalizedPath = pathname.toLowerCase();
-                                                const isCurrentNote = normalizedPath === `/notes/${note.id}` || normalizedPath === `/notes/${note.id}/`;
-                                                if (isCurrentNote) {
-                                                    closeDrawer();
-                                                    return;
-                                                }
-                                                resetStackAndReplace({ pathname: '/Notes/[id]', params: { id: note.id } });
-                                            }}
+                                            onPress={() => navigateToNote(note.id)}
                                             style={({ pressed }) => [
                                                 styles.quickAccessItem,
                                                 pressed && { opacity: 0.7 }

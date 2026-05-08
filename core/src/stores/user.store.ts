@@ -1,7 +1,7 @@
 import { Session, User } from '@supabase/supabase-js';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { areAdaptersInitialized } from '../adapters';
+import { areAdaptersInitialized, getPlatformAdapters } from '../adapters';
 import { authApi } from '../api/auth.api';
 import { userService } from '../services/user.service';
 import { getMasterKey } from '../utils/crypto';
@@ -33,7 +33,7 @@ type UserState = {
     /** Profile last update timestamp. */
     updated_at: string | null;
     getUserProfile: () => Promise<any>;
-    setSession: (session: Session | null) => void;
+    setSession: (session: Session | null, skipEmit?: boolean) => void;
     setGuest: (guest: boolean) => void;
     signOut: () => Promise<void>;
     updateDisplayName: (displayName: string) => Promise<void>;
@@ -111,14 +111,16 @@ export const useUserStore = create<UserState>()(
                 }
             },
 
-            setSession: (session) =>
+            setSession: (session, skipEmit = false) => {
+                const currentState = get();
+                const isSameSession = currentState.session?.access_token === session?.access_token;
+                if (isSameSession && currentState.initialized) return;
+
                 set((state) => {
                     const isSameUser = state.user?.id === session?.user?.id;
                     return {
                         session,
                         user: session?.user || null,
-                        // If no session is provided, preserve the current guest state
-                        // If session is provided, user is authenticated so they are no longer a guest.
                         isGuest: session ? false : state.isGuest,
                         initialized: true,
                         displayName: isSameUser ? state.displayName : null,
@@ -132,7 +134,12 @@ export const useUserStore = create<UserState>()(
                         updated_at: isSameUser ? state.updated_at : null,
                         hasMasterKey: session ? state.hasMasterKey : null,
                     };
-                }),
+                });
+
+                if (!skipEmit && areAdaptersInitialized()) {
+                    void getPlatformAdapters().events.emit('annota:auth-changed', session);
+                }
+            },
 
             setGuest: (isGuest) =>
                 set({
@@ -269,6 +276,7 @@ export const useUserStore = create<UserState>()(
             storage: createJSONStorage(() => createStorageAdapter()),
             skipHydration: true,
             partialize: (state) => ({
+                session: state.session,
                 isGuest: state.isGuest,
                 displayName: state.displayName,
                 user: state.user,

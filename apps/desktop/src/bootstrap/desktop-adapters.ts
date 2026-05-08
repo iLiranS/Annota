@@ -5,6 +5,7 @@ import { copyFile, mkdir, readFile, remove, stat, writeFile } from '@tauri-apps/
 import { fetch } from '@tauri-apps/plugin-http';
 import { openPath } from '@tauri-apps/plugin-opener';
 import { Store } from '@tauri-apps/plugin-store';
+import { emit, listen } from '@tauri-apps/api/event';
 import { encode as encodeArrayBuffer } from 'base64-arraybuffer';
 
 type Scope = 'images' | 'cache' | 'files';
@@ -360,6 +361,17 @@ export function createDesktopAdapters(): PlatformAdapters {
           }
         }
       }
+    },
+    events: {
+      emit: async (event, payload) => {
+        await emit(event, payload);
+      },
+      subscribe: async (event, callback) => {
+        const unlisten = await listen(event, (eventData) => {
+          callback(eventData.payload as any);
+        });
+        return unlisten;
+      },
     },
   };
 }

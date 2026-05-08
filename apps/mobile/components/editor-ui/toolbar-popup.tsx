@@ -128,12 +128,6 @@ const FILE_ACTIONS: BlockAction[] = [
     { id: 'delete', label: 'Delete', icon: 'delete-outline', action: 'delete' },
 ];
 
-const RESIZE_OPTIONS = [
-    { label: '25%', value: '25%' },
-    { label: '50%', value: '50%' },
-    { label: '75%', value: '75%' },
-    { label: '100%', value: '100%' },
-];
 
 function FileActionMenu({ mimeType, onAction, onClose }: { mimeType?: string, onAction: (action: string, data?: any) => void, onClose: () => void }) {
     const { colors } = useTheme();
@@ -178,43 +172,6 @@ function FileActionMenu({ mimeType, onAction, onClose }: { mimeType?: string, on
                 ))}
             </View>
 
-            {/* Resize section - Only for images */}
-            {isImage && (
-                <>
-                    <Text style={{
-                        fontSize: 13,
-                        fontWeight: '600',
-                        color: colors.text,
-                        opacity: 0.5,
-                        marginTop: 16,
-                        marginBottom: 8,
-                        textTransform: 'uppercase',
-                        letterSpacing: 0.5,
-                    }}>
-                        Resize
-                    </Text>
-                    <View style={{ flexDirection: 'row', gap: 8 }}>
-                        {RESIZE_OPTIONS.map((opt) => (
-                            <TouchableOpacity
-                                key={opt.value}
-                                style={{
-                                    flex: 1,
-                                    paddingVertical: 10,
-                                    borderRadius: 8,
-                                    backgroundColor: colors.card,
-                                    alignItems: 'center',
-                                }}
-                                onPress={() => {
-                                    onAction('resize', { width: opt.value });
-                                    onClose();
-                                }}
-                            >
-                                <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text }}>{opt.label}</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                </>
-            )}
 
         </View>
     );

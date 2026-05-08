@@ -88,16 +88,15 @@ export function AISelectionPopover({ anchorRect, isVisible, isLoading, onAction,
                         size="sm"
                         className={cn(
                             "h-9 rounded-full px-4 gap-2 transition-all duration-300",
-                            "hover:bg-primary hover:text-primary-foreground group",
-                            "bg-linear-to-r from-primary/10 to-primary/5 text-primary"
+                            "hover:bg-accent  group",
                         )}
                         onClick={(e) => {
                             e.stopPropagation();
                             setIsExpanded(true);
                         }}
                     >
-                        <Sparkles className="h-4 w-4 animate-pulse group-hover:animate-spin" />
-                        <span className="text-sm font-semibold tracking-tight">AI</span>
+                        <Sparkles className="h-4 w-4 animate-pulse" />
+                        <span className="text-sm font-semibold tracking-tight">Ask AI</span>
                     </Button>
                 ) : (
                     <div className="flex flex-col gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300">

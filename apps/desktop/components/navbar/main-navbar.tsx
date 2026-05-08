@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button"
 import { useSidebar } from "@/components/ui/sidebar"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
-import { useSettingsStore, useSyncStore, useUserStore } from "@annota/core"
+import { useNavigationStore, useSettingsStore, useSyncStore, useUserStore } from "@annota/core"
 import { PanelLeft, PanelRight } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
@@ -32,6 +32,7 @@ export function MainNavbar() {
     const { session } = useUserStore();
     const { general, updateGeneralSettings } = useSettingsStore();
     const { toggleSidebar } = useSidebar();
+    const setSettingsOpen = useNavigationStore(s => s.setSettingsOpen);
 
     const isMac = useMemo(() => {
         if (typeof navigator === "undefined") {
@@ -217,7 +218,7 @@ export function MainNavbar() {
                             variant="ghost"
                             size="icon"
                             className="h-7 w-7 rounded-full text-muted-foreground/60 transition-all active:scale-95 hover:bg-sidebar-accent hover:text-foreground"
-                            onClick={() => navigate("/settings", { state: { background: location } })}
+                            onClick={() => setSettingsOpen(true)}
                         >
                             <Ionicons name="settings-outline" size={15} />
                         </Button>
