@@ -44,7 +44,7 @@ export function SidebarFooterSection({
                     </Button>
                 </div>
             )}
-            <div data-tauri-drag-region className="flex items-center justify-center text-muted-foreground/70">
+            <div className="flex items-center justify-center text-muted-foreground/70">
                 <SidebarTabs
                     activeTab={activeTab}
                     setActiveTab={setActiveTab}

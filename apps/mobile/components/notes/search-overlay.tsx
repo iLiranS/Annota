@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
     Animated,
     Pressable,
@@ -37,7 +37,13 @@ export function SearchOverlay({
     const inputRef = useRef<TextInput>(null);
     const translateY = useRef(new Animated.Value(-100)).current;
     const opacity = useRef(new Animated.Value(0)).current;
+    const [localValue, setLocalValue] = useState(searchTerm);
+    const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+    // Sync local value with prop when prop changes from outside (e.g. cleared)
+    useEffect(() => {
+        setLocalValue(searchTerm);
+    }, [searchTerm]);
 
     useEffect(() => {
         if (visible) {
@@ -73,27 +79,30 @@ export function SearchOverlay({
         }
     }, [visible, translateY, opacity, topOffset]);
 
-    // Force focus back to input when results update
-    // This handles scenarios where the WebView might steal focus (e.g. during scroll to match)
-    useEffect(() => {
-        if (visible && searchTerm.length > 0) {
-            // Small timeout to allow any contending focus events to settle
-            const timer = setTimeout(() => {
-                const isFocused = inputRef.current?.isFocused();
-                if (!isFocused) {
-                    inputRef.current?.focus();
-                }
-            }, 100);
-            return () => clearTimeout(timer);
+    const handleTextChange = useCallback((text: string) => {
+        setLocalValue(text);
+
+        // Debounce the update to the parent to prevent lag during fast typing
+        if (debounceTimer.current) {
+            clearTimeout(debounceTimer.current);
         }
-    }, [resultCount, currentResultIndex, visible, searchTerm]);
+
+        debounceTimer.current = setTimeout(() => {
+            onSearchTermChange(text);
+        }, 150);
+    }, [onSearchTermChange]);
+
+    const handleClear = useCallback(() => {
+        setLocalValue('');
+        onSearchTermChange('');
+    }, [onSearchTermChange]);
 
     if (!visible) return null;
 
     const hasResults = resultCount > 0;
     const resultText = hasResults
         ? `${currentResultIndex + 1} of ${resultCount}`
-        : searchTerm.length > 0
+        : localValue.length > 0
             ? '0 results'
             : '';
 
@@ -132,17 +141,17 @@ export function SearchOverlay({
                     <TextInput
                         ref={inputRef}
                         style={[styles.input, { color: colors.text }]}
-                        value={searchTerm}
-                        onChangeText={onSearchTermChange}
+                        value={localValue}
+                        onChangeText={handleTextChange}
                         placeholder="Search in note..."
                         placeholderTextColor={colors.text + '60'}
                         autoCapitalize="none"
                         autoCorrect={false}
                         returnKeyType="search"
                     />
-                    {searchTerm.length > 0 && (
+                    {localValue.length > 0 && (
                         <Pressable
-                            onPress={() => onSearchTermChange('')}
+                            onPress={handleClear}
                             hitSlop={8}
                             style={styles.clearButton}
                         >

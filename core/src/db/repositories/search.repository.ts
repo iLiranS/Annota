@@ -49,7 +49,9 @@ export type NoteSearchRow = {
 export const SearchRepository = {
     // Helper to safely build an FTS5 query. Optionally strips stop words.
     _buildFtsQuery(query: string, operator: 'AND' | 'OR', removeStopWords = false): string {
-        let words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+        // Extract words, filtering out empty ones and ones that are exclusively punctuation/symbols
+        // (FTS5 unicode61 tokenizer drops punctuation, so a purely punctuation word becomes an empty token phrase which breaks matches)
+        let words = query.trim().toLowerCase().split(/\s+/).filter(w => /[\p{L}\p{N}]/u.test(w));
 
         if (removeStopWords) {
             words = words.filter(w => !STOP_WORDS.has(w) && w.length > 1);
@@ -75,10 +77,11 @@ export const SearchRepository = {
                         id,
                         snippet(notes_fts, 3, '', '', '...', 20) AS matchedSnippet,
                         rank AS score
-                    FROM notes_fts('${ftsQuery.replace(/'/g, "''")}')
+                    FROM notes_fts
+                    WHERE notes_fts MATCH ?
                     ORDER BY rank
                     ${limit ? `LIMIT ${limit * 2}` : ''}`,
-                    []
+                    [ftsQuery]
                 ) as any[][];
 
                 ftsRows = rawRows.map(row => ({
@@ -186,11 +189,12 @@ export const SearchRepository = {
             // Desktop bypass for raw FTS group query
             const rawRows = await (dbStore.nativeDb as any).selectAsync(
                 `SELECT id
-                FROM notes_fts('${ftsQuery.replace(/'/g, "''")}')
+                FROM notes_fts
+                WHERE notes_fts MATCH ?
                 GROUP BY id
                 ORDER BY rank
                 LIMIT ${limit * 3}`,
-                []
+                [ftsQuery]
             ) as any[][];
 
             ids = rawRows.map(row => row[0] as string).filter(Boolean);

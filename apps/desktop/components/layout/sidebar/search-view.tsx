@@ -96,7 +96,7 @@ export function SearchView({
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto premium-scrollbar px-1">
+            <div data-tauri-drag-region className="flex-1 overflow-y-auto premium-scrollbar px-1">
 
 
                 {searchQuery && !isSearching && dbResults.length === 0 && (

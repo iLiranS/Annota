@@ -13,34 +13,34 @@ interface SidebarTabsProps {
     };
 }
 
+const TABS: { id: SidebarTab; icon: React.ReactNode; label: string }[] = [
+    { id: 'folders', icon: <Ionicons name="folder-outline" size={16} />, label: 'Folders' },
+    { id: 'notes', icon: <NotebookTabs size={16} />, label: 'Notes' },
+    { id: 'tags', icon: <Ionicons name="pricetag-outline" size={16} />, label: 'Tags' },
+    { id: 'search', icon: <Ionicons name="search-outline" size={16} />, label: 'Search' },
+];
+
 export function SidebarTabs({ activeTab, setActiveTab, colors }: SidebarTabsProps) {
     const { general } = useSettingsStore();
     const isRtl = general.appDirection === 'rtl';
 
-    const tabs: { id: SidebarTab; icon: React.ReactNode; label: string }[] = [
-        { id: 'folders', icon: <Ionicons name="folder-outline" size={16} />, label: 'Folders' },
-        { id: 'notes', icon: <NotebookTabs size={16} />, label: 'Notes' },
-        { id: 'tags', icon: <Ionicons name="pricetag-outline" size={16} />, label: 'Tags' },
-        { id: 'search', icon: <Ionicons name="search-outline" size={16} />, label: 'Search' },
-    ];
 
-    const activeIndex = tabs.findIndex(t => t.id === activeTab);
-    const displayIndex = isRtl ? tabs.length - 1 - activeIndex : activeIndex;
+    const activeIndex = TABS.findIndex(t => t.id === activeTab);
+    const displayIndex = isRtl ? TABS.length - 1 - activeIndex : activeIndex;
 
     return (
         <div
-            data-tauri-drag-region
-            className="relative flex items-center justify-center gap-1 p-1 rounded-xl bg-sidebar-accent/20 dark:bg-sidebar-accent/40 border border-sidebar-border/40 shadow-sm"
-        >
+            className="relative overflow-hidden flex items-center w-[148px] h-10 gap-1 p-1 rounded-xl bg-sidebar-accent/50 dark:bg-sidebar-accent/70 border border-sidebar-border/40 shadow-sm outline-none  isolate "        >
             {/* Sliding Active Indicator */}
             <div
-                className="absolute left-1 top-1 h-8 w-8 rounded-lg bg-background shadow-sm border border-border/40 transition-all duration-400 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
+                className="absolute left-1 top-1 h-8 w-8 rounded-lg bg-background shadow-sm border border-border/40 transition-transform duration-400 ease-[cubic-bezier(0.34,1.56,0.64,1)] transform-gpu"
                 style={{
                     transform: `translateX(${displayIndex * (32 + 4)}px)`,
+                    willChange: 'transform',
                 }}
             />
 
-            {tabs.map((tab) => (
+            {TABS.map((tab) => (
                 <TabButton
                     key={tab.id}
                     active={activeTab === tab.id}
@@ -58,7 +58,6 @@ function TabButton({
     active,
     onClick,
     icon,
-    label,
     color
 }: {
     active: boolean;
@@ -70,16 +69,20 @@ function TabButton({
     return (
         <button
             onClick={onClick}
-            title={label}
             className={cn(
-                "relative z-10 flex items-center justify-center h-8 w-8 aspect-square rounded-lg transition-colors duration-300",
+                "relative z-10 flex flex-none items-center active:transform-none justify-center w-8 h-8 rounded-lg transition-colors duration-300 focus:outline-none focus-visible:ring-0 ",
                 active
                     ? "text-primary"
                     : "text-muted-foreground/40 hover:text-muted-foreground/80 hover:bg-sidebar-accent/30"
             )}
-            style={active ? { color: color } : {}}
+            style={{ ...active ? { color: color } : {}, willChange: 'transform' }}
         >
-            {icon}
+            <span className="flex items-center justify-center w-4 h-4 pointer-events-none">
+                {icon}
+            </span>
         </button>
     );
 }
+
+
+

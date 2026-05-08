@@ -419,6 +419,16 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                 const isShift = e.shiftKey;
                 const key = e.key.toLowerCase();
 
+                if (key === 'tab') {
+                    if (editor && editor.isFocused) {
+                        // Always prevent browser focus jumping when in the editor.
+                        // TipTap's internal keyboard shortcuts (Indentation and Table) 
+                        // will handle the actual logic.
+                        e.preventDefault();
+                        return;
+                    }
+                }
+
                 if (isMod && isShift && key === 'm') {
                     if (!editor) return;
                     e.preventDefault();

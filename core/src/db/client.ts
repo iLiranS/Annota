@@ -245,22 +245,37 @@ export async function initDatabase(
     // 5. FTS Health Check: Ensure FTS is populated if metadata exists
     // This is a safety net for cases where virtual tables weren't correctly migrated (e.g. sqlcipher_export)
     if (nativeDb.selectAsync) {
+      // ── Auto-Heal: Ensure FTS triggers always exist (in case of a reset that skipped migration 003)
+      const ftsTriggers = [
+        `CREATE TRIGGER IF NOT EXISTS notes_fts_ai AFTER INSERT ON note_content BEGIN INSERT INTO notes_fts(id, title, preview, content) SELECT new.id, m.title, m.preview, new.content FROM note_metadata m WHERE m.id = new.id; END;`,
+        `CREATE TRIGGER IF NOT EXISTS notes_fts_au_content AFTER UPDATE ON note_content BEGIN UPDATE notes_fts SET content = new.content WHERE id = new.id; END;`,
+        `CREATE TRIGGER IF NOT EXISTS notes_fts_au_metadata AFTER UPDATE OF title, preview ON note_metadata BEGIN UPDATE notes_fts SET title = new.title, preview = new.preview WHERE id = new.id; END;`,
+        `CREATE TRIGGER IF NOT EXISTS notes_fts_ad AFTER DELETE ON note_content BEGIN DELETE FROM notes_fts WHERE id = old.id; END;`
+      ];
+
+      for (const triggerSql of ftsTriggers) {
+        if (nativeDb.executeRawAsync) {
+          await nativeDb.executeRawAsync(triggerSql); // Desktop bypasses ; split bug
+        } else {
+          await nativeDb.execAsync(triggerSql); // Mobile expo-sqlite handles it fine
+        }
+      }
+
       const ftsCheck = await nativeDb.selectAsync('SELECT COUNT(*) FROM notes_fts', []);
       const ftsCount = Number(ftsCheck?.[0]?.[0] ?? ftsCheck?.[0]?.['COUNT(*)'] ?? 0);
       
-      if (ftsCount === 0) {
-        const metaCheck = await nativeDb.selectAsync('SELECT COUNT(*) FROM note_metadata', []);
-        const metaCount = Number(metaCheck?.[0]?.[0] ?? metaCheck?.[0]?.['COUNT(*)'] ?? 0);
-        
-        if (metaCount > 0) {
-          console.log(`[DB] FTS table is empty but ${metaCount} notes exist. Running emergency backfill...`);
-          await nativeDb.execAsync(`
-            INSERT OR IGNORE INTO notes_fts(id, title, preview, content) 
-            SELECT nc.id, nm.title, nm.preview, nc.content 
-            FROM note_content nc 
-            JOIN note_metadata nm ON nc.id = nm.id;
-          `);
-        }
+      const metaCheck = await nativeDb.selectAsync('SELECT COUNT(*) FROM note_metadata', []);
+      const metaCount = Number(metaCheck?.[0]?.[0] ?? metaCheck?.[0]?.['COUNT(*)'] ?? 0);
+
+      if (ftsCount < metaCount) {
+        console.log(`[DB] FTS table is missing notes (${ftsCount}/${metaCount}). Running emergency backfill...`);
+        await nativeDb.execAsync(`
+          INSERT INTO notes_fts(id, title, preview, content) 
+          SELECT nc.id, nm.title, nm.preview, nc.content 
+          FROM note_content nc 
+          JOIN note_metadata nm ON nc.id = nm.id
+          WHERE nc.id NOT IN (SELECT id FROM notes_fts);
+        `);
       }
     }
 

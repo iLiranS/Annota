@@ -273,7 +273,7 @@ export function AppSidebar() {
     return (
         <div
             className={cn(
-                "relative 2  flex shrink-0 flex-col bg-transparent transition-all duration-300 ease-in-out  overflow-hidden",
+                "relative 2  flex shrink-0 flex-col bg-transparent transition-all duration-300 ease-in-out  ",
                 !open && "w-0! opacity-0 pointer-events-none border-none",
                 isResizing && "transition-none",
                 open && 'ms-2'
@@ -286,14 +286,14 @@ export function AppSidebar() {
             <Sidebar
 
                 collapsible="none"
-                className="border-none select-none bg-transparent w-full "
+                className="border-none select-none bg-transparent w-full overflow-hidden"
                 side={general.appDirection === 'rtl' ? 'right' : 'left'}
             >
                 <div
                     onMouseDown={startResizing}
                     className={cn(
                         "absolute top-0 bottom-0 w-1 cursor-col-resize z-50 hover:bg-primary/30 transition-colors",
-                        general.appDirection === "rtl" ? "left-0" : "right-0"
+                        general.appDirection === "rtl" ? "left-0 -translate-x-2" : "right-0 translate-x-2"
                     )}
                 />
 

@@ -126,7 +126,11 @@
 }
 
 .ProseMirror[dir="rtl"] .column-resize-handle {
-    inset-inline-start: -2px;
+    inset-inline-end: -2px; /* Logical end is left in RTL */
+    inset-inline-start: auto; /* Clear the start property to avoid spanning the whole cell */
+    /* In RTL, we often need a slight shift to ensure the mouse is technically over 
+       the correct cell's edge for the LTR-biased prosemirror-tables plugin. */
+    transform: translateX(-1px);
 }
 
 /* Ensure that all cells keep their border color when the table is marked as resizing */
