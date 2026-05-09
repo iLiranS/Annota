@@ -1,11 +1,10 @@
-import { Color } from '@tiptap/extension-color';
-import { Highlight } from '@tiptap/extension-highlight';
+
 import { Link } from '@tiptap/extension-link';
 import { Placeholder } from '@tiptap/extension-placeholder';
 import { TableRow } from '@tiptap/extension-table-row';
 import { TaskItem } from '@tiptap/extension-task-item';
 import { TaskList } from '@tiptap/extension-task-list';
-import { FontFamily, TextStyle } from '@tiptap/extension-text-style';
+import { FontFamily } from '@tiptap/extension-text-style';
 import { Underline } from '@tiptap/extension-underline';
 import { DOMSerializer, Slice } from '@tiptap/pm/model';
 import { CellSelection } from '@tiptap/pm/tables';
@@ -37,6 +36,9 @@ const CustomMathematics = Mathematics.extend({
 import {
     AnnotaAutolink,
     CustomCodeBlock,
+    CustomColor,
+    CustomHighlight,
+    CustomTextStyle,
     CustomHeading,
     CustomImage,
     CustomTable,
@@ -130,12 +132,12 @@ export const getExtensions = (options: {
             HTMLAttributes: { rel: 'noopener noreferrer' },
             validate: (href) => /^(https?:\/\/|annota:\/\/|mailto:|tel:)/i.test(href),
         }),
-        Highlight.configure({ multicolor: true }),
-        TextStyle,
+        CustomHighlight.configure({ multicolor: true }),
+        CustomTextStyle,
         FontFamily.configure({
             types: ['textStyle'],
         }),
-        Color,
+        CustomColor,
         CustomYoutube.configure({}),
         CustomImage.configure({
             inline: false,

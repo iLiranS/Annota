@@ -16,7 +16,7 @@ export * from './reorder-list-item';
 export * from './quote';
 export * from './indentation';
 export * from './flashcard';
+export * from './marks';
 
 import './task-list.css';
 import './math.css';
-
