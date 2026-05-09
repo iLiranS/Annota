@@ -26,16 +26,16 @@ export function SidebarTabs({ activeTab, setActiveTab, colors }: SidebarTabsProp
 
 
     const activeIndex = TABS.findIndex(t => t.id === activeTab);
-    const displayIndex = isRtl ? TABS.length - 1 - activeIndex : activeIndex;
 
     return (
         <div
-            className="relative overflow-hidden flex items-center w-[148px] h-10 gap-1 p-1 rounded-xl bg-sidebar-accent/50 dark:bg-sidebar-accent/70 border border-sidebar-border/40 shadow-sm outline-none  isolate "        >
+            className="relative overflow-hidden flex items-center w-[150px] h-10 gap-1 p-1 rounded-xl bg-sidebar-accent/50 dark:bg-sidebar-accent/70 border border-sidebar-border/40 shadow-sm outline-none isolate"
+        >
             {/* Sliding Active Indicator */}
             <div
-                className="absolute left-1 top-1 h-8 w-8 rounded-lg bg-background shadow-sm border border-border/40 transition-transform duration-400 ease-[cubic-bezier(0.34,1.56,0.64,1)] transform-gpu"
+                className="absolute inset-s-1 top-1 h-8 w-8 rounded-lg bg-background shadow-sm border border-border/40 transition-transform duration-400 ease-[cubic-bezier(0.34,1.56,0.64,1)] transform-gpu"
                 style={{
-                    transform: `translateX(${displayIndex * (32 + 4)}px)`,
+                    transform: `translateX(${isRtl ? -(activeIndex * 36) : activeIndex * 36}px)`,
                     willChange: 'transform',
                 }}
             />

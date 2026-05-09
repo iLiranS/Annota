@@ -1,7 +1,7 @@
 import './details.css';
 import { mergeAttributes } from '@tiptap/core';
 import { Details as TiptapDetails, DetailsContent as TiptapDetailsContent, DetailsSummary as TiptapDetailsSummary } from '@tiptap/extension-details';
-import { Slice } from '@tiptap/pm/model';
+import { Slice, type Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { createBlockMenuButton } from './block-menu-button';
 import { generateBlockId } from './id-generator';
@@ -33,11 +33,7 @@ export const Details = TiptapDetails.extend({
             const dom = document.createElement('div');
 
             const updateDOM = (attrs: any) => {
-                Object.entries(stripDir(attrs)).forEach(([key, value]) => {
-                    if (value !== null && value !== undefined) {
-                        dom.setAttribute(key as string, value as string);
-                    }
-                });
+                // Ensure editor DOM has all necessary classes and data-attributes for CSS/JS
                 dom.classList.add('details-wrapper');
                 dom.setAttribute('data-type', 'details');
                 dom.setAttribute('data-open', attrs.open ? 'true' : 'false');
@@ -52,6 +48,15 @@ export const Details = TiptapDetails.extend({
                 } else {
                     dom.style.backgroundColor = '';
                 }
+
+                // Apply any other attributes (excluding dir and our custom ones which we handle manually)
+                const { dir, open, backgroundColor, id, ...rest } = attrs;
+                Object.entries(rest).forEach(([key, value]) => {
+                    if (value !== null && value !== undefined) {
+                        dom.setAttribute(key, value as string);
+                    }
+                });
+                if (id) dom.setAttribute('data-id', id);
             };
 
             updateDOM(node.attrs);
@@ -136,17 +141,18 @@ export const Details = TiptapDetails.extend({
         };
     },
 
-    // Parse both our custom format and native details
+    // Parse both our minimal format and legacy formats
     parseHTML() {
         return [
+            { tag: 'details' },
             { tag: 'div[data-type="details"]' },
             { tag: 'div.details-wrapper' },
-            { tag: 'details' },
         ];
     },
 
+    // Minimal storage: <details d-id="..." bg="..." open>
     renderHTML({ HTMLAttributes }) {
-        return ['div', mergeAttributes(stripDir(HTMLAttributes), { 'data-type': 'details', class: 'details-wrapper' }), 0];
+        return ['details', mergeAttributes(stripDir(HTMLAttributes)), 0];
     },
 
     addAttributes() {
@@ -154,12 +160,12 @@ export const Details = TiptapDetails.extend({
             ...this.parent?.(),
             id: {
                 default: null,
-                parseHTML: element => element.getAttribute('data-id'),
+                parseHTML: element => element.getAttribute('d-id') || element.getAttribute('data-id'),
                 renderHTML: attributes => {
                     if (!attributes.id) {
                         return {};
                     }
-                    return { 'data-id': attributes.id };
+                    return { 'd-id': attributes.id };
                 },
             },
             open: {
@@ -172,23 +178,18 @@ export const Details = TiptapDetails.extend({
                     return true; // Default to open
                 },
                 renderHTML: attributes => {
-                    return {
-                        'data-open': attributes.open ? 'true' : 'false',
-                        ...(attributes.open ? { open: '' } : {}),
-                    };
+                    // Boolean attribute: present if true, omitted if false
+                    return attributes.open ? { open: '' } : {};
                 },
             },
             backgroundColor: {
                 default: null,
-                parseHTML: element => element.getAttribute('data-background-color'),
+                parseHTML: element => element.getAttribute('bg') || element.getAttribute('data-background-color'),
                 renderHTML: attributes => {
                     if (!attributes.backgroundColor) {
                         return {};
                     }
-                    return {
-                        'data-background-color': attributes.backgroundColor,
-                        style: `background-color: ${attributes.backgroundColor}`,
-                    };
+                    return { bg: attributes.backgroundColor };
                 },
             },
         };
@@ -306,16 +307,31 @@ export const Details = TiptapDetails.extend({
                         const { selection } = state;
                         const { $from } = selection;
 
-                        // Check if we are already inside a details node
+                        // Check if we are already inside a details node (start or end)
                         for (let d = $from.depth; d > 0; d--) {
-                            if ($from.node(d).type.name === 'details') {
-                                return false;
-                            }
+                            if ($from.node(d).type.name === 'details') return false;
+                        }
+                        for (let d = selection.$to.depth; d > 0; d--) {
+                            if (selection.$to.node(d).type.name === 'details') return false;
                         }
 
                         let contentToWrap: any[] = [];
                         if (!selection.empty) {
                             const fragment = state.doc.slice(selection.from, selection.to).content;
+
+                            // Check if the selection itself contains a details node
+                            let hasDetails = false;
+                            fragment.descendants((node: ProseMirrorNode) => {
+                                if (node.type.name === 'details') {
+                                    hasDetails = true;
+                                    return false;
+                                }
+                            });
+
+                            if (hasDetails) {
+                                return false;
+                            }
+
                             contentToWrap = fragment.toJSON() || [];
                         }
 
@@ -500,30 +516,39 @@ export const DetailsSummary = TiptapDetailsSummary.extend<any>({
 
     parseHTML() {
         return [
+            { tag: 'summary' },
             { tag: 'div[data-type="detailsSummary"]' },
             { tag: 'div.details-summary' },
-            { tag: 'summary' },
         ];
     },
 
     renderHTML({ HTMLAttributes }) {
-        return ['div', mergeAttributes(stripDir(HTMLAttributes), { 'data-type': 'detailsSummary', class: 'details-summary' }), 0];
+        return ['summary', mergeAttributes(stripDir(HTMLAttributes)), 0];
     },
 });
 
 export const DetailsContent = TiptapDetailsContent.extend({
     addNodeView() {
-        return null as any;
+        return () => {
+            const dom = document.createElement('div');
+            dom.classList.add('details-content');
+            dom.setAttribute('data-type', 'detailsContent');
+            return {
+                dom,
+                contentDOM: dom,
+            };
+        };
     },
 
     parseHTML() {
         return [
             { tag: 'div[data-type="detailsContent"]' },
             { tag: 'div.details-content' },
+            { tag: 'div' }, // Fallback for minimal storage
         ];
     },
 
     renderHTML({ HTMLAttributes }) {
-        return ['div', mergeAttributes(stripDir(HTMLAttributes), { 'data-type': 'detailsContent', class: 'details-content' }), 0];
+        return ['div', mergeAttributes(stripDir(HTMLAttributes)), 0];
     },
 });

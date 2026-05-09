@@ -5,7 +5,7 @@ import '@annota/editor-core/styles.css';
 import { DOMSerializer } from '@tiptap/pm/model';
 import { TextSelection } from '@tiptap/pm/state';
 import { EditorContent, useEditor } from '@tiptap/react';
-import 'highlight.js/styles/atom-one-dark.css';
+import '@annota/editor-core/highlight-theme.css';
 import 'katex/dist/katex.min.css';
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { useDesktopEditorSelection } from './hooks/useDesktopEditorSelection';
@@ -759,16 +759,16 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                         setActivePopup('math');
                     }
                 })}
-                <div 
-                    className="editor-scroller" 
-                    ref={scrollerRef} 
+                <div
+                    className="editor-scroller"
+                    ref={scrollerRef}
                     onScroll={onScroll}
                     dir={direction} style={{
-                    flex: 1,
-                    overflowY: 'auto',
-                    padding: isStandalone ? '0 12px' : '0 24px',
-                    scrollPaddingBottom: 100
-                }}>
+                        flex: 1,
+                        overflowY: 'auto',
+                        padding: isStandalone ? '0 12px' : '0 24px',
+                        scrollPaddingBottom: 100
+                    }}>
                     <div style={{
                         maxWidth: editorSettings.noteWidth || '100%',
                         margin: '0 auto',

@@ -18,7 +18,6 @@ import {
     Download,
     Languages,
     Link,
-    Maximize,
     Merge,
     Palette,
     Rows,

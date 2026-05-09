@@ -1,14 +1,16 @@
-import './table.css';
+import { mergeAttributes } from '@tiptap/core';
 import type { TableOptions } from '@tiptap/extension-table';
 import { Table } from '@tiptap/extension-table';
 import { TableCell } from '@tiptap/extension-table-cell';
 import { TableHeader } from '@tiptap/extension-table-header';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
+import { Plugin } from '@tiptap/pm/state';
 import { columnResizing, tableEditing } from '@tiptap/pm/tables';
 import type { EditorView, NodeView, ViewMutationRecord } from '@tiptap/pm/view';
+import './table.css';
 
 interface CustomTableOptions extends TableOptions {
-    defaultCellMinWidth: number;
+    defaultCellWidth: number;
 }
 
 const getColStyleDeclaration = (minWidth: number, width?: number): [string, string] => {
@@ -24,11 +26,14 @@ const updateColumns = (
     colgroup: HTMLTableColElement,
     table: HTMLTableElement,
     minCellWidth: number,
+    // defaultCellWidth is the fallback when no colwidth has been stored yet.
+    // Without this, unsized columns only contribute minCellWidth to totalWidth,
+    // causing the table to snap to a tiny width on first resize.
+    defaultCellWidth: number,
     overrideCol?: number,
     overrideValue?: number,
 ) => {
     let totalWidth = 0;
-    let fixedWidth = true;
     let nextDOM = colgroup.firstChild;
     const row = node.firstChild;
 
@@ -36,36 +41,29 @@ const updateColumns = (
         for (let i = 0, col = 0; i < row.childCount; i += 1) {
             const { colspan, colwidth } = row.child(i).attrs;
             for (let j = 0; j < colspan; j += 1, col += 1) {
-                const explicitWidth =
+                const resolvedWidth: number | undefined =
                     overrideCol === col ? overrideValue : (colwidth && (colwidth[j] as number | undefined));
 
-                // If there's an explicit width (like when the user has resized the column), use it.
-                // Otherwise do not supply a default - let the table automatically size itself based on contents.
-                const resolvedWidth = explicitWidth;
-
-                totalWidth += resolvedWidth || minCellWidth;
-
-                if (!resolvedWidth) {
-                    fixedWidth = false;
-                }
+                totalWidth += resolvedWidth ?? defaultCellWidth;
 
                 if (!nextDOM) {
-                    const colElement = document.createElement('col');
+                    const col = document.createElement('col');
                     if (resolvedWidth) {
-                        const [propertyKey, propertyValue] = getColStyleDeclaration(minCellWidth, resolvedWidth);
-                        colElement.style.setProperty(propertyKey, propertyValue);
+                        const [prop, val] = getColStyleDeclaration(minCellWidth, resolvedWidth);
+                        col.style.setProperty(prop, val);
                     } else {
-                        colElement.style.minWidth = `${minCellWidth}px`;
+                        col.style.width = `${defaultCellWidth}px`;
+                        col.style.minWidth = `${minCellWidth}px`;
                     }
-                    colgroup.appendChild(colElement);
+                    colgroup.appendChild(col);
                 } else {
-                    const colElement = nextDOM as HTMLTableColElement;
+                    const col = nextDOM as HTMLTableColElement;
                     if (resolvedWidth) {
-                        const [propertyKey, propertyValue] = getColStyleDeclaration(minCellWidth, resolvedWidth);
-                        colElement.style.setProperty(propertyKey, propertyValue);
+                        const [prop, val] = getColStyleDeclaration(minCellWidth, resolvedWidth);
+                        col.style.setProperty(prop, val);
                     } else {
-                        colElement.style.width = '';
-                        colElement.style.minWidth = `${minCellWidth}px`;
+                        col.style.width = `${defaultCellWidth}px`;
+                        col.style.minWidth = `${minCellWidth}px`;
                     }
                     nextDOM = nextDOM.nextSibling;
                 }
@@ -75,21 +73,15 @@ const updateColumns = (
 
     while (nextDOM) {
         const after = nextDOM.nextSibling;
-
         nextDOM.parentNode?.removeChild(nextDOM);
         nextDOM = after;
     }
 
-    const hasUserWidth =
-        node.attrs.style && typeof node.attrs.style === 'string' && /\bwidth\s*:/i.test(node.attrs.style);
-
-    if (fixedWidth && !hasUserWidth) {
-        table.style.width = `${totalWidth}px`;
-        table.style.minWidth = '';
-    } else {
-        table.style.width = '';
-        table.style.minWidth = `${totalWidth}px`;
-    }
+    // Always a hard pixel width — never % or min-width — so overflow-x: auto
+    // on the wrapper can scroll instead of the browser clamping to viewport.
+    table.style.width = `${totalWidth}px`;
+    table.style.minWidth = `${totalWidth}px`;
+    table.style.maxWidth = 'none';
 };
 
 class CustomTableView implements NodeView {
@@ -101,25 +93,18 @@ class CustomTableView implements NodeView {
     colgroup: HTMLTableColElement;
     contentDOM: HTMLTableSectionElement;
 
-    constructor(node: ProseMirrorNode, defaultCellWidth: number, minCellWidth: number) {
+    constructor(node: ProseMirrorNode, minCellWidth: number, viewOrWidth: number | EditorView) {
         this.node = node;
         this.minCellWidth = minCellWidth;
-        this.defaultCellWidth = defaultCellWidth;
+        // If viewOrWidth is a number, it's our manual defaultCellWidth.
+        // If it's an object, it's the EditorView (passed by TipTap), so we use a fallback.
+        this.defaultCellWidth = typeof viewOrWidth === 'number' ? viewOrWidth : 128;
         this.dom = document.createElement('div');
         this.dom.className = 'tableWrapper';
         this.table = this.dom.appendChild(document.createElement('table'));
-
-        if (node.attrs.style) {
-            this.table.style.cssText = node.attrs.style;
-        }
-
         this.colgroup = this.table.appendChild(document.createElement('colgroup'));
 
-        if (node.attrs.dir) {
-            this.table.setAttribute('dir', node.attrs.dir);
-        }
-
-        updateColumns(node, this.colgroup, this.table, this.minCellWidth);
+        updateColumns(node, this.colgroup, this.table, this.minCellWidth, this.defaultCellWidth);
         this.contentDOM = this.table.appendChild(document.createElement('tbody'));
     }
 
@@ -128,16 +113,8 @@ class CustomTableView implements NodeView {
             return false;
         }
 
-        if (node.attrs.dir !== this.node.attrs.dir) {
-            if (node.attrs.dir) {
-                this.table.setAttribute('dir', node.attrs.dir);
-            } else {
-                this.table.removeAttribute('dir');
-            }
-        }
-
         this.node = node;
-        updateColumns(node, this.colgroup, this.table, this.minCellWidth);
+        updateColumns(node, this.colgroup, this.table, this.minCellWidth, this.defaultCellWidth);
 
         return true;
     }
@@ -157,6 +134,38 @@ class CustomTableView implements NodeView {
     }
 }
 
+const createTableView = (minCellWidth: number, defaultCellWidth: number) => class extends CustomTableView {
+    constructor(node: ProseMirrorNode) {
+        super(node, minCellWidth, defaultCellWidth);
+    }
+};
+
+const guardResizeEvents = (plugin: Plugin) => {
+    const events = plugin.props.handleDOMEvents;
+
+    if (!events) {
+        return plugin;
+    }
+
+    for (const eventName of ['mousemove', 'mouseleave', 'mousedown'] as const) {
+        const handler = events[eventName];
+
+        if (!handler) {
+            continue;
+        }
+
+        events[eventName] = function (this: Plugin, view: EditorView, event: MouseEvent) {
+            if (!view.editable) {
+                return false;
+            }
+
+            return handler.call(this, view, event);
+        };
+    }
+
+    return plugin;
+};
+
 export const CustomTable = Table.extend<CustomTableOptions>({
     addOptions() {
         const parentOptions = this.parent?.();
@@ -167,55 +176,64 @@ export const CustomTable = Table.extend<CustomTableOptions>({
             lastColumnResizable: true,
             allowTableNodeSelection: false,
             renderWrapper: false,
-            View: null,
             ...parentOptions,
+            View: CustomTableView, // Always use our view to rebuild colgroup
             HTMLAttributes: parentOptions?.HTMLAttributes ?? {},
-            defaultCellMinWidth: 64,
+            defaultCellWidth: 64,
         };
     },
+
+    // Only keep colwidth (needed for column resizing); drop style/dir from storage.
     addAttributes() {
         return {
-            ...this.parent?.(),
-            dir: {
-                default: null,
-                renderHTML: attributes => {
-                    if (!attributes.dir) {
-                        return {}
-                    }
-                    return { dir: attributes.dir }
-                },
-                parseHTML: element => element.getAttribute('dir') || null,
-            },
-        }
-    },
-    addProseMirrorPlugins() {
-        const isResizable = this.options.resizable && this.editor.isEditable;
-        const minCellWidth = this.options.cellMinWidth ?? 25;
-        const defaultCellWidth = this.options.defaultCellMinWidth ?? minCellWidth;
-
-        const TableViewWithDefaults = class extends CustomTableView {
-            constructor(node: ProseMirrorNode, cellWidth: number, _view?: EditorView) {
-                super(node, cellWidth, minCellWidth);
-            }
+            // colwidth lives on cells, not the table — no table-level attrs needed.
         };
+    },
+
+    // Emit the leanest possible HTML: just <table><tbody>…</tbody></table>.
+    // All visual layout (colgroup, inline widths) is rebuilt by CustomTableView at
+    // render time — it never touches storage, exactly like the YouTube NodeView.
+    renderHTML({ HTMLAttributes }) {
+        return [
+            'table',
+            mergeAttributes(this.options.HTMLAttributes, HTMLAttributes),
+            ['tbody', 0],
+        ];
+    },
+
+    // Parse plain <table> tags (covers all legacy formats automatically).
+    parseHTML() {
+        return [{ tag: 'table' }];
+    },
+
+    addProseMirrorPlugins() {
+        const minCellWidth = this.options.cellMinWidth ?? 25;
+        const defaultCellWidth = this.options.defaultCellWidth ?? 128;
+        const View = createTableView(minCellWidth, defaultCellWidth);
+        const tableViewPlugin = this.options.resizable
+            ? guardResizeEvents(columnResizing({
+                handleWidth: this.options.handleWidth,
+                cellMinWidth: minCellWidth,
+                defaultCellMinWidth: defaultCellWidth,
+                View,
+                lastColumnResizable: this.options.lastColumnResizable,
+            }))
+            : new Plugin({
+                props: {
+                    nodeViews: {
+                        table: node => new View(node),
+                    },
+                },
+            });
 
         return [
-            ...(isResizable
-                ? [
-                    columnResizing({
-                        handleWidth: this.options.handleWidth,
-                        cellMinWidth: minCellWidth,
-                        defaultCellMinWidth: defaultCellWidth,
-                        View: TableViewWithDefaults,
-                        lastColumnResizable: this.options.lastColumnResizable,
-                    }),
-                ]
-                : []),
+            tableViewPlugin,
             tableEditing({
                 allowTableNodeSelection: this.options.allowTableNodeSelection,
             }),
         ];
     },
+
     addKeyboardShortcuts() {
         return {
             'Mod-Enter': () => this.editor.commands.addRowAfter(),
@@ -242,6 +260,16 @@ export const CustomTableCell = TableCell.extend({
             },
         };
     },
+
+    // Omit colspan/rowspan/colwidth when at defaults to keep storage minimal.
+    renderHTML({ HTMLAttributes }) {
+        const { colspan, rowspan, colwidth, ...rest } = HTMLAttributes;
+        const attrs: Record<string, unknown> = { ...rest };
+        if (colspan && colspan !== 1) attrs.colspan = colspan;
+        if (rowspan && rowspan !== 1) attrs.rowspan = rowspan;
+        if (colwidth) attrs.colwidth = (colwidth as number[]).join(',');
+        return ['td', mergeAttributes(this.options.HTMLAttributes, attrs), 0];
+    },
 });
 
 export const CustomTableHeader = TableHeader.extend({
@@ -257,5 +285,15 @@ export const CustomTableHeader = TableHeader.extend({
                 parseHTML: element => element.style.backgroundColor || null,
             },
         };
+    },
+
+    // Same omission logic for header cells.
+    renderHTML({ HTMLAttributes }) {
+        const { colspan, rowspan, colwidth, ...rest } = HTMLAttributes;
+        const attrs: Record<string, unknown> = { ...rest };
+        if (colspan && colspan !== 1) attrs.colspan = colspan;
+        if (rowspan && rowspan !== 1) attrs.rowspan = rowspan;
+        if (colwidth) attrs.colwidth = (colwidth as number[]).join(',');
+        return ['th', mergeAttributes(this.options.HTMLAttributes, attrs), 0];
     },
 });

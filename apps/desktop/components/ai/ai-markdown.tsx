@@ -8,7 +8,7 @@ import remarkMath from 'remark-math';
 
 // Import styles to match the editor
 import '@annota/editor-core/styles.css';
-import 'highlight.js/styles/atom-one-dark.css';
+import '@annota/editor-core/highlight-theme.css';
 import 'katex/dist/katex.min.css';
 
 interface AiMarkdownProps {
@@ -47,7 +47,7 @@ export function AiMarkdown({ content }: AiMarkdownProps) {
                             }
 
                             return (
-                                <div dir="ltr" className="code-block-wrapper my-4 border border-border/10 bg-black/3! dark:bg-white/3! overflow-hidden rounded-lg">
+                                <div dir="ltr" className="code-block-wrapper my-4 border border-border/10 overflow-hidden rounded-lg hljs" style={{ backgroundColor: 'var(--hljs-bg)' }}>
                                     <div className="code-block-header py-0! px-3! min-h-0! h-7! pointer-events-auto! border-b! border-border/5! flex! items-center!">
                                         <div className="p-0! bg-transparent! text-[10px]! opacity-70! uppercase! tracking-wider! font-bold!">
                                             {lang}

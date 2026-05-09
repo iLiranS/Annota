@@ -1,29 +1,24 @@
 /* Table Styles */
 .ProseMirror .tableWrapper {
     overflow-x: auto;
-    overflow-y: hidden;
     margin: 0;
     margin-bottom: var(--editor-paragraph-spacing);
     -webkit-overflow-scrolling: touch;
-    overscroll-behavior-x: contain;
-    touch-action: pan-x pan-y;
     position: relative;
-    min-width: 0;
-    /* Respect container width */
-    width: 100%;
-    max-width: 100%;
+    /* Do NOT set width: 100% here — it creates a containing block that the
+       browser uses to resolve percentage widths inside, which can clamp the
+       table on narrow viewports. Let it size to its natural content width so
+       overflow-x: auto actually has room to scroll. */
     display: block;
-    /* Ensure block display for overflow to work */
 }
 
-/* Custom scrollbar for tables to make them feel integrated but visible */
+/* Custom scrollbar for tables */
 .ProseMirror .tableWrapper::-webkit-scrollbar {
     height: 6px;
 }
 
 .ProseMirror .tableWrapper::-webkit-scrollbar-track {
     background: transparent;
-    border-radius: 10px;
 }
 
 .ProseMirror .tableWrapper::-webkit-scrollbar-thumb {
@@ -31,54 +26,45 @@
     border-radius: 10px;
 }
 
-.ProseMirror .tableWrapper::-webkit-scrollbar-thumb:hover {
-    background: var(--accent-color);
-}
-
 .ProseMirror table {
     border-collapse: separate;
     border-spacing: 0;
-    width: max-content;
-    max-width: none;
-    min-width: 0;
+    /* width is set in px by updateColumns — do not set it in CSS */
     table-layout: fixed;
-    /* Better for custom column widths */
     border: 1px solid var(--border-color);
-    border-radius: 12px;
+    border-radius: 10px;
+    display: table;
+    margin: 0;
     overflow: hidden;
-    display: inline-table;
+    max-width: none;
 }
 
 .ProseMirror td,
 .ProseMirror th {
-    min-width: var(--table-cell-min-width);
-    width: var(--table-cell-default-width);
-    padding: 10px 14px;
+    /* min-width is the floor; actual width comes from <col> elements set by
+       updateColumns. Do NOT set width here — with table-layout: fixed the
+       browser resolves column widths from <colgroup> first, then the first
+       row's cells. A CSS width on td/th competes with <col> widths and wins
+       on some WebViews, stretching the table to fill the viewport. */
+    min-width: 32px;
+    padding: 2px 4px;
     border-bottom: 1px solid var(--border-color);
     border-inline-end: 1px solid var(--border-color);
     text-align: start;
     vertical-align: top;
     position: relative;
     word-wrap: break-word;
+    box-sizing: border-box;
 }
 
-/* Mobile-specific Table Overrides */
+/* Mobile: let the table bleed to the edge and scroll horizontally.
+   No min-width, no width overrides — updateColumns owns all sizing. */
 @media (max-width: 768px) {
     .ProseMirror .tableWrapper {
-        overflow-x: scroll;
-        margin-bottom: 10px;
-        margin-bottom: max(10px, var(--editor-paragraph-spacing));
         margin-left: -16px;
         margin-right: -16px;
         padding-left: 16px;
         padding-right: 16px;
-    }
-
-    .ProseMirror td,
-    .ProseMirror th {
-        /* Ensure cells have enough width to be readable */
-        min-width: var(--table-cell-min-width) !important;
-        width: var(--table-cell-default-width) !important;
     }
 }
 
@@ -104,15 +90,13 @@
 }
 
 .ProseMirror .selectedCell {
-    /* Overlay selection color over any cell background color using inset box-shadow */
     background-color: rgba(0, 122, 255, 0.1) !important;
     box-shadow: inset 0 0 0 1000px rgba(0, 122, 255, 0.25) !important;
-    /* Use a double outline effect to make selection stand out even more */
     outline: 2px solid var(--accent-color);
     outline-offset: -2px;
 }
 
-/* Stabilize borders during resizing and ensure clear resize handle */
+/* Stabilize borders during resizing */
 .ProseMirror .column-resize-handle {
     position: absolute;
     inset-inline-end: -2px;
@@ -121,19 +105,15 @@
     width: 2px;
     background-color: var(--accent-color);
     pointer-events: none;
-    /* Ensure the handle stays on top of cell borders */
     z-index: 20;
 }
 
 .ProseMirror[dir="rtl"] .column-resize-handle {
-    inset-inline-end: -2px; /* Logical end is left in RTL */
-    inset-inline-start: auto; /* Clear the start property to avoid spanning the whole cell */
-    /* In RTL, we often need a slight shift to ensure the mouse is technically over 
-       the correct cell's edge for the LTR-biased prosemirror-tables plugin. */
+    inset-inline-end: -2px;
+    inset-inline-start: auto;
     transform: translateX(-1px);
 }
 
-/* Ensure that all cells keep their border color when the table is marked as resizing */
 .ProseMirror .resizing td,
 .ProseMirror .resizing th {
     border-color: var(--border-color) !important;

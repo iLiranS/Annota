@@ -9,6 +9,7 @@
     "./config": "./src/config/index.ts",
     "./extensions": "./src/extensions/index.ts",
     "./styles.css": "./src/styles/editor.css",
+    "./highlight-theme.css": "./src/styles/highlight-theme.css",
     "./dist/editor-html": "./dist/editor-html.ts"
   },
   "scripts": {

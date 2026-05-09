@@ -14,6 +14,37 @@ import { cn } from '@/lib/utils';
 import { COLOR_PALETTE } from '@annota/core/constants/colors';
 import React, { useState } from 'react';
 
+// Helper to normalize a color to 6-digit hex + apply alpha
+function withAlpha(color: string, alphaHex: string): string {
+    if (!color) return color;
+
+    // If it's an RGB/RGBA string, convert it to RGBA with the desired alpha
+    if (color.startsWith('rgb')) {
+        const match = color.match(/\d+(\.\d+)?/g);
+        if (match && (match.length === 3 || match.length === 4)) {
+            const [r, g, b] = match;
+            const alpha = parseInt(alphaHex, 16) / 255;
+            return `rgba(${r}, ${g}, ${b}, ${alpha.toFixed(2)})`;
+        }
+        return color;
+    }
+
+    if (!color.startsWith('#')) return color;
+
+    let base = color;
+    // Strip any existing alpha suffix (8-digit hex is length 9 with #)
+    if (color.length === 9) {
+        base = color.slice(0, 7);
+    }
+    // Expand 3-digit hex (#RGB) to 6 digits (#RRGGBB)
+    else if (color.length === 4) {
+        base = '#' + color[1] + color[1] + color[2] + color[2] + color[3] + color[3];
+    }
+
+    // Only append alpha if we have a valid 7-character base hex
+    return base.length === 7 ? `${base}${alphaHex}` : base;
+}
+
 interface ColorPickerProps {
     title: string;
     icon: React.ComponentType<any>;
@@ -35,7 +66,6 @@ export function ColorPicker({
     label,
     onOpenChange,
     isMenu,
-    activeColor
 }: ColorPickerProps) {
     const [open, setOpen] = useState(false);
 
@@ -77,7 +107,7 @@ export function ColorPicker({
         return (
             <DropdownMenuSub open={open} onOpenChange={handleOpenChange}>
                 <DropdownMenuSubTrigger className="gap-2">
-                    <Icon className="w-4 h-4" style={{ color: currentColor || undefined }} />
+                    <Icon className="w-4 h-4" style={{ color: currentColor ? withAlpha(currentColor, 'FF') : undefined }} />
                     <span>{title}</span>
                 </DropdownMenuSubTrigger>
                 <DropdownMenuPortal>
@@ -98,9 +128,9 @@ export function ColorPicker({
                     className="h-9 w-9"
                     title={title}
                     style={{
-                        color: currentColor || undefined,
+                        color: currentColor ? withAlpha(currentColor, 'FF') : undefined,
                         opacity: currentColor ? 1 : 0.7,
-                        backgroundColor: currentColor && activeColor ? `${activeColor}15` : undefined,
+                        backgroundColor: currentColor ? withAlpha(currentColor, '30') : undefined,
                         borderRadius: currentColor ? '8px' : undefined,
                         transition: 'opacity 0.2s ease, background-color 0.2s ease'
                     }}

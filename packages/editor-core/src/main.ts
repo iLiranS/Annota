@@ -1,4 +1,4 @@
-import 'highlight.js/styles/atom-one-dark.css'; // Better looking theme
+import './styles/highlight-theme.css'; // Support both light and dark mode
 import 'katex/dist/katex.min.css';
 import './styles/editor.css';
 

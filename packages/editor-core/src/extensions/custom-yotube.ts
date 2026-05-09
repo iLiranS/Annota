@@ -1,71 +1,52 @@
 import Youtube from '@tiptap/extension-youtube';
 import './custom-youtube.css';
 
-function extractVideoId(urlOrId: string) {
+function extractVideoId(urlOrId: string): string | null {
     if (!urlOrId) return null;
     const match = urlOrId.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&?]+)/);
     return match ? match[1] : null;
 }
 
 export const CustomYoutube = Youtube.extend({
+    // Only the URL is meaningful — drop width/height/start from base extension.
+    addAttributes() {
+        return {
+            src: { default: null },
+        };
+    },
+
+    // ─── Storage format ───────────────────────────────────────────────────────
+    // Only the video URL is stored. The NodeView below handles all rendering.
+    // A typical YouTube embed stores as: <div data-youtube="VIDEO_ID"></div>
+    // (~40 chars vs ~1500 chars of old inline-style HTML).
     renderHTML({ HTMLAttributes }) {
-        const originalSrc = HTMLAttributes.src as string;
-        const videoId = extractVideoId(originalSrc);
-
-        if (!videoId) {
-            return ['div', { class: 'youtube-error' }, 'Invalid YouTube URL'];
-        }
-
-        const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
-        const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
-
+        const src = HTMLAttributes.src as string | null;
+        const videoId = src ? extractVideoId(src) : null;
         return [
-            // 1. Wrap the entire element in a block-level div to satisfy the schema
             'div',
             {
-                'data-youtube-wrapper': 'true',
-                'data-yt-src': originalSrc, // Keep the URL here for the parser
-                contenteditable: 'false',
-                style: 'display: flex; justify-content: center; width: 100%; margin: 24px 0;',
+                'data-type': 'youtube',
+                'data-youtube': videoId ?? '',
+                'data-yt-src': src ?? '',   // keep full URL for round-trip fidelity
             },
-            // 2. The interactive anchor tag goes inside
-            [
-                'a',
-                {
-                    class: 'yt-embed-link',
-                    href: watchUrl,
-                    target: '_blank',
-                    rel: 'noopener noreferrer',
-                    style: 'display: block; position: relative; width: 100%; max-width: 640px; text-decoration: none; cursor: pointer; border-radius: 12px; overflow: hidden; background: #000; box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);',
-                },
-                [
-                    'img',
-                    {
-                        src: thumbnailUrl,
-                        alt: 'YouTube Thumbnail',
-                        style: 'display: block; width: 100%; height: auto; aspect-ratio: 16/9; object-fit: cover; opacity: 0.9; transition: opacity 0.3s;',
-                    },
-                ],
-                [
-                    'div',
-                    {
-                        class: 'yt-play-button',
-                        style: 'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 68px; height: 68px; background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 32px rgba(0,0,0,0.3); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);',
-                    },
-                    [
-                        'div',
-                        {
-                            style: 'width: 0; height: 0; border-top: 14px solid transparent; border-bottom: 14px solid transparent; border-left: 24px solid white; margin-left: 8px;',
-                        },
-                    ],
-                ],
-            ],
         ];
     },
 
     parseHTML() {
         return [
-            // Look for our new block-level wrapper first
+            // Primary: new minimal format
+            {
+                tag: 'div[data-type="youtube"]',
+                getAttrs: (dom) => {
+                    // Prefer full URL, fall back to constructing from video ID
+                    const src = dom.getAttribute('data-yt-src');
+                    const id = dom.getAttribute('data-youtube');
+                    if (src) return { src };
+                    if (id) return { src: `https://www.youtube.com/watch?v=${id}` };
+                    return false;
+                },
+            },
+            // Legacy: old wrapper format (existing saved notes)
             {
                 tag: 'div[data-youtube-wrapper="true"]',
                 getAttrs: (dom) => {
@@ -73,8 +54,7 @@ export const CustomYoutube = Youtube.extend({
                     return src ? { src } : false;
                 },
             },
-            // Fallback to parse the <a> tag directly so the notes you saved 
-            // during the previous test don't break
+            // Legacy: anchor tag format
             {
                 tag: 'a[data-yt-src]',
                 getAttrs: (dom) => {
@@ -82,10 +62,88 @@ export const CustomYoutube = Youtube.extend({
                     return src ? { src } : false;
                 },
             },
-            // Legacy iframe parsers
+            // Legacy: iframe parsers
             { tag: 'iframe[src*="youtube.com"]' },
             { tag: 'iframe[src*="youtu.be"]' },
             { tag: 'iframe[src*="youtube-nocookie.com"]' },
         ];
+    },
+
+    // ─── Visual rendering (NodeView) ─────────────────────────────────────────
+    // Builds the thumbnail UI in the browser — nothing here affects storage.
+    addNodeView() {
+        return ({ node }) => {
+            const src = node.attrs.src as string | null;
+            const videoId = src ? extractVideoId(src) : null;
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'yt-wrapper';
+            wrapper.contentEditable = 'false';
+
+            if (!videoId) {
+                wrapper.innerHTML = '<div class="youtube-error">Invalid YouTube URL</div>';
+                return { dom: wrapper };
+            }
+
+            const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+            const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
+
+            const renderThumbnail = () => {
+                wrapper.innerHTML = `
+                    <a class="yt-embed-link" href="${watchUrl}" target="_blank" rel="noopener noreferrer">
+                        <img class="yt-thumbnail" src="${thumbnailUrl}" alt="YouTube Thumbnail">
+                        <div class="yt-play-button">
+                            <div class="yt-play-icon"></div>
+                        </div>
+                    </a>
+                `;
+                
+                const link = wrapper.querySelector('.yt-embed-link') as HTMLElement;
+                link.onclick = (e) => {
+                    const isMobileNative = typeof window !== 'undefined' && !!(window as any).ReactNativeWebView;
+                    if (isMobileNative) {
+                        // On mobile native, prevent default navigation and swap to inline iframe
+                        e.preventDefault();
+                        e.stopPropagation();
+                        renderIframe();
+                    }
+                    // On desktop/web, we let the default <a> tag behavior proceed.
+                    // In Tauri, this opens in the system browser.
+                };
+            };
+
+            const renderIframe = () => {
+                // Determine origin if available to satisfy YouTube's iframe API 
+                // and potentially bypass strict Tauri restrictions.
+                let origin = '';
+                try {
+                    origin = typeof window !== 'undefined' && window.location.origin ? window.location.origin : '';
+                } catch (e) {}
+
+                const originParam = origin && origin !== 'null' ? `&origin=${encodeURIComponent(origin)}` : '';
+                const iframeUrl = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1${originParam}`;
+                
+                wrapper.innerHTML = `
+                    <div class="yt-embed-link">
+                        <iframe 
+                            src="${iframeUrl}" 
+                            title="YouTube video player" 
+                            frameborder="0" 
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                            allowfullscreen
+                            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;"
+                        ></iframe>
+                    </div>
+                `;
+            };
+
+            renderThumbnail();
+
+            return {
+                dom: wrapper,
+                ignoreMutation: () => true,
+                update: (updatedNode) => updatedNode.type.name === this.name,
+            };
+        };
     },
 });
