@@ -13,6 +13,10 @@ export const useChangelog = (platform: 'mobile' | 'desktop') => {
     const setIsLoading = useChangelogStore(s => s.setLoading);
     const changelogData = useChangelogStore(s => s.changelogData);
     const setChangelogData = useChangelogStore(s => s.setData);
+    const latestVersion = useChangelogStore(s => s.latestVersion);
+    const setLatestVersion = useChangelogStore(s => s.setLatestVersion);
+    const dismissedUpdateVersion = useChangelogStore(s => s.dismissedUpdateVersion);
+    const dismissUpdate = useChangelogStore(s => s.dismissUpdate);
 
     const fetchChangelog = useCallback(async (version: string) => {
         setIsLoading(true);
@@ -23,8 +27,6 @@ export const useChangelog = (platform: 'mobile' | 'desktop') => {
             const entry = await response.json();
 
             if (entry) {
-                // If it's thekeyed object from before, try to find the version.
-                // But from the user's description, it now returns the entry directly.
                 const targetEntry = entry[version] || entry;
 
                 const features = [
@@ -45,7 +47,6 @@ export const useChangelog = (platform: 'mobile' | 'desktop') => {
             }
         } catch (e: any) {
             console.error("[Changelog] Fetch failed", e);
-            alert(`FETCH ERROR: ${e.message || JSON.stringify(e)}`);
         } finally {
             setIsLoading(false);
         }
@@ -56,6 +57,25 @@ export const useChangelog = (platform: 'mobile' | 'desktop') => {
     useEffect(() => {
         const checkChangelog = async () => {
             try {
+                // 1. Fetch latest version info for the update indicator
+                const response = await fetch('https://annota.online/api/changelog/latest');
+                if (response.ok) {
+                    const entry = await response.json();
+                    if (entry) {
+                        // The API returns either the latest entry directly or a map of entries.
+                        // If it has a 'version' field, use it. Otherwise, if it's a map, find the latest key.
+                        let latest = entry.version;
+                        if (!latest) {
+                            const versions = Object.keys(entry).filter(v => /^\d+\.\d+\.\d+/.test(v));
+                            if (versions.length > 0) {
+                                latest = versions.sort((a, b) => isNewerVersion(b, a) ? 1 : -1)[0];
+                            }
+                        }
+                        if (latest) setLatestVersion(latest);
+                    }
+                }
+
+                // 2. Check if we should show the "What's New" dialog
                 const db = getDb();
                 let settings = await db.select().from(appSettings).where(eq(appSettings.id, 1));
 
@@ -104,22 +124,28 @@ export const useChangelog = (platform: 'mobile' | 'desktop') => {
     };
 
     const openManual = async () => {
-        console.log("[Changelog] Manual open triggered");
         setIsOpen(true);
-        if (changelogData) {
-            console.log("[Changelog] Data already present");
-            return;
-        }
-        console.log("[Changelog] Fetching current version:", APP_RELEASE_VERSION);
+        if (changelogData) return;
         const data = await fetchChangelog(APP_RELEASE_VERSION);
         if (data) {
-            console.log("[Changelog] Fetch success");
             setChangelogData(data);
-        } else {
-            console.warn("[Changelog] Fetch returned no data for version:", APP_RELEASE_VERSION);
-            // Optionally close if failed, or let it show the "no data" state
         }
     };
 
-    return { isOpen, isLoading, changelogData, markAsSeen, setIsOpen, openManual };
+    const updateAvailable = latestVersion 
+        ? isNewerVersion(latestVersion, APP_RELEASE_VERSION) && latestVersion !== dismissedUpdateVersion 
+        : false;
+
+    return {
+        isOpen,
+        isLoading,
+        changelogData,
+        markAsSeen,
+        setIsOpen,
+        openManual,
+        latestVersion,
+        updateAvailable,
+        dismissUpdate,
+        currentVersion: APP_RELEASE_VERSION
+    };
 };

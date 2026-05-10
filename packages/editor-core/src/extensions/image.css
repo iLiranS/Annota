@@ -97,7 +97,6 @@ body.is-resizing-image {
     z-index: 10;
     opacity: 0;
     transition: opacity 0.2s ease, transform 0.2s ease;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     touch-action: none;
     display: flex;
     align-items: center;

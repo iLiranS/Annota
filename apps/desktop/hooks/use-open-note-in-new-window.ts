@@ -15,12 +15,12 @@ export function useOpenNoteInNewWindow() {
         // @ts-ignore
         const webview = new WebviewWindow(label, {
             url: `/note-fullscreen/${targetNote.id}`,
-            title: targetNote.title || "Annota Note",
+            hiddenTitle: true,
             width: 1280,
             height: 720,
             decorations: true,
             transparent: false,
-            titleBarStyle: "transparent",
+            titleBarStyle: "overlay",
         });
 
         const unlisten = await listen<{ noteId: string }>('note-window-ready', async (event) => {

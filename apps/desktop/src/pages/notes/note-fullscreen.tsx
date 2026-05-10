@@ -1,3 +1,4 @@
+import { StandaloneNavbar } from "@/components/navbar/standalone-navbar";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useNotesStore } from "@annota/core";
@@ -59,7 +60,8 @@ export default function NoteFullscreen() {
     }, []);
 
     // ── Sync tag mutations back to the main window ──
-    const noteTags = useNotesStore((s) => s.notes.find(n => n.id === noteId)?.tags);
+    const note = useNotesStore((s) => s.notes.find(n => n.id === noteId));
+    const noteTags = note?.tags;
     const allTags = useNotesStore((s) => s.tags);
     const hasSeeded = useRef(false);
 
@@ -95,14 +97,17 @@ export default function NoteFullscreen() {
 
     return (
         <SidebarProvider>
-            <div className="h-screen w-screen bg-note-bg overflow-hidden">
-                <NoteEditor
-                    noteId={noteId}
-                    initialContent={initialContent}
-                    onNoteSync={handleContentChange}
-                    onTagClick={handleTagClick}
-                    isStandalone={true}
-                />
+            <div className="flex h-screen w-screen flex-col bg-note-bg overflow-hidden">
+                <StandaloneNavbar title={note?.title || "Annota Note"} />
+                <div className="flex-1 overflow-hidden">
+                    <NoteEditor
+                        noteId={noteId}
+                        initialContent={initialContent}
+                        onNoteSync={handleContentChange}
+                        onTagClick={handleTagClick}
+                        isStandalone={true}
+                    />
+                </div>
             </div>
         </SidebarProvider>
     );

@@ -3,9 +3,10 @@ import { useSidebar } from "@/components/ui/sidebar"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import { useNavigationStore, useSettingsStore, useSyncStore, useUserStore } from "@annota/core"
-import { PanelLeft, PanelRight } from "lucide-react"
+import { Layers2, PanelLeft, PanelRight } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
+import { useAlwaysOnTop } from "../../hooks/use-always-on-top"
 import { Ionicons } from "../ui/ionicons"
 
 
@@ -33,6 +34,8 @@ export function MainNavbar() {
     const { general, updateGeneralSettings } = useSettingsStore();
     const { toggleSidebar } = useSidebar();
     const setSettingsOpen = useNavigationStore(s => s.setSettingsOpen);
+
+    const { isAlwaysOnTop, toggleAlwaysOnTop } = useAlwaysOnTop();
 
     const isMac = useMemo(() => {
         if (typeof navigator === "undefined") {
@@ -192,7 +195,6 @@ export function MainNavbar() {
                                     "h-6 w-6 text-muted-foreground/60 transition-colors",
                                     !isSyncing && "hover:bg-sidebar-accent"
                                 )}
-                                title="Reload & Sync"
                             >
                                 <Ionicons
                                     name="sync-outline"
@@ -206,11 +208,30 @@ export function MainNavbar() {
                         </TooltipTrigger>
 
                         <TooltipContent>
-                            {isSyncing ? "Syncing..." : "In Sync"}
+                            {isSyncing ? "Syncing..." : "Force Sync"}
                         </TooltipContent>
                     </Tooltip>
 
                 </div>}
+
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className={cn(
+                                "h-7 w-7 rounded-full transition-all active:scale-95",
+                                isAlwaysOnTop ? "text-accent-full bg-sidebar-accent/50 hover:bg-sidebar-accent" : "text-muted-foreground/60 hover:bg-sidebar-accent hover:text-foreground"
+                            )}
+                            onClick={toggleAlwaysOnTop}
+                        >
+                            <Layers2 size={18} />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="text-[10px]">
+                        Always on Top <span className="opacity-50 ml-1">{isMac ? "⌘+⇧+T" : "Ctrl+Shift+T"}</span>
+                    </TooltipContent>
+                </Tooltip>
 
                 <Tooltip>
                     <TooltipTrigger asChild>
@@ -224,7 +245,7 @@ export function MainNavbar() {
                         </Button>
                     </TooltipTrigger>
                     <TooltipContent side="bottom" className="text-[10px]">
-                        Settings
+                        Settings <span className="opacity-50 ml-1">{isMac ? "⌘+," : "Ctrl+,"}</span>
                     </TooltipContent>
                 </Tooltip>
 

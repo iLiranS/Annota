@@ -82,7 +82,8 @@ function App() {
   useAppTheme();
   useDailyCleanup();
   useNoteWindowSync();
-  useGlobalShortcuts();
+  const isMain = getCurrentWindow().label === "main";
+  useGlobalShortcuts({ isStandalone: !isMain });
 
   const [bootstrapState, setBootstrapState] =
     useState<BootstrapState>("booting");
@@ -535,8 +536,12 @@ function App() {
         </Route>
       </Routes>
 
-      <SettingsDialog />
-      <ChangelogModal />
+      {isMain && (
+        <>
+          <SettingsDialog />
+          <ChangelogModal />
+        </>
+      )}
     </>
   );
 }

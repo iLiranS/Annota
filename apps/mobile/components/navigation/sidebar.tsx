@@ -1,10 +1,11 @@
 import { useAppTheme } from '@/hooks/use-app-theme';
-import { DAILY_NOTES_FOLDER_ID, sortFolders, useUserStore as useAuthStore, useNotesStore, useSyncStore, type Folder, type Tag } from '@annota/core';
+import { DAILY_NOTES_FOLDER_ID, sortFolders, useUserStore as useAuthStore, useChangelog, useNotesStore, useSyncStore, type Folder, type Tag } from '@annota/core';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useGlobalSearchParams, usePathname, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+    Linking,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -195,6 +196,8 @@ export default function Sidebar({ onNavigate, ...props }: SidebarProps & React.C
     const isGuest = useAuthStore(s => s.isGuest);
     const [retryCooldown, setRetryCooldown] = useState(false);
     const showOfflineBanner = !isOnline && !isGuest;
+
+    const { updateAvailable, latestVersion, currentVersion, dismissUpdate } = useChangelog('mobile');
 
     const quickAccessChevronStyle = useAnimatedStyle(() => ({
         transform: [{ rotate: withTiming(isQuickAccessExpanded ? '90deg' : '0deg', { duration: 300, easing: Easing.bezier(0.4, 0, 0.2, 1) }) }]
@@ -600,6 +603,21 @@ export default function Sidebar({ onNavigate, ...props }: SidebarProps & React.C
                         >
                             <Text style={styles.offlineRetryText}>{retryCooldown ? 'Wait…' : 'Retry'}</Text>
                         </Pressable>
+                    </View>
+                )}
+                {updateAvailable && (
+                    <View style={[styles.offlineBanner, { backgroundColor: 'rgba(59, 130, 246, 0.1)', paddingVertical: 12 }]}>
+                        <Ionicons name="download-outline" size={20} color="#3B82F6" />
+                        <View style={{ flex: 1, marginLeft: 4 }}>
+                            <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600' }}>Update Available</Text>
+                            <Text style={{ color: colors.text + '80', fontSize: 12 }}>{currentVersion} → {latestVersion}</Text>
+                        </View>
+                        <HapticPressable
+                            onPress={() => latestVersion && dismissUpdate(latestVersion)}
+                            style={{ padding: 4 }}
+                        >
+                            <Ionicons name="close-circle" size={20} color={colors.text + '40'} />
+                        </HapticPressable>
                     </View>
                 )}
 

@@ -338,7 +338,13 @@ export const CustomImage = Image.extend<any>({
                 const parentWidth = wrapper.parentElement?.clientWidth || window.innerWidth;
                 const cappedWidth = Math.min(newWidth, parentWidth);
 
-                wrapper.style.width = `${cappedWidth}px`;
+                // Snap to 100% if close to full width
+                const SNAP_THRESHOLD = 20;
+                if (parentWidth - cappedWidth < SNAP_THRESHOLD) {
+                    wrapper.style.width = '100%';
+                } else {
+                    wrapper.style.width = `${cappedWidth}px`;
+                }
             };
 
             const onPointerUp = (e: PointerEvent) => {
@@ -352,7 +358,15 @@ export const CustomImage = Image.extend<any>({
                 const pos = getPos();
                 if (typeof pos !== 'number') return;
 
-                const finalWidth = wrapper.style.width;
+                // Determine if we should save as 100% or pixel value
+                let finalWidth = wrapper.style.width;
+
+                // Double check if we are effectively at 100% width
+                const parentWidth = wrapper.parentElement?.clientWidth || window.innerWidth;
+                if (parentWidth - wrapper.offsetWidth < 5) {
+                    finalWidth = '100%';
+                }
+
                 editor.view.dispatch(
                     editor.state.tr.setNodeMarkup(pos, undefined, {
                         ...currentNode.attrs,

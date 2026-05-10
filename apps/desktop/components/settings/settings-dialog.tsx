@@ -1,5 +1,5 @@
 import { APP_RELEASE_VERSION, useChangelog, useNavigationStore } from "@annota/core";
-import { Bot, Brush, Cog, Database, HelpCircle, Type, User } from "lucide-react";
+import { Bot, Brush, Cog, Database, HelpCircle, Keyboard, Type, User } from "lucide-react";
 import { useState } from "react";
 import { AccountSettings } from "./account-settings";
 import { AiSettings } from "./ai-settings";
@@ -7,6 +7,7 @@ import { AppearanceSettings } from "./appearance-settings";
 import { EditorSettings } from "./editor-settings";
 import { GeneralSettings } from "./general-settings";
 import { HelpSettings } from "./help-settings";
+import { ShortcutsSettings } from "./shortcuts-settings";
 
 import {
     Dialog,
@@ -52,16 +53,22 @@ const tabs: SettingsTab[] = [
         iconBg: "bg-orange-500",
     },
     {
+        id: "ai",
+        label: "AI Models",
+        icon: <Bot className="h-4 w-4 text-white" />,
+        iconBg: "bg-blue-600",
+    },
+    {
         id: "account",
         label: "Account",
         icon: <User className="h-4 w-4 text-white" />,
         iconBg: "bg-green-500",
     },
     {
-        id: "ai",
-        label: "AI Models",
-        icon: <Bot className="h-4 w-4 text-white" />,
-        iconBg: "bg-blue-600",
+        id: "shortcuts",
+        label: "Shortcuts",
+        icon: <Keyboard className="h-4 w-4 text-white" />,
+        iconBg: "bg-amber-500",
     },
     {
         id: "help",
@@ -95,7 +102,7 @@ export default function SettingsDialog() {
                     <nav className="w-[200px] flex flex-col border-r border-border p-3 bg-muted/30">
                         <div className="flex-1 space-y-0.5">
                             {tabs
-                                .filter((t) => !["account", "help"].includes(t.id))
+                                .filter((t) => !["account", "help", "shortcuts"].includes(t.id))
                                 .map((tab) => (
                                     <button
                                         key={tab.id}
@@ -123,7 +130,7 @@ export default function SettingsDialog() {
 
                         <div className="space-y-0.5">
                             {tabs
-                                .filter((t) => ["account", "help"].includes(t.id))
+                                .filter((t) => ["account", "help", "shortcuts"].includes(t.id))
                                 .map((tab) => (
                                     <button
                                         key={tab.id}
@@ -175,6 +182,8 @@ export default function SettingsDialog() {
                             <StorageSettings />
                         ) : activeTab === "ai" ? (
                             <AiSettings />
+                        ) : activeTab === "shortcuts" ? (
+                            <ShortcutsSettings />
                         ) : activeTab === "help" ? (
                             <HelpSettings />
                         ) : (

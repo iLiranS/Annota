@@ -5,7 +5,7 @@ import { Sidebar, SidebarContent, useSidebar } from "@/components/ui/sidebar";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useCreateNote } from "@/hooks/use-create-note";
 import { useSmartNavigate } from "@/hooks/use-smart-navigate";
-import { DAILY_NOTES_FOLDER_ID, TRASH_FOLDER_ID, getSortTypeLabel, sortNotes, useNavigationStore, useNotesStore, useSearchStore, useSettingsStore, useSyncStore, useUserStore, type Folder, type SidebarTab, type SortType } from "@annota/core";
+import { DAILY_NOTES_FOLDER_ID, TRASH_FOLDER_ID, getSortTypeLabel, sortNotes, useChangelog, useNavigationStore, useNotesStore, useSearchStore, useSettingsStore, useSyncStore, useUserStore, type Folder, type SidebarTab, type SortType } from "@annota/core";
 
 
 // Modular Components
@@ -62,6 +62,7 @@ export function AppSidebar() {
     const isGuest = useUserStore((s) => s.isGuest);
     const showOfflineBanner = !isOnline && !isGuest;
     const { createAndNavigate: createNote } = useCreateNote();
+    const { updateAvailable, latestVersion, currentVersion, dismissUpdate } = useChangelog('desktop');
 
     const [pendingFolderId, setPendingFolderId] = useState<string | undefined | null>(null);
 
@@ -431,6 +432,10 @@ export function AppSidebar() {
                         activeTab={activeTab}
                         setActiveTab={setActiveTab}
                         colors={colors}
+                        updateAvailable={updateAvailable}
+                        latestVersion={latestVersion}
+                        currentVersion={currentVersion}
+                        dismissUpdate={dismissUpdate}
                     />
                 </div>
 

@@ -8,6 +8,7 @@
   ],
   "permissions": [
     "core:default",
+    "core:window:allow-set-always-on-top",
     "opener:default",
     "fs:default",
     "fs:allow-appcache-read-recursive",

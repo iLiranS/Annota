@@ -118,12 +118,12 @@ export function NoteListItem({
         const label = `note-${note.id}-${Math.random().toString(36).substring(7)}`;
         const webview = new WebviewWindow(label, {
             url: `/note-fullscreen/${note.id}`,
-            title: note.title || "Annota Note",
             width: 1280,
             height: 720,
             decorations: true,
+            hiddenTitle: true,
             transparent: false,
-            titleBarStyle: "transparent",
+            titleBarStyle: "overlay",
         });
 
         // Listen for the child's "I'm ready" signal, then send it everything it needs.
