@@ -90,25 +90,24 @@ export const CustomYoutube = Youtube.extend({
 
             const renderThumbnail = () => {
                 wrapper.innerHTML = `
-                    <a class="yt-embed-link" href="${watchUrl}" target="_blank" rel="noopener noreferrer">
+                    <div class="yt-embed-link">
                         <img class="yt-thumbnail" src="${thumbnailUrl}" alt="YouTube Thumbnail">
                         <div class="yt-play-button">
                             <div class="yt-play-icon"></div>
                         </div>
-                    </a>
+                    </div>
                 `;
-                
+
                 const link = wrapper.querySelector('.yt-embed-link') as HTMLElement;
-                link.onclick = (e) => {
+                link.onclick = (_e) => {
                     const isMobileNative = typeof window !== 'undefined' && !!(window as any).ReactNativeWebView;
                     if (isMobileNative) {
-                        // On mobile native, prevent default navigation and swap to inline iframe
-                        e.preventDefault();
-                        e.stopPropagation();
+                        // On mobile native, swap to inline iframe
                         renderIframe();
+                    } else {
+                        // On desktop/web, open in system browser
+                        window.open(watchUrl, '_blank', 'noopener,noreferrer');
                     }
-                    // On desktop/web, we let the default <a> tag behavior proceed.
-                    // In Tauri, this opens in the system browser.
                 };
             };
 
@@ -118,11 +117,11 @@ export const CustomYoutube = Youtube.extend({
                 let origin = '';
                 try {
                     origin = typeof window !== 'undefined' && window.location.origin ? window.location.origin : '';
-                } catch (e) {}
+                } catch (e) { }
 
                 const originParam = origin && origin !== 'null' ? `&origin=${encodeURIComponent(origin)}` : '';
                 const iframeUrl = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1${originParam}`;
-                
+
                 wrapper.innerHTML = `
                     <div class="yt-embed-link">
                         <iframe 

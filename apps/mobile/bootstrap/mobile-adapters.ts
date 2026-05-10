@@ -276,5 +276,35 @@ export function createMobileAdapters(): PlatformAdapters {
                 });
             },
         },
+        events: {
+            emit: async (event: string, payload?: any) => {
+                const eventListeners = (global as any)._mobileEventListeners?.get(event);
+                if (eventListeners) {
+                    eventListeners.forEach((callback: Function) => {
+                        try {
+                            callback(payload);
+                        } catch (err) {
+                            console.error(`Error in event listener for ${event}:`, err);
+                        }
+                    });
+                }
+            },
+            subscribe: async (event: string, callback: (payload: any) => void) => {
+                if (!(global as any)._mobileEventListeners) {
+                    (global as any)._mobileEventListeners = new Map<string, Set<Function>>();
+                }
+                const listeners = (global as any)._mobileEventListeners;
+                if (!listeners.has(event)) {
+                    listeners.set(event, new Set());
+                }
+                listeners.get(event)!.add(callback);
+                return () => {
+                    const eventListeners = listeners.get(event);
+                    if (eventListeners) {
+                        eventListeners.delete(callback);
+                    }
+                };
+            },
+        },
     };
 }

@@ -87,6 +87,8 @@ export default function NoteEditor() {
     const shouldAutofocus = content !== null && isEmptyContent(content);
     const isContentReady = !id || content !== null;
 
+    const lastSavedContentRef = useRef<string | null>(null);
+
     // Load content from database on mount
     useEffect(() => {
         let cancelled = false;
@@ -97,10 +99,12 @@ export default function NoteEditor() {
                     const loadedContent = await getNoteContent(id);
                     if (cancelled) return;
                     setContent(loadedContent);
+                    lastSavedContentRef.current = loadedContent;
                 } catch (error) {
                     if (!cancelled) {
                         console.error('Failed to load note content', error);
                         setContent('');
+                        lastSavedContentRef.current = '';
                     }
                 } finally {
                     if (!cancelled) {
@@ -111,6 +115,7 @@ export default function NoteEditor() {
             } else {
                 if (!cancelled) {
                     setContent(null);
+                    lastSavedContentRef.current = null;
                     setIsLoading(false);
                     pendingScrollElementIdRef.current = null;
                 }
@@ -158,10 +163,14 @@ export default function NoteEditor() {
     // Handle content changes from the editor
     const handleContentChange = useCallback(async (html: string) => {
         if (!id) return;
-        // Extract title from the content
-        const title = generateTitle(html);
+
+        // Prevent redundant updates if content hasn't changed
+        if (html === lastSavedContentRef.current) return;
+        lastSavedContentRef.current = html;
+        setContent(html);
 
         // Update display title for the header
+        const title = generateTitle(html);
         setDisplayTitle(title);
 
         // Update the note content in the database (this also updates preview)

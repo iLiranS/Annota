@@ -131,8 +131,8 @@ const styles = StyleSheet.create({
     },
     border: {
         position: 'absolute',
-        left: '5%',
-        right: '5%',
+        left: 8,
+        right: 8,
         height: StyleSheet.hairlineWidth,
     },
     topBorder: {

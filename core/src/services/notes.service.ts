@@ -1,3 +1,4 @@
+import { freeNotesLimit, premiumNotesLimit } from '../../constants/config';
 import * as FilesRepo from '../db/repositories/files.repository';
 import * as notesRepo from '../db/repositories/notes.repository';
 import { MAX_NOTE_SIZE, normalizeStoredContent } from '../db/repositories/notes.repository';
@@ -28,7 +29,7 @@ export const NoteService = {
     // 1. Create
     create: async (data: Partial<NoteMetadata>, userRole: UserRole, subExpDate: string | null): Promise<NoteMetadata> => {
         const isPremium = isPremiumUser(userRole, subExpDate);
-        const limit = isPremium ? 7500 : 100;
+        const limit = isPremium ? premiumNotesLimit : freeNotesLimit;
 
         // Ask repository for current count to ensure absolute accuracy
         const currentCount = await notesRepo.getNotesCount();
@@ -50,7 +51,7 @@ export const NoteService = {
 
     createBulk: async (notes: { title: string, content: string }[], userRole: UserRole, subExpDate: string | null): Promise<{ notes: NoteMetadata[], folder: any }> => {
         const isPremium = isPremiumUser(userRole, subExpDate);
-        const limit = isPremium ? 7500 : 100;
+        const limit = isPremium ? premiumNotesLimit : freeNotesLimit;
 
         const currentCount = await notesRepo.getNotesCount();
 

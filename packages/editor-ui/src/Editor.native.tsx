@@ -6,7 +6,7 @@ import { useTheme } from '@react-navigation/native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 
-import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Keyboard, Linking, Platform, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useEditorBridgeHandlers } from './hooks/useEditorBridgeHandlers';
@@ -59,6 +59,7 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
         const contentResolverRef = useRef<((html: string) => void) | null>(null);
         const [blockData, setBlockData] = useState<any>(null);
         const { width, height } = useWindowDimensions();
+        const webViewSource = useMemo(() => ({ html: editorHtml, baseUrl: 'https://app.local' }), []);
         const [keyboardParams, setKeyboardParams] = useState({ isVisible: false, height: 0 });
         const { isVisible: isKeyboardVisible, height: keyboardHeight } = keyboardParams;
 
@@ -355,7 +356,7 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                         allowFileAccessFromFileURLs={true}
                         allowUniversalAccessFromFileURLs={true}
                         mixedContentMode="always"
-                        source={{ html: editorHtml, baseUrl: 'https://app.local' }}
+                        source={webViewSource}
                         onMessage={(event) => {
                             try {
                                 const data = JSON.parse(event.nativeEvent.data);

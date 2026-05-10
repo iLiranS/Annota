@@ -1,4 +1,5 @@
 import { eq, inArray, sql } from 'drizzle-orm';
+import { freeFoldersLimit, premiumFoldersLimit } from '../../constants/config';
 import { getDb, purgeGuestTombstones } from '../db';
 import * as foldersRepo from '../db/repositories/folders.repository';
 import * as notesRepo from '../db/repositories/notes.repository';
@@ -8,7 +9,6 @@ import type { UserRole } from '../stores/user.store';
 import { generateFolder } from '../utils/folders';
 import { isPremiumUser } from '../utils/subscription';
 import * as NoteFileService from './files/note-file.service';
-
 
 
 
@@ -30,7 +30,7 @@ export const FolderService = {
 
     create: async (folderData: Partial<FolderInsert>, userRole: UserRole, subExpDate: string | null): Promise<Folder> => {
         const isPremium = isPremiumUser(userRole, subExpDate);
-        const limit = isPremium ? 2500 : 20;
+        const limit = isPremium ? premiumFoldersLimit : freeFoldersLimit;
         const currentCount = await foldersRepo.getFoldersCount();
 
         if (currentCount >= limit) {

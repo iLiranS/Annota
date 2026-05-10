@@ -169,14 +169,27 @@ export function ImageGallery({
 
     // --- Gestures ---
 
-    // Helper: clamp translate to image boundaries + buffer
-    const PAN_BUFFER = 20;
+    // Helper: clamp translate so the image never leaves the viewport.
+    //
+    // IMPORTANT — coordinate space:
+    // The transform array is [scale(s), translateX(tx), translateY(ty)].
+    // RN applies transforms left-to-right, so translateX/Y are in PRE-SCALE
+    // space. A tx of 1 unit shifts the already-scaled image by `s` screen pixels:
+    //
+    //   screenDisplacement = tx * s
+    //
+    // The image occupies sw*s × sh*s on screen, centred at tx*s from origin.
+    // Left edge = sw/2 + tx*s - sw*s/2. For no overshoot:
+    //
+    //   |tx * s| <= (sw*s - sw) / 2
+    //   |tx|     <= sw*(s-1) / (2*s)
+    //
     const clampTranslate = (tx: number, ty: number, s: number) => {
         'worklet';
         const sw = screenWidthSV.value;
         const sh = screenHeightSV.value;
-        const maxTx = Math.max(0, (sw * s - sw) / 2) + PAN_BUFFER;
-        const maxTy = Math.max(0, (sh * s - sh) / 2) + PAN_BUFFER;
+        const maxTx = Math.max(0, sw * (s - 1) / (2 * s));
+        const maxTy = Math.max(0, sh * (s - 1) / (2 * s));
         return {
             x: Math.max(-maxTx, Math.min(tx, maxTx)),
             y: Math.max(-maxTy, Math.min(ty, maxTy)),
@@ -186,6 +199,7 @@ export function ImageGallery({
     const pinchGesture = Gesture.Pinch()
         .onStart((e) => {
             'worklet';
+            // Snapshot current committed state at gesture start
             savedScale.value = scale.value;
             savedTranslateX.value = translateX.value;
             savedTranslateY.value = translateY.value;
@@ -194,19 +208,44 @@ export function ImageGallery({
         })
         .onUpdate((e) => {
             'worklet';
-            const scaleFactor = e.scale;
-            const nextScale = savedScale.value * scaleFactor;
-
             const sw = screenWidthSV.value;
             const sh = screenHeightSV.value;
-            const dx0 = pinchStartFocalX.value - sw / 2;
-            const dy0 = pinchStartFocalY.value - sh / 2;
-            const dx = e.focalX - sw / 2;
-            const dy = e.focalY - sh / 2;
 
-            // Keep the pinch focal point stable while scaling.
-            const rawX = scaleFactor * savedTranslateX.value + dx - scaleFactor * dx0;
-            const rawY = scaleFactor * savedTranslateY.value + dy - scaleFactor * dy0;
+            // e.scale is cumulative from gesture start.
+            const nextScale = Math.max(1, Math.min(savedScale.value * e.scale, 5));
+
+            // All translateX/Y values live in PRE-SCALE space because the
+            // transform array is [scale, translateX, translateY] — RN applies
+            // them left-to-right, so a translate of 1 unit shifts the already-
+            // scaled element by `currentScale` screen pixels.
+            //
+            // To keep the pinch focal point visually fixed we compute the
+            // required pre-scale translate at nextScale:
+            //
+            //   The focal point in screen-space (relative to centre):
+            //     focalScreen = startFocalX - sw/2
+            //
+            //   In pre-savedScale space (where savedTranslate lives):
+            //     focalPre = focalScreen / savedScale
+            //
+            //   The translate that keeps focalPre fixed after scaling:
+            //     newTx = savedTx - focalPre * (scaleRatio - 1)
+            //           = savedTx + focalPre * (1 - scaleRatio)
+            //
+            //   Finger drift (midpoint moving) in pre-nextScale space:
+            //     driftPre = (focalX - startFocalX) / nextScale
+            //
+            const scaleRatio = nextScale / savedScale.value;
+            const focalScreenX = pinchStartFocalX.value - sw / 2;
+            const focalScreenY = pinchStartFocalY.value - sh / 2;
+
+            const rawX = savedTranslateX.value
+                + (focalScreenX / savedScale.value) * (1 - scaleRatio)
+                + (e.focalX - pinchStartFocalX.value) / nextScale;
+            const rawY = savedTranslateY.value
+                + (focalScreenY / savedScale.value) * (1 - scaleRatio)
+                + (e.focalY - pinchStartFocalY.value) / nextScale;
+
             const clamped = clampTranslate(rawX, rawY, nextScale);
 
             scale.value = nextScale;
@@ -256,12 +295,15 @@ export function ImageGallery({
         .onUpdate((e) => {
             'worklet';
             if (scale.value > 1.05) {
-                // Zoomed — pan around the image, clamped to borders
-                const dragScale = 1 / Math.max(1, scale.value);
+                // Zoomed — pan around the image, clamped to borders.
+                // e.translationX/Y are in screen pixels, but translateX/Y live in
+                // PRE-SCALE space. Divide by scale to convert:
+                //   preScaleDelta = screenDelta / scale
+                const s = scale.value;
                 const clamped = clampTranslate(
-                    savedTranslateX.value + e.translationX * dragScale,
-                    savedTranslateY.value + e.translationY * dragScale,
-                    scale.value
+                    savedTranslateX.value + e.translationX / s,
+                    savedTranslateY.value + e.translationY / s,
+                    s
                 );
                 translateX.value = clamped.x;
                 translateY.value = clamped.y;
@@ -336,18 +378,25 @@ export function ImageGallery({
                 savedTranslateX.value = 0;
                 savedTranslateY.value = 0;
             } else {
-                // Zoom in toward the tapped point
+                // Zoom in toward the tapped point.
                 const targetScale = 2.5;
-                const focusDamping = 0.85;
-
-                // e.localX/Y are relative to the gesture view (screen coords).
-                // We need to shift so the tapped point stays fixed after scaling.
-                // Formula: translate = (center - tapPoint) * (targetScale - 1)
                 const sw = screenWidthSV.value;
                 const sh = screenHeightSV.value;
 
-                const offsetX = (sw / 2 - e.x) * (targetScale - 1) * focusDamping;
-                const offsetY = (sh / 2 - e.y) * (targetScale - 1) * focusDamping;
+                // Tap point in screen-space relative to centre:
+                //   tapScreen = e.x - sw/2
+                //
+                // translateX/Y are in PRE-SCALE space (a tx of 1 moves the image
+                // by targetScale screen pixels). Starting from tx=0 (unzoomed),
+                // to keep the tap point visually fixed after zooming to targetScale:
+                //
+                //   tapScreen + newTx * targetScale = tapScreen * 1  (fixed in screen)
+                //   newTx * targetScale = tapScreen * (1 - targetScale)
+                //   newTx = -(tapScreen) * (targetScale - 1) / targetScale
+                //         = (sw/2 - e.x) * (targetScale - 1) / targetScale
+                //
+                const offsetX = (sw / 2 - e.x) * (targetScale - 1) / targetScale;
+                const offsetY = (sh / 2 - e.y) * (targetScale - 1) / targetScale;
 
                 const clamped = clampTranslate(offsetX, offsetY, targetScale);
 

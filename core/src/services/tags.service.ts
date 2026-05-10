@@ -1,10 +1,10 @@
+import { freeTagsLimit, premiumTagsLimit } from '../../constants/config';
 import { removeTagFromAllNotes } from '../db/repositories/notes.repository';
 import type { TagCreateInput } from '../db/repositories/tags.repository';
 import * as tagsRepo from '../db/repositories/tags.repository';
 import type { Tag } from '../db/schema';
 import type { UserRole } from '../stores/user.store';
 import { isPremiumUser } from '../utils/subscription';
-
 
 
 export const TagService = {
@@ -22,7 +22,7 @@ export const TagService = {
 
     create: async (data: TagCreateInput, userRole: UserRole, subExpDate: string | null): Promise<Tag> => {
         const isPremium = isPremiumUser(userRole, subExpDate);
-        const limit = isPremium ? 2500 : 20;
+        const limit = isPremium ? premiumTagsLimit : freeTagsLimit;
         const currentCount = await tagsRepo.getTagsCount();
 
         if (currentCount >= limit) {

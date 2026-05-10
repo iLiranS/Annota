@@ -66,6 +66,7 @@ export function setupCommands() {
                 handled = true;
                 break;
             case 'setContent':
+                (window as any)._lastSentHtml = params?.content;
                 e.commands.setContent(params?.content);
                 handled = true;
                 break;

@@ -336,7 +336,10 @@ export function setupEditor(options: any) {
 
                 if (debounceTimer) clearTimeout(debounceTimer);
                 debounceTimer = setTimeout(() => {
-                    sendMessage({ type: 'content', html: editor.getHTML() });
+                    const html = editor.getHTML();
+                    if (html === (window as any)._lastSentHtml) return;
+                    (window as any)._lastSentHtml = html;
+                    sendMessage({ type: 'content', html });
                 }, 300);
             },
             onFocus: function () {
@@ -370,6 +373,7 @@ export function setupEditor(options: any) {
         }
         // quick hack to solve notes with file attachment not loading issue
         if (content) {
+            (window as any)._lastSentHtml = content;
             setTimeout(() => {
                 if (window.editor) {
                     window.editor.commands.setContent(content);
