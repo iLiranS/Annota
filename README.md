@@ -1,7 +1,7 @@
 # Annota 📝
 
 A private, local-first mobile note-taking application designed for speed, privacy, and rich text organization.
-![App Screenshot](docs/images/preview.png)
+![App Screenshot](docs/images/preview.webp)
 
 
 ## ✨ Core Features

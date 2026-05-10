@@ -8,6 +8,7 @@ import { createBlockMenuButton } from './block-menu-button';
 import './image.css';
 
 const INTERNAL_IMAGE_ID_MIME = 'application/x-note-image-id';
+const RESIZE_ICON_SVG = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 11 5 5 11 5"></polyline><polyline points="13 19 19 19 19 13"></polyline><line x1="5" y1="5" x2="19" y2="19"></line></svg>`;
 
 function escapeHtmlAttr(value: string): string {
     return value
@@ -320,6 +321,7 @@ export const CustomImage = Image.extend<any>({
             // Resize handle
             const resizeHandle = document.createElement('div');
             resizeHandle.className = 'image-resize-handle';
+            resizeHandle.innerHTML = RESIZE_ICON_SVG;
             wrapper.appendChild(resizeHandle);
 
             let isResizing = false;
@@ -401,7 +403,7 @@ export const CustomImage = Image.extend<any>({
                 },
                 update: (updatedNode) => {
                     if (updatedNode.type.name !== 'image') return false;
-                    
+
                     // CRITICAL: If we are actively resizing, don't let Tiptap's update cycle
                     // overwrite our temporary drag width.
                     if (isResizing) return true;

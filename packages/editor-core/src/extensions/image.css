@@ -9,7 +9,8 @@
 /* Image node wrapper */
 .image-node-wrapper {
     position: relative;
-    display: block; /* Changed from inline-block */
+    display: block;
+    /* Changed from inline-block */
     max-width: 100%;
     margin: 8px 0;
     width: fit-content;
@@ -87,19 +88,25 @@ body.is-resizing-image {
 /* Resize handle */
 .image-resize-handle {
     position: absolute;
-    bottom: 4px;
-    right: 4px;
-    width: 12px;
-    height: 12px;
-    background: var(--accent-color, #007aff);
-    border: 2px solid #fff;
-    border-radius: 50%;
+    bottom: 6px;
+    right: 6px;
+    width: 22px;
+    height: 22px;
+    color: #fff;
     cursor: nwse-resize;
     z-index: 10;
     opacity: 0;
     transition: opacity 0.2s ease, transform 0.2s ease;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     touch-action: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.image-resize-handle:hover {
+    background-color: color-mix(in srgb, var(--accent-color), transparent 40%);
+    border-radius: 50%;
 }
 
 .image-node-wrapper:hover .image-resize-handle,
@@ -118,14 +125,4 @@ body.is-resizing-image {
     left: -10px;
     right: -10px;
     bottom: -10px;
-}
-
-/* On mobile, make the handle slightly larger for better touch target */
-@media (max-width: 768px) {
-    .image-resize-handle {
-        width: 20px;
-        height: 20px;
-        bottom: 6px;
-        right: 6px;
-    }
 }
