@@ -8,7 +8,7 @@ import { EditorToolbar } from '@/components/editor-ui/toolbar';
 import NoteHeaderMenu from '@/components/notes/note-header-menu';
 import { SearchOverlay } from '@/components/notes/search-overlay';
 import { HapticPressable } from '@/components/ui/haptic-pressable';
-import { ContextMode, generateTitle, purifyNoteHtml, useAiChat, useNotesStore, useSettingsStore } from '@annota/core';
+import { ContextMode, generateTitle, purifyNoteHtml, useAiChat, useAiStore, useNotesStore, useSettingsStore } from '@annota/core';
 import TipTapEditor, { TipTapEditorRef, ToolbarRenderProps } from '@annota/editor-ui';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
@@ -285,7 +285,7 @@ export default function NoteEditor() {
 
 
     const { sendMessage: sendAiMessage, isStreaming: isAiStreaming, stop: stopAiMessage } = useAiChat('inline-assistant');
-    const handleAIAction = useCallback(async (mode: ContextMode, instructions?: string) => {
+    const handleAIAction = useCallback(async (mode: ContextMode | 'send-to-chat', instructions?: string) => {
         const editor = editorRef.current;
         if (!editor) return;
 
@@ -298,8 +298,14 @@ export default function NoteEditor() {
             return;
         }
 
+        if (mode === 'send-to-chat') {
+            useAiStore.getState().setChatContext({ text: selectedText, html: selectedHtml || selectedText });
+            setIsAiChatVisible(true);
+            return;
+        }
+
         await sendAiMessage(instructions || selectedHtml || selectedText, {
-            mode: mode,
+            mode: mode as ContextMode,
             manualContext: selectedHtml || selectedText,
             onFinish: async (text) => {
                 if (mode === 'rewrite') {

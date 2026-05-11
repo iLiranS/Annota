@@ -66,7 +66,7 @@ export interface TipTapEditorProps {
     /** Callback for opening a link-specific menu */
     onOpenLinkMenu?: (e: MouseEvent, url: string) => void;
     /** Callback for selection changes, provides the bounding rect of the selection */
-    onSelectionChange?: (data: { empty: boolean; range: { from: number; to: number }; clientRect: DOMRect | null; text: string }) => void;
+    onSelectionChange?: (data: { empty: boolean; range: { from: number; to: number }; clientRect: DOMRect | null; text: string; nodeName?: string }) => void;
     /** Render prop for customizing the slash command menu */
     renderSlashCommandMenu?: () => React.ReactNode;
     /** Callback for when the code block language selector is clicked */

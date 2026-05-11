@@ -70,6 +70,7 @@ export function AccountSettings() {
     const [copied, setCopied] = useState(false);
     const [isDeletingAccount, setIsDeletingAccount] = useState(false);
     const [isPendingDelete, setIsPendingDelete] = useState(false);
+    const [deleteConfirmation, setDeleteConfirmation] = useState("");
 
     useEffect(() => {
         if (session) {
@@ -331,7 +332,10 @@ export function AccountSettings() {
             </Dialog>
 
             {/* Delete Account Dialog */}
-            <Dialog open={isDeletingAccount} onOpenChange={setIsDeletingAccount}>
+            <Dialog open={isDeletingAccount} onOpenChange={(open) => {
+                setIsDeletingAccount(open);
+                if (!open) setDeleteConfirmation("");
+            }}>
                 <DialogContent className="sm:max-w-[400px]">
                     <DialogHeader>
                         <DialogTitle className="text-rose-600">Delete Account</DialogTitle>
@@ -339,10 +343,21 @@ export function AccountSettings() {
                             This action is permanent. All your data in the cloud will be deleted. Your local data will remain on this device.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="py-4">
+                    <div className="py-4 space-y-4">
                         <p className="text-sm text-muted-foreground">
                             To confirm, please realize that this cannot be undone. All your encrypted notes, and folders on our servers will be wiped.
                         </p>
+                        <div className="space-y-2">
+                            <Label htmlFor="delete-confirm" className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Type <span className="font-bold text-foreground">DELETE</span> to confirm</Label>
+                            <Input
+                                id="delete-confirm"
+                                value={deleteConfirmation}
+                                onChange={(e) => setDeleteConfirmation(e.target.value)}
+                                placeholder="DELETE"
+                                className="bg-rose-500/5 border-rose-500/20 focus-visible:ring-rose-500"
+                                autoFocus
+                            />
+                        </div>
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsDeletingAccount(false)} disabled={isPendingDelete}>
@@ -351,7 +366,7 @@ export function AccountSettings() {
                         <Button
                             variant="destructive"
                             onClick={handleDeleteAccount}
-                            disabled={isPendingDelete}
+                            disabled={isPendingDelete || deleteConfirmation !== "DELETE"}
                         >
                             {isPendingDelete ? "Deleting..." : "Permanently Delete"}
                         </Button>

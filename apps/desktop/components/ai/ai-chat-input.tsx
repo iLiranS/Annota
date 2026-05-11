@@ -6,8 +6,8 @@ import {
     DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { cn } from '@/lib/utils';
-import { ANTHROPIC_MODELS, GOOGLE_MODELS, OPENAI_MODELS, useAiStore } from "@annota/core";
-import { Bot, Check, ChevronDown, Send, Square } from 'lucide-react';
+import { ANTHROPIC_MODELS, GOOGLE_MODELS, OPENAI_MODELS, purifyNoteHtml, useAiStore } from "@annota/core";
+import { Bot, Check, ChevronDown, MessageSquare, Send, Square, X } from 'lucide-react';
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { ContextSelector } from './context-selector';
 
@@ -45,7 +45,9 @@ export function AiChatInput({
         selectedModelGoogle,
         setSelectedModelOpenAi,
         setSelectedModelAnthropic,
-        setSelectedModelGoogle
+        setSelectedModelGoogle,
+        chatContext,
+        setChatContext
     } = useAiStore();
 
     const currentModelName = activeProvider === 'ollama'
@@ -115,7 +117,26 @@ export function AiChatInput({
 
     return (
         <div className="flex flex-col gap-2 mb-2 pt-2 border-t border-border/40">
-            <div className="w-full bg-background border rounded-[24px] shadow-sm focus-within:shadow-md focus-within:border-primary/30 group p-1.5 flex flex-col gap-1">
+            <div className="w-full bg-background border rounded-[24px] shadow-sm focus-within:shadow-md focus-within:border-primary/30 group p-1.5 flex flex-col gap-1 transition-all duration-300">
+                {chatContext && (
+                    <div className="mx-1 mt-1 px-3 py-2.5 bg-primary/5 border border-primary/10 rounded-2xl relative group/context animate-in fade-in slide-in-from-top-2 duration-300">
+                        <div className="text-[10px] font-bold text-primary/70 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                            <MessageSquare size={10} />
+                            Selected Context
+                        </div>
+                        <p className="text-[11px] text-muted-foreground line-clamp-3 leading-relaxed wrap-break-word italic border-l-2 border-primary/20 pl-2 ml-1 whitespace-pre-wrap">
+                            "{purifyNoteHtml(chatContext.html).trim() || chatContext.text || 'Selected item'}"
+                        </p>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setChatContext(null)}
+                            className="absolute top-1.5 right-1.5 h-6 w-6 rounded-lg opacity-0 group-hover/context:opacity-100 transition-opacity text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                        >
+                            <X size={12} />
+                        </Button>
+                    </div>
+                )}
                 <textarea
                     ref={textareaRef}
                     value={content}

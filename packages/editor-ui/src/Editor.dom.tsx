@@ -336,7 +336,8 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                         empty: selection.empty,
                         range: { from: selection.from, to: selection.to },
                         clientRect: rect,
-                        text: editor.state.doc.textBetween(selection.from, selection.to, ' ')
+                        text: editor.state.doc.textBetween(selection.from, selection.to, ' '),
+                        nodeName: (selection as any).node?.type.name
                     });
                 }
             },

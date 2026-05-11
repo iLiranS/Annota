@@ -41,9 +41,11 @@ export interface AiState {
     selectedModelGoogle: string;
     isLoadingModels: boolean;
     refreshTicket: number;
+    chatContext: { text: string; html: string } | null;
 
     // Actions
     triggerChatRefresh: () => void;
+    setChatContext: (context: { text: string; html: string } | null) => void;
     setOllamaBaseUrl: (url: string) => void;
     checkConnection: () => Promise<boolean>;
     fetchModels: () => Promise<void>;
@@ -76,7 +78,9 @@ export const useAiStore = create<AiState>()(
             selectedModelGoogle: 'gemini-2.5-flash-lite',
             isLoadingModels: false,
             refreshTicket: 0,
+            chatContext: null,
             triggerChatRefresh: () => set((state: AiState) => ({ refreshTicket: state.refreshTicket + 1 })),
+            setChatContext: (context) => set({ chatContext: context }),
 
             // Actions
             setOllamaBaseUrl: (url) => set({ ollamaBaseUrl: url }),

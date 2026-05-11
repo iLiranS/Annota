@@ -59,6 +59,7 @@ export const Mermaid = Node.create({
         return [
             {
                 tag: 'div[data-type="mermaid"]',
+                priority: 100,
             },
         ];
     },

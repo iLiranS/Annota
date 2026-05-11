@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import { TipTapEditorRef } from "@annota/editor-ui";
-import { ContextMode, useAiChat } from "@annota/core";
+import { ContextMode, useAiChat, useAiStore, useSettingsStore } from "@annota/core";
 import { convertMarkdownToAnnotaHTML } from "@annota/editor-core";
 
 interface UseNoteEditorAIProps {
@@ -30,6 +30,13 @@ export function useNoteEditorAI({ editorRef }: UseNoteEditorAIProps) {
             return;
         }
 
+        if (action === 'send-to-chat') {
+            useAiStore.getState().setChatContext({ text: selectedText, html: selectedHtml || selectedText });
+            setAiSelection(prev => ({ ...prev, isVisible: false }));
+            useSettingsStore.getState().updateGeneralSettings({ isAiSidebarOpen: true });
+            return;
+        }
+
         await sendAiMessage(instructions || selectedHtml || selectedText, {
             mode: mode,
             manualContext: selectedHtml || selectedText,
@@ -50,10 +57,10 @@ export function useNoteEditorAI({ editorRef }: UseNoteEditorAIProps) {
         });
     }, [sendAiMessage, editorRef]);
 
-    const handleSelectionChange = useCallback(({ empty, clientRect }: { empty: boolean; clientRect: DOMRect | null }) => {
+    const handleSelectionChange = useCallback(({ empty, clientRect, nodeName }: { empty: boolean; clientRect: DOMRect | null; nodeName?: string }) => {
         if (aiTimeoutRef.current) clearTimeout(aiTimeoutRef.current);
 
-        if (empty || !clientRect) {
+        if (empty || !clientRect || nodeName) {
             setAiSelection(prev => ({ ...prev, isVisible: false }));
             return;
         }

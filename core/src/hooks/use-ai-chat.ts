@@ -333,17 +333,28 @@ export function useAiChat(chatId: string | null) {
                 }
             }
 
+            const { chatContext, setChatContext } = useAiStore.getState();
+            if (chatContext && !isEphemeral) {
+                const extra = `[USER REFERENCED THE FOLLOWING TEXT FOR CONTEXT]\n"${purifyNoteHtml(chatContext.html)}"`;
+                if (liveNoteContext) {
+                    liveNoteContext = extra + '\n\n' + liveNoteContext;
+                } else {
+                    liveNoteContext = extra;
+                }
+                setChatContext(null);
+            }
+
             // Apply sliding window to the updated history
             const history = buildHistoryWindow(updatedHistory, 4000);
 
-            console.groupCollapsed('🤖 AI Request Debug');
+            console.log('\n================ 🤖 AI Request Debug ================');
             console.log('Query:', content);
             console.log('Context Mode:', effectiveMode);
             console.log('History Messages:', history.length);
             console.log('Context Size:', liveNoteContext.length, 'chars');
             console.log('Full History Payload:', history);
             console.log('Full Context Payload:', liveNoteContext);
-            console.groupEnd();
+            console.log('=====================================================\n');
 
             const systemInstructions = AI_ACTION_PROMPTS[effectiveMode as keyof typeof AI_ACTION_PROMPTS] || null;
 

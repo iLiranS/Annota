@@ -13,7 +13,7 @@ import { AIToolbarButton } from './ai-toolbar-button';
 import { ContextMode } from '@annota/core';
 
 interface EditorToolbarProps extends ToolbarRenderProps {
-    onAIAction?: (mode: ContextMode, instructions?: string) => void;
+    onAIAction?: (mode: ContextMode | 'send-to-chat', instructions?: string) => void;
     isAIStreaming?: boolean;
     onStopAI?: () => void;
 }
@@ -296,7 +296,10 @@ export function EditorToolbar({
                     type="ai"
                     isLoading={isAIStreaming}
                     onAction={(action, instructions) => {
-                        onAIAction?.(action as ContextMode, instructions);
+                        onAIAction?.(action as ContextMode | 'send-to-chat', instructions);
+                        if (action === 'send-to-chat') {
+                            closePopup();
+                        }
                     }}
                     onStop={onStopAI}
                     onClose={closePopup}

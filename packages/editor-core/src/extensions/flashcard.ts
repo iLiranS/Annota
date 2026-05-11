@@ -157,15 +157,15 @@ export const FlashcardBlock = Node.create({
 
     parseHTML() {
         return [
-            { tag: 'div[data-fc]' },
-            { tag: 'div[data-type="flashcardBlock"]' },
+            { tag: 'div[data-fc]', priority: 100 },
+            { tag: 'div[data-type="flashcardBlock"]', priority: 100 },
         ];
     },
 
     renderHTML({ HTMLAttributes }) {
         return [
             'div',
-            mergeAttributes(HTMLAttributes, { 'data-fc': '' }),
+            mergeAttributes(HTMLAttributes, { 'data-fc': '', 'data-type': 'flashcardBlock' }),
         ];
     },
 

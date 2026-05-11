@@ -77,6 +77,8 @@ export default function AiChatModal({ visible, onClose, initialContext, initialF
                 } else if (initialContext && selectedContextNotes.length === 0) {
                     setSelectedContextNotes([initialContext]);
                     setShowHistory(false);
+                } else if (useAiStore.getState().chatContext) {
+                    setShowHistory(false);
                 }
             }
         }

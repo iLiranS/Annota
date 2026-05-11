@@ -544,11 +544,11 @@ export const DetailsContent = TiptapDetailsContent.extend({
         return [
             { tag: 'div[data-type="detailsContent"]' },
             { tag: 'div.details-content' },
-            { tag: 'div' }, // Fallback for minimal storage
+            { tag: 'div', priority: 10 }, // Fallback for minimal storage, lower priority to avoid stealing other div-based nodes
         ];
     },
 
     renderHTML({ HTMLAttributes }) {
-        return ['div', mergeAttributes(stripDir(HTMLAttributes)), 0];
+        return ['div', mergeAttributes(stripDir(HTMLAttributes), { class: 'details-content', 'data-type': 'detailsContent' }), 0];
     },
 });

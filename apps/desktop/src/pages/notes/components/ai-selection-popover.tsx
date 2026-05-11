@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { useAiConfiguration } from "@annota/core";
-import { Send, Sparkles } from "lucide-react";
+import { MessageSquare, Send, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 
 interface AISelectionPopoverProps {
@@ -78,30 +78,47 @@ export function AISelectionPopover({ anchorRect, isVisible, isLoading, onAction,
                                 onStop?.();
                             }}
                         >
-                            <div className="h-3 w-3 bg-current rounded-[2px] animate-pulse" />
+                            <div className="h-3 w-3 bg-current rounded-[2px]" />
                         </Button>
-                        <span className="text-sm font-medium text-primary animate-pulse pr-2">AI is working...</span>
+                        <span className="text-sm font-medium text-primary  pr-2">AI is working...</span>
                     </div>
                 ) : !isExpanded ? (
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        className={cn(
-                            "h-9 rounded-full px-4 gap-2 transition-all duration-300",
-                            "hover:bg-accent  group",
-                        )}
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            setIsExpanded(true);
-                        }}
-                    >
-                        <Sparkles className="h-4 w-4 animate-pulse" />
-                        <span className="text-sm font-semibold tracking-tight">Ask AI</span>
-                    </Button>
+                    <div className="flex items-center gap-1">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className={cn(
+                                "h-9 rounded-full px-4 gap-2 transition-all duration-300",
+                                "hover:bg-accent group",
+                            )}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setIsExpanded(true);
+                            }}
+                        >
+                            <Sparkles className="h-4 w-4" />
+                            <span className="text-sm font-semibold tracking-tight">Rewrite</span>
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className={cn(
+                                "h-9 rounded-full px-4 gap-2 transition-all duration-300",
+                                "hover:bg-accent group",
+                            )}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onAction?.('send-to-chat');
+                            }}
+                        >
+                            <MessageSquare className="h-4 w-4" />
+                            <span className="text-sm font-semibold tracking-tight">Chat</span>
+                        </Button>
+                    </div>
                 ) : (
                     <div className="flex flex-col gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
                         <div className="flex items-center gap-2 px-1">
-                            <Sparkles className="h-4 w-4 text-primary animate-pulse" />
+                            <Sparkles className="h-4 w-4 text-primary" />
                             <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">AI Assistant</span>
                         </div>
 

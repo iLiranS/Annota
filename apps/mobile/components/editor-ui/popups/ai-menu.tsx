@@ -13,6 +13,7 @@ interface AIMenuProps {
 export function AIMenu({ onAction, onClose, isLoading, onStop }: AIMenuProps) {
     const { colors } = useTheme();
     const [instructions, setInstructions] = useState('');
+    const [isExpanded, setIsExpanded] = useState(false);
 
     return (
         <Pressable onPress={Keyboard.dismiss} accessible={false}>
@@ -43,29 +44,63 @@ export function AIMenu({ onAction, onClose, isLoading, onStop }: AIMenuProps) {
                     </View>
                 ) : (
                     <>
-                        <View style={[styles.inputContainer, { backgroundColor: colors.border + '20', borderColor: colors.border }]}>
-                            <TextInput
-                                placeholder="(e.g. summarize this)"
-                                placeholderTextColor={colors.text + '60'}
-                                value={instructions}
-                                onChangeText={setInstructions}
-                                style={[styles.input, { color: colors.text }]}
-                                multiline
-                                maxLength={2000}
-                            />
-                            <Pressable
-                                onPress={() => onAction('rewrite', instructions)}
-                                style={({ pressed }) => [
-                                    styles.sendButton,
-                                    {
-                                        backgroundColor: instructions.trim() ? colors.primary : colors.text + '20',
-                                        opacity: pressed ? 0.7 : 1
-                                    }
-                                ]}
-                            >
-                                <MaterialIcons name="arrow-upward" size={20} color={instructions.trim() ? "#FFF" : colors.text + '40'} />
-                            </Pressable>
-                        </View>
+                        {!isExpanded ? (
+                            <View style={styles.buttonRow}>
+                                <Pressable
+                                    onPress={() => setIsExpanded(true)}
+                                    style={({ pressed }) => [
+                                        styles.actionButton,
+                                        {
+                                            backgroundColor: colors.border + '20',
+                                            borderColor: colors.border,
+                                            opacity: pressed ? 0.7 : 1
+                                        }
+                                    ]}
+                                >
+                                    <MaterialIcons name="auto-awesome" size={20} color={colors.text} />
+                                    <Text style={{ color: colors.text, fontWeight: '600', fontSize: 16 }}>Rewrite</Text>
+                                </Pressable>
+                                <Pressable
+                                    onPress={() => onAction('send-to-chat', '')}
+                                    style={({ pressed }) => [
+                                        styles.actionButton,
+                                        {
+                                            backgroundColor: colors.border + '20',
+                                            borderColor: colors.border,
+                                            opacity: pressed ? 0.7 : 1
+                                        }
+                                    ]}
+                                >
+                                    <MaterialIcons name="chat" size={20} color={colors.text} />
+                                    <Text style={{ color: colors.text, fontWeight: '600', fontSize: 16 }}>Chat</Text>
+                                </Pressable>
+                            </View>
+                        ) : (
+                            <View style={[styles.inputContainer, { backgroundColor: colors.border + '20', borderColor: colors.border }]}>
+                                <TextInput
+                                    placeholder="(e.g. summarize this)"
+                                    placeholderTextColor={colors.text + '60'}
+                                    value={instructions}
+                                    onChangeText={setInstructions}
+                                    style={[styles.input, { color: colors.text }]}
+                                    multiline
+                                    maxLength={2000}
+                                    autoFocus
+                                />
+                                <Pressable
+                                    onPress={() => onAction('rewrite', instructions)}
+                                    style={({ pressed }) => [
+                                        styles.sendButton,
+                                        {
+                                            backgroundColor: instructions.trim() ? colors.primary : colors.text + '20',
+                                            opacity: pressed ? 0.7 : 1
+                                        }
+                                    ]}
+                                >
+                                    <MaterialIcons name="arrow-upward" size={20} color={instructions.trim() ? "#FFF" : colors.text + '40'} />
+                                </Pressable>
+                            </View>
+                        )}
                     </>
                 )}
             </View>
@@ -135,6 +170,21 @@ const styles = StyleSheet.create({
         marginTop: 12,
         paddingHorizontal: 16,
         paddingVertical: 8,
+        borderRadius: 16,
+        borderWidth: 1,
+    },
+    buttonRow: {
+        flexDirection: 'row',
+        gap: 12,
+        justifyContent: 'center',
+    },
+    actionButton: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        paddingVertical: 14,
         borderRadius: 16,
         borderWidth: 1,
     },

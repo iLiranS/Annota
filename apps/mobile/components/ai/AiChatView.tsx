@@ -1,4 +1,4 @@
-import { AiMessage } from '@annota/core';
+import { AiMessage, purifyNoteHtml, useAiStore } from '@annota/core';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
 import * as Clipboard from 'expo-clipboard';
@@ -414,6 +414,7 @@ export function AiChatView({
     const router = useRouter();
     const flatListRef = useRef<FlatList>(null);
     const [isContextSelectorVisible, setIsContextSelectorVisible] = useState(false);
+    const { chatContext, setChatContext } = useAiStore();
 
     const initialScrollDone = useRef(false);
 
@@ -562,6 +563,25 @@ export function AiChatView({
                     },
                 ]}
             >
+                {chatContext && (
+                    <View style={[styles.activeContextBar, { borderBottomColor: colors.border, backgroundColor: colors.primary + '10' }]}>
+                        <Ionicons 
+                            name="chatbox-ellipses" 
+                            size={14} 
+                            color={colors.primary} 
+                        />
+                        <Text style={[styles.activeContextTitle, { color: colors.primary, flex: 1, marginHorizontal: 4 }]} numberOfLines={2}>
+                            {purifyNoteHtml(chatContext.html).trim() || chatContext.text || 'Selected item'}
+                        </Text>
+                        <TouchableOpacity 
+                            onPress={() => setChatContext(null)} 
+                            style={{ padding: 4 }}
+                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        >
+                            <Ionicons name="close-circle" size={20} color={colors.primary + '80'} />
+                        </TouchableOpacity>
+                    </View>
+                )}
                 {(initialContext || selectedContextNotes.length > 0) && (
                     <TouchableOpacity 
                         style={[styles.activeContextBar, { borderBottomColor: colors.border }]}
