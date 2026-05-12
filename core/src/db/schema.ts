@@ -129,6 +129,8 @@ export const aiMessages = sqliteTable('ai_messages', {
     chatId: text('chat_id').notNull(), // References aiChats.id
     role: text('role').$type<'system' | 'user' | 'assistant'>().notNull(),
     content: text('content').notNull(),
+    reasoningContent: text('reasoning_content'),
+    toolCalls: text('tool_calls', { mode: 'json' }).$type<string[]>(),
     model: text('model'), // The model used for this message
     createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 });

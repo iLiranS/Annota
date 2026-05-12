@@ -323,7 +323,7 @@ export function createDesktopAdapters(): PlatformAdapters {
     },
     http: {
       fetch: fetch as any,
-      streamRequest: async (url: string, options: any, onChunk: (chunk: string) => void) => {
+      streamRequest: async (url: string, options: any, onChunk: (chunk: unknown) => void) => {
         const response = await fetch(url, options);
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
@@ -350,10 +350,7 @@ export function createDesktopAdapters(): PlatformAdapters {
             if (cleanLine.startsWith('data: ')) {
               try {
                 const json = JSON.parse(cleanLine.slice(6));
-                // This is a generic SSE parser, providers will handle specific formats if needed
-                // But most AI APIs follow this OpenAI-like format for the delta
-                const content = json.choices?.[0]?.delta?.content || json.delta?.text || json.content;
-                if (content) onChunk(content);
+                onChunk(json);
               } catch (e) {
                 // Ignore parse errors for non-JSON SSE lines
               }

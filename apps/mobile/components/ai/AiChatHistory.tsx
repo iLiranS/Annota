@@ -90,10 +90,10 @@ export function AiChatHistory({ chats, onSelectChat, onDeleteChat, onTogglePin, 
                 <View style={styles.leftAction}>
                     {chats.length > 0 && (
                         <TouchableOpacity 
-                            style={styles.clearIconButton}
+                            style={[styles.clearIconButton, { backgroundColor: '#EF444415' }]}
                             onPress={() => onDeleteChat('ALL')}
                         >
-                            <Ionicons name="trash-outline" size={22} color={colors.text + '40'} />
+                            <Ionicons name="trash-outline" size={22} color="#EF4444" />
                         </TouchableOpacity>
                     )}
                 </View>

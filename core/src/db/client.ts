@@ -132,6 +132,8 @@ export const CREATE_TABLES_SQL = `
     chat_id TEXT NOT NULL,
     role TEXT NOT NULL,
     content TEXT NOT NULL,
+    reasoning_content TEXT,
+    tool_calls TEXT,
     model TEXT,
     created_at INTEGER NOT NULL
   );
@@ -197,6 +199,13 @@ export async function initDatabase(
       {
         name: '004_add_is_pinned_to_ai_chats',
         sql: 'ALTER TABLE ai_chats ADD COLUMN is_pinned INTEGER NOT NULL DEFAULT 0;'
+      },
+      {
+        name: '005_add_ai_message_process_fields',
+        sql: [
+          'ALTER TABLE ai_messages ADD COLUMN reasoning_content TEXT;',
+          'ALTER TABLE ai_messages ADD COLUMN tool_calls TEXT;'
+        ]
       }
     ];
 

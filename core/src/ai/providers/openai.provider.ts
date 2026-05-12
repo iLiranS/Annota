@@ -2,8 +2,16 @@ import { AiMessage, useAiStore } from '@annota/core';
 import { getPlatformAdapters } from '../../adapters';
 import { DEFAULT_SYSTEM_PROMPT } from '../constants';
 import { getApiKey } from '../security';
-import { AiProviderAdapter } from '../types';
+import { normalizeStreamChunk } from '../streaming';
+import { AiProviderAdapter, StreamChunk } from '../types';
 
+/**
+ * Models that support the `reasoning` parameter in the Responses API.
+ * Only o-series reasoning models accept it; GPT-series do not.
+ */
+function isReasoningModel(model: string): boolean {
+    return /^o\d/i.test(model);
+}
 
 export class OpenAiProvider implements AiProviderAdapter {
     id = 'openai' as const;
@@ -12,10 +20,10 @@ export class OpenAiProvider implements AiProviderAdapter {
         history: AiMessage[],
         liveNoteContent: string | null,
         systemInstructions: string | null,
-        onChunk: (text: string) => void,
+        onChunk: (chunk: StreamChunk) => void,
         signal?: AbortSignal
     ): Promise<void> {
-        const { selectedModelOpenAi } = useAiStore.getState();
+        const { selectedModelOpenAi, webSearchEnabled, reasoningEnabled } = useAiStore.getState();
         const openAiKey = await getApiKey('openai');
         if (!openAiKey) throw new Error('OpenAI API Key is missing. Please add it in settings.');
 
@@ -24,26 +32,41 @@ export class OpenAiProvider implements AiProviderAdapter {
             ? `${baseSystemPrompt}\n\nUse the following live note context to answer accurately:\n${liveNoteContent}`
             : baseSystemPrompt;
 
-        const messages = [
-            { role: 'system', content: liveSystemContent },
-            ...history
-                .filter(m => m.role !== 'system')
-                .map(m => ({ role: m.role, content: m.content }))
-        ];
+        const input = history
+            .filter(m => m.role !== 'system')
+            .map(m => ({
+                role: m.role === 'assistant' ? 'assistant' : 'user',
+                content: m.content
+            }));
 
-        await getPlatformAdapters().http.streamRequest('https://api.openai.com/v1/chat/completions', {
+        const body: Record<string, unknown> = {
+            model: selectedModelOpenAi,
+            instructions: liveSystemContent,
+            input,
+            stream: true,
+        };
+
+        // Only o-series models support the reasoning parameter
+        if (reasoningEnabled && isReasoningModel(selectedModelOpenAi)) {
+            body.reasoning = { effort: 'low', summary: 'auto' };
+        }
+
+        // Conditionally add web search tool (costs extra – off by default)
+        if (webSearchEnabled) {
+            body.tools = [{ type: 'web_search_preview' }];
+        }
+
+        await getPlatformAdapters().http.streamRequest('https://api.openai.com/v1/responses', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${openAiKey}`
             },
-            body: JSON.stringify({
-                model: selectedModelOpenAi,
-                messages,
-                stream: true,
-            }),
+            body: JSON.stringify(body),
             signal
-        }, onChunk);
+        }, (rawChunk) => {
+            normalizeStreamChunk(rawChunk).forEach(onChunk);
+        });
     }
 
     async generateTitle(firstMessage: string): Promise<string> {

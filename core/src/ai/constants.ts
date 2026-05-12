@@ -13,8 +13,7 @@ CRITICAL FORMATTING RULES:
     <div class="flashcard-card-back">Concise Answer.</div>
   </div>
 </div>
-PURE TEXT ONLY: DO NOT use Markdown, code blocks, or LaTeX ($) inside flashcards.
-Output ONLY the flashcard block(s), no intro or conversational filler.`;
+PURE TEXT ONLY: DO NOT use Markdown, code blocks, or LaTeX ($) inside flashcards.`;
 
 export const ANTHROPIC_MODELS = [
   { label: 'Claude Opus 4.7 (Most Capable)', value: 'claude-opus-4-7' },

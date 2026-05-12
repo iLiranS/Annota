@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { useAiConfiguration } from "@annota/core";
 import { MessageSquare, Send, Sparkles } from "lucide-react";
@@ -119,28 +119,34 @@ export function AISelectionPopover({ anchorRect, isVisible, isLoading, onAction,
                     <div className="flex flex-col gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
                         <div className="flex items-center gap-2 px-1">
                             <Sparkles className="h-4 w-4 text-primary" />
-                            <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">AI Assistant</span>
+                            <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">AI REWRITE</span>
                         </div>
 
                         <div className="relative group/input">
-                            <Input
+                            <Textarea
                                 placeholder="(e.g. rewrite as table)..."
                                 value={instructions}
-                                onChange={(e) => setInstructions(e.target.value)}
+                                onChange={(e) => {
+                                    setInstructions(e.target.value);
+                                    e.target.style.height = '36px';
+                                    e.target.style.height = `${Math.min(e.target.scrollHeight, 80)}px`;
+                                }}
                                 onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
+                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                        e.preventDefault();
                                         onAction?.('rewrite', instructions);
                                     }
                                 }}
-                                className="h-9 pr-9 text-xs focus-visible:ring-primary/30 rounded-xl"
+                                className="min-h-[36px] h-9 py-2 pr-9 text-xs focus-visible:ring-primary/30 rounded-xl resize-none overflow-y-auto"
                                 autoFocus
                                 maxLength={2000}
+                                rows={1}
                             />
                             <Button
                                 size="icon"
                                 variant="ghost"
                                 className={cn(
-                                    "absolute right-0 top-0 h-9 w-9 hover:bg-transparent transition-all duration-300",
+                                    "absolute right-0 bottom-0 h-9 w-9 hover:bg-transparent transition-all duration-300",
                                     instructions.trim() ? "text-primary opacity-100 scale-100" : "text-muted-foreground opacity-50 scale-90"
                                 )}
                                 onClick={() => onAction?.('rewrite', instructions)}

@@ -1,5 +1,11 @@
 import { AiMessage } from '../db/schema';
 
+export interface StreamChunk {
+    text?: string;
+    reasoning?: string;
+    toolCall?: string;
+}
+
 export interface AiProviderAdapter {
     id: 'ollama' | 'openai' | 'anthropic' | 'google';
 
@@ -8,7 +14,7 @@ export interface AiProviderAdapter {
         history: AiMessage[],
         liveNoteContent: string | null,
         systemInstructions: string | null,
-        onChunk: (text: string) => void,
+        onChunk: (chunk: StreamChunk) => void,
         signal?: AbortSignal
     ) => Promise<void>;
 

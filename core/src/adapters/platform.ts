@@ -55,7 +55,7 @@ export interface PlatformAdapters {
 
     http: {
         fetch: typeof fetch;
-        streamRequest: (url: string, options: any, onChunk: (chunk: string) => void) => Promise<void>;
+        streamRequest: (url: string, options: any, onChunk: (chunk: unknown) => void) => Promise<void>;
     };
     events: {
         emit: (event: string, payload?: any) => Promise<void>;

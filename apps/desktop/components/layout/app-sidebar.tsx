@@ -75,21 +75,33 @@ export function AppSidebar() {
     }, [location.search]);
 
     const currentFolderId = useMemo(() => {
-        // Optimistic update for tab switching
+        // 1. Priority: Optimistic update for tab switching/navigation
         if (pendingFolderId !== null) return pendingFolderId === 'root' ? undefined : (pendingFolderId as string);
 
+        // 2. Tags view takes precedence (no folder)
         if (tagId) return undefined;
-        if (searchFolderId && !['root', 'null', 'undefined'].includes(searchFolderId)) return searchFolderId;
+
+        // 3. Search folder ID (query param) - handles /notes?folderId=...
+        // We prioritize this over path params as it's the primary way we navigate folders in the sidebar
+        if (searchFolderId !== null) {
+            if (['root', 'null', 'undefined', ''].includes(searchFolderId)) return undefined;
+            return searchFolderId;
+        }
+
+        // 4. Route folder ID (path param) - handles /notes/:folderId/:noteId
         if (routeFolderId && !['root', 'null', 'undefined'].includes(routeFolderId)) return routeFolderId;
+
         return undefined;
     }, [routeFolderId, searchFolderId, tagId, pendingFolderId]);
 
     // Clear pending ID once URL catches up
     useEffect(() => {
-        const normalizedActual = searchFolderId || routeFolderId || 'root';
-        const normalizedPending = pendingFolderId === null ? null : (pendingFolderId || 'root');
+        if (pendingFolderId === null) return;
 
-        if (normalizedPending && normalizedActual === normalizedPending) {
+        const normalizedActual = searchFolderId || routeFolderId || 'root';
+        const normalizedPending = pendingFolderId || 'root';
+
+        if (normalizedActual === normalizedPending) {
             setPendingFolderId(null);
         }
     }, [searchFolderId, routeFolderId, pendingFolderId]);
@@ -341,6 +353,7 @@ export function AppSidebar() {
                             onDelete={setFolderToDelete}
                             onCreateSubFolder={handleCreateSubFolder}
                             onCreateNote={(id) => {
+                                setPendingFolderId(id || 'root');
                                 createNote(id);
                                 setActiveTab('notes');
                             }}
@@ -396,6 +409,7 @@ export function AppSidebar() {
                             setIsTagsOpen={() => { }}
                             activeTagId={tagId}
                             onTagClick={(id) => {
+                                setPendingFolderId(null);
                                 navigateWithHistory(`/notes?tagId=${id}`);
                                 setActiveTab('notes');
                             }}
@@ -409,6 +423,7 @@ export function AppSidebar() {
                                 navigateWithHistory(`/notes/${note.folderId || "root"}/${note.id}`);
                             }}
                             onFolderClick={(folder) => {
+                                setPendingFolderId(folder.id || 'root');
                                 navigateWithHistory(`/notes?folderId=${folder.id}`);
                                 setActiveTab('notes');
                             }}
@@ -417,6 +432,7 @@ export function AppSidebar() {
                             onDeleteFolder={setFolderToDelete}
                             onCreateSubFolder={handleCreateSubFolder}
                             onCreateNote={(id) => {
+                                setPendingFolderId(id || 'root');
                                 createNote(id);
                                 setActiveTab('notes');
                             }}

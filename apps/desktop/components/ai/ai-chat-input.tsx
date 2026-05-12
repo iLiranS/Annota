@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from '@/lib/utils';
 import { ANTHROPIC_MODELS, GOOGLE_MODELS, OPENAI_MODELS, purifyNoteHtml, useAiStore } from "@annota/core";
-import { Bot, Check, ChevronDown, MessageSquare, Send, Square, X } from 'lucide-react';
+import { Bot, BrainCircuit, Check, ChevronDown, Globe, MessageSquare, Send, Settings2, Square, X } from 'lucide-react';
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { ContextSelector } from './context-selector';
 
@@ -47,8 +47,15 @@ export function AiChatInput({
         setSelectedModelAnthropic,
         setSelectedModelGoogle,
         chatContext,
-        setChatContext
+        setChatContext,
+        webSearchEnabled,
+        setWebSearchEnabled,
+        reasoningEnabled,
+        setReasoningEnabled,
     } = useAiStore();
+
+    // Ollama is the only provider without web search support
+    const supportsWebSearch = activeProvider === 'openai' || activeProvider === 'google' || activeProvider === 'anthropic';
 
     const currentModelName = activeProvider === 'ollama'
         ? selectedModel
@@ -149,8 +156,8 @@ export function AiChatInput({
                     className="w-full bg-transparent border-none outline-none resize-none px-3 pt-2 pb-1 text-[14px] leading-relaxed max-h-[160px] min-h-[44px] overflow-y-auto custom-scrollbar disabled:opacity-50"
                 />
 
-                <div className="flex items-center justify-between px-1.5 pb-0.5">
-                    <div className="flex items-center gap-1">
+                <div className="flex items-center justify-between px-1.5 pb-0.5 gap-2">
+                    <div className="flex items-center gap-1 min-w-0 flex-1">
                         <ContextSelector
                             notes={notes}
                             folders={folders}
@@ -165,13 +172,65 @@ export function AiChatInput({
                                 <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="h-7 px-2 rounded-full gap-1.5 text-[10px] font-bold text-muted-foreground hover:text-foreground bg-muted/30 hover:bg-muted/50 transition-all border border-transparent hover:border-border/50"
+                                    className={cn(
+                                        "h-7 px-2 rounded-full gap-1 text-[10px] font-bold transition-all border shrink-0",
+                                        (webSearchEnabled || reasoningEnabled)
+                                            ? "bg-primary/10 text-primary border-primary/25 hover:bg-primary/20"
+                                            : "text-muted-foreground hover:text-foreground bg-muted/30 hover:bg-muted/50 border-transparent hover:border-border/50",
+                                    )}
                                 >
-                                    <Bot size={12} className={cn("transition-colors", currentModelName ? "text-primary" : "text-muted-foreground")} />
-                                    <span className="max-w-[120px] truncate">
+                                    <Settings2
+                                        size={12}
+                                        className={cn(
+                                            "transition-colors",
+                                            (webSearchEnabled || reasoningEnabled) ? "text-primary" : "text-muted-foreground"
+                                        )}
+                                    />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" className="w-48 rounded-xl border-border/50 shadow-xl bg-popover/95 backdrop-blur-md p-1.5">
+                                <DropdownMenuItem
+                                    className="text-xs rounded-lg cursor-pointer flex items-center justify-between"
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        if (supportsWebSearch) setWebSearchEnabled(!webSearchEnabled);
+                                    }}
+                                    disabled={!supportsWebSearch}
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <Globe size={14} className={webSearchEnabled ? "text-primary" : "text-muted-foreground/70"} />
+                                        <span className={cn(webSearchEnabled && "font-medium")}>Web Search</span>
+                                    </div>
+                                    {webSearchEnabled && <Check size={12} className="text-primary" />}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                    className="text-xs rounded-lg cursor-pointer flex items-center justify-between"
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        setReasoningEnabled(!reasoningEnabled);
+                                    }}
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <BrainCircuit size={14} className={reasoningEnabled ? "text-primary" : "text-muted-foreground/70"} />
+                                        <span className={cn(reasoningEnabled && "font-medium")}>Reasoning Mode</span>
+                                    </div>
+                                    {reasoningEnabled && <Check size={12} className="text-primary" />}
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 px-2 rounded-full gap-1.5 text-[10px] font-bold text-muted-foreground hover:text-foreground bg-muted/30 hover:bg-muted/50 transition-all border border-transparent hover:border-border/50 min-w-0 shrink flex"
+                                >
+                                    <Bot size={12} className={cn("transition-colors shrink-0", currentModelName ? "text-primary" : "text-muted-foreground")} />
+                                    <span className="truncate min-w-0">
                                         {currentModelName ? (getProviderModels().find(m => m.value === currentModelName)?.label || currentModelName) : "Select Model"}
                                     </span>
-                                    <ChevronDown size={10} className="opacity-50" />
+                                    <ChevronDown size={10} className="opacity-50 shrink-0" />
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="start" className="w-max rounded-xl border-border/50 shadow-xl bg-popover/95 backdrop-blur-md">
@@ -198,7 +257,7 @@ export function AiChatInput({
                         </DropdownMenu>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 shrink-0">
                         {isNearLimit && (
                             <span className={cn(
                                 "text-[10px] font-medium",

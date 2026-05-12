@@ -15,6 +15,7 @@ export * from '../constants/config';
 export * from '../constants/icons';
 export * from './hooks/useChangelog';
 export * from './ai/types';
+export * from './ai/streaming';
 export * from './ai/providers';
 export * from './ai/constants';
 export * from './ai/security';

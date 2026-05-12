@@ -1,19 +1,89 @@
 import { AiMessage } from '../db/schema';
 import { stripHtml } from '../utils/html';
 
+function estimateTokens(value: string): number {
+    return Math.ceil(value.length / 2);
+}
+
+function compactWhitespace(value: string): string {
+    return value.replace(/\s+/g, ' ').trim();
+}
+
+function truncateAtWord(value: string, maxChars: number): string {
+    const clean = compactWhitespace(value);
+    if (clean.length <= maxChars) return clean;
+
+    const sliced = clean.slice(0, maxChars);
+    const lastSpace = sliced.lastIndexOf(' ');
+    const trimmed = sliced.slice(0, lastSpace > maxChars * 0.7 ? lastSpace : maxChars).trim();
+    return `${trimmed}...`;
+}
+
+function compactReasoningContext(reasoningContent: string, maxChars = 420): string {
+    const lines = reasoningContent
+        .split('\n')
+        .map(line => line.replace(/^[-*\d.)\s]+/, '').trim())
+        .filter(Boolean)
+        .filter(line => !/^thinking process:?$/i.test(line));
+
+    const signalLines = lines.filter(line =>
+        /\b(user|request|scope|context|constraint|decided|selected|used|answer|result|topic|next|summary|note)\b/i.test(line)
+    );
+
+    const source = signalLines.length > 0 ? signalLines : lines;
+    return truncateAtWord(source.slice(0, 4).join(' '), maxChars);
+}
+
+function buildProviderHistoryMessage(message: AiMessage): AiMessage {
+    if (message.role !== 'assistant') {
+        return {
+            ...message,
+            reasoningContent: null,
+            toolCalls: null,
+        };
+    }
+
+    const processParts: string[] = [];
+    const toolCalls = Array.isArray(message.toolCalls) ? message.toolCalls : [];
+
+    if (toolCalls.length) {
+        processParts.push(`Tools used: ${toolCalls.join(', ')}`);
+    }
+
+    if (message.reasoningContent?.trim()) {
+        const compactReasoning = compactReasoningContext(message.reasoningContent);
+        if (compactReasoning) {
+            processParts.push(`Process context: ${compactReasoning}`);
+        }
+    }
+
+    return {
+        ...message,
+        content: processParts.length > 0
+            ? `${message.content}\n\n[Previous assistant context: ${processParts.join('; ')}]`
+            : message.content,
+        reasoningContent: null,
+        toolCalls: null,
+    };
+}
+
 /**
  * Builds a sliding window for chat history based on a token budget.
  * Always keeps system markers (context shifts) regardless of the window.
+ * Returns provider-ready messages: final answers plus compact process context,
+ * without carrying raw reasoning/tool fields into the provider payload.
  */
 export function buildHistoryWindow(messages: AiMessage[], tokenBudget = 3000): AiMessage[] {
-    const conversational = messages.filter(m => m.role !== 'system');
+    const conversational = messages
+        .filter(m => m.role !== 'system')
+        .map(buildProviderHistoryMessage);
 
     // Walk backwards, accumulate until budget exhausted
     const window: AiMessage[] = [];
     let tokens = 0;
 
     for (let i = conversational.length - 1; i >= 0; i--) {
-        const estimated = Math.ceil(conversational[i].content.length / 2); // safer estimate for multilingual support
+        const estimated = estimateTokens(conversational[i].content); // safer estimate for multilingual support
         if (tokens + estimated > tokenBudget) break;
         window.unshift(conversational[i]);
         tokens += estimated;
@@ -21,9 +91,9 @@ export function buildHistoryWindow(messages: AiMessage[], tokenBudget = 3000): A
 
     // Get the earliest message in our window, include system markers from that point on
     const windowStart = window[0]?.createdAt ?? new Date(0);
-    const relevantSystem = messages.filter(
-        m => m.role === 'system' && m.createdAt >= windowStart
-    );
+    const relevantSystem = messages
+        .filter(m => m.role === 'system' && m.createdAt >= windowStart)
+        .map(buildProviderHistoryMessage);
 
     // Merge and re-sort by timestamp to preserve true ordering
     return [...relevantSystem, ...window].sort(

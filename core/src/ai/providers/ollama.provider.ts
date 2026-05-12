@@ -1,7 +1,7 @@
 import { AiMessage, useAiStore } from '@annota/core';
 import { getPlatformAdapters } from '../../adapters';
 import { DEFAULT_SYSTEM_PROMPT } from '../constants';
-import { AiProviderAdapter } from '../types';
+import { AiProviderAdapter, StreamChunk } from '../types';
 
 export class OllamaProvider implements AiProviderAdapter {
     id = 'ollama' as const;
@@ -10,7 +10,7 @@ export class OllamaProvider implements AiProviderAdapter {
         history: AiMessage[],
         liveNoteContent: string | null,
         systemInstructions: string | null,
-        onChunk: (text: string) => void,
+        onChunk: (chunk: StreamChunk) => void,
         signal?: AbortSignal
     ): Promise<void> {
         const { ollamaBaseUrl, selectedModel } = useAiStore.getState();
@@ -35,7 +35,7 @@ export class OllamaProvider implements AiProviderAdapter {
                 model: selectedModel,
                 messages,
                 stream: true,
-                think: false
+                think: true
             }),
             signal
         });
@@ -62,9 +62,8 @@ export class OllamaProvider implements AiProviderAdapter {
                 try {
                     const json = JSON.parse(line);
                     if (json.done) break;
-                    if (json.message?.content) {
-                        onChunk(json.message.content);
-                    }
+                    if (json.message?.thinking) onChunk({ reasoning: json.message.thinking });
+                    if (json.message?.content) onChunk({ text: json.message.content });
                 } catch (e) {
                     console.error('Error parsing NDJSON chunk', e);
                 }

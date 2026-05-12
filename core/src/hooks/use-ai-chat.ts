@@ -1,5 +1,6 @@
 import { asc, eq } from 'drizzle-orm';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { StreamChunk } from '../ai/types';
 import { buildBulkContext, buildHistoryWindow, prepareNoteContext, purifyNoteHtml } from '../ai/utils';
 import {
     aiChats,
@@ -15,6 +16,67 @@ import {
 } from '../index';
 
 export type ContextMode = 'auto' | 'summary' | 'full' | 'rewrite' | 'flashcard';
+
+type ThinkTagState = {
+    isThinking: boolean;
+    pending: string;
+};
+
+const THINK_TAGS = ['<think>', '</think>'];
+
+function splitThinkTaggedText(value: string, state: ThinkTagState, flush = false): { text: string; reasoning: string } {
+    let input = state.pending + value;
+    state.pending = '';
+
+    if (!flush) {
+        const lowerInput = input.toLowerCase();
+        let holdLength = 0;
+
+        for (const tag of THINK_TAGS) {
+            for (let length = 1; length < tag.length; length += 1) {
+                if (lowerInput.endsWith(tag.slice(0, length))) {
+                    holdLength = Math.max(holdLength, length);
+                }
+            }
+        }
+
+        if (holdLength > 0) {
+            state.pending = input.slice(-holdLength);
+            input = input.slice(0, -holdLength);
+        }
+    }
+
+    let text = '';
+    let reasoning = '';
+    let index = 0;
+    const lowerInput = input.toLowerCase();
+
+    while (index < input.length) {
+        if (state.isThinking) {
+            const closeIndex = lowerInput.indexOf('</think>', index);
+            if (closeIndex === -1) {
+                reasoning += input.slice(index);
+                break;
+            }
+
+            reasoning += input.slice(index, closeIndex);
+            index = closeIndex + '</think>'.length;
+            state.isThinking = false;
+        } else {
+            const openIndex = lowerInput.indexOf('<think>', index);
+            if (openIndex === -1) {
+                text += input.slice(index);
+                break;
+            }
+
+            text += input.slice(index, openIndex);
+            index = openIndex + '<think>'.length;
+            state.isThinking = true;
+        }
+    }
+
+    return { text, reasoning };
+}
 
 export const AI_ACTION_PROMPTS = {
     rewrite: `You are an expert editor and technical writer. Rewrite the following content to be clear, concise, and professional.
@@ -56,15 +118,21 @@ export function useAiChat(chatId: string | null) {
 
     // Throttling stream updates to avoid React render lag
     const streamingContentRef = useRef('');
+    const streamingReasoningRef = useRef('');
+    const activeToolsRef = useRef<string[]>([]);
+    const thinkTagStateRef = useRef<ThinkTagState>({ isThinking: false, pending: '' });
     const assistantMessageIdRef = useRef<string | null>(null);
 
     // Initial load
     useEffect(() => {
+        setError(null);
         if (!chatId) {
             setMessages([]);
-            setError(null);
             assistantMessageIdRef.current = null;
             streamingContentRef.current = '';
+            streamingReasoningRef.current = '';
+            activeToolsRef.current = [];
+            thinkTagStateRef.current = { isThinking: false, pending: '' };
             return;
         }
 
@@ -122,17 +190,30 @@ export function useAiChat(chatId: string | null) {
         messagesRef.current = messages;
     }, [messages]);
 
-    const updateStreamingMessage = useCallback((content: string) => {
+    const updateStreamingMessage = useCallback(() => {
         const assistantId = assistantMessageIdRef.current;
         if (!assistantId) return;
 
         setMessages(prev => {
             const msgIndex = prev.findIndex(m => m.id === assistantId);
             if (msgIndex === -1) return prev;
-            if (prev[msgIndex].content === content) return prev;
+            const content = streamingContentRef.current;
+            const reasoningContent = streamingReasoningRef.current || null;
+            const toolCalls = activeToolsRef.current.length > 0 ? [...activeToolsRef.current] : null;
+            const current = prev[msgIndex];
+            if (
+                current.content === content &&
+                current.reasoningContent === reasoningContent &&
+                JSON.stringify(current.toolCalls ?? null) === JSON.stringify(toolCalls)
+            ) return prev;
 
             const newMessages = [...prev];
-            newMessages[msgIndex] = { ...newMessages[msgIndex], content };
+            newMessages[msgIndex] = {
+                ...current,
+                content,
+                reasoningContent,
+                toolCalls,
+            };
             return newMessages;
         });
     }, []);
@@ -225,6 +306,8 @@ export function useAiChat(chatId: string | null) {
                 chatId: effectiveChatId,
                 role: 'user',
                 content,
+                reasoningContent: null,
+                toolCalls: null,
                 model: null,
                 createdAt: timestamp,
             };
@@ -256,6 +339,9 @@ export function useAiChat(chatId: string | null) {
         // 5. Initialize assistant message 
         const assistantId = generateId();
         streamingContentRef.current = '';
+        streamingReasoningRef.current = '';
+        activeToolsRef.current = [];
+        thinkTagStateRef.current = { isThinking: false, pending: '' };
         lastUpdateTimeRef.current = 0;
         assistantMessageIdRef.current = assistantId;
 
@@ -264,6 +350,8 @@ export function useAiChat(chatId: string | null) {
             chatId: effectiveChatId,
             role: 'assistant',
             content: '',
+            reasoningContent: null,
+            toolCalls: null,
             model: null, // Model will be updated by adapter or on save
             createdAt: new Date(),
         };
@@ -345,29 +433,58 @@ export function useAiChat(chatId: string | null) {
             }
 
             // Apply sliding window to the updated history
-            const history = buildHistoryWindow(updatedHistory, 4000);
+            const providerHistory = buildHistoryWindow(updatedHistory, 4000);
+            const compactHistoryContext = providerHistory.flatMap((message, index) => {
+                const match = message.content.match(/\n\n\[(Previous assistant context: [\s\S]+)\]$/);
+                return match ? [{ index, role: message.role, context: match[1] }] : [];
+            });
 
             console.log('\n================ 🤖 AI Request Debug ================');
             console.log('Query:', content);
             console.log('Context Mode:', effectiveMode);
-            console.log('History Messages:', history.length);
+            console.log('Provider History Messages:', providerHistory.length);
             console.log('Context Size:', liveNoteContext.length, 'chars');
-            console.log('Full History Payload:', history);
+            console.log('Provider History Payload:', providerHistory.map(({ role, content }) => ({ role, content })));
+            if (compactHistoryContext.length > 0) {
+                console.log('Compact History Context:', compactHistoryContext);
+            }
             console.log('Full Context Payload:', liveNoteContext);
             console.log('=====================================================\n');
 
             const systemInstructions = AI_ACTION_PROMPTS[effectiveMode as keyof typeof AI_ACTION_PROMPTS] || null;
 
             await adapter.sendMessage(
-                history,
+                providerHistory,
                 liveNoteContext,
                 systemInstructions,
-                (chunk: string) => {
-                    streamingContentRef.current += chunk;
+                (chunk: StreamChunk) => {
+                    let updated = false;
+
+                    if (chunk.reasoning) {
+                        streamingReasoningRef.current += chunk.reasoning;
+                        updated = true;
+                    }
+
+                    if (chunk.text) {
+                        const parts = splitThinkTaggedText(chunk.text, thinkTagStateRef.current);
+                        if (parts.text) {
+                            streamingContentRef.current += parts.text;
+                            updated = true;
+                        }
+                        if (parts.reasoning) {
+                            streamingReasoningRef.current += parts.reasoning;
+                            updated = true;
+                        }
+                    }
+
+                    if (chunk.toolCall && !activeToolsRef.current.includes(chunk.toolCall)) {
+                        activeToolsRef.current.push(chunk.toolCall);
+                        updated = true;
+                    }
 
                     const now = Date.now();
-                    if (now - lastUpdateTimeRef.current > 64) {
-                        updateStreamingMessage(streamingContentRef.current);
+                    if (updated && now - lastUpdateTimeRef.current > 64) {
+                        updateStreamingMessage();
                         lastUpdateTimeRef.current = now;
                     }
                 },
@@ -375,13 +492,18 @@ export function useAiChat(chatId: string | null) {
             );
 
             // Final UI update to ensure the last chunk is rendered
-            updateStreamingMessage(streamingContentRef.current);
+            const pendingThinkParts = splitThinkTaggedText('', thinkTagStateRef.current, true);
+            if (pendingThinkParts.text) streamingContentRef.current += pendingThinkParts.text;
+            if (pendingThinkParts.reasoning) streamingReasoningRef.current += pendingThinkParts.reasoning;
+            updateStreamingMessage();
             if (onFinish) onFinish(streamingContentRef.current);
 
             // Save assistant message to DB
             const finalAssistantMsg: AiMessage = {
                 ...placeholderAssistant,
                 content: streamingContentRef.current,
+                reasoningContent: streamingReasoningRef.current || null,
+                toolCalls: activeToolsRef.current.length > 0 ? [...activeToolsRef.current] : null,
                 model: adapter.id, // Or get specific model name from store if needed
                 createdAt: new Date(),
             };

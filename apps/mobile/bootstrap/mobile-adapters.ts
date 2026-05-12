@@ -224,7 +224,7 @@ export function createMobileAdapters(): PlatformAdapters {
         },
         http: {
             fetch: fetch as any,
-            streamRequest: async (url: string, options: any, onChunk: (chunk: string) => void) => {
+            streamRequest: async (url: string, options: any, onChunk: (chunk: unknown) => void) => {
                 return new Promise<void>((resolve, reject) => {
                     const es = new EventSource(url, {
                         method: options.method || 'POST',
@@ -234,30 +234,45 @@ export function createMobileAdapters(): PlatformAdapters {
 
                     let hasError = false;
 
+                    // Disable auto-reconnect for this stream. EventSource natively auto-reconnects
+                    // when the connection closes, which causes infinite looping for streaming APIs
+                    // that don't send a `[DONE]` marker or when the server terminates the stream.
+                    (es as any)._pollAgain = () => {
+                        es.close();
+                        if (!hasError) {
+                            resolve();
+                        }
+                    };
+
                     es.addEventListener('open', () => {
                         console.log('[SSE] Connection opened');
                     });
 
-                    es.addEventListener('message', (event) => {
-                        if (event.data === '[DONE]') {
-                            es.close();
-                            resolve();
-                            return;
-                        }
+                    // Patch dispatch to capture all custom SSE events (like OpenAI's `event: response.output_text.delta`)
+                    // which bypass standard 'message' listeners in react-native-sse.
+                    const originalDispatch = (es as any).dispatch.bind(es);
+                    (es as any).dispatch = (type: string, data: any) => {
+                        originalDispatch(type, data);
 
-                        if (!event.data) return;
+                        if (type !== 'open' && type !== 'error' && type !== 'close' && type !== 'timeout') {
+                            if (data && typeof data.data === 'string') {
+                                if (data.data.trim() === '[DONE]') {
+                                    es.close();
+                                    resolve();
+                                    return;
+                                }
 
-                        try {
-                            const json = JSON.parse(event.data);
-                            const content = json.choices?.[0]?.delta?.content || json.delta?.text || json.content;
-                            if (content) {
-                                console.log('[SSE] Received chunk:', content.length, 'chars');
-                                onChunk(content);
+                                if (!data.data) return;
+
+                                try {
+                                    const json = JSON.parse(data.data);
+                                    onChunk(json);
+                                } catch (e) {
+                                    // Non-JSON or malformed data, ignore
+                                }
                             }
-                        } catch (e) {
-                            // Non-JSON or malformed data, ignore
                         }
-                    });
+                    };
 
                     es.addEventListener('error', (event: any) => {
                         console.error('[SSE] Error:', event);

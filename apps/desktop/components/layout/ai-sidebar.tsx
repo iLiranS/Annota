@@ -92,6 +92,10 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
     const scrollEndRef = useRef<HTMLDivElement>(null);
 
     const { messages, sendMessage: originalSendMessage, isStreaming, error, stop } = useAiChat(activeChatId);
+    const visibleMessages = messages.filter(m => m.role !== 'system');
+    const streamingMessageId = isStreaming
+        ? [...visibleMessages].reverse().find(m => m.role === 'assistant')?.id
+        : null;
 
     const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
     const lastScrollTopRef = useRef(0);
@@ -536,11 +540,11 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
                             onScroll={handleChatScroll}
                         >
                             <div className="flex flex-col gap-4 px-3 py-4">
-                                {messages.filter(m => m.role !== 'system').map((m, idx) => (
+                                {visibleMessages.map((m, idx) => (
                                     <AiChatMessage
                                         key={m.id || idx}
                                         message={m}
-                                        isStreaming={isStreaming}
+                                        isStreaming={m.id === streamingMessageId}
                                         onInsertToNote={handleInsertToNote}
                                     />
                                 ))}

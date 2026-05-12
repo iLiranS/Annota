@@ -4,10 +4,8 @@ import { useTheme } from '@react-navigation/native';
 import * as Clipboard from 'expo-clipboard';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AiContextSelector } from './AiContextSelector';
 import {
     ActivityIndicator,
-    Alert,
     FlatList,
     KeyboardAvoidingView,
     Platform,
@@ -20,6 +18,7 @@ import {
 import Markdown from 'react-native-markdown-display';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
+import { AiContextSelector } from './AiContextSelector';
 
 interface AiChatViewProps {
     messages: AiMessage[];
@@ -202,7 +201,7 @@ function FlashcardBlock({ content, colors }: { content: string, colors: any }) {
     // Use highly lenient regexes to tolerate extra spaces or additional classes
     const fronts = Array.from(content.matchAll(/class=[^>]*flashcard-card-front[^>]*>([\s\S]*?)(?:<\/div>|(?=<div[^>]*class=[^>]*flashcard-card-back))/gi));
     const backs = Array.from(content.matchAll(/class=[^>]*flashcard-card-back[^>]*>([\s\S]*?)(?:<\/div>|(?=<div[^>]*class=[^>]*flashcard-card-(?:container|front)|$))/gi));
-    
+
     const cardsCount = Math.max(fronts.length, backs.length);
     const cards = useMemo(() => {
         const c = [];
@@ -225,14 +224,14 @@ function FlashcardBlock({ content, colors }: { content: string, colors: any }) {
                     Flashcards ({currentIndex + 1} of {cards.length})
                 </Text>
                 <View style={{ flexDirection: 'row', gap: 4 }}>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                         onPress={() => { setCurrentIndex(c => Math.max(0, c - 1)); setIsFlipped(false); }}
                         disabled={currentIndex === 0}
                         style={{ padding: 4, opacity: currentIndex === 0 ? 0.3 : 1 }}
                     >
                         <Ionicons name="chevron-back" size={16} color={colors.text} />
                     </TouchableOpacity>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                         onPress={() => { setCurrentIndex(c => Math.min(cards.length - 1, c + 1)); setIsFlipped(false); }}
                         disabled={currentIndex === cards.length - 1}
                         style={{ padding: 4, opacity: currentIndex === cards.length - 1 ? 0.3 : 1 }}
@@ -242,7 +241,7 @@ function FlashcardBlock({ content, colors }: { content: string, colors: any }) {
                 </View>
             </View>
 
-            <TouchableOpacity 
+            <TouchableOpacity
                 activeOpacity={0.8}
                 onPress={() => setIsFlipped(!isFlipped)}
                 style={{ padding: 16, minHeight: 120, justifyContent: 'center', backgroundColor: colors.card + (isFlipped ? '50' : '20') }}
@@ -250,7 +249,7 @@ function FlashcardBlock({ content, colors }: { content: string, colors: any }) {
                 <Text style={{ fontSize: 10, fontWeight: 'bold', color: colors.primary + '80', textTransform: 'uppercase', marginBottom: 8, textAlign: 'center' }}>
                     {isFlipped ? 'Answer' : 'Question'}
                 </Text>
-                <Text style={{ fontSize: 15, fontWeight: isFlipped ? 'normal' : '600', color: colors.text, textAlign: 'center', lineHeight: 22 }}>
+                <Text selectable style={{ fontSize: 15, fontWeight: isFlipped ? 'normal' : '600', color: colors.text, textAlign: 'center', lineHeight: 22 }}>
                     {isFlipped ? card.back : card.front}
                 </Text>
             </TouchableOpacity>
@@ -264,11 +263,84 @@ function FlashcardBlock({ content, colors }: { content: string, colors: any }) {
     );
 }
 
+function AiProcessBlock({
+    reasoningContent,
+    toolCalls,
+    isStreaming,
+    colors,
+}: {
+    reasoningContent?: string | null;
+    toolCalls?: string[] | null;
+    isStreaming: boolean;
+    colors: { text: string; border: string; primary: string; card: string };
+}) {
+    const [isOpen, setIsOpen] = useState(isStreaming);
+    const hasReasoning = Boolean(reasoningContent?.trim());
+    const hasTools = Boolean(toolCalls?.length);
+
+    useEffect(() => {
+        if (isStreaming) setIsOpen(true);
+    }, [isStreaming]);
+
+    if (!hasReasoning && !hasTools) return null;
+
+    return (
+        <View style={[styles.processBlock, { borderColor: colors.border + '66', backgroundColor: colors.border + '18' }]}>
+            <TouchableOpacity
+                activeOpacity={0.75}
+                onPress={() => setIsOpen(open => !open)}
+                style={styles.processHeader}
+            >
+                <View style={styles.processHeaderLeft}>
+                    <Ionicons name="hardware-chip-outline" size={14} color={colors.text + '99'} />
+                    <Text style={[styles.processTitle, { color: colors.text + '99' }]}>
+                        {isStreaming ? 'Thinking' : 'Thought process'}
+                    </Text>
+                </View>
+                <Ionicons
+                    name={isOpen ? 'chevron-up' : 'chevron-down'}
+                    size={14}
+                    color={colors.text + '80'}
+                />
+            </TouchableOpacity>
+
+            {isOpen && (
+                <View style={[styles.processBody, { borderTopColor: colors.border + '55' }]}>
+                    {hasTools && (
+                        <View style={styles.toolList}>
+                            {toolCalls?.map(tool => (
+                                <View
+                                    key={tool}
+                                    style={[styles.toolChip, { borderColor: colors.border + '66', backgroundColor: colors.card + '80' }]}
+                                >
+                                    <Ionicons name="construct-outline" size={11} color={colors.text + '99'} />
+                                    <Text style={[styles.toolText, { color: colors.text + '99' }]}>{tool}</Text>
+                                </View>
+                            ))}
+                        </View>
+                    )}
+                    {hasReasoning && (
+                        <Text selectable style={[styles.reasoningText, { color: colors.text + 'B3' }]}>
+                            {reasoningContent}
+                        </Text>
+                    )}
+                </View>
+            )}
+        </View>
+    );
+}
+
 function AssistantMessageContent({
     content,
+    reasoningContent,
+    toolCalls,
+    isStreaming,
     colors,
 }: {
     content: string;
+    reasoningContent?: string | null;
+    toolCalls?: string[] | null;
+    isStreaming: boolean;
     colors: { text: string; border: string; primary: string; card: string };
 }) {
     const segments = useMemo(() => parseAssistantContent(content), [content]);
@@ -329,6 +401,13 @@ function AssistantMessageContent({
 
     return (
         <View style={styles.assistantContent}>
+            <AiProcessBlock
+                reasoningContent={reasoningContent}
+                toolCalls={toolCalls}
+                isStreaming={isStreaming}
+                colors={colors}
+            />
+
             {segments.map((segment, index) => {
                 if (segment.type === 'markdown') {
                     return (
@@ -414,7 +493,19 @@ export function AiChatView({
     const router = useRouter();
     const flatListRef = useRef<FlatList>(null);
     const [isContextSelectorVisible, setIsContextSelectorVisible] = useState(false);
-    const { chatContext, setChatContext } = useAiStore();
+    const [isOptionsVisible, setIsOptionsVisible] = useState(false);
+    const { chatContext, setChatContext, webSearchEnabled, setWebSearchEnabled, reasoningEnabled, setReasoningEnabled } = useAiStore();
+    const supportsWebSearch = activeProvider === 'openai' || activeProvider === 'google' || activeProvider === 'anthropic';
+    const visibleMessages = useMemo(() => messages.filter(m => m.role !== 'system'), [messages]);
+    const streamingMessageId = useMemo(
+        () => isStreaming ? [...visibleMessages].reverse().find(m => m.role === 'assistant')?.id : null,
+        [isStreaming, visibleMessages]
+    );
+
+    const displayModelName = useMemo(() => {
+        if (!currentModelName) return '';
+        return currentModelName.length > 15 ? currentModelName.slice(0, 15) + '...' : currentModelName;
+    }, [currentModelName]);
 
     const initialScrollDone = useRef(false);
 
@@ -436,10 +527,10 @@ export function AiChatView({
 
     const handleInsert = useCallback((content: string) => {
         if (!onInsertToNote) return;
-        
+
         const fronts = Array.from(content.matchAll(/class=[^>]*flashcard-card-front[^>]*>([\s\S]*?)(?:<\/div>|(?=<div[^>]*class=[^>]*flashcard-card-back))/gi));
         const backs = Array.from(content.matchAll(/class=[^>]*flashcard-card-back[^>]*>([\s\S]*?)(?:<\/div>|(?=<div[^>]*class=[^>]*flashcard-card-(?:container|front)|$))/gi));
-        
+
         const cardsCount = Math.max(fronts.length, backs.length);
         const cards = [];
         for (let j = 0; j < cardsCount; j++) {
@@ -449,13 +540,13 @@ export function AiChatView({
         }
 
         let finalHtml = content;
-        
+
         if (cards.length > 0) {
             const firstFlashcardIndex = content.search(/<div[^>]*class=[^>]*flashcard-(?:block|card-container)/i);
-            const markdownContent = firstFlashcardIndex !== -1 
-                ? content.slice(0, firstFlashcardIndex).trim() 
+            const markdownContent = firstFlashcardIndex !== -1
+                ? content.slice(0, firstFlashcardIndex).trim()
                 : '';
-                
+
             finalHtml = markdownContent ? markdownContent + '\n\n' : '';
             finalHtml += '<div class="flashcard-block" data-fc="true">\n';
             cards.forEach(c => {
@@ -463,7 +554,7 @@ export function AiChatView({
             });
             finalHtml += '</div>';
         }
-        
+
         onInsertToNote(finalHtml);
     }, [onInsertToNote]);
 
@@ -473,9 +564,16 @@ export function AiChatView({
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             keyboardVerticalOffset={Platform.OS === 'ios' ? 30 : 0}
         >
+            {isOptionsVisible && (
+                <TouchableOpacity
+                    activeOpacity={1}
+                    style={[StyleSheet.absoluteFill, { zIndex: 10 }]}
+                    onPress={() => setIsOptionsVisible(false)}
+                />
+            )}
             <FlatList
                 ref={flatListRef}
-                data={messages.filter(m => m.role !== 'system')}
+                data={visibleMessages}
                 keyExtractor={(item, index) => item.id || index.toString()}
                 contentContainerStyle={styles.messageList}
                 keyboardShouldPersistTaps="handled"
@@ -491,12 +589,15 @@ export function AiChatView({
                                 : [styles.aiMessage, { backgroundColor: 'transparent', borderWidth: 0, paddingHorizontal: 0 }]
                         ]}>
                             {item.role === 'user' ? (
-                                <Text style={[styles.messageText, { color: '#FFF' }]}>
+                                <Text selectable style={[styles.messageText, { color: '#FFF' }]}>
                                     {item.content}
                                 </Text>
                             ) : (
                                 <AssistantMessageContent
                                     content={item.content}
+                                    reasoningContent={item.reasoningContent}
+                                    toolCalls={item.toolCalls}
+                                    isStreaming={item.id === streamingMessageId}
                                     colors={{
                                         text: colors.text,
                                         border: colors.border,
@@ -509,14 +610,27 @@ export function AiChatView({
                         {!item.content && isStreaming && item.role === 'assistant' && (
                             <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 8 }} />
                         )}
-                        {item.role === 'assistant' && item.content && !isStreaming && onInsertToNote && (
-                            <TouchableOpacity 
-                                style={{ flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginTop: 8, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: colors.primary + '15', borderRadius: 8 }}
-                                onPress={() => handleInsert(item.content)}
-                            >
-                                <Ionicons name="copy-outline" size={14} color={colors.primary} />
-                                <Text style={{ fontSize: 12, fontWeight: '600', color: colors.primary }}>Insert into note</Text>
-                            </TouchableOpacity>
+                        {item.role === 'assistant' && item.content && !isStreaming && (
+                            <View style={{ flexDirection: 'row', gap: 6, marginTop: 2 }}>
+                                {onInsertToNote && (
+                                    <TouchableOpacity
+                                        style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: colors.primary + '15', borderRadius: 8 }}
+                                        onPress={() => handleInsert(item.content)}
+                                    >
+                                        <Ionicons name="download-outline" size={14} color={colors.primary} />
+                                        <Text style={{ fontSize: 12, fontWeight: '600', color: colors.primary }}>Insert to note</Text>
+                                    </TouchableOpacity>
+                                )}
+                                <TouchableOpacity
+                                    style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: colors.text + '08', borderRadius: 8 }}
+                                    onPress={async () => {
+                                        await Clipboard.setStringAsync(item.content);
+                                    }}
+                                >
+                                    <Ionicons name="copy-outline" size={14} color={colors.text + '60'} />
+                                    <Text style={{ fontSize: 12, fontWeight: '600', color: colors.text + '60' }}>Copy</Text>
+                                </TouchableOpacity>
+                            </View>
                         )}
                     </View>
                 )}
@@ -541,18 +655,21 @@ export function AiChatView({
                         <View style={styles.placeholderContainer}>
                             <Ionicons name="sparkles-outline" size={48} color={colors.text + '10'} />
                             <Text style={[styles.placeholderText, { color: colors.text + '40' }]}>
-                                Ask {activeProvider ? activeProvider.charAt(0).toUpperCase() + activeProvider.slice(1) : 'Annota AI'} anything about your notes.{'\n'}Using {currentModelName || 'default model'}.
+                                Ask {activeProvider ? activeProvider.charAt(0).toUpperCase() + activeProvider.slice(1) : 'Annota AI'} anything about your notes.{'\n'}Using {displayModelName || 'default model'}.
                             </Text>
                         </View>
                     )
                 }
+                ListFooterComponent={
+                    error ? (
+                        <View style={{ paddingVertical: 12, paddingHorizontal: 16, alignItems: 'center' }}>
+                            <Text style={{ color: '#EF4444', fontSize: 13, textAlign: 'center' }}>
+                                {error}
+                            </Text>
+                        </View>
+                    ) : null
+                }
             />
-            {error && (
-                <View style={styles.errorContainer}>
-                    <Text style={styles.errorText}>{error}</Text>
-                </View>
-            )}
-
             <View
                 style={[
                     styles.inputWrapper,
@@ -565,16 +682,16 @@ export function AiChatView({
             >
                 {chatContext && (
                     <View style={[styles.activeContextBar, { borderBottomColor: colors.border, backgroundColor: colors.primary + '10' }]}>
-                        <Ionicons 
-                            name="chatbox-ellipses" 
-                            size={14} 
-                            color={colors.primary} 
+                        <Ionicons
+                            name="chatbox-ellipses"
+                            size={14}
+                            color={colors.primary}
                         />
                         <Text style={[styles.activeContextTitle, { color: colors.primary, flex: 1, marginHorizontal: 4 }]} numberOfLines={2}>
                             {purifyNoteHtml(chatContext.html).trim() || chatContext.text || 'Selected item'}
                         </Text>
-                        <TouchableOpacity 
-                            onPress={() => setChatContext(null)} 
+                        <TouchableOpacity
+                            onPress={() => setChatContext(null)}
                             style={{ padding: 4 }}
                             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                         >
@@ -583,25 +700,25 @@ export function AiChatView({
                     </View>
                 )}
                 {(initialContext || selectedContextNotes.length > 0) && (
-                    <TouchableOpacity 
+                    <TouchableOpacity
                         style={[styles.activeContextBar, { borderBottomColor: colors.border }]}
                         onPress={() => setIsContextSelectorVisible(true)}
                         activeOpacity={0.7}
                     >
-                        <Ionicons 
-                            name={selectedContextNotes.length > 0 ? "layers" : "search"} 
-                            size={14} 
-                            color={colors.primary} 
+                        <Ionicons
+                            name={selectedContextNotes.length > 0 ? "layers" : "search"}
+                            size={14}
+                            color={colors.primary}
                         />
                         <Text style={[styles.activeContextTitle, { color: colors.text + '80' }]} numberOfLines={1}>
-                            {selectedContextNotes.length > 0 
+                            {selectedContextNotes.length > 0
                                 ? `Using ${selectedContextNotes.length} selected ${selectedContextNotes.length === 1 ? 'note' : 'notes'} as context`
                                 : `Using global search context`
                             }
                         </Text>
                         {selectedContextNotes.length > 0 && (
-                            <TouchableOpacity 
-                                onPress={() => onClearAllContext?.()} 
+                            <TouchableOpacity
+                                onPress={() => onClearAllContext?.()}
                                 style={{ marginLeft: 'auto', padding: 4 }}
                                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                             >
@@ -615,15 +732,67 @@ export function AiChatView({
                         style={styles.contextButton}
                         onPress={() => setIsContextSelectorVisible(true)}
                     >
-                        <Ionicons 
-                            name={selectedContextNotes.length > 0 ? "add-circle" : "add-circle-outline"} 
-                            size={26} 
-                            color={selectedContextNotes.length > 0 ? colors.primary : colors.text + '40'} 
+                        <Ionicons
+                            name={selectedContextNotes.length > 0 ? "add-circle" : "add-circle-outline"}
+                            size={24}
+                            color={selectedContextNotes.length > 0 ? colors.primary : colors.text + '40'}
                         />
                     </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[
+                            styles.webButton,
+                            {
+                                backgroundColor: (webSearchEnabled || reasoningEnabled)
+                                    ? colors.primary + '18'
+                                    : 'transparent',
+                            },
+                        ]}
+                        onPress={() => setIsOptionsVisible(!isOptionsVisible)}
+                        hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
+                    >
+                        <Ionicons
+                            name="options-outline"
+                            size={20}
+                            color={(webSearchEnabled || reasoningEnabled) ? colors.primary : colors.text + '40'}
+                        />
+                    </TouchableOpacity>
+
+                    {isOptionsVisible && (
+                        <View style={[styles.optionsMenu, { backgroundColor: colors.card, borderColor: colors.border + '50' }]}>
+                            <TouchableOpacity
+                                style={[styles.optionItem, !supportsWebSearch && { opacity: 0.4 }]}
+                                onPress={() => {
+                                    if (supportsWebSearch) {
+                                        setWebSearchEnabled(!webSearchEnabled);
+                                        setIsOptionsVisible(false);
+                                    }
+                                }}
+                                disabled={!supportsWebSearch}
+                            >
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                    <Ionicons name="globe-outline" size={16} color={webSearchEnabled ? colors.primary : colors.text + '80'} />
+                                    <Text style={[styles.optionText, { color: colors.text }]}>Web Search</Text>
+                                </View>
+                                {webSearchEnabled && <Ionicons name="checkmark" size={16} color={colors.primary} />}
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={styles.optionItem}
+                                onPress={() => {
+                                    setReasoningEnabled(!reasoningEnabled);
+                                    setIsOptionsVisible(false);
+                                }}
+                            >
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                    <Ionicons name="hardware-chip-outline" size={16} color={reasoningEnabled ? colors.primary : colors.text + '80'} />
+                                    <Text style={[styles.optionText, { color: colors.text }]}>Reasoning Mode</Text>
+                                </View>
+                                {reasoningEnabled && <Ionicons name="checkmark" size={16} color={colors.primary} />}
+                            </TouchableOpacity>
+                        </View>
+                    )}
                     <TextInput
                         style={[styles.input, { color: colors.text }]}
-                        placeholder={`Ask ${activeProvider ? activeProvider.charAt(0).toUpperCase() + activeProvider.slice(1) : 'Annota AI'} (${currentModelName || ''})...`}
+                        placeholder={`Ask ${activeProvider ? activeProvider.charAt(0).toUpperCase() + activeProvider.slice(1) : 'Annota AI'}${displayModelName ? ` (${displayModelName})` : ''}...`}
                         placeholderTextColor={colors.text + '40'}
                         value={input}
                         onChangeText={setInput}
@@ -694,6 +863,60 @@ const styles = StyleSheet.create({
     },
     assistantContent: {
         gap: 6,
+    },
+    processBlock: {
+        borderWidth: 1,
+        borderRadius: 10,
+        overflow: 'hidden',
+        marginBottom: 4,
+    },
+    processHeader: {
+        minHeight: 34,
+        paddingHorizontal: 10,
+        paddingVertical: 8,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 8,
+    },
+    processHeaderLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        minWidth: 0,
+        flex: 1,
+    },
+    processTitle: {
+        fontSize: 12,
+        fontWeight: '700',
+    },
+    processBody: {
+        borderTopWidth: 1,
+        paddingHorizontal: 10,
+        paddingVertical: 9,
+        gap: 8,
+    },
+    toolList: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 6,
+    },
+    toolChip: {
+        borderWidth: 1,
+        borderRadius: 7,
+        paddingHorizontal: 7,
+        paddingVertical: 4,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+    },
+    toolText: {
+        fontSize: 11,
+        fontWeight: '600',
+    },
+    reasoningText: {
+        fontSize: 12,
+        lineHeight: 18,
     },
     messageText: {
         fontSize: 15,
@@ -821,8 +1044,20 @@ const styles = StyleSheet.create({
         gap: 2,
     },
     contextButton: {
-        padding: 6,
-        marginBottom: 2,
+        width: 32,
+        height: 32,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 4,
+        marginLeft: 2,
+    },
+    webButton: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 4,
     },
     input: {
         flex: 1,
@@ -841,5 +1076,32 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         marginBottom: 4,
         marginRight: 4,
-    }
+    },
+    optionsMenu: {
+        position: 'absolute',
+        bottom: 55,
+        left: 45,
+        width: 180,
+        borderRadius: 12,
+        borderWidth: 1,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+        elevation: 8,
+        padding: 4,
+        zIndex: 20,
+    },
+    optionItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        borderRadius: 8,
+    },
+    optionText: {
+        fontSize: 14,
+        fontWeight: '500',
+    },
 });

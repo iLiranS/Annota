@@ -43,6 +43,10 @@ export interface AiState {
     refreshTicket: number;
     chatContext: { text: string; html: string } | null;
 
+    // Features
+    webSearchEnabled: boolean;
+    reasoningEnabled: boolean;
+
     // Actions
     triggerChatRefresh: () => void;
     setChatContext: (context: { text: string; html: string } | null) => void;
@@ -58,6 +62,8 @@ export interface AiState {
     setSelectedModelOpenAi: (model: string) => void;
     setSelectedModelAnthropic: (model: string) => void;
     setSelectedModelGoogle: (model: string) => void;
+    setWebSearchEnabled: (enabled: boolean) => void;
+    setReasoningEnabled: (enabled: boolean) => void;
 }
 
 export const useAiStore = create<AiState>()(
@@ -79,8 +85,12 @@ export const useAiStore = create<AiState>()(
             isLoadingModels: false,
             refreshTicket: 0,
             chatContext: null,
+            webSearchEnabled: false,
+            reasoningEnabled: false,
             triggerChatRefresh: () => set((state: AiState) => ({ refreshTicket: state.refreshTicket + 1 })),
             setChatContext: (context) => set({ chatContext: context }),
+            setWebSearchEnabled: (enabled) => set({ webSearchEnabled: enabled }),
+            setReasoningEnabled: (enabled) => set({ reasoningEnabled: enabled }),
 
             // Actions
             setOllamaBaseUrl: (url) => set({ ollamaBaseUrl: url }),
@@ -155,6 +165,8 @@ export const useAiStore = create<AiState>()(
                 selectedModelOpenAi: state.selectedModelOpenAi,
                 selectedModelAnthropic: state.selectedModelAnthropic,
                 selectedModelGoogle: state.selectedModelGoogle,
+                webSearchEnabled: state.webSearchEnabled,
+                reasoningEnabled: state.reasoningEnabled,
             }),
         }
     )

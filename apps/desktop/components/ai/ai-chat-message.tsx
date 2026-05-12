@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { cn, isRtl } from "@/lib/utils";
 import { AiMessage } from "@annota/core";
-import { ChevronLeft, ChevronRight, CopyPlus, RotateCcw, X } from "lucide-react";
+import { BrainCircuit, ChevronDown, ChevronLeft, ChevronRight, CopyPlus, RotateCcw, Wrench, X } from "lucide-react";
 import React from "react";
 import { AiMarkdown } from "./ai-markdown";
 
@@ -42,6 +42,12 @@ export function AiChatMessage({ message, isStreaming, onInsertToNote }: AiChatMe
                     <span className="whitespace-pre-wrap">{message.content}</span>
                 ) : (
                     <div className="flex flex-col gap-2">
+                        <AiProcessBlock
+                            reasoningContent={message.reasoningContent}
+                            toolCalls={message.toolCalls}
+                            isStreaming={isStreaming}
+                        />
+
                         {hasFlashcards ? (
                             <FlashcardRenderer content={message.content} isStreaming={isStreaming} onInsertToNote={onInsertToNote} />
                         ) : (
@@ -73,6 +79,69 @@ export function AiChatMessage({ message, isStreaming, onInsertToNote }: AiChatMe
                     </div>
                 )}
             </div>
+        </div>
+    );
+}
+
+function AiProcessBlock({
+    reasoningContent,
+    toolCalls,
+    isStreaming,
+}: {
+    reasoningContent?: string | null;
+    toolCalls?: string[] | null;
+    isStreaming?: boolean;
+}) {
+    const hasReasoning = Boolean(reasoningContent?.trim());
+    const hasTools = Boolean(toolCalls?.length);
+    const [isOpen, setIsOpen] = React.useState(Boolean(isStreaming));
+
+    React.useEffect(() => {
+        if (isStreaming) setIsOpen(true);
+    }, [isStreaming]);
+
+    if (!hasReasoning && !hasTools) return null;
+
+    return (
+        <div className="mb-1 rounded-lg border border-border/50 bg-muted/25 overflow-hidden">
+            <button
+                type="button"
+                onClick={() => setIsOpen(open => !open)}
+                className="flex w-full items-center justify-between gap-2 px-2.5 py-1.5 text-[11px] text-muted-foreground hover:text-foreground hover:bg-muted/35 transition-colors"
+            >
+                <span className="flex min-w-0 items-center gap-1.5 font-medium">
+                    <BrainCircuit size={12} className="shrink-0" />
+                    <span className="truncate">{isStreaming ? 'Thinking' : 'Thought process'}</span>
+                </span>
+                <ChevronDown
+                    size={13}
+                    className={cn("shrink-0 transition-transform", isOpen && "rotate-180")}
+                />
+            </button>
+
+            {isOpen && (
+                <div className="border-t border-border/40 px-2.5 py-2">
+                    {hasTools && (
+                        <div className="mb-2 flex flex-wrap gap-1.5">
+                            {toolCalls?.map(tool => (
+                                <span
+                                    key={tool}
+                                    className="inline-flex items-center gap-1 rounded-md border border-border/50 bg-background/50 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
+                                >
+                                    <Wrench size={10} />
+                                    {tool}
+                                </span>
+                            ))}
+                        </div>
+                    )}
+
+                    {hasReasoning && (
+                        <div className="max-h-52 overflow-y-auto premium-scrollbar whitespace-pre-wrap text-[11px] leading-relaxed text-muted-foreground/90">
+                            {reasoningContent}
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 }

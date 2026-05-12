@@ -163,7 +163,7 @@ export function AiContextSelector({
             />
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                // keyboardVerticalOffset={Platform.OS === 'ios' ? 30 : 0}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
                 style={{ flex: 1, justifyContent: 'flex-end' }}
             >
                 <Animated.View
