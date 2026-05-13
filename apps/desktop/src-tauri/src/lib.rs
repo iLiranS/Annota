@@ -145,34 +145,21 @@ async fn execute_sql(
         pool_guard.as_ref().ok_or("Database not initialized")?.1.clone()
     };
 
-    let conn = pool.get().map_err(|e| e.to_string())?;
-    conn.execute(&sql, rusqlite::params_from_iter(sql_params))
-        .map_err(|e| e.to_string())?;
-
-    Ok(())
+    // Offload the blocking C-bindings to a background OS thread
+    tauri::async_runtime::spawn_blocking(move || -> Result<(), String> {
+        let conn = pool.get().map_err(|e| e.to_string())?;
+        conn.execute(&sql, rusqlite::params_from_iter(sql_params))
+            .map_err(|e| e.to_string())?;
+        Ok(())
+    })
+    .await
+    .unwrap_or_else(|e| Err(format!("Thread crashed: {}", e)))
 }
 
 #[tauri::command]
-async fn wait_for_db(state: tauri::State<'_, DbState>) -> Result<(), String> {
-    let mut attempts = 0;
-    loop {
-        {
-            let pool_guard = state.0.lock().unwrap();
-            if pool_guard.is_some() {
-                println!("[DB] Child window attached to existing pool.");
-                return Ok(());
-            }
-        }
-        
-        if attempts > 200 { 
-            return Err("Child window timed out waiting for main window DB".to_string());
-        }
-        
-        // Because this function is now `async`, this sleep runs on a background
-        // Tokio worker thread. It will NOT freeze your main UI thread or the "X" button.
-        std::thread::sleep(std::time::Duration::from_millis(50));
-        attempts += 1;
-    }
+fn is_db_ready(state: tauri::State<'_, DbState>) -> bool {
+    let pool_guard = state.0.lock().unwrap();
+    pool_guard.is_some()
 }
 
 #[tauri::command]
@@ -188,26 +175,31 @@ async fn select_sql(
         pool_guard.as_ref().ok_or("Database not initialized")?.1.clone()
     };
 
-    let conn = pool.get().map_err(|e| e.to_string())?;
-    let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
-    let col_count = stmt.column_count();
+    // Offload the blocking C-bindings to a background OS thread
+    tauri::async_runtime::spawn_blocking(move || -> Result<Vec<Vec<serde_json::Value>>, String> {
+        let conn = pool.get().map_err(|e| e.to_string())?;
+        let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
+        let col_count = stmt.column_count();
 
-    let rows = stmt.query_map(rusqlite::params_from_iter(sql_params), |row| {
-        let mut row_arr = Vec::with_capacity(col_count);
-        for i in 0..col_count {
-            let val: serde_json::Value = match row.get_ref(i)? {
-                rusqlite::types::ValueRef::Null => serde_json::Value::Null,
-                rusqlite::types::ValueRef::Integer(n) => n.into(),
-                rusqlite::types::ValueRef::Real(f) => f.into(),
-                rusqlite::types::ValueRef::Text(s) => String::from_utf8_lossy(s).into_owned().into(),
-                rusqlite::types::ValueRef::Blob(b) => serde_json::Value::String(BASE64_STANDARD.encode(b)),
-            };
-            row_arr.push(val);
-        }
-        Ok(row_arr)
-    }).map_err(|e| e.to_string())?;
+        let rows = stmt.query_map(rusqlite::params_from_iter(sql_params), |row| {
+            let mut row_arr = Vec::with_capacity(col_count);
+            for i in 0..col_count {
+                let val: serde_json::Value = match row.get_ref(i)? {
+                    rusqlite::types::ValueRef::Null => serde_json::Value::Null,
+                    rusqlite::types::ValueRef::Integer(n) => n.into(),
+                    rusqlite::types::ValueRef::Real(f) => f.into(),
+                    rusqlite::types::ValueRef::Text(s) => String::from_utf8_lossy(s).into_owned().into(),
+                    rusqlite::types::ValueRef::Blob(b) => serde_json::Value::String(BASE64_STANDARD.encode(b)),
+                };
+                row_arr.push(val);
+            }
+            Ok(row_arr)
+        }).map_err(|e| e.to_string())?;
 
-    rows.collect::<Result<Vec<_>, _>>().map_err(|e| e.to_string())
+        rows.collect::<Result<Vec<_>, _>>().map_err(|e| e.to_string())
+    })
+    .await
+    .unwrap_or_else(|e| Err(format!("Thread crashed: {}", e)))
 }
 
 #[tauri::command]
@@ -333,7 +325,7 @@ pub fn run() {
         .manage(DbState(Mutex::new(None)))
         .invoke_handler(tauri::generate_handler![
             start_auth_listener,
-            wait_for_db,
+            is_db_ready,
             compress_image_native,
             get_system_fonts,
             argon2id,

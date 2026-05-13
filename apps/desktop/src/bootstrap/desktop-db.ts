@@ -47,10 +47,19 @@ export async function initDesktopSqlite(userId: string | null, dbKey: string, sk
       const appDataDirPath = await appDataDir();
       const fullDbPath = await join(appDataDirPath, dbName);
 
-      // FIX: Child windows must not touch the SQLite file directly to avoid Windows file locks.
-      // They wait for the main window to finish setting up the Rust pool.
+      // FIX: Move the polling loop entirely to JS to prevent Rust thread starvation
       if (skipMigrations) {
-        await invoke('wait_for_db');
+        let attempts = 0;
+        while (attempts < 200) {
+          const ready = await invoke<boolean>('is_db_ready');
+          if (ready) break;
+          // Sleep for 50ms in JS, keeping the Rust IPC channel completely free
+          await new Promise(r => setTimeout(r, 50));
+          attempts++;
+        }
+        if (attempts >= 200) {
+          throw new Error("Child window timed out waiting for main window DB");
+        }
       } else {
         await invoke('open_encrypted_db', { 
           dbPath: fullDbPath, 
