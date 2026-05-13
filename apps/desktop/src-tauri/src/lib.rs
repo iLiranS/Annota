@@ -31,7 +31,7 @@ fn json_to_sql(v: &serde_json::Value) -> SqlValue {
 }
 
 #[tauri::command]
-async fn open_encrypted_db(
+fn open_encrypted_db(
     state: tauri::State<'_, DbState>,
     db_path: String,
     encryption_key: String,
@@ -124,14 +124,11 @@ async fn open_encrypted_db(
             Ok(())
         });
 
-    // FIX: Limit pool to 1 connection on Windows. r2d2 defaults to a max of 10.
-    // With WAL mode + SQLCipher on Windows, multiple pooled connections from the
-    // same process can still contend on the -shm file during heavy write bursts,
-    // causing sporadic SQLITE_BUSY. A single connection serialises all access,
-    // which is the correct model for a single-user desktop app anyway.
-    // If you need more throughput later, raise this — but start at 1.
+    // FIX: Limit pool size. Since we are in WAL mode and we've fixed the Mutex
+    // race condition, we can safely allow multiple connections (e.g. 4)
+    // so that the child window can read while the main window is busy.
     let pool = Pool::builder()
-        .max_size(1)
+        .max_size(4)
         .build(manager)
         .map_err(|e| format!("Failed to create pool: {}", e))?;
 
@@ -157,7 +154,7 @@ async fn open_encrypted_db(
 }
 
 #[tauri::command]
-async fn execute_sql(
+fn execute_sql(
     state: tauri::State<'_, DbState>,
     sql: String,
     params: Vec<serde_json::Value>,
@@ -179,7 +176,7 @@ async fn execute_sql(
 }
 
 #[tauri::command]
-async fn select_sql(
+fn select_sql(
     state: tauri::State<'_, DbState>,
     sql: String,
     params: Vec<serde_json::Value>,
@@ -246,7 +243,7 @@ fn argon2id(
 }
 
 #[tauri::command]
-async fn compress_image_native(
+fn compress_image_native(
     source_path: String,
     output_path: String,
     max_dimension: u32,
@@ -322,6 +319,13 @@ async fn start_auth_listener(window: Window) -> Result<(), String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .setup(|app| {
+            // Forces DevTools open immediately on app launch for debugging
+            if let Some(window) = app.get_webview_window("main") {
+                window.open_devtools();
+            }
+            Ok(())
+        })
         .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.show();
