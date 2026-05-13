@@ -4,7 +4,4 @@ packages:
   - "packages/*"
   - "core"
 
-onlyBuiltDependencies:
-  - esbuild
-  - msw
-  - unrs-resolver
+

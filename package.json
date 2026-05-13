@@ -18,5 +18,12 @@
     "eslint-plugin-react-hooks": "^5.0.0",
     "typescript": "~6.0.2"
   },
-  "private": true
+  "private": true,
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "msw",
+      "unrs-resolver"
+    ]
+  }
 }
