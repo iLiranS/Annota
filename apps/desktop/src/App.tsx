@@ -214,6 +214,9 @@ function App() {
         }
 
         if (!cancelled) {
+          if (isMain) {
+            await getCurrentWindow().setTitle("Annota");
+          }
           setBootstrapState("ready");
         }
       } catch (error) {

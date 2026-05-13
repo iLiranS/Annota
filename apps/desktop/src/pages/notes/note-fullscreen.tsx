@@ -2,7 +2,7 @@ import { StandaloneNavbar } from "@/components/navbar/standalone-navbar";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useNotesStore } from "@annota/core";
-import { emit, once } from "@tauri-apps/api/event";
+import { emit, listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Loader2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -40,18 +40,49 @@ export default function NoteFullscreen() {
     useEffect(() => {
         if (!noteId) return;
 
-        const unlistenPromise = once<{ content: string; tags: any[]; notes: any[] }>(
-            'note-window-init',
-            (event) => {
-                const { content, tags, notes } = event.payload;
-                useNotesStore.setState({ tags, notes, isInitialized: true });
-                setInitialContent(content);
-            }
-        );
+        let unlisten: (() => void) | null = null;
+        let isMounted = true;
 
-        unlistenPromise.then(() => {
-            emit('note-window-ready', { noteId });
-        });
+        const setupListener = async () => {
+            const u = await listen<{ content: string; tags: any[]; notes: any[] }>(
+                'note-window-init',
+                (event) => {
+                    if (!isMounted) return;
+                    
+                    const { content, tags, notes } = event.payload;
+                    useNotesStore.setState({ tags, notes, isInitialized: true });
+                    setInitialContent(content);
+                    
+                    // Since we only want this once, unlisten after receiving
+                    if (unlisten) {
+                        unlisten();
+                        unlisten = null;
+                    }
+                }
+            );
+
+            if (!isMounted) {
+                u();
+                return;
+            }
+
+            unlisten = u;
+
+            // Small delay to ensure the listener is fully registered in the event system
+            // before we tell the parent window we're ready to receive data.
+            setTimeout(() => {
+                if (isMounted) {
+                    emit('note-window-ready', { noteId });
+                }
+            }, 10);
+        };
+
+        setupListener();
+
+        return () => {
+            isMounted = false;
+            if (unlisten) unlisten();
+        };
     }, [noteId]);
 
     // ── Content change handler: emit to main window ──
@@ -65,6 +96,13 @@ export default function NoteFullscreen() {
     const allTags = useNotesStore((s) => s.tags);
     const hasSeeded = useRef(false);
 
+    // ── Set native window title once note is known ──
+    useEffect(() => {
+        if (!note?.title || initialContent === null) return;
+        getCurrentWindow().setTitle(note.title).catch(console.error);
+    }, [note?.title, initialContent]);
+
+    // ── Sync tag mutations back to the main window ──
     useEffect(() => {
         if (!noteId || initialContent === null) return;
 

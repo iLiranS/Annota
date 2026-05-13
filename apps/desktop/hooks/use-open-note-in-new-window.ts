@@ -12,8 +12,10 @@ export function useOpenNoteInNewWindow() {
 
         const label = `note-${targetNote.id}-${Math.random().toString(36).substring(7)}`;
 
+        let isFinished = false;
         const unlisten = await listen<{ noteId: string }>('note-window-ready', async (event) => {
-            if (event.payload.noteId !== targetNote.id) return;
+            if (event.payload.noteId !== targetNote.id || isFinished) return;
+            isFinished = true;
             unlisten();
 
             try {
@@ -51,10 +53,20 @@ export function useOpenNoteInNewWindow() {
             }
         });
 
+        // Safety timeout: if the window doesn't signal ready within 10s, clean up
+        setTimeout(() => {
+            if (!isFinished) {
+                isFinished = true;
+                unlisten();
+                console.warn(`[OpenInNewWindow] Timeout waiting for ready event for note ${targetNote.id}`);
+            }
+        }, 10000);
+
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         // @ts-ignore
         const webview = new WebviewWindow(label, {
             url: `/note-fullscreen/${targetNote.id}`,
+            title: targetNote.title,
             hiddenTitle: true,
             width: 1280,
             height: 720,
