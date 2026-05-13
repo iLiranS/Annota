@@ -3,7 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { appDataDir, join } from '@tauri-apps/api/path';
 import { drizzle } from "drizzle-orm/sqlite-proxy";
 
-/** Per-user bootstrap cache — avoids re-initialising for the same user. */
+/** Per-user bootstrap cache — avoids re-initialising for the same user within this JS context. */
 const userDbCache = new Map<string, Promise<void>>();
 
 /** The cache key that was last successfully activated. */
@@ -30,7 +30,7 @@ export async function initDesktopSqlite(userId: string | null, dbKey: string, sk
   const cacheKey = userId ?? "__guest__";
   const dbName = userId ? `user_${userId}.db` : "local_guest.db";
 
-  // Same user already active — nothing to do.
+  // Same user already active in THIS JS context — nothing to do.
   if (activeUserKey === cacheKey && userDbCache.has(cacheKey)) {
     await userDbCache.get(cacheKey);
     return;
@@ -43,12 +43,26 @@ export async function initDesktopSqlite(userId: string | null, dbKey: string, sk
 
   if (!userDbCache.has(cacheKey)) {
     const bootstrapPromise = (async () => {
-      // 1. Resolve full path (Tauri official plugin did this automatically, we must do it manually)
+      // 1. Resolve full path
       const appDataDirPath = await appDataDir();
       const fullDbPath = await join(appDataDirPath, dbName);
 
-      // 2. Init the Rust connection pool.
-      // The Rust side is idempotent: if this db path is already open it returns immediately.
+      // FIX: If this is a child window (skipMigrations=true), we must wait for the
+      // Rust pool to exist before proceeding. The main window creates the pool and
+      // runs migrations; the child window must not call open_encrypted_db while the
+      // main window's pool creation is in-flight on the Rust side, because on Windows
+      // this races the final Mutex write and can discard the main window's pool.
+      //
+      // The safe protocol:
+      //   - Main window: calls open_encrypted_db normally (creates pool, stores it).
+      //   - Child window: also calls open_encrypted_db, but Rust now holds the Mutex
+      //     for the full check-and-set, so the child's call either:
+      //       a) returns immediately (pool already there) — the common fast path, or
+      //       b) builds its own pool but discards it inside the lock when it sees the
+      //          main window's pool is already there — safe, no data loss.
+      //
+      // We still call open_encrypted_db from the child so the JS side can be sure
+      // the Rust pool exists before issuing queries. The Rust side is now safe.
       await invoke('open_encrypted_db', { 
         dbPath: fullDbPath, 
         encryptionKey: dbKey 
@@ -72,11 +86,9 @@ export async function initDesktopSqlite(userId: string | null, dbKey: string, sk
           const result: any[][] = await invoke('select_sql', { sql, params });
 
           if (method === "get") {
-            // Drizzle .get() expects the single row array directly
             return { rows: result[0] || [] };
           }
 
-          // Drizzle .all() expects the array of arrays
           return { rows: result };
           
         } catch (error) {
@@ -87,7 +99,7 @@ export async function initDesktopSqlite(userId: string | null, dbKey: string, sk
 
       initDb(drizzleDb as any);
 
-      // 3. Define the native wrapper
+      // 2. Define the native wrapper
       const nativeDbWrapper = {
         execAsync: async (rawSql: string) => {
           const statements = splitSqlStatements(rawSql);
@@ -104,9 +116,9 @@ export async function initDesktopSqlite(userId: string | null, dbKey: string, sk
       };
 
       if (!skipMigrations) {
-        // Main window: run full schema setup + migrations.
+        // Main window only: run full schema setup + migrations.
         // Child windows must NOT do this — running DDL concurrently with the
-        // main window's reads causes exclusive write locks on Windows.
+        // main window causes exclusive write locks on Windows, deadlocking both.
         const { initDatabase } = await import("@annota/core");
         await initDatabase(nativeDbWrapper, drizzleDb as any);
       }

@@ -10,7 +10,7 @@ use r2d2::Pool;
 use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::types::Value as SqlValue;
 use std::sync::Mutex;
-use base64::prelude::*; // Fix 1: added missing semicolon
+use base64::prelude::*;
 
 // The Tauri state holding our connection pool and the path it belongs to
 struct DbState(Mutex<Option<(String, Pool<SqliteConnectionManager>)>>);
@@ -41,7 +41,18 @@ async fn open_encrypted_db(
         std::fs::create_dir_all(parent).map_err(|e| format!("Failed to create DB directory: {}", e))?;
     }
 
-    // 2. Fast Path: If database is already open at this path, just return
+    // FIX: The previous code released the Mutex between the "is it already open?" check
+    // and the "write the new pool" step. On Windows, two windows could both pass the check
+    // simultaneously, and the second would overwrite the pool — dropping live connections
+    // from the first window, causing SQLCipher's file lock to be torn down mid-query.
+    //
+    // The fix: hold the lock for the entire check-and-set. We do the expensive work
+    // (migration, pool creation) BEFORE acquiring the lock, then do one final check
+    // inside the lock before committing. This is the classic "double-checked locking"
+    // pattern, done correctly.
+
+    // 2. Fast path: check if already open WITHOUT holding the lock long.
+    // This is safe to read optimistically — worst case we do redundant work below.
     {
         let pool_guard = state.0.lock().unwrap();
         if let Some((current_path, _)) = pool_guard.as_ref() {
@@ -51,61 +62,97 @@ async fn open_encrypted_db(
         }
     }
 
-    // 3. Check if the database exists AND is unencrypted
+    // 3. Check if the database exists AND is unencrypted (migration path).
+    // This is done OUTSIDE the lock because it can be slow and doesn't mutate state.
     if std::path::Path::new(&db_path).exists() {
-        let is_unencrypted = {
-            if let Ok(test_conn) = rusqlite::Connection::open(&db_path) {
-                // If we can query the schema without a key, the database is plaintext
-                test_conn.query_row("SELECT 1 FROM sqlite_master LIMIT 1", [], |_| Ok(())).is_ok()
-            } else {
-                false
-            }
+        // FIX: We must check under a short lock whether the pool is already initialised
+        // BEFORE attempting to open the file for the plaintext check. On Windows, even
+        // a read-only rusqlite::Connection::open on a SQLCipher-encrypted file that's
+        // already pool-managed can cause a sharing violation.
+        let already_open = {
+            let pool_guard = state.0.lock().unwrap();
+            pool_guard.as_ref().map_or(false, |(p, _)| p == &db_path)
         };
 
-        if is_unencrypted {
-            println!("[DB] Unencrypted database detected. Running SQLCipher migration...");
-            
-            // Backup the plaintext file
-            let backup_path = format!("{}.bak", db_path);
-            std::fs::rename(&db_path, &backup_path).map_err(|e| e.to_string())?;
+        if !already_open {
+            let is_unencrypted = {
+                if let Ok(test_conn) = rusqlite::Connection::open(&db_path) {
+                    test_conn.query_row("SELECT 1 FROM sqlite_master LIMIT 1", [], |_| Ok(())).is_ok()
+                } else {
+                    false
+                }
+            };
 
-            // Open a NEW database at the original path and immediately encrypt it
-            let new_conn = rusqlite::Connection::open(&db_path).map_err(|e| e.to_string())?;
-            new_conn.pragma_update(None, "key", &encryption_key).map_err(|e| e.to_string())?;
+            if is_unencrypted {
+                println!("[DB] Unencrypted database detected. Running SQLCipher migration...");
+                
+                let backup_path = format!("{}.bak", db_path);
+                std::fs::rename(&db_path, &backup_path).map_err(|e| e.to_string())?;
 
-            // Attach the plaintext backup (using an empty key)
-            new_conn.execute(
-                &format!("ATTACH DATABASE '{}' AS plaintext KEY '';", backup_path),
-                []
-            ).map_err(|e| e.to_string())?;
+                let new_conn = rusqlite::Connection::open(&db_path).map_err(|e| e.to_string())?;
+                new_conn.pragma_update(None, "key", &encryption_key).map_err(|e| e.to_string())?;
 
-            // Export all data, schema, and FTS triggers into the new encrypted database
-            new_conn.query_row("SELECT sqlcipher_export('main')", [], |_| Ok(()))
-                .map_err(|e| e.to_string())?;
-            new_conn.execute("DETACH DATABASE plaintext", [], ).map_err(|e| e.to_string())?;
-            
-            // Close the setup connection so the pool can take over
-            new_conn.close().map_err(|_| "Failed to close migration connection".to_string())?;
-            
-            println!("[DB] Migration complete.");
-            
-            // Optional: You can delete the .bak file here, or leave it for safety during alpha
-            // let _ = std::fs::remove_file(&backup_path); 
+                new_conn.execute(
+                    &format!("ATTACH DATABASE '{}' AS plaintext KEY '';", backup_path),
+                    []
+                ).map_err(|e| e.to_string())?;
+
+                new_conn.query_row("SELECT sqlcipher_export('main')", [], |_| Ok(()))
+                    .map_err(|e| e.to_string())?;
+                new_conn.execute("DETACH DATABASE plaintext", []).map_err(|e| e.to_string())?;
+                
+                new_conn.close().map_err(|_| "Failed to close migration connection".to_string())?;
+                
+                println!("[DB] Migration complete.");
+            }
         }
     }
 
-    // 3. Standard Pool Initialization
-    let manager = SqliteConnectionManager::file(&db_path)
+    // 4. Build the pool OUTSIDE the lock (pool creation opens connections, which is slow
+    //    and would hold the Mutex for too long, blocking any concurrent queries).
+    let encryption_key_clone = encryption_key.clone();
+    let db_path_clone = db_path.clone();
+    let manager = SqliteConnectionManager::file(&db_path_clone)
         .with_init(move |conn| {
-            // This now safely unlocks the database for every connection in the pool
-            conn.pragma_update(None, "key", &encryption_key)?;
+            conn.pragma_update(None, "key", &encryption_key_clone)?;
             conn.pragma_update(None, "journal_mode", "WAL")?;
             conn.pragma_update(None, "foreign_keys", "ON")?;
+            // FIX: Increase busy timeout so that if the main window is mid-migration
+            // and the child window sends a query, it waits instead of erroring immediately.
+            // 5000ms is generous; normal contention resolves in <100ms.
+            conn.pragma_update(None, "busy_timeout", 5000)?;
             Ok(())
         });
 
-    let pool = Pool::new(manager).map_err(|e| format!("Failed to create pool: {}", e))?;
-    *state.0.lock().unwrap() = Some((db_path, pool));
+    // FIX: Limit pool to 1 connection on Windows. r2d2 defaults to a max of 10.
+    // With WAL mode + SQLCipher on Windows, multiple pooled connections from the
+    // same process can still contend on the -shm file during heavy write bursts,
+    // causing sporadic SQLITE_BUSY. A single connection serialises all access,
+    // which is the correct model for a single-user desktop app anyway.
+    // If you need more throughput later, raise this — but start at 1.
+    let pool = Pool::builder()
+        .max_size(1)
+        .build(manager)
+        .map_err(|e| format!("Failed to create pool: {}", e))?;
+
+    // 5. FIX: Final check-and-set INSIDE the lock — atomic, no race.
+    // If another window won the race and already wrote the pool, we discard ours.
+    // Our pool will be dropped here, which cleanly closes its connection.
+    {
+        let mut pool_guard = state.0.lock().unwrap();
+        match pool_guard.as_ref() {
+            Some((current_path, _)) if current_path == &db_path => {
+                // Another window beat us here — their pool is already live. Use it.
+                // Our newly-built pool is dropped cleanly at end of this block.
+                println!("[DB] Pool already initialised by another window, discarding duplicate.");
+            }
+            _ => {
+                *pool_guard = Some((db_path, pool));
+                println!("[DB] Pool initialised.");
+            }
+        }
+    }
+
     Ok(())
 }
 
@@ -117,7 +164,7 @@ async fn execute_sql(
 ) -> Result<(), String> {
     let sql_params: Vec<SqlValue> = params.iter().map(json_to_sql).collect();
 
-    // Clone the pool reference out of the Mutex so we don't lock the state during the query
+    // Clone the pool reference out of the Mutex so we don't hold the lock during the query
     let pool = {
         let pool_guard = state.0.lock().unwrap();
         pool_guard.as_ref().ok_or("Database not initialized")?.1.clone()
