@@ -15,7 +15,7 @@ import {
     useAiStore
 } from '../index';
 
-export type ContextMode = 'auto' | 'summary' | 'full' | 'rewrite' | 'flashcard';
+export type ContextMode = 'auto' | 'summary' | 'full' | 'rewrite';
 
 type ThinkTagState = {
     isThinking: boolean;
@@ -87,25 +87,18 @@ export const AI_ACTION_PROMPTS = {
     - Diagrams: Use \`\`\`mermaid blocks for any flowcharts or diagrams.
     - Flashcards: If the user asks for flashcards or study material, ALWAYS use this EXACT structure:
       <div class="flashcard-block" data-fc="true">
+        <!-- ALL cards go inside this single block -->
         <div class="flashcard-card-container">
-          <div class="flashcard-card-front">Short Question?</div>
-          <div class="flashcard-card-back">Concise Answer.</div>
+          <div class="flashcard-card-front">Short Question 1?</div>
+          <div class="flashcard-card-back">Concise Answer 1.</div>
+        </div>
+        <div class="flashcard-card-container">
+          <div class="flashcard-card-front">Short Question 2?</div>
+          <div class="flashcard-card-back">Concise Answer 2.</div>
         </div>
       </div>
-      PURE TEXT ONLY: DO NOT use Markdown, code blocks , or LaTeX ($) inside flashcards.
-    Output ONLY the rewritten/improved content. No conversational filler, intro, or explanations.`,
-    flashcard: `You are a study assistant. Generate concise and effective flashcards from the provided text.
-    
-    CRITICAL RULES:
-    1. Output ONLY a single <div class="flashcard-block" data-fc="true"> container.
-    2. Inside that container, for EACH flashcard, use EXACTLY this structure:
-       <div class="flashcard-card-container">
-         <div class="flashcard-card-front">Short Question</div>
-         <div class="flashcard-card-back">Concise Answer</div>
-       </div>
-    3. PURE TEXT ONLY: DO NOT use Markdown, code blocks, or LaTeX ($) inside the flashcards.
-    4. DO NOT include any introductory text, titles, or conversational filler.
-    5. Output ONLY the raw HTML block. If you include ANY other text, the system will fail.`
+      CRITICAL: Output EXACTLY ONE <div class="flashcard-block" data-fc="true"> container, and put all card containers inside it. PURE TEXT ONLY: DO NOT use Markdown, code blocks , or LaTeX ($) inside flashcards.
+    Output ONLY the rewritten/improved content or replacement HTML. DO NOT include any conversational filler, intro, titles, or explanations. Just the final replacement text/html.`,
 };
 
 export function useAiChat(chatId: string | null) {
@@ -263,11 +256,7 @@ export function useAiChat(chatId: string | null) {
     ) => {
         const { overrideChatId, selectedFolderNotes, mode = 'auto', isRetry = false, manualContext, onFinish } = options;
 
-        // Auto-detect flashcard intent if mode is auto and "flashcard" is in the text
         let effectiveMode = mode;
-        if (effectiveMode === 'auto' && content.toLowerCase().includes('flashcard')) {
-            effectiveMode = 'flashcard';
-        }
 
         const effectiveChatId = overrideChatId || chatId;
         if (!effectiveChatId) return;

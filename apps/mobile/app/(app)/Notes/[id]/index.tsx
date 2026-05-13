@@ -311,14 +311,6 @@ export default function NoteEditor() {
                 if (mode === 'rewrite') {
                     // Replace selection
                     editor.onCommand('insertContent', { content: text });
-                } else if (mode === 'flashcard') {
-                    // Insert after selection
-                    const insertPos = selection?.range?.to;
-                    if (typeof insertPos === 'number') {
-                        // Collapse selection to the end to prevent replacement
-                        editor.onCommand('setTextSelection', { from: insertPos, to: insertPos });
-                    }
-                    editor.onCommand('insertContent', { content: text });
                 }
             }
         });

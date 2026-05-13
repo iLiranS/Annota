@@ -42,7 +42,7 @@ jobs:
             ${{ runner.os }}-pnpm-store-
 
       - name: Install deps
-        run: pnpm install
+        run: pnpm install --allow-scripts
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable

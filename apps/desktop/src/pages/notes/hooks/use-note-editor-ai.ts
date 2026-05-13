@@ -44,13 +44,6 @@ export function useNoteEditorAI({ editorRef }: UseNoteEditorAIProps) {
                 if (mode === 'rewrite') {
                     const html = await convertMarkdownToAnnotaHTML(text);
                     editor.onCommand('insertContent', { content: html });
-                } else if (mode === 'flashcard') {
-                    const insertPos = selection?.range?.to;
-                    if (typeof insertPos === 'number') {
-                        editor.onCommand('setTextSelection', { from: insertPos, to: insertPos });
-                    }
-                    const html = await convertMarkdownToAnnotaHTML(text);
-                    editor.onCommand('insertContent', { content: html });
                 }
                 setAiSelection(prev => ({ ...prev, isVisible: false }));
             }
