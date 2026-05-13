@@ -322,7 +322,7 @@ pub fn run() {
         .setup(|app| {
             // Forces DevTools open immediately on app launch for debugging
             if let Some(window) = app.get_webview_window("main") {
-                window.open_devtools();
+                let _ = window.open_devtools();
             }
             Ok(())
         })
