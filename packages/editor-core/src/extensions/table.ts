@@ -4,7 +4,7 @@ import { Table } from '@tiptap/extension-table';
 import { TableCell } from '@tiptap/extension-table-cell';
 import { TableHeader } from '@tiptap/extension-table-header';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
-import { Plugin } from '@tiptap/pm/state';
+import { Plugin, TextSelection } from '@tiptap/pm/state';
 import { columnResizing, tableEditing } from '@tiptap/pm/tables';
 import type { EditorView, NodeView, ViewMutationRecord } from '@tiptap/pm/view';
 import './table.css';
@@ -92,20 +92,53 @@ class CustomTableView implements NodeView {
     table: HTMLTableElement;
     colgroup: HTMLTableColElement;
     contentDOM: HTMLTableSectionElement;
+    view: EditorView;
+    getPos: () => number | undefined;
 
-    constructor(node: ProseMirrorNode, minCellWidth: number, viewOrWidth: number | EditorView) {
+    constructor(node: ProseMirrorNode, minCellWidth: number, view: EditorView, getPos?: () => number | undefined, defaultCellWidth?: number) {
         this.node = node;
         this.minCellWidth = minCellWidth;
-        // If viewOrWidth is a number, it's our manual defaultCellWidth.
-        // If it's an object, it's the EditorView (passed by TipTap), so we use a fallback.
-        this.defaultCellWidth = typeof viewOrWidth === 'number' ? viewOrWidth : 128;
+        this.defaultCellWidth = defaultCellWidth ?? 128;
+        this.view = view;
+        this.getPos = getPos || (() => undefined);
         this.dom = document.createElement('div');
         this.dom.className = 'tableWrapper';
+
+        // --- Selection Gutter ---
+        const gutter = document.createElement('div');
+        gutter.className = 'block-selection-gutter';
+        this.dom.appendChild(gutter);
+
         this.table = this.dom.appendChild(document.createElement('table'));
         this.colgroup = this.table.appendChild(document.createElement('colgroup'));
 
         updateColumns(node, this.colgroup, this.table, this.minCellWidth, this.defaultCellWidth);
         this.contentDOM = this.table.appendChild(document.createElement('tbody'));
+
+        // --- Mobile Selection Support ---
+        let touchStartTime = 0;
+        let touchStartY = 0;
+
+        this.dom.addEventListener('touchstart', (e: TouchEvent) => {
+            touchStartTime = Date.now();
+            touchStartY = e.touches[0].clientY;
+        }, { passive: true });
+
+        this.dom.addEventListener('touchend', (e: TouchEvent) => {
+            const elapsed = Date.now() - touchStartTime;
+            const deltaY = Math.abs(e.changedTouches[0].clientY - touchStartY);
+
+            // Short tap with minimal movement = selection intent
+            if (elapsed < 500 && deltaY < 10) {
+                const pos = typeof this.getPos === 'function' ? this.getPos() : undefined;
+                if (typeof pos !== 'number') return;
+
+                const { state, dispatch } = this.view;
+                // Tapping a table selects the first cell (pos + 1), not the table node itself
+                const tr = state.tr.setSelection(TextSelection.create(state.doc, pos + 1));
+                dispatch(tr);
+            }
+        }, { passive: true });
     }
 
     update(node: ProseMirrorNode) {
@@ -134,11 +167,12 @@ class CustomTableView implements NodeView {
     }
 }
 
-const createTableView = (minCellWidth: number, defaultCellWidth: number) => class extends CustomTableView {
-    constructor(node: ProseMirrorNode) {
-        super(node, minCellWidth, defaultCellWidth);
-    }
-};
+const createTableView = (_minCellWidth: number, defaultCellWidth: number) =>
+    class extends CustomTableView {
+        constructor(node: ProseMirrorNode, cellMinWidth: number, view: EditorView, getPos?: () => number | undefined) {
+            super(node, cellMinWidth, view, getPos, defaultCellWidth);
+        }
+    };
 
 const guardResizeEvents = (plugin: Plugin) => {
     const events = plugin.props.handleDOMEvents;
@@ -221,7 +255,7 @@ export const CustomTable = Table.extend<CustomTableOptions>({
             : new Plugin({
                 props: {
                     nodeViews: {
-                        table: node => new View(node),
+                        table: (node, view, getPos) => new (View as any)(node, minCellWidth, view, getPos),
                     },
                 },
             });

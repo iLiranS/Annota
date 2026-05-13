@@ -8,7 +8,6 @@ import { EditorContent, useEditor } from '@tiptap/react';
 import '@annota/editor-core/highlight-theme.css';
 import 'katex/dist/katex.min.css';
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { useDesktopEditorSelection } from './hooks/useDesktopEditorSelection';
 import { useEditorThemeVariables } from './hooks/useEditorThemeVariables';
 import { useSharedEditorUI } from './hooks/useSharedEditorUI';
 import { AutoShowHeader } from './shared/AutoShowHeader';
@@ -355,7 +354,6 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
             }
         }, [editor, editorProps]);
 
-        useDesktopEditorSelection({ editor, containerRef });
 
         useEditorThemeVariables({ colors, dark, editorSettings, rootRef: containerRef });
 

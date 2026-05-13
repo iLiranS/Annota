@@ -278,3 +278,40 @@
 .ProseMirror-focused {
     outline: none;
 }
+
+/* Block Selection Gutter - invisible area to allow block selection */
+.block-selection-gutter {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 14px;
+    z-index: 1;
+}
+
+/* For tables, the gutter should be relative to the wrapper */
+.tableWrapper {
+    position: relative;
+    margin: var(--editor-paragraph-spacing) 0;
+}
+
+/* Selected Node Highlights */
+.ProseMirror-selectednode {
+    outline: 2px solid var(--accent-color, #007AFF) !important;
+    outline-offset: -2px;
+}
+
+/* Overlay for rich nodes to show they are selected as a block */
+.flashcard-block.ProseMirror-selectednode::after,
+.tableWrapper.ProseMirror-selectednode::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 122, 255, 0.08);
+    pointer-events: none;
+    z-index: 5;
+    border-radius: inherit;
+}

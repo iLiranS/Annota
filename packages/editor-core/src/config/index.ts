@@ -55,6 +55,7 @@ import {
     NoteLinkCommandExtension,
     Quote,
     SearchExtension,
+    SelectionManager,
     ShortcutManager,
     SlashCommandExtension,
     TagCommandExtension
@@ -119,6 +120,7 @@ export const getExtensions = (options: {
             gapcursor: true,
         }),
         Indentation,
+        SelectionManager,
         ShortcutManager,
         ListItemReorder,
         AnnotaAutolink,
@@ -309,16 +311,19 @@ export const getEditorState = (editor: any) => {
     const codeBlockAttrs = e.getAttributes('codeBlock');
 
     const { from, to } = e.state.selection;
-    const selectedText = from !== to ? e.state.doc.textBetween(from, to, ' ') : '';
+    const selection = e.state.selection;
+    const isCellSelection = selection instanceof CellSelection || (selection as any).constructor.name === 'CellSelection';
 
-    // Get HTML of selection
     let selectedHtml = '';
-    if (from !== to) {
-        const slice = e.state.doc.slice(from, to);
+    let selectedText = '';
+    
+    if (from !== to || isCellSelection) {
+        const slice = selection.content();
         const fragment = DOMSerializer.fromSchema(e.schema).serializeFragment(slice.content);
         const div = document.createElement('div');
         div.appendChild(fragment);
         selectedHtml = div.innerHTML;
+        selectedText = slice.content.textBetween(0, slice.content.size, ' ');
     }
 
     const headingAttrs = e.isActive('heading') ? e.getAttributes('heading') : null;

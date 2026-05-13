@@ -72,32 +72,59 @@ export function applyFontFamily(value?: string) {
 // --- Logic ---
 
 
-let scrollDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+// Force internal WebView scroll to 0,0 to prevent fighting with parent ScrollView
+if (typeof window !== 'undefined') {
+    window.addEventListener('scroll', () => {
+        if (window.scrollY !== 0 || window.scrollX !== 0) {
+            window.scrollTo(0, 0);
+        }
+    }, { passive: true });
+}
+
+let lastSelection = { from: -1, to: -1 };
 
 export function scrollCursorIntoView() {
-    if (!window.editor) return;
+    if (!window.editor || !window.editor.isFocused) return;
 
-    // Debounce to avoid excessive calls
-    if (scrollDebounceTimer) clearTimeout(scrollDebounceTimer);
-    scrollDebounceTimer = setTimeout(() => {
-        if (!window.editor || !window.editor.isFocused) return;
+    try {
+        const { selection } = window.editor.state;
+        
+        // Default to head for normal cursor movements
+        let activePos = (selection as any).head ?? selection.from;
 
-        try {
-            let { from } = window.editor.state.selection;
+        // Detect which handle actually moved (crucial for mobile native selection handles)
+        if (lastSelection.from !== -1) {
+            const fromChanged = selection.from !== lastSelection.from;
+            const toChanged = selection.to !== lastSelection.to;
 
-
-            const coords = window.editor.view.coordsAtPos(from);
-            if (!coords) return;
-
-            sendMessage({
-                type: 'cursorPosition',
-                top: coords.top,
-                bottom: coords.bottom
-            });
-        } catch (e) {
-            // Silently fail - don't break the editor
+            if (fromChanged && !toChanged) {
+                // Top handle moved
+                activePos = selection.from;
+            } else if (toChanged && !fromChanged) {
+                // Bottom handle moved
+                activePos = selection.to;
+            }
+            // If both changed, fallback to the default head
         }
-    }, 50);
+
+        lastSelection = { from: selection.from, to: selection.to };
+
+        const coords = window.editor.view.coordsAtPos(activePos);
+        if (!coords) return;
+
+        sendMessage({
+            type: 'cursorPosition',
+            top: coords.top,
+            bottom: coords.bottom,
+            activePos: activePos,
+            isTopHandle: activePos === selection.from,
+            isBottomHandle: activePos === selection.to,
+            // Keep headIndex for RTL shield
+            headIndex: activePos 
+        });
+    } catch (e) {
+        // Silently fail - don't break the editor
+    }
 }
 
 
@@ -169,7 +196,8 @@ export function setupEditor(options: any) {
     // Notify extensions about theme changes
     window.dispatchEvent(new CustomEvent('annota-theme-change', { detail: { isDark } }));
 
-    // Height is auto so it can grow
+    // Force internal WebView scroll to 0,0 and hide overflow to prevent fighting
+    document.body.style.overflow = 'hidden';
     document.body.style.height = 'auto';
     document.body.style.minHeight = '100%';
 

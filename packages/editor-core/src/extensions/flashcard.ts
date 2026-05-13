@@ -1,5 +1,5 @@
 import { mergeAttributes, Node } from '@tiptap/core';
-import { Plugin, PluginKey } from '@tiptap/pm/state';
+import { Plugin, PluginKey, NodeSelection } from '@tiptap/pm/state';
 import { createBlockMenuButton } from './block-menu-button';
 import './flashcard.css';
 import { generateBlockId } from './id-generator';
@@ -162,10 +162,28 @@ export const FlashcardBlock = Node.create({
         ];
     },
 
-    renderHTML({ HTMLAttributes }) {
+    renderHTML({ node, HTMLAttributes }) {
+        const cards = parseCards(node.attrs.cards);
+        const title = node.attrs.title ?? DEFAULT_TITLE;
+        
+        // Render a simplified version for HTML export / AI context
+        const cardsHtml = cards.map(c => [
+            'div', 
+            { class: 'flashcard-card-item' }, 
+            ['p', { class: 'flashcard-front-text' }, `Q: ${c.front}`],
+            ['p', { class: 'flashcard-back-text' }, `A: ${c.back}`]
+        ]);
+
         return [
             'div',
-            mergeAttributes(HTMLAttributes, { 'data-fc': '', 'data-type': 'flashcardBlock' }),
+            mergeAttributes(HTMLAttributes, { 
+                'data-fc': '', 
+                'data-type': 'flashcardBlock',
+                'data-title': title,
+                'data-c': serializeCards(cards)
+            }),
+            ['h3', { class: 'flashcard-export-title' }, title],
+            ...cardsHtml
         ];
     },
 
@@ -219,6 +237,35 @@ export const FlashcardBlock = Node.create({
             const dom = document.createElement('div');
             dom.className = 'flashcard-block';
             dom.dataset.id = node.attrs.id;
+
+            // --- Selection Gutter ---
+            const gutter = document.createElement('div');
+            gutter.className = 'block-selection-gutter';
+            dom.appendChild(gutter);
+
+            // --- Mobile Selection Support ---
+            let touchStartTime = 0;
+            let touchStartY = 0;
+
+            dom.addEventListener('touchstart', (e: TouchEvent) => {
+                touchStartTime = Date.now();
+                touchStartY = e.touches[0].clientY;
+            }, { passive: true });
+
+            dom.addEventListener('touchend', (e: TouchEvent) => {
+                const elapsed = Date.now() - touchStartTime;
+                const deltaY = Math.abs(e.changedTouches[0].clientY - touchStartY);
+
+                // Short tap with minimal movement = selection intent
+                if (elapsed < 500 && deltaY < 10) {
+                    const pos = typeof getPos === 'function' ? getPos() : undefined;
+                    if (typeof pos !== 'number') return;
+
+                    const { state, dispatch } = editor.view;
+                    const tr = state.tr.setSelection(NodeSelection.create(state.doc, pos));
+                    dispatch(tr);
+                }
+            }, { passive: true });
 
             // --- Header ---
             const header = document.createElement('div');
@@ -621,7 +668,15 @@ export const FlashcardBlock = Node.create({
                 stopEvent: (event) => {
                     const target = event.target as HTMLElement;
                     if (!target) return false;
-                    if (dom.contains(target)) return true;
+
+                    // Allow ProseMirror to handle events on the block itself and non-interactive areas
+                    // for proper NodeSelection and drag behavior.
+                    if (target.closest('button, input, textarea, .flashcard-nav-overlay-btn, .flashcard-action-btn')) {
+                        return true;
+                    }
+
+                    // For the main card area, if it's NOT an interactive element, let PM see it 
+                    // unless we are in the middle of a card flip/edit (but even then, PM selection is good).
                     return false;
                 },
                 ignoreMutation: () => true,

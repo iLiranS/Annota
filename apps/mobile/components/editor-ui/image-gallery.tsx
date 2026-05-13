@@ -264,22 +264,24 @@ export function ImageGallery({
             } else if (scale.value > 5) {
                 scale.value = withSpring(5);
                 savedScale.value = 5;
-                // Clamp translate for the capped scale
                 const clamped = clampTranslate(translateX.value, translateY.value, 5);
                 translateX.value = withSpring(clamped.x);
                 translateY.value = withSpring(clamped.y);
-                savedTranslateX.value = clamped.x;
-                savedTranslateY.value = clamped.y;
+                // Save the current (pre-spring) position as baseline so that any
+                // concurrent pan gesture doesn't jump when it reads savedTranslate*.
+                savedTranslateX.value = translateX.value;
+                savedTranslateY.value = translateY.value;
             } else {
                 savedScale.value = scale.value;
-                // Clamp translate for the current scale
                 const clamped = clampTranslate(translateX.value, translateY.value, scale.value);
                 if (clamped.x !== translateX.value || clamped.y !== translateY.value) {
                     translateX.value = withSpring(clamped.x);
                     translateY.value = withSpring(clamped.y);
                 }
-                savedTranslateX.value = clamped.x;
-                savedTranslateY.value = clamped.y;
+                // Save the current (pre-spring) position as baseline so that any
+                // concurrent pan gesture doesn't jump when it reads savedTranslate*.
+                savedTranslateX.value = translateX.value;
+                savedTranslateY.value = translateY.value;
             }
         });
 
@@ -289,6 +291,7 @@ export function ImageGallery({
         .onStart(() => {
             'worklet';
             savedOffset.value = totalOffset.value;
+            savedScale.value = scale.value;
             savedTranslateX.value = translateX.value;
             savedTranslateY.value = translateY.value;
         })

@@ -50,6 +50,7 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
         const scrollViewRef = useRef<ScrollView>(null);
         const scrollOffsetY = useRef(0);
         const scrollHeight = useRef(0);
+        const webViewY = useRef(0);
         const [editorHeight, setEditorHeight] = useState<number>(100);
         const [isPopupOpen, setIsPopupOpen] = useState(false);
         const [activePopup, setActivePopup] = useState<PopupType>(null);
@@ -181,38 +182,41 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                     }
                     break;
                 case 'cursorPosition':
-                    if (!isKeyboardVisible) return;
-
-                    // --- THE RTL BUG SHIELD ---
-                    // WebKit's RTL bug causes trailing spaces to report their position as `top: 0`.
-                    // If the WebView tells us the cursor is at the very top of the document, 
-                    // but the user's screen is scrolled down further than 150px, it's a phantom coordinate.
-                    // We simply block the scroll so the screen doesn't violently jump up.
-                    if (data.top < 10 && scrollOffsetY.current > 150) {
+                    // --------------------------
+                    // If the cursor is at the very top of the document (index < 10), it's NOT a phantom coordinate.
+                    // The RTL bug typically happens for trailing spaces at the end of lines, often deep in the doc.
+                    if (data.top < 10 && scrollOffsetY.current > 150 && (data.headIndex || 0) > 10) {
                         return;
                     }
                     // --------------------------
+
+                    // Account for the WebView's vertical offset within the ScrollView
+                    const absoluteTop = data.top + webViewY.current;
+                    const absoluteBottom = data.bottom + webViewY.current;
+
+                    const isTopHandle = data.isTopHandle ?? true;
+                    const isBottomHandle = data.isBottomHandle ?? true;
 
                     // Accurately calculate what is blocking the bottom of the screen
                     const bottomObstruction = isKeyboardVisible ? (keyboardHeight + toolbarHeight) : 0;
                     const visibleSpace = height - bottomObstruction;
 
-                    // Massive safe margins so the cursor rests comfortably in the middle-lower screen
-                    const bottomBuffer = 140;
-                    const topBuffer = 80;
+                    // Slimmer buffers for auto-scroll to avoid "fighting" the user's manual scroll
+                    const bottomBuffer = 80;
+                    const topBuffer = 60;
 
-                    // If cursor is dipping too close to the toolbar, push it up
-                    if (data.bottom > scrollOffsetY.current + visibleSpace - bottomBuffer) {
+                    // If actively dragging the BOTTOM handle, only push up if it dips below the screen
+                    if (isBottomHandle && absoluteBottom > scrollOffsetY.current + visibleSpace - bottomBuffer) {
                         scrollViewRef.current?.scrollTo({
-                            y: data.bottom - visibleSpace + bottomBuffer,
-                            animated: true
+                            y: absoluteBottom - visibleSpace + bottomBuffer,
+                            animated: false
                         });
                     }
-                    // If cursor is hiding under the top header, pull it down
-                    else if (data.top < scrollOffsetY.current + topBuffer) {
+                    // If actively dragging the TOP handle, only pull down if it goes above the screen
+                    else if (isTopHandle && absoluteTop < scrollOffsetY.current + topBuffer) {
                         scrollViewRef.current?.scrollTo({
-                            y: Math.max(0, data.top - topBuffer),
-                            animated: true
+                            y: Math.max(0, absoluteTop - topBuffer),
+                            animated: false
                         });
                     }
                     break;
@@ -362,6 +366,9 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                                 const data = JSON.parse(event.nativeEvent.data);
                                 handleBridgeMessage(data);
                             } catch (e) { }
+                        }}
+                        onLayout={(e) => {
+                            webViewY.current = e.nativeEvent.layout.y;
                         }}
                         style={[styles.webView, { height: Math.max(editorHeight, 100) }]}
                         scrollEnabled={false}
