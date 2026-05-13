@@ -38,6 +38,7 @@ export interface PlatformAdapters {
         ensureDir: (scope: 'images' | 'cache' | 'files') => Promise<string>;
         copyFile: (from: string, to: string) => Promise<void>;
         deleteFile: (path: string) => Promise<void>;
+        clearDir: (path: string) => Promise<void>;
         readBase64: (path: string) => Promise<string>;
         readBytes: (path: string) => Promise<Uint8Array>;
         writeBytes: (path: string, bytes: Uint8Array) => Promise<void>;

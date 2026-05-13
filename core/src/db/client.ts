@@ -1,4 +1,5 @@
 import { eq, inArray } from 'drizzle-orm';
+import { areAdaptersInitialized, getPlatformAdapters } from '../adapters';
 import { getStorageEngine } from '../stores/config';
 import { getDb, getExpoDb, useDbStore } from '../stores/db.store';
 import { useSyncStore } from '../stores/sync.store';
@@ -353,6 +354,21 @@ export async function resetAll(): Promise<void> {
     if (typeof storage.clear === 'function') {
       await storage.clear();
       console.log('Storage cleared');
+    }
+
+    // 4.1 Clear local file directories
+    if (areAdaptersInitialized()) {
+      const adapters = getPlatformAdapters();
+      const scopes: ('images' | 'cache' | 'files')[] = ['images', 'cache', 'files'];
+      for (const scope of scopes) {
+        try {
+          const dir = await adapters.fileSystem.ensureDir(scope);
+          await adapters.fileSystem.clearDir(dir);
+          console.log(`[Reset] Cleared local directory for scope: ${scope}`);
+        } catch (dirError) {
+          console.warn(`[Reset] Failed to clear ${scope} directory:`, dirError);
+        }
+      }
     }
 
     // 5. Sign out LAST — this triggers onAuthStateChange listeners which may

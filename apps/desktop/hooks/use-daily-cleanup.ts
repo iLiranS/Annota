@@ -40,6 +40,7 @@ export function useDailyCleanup() {
 
                     // 2. Update the last run time
                     await storage.setItem(storageKey, now.toISOString());
+                    console.log("[DAILY_CLEANUP] Daily cleanup completed successfully");
                 }
             } catch (error) {
                 console.error("[DAILY_CLEANUP] Failed to run daily cleanup", error);

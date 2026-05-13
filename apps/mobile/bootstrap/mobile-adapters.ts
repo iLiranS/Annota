@@ -131,6 +131,11 @@ export function createMobileAdapters(): PlatformAdapters {
                 const file = new FileSystem.File(path);
                 if (file.exists) await file.delete();
             },
+            clearDir: async (path: string) => {
+                const dir = new FileSystem.Directory(path);
+                if (dir.exists) await dir.delete();
+                await dir.create();
+            },
             readBase64: async (path: string) => {
                 const file = new FileSystem.File(path);
                 return await file.base64();

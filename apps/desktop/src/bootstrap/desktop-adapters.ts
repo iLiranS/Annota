@@ -201,6 +201,10 @@ export function createDesktopAdapters(): PlatformAdapters {
       deleteFile: async (path: string) => {
         await remove(path);
       },
+      clearDir: async (path: string) => {
+        await remove(path, { recursive: true });
+        await mkdir(path, { recursive: true });
+      },
       readBase64: async (path: string) => {
         const bytes = await readFileBytes(path);
         return encodeArrayBuffer(toArrayBuffer(bytes));
@@ -216,42 +220,20 @@ export function createDesktopAdapters(): PlatformAdapters {
         return typeof info.size === 'number' ? info.size : 0;
       },
       downloadToTemp: async (url: string) => {
-        const MAX_SIZE = 5 * 1024 * 1024; // 5MB limit
-        const tempDir = await ensureScopedDir('cache');
-        const path = await join(tempDir, makeTempFilename('bin'));
-
-        const cleanup = async () => {
-          try { await remove(path); } catch { }
-        };
-
         try {
-          const response = await fetch(url);
-          if (!response.ok) {
-            throw new Error(`Failed to download file: ${response.status}`);
-          }
+          // Use the secure Rust backend to download the file
+          const localPath = await invoke<string>('download_to_temp_secure', { url });
 
-          const contentLength = response.headers.get("content-length");
-          if (contentLength && Number(contentLength) > MAX_SIZE) {
-            throw new Error("Image too large");
-          }
+          const cleanup = async () => {
+            try { await remove(localPath); } catch { }
+          };
 
-          const contentType = response.headers.get("content-type");
-          if (!contentType?.startsWith("image/") && contentType !== "application/pdf") {
-            throw new Error("URL does not point to a supported file type (image or pdf)");
-          }
-
-          const bytes = new Uint8Array(await response.arrayBuffer());
-          if (bytes.length > MAX_SIZE) {
-            throw new Error("Image too large");
-          }
-
-          await writeFileBytes(path, bytes);
           return {
-            path,
+            path: localPath,
             cleanup
           };
         } catch (error) {
-          await cleanup();
+          console.error("Secure download failed:", error);
           throw error;
         }
       },

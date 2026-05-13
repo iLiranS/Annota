@@ -1,4 +1,4 @@
-use std::fs;
+use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::net::TcpListener;
 use tauri::{Emitter, Window, Manager};
@@ -275,6 +275,60 @@ fn compress_image_native(
 }
 
 #[tauri::command]
+async fn download_to_temp_secure(app_handle: tauri::AppHandle, url: String) -> Result<String, String> {
+    let max_size: u64 = 5 * 1024 * 1024; // 5MB
+
+    // 1. Fetch the URL securely from the backend
+    let client = reqwest::Client::new();
+    let response = client.get(&url).send().await.map_err(|e| e.to_string())?;
+
+    // 2. Validate Size (Content-Length header)
+    if let Some(len) = response.content_length() {
+        if len > max_size {
+            return Err("File too large".into());
+        }
+    }
+
+    // 3. Validate Type
+    let content_type = response
+        .headers()
+        .get(reqwest::header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+
+    if !content_type.starts_with("image/") && content_type != "application/pdf" {
+        return Err("Unsupported file type".into());
+    }
+
+    // 4. Download bytes and check size again (streaming)
+    let bytes = response.bytes().await.map_err(|e| e.to_string())?;
+    if bytes.len() as u64 > max_size {
+        return Err("File too large".into());
+    }
+
+    // 5. Save to temp dir
+    let cache_dir = app_handle
+        .path()
+        .app_cache_dir()
+        .map_err(|e| e.to_string())?
+        .join("annota-cache"); // Match the scoped directory name used in JS
+    
+    fs::create_dir_all(&cache_dir).map_err(|e| e.to_string())?;
+
+    // Generate a temp filename
+    let timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_millis();
+    let temp_path = cache_dir.join(format!("download_{}.bin", timestamp));
+
+    let mut file = File::create(&temp_path).map_err(|e| e.to_string())?;
+    file.write_all(&bytes).map_err(|e| e.to_string())?;
+
+    Ok(temp_path.to_string_lossy().to_string())
+}
+
+#[tauri::command]
 async fn start_auth_listener(window: Window) -> Result<(), String> {
     std::thread::spawn(move || {
         let listener = TcpListener::bind("127.0.0.1:8484").expect("Failed to bind to port 8484");
@@ -338,7 +392,8 @@ pub fn run() {
             argon2id,
             open_encrypted_db,
             execute_sql,
-            select_sql
+            select_sql,
+            download_to_temp_secure
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

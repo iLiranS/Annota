@@ -1,4 +1,4 @@
-import { useDbStore, useSettingsStore, vacuumDatabase } from '@annota/core';
+import { useDbStore, vacuumDatabase } from '@annota/core';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect } from 'react';
 
@@ -33,6 +33,7 @@ export function useDailyCleanup() {
 
                     // 2. Update the last run time
                     await AsyncStorage.setItem(storageKey, now.toISOString());
+                    console.log("[DAILY_CLEANUP] Daily cleanup completed successfully");
                 }
             } catch (error) {
                 console.error("[DAILY_CLEANUP] Failed to run daily cleanup", error);
