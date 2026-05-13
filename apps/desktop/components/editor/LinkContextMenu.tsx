@@ -81,10 +81,12 @@ export function LinkContextMenu({
                             <Eye className="mr-2 h-4 w-4" />
                             <span>Preview Note</span>
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleAction('open')}>
-                            <ExternalLink className="mr-2 h-4 w-4" />
-                            <span>Open in New Window</span>
-                        </DropdownMenuItem>
+                        {!(typeof window !== 'undefined' && /windows/i.test(navigator.userAgent)) && (
+                            <DropdownMenuItem onClick={() => handleAction('open')}>
+                                <ExternalLink className="mr-2 h-4 w-4" />
+                                <span>Open in New Window</span>
+                            </DropdownMenuItem>
+                        )}
                     </>
                 ) : (
                     <DropdownMenuItem onClick={() => handleAction('external')}>

@@ -29,13 +29,20 @@ fn json_to_sql(v: &serde_json::Value) -> SqlValue {
         _ => SqlValue::Text(v.to_string()),
     }
 }
-// Helper to normalize Windows paths so child/main windows always match
+// Helper to normalize Windows paths including UNC paths
+fn canonicalize_path(p: &str) -> String {
+    std::path::Path::new(p)
+        .canonicalize()
+        .map(|p| p.to_string_lossy().to_string().to_lowercase().replace('\\', "/"))
+        .unwrap_or_else(|_| p.to_lowercase().replace('\\', "/"))
+}
+
 fn paths_match(p1: &str, p2: &str) -> bool {
-    p1.to_lowercase().replace('\\', "/") == p2.to_lowercase().replace('\\', "/")
+    canonicalize_path(p1) == canonicalize_path(p2)
 }
 
 #[tauri::command]
-async fn open_encrypted_db(
+fn open_encrypted_db(
     state: tauri::State<'_, DbState>,
     db_path: String,
     encryption_key: String,

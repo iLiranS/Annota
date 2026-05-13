@@ -322,13 +322,15 @@ export function NoteListItem({
                                 <span>Preview Note</span>
                             </ContextMenuItem>
 
-                            <ContextMenuItem
-                                onSelect={handleOpenInNewWindow}
-                                onPointerUp={(e) => e.button === 2 && e.preventDefault()}
-                            >
-                                <Ionicons name="open-outline" size={16} />
-                                <span>Open in New Window</span>
-                            </ContextMenuItem>
+                            {!(typeof window !== 'undefined' && /windows/i.test(navigator.userAgent)) && (
+                                <ContextMenuItem
+                                    onSelect={handleOpenInNewWindow}
+                                    onPointerUp={(e) => e.button === 2 && e.preventDefault()}
+                                >
+                                    <Ionicons name="open-outline" size={16} />
+                                    <span>Open in New Window</span>
+                                </ContextMenuItem>
+                            )}
 
                             <ContextMenuItem
                                 onSelect={handleToggleQuickAccess}

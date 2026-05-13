@@ -48,6 +48,11 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri -> target
+
       - name: Set version
         run: pnpm version ${{ inputs.version }} --no-git-tag-version
 
