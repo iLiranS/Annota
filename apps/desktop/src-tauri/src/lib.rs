@@ -29,49 +29,37 @@ fn json_to_sql(v: &serde_json::Value) -> SqlValue {
         _ => SqlValue::Text(v.to_string()),
     }
 }
+// Helper to normalize Windows paths so child/main windows always match
+fn paths_match(p1: &str, p2: &str) -> bool {
+    p1.to_lowercase().replace('\\', "/") == p2.to_lowercase().replace('\\', "/")
+}
 
 #[tauri::command]
-fn open_encrypted_db(
+async fn open_encrypted_db(
     state: tauri::State<'_, DbState>,
     db_path: String,
     encryption_key: String,
 ) -> Result<(), String> {
-    // 1. Ensure directory exists
     if let Some(parent) = std::path::Path::new(&db_path).parent() {
         std::fs::create_dir_all(parent).map_err(|e| format!("Failed to create DB directory: {}", e))?;
     }
 
-    // FIX: The previous code released the Mutex between the "is it already open?" check
-    // and the "write the new pool" step. On Windows, two windows could both pass the check
-    // simultaneously, and the second would overwrite the pool — dropping live connections
-    // from the first window, causing SQLCipher's file lock to be torn down mid-query.
-    //
-    // The fix: hold the lock for the entire check-and-set. We do the expensive work
-    // (migration, pool creation) BEFORE acquiring the lock, then do one final check
-    // inside the lock before committing. This is the classic "double-checked locking"
-    // pattern, done correctly.
-
-    // 2. Fast path: check if already open WITHOUT holding the lock long.
-    // This is safe to read optimistically — worst case we do redundant work below.
+    // 1. Fast path using bulletproof helper
     {
         let pool_guard = state.0.lock().unwrap();
         if let Some((current_path, _)) = pool_guard.as_ref() {
-            if current_path == &db_path {
+            if paths_match(current_path, &db_path) {
+                println!("[DB] Fast path hit! Connection already open.");
                 return Ok(());
             }
         }
     }
 
-    // 3. Check if the database exists AND is unencrypted (migration path).
-    // This is done OUTSIDE the lock because it can be slow and doesn't mutate state.
+    // 2. Migration check using bulletproof helper
     if std::path::Path::new(&db_path).exists() {
-        // FIX: We must check under a short lock whether the pool is already initialised
-        // BEFORE attempting to open the file for the plaintext check. On Windows, even
-        // a read-only rusqlite::Connection::open on a SQLCipher-encrypted file that's
-        // already pool-managed can cause a sharing violation.
         let already_open = {
             let pool_guard = state.0.lock().unwrap();
-            pool_guard.as_ref().map_or(false, |(p, _)| p == &db_path)
+            pool_guard.as_ref().map_or(false, |(p, _)| paths_match(p, &db_path))
         };
 
         if !already_open {
@@ -85,7 +73,6 @@ fn open_encrypted_db(
 
             if is_unencrypted {
                 println!("[DB] Unencrypted database detected. Running SQLCipher migration...");
-                
                 let backup_path = format!("{}.bak", db_path);
                 std::fs::rename(&db_path, &backup_path).map_err(|e| e.to_string())?;
 
@@ -102,14 +89,12 @@ fn open_encrypted_db(
                 new_conn.execute("DETACH DATABASE plaintext", []).map_err(|e| e.to_string())?;
                 
                 new_conn.close().map_err(|_| "Failed to close migration connection".to_string())?;
-                
                 println!("[DB] Migration complete.");
             }
         }
     }
 
-    // 4. Build the pool OUTSIDE the lock (pool creation opens connections, which is slow
-    //    and would hold the Mutex for too long, blocking any concurrent queries).
+    // 3. Build pool
     let encryption_key_clone = encryption_key.clone();
     let db_path_clone = db_path.clone();
     let manager = SqliteConnectionManager::file(&db_path_clone)
@@ -117,36 +102,30 @@ fn open_encrypted_db(
             conn.pragma_update(None, "key", &encryption_key_clone)?;
             conn.pragma_update(None, "journal_mode", "WAL")?;
             conn.pragma_update(None, "foreign_keys", "ON")?;
-            // FIX: Increase busy timeout so that if the main window is mid-migration
-            // and the child window sends a query, it waits instead of erroring immediately.
-            // 5000ms is generous; normal contention resolves in <100ms.
             conn.pragma_update(None, "busy_timeout", 5000)?;
             Ok(())
         });
 
-    // FIX: Limit pool size. Since we are in WAL mode and we've fixed the Mutex
-    // race condition, we can safely allow multiple connections (e.g. 4)
-    // so that the child window can read while the main window is busy.
     let pool = Pool::builder()
         .max_size(4)
         .build(manager)
         .map_err(|e| format!("Failed to create pool: {}", e))?;
 
-    // 5. FIX: Final check-and-set INSIDE the lock — atomic, no race.
-    // If another window won the race and already wrote the pool, we discard ours.
-    // Our pool will be dropped here, which cleanly closes its connection.
+    // 4. Final check-and-set using bulletproof helper
     {
         let mut pool_guard = state.0.lock().unwrap();
-        match pool_guard.as_ref() {
-            Some((current_path, _)) if current_path == &db_path => {
-                // Another window beat us here — their pool is already live. Use it.
-                // Our newly-built pool is dropped cleanly at end of this block.
-                println!("[DB] Pool already initialised by another window, discarding duplicate.");
-            }
-            _ => {
-                *pool_guard = Some((db_path, pool));
-                println!("[DB] Pool initialised.");
-            }
+        
+        let is_duplicate = if let Some((current_path, _)) = pool_guard.as_ref() {
+            paths_match(current_path, &db_path)
+        } else {
+            false
+        };
+
+        if is_duplicate {
+            println!("[DB] Pool already initialised by another window, discarding duplicate.");
+        } else {
+            *pool_guard = Some((db_path, pool));
+            println!("[DB] Pool initialised.");
         }
     }
 
@@ -154,21 +133,19 @@ fn open_encrypted_db(
 }
 
 #[tauri::command]
-fn execute_sql(
+async fn execute_sql(
     state: tauri::State<'_, DbState>,
     sql: String,
     params: Vec<serde_json::Value>,
 ) -> Result<(), String> {
     let sql_params: Vec<SqlValue> = params.iter().map(json_to_sql).collect();
 
-    // Clone the pool reference out of the Mutex so we don't hold the lock during the query
     let pool = {
         let pool_guard = state.0.lock().unwrap();
         pool_guard.as_ref().ok_or("Database not initialized")?.1.clone()
     };
 
     let conn = pool.get().map_err(|e| e.to_string())?;
-
     conn.execute(&sql, rusqlite::params_from_iter(sql_params))
         .map_err(|e| e.to_string())?;
 
@@ -176,7 +153,30 @@ fn execute_sql(
 }
 
 #[tauri::command]
-fn select_sql(
+async fn wait_for_db(state: tauri::State<'_, DbState>) -> Result<(), String> {
+    let mut attempts = 0;
+    loop {
+        {
+            let pool_guard = state.0.lock().unwrap();
+            if pool_guard.is_some() {
+                println!("[DB] Child window attached to existing pool.");
+                return Ok(());
+            }
+        }
+        
+        if attempts > 200 { 
+            return Err("Child window timed out waiting for main window DB".to_string());
+        }
+        
+        // Because this function is now `async`, this sleep runs on a background
+        // Tokio worker thread. It will NOT freeze your main UI thread or the "X" button.
+        std::thread::sleep(std::time::Duration::from_millis(50));
+        attempts += 1;
+    }
+}
+
+#[tauri::command]
+async fn select_sql(
     state: tauri::State<'_, DbState>,
     sql: String,
     params: Vec<serde_json::Value>,
@@ -190,7 +190,6 @@ fn select_sql(
 
     let conn = pool.get().map_err(|e| e.to_string())?;
     let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
-
     let col_count = stmt.column_count();
 
     let rows = stmt.query_map(rusqlite::params_from_iter(sql_params), |row| {
@@ -200,12 +199,8 @@ fn select_sql(
                 rusqlite::types::ValueRef::Null => serde_json::Value::Null,
                 rusqlite::types::ValueRef::Integer(n) => n.into(),
                 rusqlite::types::ValueRef::Real(f) => f.into(),
-                rusqlite::types::ValueRef::Text(s) => {
-                    String::from_utf8_lossy(s).into_owned().into()
-                }
-                rusqlite::types::ValueRef::Blob(b) => {
-                    serde_json::Value::String(BASE64_STANDARD.encode(b))
-                }
+                rusqlite::types::ValueRef::Text(s) => String::from_utf8_lossy(s).into_owned().into(),
+                rusqlite::types::ValueRef::Blob(b) => serde_json::Value::String(BASE64_STANDARD.encode(b)),
             };
             row_arr.push(val);
         }
@@ -319,13 +314,6 @@ async fn start_auth_listener(window: Window) -> Result<(), String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .setup(|app| {
-            // Forces DevTools open immediately on app launch for debugging
-            if let Some(window) = app.get_webview_window("main") {
-                let _ = window.open_devtools();
-            }
-            Ok(())
-        })
         .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.show();
@@ -345,6 +333,7 @@ pub fn run() {
         .manage(DbState(Mutex::new(None)))
         .invoke_handler(tauri::generate_handler![
             start_auth_listener,
+            wait_for_db,
             compress_image_native,
             get_system_fonts,
             argon2id,

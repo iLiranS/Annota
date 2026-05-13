@@ -47,26 +47,16 @@ export async function initDesktopSqlite(userId: string | null, dbKey: string, sk
       const appDataDirPath = await appDataDir();
       const fullDbPath = await join(appDataDirPath, dbName);
 
-      // FIX: If this is a child window (skipMigrations=true), we must wait for the
-      // Rust pool to exist before proceeding. The main window creates the pool and
-      // runs migrations; the child window must not call open_encrypted_db while the
-      // main window's pool creation is in-flight on the Rust side, because on Windows
-      // this races the final Mutex write and can discard the main window's pool.
-      //
-      // The safe protocol:
-      //   - Main window: calls open_encrypted_db normally (creates pool, stores it).
-      //   - Child window: also calls open_encrypted_db, but Rust now holds the Mutex
-      //     for the full check-and-set, so the child's call either:
-      //       a) returns immediately (pool already there) — the common fast path, or
-      //       b) builds its own pool but discards it inside the lock when it sees the
-      //          main window's pool is already there — safe, no data loss.
-      //
-      // We still call open_encrypted_db from the child so the JS side can be sure
-      // the Rust pool exists before issuing queries. The Rust side is now safe.
-      await invoke('open_encrypted_db', { 
-        dbPath: fullDbPath, 
-        encryptionKey: dbKey 
-      });
+      // FIX: Child windows must not touch the SQLite file directly to avoid Windows file locks.
+      // They wait for the main window to finish setting up the Rust pool.
+      if (skipMigrations) {
+        await invoke('wait_for_db');
+      } else {
+        await invoke('open_encrypted_db', { 
+          dbPath: fullDbPath, 
+          encryptionKey: dbKey 
+        });
+      }
 
       const TX_CONTROL_RE = /^\s*(begin|commit|rollback|savepoint|release savepoint)\b/i;
 
