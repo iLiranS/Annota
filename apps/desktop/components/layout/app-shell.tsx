@@ -157,8 +157,7 @@ export default function AppShell() {
                             <div
                                 onMouseDown={startResizing}
                                 className={cn(
-                                    "absolute top-0 bottom-0 w-3 cursor-col-resize z-50 flex items-center justify-center group",
-                                    general.appDirection === "rtl" ? "-right-1.5" : "-left-1.5"
+                                    "absolute top-0 bottom-0 w-3   cursor-col-resize z-50 flex items-center justify-center group",
                                 )}
                             >
                                 <div className="w-px h-full bg-transparent group-hover:bg-primary/40 group-hover:w-0.5 transition-all" />

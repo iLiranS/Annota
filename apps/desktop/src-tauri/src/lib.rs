@@ -12,8 +12,8 @@ use rusqlite::types::Value as SqlValue;
 use std::sync::Mutex;
 use base64::prelude::*; // Fix 1: added missing semicolon
 
-// The Tauri state holding our connection pool
-struct DbState(Mutex<Option<Pool<SqliteConnectionManager>>>);
+// The Tauri state holding our connection pool and the path it belongs to
+struct DbState(Mutex<Option<(String, Pool<SqliteConnectionManager>)>>);
 
 // Helper to convert JSON values to SQLite values
 fn json_to_sql(v: &serde_json::Value) -> SqlValue {
@@ -41,7 +41,17 @@ async fn open_encrypted_db(
         std::fs::create_dir_all(parent).map_err(|e| format!("Failed to create DB directory: {}", e))?;
     }
 
-    // 2. Check if the database exists AND is unencrypted
+    // 2. Fast Path: If database is already open at this path, just return
+    {
+        let pool_guard = state.0.lock().unwrap();
+        if let Some((current_path, _)) = pool_guard.as_ref() {
+            if current_path == &db_path {
+                return Ok(());
+            }
+        }
+    }
+
+    // 3. Check if the database exists AND is unencrypted
     if std::path::Path::new(&db_path).exists() {
         let is_unencrypted = {
             if let Ok(test_conn) = rusqlite::Connection::open(&db_path) {
@@ -95,7 +105,7 @@ async fn open_encrypted_db(
         });
 
     let pool = Pool::new(manager).map_err(|e| format!("Failed to create pool: {}", e))?;
-    *state.0.lock().unwrap() = Some(pool);
+    *state.0.lock().unwrap() = Some((db_path, pool));
     Ok(())
 }
 
@@ -110,7 +120,7 @@ async fn execute_sql(
     // Clone the pool reference out of the Mutex so we don't lock the state during the query
     let pool = {
         let pool_guard = state.0.lock().unwrap();
-        pool_guard.as_ref().ok_or("Database not initialized")?.clone()
+        pool_guard.as_ref().ok_or("Database not initialized")?.1.clone()
     };
 
     let conn = pool.get().map_err(|e| e.to_string())?;
@@ -131,7 +141,7 @@ async fn select_sql(
 
     let pool = {
         let pool_guard = state.0.lock().unwrap();
-        pool_guard.as_ref().ok_or("Database not initialized")?.clone()
+        pool_guard.as_ref().ok_or("Database not initialized")?.1.clone()
     };
 
     let conn = pool.get().map_err(|e| e.to_string())?;

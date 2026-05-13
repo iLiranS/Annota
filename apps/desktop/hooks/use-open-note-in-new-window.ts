@@ -11,17 +11,6 @@ export function useOpenNoteInNewWindow() {
         if (!targetNote) return;
 
         const label = `note-${targetNote.id}-${Math.random().toString(36).substring(7)}`;
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        // @ts-ignore
-        const webview = new WebviewWindow(label, {
-            url: `/note-fullscreen/${targetNote.id}`,
-            hiddenTitle: true,
-            width: 1280,
-            height: 720,
-            decorations: true,
-            transparent: false,
-            titleBarStyle: "overlay",
-        });
 
         const unlisten = await listen<{ noteId: string }>('note-window-ready', async (event) => {
             if (event.payload.noteId !== targetNote.id) return;
@@ -60,6 +49,18 @@ export function useOpenNoteInNewWindow() {
             } catch (err) {
                 console.error('[OpenInNewWindow] Failed to send init data:', err);
             }
+        });
+
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        // @ts-ignore
+        const webview = new WebviewWindow(label, {
+            url: `/note-fullscreen/${targetNote.id}`,
+            hiddenTitle: true,
+            width: 1280,
+            height: 720,
+            decorations: true,
+            transparent: false,
+            titleBarStyle: "overlay",
         });
     }, []);
 }

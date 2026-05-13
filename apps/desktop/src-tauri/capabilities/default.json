@@ -10,6 +10,7 @@
     "core:default",
     "core:window:allow-set-always-on-top",
     "opener:default",
+    "opener:allow-open-url",
     "fs:default",
     "fs:allow-appcache-read-recursive",
     "fs:allow-appcache-write-recursive",

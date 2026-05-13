@@ -21,6 +21,7 @@ import {
 } from "@annota/core/platform";
 import { emit, listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
@@ -131,14 +132,17 @@ function App() {
         await useSettingsStore.persist.rehydrate();
         await useAiStore.persist.rehydrate();
 
+
         // 2. Fetch/Apply remote app config (blocking sync if needed)
-        try {
-          const { appConfigService } = await import("@annota/core");
-          await withStartupTimeout(appConfigService.init(), "App config");
-        } catch (e) {
-          console.error("[DesktopBootstrap] Failed to init app config:", e);
-          if (isStartupTimeout(e)) {
-            useSyncStore.getState().setOnline(false);
+        if (isMain) {
+          try {
+            const { appConfigService } = await import("@annota/core");
+            await withStartupTimeout(appConfigService.init(), "App config");
+          } catch (e) {
+            console.error("[DesktopBootstrap] Failed to init app config:", e);
+            if (isStartupTimeout(e)) {
+              useSyncStore.getState().setOnline(false);
+            }
           }
         }
 
@@ -151,29 +155,31 @@ function App() {
         } else {
           // Populate master key early so offline mode doesn't redirect to /auth/master-key
           // since authApi.onAuthStateChange might not provide a session when offline.
-          if (activeUserId) {
+          if (activeUserId && isMain) {
             await useUserStore.getState().checkMasterKey();
           }
 
           // 3. Background session revalidation (Stale-While-Revalidate)
           // We don't await this because we want the app to boot instantly with rehydrated state.
-          void (async () => {
-            try {
-              const { data } = await authApi.getSession();
-              if (data?.session) {
-                setSession(data.session);
-                activeUserId = data.session.user.id;
-                await useUserStore.getState().getUserProfile();
-              } else {
-                // If no session is found by Supabase, we MUST clear the rehydrated user
-                // to avoid the "half-logged in" trap.
-                setSession(null);
+          if (isMain) {
+            void (async () => {
+              try {
+                const { data } = await authApi.getSession();
+                if (data?.session) {
+                  setSession(data.session);
+                  activeUserId = data.session.user.id;
+                  await useUserStore.getState().getUserProfile();
+                } else {
+                  // If no session is found by Supabase, we MUST clear the rehydrated user
+                  // to avoid the "half-logged in" trap.
+                  setSession(null);
+                }
+              } catch (error) {
+                console.warn("[DesktopBootstrap] Background session revalidation failed:", error);
+                // We don't logout on network errors, only on explicit "no session" from Supabase.
               }
-            } catch (error) {
-              console.warn("[DesktopBootstrap] Background session revalidation failed:", error);
-              // We don't logout on network errors, only on explicit "no session" from Supabase.
-            }
-          })();
+            })();
+          }
         }
 
         // 4. Initialise (or switch to) the per-user SQLite database.
@@ -181,15 +187,12 @@ function App() {
           ? await getMasterKey(activeUserId)
           : "annota-guest-db-key";
 
-        if (activeUserId && !dbKey) {
+        if (activeUserId && !dbKey && isMain) {
           console.warn("[DesktopBootstrap] Missing master key. Deferring DB init until key is provided.");
-        } else {
+        } else if (dbKey || !activeUserId) {
           await initDesktopSqlite(activeUserId, dbKey || "");
 
           // 5. Initialize stores only for the main window.
-          //    Child windows (standalone note editors) read directly from the DB
-          //    via NoteService and don't need the full store to be populated.
-          const isMain = getCurrentWindow().label === "main";
           if (isMain) {
             try {
               const storesPromise = Promise.all([
@@ -316,10 +319,18 @@ function App() {
       if (!anchor) return;
 
       const href = anchor.getAttribute("href");
+      if (!href) return;
+
       // If it's an internal app link, stop the webview from navigating natively
-      if (href && href.startsWith("annota://")) {
+      if (href.startsWith("annota://")) {
         e.preventDefault();
         handleDeepLink(href);
+      } else if (href.startsWith("http://") || href.startsWith("https://")) {
+        // If it's an external link, open it in the system browser
+        e.preventDefault();
+        openUrl(href).catch(err => {
+          console.error("Failed to open external URL:", err);
+        });
       }
     };
 

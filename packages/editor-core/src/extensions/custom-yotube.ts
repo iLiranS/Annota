@@ -90,24 +90,24 @@ export const CustomYoutube = Youtube.extend({
 
             const renderThumbnail = () => {
                 wrapper.innerHTML = `
-                    <div class="yt-embed-link">
+                    <a href="${watchUrl}" target="_blank" rel="noopener noreferrer" class="yt-embed-link">
                         <img class="yt-thumbnail" src="${thumbnailUrl}" alt="YouTube Thumbnail">
                         <div class="yt-play-button">
                             <div class="yt-play-icon"></div>
                         </div>
-                    </div>
+                    </a>
                 `;
 
-                const link = wrapper.querySelector('.yt-embed-link') as HTMLElement;
-                link.onclick = (_e) => {
+                const link = wrapper.querySelector('.yt-embed-link') as HTMLAnchorElement;
+                link.onclick = (e) => {
                     const isMobileNative = typeof window !== 'undefined' && !!(window as any).ReactNativeWebView;
                     if (isMobileNative) {
+                        e.preventDefault();
                         // On mobile native, swap to inline iframe
                         renderIframe();
-                    } else {
-                        // On desktop/web, open in system browser
-                        window.open(watchUrl, '_blank', 'noopener,noreferrer');
                     }
+                    // On desktop, we let the default <a> behavior handle it, 
+                    // which we will intercept in App.tsx to ensure it opens externally.
                 };
             };
 

@@ -18,6 +18,7 @@ export function useGlobalShortcuts(options: { isStandalone?: boolean } = {}) {
 
             if (isMod && !e.altKey) {
                 const key = e.key.toLowerCase();
+                const code = e.code;
 
                 // Shared shortcuts (Work in both main and standalone)
                 if (key === '=' || key === '+') {
@@ -29,23 +30,23 @@ export function useGlobalShortcuts(options: { isStandalone?: boolean } = {}) {
                 } else if (key === '0') {
                     e.preventDefault();
                     updateEditorSettings({ fontSize: 16 });
-                } else if (key === 't' && e.shiftKey) {
+                } else if (code === 'KeyT' && e.shiftKey) {
                     e.preventDefault();
                     toggleAlwaysOnTop();
                 }
 
                 // App-wide shortcuts (Only in main window)
                 if (!isStandalone) {
-                    if (key === 'n' && !e.shiftKey) {
+                    if (code === 'KeyN' && !e.shiftKey) {
                         e.preventDefault();
                         createAndNavigate();
-                    } else if (key === 'p' && !e.shiftKey) {
+                    } else if (code === 'KeyP' && !e.shiftKey) {
                         e.preventDefault();
                         setIsSearchOpen(true);
-                    } else if (key === 'e' && !e.shiftKey && general.isAiEnabled) {
+                    } else if (code === 'KeyE' && !e.shiftKey && general.isAiEnabled) {
                         e.preventDefault();
                         updateGeneralSettings({ isAiSidebarOpen: !general.isAiSidebarOpen });
-                    } else if (key === ',' && !e.shiftKey) {
+                    } else if ((code === 'Comma' || key === ',') && !e.shiftKey) {
                         e.preventDefault();
                         setSettingsOpen(true);
                     }

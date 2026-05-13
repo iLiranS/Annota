@@ -1,6 +1,17 @@
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { AiChat, aiChats, aiMessages, generateId, getDb, useAiStore, useNotesStore, useSettingsStore } from "@annota/core";
+import { AiChat, aiChats, aiMessages, generateId, getDb, useAiStore, useNavigationStore, useNotesStore, useSettingsStore } from "@annota/core";
 import { desc, eq } from "drizzle-orm";
 import {
     Bot,
@@ -13,19 +24,8 @@ import {
     Sparkles,
     Trash2
 } from "lucide-react";
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { matchPath, useLocation, useNavigate } from "react-router-dom";
+import { matchPath, useLocation } from "react-router-dom";
 
 import { useAiChat } from "@annota/core";
 import { AiChatInput } from "../ai/ai-chat-input";
@@ -45,8 +45,8 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
     } = useAiStore();
 
     const { notes, folders } = useNotesStore();
+    const { setSettingsOpen } = useNavigationStore();
     const location = useLocation();
-    const navigate = useNavigate();
     const [activeChatId, setActiveChatId] = useState<string | null>(null);
     const [chats, setChats] = useState<AiChat[]>([]);
     const [selectedFolderNotes, setSelectedFolderNotes] = useState<any[]>([]);
@@ -305,7 +305,7 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
                             variant="outline"
                             size="sm"
                             className="mt-2 rounded-xl gap-2 h-9 px-6 bg-primary/5 border-primary/20 hover:bg-primary/10 transition-all font-medium"
-                            onClick={() => navigate("/settings", { state: { background: location } })}
+                            onClick={() => setSettingsOpen(true)}
                         >
                             <Settings2 size={14} />
                             Open Settings
@@ -400,7 +400,7 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
                                         </AlertDialogHeader>
                                         <AlertDialogFooter>
                                             <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
-                                            <AlertDialogAction 
+                                            <AlertDialogAction
                                                 onClick={handleClearAllChats}
                                                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl"
                                             >
