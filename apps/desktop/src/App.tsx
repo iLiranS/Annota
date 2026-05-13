@@ -190,7 +190,7 @@ function App() {
         if (activeUserId && !dbKey && isMain) {
           console.warn("[DesktopBootstrap] Missing master key. Deferring DB init until key is provided.");
         } else if (dbKey || !activeUserId) {
-          await initDesktopSqlite(activeUserId, dbKey || "");
+          await initDesktopSqlite(activeUserId, dbKey || "", !isMain);
 
           // 5. Initialize stores only for the main window.
           if (isMain) {

@@ -20,8 +20,13 @@ function splitSqlStatements(sql: string): string[] {
 /**
  * Initialise (or switch to) a per-user SQLite database.
  * Uses SQLCipher for encryption via Rust side invokes.
+ *
+ * @param skipMigrations - When true, skips DDL (CREATE TABLE / migrations).
+ *   Use this for child windows that share the DB with the main window.
+ *   Running DDL concurrently causes exclusive write locks on Windows,
+ *   deadlocking both processes.
  */
-export async function initDesktopSqlite(userId: string | null, dbKey: string): Promise<void> {
+export async function initDesktopSqlite(userId: string | null, dbKey: string, skipMigrations = false): Promise<void> {
   const cacheKey = userId ?? "__guest__";
   const dbName = userId ? `user_${userId}.db` : "local_guest.db";
 
@@ -42,7 +47,8 @@ export async function initDesktopSqlite(userId: string | null, dbKey: string): P
       const appDataDirPath = await appDataDir();
       const fullDbPath = await join(appDataDirPath, dbName);
 
-      // 2. Init the Rust connection pool
+      // 2. Init the Rust connection pool.
+      // The Rust side is idempotent: if this db path is already open it returns immediately.
       await invoke('open_encrypted_db', { 
         dbPath: fullDbPath, 
         encryptionKey: dbKey 
@@ -97,9 +103,13 @@ export async function initDesktopSqlite(userId: string | null, dbKey: string): P
         }
       };
 
-      // Use the centralized initDatabase from core to handle tables + migrations
-      const { initDatabase } = await import("@annota/core");
-      await initDatabase(nativeDbWrapper, drizzleDb as any);
+      if (!skipMigrations) {
+        // Main window: run full schema setup + migrations.
+        // Child windows must NOT do this — running DDL concurrently with the
+        // main window's reads causes exclusive write locks on Windows.
+        const { initDatabase } = await import("@annota/core");
+        await initDatabase(nativeDbWrapper, drizzleDb as any);
+      }
 
       // Register the active user in the DB store
       useDbStore.getState().initDB(userId, nativeDbWrapper);
