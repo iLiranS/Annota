@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { CheckCircle2, FileText, Folder, Plus, Search } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -105,7 +104,7 @@ export function ContextSelector({
                     </div>
                 </div>
 
-                <ScrollArea className="h-[300px]">
+                <div className="h-[300px] overflow-y-auto premium-scrollbar">
                     <div className="p-2 space-y-4">
                         {selectedNotes.length > 0 && (
                             <div className="px-2 pt-1 flex items-center justify-between">
@@ -178,7 +177,7 @@ export function ContextSelector({
                             )}
                         </div>
                     </div>
-                </ScrollArea>
+                </div>
                 {selectedNotes.length > 0 && (
                     <div className="p-2 border-t border-border/30 bg-muted/20">
                         <Button

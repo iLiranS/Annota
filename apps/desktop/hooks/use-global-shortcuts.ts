@@ -43,9 +43,9 @@ export function useGlobalShortcuts(options: { isStandalone?: boolean } = {}) {
                     } else if (code === 'KeyP' && !e.shiftKey) {
                         e.preventDefault();
                         setIsSearchOpen(true);
-                    } else if (code === 'KeyE' && !e.shiftKey && general.isAiEnabled) {
+                    } else if (code === 'KeyE' && !e.shiftKey) {
                         e.preventDefault();
-                        updateGeneralSettings({ isAiSidebarOpen: !general.isAiSidebarOpen });
+                        updateGeneralSettings({ isSecondarySidebarOpen: !general.isSecondarySidebarOpen });
                     } else if ((code === 'Comma' || key === ',') && !e.shiftKey) {
                         e.preventDefault();
                         setSettingsOpen(true);
@@ -58,6 +58,6 @@ export function useGlobalShortcuts(options: { isStandalone?: boolean } = {}) {
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [createAndNavigate, setIsSearchOpen, general.isAiSidebarOpen, updateGeneralSettings, editor.fontSize, updateEditorSettings, setSettingsOpen, isStandalone]);
+    }, [createAndNavigate, setIsSearchOpen, general.isSecondarySidebarOpen, updateGeneralSettings, editor.fontSize, updateEditorSettings, setSettingsOpen, isStandalone]);
 }
 

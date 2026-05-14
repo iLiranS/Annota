@@ -176,6 +176,17 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
         return () => window.removeEventListener('annota-insert-ai-content' as any, handleInsertAiContent);
     }, [note?.isDeleted]);
 
+    // TOC Scroll Effect
+    useEffect(() => {
+        const handleScrollToElement = (e: CustomEvent<{ elementId: string }>) => {
+            if (!editorRef.current) return;
+            editorRef.current.scrollToElement(e.detail.elementId);
+        };
+
+        window.addEventListener('annota-scroll-to-element' as any, handleScrollToElement);
+        return () => window.removeEventListener('annota-scroll-to-element' as any, handleScrollToElement);
+    }, []);
+
     // Navigation logic
     useEffect(() => {
         if (!noteId) return;

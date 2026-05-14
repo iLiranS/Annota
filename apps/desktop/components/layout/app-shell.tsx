@@ -4,7 +4,7 @@ import { useSettingsStore } from "@annota/core";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Outlet } from "react-router-dom";
 import { MainNavbar } from "../navbar/main-navbar";
-import { AiSidebar } from "./ai-sidebar";
+import { SecondarySidebar } from "./secondary-sidebar";
 import { AppSidebar } from "./app-sidebar";
 
 /**
@@ -83,7 +83,7 @@ export default function AppShell() {
 
     // Handle auto-close on click outside (only for non-sticky floating mode)
     useEffect(() => {
-        if (!general.isAiSidebarOpen || general.aiSidebarMode === 'pinned' || general.isAiSidebarSticky) {
+        if (!general.isSecondarySidebarOpen || general.secondarySidebarMode === 'pinned' || general.isSecondarySidebarSticky) {
             return;
         }
 
@@ -94,13 +94,13 @@ export default function AppShell() {
                     return;
                 }
 
-                useSettingsStore.getState().updateGeneralSettings({ isAiSidebarOpen: false });
+                useSettingsStore.getState().updateGeneralSettings({ isSecondarySidebarOpen: false });
             }
         };
 
         document.addEventListener('mousedown', handleClickOutside, true);
         return () => document.removeEventListener('mousedown', handleClickOutside, true);
-    }, [general.isAiSidebarOpen, general.aiSidebarMode, general.isAiSidebarSticky]);
+    }, [general.isSecondarySidebarOpen, general.secondarySidebarMode, general.isSecondarySidebarSticky]);
 
     return (
         <SidebarProvider
@@ -134,7 +134,7 @@ export default function AppShell() {
                     <div
                         ref={sidebarRef}
                         className={cn(
-                            general.aiSidebarMode === 'pinned'
+                            general.secondarySidebarMode === 'pinned'
                                 ? "relative h-full"
                                 : cn(
                                     "absolute z-50",
@@ -144,16 +144,16 @@ export default function AppShell() {
                             "flex shrink-0 overflow-hidden",
                             // Only animate on open/close, not during drag
                             !isResizing && "transition-[width,opacity] duration-300 ease-in-out",
-                            general.isAiSidebarOpen
+                            general.isSecondarySidebarOpen
                                 ? "opacity-100 pointer-events-auto"
                                 : "opacity-0 pointer-events-none"
                         )}
                         style={{
-                            width: general.isAiSidebarOpen ? `${sidebarWidth}px` : '0px',
+                            width: general.isSecondarySidebarOpen ? `${sidebarWidth}px` : '0px',
                         }}
                     >
                         {/* Resize handle */}
-                        {general.isAiSidebarOpen && (
+                        {general.isSecondarySidebarOpen && (
                             <div
                                 onMouseDown={startResizing}
                                 className={cn(
@@ -164,7 +164,7 @@ export default function AppShell() {
                             </div>
                         )}
 
-                        <AiSidebar width={sidebarWidth} isResizing={isResizing} />
+                        <SecondarySidebar width={sidebarWidth} isResizing={isResizing} />
                     </div>
                 </div>
             </div>

@@ -249,23 +249,21 @@ export function MainNavbar() {
                     </TooltipContent>
                 </Tooltip>
 
-                {general.isAiEnabled && (
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className={cn("h-7 w-7 rounded-full transition-all active:scale-95 text-muted-foreground/60 hover:bg-sidebar-accent hover:text-foreground ai-sidebar-toggle", general.isAiSidebarOpen && "text-accent-full")}
-                                onClick={() => updateGeneralSettings({ isAiSidebarOpen: !general.isAiSidebarOpen })}
-                            >
-                                {general.appDirection === 'rtl' ? <PanelLeft size={16} /> : <PanelRight size={16} />}
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom" className="text-[10px]">
-                            AI Sidebar <span className="opacity-50 ml-1">{isMac ? "⌘E" : "Ctrl+E"}</span>
-                        </TooltipContent>
-                    </Tooltip>
-                )}
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className={cn("h-7 w-7 rounded-full transition-all active:scale-95 text-muted-foreground/60 hover:bg-sidebar-accent hover:text-foreground ai-sidebar-toggle", general.isSecondarySidebarOpen && "text-accent-full")}
+                            onClick={() => updateGeneralSettings({ isSecondarySidebarOpen: !general.isSecondarySidebarOpen })}
+                        >
+                            {general.appDirection === 'rtl' ? <PanelLeft size={16} /> : <PanelRight size={16} />}
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="text-[10px]">
+                        Secondary Sidebar <span className="opacity-50 ml-1">{isMac ? "⌘E" : "Ctrl+E"}</span>
+                    </TooltipContent>
+                </Tooltip>
 
             </div>
         </header>

@@ -231,6 +231,8 @@ export function useNoteEditorContent({ noteId, editorRef, onNoteSync, elementId,
         const { error } = await updateNoteContent(noteId, html);
         if (!error) {
             updateNoteMetadata(noteId, { title });
+            // Notify other components (like Sidebar Note Info) that content changed
+            window.dispatchEvent(new CustomEvent('annota-note-content-updated', { detail: { noteId } }));
         }
     }, [noteId, updateNoteContent, updateNoteMetadata, onNoteSync]);
 

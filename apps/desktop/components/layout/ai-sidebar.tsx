@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { AiChat, aiChats, aiMessages, generateId, getDb, useAiStore, useNavigationStore, useNotesStore, useSettingsStore } from "@annota/core";
+import { AiChat, aiChats, aiMessages, generateId, getDb, useAiStore, useNavigationStore, useNotesStore } from "@annota/core";
 import { desc, eq } from "drizzle-orm";
 import {
     Bot,
@@ -19,7 +19,6 @@ import {
     MessageSquare,
     Pin,
     PinOff,
-    Plus,
     Settings2,
     Sparkles,
     Trash2
@@ -218,9 +217,7 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
         loadChats();
     }, [loadChats, refreshTicket]);
 
-    const handleNewChat = useCallback(() => {
-        setActiveChatId(null);
-    }, []);
+
 
     const handleClearAllChats = useCallback(async () => {
         const db = getDb();
@@ -256,8 +253,7 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
         }));
     }, []);
 
-    const { general, updateGeneralSettings } = useSettingsStore();
-    const isFloating = general.aiSidebarMode === 'floating';
+
 
     const isConfigured = activeProvider === 'ollama'
         ? isOllamaRunning
@@ -272,9 +268,7 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
             <div className="flex flex-col h-full w-full overflow-hidden" style={{ minWidth: isResizing ? undefined : width }}>
                 <div className={cn(
                     "flex flex-col h-full w-full items-center justify-center text-center gap-4 p-6 overflow-hidden transition-all duration-300",
-                    isFloating
-                        ? " border border-border bg-sidebar  "
-                        : "bg-sidebar/50"
+
                 )}>
                     <div className="p-4 rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/20">
                         <Bot size={36} />
@@ -322,254 +316,216 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
     }
 
     return (
-        <div
-            dir="ltr"
-            className="flex flex-col h-full w-full overflow-hidden"
-            style={{ minWidth: isResizing ? undefined : width }}
-        >
-            <div className={cn(
-                "flex flex-col h-full w-full overflow-hidden  transition-all duration-300",
-                isFloating
-                    ? "rounded-2xl  border border-border/40 bg-sidebar"
-                    : "bg-sidebar/50"
-            )}>
-                <header className="flex items-center justify-between shrink-0 h-12 px-3 border-b border-border/30 bg-sidebar/60">
-                    <div className="flex items-center gap-2 min-w-0">
-                        {activeChatId ? (
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all shrink-0"
-                                onClick={() => setActiveChatId(null)}
-                            >
-                                <ChevronLeft size={15} />
-                            </Button>
-                        ) : (
-                            <div className="flex items-center gap-1.5 text-primary/80">
-                                <Sparkles size={14} />
-                            </div>
-                        )}
-
-                        {activeChatId && activeChat ? (
-                            <span dir="auto" className="text-[12px] font-semibold truncate text-foreground/80">
-                                {activeChat.title}
-                            </span>
-                        ) : (
-                            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/70">
-                                AI Assistant
-                            </span>
-                        )}
-                    </div>
-
-                    <div className="flex items-center gap-0.5 shrink-0">
-                        {isFloating && (
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className={cn(
-                                    "h-7 w-7 rounded-lg transition-all active:scale-95",
-                                    general.isAiSidebarSticky
-                                        ? "text-primary bg-primary/10"
-                                        : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
-                                )}
-                                onClick={() => updateGeneralSettings({ isAiSidebarSticky: !general.isAiSidebarSticky })}
-                                title={general.isAiSidebarSticky ? "Unpin (Auto-hide)" : "Pin (Keep open)"}
-                            >
-                                <Pin size={14} className={cn("fill-current transition-transform", general.isAiSidebarSticky && "rotate-45 text-accent-full")} />
-                            </Button>
-                        )}
-                        {!activeChatId ? (
-                            chats.length > 0 && (
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="h-7 px-2 text-[10px] text-muted-foreground hover:text-destructive hover:bg-primary/10 rounded-lg gap-1.5 transition-all"
-                                        >
-                                            <Trash2 size={11} />
-                                            Clear all
-                                        </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent className="rounded-2xl">
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>Clear all conversations?</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                                This will permanently delete all your AI chat history. This action cannot be undone.
-                                            </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
-                                            <AlertDialogAction
-                                                onClick={handleClearAllChats}
-                                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl"
-                                            >
-                                                Clear All
-                                            </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
-                            )
-                        ) : (
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all"
-                                onClick={handleNewChat}
-                                title="New chat"
-                            >
-                                <Plus size={15} />
-                            </Button>
-                        )}
-                    </div>
-                </header>
-
-                {!isConfigured && activeChatId && (
-                    <div className="bg-destructive/10 text-destructive text-[10px] font-medium px-3 py-1.5 flex items-center justify-between gap-2 border-b border-destructive/20 animate-in slide-in-from-top duration-300">
-                        <div className="flex items-center gap-2">
-                            <div className="h-1.5 w-1.5 rounded-full bg-destructive animate-pulse" />
-                            <span>Connection lost to {activeProvider}</span>
+        <div className="flex flex-col h-full w-full overflow-hidden">
+            <header className="flex items-center justify-between shrink-0 h-10 px-3 border-b border-border/20 bg-sidebar/30">
+                <div className="flex items-center gap-1 min-w-0">
+                    {activeChatId ? (
+                        <Button
+                            variant="secondary"
+                            size="sm"
+                            className="h-7 px-2 rounded-lg bg-transparent text-accent-full hover:bg-primary/10 transition-all shrink-0 border-none gap-1"
+                            onClick={() => setActiveChatId(null)}
+                        >
+                            <ChevronLeft size={14} strokeWidth={2.5} />
+                            <span className="text-[11px] font-semibold">Back</span>
+                        </Button>
+                    ) : (
+                        <div className="flex items-center gap-1.5 text-primary/60">
+                            <Sparkles size={13} />
                         </div>
-                        {activeProvider === 'ollama' && (
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-5 px-1.5 text-[9px] hover:bg-destructive/10 text-destructive border border-destructive/20 rounded-md"
-                                onClick={() => { checkConnection(); fetchModels(); }}
-                            >
-                                Reconnect
-                            </Button>
-                        )}
-                    </div>
-                )}
+                    )}
 
-                {!activeChatId ? (
-                    <div className="flex-1 flex flex-col min-h-0">
-                        <div className="flex-1 min-h-0 px-2 pt-2 overflow-y-auto premium-scrollbar">
-                            <div className="space-y-0.5 pb-2">
-                                {chats.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-                                        <div className="p-3 rounded-xl bg-muted/40 text-muted-foreground/40">
-                                            <MessageSquare size={20} />
-                                        </div>
-                                        <p className="text-[11px] text-muted-foreground/40 italic">
-                                            No conversations yet
-                                        </p>
+                    {activeChatId && activeChat ? (
+                        <span dir="auto" className="text-[11px] font-semibold truncate text-foreground/80">
+                            {activeChat.title}
+                        </span>
+                    ) : (
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
+                            All Chats
+                        </span>
+                    )}
+                </div>
+
+                <div className="flex items-center gap-1 shrink-0">
+                    {!activeChatId && chats.length > 0 && (
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 px-2 text-[10px] text-muted-foreground hover:text-destructive hover:bg-destructive/5 rounded-lg gap-1.5 transition-all"
+                                >
+                                    <Trash2 size={11} />
+                                    Clear
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent className="rounded-2xl">
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Clear all conversations?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        This will permanently delete all your AI chat history. This action cannot be undone.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                        onClick={handleClearAllChats}
+                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl"
+                                    >
+                                        Clear All
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    )}
+                </div>
+            </header>
+
+            {!isConfigured && activeChatId && (
+                <div className="bg-destructive/10 text-destructive text-[10px] font-medium px-3 py-1.5 flex items-center justify-between gap-2 border-b border-destructive/20 animate-in slide-in-from-top duration-300">
+                    <div className="flex items-center gap-2">
+                        <div className="h-1.5 w-1.5 rounded-full bg-destructive animate-pulse" />
+                        <span>Connection lost to {activeProvider}</span>
+                    </div>
+                    {activeProvider === 'ollama' && (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-5 px-1.5 text-[9px] hover:bg-destructive/10 text-destructive border border-destructive/20 rounded-md"
+                            onClick={() => { checkConnection(); fetchModels(); }}
+                        >
+                            Reconnect
+                        </Button>
+                    )}
+                </div>
+            )}
+
+            {!activeChatId ? (
+                <div className="flex-1 flex flex-col min-h-0">
+                    <div className="flex-1 min-h-0 px-2 pt-2 overflow-y-auto premium-scrollbar">
+                        <div className="space-y-0.5 pb-2">
+                            {chats.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
+                                    <div className="p-3 rounded-xl bg-muted/40 text-muted-foreground/40">
+                                        <MessageSquare size={20} />
                                     </div>
-                                ) : (
-                                    [...chats].sort((a, b) => {
-                                        if (a.isPinned && !b.isPinned) return -1;
-                                        if (!a.isPinned && b.isPinned) return 1;
-                                        return (b.updatedAt?.getTime() || 0) - (a.updatedAt?.getTime() || 0);
-                                    }).map(chat => (
-                                        <div
-                                            key={chat.id}
-                                            onClick={() => setActiveChatId(chat.id)}
-                                            className={cn(
-                                                "w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left text-xs",
-                                                "transition-all group cursor-pointer border border-transparent relative",
-                                                "hover:bg-muted/50 hover:border-border/40 text-muted-foreground hover:text-foreground",
-                                                chat.id === activeChatId && "bg-muted/50 border-border/40 text-foreground"
-                                            )}
-                                        >
-                                            <div className="flex-1 flex flex-col min-w-0 pr-2 gap-0.5">
-                                                <div className="flex items-center gap-1.5">
-                                                    {chat.isPinned && <Pin size={10} className="text-accent-full shrink-0 fill-current" />}
-                                                    <span dir="auto" className="truncate font-medium text-[12px]">
-                                                        {chat.title}
-                                                    </span>
-                                                </div>
-                                                <span className="text-[9px] opacity-40 tracking-wide">
-                                                    {new Date(chat.updatedAt).toLocaleString(undefined, {
-                                                        month: 'numeric',
-                                                        day: 'numeric',
-                                                        hour: '2-digit',
-                                                        minute: '2-digit',
-                                                        hour12: false
-                                                    })}
+                                    <p className="text-[11px] text-muted-foreground/40 italic">
+                                        No conversations yet
+                                    </p>
+                                </div>
+                            ) : (
+                                [...chats].sort((a, b) => {
+                                    if (a.isPinned && !b.isPinned) return -1;
+                                    if (!a.isPinned && b.isPinned) return 1;
+                                    return (b.updatedAt?.getTime() || 0) - (a.updatedAt?.getTime() || 0);
+                                }).map(chat => (
+                                    <div
+                                        key={chat.id}
+                                        onClick={() => setActiveChatId(chat.id)}
+                                        className={cn(
+                                            "w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left text-xs",
+                                            "transition-all group cursor-pointer border border-transparent relative",
+                                            "hover:bg-muted/50 hover:border-border/40 text-muted-foreground hover:text-foreground",
+                                            chat.id === activeChatId && "bg-muted/50 border-border/40 text-foreground"
+                                        )}
+                                    >
+                                        <div className="flex-1 flex flex-col min-w-0 pr-2 gap-0.5">
+                                            <div className="flex items-center gap-1.5">
+                                                {chat.isPinned && <Pin size={10} className="text-accent-full shrink-0 fill-current" />}
+                                                <span dir="auto" className="truncate font-medium text-[12px]">
+                                                    {chat.title}
                                                 </span>
                                             </div>
-                                            <div className="flex items-center gap-1">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className={cn(
-                                                        "h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 transition-all rounded-lg",
-                                                        chat.isPinned ? "text-primary hover:bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                                                    )}
-                                                    onClick={(e) => handleTogglePinChat(chat.id, e)}
-                                                    title={chat.isPinned ? "Unpin chat" : "Pin chat"}
-                                                >
-                                                    {chat.isPinned ? <PinOff size={11} /> : <Pin size={11} />}
-                                                </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 hover:text-destructive hover:bg-destructive/10 transition-all rounded-lg"
-                                                    onClick={(e) => handleDeleteChat(chat.id, e)}
-                                                    title="Delete chat"
-                                                >
-                                                    <Trash2 size={11} />
-                                                </Button>
-                                            </div>
+                                            <span className="text-[9px] opacity-40 tracking-wide">
+                                                {new Date(chat.updatedAt).toLocaleString(undefined, {
+                                                    month: 'numeric',
+                                                    day: 'numeric',
+                                                    hour: '2-digit',
+                                                    minute: '2-digit',
+                                                    hour12: false
+                                                })}
+                                            </span>
                                         </div>
-                                    ))
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="p-2 pt-1 shrink-0">
-                            <AiChatInput
-                                onSend={handleSendMessage}
-                                onSummarize={handleSummarize}
-                                notes={notes}
-                                folders={folders}
-                                selectedNotes={selectedFolderNotes}
-                                onToggleNote={handleToggleNote}
-                                onToggleFolder={handleToggleFolder}
-                                onClearAll={() => setSelectedFolderNotes([])}
-                                onStop={stop}
-                                disabled={isStreaming}
-                            />
+                                        <div className="flex items-center gap-1">
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className={cn(
+                                                    "h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 transition-all rounded-lg",
+                                                    chat.isPinned ? "text-primary hover:bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                                                )}
+                                                onClick={(e) => handleTogglePinChat(chat.id, e)}
+                                                title={chat.isPinned ? "Unpin chat" : "Pin chat"}
+                                            >
+                                                {chat.isPinned ? <PinOff size={11} /> : <Pin size={11} />}
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 hover:text-destructive hover:bg-destructive/10 transition-all rounded-lg"
+                                                onClick={(e) => handleDeleteChat(chat.id, e)}
+                                                title="Delete chat"
+                                            >
+                                                <Trash2 size={11} />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
                         </div>
                     </div>
-                ) : (
-                    <>
-                        <div
-                            className="flex-1 min-h-0 overflow-y-auto premium-scrollbar"
-                            onScroll={handleChatScroll}
-                        >
-                            <div className="flex flex-col gap-4 px-3 py-4">
-                                {visibleMessages.map((m, idx) => (
-                                    <AiChatMessage
-                                        key={m.id || idx}
-                                        message={m}
-                                        isStreaming={m.id === streamingMessageId}
-                                        onInsertToNote={handleInsertToNote}
-                                    />
-                                ))}
-                                {error && <AiChatError error={error} onRetry={handleRetry} />}
-                                <div ref={scrollEndRef} />
-                            </div>
-                        </div>
 
-                        <div className="p-2 pt-1 shrink-0">
-                            <AiChatInput
-                                onSend={handleSendMessage}
-                                onSummarize={handleSummarize}
-                                notes={notes}
-                                folders={folders}
-                                selectedNotes={selectedFolderNotes}
-                                onToggleNote={handleToggleNote}
-                                onToggleFolder={handleToggleFolder}
-                                onClearAll={() => setSelectedFolderNotes([])}
-                                onStop={stop}
-                                disabled={isStreaming}
-                            />
+                    <div className="p-2 pt-1 shrink-0">
+                        <AiChatInput
+                            onSend={handleSendMessage}
+                            onSummarize={handleSummarize}
+                            notes={notes}
+                            folders={folders}
+                            selectedNotes={selectedFolderNotes}
+                            onToggleNote={handleToggleNote}
+                            onToggleFolder={handleToggleFolder}
+                            onClearAll={() => setSelectedFolderNotes([])}
+                            onStop={stop}
+                            disabled={isStreaming}
+                        />
+                    </div>
+                </div>
+            ) : (
+                <>
+                    <div
+                        className="flex-1 min-h-0 overflow-y-auto premium-scrollbar"
+                        onScroll={handleChatScroll}
+                    >
+                        <div className="flex flex-col gap-4 px-3 py-4">
+                            {visibleMessages.map((m, idx) => (
+                                <AiChatMessage
+                                    key={m.id || idx}
+                                    message={m}
+                                    isStreaming={m.id === streamingMessageId}
+                                    onInsertToNote={handleInsertToNote}
+                                />
+                            ))}
+                            {error && <AiChatError error={error} onRetry={handleRetry} />}
+                            <div ref={scrollEndRef} />
                         </div>
-                    </>
-                )}
-            </div>
+                    </div>
+
+                    <div className="p-2 pt-1 shrink-0">
+                        <AiChatInput
+                            onSend={handleSendMessage}
+                            onSummarize={handleSummarize}
+                            notes={notes}
+                            folders={folders}
+                            selectedNotes={selectedFolderNotes}
+                            onToggleNote={handleToggleNote}
+                            onToggleFolder={handleToggleFolder}
+                            onClearAll={() => setSelectedFolderNotes([])}
+                            onStop={stop}
+                            disabled={isStreaming}
+                        />
+                    </div>
+                </>
+            )}
         </div>
     );
 }

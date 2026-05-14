@@ -26,6 +26,8 @@ interface NoteHeaderMenuProps {
     onExport?: () => void;
     /** Callback when delete is pressed */
     onDelete?: () => void;
+    /** Callback when note info is pressed */
+    onNoteInfo?: () => void;
 }
 
 export default function NoteHeaderMenu({
@@ -39,6 +41,7 @@ export default function NoteHeaderMenu({
     onCopyLink,
     onExport,
     onDelete,
+    onNoteInfo,
 }: NoteHeaderMenuProps) {
     const { colors } = useAppTheme();
     const router = useRouter();
@@ -48,6 +51,7 @@ export default function NoteHeaderMenu({
         else if (id === 'quick-access') onToggleQuickAccess?.(!isQuickAccess);
         else if (id === 'pin') onTogglePin?.(!isPinned);
         else if (id === 'version-history') onVersionHistory?.();
+        else if (id === 'note-info') onNoteInfo?.();
         else if (id === 'copy-link') onCopyLink?.();
         else if (id === 'export') {
             if (onExport) onExport();
@@ -86,6 +90,12 @@ export default function NoteHeaderMenu({
                     id: 'version-history',
                     title: 'Version History',
                     image: 'clock',
+                    imageColor: colors.primary,
+                },
+                {
+                    id: 'note-info',
+                    title: 'Note Info',
+                    image: 'info.circle',
                     imageColor: colors.primary,
                 },
                 {

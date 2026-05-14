@@ -33,7 +33,10 @@ export function useNoteEditorAI({ editorRef }: UseNoteEditorAIProps) {
         if (action === 'send-to-chat') {
             useAiStore.getState().setChatContext({ text: selectedText, html: selectedHtml || selectedText });
             setAiSelection(prev => ({ ...prev, isVisible: false }));
-            useSettingsStore.getState().updateGeneralSettings({ isAiSidebarOpen: true });
+            useSettingsStore.getState().updateGeneralSettings({ 
+                isSecondarySidebarOpen: true,
+                secondarySidebarTab: 'ai'
+            });
             return;
         }
 

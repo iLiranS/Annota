@@ -6,6 +6,7 @@ import { SlashCommandMenu } from '@/components/editor-ui/slash-command-menu';
 import { TagCommandMenu } from '@/components/editor-ui/tag-command-menu';
 import { EditorToolbar } from '@/components/editor-ui/toolbar';
 import NoteHeaderMenu from '@/components/notes/note-header-menu';
+import NoteInfoModal from '@/components/notes/NoteInfoModal';
 import { SearchOverlay } from '@/components/notes/search-overlay';
 import { HapticPressable } from '@/components/ui/haptic-pressable';
 import { ContextMode, generateTitle, purifyNoteHtml, useAiChat, useAiStore, useNotesStore, useSettingsStore } from '@annota/core';
@@ -19,7 +20,6 @@ import {
     ActivityIndicator,
     Alert,
     BackHandler,
-    Keyboard,
     Platform,
     StyleSheet,
     Text,
@@ -67,6 +67,15 @@ export default function NoteEditor() {
     const [tagCommandState, setTagCommandState] = useState<{ active: boolean; query?: string; range?: { from: number; to: number } }>({ active: false });
     const [noteLinkCommandState, setNoteLinkCommandState] = useState<{ active: boolean; query?: string; range?: { from: number; to: number } }>({ active: false });
     const [isAiChatVisible, setIsAiChatVisible] = useState(false);
+    const [isNoteInfoVisible, setIsNoteInfoVisible] = useState(false);
+
+    const handleNoteInfo = useCallback(() => {
+        setIsNoteInfoVisible(true);
+    }, []);
+
+    const handleScrollToElement = useCallback((elementId: string) => {
+        editorRef.current?.scrollToElement(elementId);
+    }, []);
 
     const appliedTagIds = useMemo(() => {
         if (!currentNote || !currentNote.tags) return [];
@@ -319,7 +328,7 @@ export default function NoteEditor() {
     const handleInsertFromAi = useCallback((content: string) => {
         const editor = editorRef.current;
         if (!editor) return;
-        
+
         editor.onCommand('insertContent', { content });
         setIsAiChatVisible(false);
     }, []);
@@ -425,6 +434,7 @@ export default function NoteEditor() {
                                 onTogglePin={handleTogglePin}
                                 onToggleQuickAccess={handleToggleQuickAccess}
                                 onVersionHistory={handleVersionHistory}
+                                onNoteInfo={handleNoteInfo}
                                 onCopyLink={handleCopyLink}
                             />
                         </View>
@@ -437,6 +447,13 @@ export default function NoteEditor() {
                 onClose={() => setIsAiChatVisible(false)}
                 initialContext={activeNoteContext}
                 onInsertToNote={handleInsertFromAi}
+            />
+
+            <NoteInfoModal
+                visible={isNoteInfoVisible}
+                onClose={() => setIsNoteInfoVisible(false)}
+                noteId={id}
+                onScrollToElement={handleScrollToElement}
             />
 
             {isLoading || !isContentReady ? (

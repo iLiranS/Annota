@@ -23,11 +23,12 @@ export interface GeneralSettings {
     compactMode: boolean;
     hapticFeedback: boolean;
     appDirection: 'ltr' | 'rtl';
-    isAiSidebarOpen: boolean;
-    aiSidebarMode: 'floating' | 'pinned';
-    isAiSidebarSticky: boolean;
+    isSecondarySidebarOpen: boolean;
+    secondarySidebarMode: 'floating' | 'pinned';
+    isSecondarySidebarSticky: boolean;
     showNotesCountInFolder: boolean;
     isAiEnabled: boolean;
+    secondarySidebarTab: 'ai' | 'info';
 }
 
 export interface SettingsState {
@@ -73,11 +74,12 @@ const DEFAULT_GENERAL_SETTINGS: GeneralSettings = {
     compactMode: false,
     hapticFeedback: true,
     appDirection: 'ltr',
-    isAiSidebarOpen: false,
-    aiSidebarMode: 'pinned',
-    isAiSidebarSticky: true,
+    isSecondarySidebarOpen: false,
+    secondarySidebarMode: 'pinned',
+    isSecondarySidebarSticky: true,
     showNotesCountInFolder: true,
     isAiEnabled: true,
+    secondarySidebarTab: 'ai',
 };
 
 export const useSettingsStore = create<SettingsState>()(

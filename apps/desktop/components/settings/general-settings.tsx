@@ -81,13 +81,13 @@ export function GeneralSettings() {
                 </h4>
                 <div className="bg-card border rounded-2xl overflow-hidden shadow-sm">
                     <SettingItem
-                        label="AI Sidebar Layout"
+                        label="Secondary Sidebar Layout"
                         description="Floating overlays content, Pinned shrinks it"
                         icon={<PanelRight size={18} />}
                         iconBg="bg-indigo-500"
-                        value={general.aiSidebarMode === 'pinned' ? 'Pinned' : 'Floating'}
+                        value={general.secondarySidebarMode === 'pinned' ? 'Pinned' : 'Floating'}
                         onClick={() => updateGeneralSettings({
-                            aiSidebarMode: general.aiSidebarMode === 'floating' ? 'pinned' : 'floating'
+                            secondarySidebarMode: general.secondarySidebarMode === 'floating' ? 'pinned' : 'floating'
                         })}
                         action={<ChevronRight size={16} className="text-muted-foreground" />}
                     />
