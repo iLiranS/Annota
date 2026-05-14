@@ -88,7 +88,7 @@ export function scrollCursorIntoView() {
 
     try {
         const { selection } = window.editor.state;
-        
+
         // Default to head for normal cursor movements
         let activePos = (selection as any).head ?? selection.from;
 
@@ -120,7 +120,7 @@ export function scrollCursorIntoView() {
             isTopHandle: activePos === selection.from,
             isBottomHandle: activePos === selection.to,
             // Keep headIndex for RTL shield
-            headIndex: activePos 
+            headIndex: activePos
         });
     } catch (e) {
         // Silently fail - don't break the editor

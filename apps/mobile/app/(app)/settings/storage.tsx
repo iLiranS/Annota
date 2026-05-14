@@ -58,38 +58,7 @@ export default function StorageSettings() {
 
     const isActiveDb = stats?.dbName === (user ? `user_${user.id}.db` : 'local_guest.db');
 
-    const handleGC = () => {
-        if (!isActiveDb) {
-            Alert.alert("Action Not Supported", "Garbage collection can only be run on the active database.");
-            return;
-        }
-        Alert.alert(
-            "Run Garbage Collection?",
-            "This will delete all files that are not referenced by any note version. This cannot be undone.",
-            [
-                { text: "Cancel", style: "cancel" },
-                {
-                    text: "Delete Unused Files",
-                    style: "destructive",
-                    onPress: () => {
-                        setIsLoading(true);
-                        setTimeout(async () => {
-                            try {
-                                const count = await StorageService.runGarbageCollection(true); // Force clean
-                                Alert.alert("Cleanup Complete", `Deleted ${count} unused Files.`);
-                                await loadStats();
-                            } catch (e) {
-                                Alert.alert("Error", "Failed to clean storage.");
-                                console.error(e);
-                            } finally {
-                                setIsLoading(false);
-                            }
-                        }, 100);
-                    }
-                }
-            ]
-        );
-    };
+
 
     const handleRemoveMasterKey = () => {
         if (!user?.id) return;
@@ -177,7 +146,9 @@ export default function StorageSettings() {
 
             {availableDbs.length > 1 && (
                 <View style={styles.section}>
-                    <Text style={[styles.sectionTitle, { color: colors.text }]}>Selected Database</Text>
+                    <View style={styles.sectionHeader}>
+                        <Text style={[styles.sectionTitle, { color: colors.text }]}>Selected Database</Text>
+                    </View>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dbSelector}>
                         {availableDbs.map(db => (
                             <HapticPressable
@@ -247,7 +218,9 @@ export default function StorageSettings() {
             </View>
 
             <View style={styles.section}>
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>Items Count</Text>
+                <View style={styles.sectionHeader}>
+                    <Text style={[styles.sectionTitle, { color: colors.text }]}>Items Count</Text>
+                </View>
                 <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
                     <SettingItem
                         label="Total Notes"
@@ -276,7 +249,9 @@ export default function StorageSettings() {
             </View>
 
             <View style={styles.section}>
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>Database Actions</Text>
+                <View style={styles.sectionHeader}>
+                    <Text style={[styles.sectionTitle, { color: colors.text }]}>Database Actions</Text>
+                </View>
                 <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
                     {user && (
                         <>
@@ -302,15 +277,7 @@ export default function StorageSettings() {
                             <Divider colors={colors} />
                         </>
                     )}
-                    <SettingItem
-                        label="Shrink Database"
-                        description="Remove unused files (GC)"
-                        icon="trash-bin-outline"
-                        iconBg={colors.primary}
-                        onPress={handleGC}
-                        action={<Ionicons name="chevron-forward" size={16} color={colors.text + '60'} />}
-                        colors={colors}
-                    />
+
                     <Divider colors={colors} />
                     <SettingItem
                         label="Reset Local Database"

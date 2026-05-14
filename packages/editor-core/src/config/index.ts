@@ -37,13 +37,13 @@ import {
     AnnotaAutolink,
     CustomCodeBlock,
     CustomColor,
-    CustomHighlight,
-    CustomTextStyle,
     CustomHeading,
+    CustomHighlight,
     CustomImage,
     CustomTable,
     CustomTableCell,
     CustomTableHeader,
+    CustomTextStyle,
     Details,
     DetailsContent,
     DetailsSummary,
@@ -229,7 +229,7 @@ export const getEditorProps = (callbacks: {
     autocapitalize?: boolean;
     autocomplete?: boolean;
 }) => ({
-    attributes: { 
+    attributes: {
         dir: callbacks.direction || 'auto',
         spellcheck: callbacks.spellcheck !== undefined ? (callbacks.spellcheck ? 'true' : 'false') : 'true',
         autocorrect: callbacks.autocorrect ? 'on' : 'off',
@@ -326,7 +326,7 @@ export const getEditorState = (editor: any) => {
 
     let selectedHtml = '';
     let selectedText = '';
-    
+
     if (from !== to || isCellSelection) {
         const slice = selection.content();
         const fragment = DOMSerializer.fromSchema(e.schema).serializeFragment(slice.content);

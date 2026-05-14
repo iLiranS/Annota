@@ -274,6 +274,9 @@ export function EditorSettings() {
                 <h4 className="text-[11px] font-bold text-muted-foreground tracking-wider uppercase px-1">
                     Behavior
                 </h4>
+                <p className="text-[11px] text-muted-foreground px-2 leading-relaxed italic">
+                    Below settings availability may vary depending on the platform and device settings.
+                </p>
                 <div className="bg-card border rounded-2xl overflow-hidden shadow-sm divide-y">
                     <SettingItem
                         label="Spellcheck"
@@ -332,6 +335,7 @@ export function EditorSettings() {
                         onClick={() => updateEditorSettings({ autocomplete: !editor.autocomplete })}
                     />
                 </div>
+
             </section>
 
             {/* Layout Section */}

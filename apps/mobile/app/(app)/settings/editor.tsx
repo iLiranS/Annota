@@ -109,6 +109,9 @@ export default function EditorSettings() {
 
             <View style={styles.section}>
                 <Text style={[styles.sectionHeader, { color: colors.text + '80' }]}>BEHAVIOR</Text>
+                <Text style={[styles.helperText, { color: colors.text + '60', marginTop: 0, marginBottom: 8 }]}>
+                    Below settings availability may vary depending on the platform and device settings.
+                </Text>
                 <View style={[styles.card, { backgroundColor: colors.card }]}>
                     <SettingItem
                         label="Spellcheck"
@@ -139,9 +142,10 @@ export default function EditorSettings() {
                         icon="flash-outline"
                     />
                 </View>
+
             </View>
 
-            <View style={styles.section}>
+            <View style={[styles.section, { paddingBottom: 80 }]}>
                 <Text style={[styles.sectionHeader, { color: colors.text + '80' }]}>LAYOUT</Text>
                 <View style={[styles.card, { backgroundColor: colors.card }]}>
                     <SettingItem

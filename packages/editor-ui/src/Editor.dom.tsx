@@ -1,11 +1,11 @@
 import { useSettingsStore } from '@annota/core';
 import { NoteFileService } from '@annota/core/platform';
 import { dispatchEditorCommand, getEditorProps, getEditorState, getExtensions } from '@annota/editor-core';
+import '@annota/editor-core/highlight-theme.css';
 import '@annota/editor-core/styles.css';
 import { DOMSerializer } from '@tiptap/pm/model';
 import { TextSelection } from '@tiptap/pm/state';
 import { EditorContent, useEditor } from '@tiptap/react';
-import '@annota/editor-core/highlight-theme.css';
 import 'katex/dist/katex.min.css';
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { useEditorThemeVariables } from './hooks/useEditorThemeVariables';

@@ -228,7 +228,7 @@ export function AISelectionPopover({ anchorRect, isVisible, isLoading, onAction,
                                         onAction?.('rewrite', instructions);
                                     }
                                 }}
-                                className="min-h-[36px] w-full py-2 pr-9 text-xs focus-visible:ring-primary/30 rounded-xl resize-none overflow-y-auto no-scrollbar"
+                                className="min-h-[36px] w-full py-2 pr-9 text-xs focus-visible:ring-0 ring-0 rounded-xl resize-none overflow-y-auto no-scrollbar"
                                 autoFocus
                                 maxLength={2000}
                                 rows={1}

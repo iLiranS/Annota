@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { TipTapEditorRef } from "@annota/editor-ui";
 import { ContextMode, useAiChat, useAiStore, useSettingsStore } from "@annota/core";
 import { convertMarkdownToAnnotaHTML } from "@annota/editor-core";
@@ -14,7 +14,29 @@ export function useNoteEditorAI({ editorRef }: UseNoteEditorAIProps) {
         isVisible: false,
         anchorRect: null
     });
+    const isMouseDownRef = useRef(false);
+    const pendingSelectionRef = useRef<DOMRect | null>(null);
     const aiTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    useEffect(() => {
+        const onMouseDown = () => {
+            isMouseDownRef.current = true;
+        };
+        const onMouseUp = () => {
+            isMouseDownRef.current = false;
+            if (pendingSelectionRef.current) {
+                setAiSelection({ isVisible: true, anchorRect: pendingSelectionRef.current });
+                pendingSelectionRef.current = null;
+            }
+        };
+
+        window.addEventListener('mousedown', onMouseDown);
+        window.addEventListener('mouseup', onMouseUp);
+        return () => {
+            window.removeEventListener('mousedown', onMouseDown);
+            window.removeEventListener('mouseup', onMouseUp);
+        };
+    }, []);
 
     const handleAIAction = useCallback(async (action: string, instructions?: string) => {
         const editor = editorRef.current;
@@ -55,15 +77,21 @@ export function useNoteEditorAI({ editorRef }: UseNoteEditorAIProps) {
 
     const handleSelectionChange = useCallback(({ empty, clientRect, nodeName }: { empty: boolean; clientRect: DOMRect | null; nodeName?: string }) => {
         if (aiTimeoutRef.current) clearTimeout(aiTimeoutRef.current);
+        pendingSelectionRef.current = null;
 
         if (empty || !clientRect || nodeName) {
-            setAiSelection(prev => ({ ...prev, isVisible: false }));
+            setAiSelection(prev => (prev.isVisible ? { ...prev, isVisible: false } : prev));
+            return;
+        }
+
+        if (isMouseDownRef.current) {
+            pendingSelectionRef.current = clientRect;
             return;
         }
 
         aiTimeoutRef.current = setTimeout(() => {
             setAiSelection({ isVisible: true, anchorRect: clientRect });
-        }, 300);
+        }, 150);
     }, []);
 
     const handleScroll = useCallback(() => {
