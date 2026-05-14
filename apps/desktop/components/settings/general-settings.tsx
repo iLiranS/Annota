@@ -21,7 +21,7 @@ const Toggle = ({ enabled }: { enabled: boolean }) => (
     )}>
         <span className={cn(
             "pointer-events-none block h-4 w-4 rounded-full  shadow-lg ring-0 transition-transform duration-200 ease-in-out",
-            enabled ? "translate-x-4 bg-foreground" : "translate-x-0 bg-background"
+            enabled ? "translate-x-4 bg-background dark:bg-foreground" : "translate-x-0 bg-background dark:bg-foreground"
         )} />
     </div>
 );

@@ -1,13 +1,11 @@
-import { useNavigationStore, useNotesStore, useSettingsStore } from "@annota/core";
-import { useLocation, useParams } from "react-router-dom";
+import { useNavigationStore, useSettingsStore } from "@annota/core";
 import { useMemo } from "react";
+import { useParams } from "react-router-dom";
 
 export function useActiveNoteId() {
-    const location = useLocation();
     const { noteId: routeNoteId } = useParams<{ noteId: string }>();
     const quickAccessNoteId = useNavigationStore(s => s.quickAccessNoteId);
     const lastViewedNoteId = useSettingsStore(s => s.lastViewedNoteId);
-    const notes = useNotesStore(s => s.notes);
 
     const activeNoteId = useMemo(() => {
         // 1. Quick Access (if applicable - though location.key check is tricky here without a ref)

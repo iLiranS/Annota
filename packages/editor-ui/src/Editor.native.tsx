@@ -242,6 +242,10 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                     noteWidth: editorSettings.noteWidth,
                     direction: editorSettings.direction,
                     defaultCodeLanguage: editorSettings.defaultCodeLanguage,
+                    spellcheck: editorSettings.spellcheck,
+                    autocorrect: editorSettings.autocorrect,
+                    autocapitalize: editorSettings.autocapitalize,
+                    autocomplete: editorSettings.autocomplete,
                 });
             }
         }, [isReady, dark, colors, editorSettings, sendMessage]);

@@ -108,6 +108,40 @@ export default function EditorSettings() {
             </View>
 
             <View style={styles.section}>
+                <Text style={[styles.sectionHeader, { color: colors.text + '80' }]}>BEHAVIOR</Text>
+                <View style={[styles.card, { backgroundColor: colors.card }]}>
+                    <SettingItem
+                        label="Spellcheck"
+                        type="toggle"
+                        value={editor.spellcheck}
+                        onToggle={(val) => updateEditorSettings({ spellcheck: val })}
+                        icon="checkmark-circle-outline"
+                    />
+                    <SettingItem
+                        label="Autocorrect"
+                        type="toggle"
+                        value={editor.autocorrect}
+                        onToggle={(val) => updateEditorSettings({ autocorrect: val })}
+                        icon="sparkles-outline"
+                    />
+                    <SettingItem
+                        label="Autocapitalize"
+                        type="toggle"
+                        value={editor.autocapitalize}
+                        onToggle={(val) => updateEditorSettings({ autocapitalize: val })}
+                        icon="text-outline"
+                    />
+                    <SettingItem
+                        label="Autocomplete"
+                        type="toggle"
+                        value={editor.autocomplete}
+                        onToggle={(val) => updateEditorSettings({ autocomplete: val })}
+                        icon="flash-outline"
+                    />
+                </View>
+            </View>
+
+            <View style={styles.section}>
                 <Text style={[styles.sectionHeader, { color: colors.text + '80' }]}>LAYOUT</Text>
                 <View style={[styles.card, { backgroundColor: colors.card }]}>
                     <SettingItem

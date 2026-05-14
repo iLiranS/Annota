@@ -1,4 +1,4 @@
-import { useNotesStore } from '@annota/core';
+import { calculateNoteStats, useNotesStore } from '@annota/core';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
 import { format } from 'date-fns';
@@ -42,13 +42,7 @@ export default function NoteInfoModal({ visible, onClose, noteId, onScrollToElem
     }, [visible, noteId, getNoteContent]);
 
     const stats = useMemo(() => {
-        if (!content) return { words: 0, chars: 0, size: 0 };
-        const text = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-        return {
-            words: text ? text.split(/\s+/).length : 0,
-            chars: text.length,
-            size: new TextEncoder().encode(content).length
-        };
+        return calculateNoteStats(content || "");
     }, [content]);
 
     const toc = useMemo(() => {

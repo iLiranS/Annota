@@ -25,7 +25,7 @@ declare module '@tiptap/core' {
 
 // Extend Details with custom rendering and parsing
 export const Details = TiptapDetails.extend({
-    draggable: false,
+    draggable: true,
 
     // Custom NodeView to handle height animation
     addNodeView() {
@@ -75,7 +75,6 @@ export const Details = TiptapDetails.extend({
                         if (contentEl) {
                             if (isOpen) {
                                 // 1. Measure target height (precisely!)
-                                contentEl.style.display = 'block';
                                 contentEl.style.transition = 'none';
                                 contentEl.style.height = 'auto';
                                 contentEl.style.opacity = '1';
@@ -122,7 +121,6 @@ export const Details = TiptapDetails.extend({
 
                                 const onEnd = (e: TransitionEvent) => {
                                     if (e.propertyName === 'height' && !newNode.attrs.open) {
-                                        contentEl.style.display = 'none';
                                         contentEl.removeEventListener('transitionend', onEnd);
                                     }
                                 };
@@ -144,15 +142,14 @@ export const Details = TiptapDetails.extend({
     // Parse both our minimal format and legacy formats
     parseHTML() {
         return [
-            { tag: 'details' },
-            { tag: 'div[data-type="details"]' },
-            { tag: 'div.details-wrapper' },
+            { tag: 'details', priority: 100 },
+            { tag: 'div.details-wrapper', priority: 100 },
+            { tag: 'div[data-type="details"]', priority: 100 },
         ];
     },
 
-    // Minimal storage: <details d-id="..." bg="..." open>
     renderHTML({ HTMLAttributes }) {
-        return ['details', mergeAttributes(stripDir(HTMLAttributes)), 0];
+        return ['div', mergeAttributes(stripDir(HTMLAttributes), { class: 'details-wrapper', 'data-type': 'details' }), 0];
     },
 
     addAttributes() {
@@ -171,14 +168,16 @@ export const Details = TiptapDetails.extend({
             open: {
                 default: true,
                 parseHTML: element => {
-                    // Check multiple sources for open state
                     if (element.hasAttribute('open')) return true;
                     if (element.getAttribute('data-open') === 'true') return true;
                     if (element.getAttribute('data-open') === 'false') return false;
-                    return true; // Default to open
+
+                    // If it's a <details> tag and has no 'open' attribute, it's closed in HTML
+                    if (element.tagName === 'DETAILS') return false;
+
+                    return true;
                 },
                 renderHTML: attributes => {
-                    // Boolean attribute: present if true, omitted if false
                     return attributes.open ? { open: '' } : {};
                 },
             },
@@ -343,6 +342,7 @@ export const Details = TiptapDetails.extend({
                         return chain()
                             .insertContent({
                                 type: this.name,
+                                attrs: { open: true },
                                 content: [
                                     { type: 'detailsSummary', content: [{ type: 'heading', attrs: { level: 3 } }] },
                                     { type: 'detailsContent', content: contentToWrap },
@@ -516,14 +516,14 @@ export const DetailsSummary = TiptapDetailsSummary.extend<any>({
 
     parseHTML() {
         return [
-            { tag: 'summary' },
-            { tag: 'div[data-type="detailsSummary"]' },
-            { tag: 'div.details-summary' },
+            { tag: 'summary', priority: 100 },
+            { tag: 'div.details-summary', priority: 100 },
+            { tag: 'div[data-type="detailsSummary"]', priority: 100 },
         ];
     },
 
     renderHTML({ HTMLAttributes }) {
-        return ['summary', mergeAttributes(stripDir(HTMLAttributes)), 0];
+        return ['div', mergeAttributes(stripDir(HTMLAttributes), { class: 'details-summary', 'data-type': 'detailsSummary' }), 0];
     },
 });
 
@@ -542,9 +542,17 @@ export const DetailsContent = TiptapDetailsContent.extend({
 
     parseHTML() {
         return [
-            { tag: 'div[data-type="detailsContent"]' },
-            { tag: 'div.details-content' },
-            { tag: 'div', priority: 10 }, // Fallback for minimal storage, lower priority to avoid stealing other div-based nodes
+            { tag: 'div.details-content', priority: 100 },
+            { tag: 'div[data-type="detailsContent"]', priority: 100 },
+            {
+                tag: 'div',
+                priority: 10,
+                getAttrs: (element) => {
+                    if (!(element instanceof HTMLElement)) return false;
+                    const parent = element.parentElement;
+                    return (parent?.tagName === 'DETAILS' || parent?.classList.contains('details-wrapper')) ? {} : false;
+                },
+            },
         ];
     },
 

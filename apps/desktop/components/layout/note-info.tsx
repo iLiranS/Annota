@@ -1,8 +1,8 @@
 import { cn } from "@/lib/utils";
-import { useNotesStore } from "@annota/core";
+import { calculateNoteStats, useNotesStore } from "@annota/core";
 import { format } from "date-fns";
 import { Calendar, ChevronDown, ChevronRight, Clock, FileText, HardDrive, Hash } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 interface TocItem {
     id: string;
@@ -11,18 +11,22 @@ interface TocItem {
 }
 
 export function NoteInfo({ noteId }: { noteId: string }) {
-    const { notes, getNoteContent } = useNotesStore();
-    const note = notes.find(n => n.id === noteId);
+    const note = useNotesStore(s => s.notes.find(n => n.id === noteId));
+    const getNoteContent = useNotesStore(s => s.getNoteContent);
 
     const [content, setContent] = useState<string>("");
     const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
+    const updateTimeoutRef = useRef<any>(null);
+    const lastFetchedContentRef = useRef<string>("");
 
     useEffect(() => {
         let cancelled = false;
         if (noteId) {
             getNoteContent(noteId).then(c => {
                 if (!cancelled) {
-                    setContent(c || "");
+                    const newContent = c || "";
+                    setContent(newContent);
+                    lastFetchedContentRef.current = newContent;
                 }
             });
         }
@@ -31,20 +35,27 @@ export function NoteInfo({ noteId }: { noteId: string }) {
 
     useEffect(() => {
         const handleUpdate = () => {
-            getNoteContent(noteId).then(c => setContent(c || ""));
+            if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+            updateTimeoutRef.current = setTimeout(() => {
+                getNoteContent(noteId).then(c => {
+                    const newContent = c || "";
+                    if (newContent !== lastFetchedContentRef.current) {
+                        setContent(newContent);
+                        lastFetchedContentRef.current = newContent;
+                    }
+                });
+            }, 1000); // 1s debounce for stats calculation on desktop
         };
         window.addEventListener('annota-note-content-updated', handleUpdate);
-        return () => window.removeEventListener('annota-note-content-updated', handleUpdate);
+        return () => {
+            window.removeEventListener('annota-note-content-updated', handleUpdate);
+            if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+        };
     }, [noteId, getNoteContent]);
 
     const stats = useMemo(() => {
-        if (!content) return { words: 0, chars: 0, size: 0 };
-        const text = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-        return {
-            words: text ? text.split(/\s+/).length : 0,
-            chars: text.length,
-            size: new TextEncoder().encode(content).length
-        };
+        console.log("calculate stats")
+        return calculateNoteStats(content);
     }, [content]);
 
     const formatSize = (bytes: number) => {

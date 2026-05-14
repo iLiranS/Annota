@@ -224,8 +224,18 @@ export const getEditorProps = (callbacks: {
     onScroll?: () => void;
     onContextMenu?: (view: any, event: MouseEvent) => boolean;
     direction?: string;
+    spellcheck?: boolean;
+    autocorrect?: boolean;
+    autocapitalize?: boolean;
+    autocomplete?: boolean;
 }) => ({
-    attributes: { dir: callbacks.direction || 'auto' },
+    attributes: { 
+        dir: callbacks.direction || 'auto',
+        spellcheck: callbacks.spellcheck !== undefined ? (callbacks.spellcheck ? 'true' : 'false') : 'true',
+        autocorrect: callbacks.autocorrect ? 'on' : 'off',
+        autocapitalize: callbacks.autocapitalize ? 'on' : 'off',
+        autocomplete: callbacks.autocomplete ? 'on' : 'off',
+    },
     scrollMargin: { top: 30, bottom: 85, left: 0, right: 0 },
     scrollThreshold: 10,
     handleScrollToSelection: () => {

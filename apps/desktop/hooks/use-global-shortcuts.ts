@@ -13,9 +13,23 @@ export function useGlobalShortcuts(options: { isStandalone?: boolean } = {}) {
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            // mod+n (Cmd+N on Mac, Ctrl+N on Windows)
             const isMod = e.metaKey || e.ctrlKey;
 
+            // 1. Prevent Backspace from navigating back in history when not in an editable context
+            if (e.key === 'Backspace' && !isMod) {
+                const target = e.target as HTMLElement;
+                const isEditable =
+                    target.tagName === 'INPUT' ||
+                    target.tagName === 'TEXTAREA' ||
+                    target.isContentEditable ||
+                    target.closest('[contenteditable="true"]');
+
+                if (!isEditable) {
+                    e.preventDefault();
+                }
+            }
+
+            // 2. Handle global shortcuts
             if (isMod && !e.altKey) {
                 const key = e.key.toLowerCase();
                 const code = e.code;

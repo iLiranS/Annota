@@ -319,7 +319,8 @@ export async function dispatchEditorCommand(editor: Editor, command: string, par
             if (!isNodeSelection) {
                 while (fragment.childCount === 1) {
                     const child = fragment.firstChild!;
-                    if (['details', 'detailsContent', 'codeBlock'].includes(child.type.name)) {
+                    // Never unwrap 'details' as it splits the summary from the content and loses attributes
+                    if (['detailsContent', 'codeBlock'].includes(child.type.name)) {
                         fragment = child.content;
                     } else {
                         break;

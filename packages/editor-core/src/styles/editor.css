@@ -181,6 +181,20 @@
     margin-bottom: var(--editor-paragraph-spacing);
 }
 
+.ProseMirror ul ul,
+.ProseMirror ol ul,
+.ProseMirror ul ul li,
+.ProseMirror ol ul li {
+    list-style-type: circle !important;
+}
+
+.ProseMirror ul ul ul,
+.ProseMirror ol ul ul,
+.ProseMirror ul ul ul li,
+.ProseMirror ol ul ul li {
+    list-style-type: square !important;
+}
+
 .ProseMirror ol {
     list-style-type: decimal;
     padding-inline-start: 24px;

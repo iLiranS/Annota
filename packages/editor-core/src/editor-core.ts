@@ -168,7 +168,11 @@ export function setupEditor(options: any) {
         lineSpacing = 1.5,
         paragraphSpacing = 8,
         noteWidth = 0,
-        defaultCodeLanguage = null
+        defaultCodeLanguage = null,
+        spellcheck = true,
+        autocorrect = false,
+        autocapitalize = false,
+        autocomplete = false
     } = options;
 
     // Set CSS variables and attributes for theme
@@ -208,22 +212,14 @@ export function setupEditor(options: any) {
     const shouldDeferEditable = !autofocus && editable !== false && !hasUserActivated;
 
     if (window.editor) {
-        // Update direction on the ProseMirror view DOM and editorProps so it
-        // persists across view updates. CSS handles the rest via unicode-bidi.
-        const currentEditorProps = window.editor.options.editorProps || {};
-        window.editor.setOptions({
-            editorProps: {
-                ...currentEditorProps,
-                attributes: {
-                    ...((currentEditorProps as any).attributes || {}),
-                    dir: direction,
-                },
-            },
-        });
-
-        // Also set dir directly on the DOM element for immediate visual update
+        // Also set attributes directly on the DOM element for immediate visual update
         if (window.editor.view?.dom) {
-            window.editor.view.dom.setAttribute('dir', direction);
+            const dom = window.editor.view.dom;
+            dom.setAttribute('dir', direction);
+            dom.setAttribute('spellcheck', spellcheck ? 'true' : 'false');
+            dom.setAttribute('autocorrect', autocorrect ? 'on' : 'off');
+            dom.setAttribute('autocapitalize', autocapitalize ? 'on' : 'off');
+            dom.setAttribute('autocomplete', autocomplete ? 'on' : 'off');
         }
 
         if (currentFontFamily !== (fontFamily ?? 'system').toLowerCase()) {
@@ -248,7 +244,11 @@ export function setupEditor(options: any) {
         window.editor.setOptions({
             editorProps: getEditorProps({
                 direction,
-                onScroll: scrollCursorIntoView
+                onScroll: scrollCursorIntoView,
+                spellcheck,
+                autocorrect,
+                autocapitalize,
+                autocomplete
             })
         });
 
@@ -278,7 +278,11 @@ export function setupEditor(options: any) {
             element: editorEl,
             editorProps: getEditorProps({
                 direction,
-                onScroll: scrollCursorIntoView
+                onScroll: scrollCursorIntoView,
+                spellcheck,
+                autocorrect,
+                autocapitalize,
+                autocomplete
             }),
             extensions: getExtensions({
                 placeholder,

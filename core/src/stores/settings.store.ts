@@ -16,6 +16,10 @@ export interface EditorSettings {
     floatingNoteHeader: boolean;
     noteWidth: number; // pixels, 0 for full width
     defaultCodeLanguage: string | null;
+    spellcheck: boolean;
+    autocorrect: boolean;
+    autocapitalize: boolean;
+    autocomplete: boolean;
 }
 
 export interface GeneralSettings {
@@ -67,6 +71,10 @@ const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
     noteWidth: 900,
 
     defaultCodeLanguage: null,
+    spellcheck: true,
+    autocorrect: false,
+    autocapitalize: false,
+    autocomplete: false,
 };
 
 const DEFAULT_GENERAL_SETTINGS: GeneralSettings = {

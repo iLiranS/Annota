@@ -1,5 +1,5 @@
 import { Extension } from '@tiptap/core';
-import { Plugin, PluginKey, TextSelection, NodeSelection } from '@tiptap/pm/state';
+import { NodeSelection, Plugin, PluginKey, TextSelection } from '@tiptap/pm/state';
 
 export const SelectionManager = Extension.create({
   name: 'selectionManager',
@@ -31,7 +31,7 @@ export const SelectionManager = Extension.create({
         },
         view(editorView) {
           const originalScrollIntoView = (editorView as any).scrollIntoView?.bind(editorView);
-          
+
           // Override scrollIntoView to respect touch dragging
           if (originalScrollIntoView) {
             (editorView as any).scrollIntoView = () => {
@@ -90,13 +90,12 @@ export const SelectionManager = Extension.create({
           handleDOMEvents: {
             mousedown(_view, event) {
               const target = event.target as HTMLElement;
-              
+
               // Prevent default drag-select from conflicting with custom nodes
-              const wrapper = target.closest('[data-node-view-wrapper], .tableWrapper, .flashcard-block, .mermaid-block');
-              if (wrapper) {
+              const wrapper = target.closest('[data-node-view-wrapper], .tableWrapper, .flashcard-block, .mermaid-block, [data-type="blockMath"], [data-type="block-math"]'); if (wrapper) {
                 const isEditable = target.isContentEditable || !!target.closest('[contenteditable="true"]');
                 const isInteractive = !!target.closest('button, input, textarea, a');
-                
+
                 if (!isEditable && !isInteractive) {
                   // This is chrome of a rich node. Let handleClickOn handle the selection.
                   event.preventDefault();

@@ -132,6 +132,10 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
         const editorProps = useMemo(() => {
             const baseProps = getEditorProps({
                 direction: direction,
+                spellcheck: editorSettings.spellcheck,
+                autocorrect: editorSettings.autocorrect,
+                autocapitalize: editorSettings.autocapitalize,
+                autocomplete: editorSettings.autocomplete,
                 onContextMenu: (view, event) => {
                     const linkElement = event.composedPath().find((el: any) => el.nodeName === 'A') as HTMLAnchorElement | undefined;
 
@@ -265,7 +269,7 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                     return false;
                 }
             };
-        }, [direction]); // callbacks are accessed via refs, no need to re-create
+        }, [direction, editorSettings]); // callbacks are accessed via refs, no need to re-create
 
 
         const editor = useEditor({
@@ -351,8 +355,17 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                 editor.setOptions({
                     editorProps: editorProps as any,
                 });
+
+                // Also update DOM attributes directly for immediate effect
+                const dom = editor.view.dom;
+                if (dom) {
+                    dom.setAttribute('spellcheck', editorSettings.spellcheck ? 'true' : 'false');
+                    dom.setAttribute('autocorrect', editorSettings.autocorrect ? 'on' : 'off');
+                    dom.setAttribute('autocapitalize', editorSettings.autocapitalize ? 'on' : 'off');
+                    dom.setAttribute('autocomplete', editorSettings.autocomplete ? 'on' : 'off');
+                }
             }
-        }, [editor, editorProps]);
+        }, [editor, editorProps, editorSettings]);
 
 
         useEditorThemeVariables({ colors, dark, editorSettings, rootRef: containerRef });
@@ -697,7 +710,6 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                     }
                     ${DESKTOP_SELECTION_STYLES}
                     .ProseMirror[dir="rtl"] {
-                        unicode-bidi: bidi-override;
                         unicode-bidi: isolate; 
                     }
                     .ProseMirror[dir="rtl"] p {

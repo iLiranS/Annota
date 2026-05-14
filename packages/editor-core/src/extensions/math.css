@@ -5,11 +5,11 @@
 [data-type="inline-math"],
 .tiptap-mathematics-render[data-type="inline-math"],
 .math-node {
-    display: inline-flex;
+    display: inline-block;
+    contain: paint;
     align-items: center;
     position: relative;
     vertical-align: middle;
-    /* Better baseline alignment */
     padding: 0;
     margin: 0 3px;
     border-radius: 4px;
@@ -17,11 +17,24 @@
     line-height: 1;
     pointer-events: auto;
     white-space: nowrap;
-    user-select: none;
     max-width: 100%;
-    /* Force LTR rendering */
     direction: ltr !important;
-    unicode-bidi: isolate !important;
+    -webkit-user-select: text !important;
+    user-select: text !important;
+}
+
+
+[data-type*="math"]::selection,
+[data-type*="math"] *::selection {
+    background-color: transparent !important;
+    color: inherit !important;
+}
+
+/* Firefox support */
+[data-type*="math"]::-moz-selection,
+[data-type*="math"] *::-moz-selection {
+    background-color: transparent !important;
+    color: inherit !important;
 }
 
 [data-type="math"] .katex,
@@ -31,12 +44,14 @@
 [data-type="block-math"] .katex,
 .tiptap-mathematics-render .katex,
 .math-node .katex {
-    display: inline-flex;
+    display: inline-block;
     align-items: center;
     border-radius: 4px;
     max-width: 100%;
     line-height: 1;
     font-size: clamp(0.7em, 3cqw, 1.1em);
+    -webkit-user-select: text !important;
+    user-select: text !important;
 }
 
 [data-type="blockMath"],
@@ -52,18 +67,12 @@
     unicode-bidi: isolate !important;
 }
 
-/* 
- * CRITICAL: KaTeX internals must NOT inherit pre-wrap 
- * Also disable user-select and pointer-events on KAtex itself 
- * so the browser handles the node as a single atom during navigation/clicks.
- */
 .katex {
     white-space: nowrap !important;
-    user-select: none !important;
     pointer-events: none !important;
-    /* Force LTR rendering */
     direction: ltr !important;
     unicode-bidi: isolate !important;
+
 }
 
 .katex * {
@@ -77,7 +86,7 @@
 [data-type="block-math"].ProseMirror-selectednode,
 .tiptap-mathematics-render.ProseMirror-selectednode {
     outline: 2px solid var(--accent-color) !important;
-    background-color: var(--code-bg) !important;
+    background-color: var(--block-selection-bg, rgba(0, 122, 255, 0.12)) !important;
     box-shadow: 0 0 0 1px var(--accent-color);
 }
 

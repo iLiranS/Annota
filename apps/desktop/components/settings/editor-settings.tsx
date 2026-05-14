@@ -10,16 +10,21 @@ import { EDITOR_FONTS, useSettingsStore } from "@annota/core";
 import { invoke } from "@tauri-apps/api/core";
 import {
     AlignLeft,
+    CaseSensitive,
     Check,
     ChevronRight,
     Languages,
     Maximize2,
+    MousePointer2,
     Pilcrow,
+    Sparkles,
+    SpellCheck,
     TextCursor,
     Type
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import { Checkbox } from "@/components/ui/checkbox";
 import { CODE_LANGUAGES } from "@annota/core/constants/editor-code-languages";
 import { SettingItem } from "./setting-item";
 
@@ -104,7 +109,7 @@ export function EditorSettings() {
         const level = Math.round((editor.lineSpacing - 1.5) / 0.1);
         return (level > 0 ? '+' : '') + level;
     };
-    
+
     const getParagraphSpacingDisplay = () => {
         const level = Math.round((editor.paragraphSpacing - 8) / 2);
         return (level > 0 ? '+' : '') + level;
@@ -261,6 +266,71 @@ export function EditorSettings() {
                             ))}
                         </DropdownMenuContent>
                     </DropdownMenu>
+                </div>
+            </section>
+
+            {/* Behavior Section */}
+            <section className="space-y-3">
+                <h4 className="text-[11px] font-bold text-muted-foreground tracking-wider uppercase px-1">
+                    Behavior
+                </h4>
+                <div className="bg-card border rounded-2xl overflow-hidden shadow-sm divide-y">
+                    <SettingItem
+                        label="Spellcheck"
+                        description="Underline misspelled words in red"
+                        icon={<SpellCheck size={18} />}
+                        iconBg="bg-blue-500"
+                        action={
+                            <Checkbox
+                                className="data-[state=checked]:bg-accent-full data-[state=checked]:border-accent-full dark:data-[state=checked]:bg-accent-full dark:data-[state=checked]:border-accent-full"
+                                checked={editor.spellcheck}
+                                onCheckedChange={(checked) => updateEditorSettings({ spellcheck: !!checked })}
+                            />
+                        }
+                        onClick={() => updateEditorSettings({ spellcheck: !editor.spellcheck })}
+                    />
+                    <SettingItem
+                        label="Autocorrect"
+                        description="Automatically fix common spelling errors"
+                        icon={<Sparkles size={18} />}
+                        iconBg="bg-amber-500"
+                        action={
+                            <Checkbox
+                                className="data-[state=checked]:bg-accent-full data-[state=checked]:border-accent-full dark:data-[state=checked]:bg-accent-full dark:data-[state=checked]:border-accent-full"
+                                checked={editor.autocorrect}
+                                onCheckedChange={(checked) => updateEditorSettings({ autocorrect: !!checked })}
+                            />
+                        }
+                        onClick={() => updateEditorSettings({ autocorrect: !editor.autocorrect })}
+                    />
+                    <SettingItem
+                        label="Autocapitalize"
+                        description="Capitalize the first letter of sentences"
+                        icon={<CaseSensitive size={18} />}
+                        iconBg="bg-indigo-500"
+                        action={
+                            <Checkbox
+                                className="data-[state=checked]:bg-accent-full data-[state=checked]:border-accent-full dark:data-[state=checked]:bg-accent-full dark:data-[state=checked]:border-accent-full"
+                                checked={editor.autocapitalize}
+                                onCheckedChange={(checked) => updateEditorSettings({ autocapitalize: !!checked })}
+                            />
+                        }
+                        onClick={() => updateEditorSettings({ autocapitalize: !editor.autocapitalize })}
+                    />
+                    <SettingItem
+                        label="Autocomplete"
+                        description="Suggest words as you type"
+                        icon={<MousePointer2 size={18} />}
+                        iconBg="bg-violet-500"
+                        action={
+                            <Checkbox
+                                className="data-[state=checked]:bg-accent-full data-[state=checked]:border-accent-full dark:data-[state=checked]:bg-accent-full dark:data-[state=checked]:border-accent-full"
+                                checked={editor.autocomplete}
+                                onCheckedChange={(checked) => updateEditorSettings({ autocomplete: !!checked })}
+                            />
+                        }
+                        onClick={() => updateEditorSettings({ autocomplete: !editor.autocomplete })}
+                    />
                 </div>
             </section>
 
