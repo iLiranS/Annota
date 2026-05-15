@@ -207,6 +207,12 @@ function AppLogicHub() {
             if (!isMounted) return;
             console.log('[RootLayout] Auth state change:', event);
             if (session) {
+              const prevUserId = useAuthStore.getState().user?.id ?? null;
+              if (session.user.id !== prevUserId) {
+                useNotesStore.getState().reset();
+                useSearchStore.getState().reset();
+                useSyncStore.getState().reset();
+              }
               setSession(session);
               getUserProfile();
               logInRevenueCat(session.user.id);
@@ -229,6 +235,10 @@ function AppLogicHub() {
             if (isMounted) {
               if (currentSession) {
                 setSession(currentSession);
+              } else if (useAuthStore.getState().session) {
+                // If we had a session rehydrated but Supabase says no session,
+                // it means the token is expired/invalid. Set authRequired.
+                useSyncStore.getState().setAuthRequired(true);
               }
             }
           } catch (err) {

@@ -193,7 +193,9 @@ export default function Sidebar({ onNavigate, ...props }: SidebarProps & React.C
 
     // Offline / sync state
     const isOnline = useSyncStore(s => s.isOnline);
+    const authRequired = useSyncStore(s => s.authRequired);
     const isGuest = useAuthStore(s => s.isGuest);
+    const signOut = useAuthStore(s => s.signOut);
     const [retryCooldown, setRetryCooldown] = useState(false);
     const showOfflineBanner = !isOnline && !isGuest;
 
@@ -592,7 +594,22 @@ export default function Sidebar({ onNavigate, ...props }: SidebarProps & React.C
 
             {/* Footer Section */}
             <View style={[styles.footer, { paddingBottom: insets.bottom + 16, borderTopColor: colors.border }]}>
-                {showOfflineBanner && (
+                {authRequired && !isGuest && (
+                    <View style={[styles.offlineBanner, { backgroundColor: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.2)', borderWidth: 1 }]}>
+                        <Ionicons name="lock-closed-outline" size={16} color="#EF4444" />
+                        <View style={{ flex: 1 }}>
+                            <Text style={[styles.offlineText, { color: '#EF4444', fontWeight: 'bold' }]}>Session Expired</Text>
+                            <Text style={{ color: '#EF4444', opacity: 0.7, fontSize: 10 }}>Sync Paused</Text>
+                        </View>
+                        <Pressable
+                            onPress={signOut}
+                            style={[styles.offlineRetryBtn, { backgroundColor: '#EF4444' }]}
+                        >
+                            <Text style={[styles.offlineRetryText, { color: '#FFF' }]}>Login</Text>
+                        </Pressable>
+                    </View>
+                )}
+                {showOfflineBanner && !authRequired && (
                     <View style={styles.offlineBanner}>
                         <Ionicons name="cloud-offline-outline" size={16} color="#F59E0B" />
                         <Text style={[styles.offlineText, { color: colors.text }]}>Offline</Text>
@@ -658,6 +675,7 @@ export default function Sidebar({ onNavigate, ...props }: SidebarProps & React.C
                 tag={editingTag}
                 onClose={() => setEditingTag(null)}
             />
+
         </View>
     );
 }

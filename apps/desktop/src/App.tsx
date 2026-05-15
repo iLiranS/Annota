@@ -170,9 +170,9 @@ function App() {
                   activeUserId = data.session.user.id;
                   await useUserStore.getState().getUserProfile();
                 } else {
-                  // If no session is found by Supabase, we MUST clear the rehydrated user
-                  // to avoid the "half-logged in" trap.
-                  setSession(null);
+                  // If no session is found by Supabase, we set authRequired 
+                  // instead of clearing the session to allow offline editing.
+                  useSyncStore.getState().setAuthRequired(true);
                 }
               } catch (error) {
                 console.warn("[DesktopBootstrap] Background session revalidation failed:", error);
@@ -344,10 +344,20 @@ function App() {
       const prevUserId = useUserStore.getState().user?.id ?? null;
 
       if (newSession) {
+        const isNewUser = newSession.user.id !== prevUserId;
+        
+        if (isNewUser) {
+          // Explicitly reset stores before switching identities
+          useNotesStore.getState().reset();
+          useSearchStore.getState().reset();
+          useSyncStore.getState().reset();
+        }
+
         setSession(newSession);
         useUserStore.getState().checkMasterKey();
         useUserStore.getState().getUserProfile();
-        if (newSession.user.id !== prevUserId) {
+        
+        if (isNewUser) {
           setRunId((v) => v + 1);
         }
       } else if (event === "SIGNED_OUT") {

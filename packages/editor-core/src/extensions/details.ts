@@ -175,10 +175,13 @@ export const Details = TiptapDetails.extend({
                     // If it's a <details> tag and has no 'open' attribute, it's closed in HTML
                     if (element.tagName === 'DETAILS') return false;
 
-                    return true;
+                    return false;
                 },
                 renderHTML: attributes => {
-                    return attributes.open ? { open: '' } : {};
+                    return {
+                        'data-open': attributes.open ? 'true' : 'false',
+                        ...(attributes.open ? { open: '' } : {}),
+                    };
                 },
             },
             backgroundColor: {

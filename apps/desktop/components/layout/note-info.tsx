@@ -54,7 +54,6 @@ export function NoteInfo({ noteId }: { noteId: string }) {
     }, [noteId, getNoteContent]);
 
     const stats = useMemo(() => {
-        console.log("calculate stats")
         return calculateNoteStats(content);
     }, [content]);
 

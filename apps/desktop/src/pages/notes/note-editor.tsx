@@ -385,6 +385,7 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
                         isVisible={aiSelection.isVisible || isAiStreaming}
                         isLoading={isAiStreaming}
                         anchorRect={aiSelection.anchorRect}
+                        cursorPosition={aiSelection.cursorPosition}
                         direction={direction}
                         onAction={handleAIAction}
                         onClose={hideAISelection}

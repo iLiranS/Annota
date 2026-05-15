@@ -10,7 +10,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { useUserStore, isCloudEnabled } from "@annota/core";
+import { useUserStore, isCloudEnabled, useNavigationStore } from "@annota/core";
 import { getMasterKey } from "@annota/core/platform";
 import { useEffect, useState } from "react";
 import { Ionicons } from "../ui/ionicons";
@@ -61,6 +61,7 @@ function RoleBadge({ role }: { role: string | null }) {
 
 export function AccountSettings() {
     const { session, signOut, setGuest, updateDisplayName } = useUserStore();
+    const setSettingsOpen = useNavigationStore(s => s.setSettingsOpen);
     const [userRole, setUserRole] = useState<string | null>(null);
     const [displayName, setDisplayName] = useState<string>("");
     const [isEditingName, setIsEditingName] = useState(false);
@@ -182,7 +183,10 @@ export function AccountSettings() {
                                 icon={<Ionicons name="log-out" size={20} />}
                                 iconBg="bg-rose-500"
                                 danger
-                                onClick={signOut}
+                                onClick={() => {
+                                    setSettingsOpen(false);
+                                    signOut();
+                                }}
                             />
                         </>
                     ) : (
@@ -194,7 +198,10 @@ export function AccountSettings() {
                                         description="Enable cloud sync and multi-device access"
                                         icon={<Ionicons name="log-in" size={20} />}
                                         iconBg="bg-blue-600"
-                                        onClick={() => setGuest(false)}
+                                        onClick={() => {
+                                            setSettingsOpen(false);
+                                            setGuest(false);
+                                        }}
                                         action={<Ionicons name="chevron-forward" size={16} className="text-muted-foreground" />}
                                     />
                                     <Separator />

@@ -112,6 +112,13 @@ export class SyncScheduler {
             this.hardMaxTimer = setTimeout(() => {
                 this.hardMaxTimer = null;
                 this.clearDebounce();
+                
+                // If auth is required, don't even try to pull/push
+                if (useSyncStore.getState().authRequired) {
+                    console.log('[SyncScheduler] Sync paused: re-authentication required');
+                    return;
+                }
+
                 // Pull first (user may be editing on another device), then push
                 this.executeSyncPull().then(() => this.executeSyncPush());
             }, HARD_MAX_MS);
@@ -206,6 +213,11 @@ export class SyncScheduler {
             return false;
         }
 
+        if (useSyncStore.getState().authRequired) {
+            console.log('[SyncScheduler] Push skipped: re-authentication required');
+            return false;
+        }
+
         try {
             const success = await syncPush(this.masterKey, this.saltHex);
             if (success) {
@@ -227,6 +239,11 @@ export class SyncScheduler {
 
         if (SyncScheduler._syncDisabled) {
             console.log('[SyncScheduler] Pull skipped: sync is disabled via remote config');
+            return false;
+        }
+
+        if (useSyncStore.getState().authRequired) {
+            console.log('[SyncScheduler] Pull skipped: re-authentication required');
             return false;
         }
 

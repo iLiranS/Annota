@@ -59,7 +59,9 @@ export function AppSidebar() {
     } = useNotesStore();
 
     const isOnline = useSyncStore((s) => s.isOnline);
+    const authRequired = useSyncStore((s) => s.authRequired);
     const isGuest = useUserStore((s) => s.isGuest);
+    const signOut = useUserStore((s) => s.signOut);
     const showOfflineBanner = !isOnline && !isGuest;
     const { createAndNavigate: createNote } = useCreateNote();
     const { updateAvailable, latestVersion, currentVersion, dismissUpdate } = useChangelog('desktop');
@@ -192,9 +194,13 @@ export function AppSidebar() {
     }, [deleteFolder, folderToDelete]);
 
     const navigateWithHistory = useCallback((to: string) => {
-        clearQuickAccessView();
+        // If we're navigating to the same URL, we need to clear quick access manually
+        // because the location key might not change, and we want to "close" the quick access view.
+        if (location.pathname + location.search === to) {
+            clearQuickAccessView();
+        }
         navigateSmart(to);
-    }, [clearQuickAccessView, navigateSmart]);
+    }, [navigateSmart, location.pathname, location.search, clearQuickAccessView]);
 
     const handleFolderCreated = useCallback((id: string) => {
         setPendingFolderId(id);
@@ -393,7 +399,10 @@ export function AppSidebar() {
                                     <QuickAccessSection
                                         notes={quickAccessNotes}
                                         activeNoteId={quickAccessNoteId || routeNoteId}
-                                        onNoteClick={(note) => setQuickAccessView(note.id, note.folderId || "root")}
+                                        onNoteClick={(note) => {
+                                            setQuickAccessView(note.id, currentFolderId || "root");
+                                            navigateWithHistory(`/notes/${currentFolderId || "root"}/${note.id}`);
+                                        }}
                                         onDeleteNote={deleteNote}
                                         general={general}
                                     />
@@ -452,8 +461,12 @@ export function AppSidebar() {
                         latestVersion={latestVersion}
                         currentVersion={currentVersion}
                         dismissUpdate={dismissUpdate}
+                        authRequired={authRequired}
+                        onReauthenticate={signOut}
+                        isGuest={isGuest}
                     />
                 </div>
+
 
                 <FolderEditModal
                     open={isEditModalOpen}

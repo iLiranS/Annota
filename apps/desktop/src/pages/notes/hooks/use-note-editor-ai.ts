@@ -10,9 +10,14 @@ interface UseNoteEditorAIProps {
 export function useNoteEditorAI({ editorRef }: UseNoteEditorAIProps) {
     const { sendMessage: sendAiMessage, isStreaming: isAiStreaming, stop: stopAiChat } = useAiChat('inline-assistant');
     
-    const [aiSelection, setAiSelection] = useState<{ isVisible: boolean; anchorRect: DOMRect | null }>({
+    const [aiSelection, setAiSelection] = useState<{ 
+        isVisible: boolean; 
+        anchorRect: DOMRect | null;
+        cursorPosition?: { x: number; y: number } | null;
+    }>({
         isVisible: false,
-        anchorRect: null
+        anchorRect: null,
+        cursorPosition: null
     });
     const isMouseDownRef = useRef(false);
     const pendingSelectionRef = useRef<DOMRect | null>(null);
@@ -34,17 +39,23 @@ export function useNoteEditorAI({ editorRef }: UseNoteEditorAIProps) {
             }
         };
 
-        const onMouseUp = () => {
+        const onMouseUp = (e: MouseEvent) => {
             isMouseDownRef.current = false;
             if (pendingSelectionRef.current) {
                 const rect = pendingSelectionRef.current;
                 pendingSelectionRef.current = null;
                 
+                const cursorPosition = { x: e.clientX, y: e.clientY };
+                
                 // Small delay to allow 'click' events to pass before showing.
                 // This prevents Radix Popover from immediately closing due to 
                 // the click event being perceived as "outside" right after it opens.
                 setTimeout(() => {
-                    setAiSelection({ isVisible: true, anchorRect: rect });
+                    setAiSelection({ 
+                        isVisible: true, 
+                        anchorRect: rect,
+                        cursorPosition 
+                    });
                 }, 10);
             }
         };

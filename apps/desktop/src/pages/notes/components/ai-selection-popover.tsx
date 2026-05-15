@@ -14,9 +14,10 @@ interface AISelectionPopoverProps {
     onClose?: () => void;
     onStop?: () => void;
     direction?: 'ltr' | 'rtl' | 'auto';
+    cursorPosition?: { x: number; y: number } | null;
 }
 
-export function AISelectionPopover({ anchorRect, isVisible, isLoading, onAction, onClose, onStop, direction = 'ltr' }: AISelectionPopoverProps) {
+export function AISelectionPopover({ anchorRect, isVisible, isLoading, onAction, onClose, onStop, direction = 'ltr', cursorPosition }: AISelectionPopoverProps) {
     const { isAiAvailable } = useAiConfiguration();
     const [open, setOpen] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
@@ -58,8 +59,8 @@ export function AISelectionPopover({ anchorRect, isVisible, isLoading, onAction,
     if (!anchorRect || !isAiAvailable) return null;
 
     const isRtl = direction === 'rtl';
-    const rawX = isRtl ? anchorRect.left : anchorRect.right;
-    const rawY = anchorRect.top;
+    const rawX = cursorPosition ? cursorPosition.x : (isRtl ? anchorRect.left : anchorRect.right);
+    const rawY = cursorPosition ? cursorPosition.y : anchorRect.top;
 
     const x = Math.max(20, Math.min(window.innerWidth - 20, rawX));
     const y = Math.max(20, Math.min(window.innerHeight - 20, rawY));
@@ -105,7 +106,15 @@ export function AISelectionPopover({ anchorRect, isVisible, isLoading, onAction,
             >
                 <style>
                     {`
-                    @keyframes bloom {
+                    .animate-bloom {
+                        animation: bloom-top 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                        transform-origin: bottom center;
+                    }
+                    .animate-bloom[data-side="bottom"] {
+                        animation-name: bloom-bottom;
+                        transform-origin: top center;
+                    }
+                    @keyframes bloom-top {
                         0% { 
                             transform: scale(0.6) translateY(20px); 
                             opacity: 0; 
@@ -119,14 +128,24 @@ export function AISelectionPopover({ anchorRect, isVisible, isLoading, onAction,
                             clip-path: circle(150% at 50% 100%);
                         }
                     }
+                    @keyframes bloom-bottom {
+                        0% { 
+                            transform: scale(0.6) translateY(-20px); 
+                            opacity: 0; 
+                            filter: blur(10px);
+                            clip-path: circle(0% at 50% 0%);
+                        }
+                        100% { 
+                            transform: scale(1) translateY(0); 
+                            opacity: 1; 
+                            filter: blur(0);
+                            clip-path: circle(150% at 50% 0%);
+                        }
+                    }
                     @keyframes light-sweep {
                         0% { left: -100%; opacity: 0; }
                         20% { opacity: 0.6; }
                         100% { left: 100%; opacity: 0; }
-                    }
-                    .animate-bloom {
-                        animation: bloom 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-                        transform-origin: bottom center;
                     }
                     .light-streak {
                         position: absolute;

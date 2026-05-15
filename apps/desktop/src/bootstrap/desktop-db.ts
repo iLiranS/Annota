@@ -3,8 +3,13 @@ import { invoke } from '@tauri-apps/api/core';
 import { appDataDir, join } from '@tauri-apps/api/path';
 import { drizzle } from "drizzle-orm/sqlite-proxy";
 
-/** Per-user bootstrap cache — avoids re-initialising for the same user within this JS context. */
-const userDbCache = new Map<string, Promise<void>>();
+interface DbCacheEntry {
+  promise: Promise<void>;
+  drizzleDb: any;
+  nativeDbWrapper: any;
+}
+
+const userDbCache = new Map<string, DbCacheEntry>();
 
 /** The cache key that was last successfully activated. */
 let activeUserKey: string | null = null;
@@ -17,22 +22,12 @@ function splitSqlStatements(sql: string): string[] {
     .map((statement) => `${statement};`);
 }
 
-/**
- * Initialise (or switch to) a per-user SQLite database.
- * Uses SQLCipher for encryption via Rust side invokes.
- *
- * @param skipMigrations - When true, skips DDL (CREATE TABLE / migrations).
- *   Use this for child windows that share the DB with the main window.
- *   Running DDL concurrently causes exclusive write locks on Windows,
- *   deadlocking both processes.
- */
 export async function initDesktopSqlite(userId: string | null, dbKey: string, skipMigrations = false): Promise<void> {
   const cacheKey = userId ?? "__guest__";
   const dbName = userId ? `user_${userId}.db` : "local_guest.db";
 
   // Same user already active in THIS JS context — nothing to do.
   if (activeUserKey === cacheKey && userDbCache.has(cacheKey)) {
-    await userDbCache.get(cacheKey);
     return;
   }
 
@@ -42,7 +37,17 @@ export async function initDesktopSqlite(userId: string | null, dbKey: string, sk
   }
 
   if (!userDbCache.has(cacheKey)) {
-    const bootstrapPromise = (async () => {
+    let resolveReady: () => void;
+    const promise = new Promise<void>((resolve) => { resolveReady = resolve; });
+    
+    const entry: DbCacheEntry = {
+      promise,
+      drizzleDb: null,
+      nativeDbWrapper: null
+    };
+    userDbCache.set(cacheKey, entry);
+
+    try {
       // 1. Resolve full path
       const appDataDirPath = await appDataDir();
       const fullDbPath = await join(appDataDirPath, dbName);
@@ -53,52 +58,32 @@ export async function initDesktopSqlite(userId: string | null, dbKey: string, sk
         while (attempts < 200) {
           const ready = await invoke<boolean>('is_db_ready');
           if (ready) break;
-          // Sleep for 50ms in JS, keeping the Rust IPC channel completely free
           await new Promise(r => setTimeout(r, 50));
           attempts++;
         }
-        if (attempts >= 200) {
-          throw new Error("Child window timed out waiting for main window DB");
-        }
+        if (attempts >= 200) throw new Error("Child window timed out waiting for main window DB");
       } else {
-        await invoke('open_encrypted_db', { 
-          dbPath: fullDbPath, 
-          encryptionKey: dbKey 
-        });
+        await invoke('open_encrypted_db', { dbPath: fullDbPath, encryptionKey: dbKey });
       }
 
       const TX_CONTROL_RE = /^\s*(begin|commit|rollback|savepoint|release savepoint)\b/i;
-
       const drizzleDb = drizzle(async (sql, params, method) => {
         try {
           if (TX_CONTROL_RE.test(sql)) return { rows: [] };
-
           const isReturning = /\bRETURNING\b/i.test(sql);
-
-          // Writes
           if (method === "run" && !isReturning) {
             await invoke('execute_sql', { sql, params });
             return { rows: [] };
           }
-
-          // Reads (returns any[][] directly from Rust)
           const result: any[][] = await invoke('select_sql', { sql, params });
-
-          if (method === "get") {
-            return { rows: result[0] || [] };
-          }
-
+          if (method === "get") return { rows: result[0] || [] };
           return { rows: result };
-          
         } catch (error) {
           console.error(`[DesktopDB] Failed query: ${sql}`, params, error);
           throw error;
         }
       });
 
-      initDb(drizzleDb as any);
-
-      // 2. Define the native wrapper
       const nativeDbWrapper = {
         execAsync: async (rawSql: string) => {
           const statements = splitSqlStatements(rawSql);
@@ -115,28 +100,26 @@ export async function initDesktopSqlite(userId: string | null, dbKey: string, sk
       };
 
       if (!skipMigrations) {
-        // Main window only: run full schema setup + migrations.
-        // Child windows must NOT do this — running DDL concurrently with the
-        // main window causes exclusive write locks on Windows, deadlocking both.
         const { initDatabase } = await import("@annota/core");
         await initDatabase(nativeDbWrapper, drizzleDb as any);
       }
 
-      // Register the active user in the DB store
-      useDbStore.getState().initDB(userId, nativeDbWrapper);
-    })();
-
-    userDbCache.set(cacheKey, bootstrapPromise);
+      entry.drizzleDb = drizzleDb;
+      entry.nativeDbWrapper = nativeDbWrapper;
+      resolveReady!();
+    } catch (error) {
+      userDbCache.delete(cacheKey);
+      throw error;
+    }
   }
 
-  try {
-    await userDbCache.get(cacheKey);
-    activeUserKey = cacheKey;
-  } catch (error) {
-    userDbCache.delete(cacheKey);
-    console.error("[DesktopDB] SQLite init failed:", error);
-    throw error;
-  }
+  const entry = userDbCache.get(cacheKey)!;
+  await entry.promise;
+
+  // Re-register with the global runtime and store
+  initDb(entry.drizzleDb);
+  useDbStore.getState().initDB(userId, entry.nativeDbWrapper);
+  activeUserKey = cacheKey;
 }
 
 export async function resetDesktopDatabase(): Promise<void> {

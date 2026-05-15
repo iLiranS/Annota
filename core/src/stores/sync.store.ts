@@ -29,11 +29,14 @@ interface SyncState {
 
     /** The user ID whose sync pointer is currently loaded. */
     syncUserId: string | null;
+    /** Whether re-authentication is required (e.g. 401 error) */
+    authRequired: boolean;
 
     setSyncing: (v: boolean) => void;
     setOnline: (v: boolean) => void;
     setLastSyncAt: (d: Date) => void;
     setSyncError: (e: string | null) => void;
+    setAuthRequired: (v: boolean) => void;
     setDerivedKeys: (mnemonic: string | null, saltHex: string | null, keys: { masterKey: Buffer; notesKey: Buffer; filesKey: Buffer } | null) => void;
     clearDerivedKeys: () => void;
     forceSync: () => Promise<void>;
@@ -56,6 +59,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
     activeMnemonic: null,
     activeSaltHex: null,
     syncUserId: null,
+    authRequired: false,
 
     setSyncing: (isSyncing) => set({ isSyncing }),
     setOnline: (isOnline) => set({ isOnline }),
@@ -68,6 +72,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
         }
     },
     setSyncError: (syncError) => set({ syncError }),
+    setAuthRequired: (authRequired) => set({ authRequired }),
     setDerivedKeys: (activeMnemonic, activeSaltHex, keys) => set({
         activeMnemonic,
         activeSaltHex,
@@ -122,6 +127,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
             activeMnemonic: null,
             activeSaltHex: null,
             syncUserId: null,
+            authRequired: false,
         });
     },
 
@@ -137,6 +143,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
             activeMnemonic: null,
             activeSaltHex: null,
             syncUserId: null,
+            authRequired: false,
         });
         console.log(`[SyncStore] Cleared sync pointer for user ${userId}`);
     },
