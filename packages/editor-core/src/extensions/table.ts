@@ -13,27 +13,17 @@ interface CustomTableOptions extends TableOptions {
     defaultCellWidth: number;
 }
 
-const getColStyleDeclaration = (minWidth: number, width?: number): [string, string] => {
-    if (width) {
-        return ['width', `${Math.max(width, minWidth)}px`];
-    }
-
-    return ['min-width', `${minWidth}px`];
-};
-
 const updateColumns = (
     node: ProseMirrorNode,
     colgroup: HTMLTableColElement,
     table: HTMLTableElement,
     minCellWidth: number,
-    // defaultCellWidth is the fallback when no colwidth has been stored yet.
-    // Without this, unsized columns only contribute minCellWidth to totalWidth,
-    // causing the table to snap to a tiny width on first resize.
     defaultCellWidth: number,
     overrideCol?: number,
     overrideValue?: number,
 ) => {
     let totalWidth = 0;
+    let fixedWidth = true;
     let nextDOM = colgroup.firstChild;
     const row = node.firstChild;
 
@@ -41,29 +31,28 @@ const updateColumns = (
         for (let i = 0, col = 0; i < row.childCount; i += 1) {
             const { colspan, colwidth } = row.child(i).attrs;
             for (let j = 0; j < colspan; j += 1, col += 1) {
-                const resolvedWidth: number | undefined =
-                    overrideCol === col ? overrideValue : (colwidth && (colwidth[j] as number | undefined));
+                const storedWidth =
+                    overrideCol === col
+                        ? overrideValue
+                        : colwidth?.[j];
 
-                totalWidth += resolvedWidth ?? defaultCellWidth;
+                const hasWidth = typeof storedWidth === 'number' && storedWidth > 0 ? storedWidth : undefined;
+                const cssWidth = hasWidth ? `${Math.max(hasWidth, minCellWidth)}px` : '';
+                
+                totalWidth += hasWidth || minCellWidth;
+                
+                if (!hasWidth) {
+                    fixedWidth = false;
+                }
 
                 if (!nextDOM) {
-                    const col = document.createElement('col');
-                    if (resolvedWidth) {
-                        const [prop, val] = getColStyleDeclaration(minCellWidth, resolvedWidth);
-                        col.style.setProperty(prop, val);
-                    } else {
-                        col.style.width = `${defaultCellWidth}px`;
-                        col.style.minWidth = `${minCellWidth}px`;
-                    }
-                    colgroup.appendChild(col);
+                    const colEl = document.createElement('col');
+                    colEl.style.width = cssWidth;
+                    colgroup.appendChild(colEl);
                 } else {
-                    const col = nextDOM as HTMLTableColElement;
-                    if (resolvedWidth) {
-                        const [prop, val] = getColStyleDeclaration(minCellWidth, resolvedWidth);
-                        col.style.setProperty(prop, val);
-                    } else {
-                        col.style.width = `${defaultCellWidth}px`;
-                        col.style.minWidth = `${minCellWidth}px`;
+                    const colEl = nextDOM as HTMLTableColElement;
+                    if (colEl.style.width !== cssWidth) {
+                        colEl.style.width = cssWidth;
                     }
                     nextDOM = nextDOM.nextSibling;
                 }
@@ -77,11 +66,113 @@ const updateColumns = (
         nextDOM = after;
     }
 
-    // Always a hard pixel width — never % or min-width — so overflow-x: auto
-    // on the wrapper can scroll instead of the browser clamping to viewport.
-    table.style.width = `${totalWidth}px`;
-    table.style.minWidth = `${totalWidth}px`;
+    if (fixedWidth) {
+        table.style.width = `${totalWidth}px`;
+        table.style.minWidth = '';
+    } else {
+        table.style.width = '';
+        table.style.minWidth = `${totalWidth}px`;
+    }
     table.style.maxWidth = 'none';
+};
+
+/**
+ * Returns true if ANY cell in the table already has a stored colwidth.
+ *
+ * We use "any" rather than "all" intentionally: once the user has manually
+ * resized even one column, the resize transaction writes colwidth onto that
+ * cell. If we then re-trigger auto-measurement (because other cells still lack
+ * widths), we overwrite the user's manual resize. Treating any stored width as
+ * "this table has been touched" prevents that snap-back.
+ *
+ * The only time we auto-measure is when the table is completely fresh (every
+ * cell has null colwidth), i.e. freshly pasted from markdown or an AI response.
+ */
+const tableHasStoredWidths = (node: ProseMirrorNode): boolean => {
+    let found = false;
+    node.forEach(rowNode => {
+        if (found) return;
+        rowNode.forEach(cell => {
+            if (found) return;
+            const { colwidth } = cell.attrs;
+            if (colwidth && (colwidth as number[]).some((w: number) => w > 0)) {
+                found = true;
+            }
+        });
+    });
+    return found;
+};
+
+/**
+ * After the table's first paint, measure each <td>/<th> in every rendered row
+ * and write those pixel widths back into the ProseMirror document as `colwidth`
+ * attrs on any cell that doesn't already have stored widths.
+ *
+ * This makes pasted / imported tables behave exactly like manually-resized
+ * ones: updateColumns finds real stored widths on every subsequent render and
+ * never falls back to defaultCellWidth again.
+ */
+const persistNaturalWidths = (
+    node: ProseMirrorNode,
+    table: HTMLTableElement,
+    view: EditorView,
+    getPos: () => number | undefined,
+    minCellWidth: number,
+): void => {
+    // Run after the browser has laid out the table so offsetWidth is real.
+    requestAnimationFrame(() => {
+        if (view.isDestroyed) return;
+        if (!table.isConnected) return;
+
+        const tablePos = getPos();
+        if (typeof tablePos !== 'number') return;
+
+        const liveTable = view.state.doc.nodeAt(tablePos);
+        if (!liveTable) return;
+
+        if (tableHasStoredWidths(liveTable)) return;
+
+        const domRows = Array.from(table.querySelectorAll('tr')) as HTMLTableRowElement[];
+        if (!domRows.length) return;
+
+        const pmTr = view.state.tr;
+        let changed = false;
+        let rowIndex = 0;
+
+        liveTable.forEach((rowNode, rowOffset) => {
+            const domRow = domRows[rowIndex++];
+            if (!domRow) return;
+
+            const domCells = Array.from(domRow.querySelectorAll('td, th')) as HTMLElement[];
+            let domCellIdx = 0;
+
+            rowNode.forEach((pmCell, cellOffset) => {
+                const { colspan, colwidth: existing } = pmCell.attrs;
+                const needsMeasure = !existing || (existing as number[]).every((w: number) => !w);
+
+                if (needsMeasure && domCells[domCellIdx]) {
+                    const totalPx = domCells[domCellIdx].offsetWidth;
+                    const perCol = Math.max(Math.round(totalPx / colspan), minCellWidth);
+                    const newWidths = Array.from({ length: colspan }, () => perCol);
+
+                    const absPos = tablePos + 1 + rowOffset + 1 + cellOffset;
+
+                    pmTr.setNodeMarkup(absPos, undefined, {
+                        ...pmCell.attrs,
+                        colwidth: newWidths,
+                    });
+                    changed = true;
+                }
+
+                domCellIdx += colspan;
+            });
+        });
+
+        if (changed) {
+            pmTr.setMeta('addToHistory', false);
+            view.dispatch(pmTr);
+        }
+    });
 };
 
 class CustomTableView implements NodeView {
@@ -114,6 +205,14 @@ class CustomTableView implements NodeView {
 
         updateColumns(node, this.colgroup, this.table, this.minCellWidth, this.defaultCellWidth);
         this.contentDOM = this.table.appendChild(document.createElement('tbody'));
+
+        // If this table has no stored colwidths (e.g. pasted from markdown or an
+        // AI response), measure the browser's natural layout after first paint and
+        // write the widths back into the document. This prevents every subsequent
+        // updateColumns call from resetting columns to defaultCellWidth.
+        if (!tableHasStoredWidths(node)) {
+            persistNaturalWidths(node, this.table, this.view, this.getPos, this.minCellWidth);
+        }
 
         // --- Mobile Selection Support ---
         let touchStartTime = 0;
@@ -150,6 +249,17 @@ class CustomTableView implements NodeView {
         updateColumns(node, this.colgroup, this.table, this.minCellWidth, this.defaultCellWidth);
 
         return true;
+    }
+
+    updateColumns(
+        node: ProseMirrorNode,
+        colgroup: HTMLTableColElement,
+        table: HTMLTableElement,
+        cellMinWidth: number,
+        overrideCol: number,
+        overrideValue: number,
+    ) {
+        updateColumns(node, colgroup, table, cellMinWidth, this.defaultCellWidth, overrideCol, overrideValue);
     }
 
     ignoreMutation(mutation: ViewMutationRecord) {
@@ -248,7 +358,11 @@ export const CustomTable = Table.extend<CustomTableOptions>({
             ? guardResizeEvents(columnResizing({
                 handleWidth: this.options.handleWidth,
                 cellMinWidth: minCellWidth,
-                defaultCellMinWidth: defaultCellWidth,
+                // defaultCellMinWidth is the floor the columnResizing plugin enforces
+                // *during a drag*. It must equal cellMinWidth — NOT defaultCellWidth.
+                // If it's set to defaultCellWidth (e.g. 120px), the plugin refuses to
+                // let you drag any column below 120px and snaps back on mouseup.
+                defaultCellMinWidth: minCellWidth,
                 View,
                 lastColumnResizable: this.options.lastColumnResizable,
             }))

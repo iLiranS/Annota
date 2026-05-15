@@ -155,8 +155,8 @@ export const getExtensions = (options: {
         }),
         CustomTable.configure({
             resizable: true,
-            cellMinWidth: 64,
-            defaultCellWidth: 64,
+            cellMinWidth: 32,
+            defaultCellWidth: 128,
             renderWrapper: true,
             HTMLAttributes: { class: 'editor-table' },
         }),

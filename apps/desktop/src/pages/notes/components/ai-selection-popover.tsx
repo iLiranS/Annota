@@ -11,11 +11,12 @@ interface AISelectionPopoverProps {
     isVisible: boolean;
     isLoading?: boolean;
     onAction?: (action: string, instructions?: string) => void;
+    onClose?: () => void;
     onStop?: () => void;
     direction?: 'ltr' | 'rtl' | 'auto';
 }
 
-export function AISelectionPopover({ anchorRect, isVisible, isLoading, onAction, onStop, direction = 'ltr' }: AISelectionPopoverProps) {
+export function AISelectionPopover({ anchorRect, isVisible, isLoading, onAction, onClose, onStop, direction = 'ltr' }: AISelectionPopoverProps) {
     const { isAiAvailable } = useAiConfiguration();
     const [open, setOpen] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
@@ -67,7 +68,10 @@ export function AISelectionPopover({ anchorRect, isVisible, isLoading, onAction,
         <Popover open={open} onOpenChange={(val) => {
             if (isLoading) return;
             setOpen(val);
-            if (!val) setIsExpanded(false);
+            if (!val) {
+                setIsExpanded(false);
+                onClose?.();
+            }
         }}>
             <PopoverAnchor asChild>
                 <div
