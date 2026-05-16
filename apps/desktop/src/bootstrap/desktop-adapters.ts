@@ -8,7 +8,7 @@ import { Store } from '@tauri-apps/plugin-store';
 import { emit, listen } from '@tauri-apps/api/event';
 import { encode as encodeArrayBuffer } from 'base64-arraybuffer';
 
-type Scope = 'images' | 'cache' | 'files';
+type Scope = 'cache' | 'files';
 
 const dirCache = new Map<Scope, string>();
 
@@ -42,7 +42,7 @@ async function ensureScopedDir(scope: Scope): Promise<string> {
   const cached = dirCache.get(scope);
   if (cached) return cached;
 
-  const baseDir = (scope === 'images' || scope === 'files') ? await appDataDir() : await appCacheDir();
+  const baseDir = (scope === 'files') ? await appDataDir() : await appCacheDir();
   const dir = await join(baseDir, `annota-${scope}`);
   await mkdir(dir, { recursive: true });
   dirCache.set(scope, dir);

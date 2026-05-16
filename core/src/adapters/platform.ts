@@ -35,7 +35,7 @@ export interface PlatformAdapters {
     };
 
     fileSystem: {
-        ensureDir: (scope: 'images' | 'cache' | 'files') => Promise<string>;
+        ensureDir: (scope: 'cache' | 'files') => Promise<string>;
         copyFile: (from: string, to: string) => Promise<void>;
         deleteFile: (path: string) => Promise<void>;
         clearDir: (path: string) => Promise<void>;

@@ -359,7 +359,7 @@ export async function resetAll(): Promise<void> {
     // 4.1 Clear local file directories
     if (areAdaptersInitialized()) {
       const adapters = getPlatformAdapters();
-      const scopes: ('images' | 'cache' | 'files')[] = ['images', 'cache', 'files'];
+      const scopes: ('cache' | 'files')[] = ['cache', 'files'];
       for (const scope of scopes) {
         try {
           const dir = await adapters.fileSystem.ensureDir(scope);

@@ -114,8 +114,8 @@ export function createMobileAdapters(): PlatformAdapters {
             base64Decode: (str: string) => new Uint8Array(Buffer.from(str, 'base64')),
         },
         fileSystem: {
-            ensureDir: async (scope: 'images' | 'cache' | 'files') => {
-                const parentPath = (scope === 'images' || scope === 'files') ? FileSystem.Paths.document : FileSystem.Paths.cache;
+            ensureDir: async (scope: 'cache' | 'files') => {
+                const parentPath = (scope === 'files') ? FileSystem.Paths.document : FileSystem.Paths.cache;
                 const dir = new FileSystem.Directory(parentPath, scope);
                 if (!dir.exists) {
                     await dir.create();
