@@ -3,7 +3,7 @@ import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover"
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { useAiConfiguration } from "@annota/core";
-import { BotMessageSquare, Pencil, Send, Sparkles } from "lucide-react";
+import { BotMessageSquare, Pencil, Send } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 interface AISelectionPopoverProps {
@@ -231,10 +231,10 @@ export function AISelectionPopover({ anchorRect, isVisible, isLoading, onAction,
                 ) : (
                     // ── Expanded rewrite panel ───────────────────────────────
                     <div className="flex flex-col gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                        <div className="flex items-center gap-2 px-1">
+                        {/* <div className="flex items-center gap-2 px-1">
                             <Sparkles className="h-4 w-4 text-primary" />
                             <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">AI Rewrite</span>
-                        </div>
+                        </div> */}
 
                         <div className="relative">
                             <Textarea

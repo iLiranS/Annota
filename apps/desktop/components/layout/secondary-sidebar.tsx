@@ -1,16 +1,17 @@
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useSettingsStore } from "@annota/core";
-import { Info, Pin, Sparkles } from "lucide-react";
+import { Image, Info, Pin, Sparkles } from "lucide-react";
 import { useEffect } from "react";
 import { useActiveNoteId } from "../../hooks/use-active-note-id";
 import { AiSidebar } from "./ai-sidebar";
+import { MediaSidebar } from "./media-sidebar";
 import { NoteInfo } from "./note-info";
 
 export function SecondarySidebar({ width, isResizing }: { width?: number, isResizing?: boolean }) {
     const { general, updateGeneralSettings } = useSettingsStore();
     const activeTab = general.secondarySidebarTab;
-    const setActiveTab = (tab: 'ai' | 'info') => updateGeneralSettings({ secondarySidebarTab: tab });
+    const setActiveTab = (tab: 'ai' | 'info' | 'media') => updateGeneralSettings({ secondarySidebarTab: tab });
     const activeNoteId = useActiveNoteId();
 
     // Force info tab if AI is disabled
@@ -59,6 +60,18 @@ export function SecondarySidebar({ width, isResizing }: { width?: number, isResi
                                     <Info size={11} className={cn(activeTab === 'info' ? "text-primary" : "text-muted-foreground/40")} />
                                     Note Info
                                 </button>
+                                <button
+                                    onClick={() => setActiveTab('media')}
+                                    className={cn(
+                                        "flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all",
+                                        activeTab === 'media'
+                                            ? "bg-background text-primary shadow-sm"
+                                            : "text-muted-foreground/60 hover:text-muted-foreground"
+                                    )}
+                                >
+                                    <Image size={11} className={cn(activeTab === 'media' ? "text-primary" : "text-muted-foreground/40")} />
+                                    Media
+                                </button>
                             </div>
                         ) : (
                             <div className="flex items-center gap-2 px-1 text-primary/80">
@@ -93,6 +106,8 @@ export function SecondarySidebar({ width, isResizing }: { width?: number, isResi
                 <div className="flex-1 overflow-hidden">
                     {activeTab === 'ai' ? (
                         <AiSidebar isFloating={isFloating} />
+                    ) : activeTab === 'media' ? (
+                        <MediaSidebar />
                     ) : (
                         activeNoteId && <NoteInfo noteId={activeNoteId} />
                     )}

@@ -107,6 +107,10 @@ export function ImageGallery({
     const savedTranslateY = useSharedValue(0);
     const pinchStartFocalX = useSharedValue(0);
     const pinchStartFocalY = useSharedValue(0);
+    const isPinching = useSharedValue(false);
+    const lastPanX = useSharedValue(0);
+    const lastPanY = useSharedValue(0);
+    const prevPanPointers = useSharedValue(0);
 
     // Dismiss (vertical drag)
     const dismissY = useSharedValue(0);
@@ -199,7 +203,12 @@ export function ImageGallery({
     const pinchGesture = Gesture.Pinch()
         .onStart((e) => {
             'worklet';
-            // Snapshot current committed state at gesture start
+            isPinching.value = true;
+            // Defensive: Reset if values are somehow invalid
+            if (!Number.isFinite(scale.value)) scale.value = 1;
+            if (!Number.isFinite(translateX.value)) translateX.value = 0;
+            if (!Number.isFinite(translateY.value)) translateY.value = 0;
+
             savedScale.value = scale.value;
             savedTranslateX.value = translateX.value;
             savedTranslateY.value = translateY.value;
@@ -208,43 +217,29 @@ export function ImageGallery({
         })
         .onUpdate((e) => {
             'worklet';
+            // PREVENT FOCAL JUMP ON RELEASE:
+            // Ignore the dirty update frame where one finger has just lifted.
+            if (e.numberOfPointers !== 2) return;
+
             const sw = screenWidthSV.value;
             const sh = screenHeightSV.value;
 
-            // e.scale is cumulative from gesture start.
-            const nextScale = Math.max(1, Math.min(savedScale.value * e.scale, 5));
+            // Allow rubber-banding (don't strictly clamp max to 5 here)
+            const nextScale = Math.max(0.5, savedScale.value * e.scale);
+            const s0 = Math.max(0.1, savedScale.value);
 
-            // All translateX/Y values live in PRE-SCALE space because the
-            // transform array is [scale, translateX, translateY] — RN applies
-            // them left-to-right, so a translate of 1 unit shifts the already-
-            // scaled element by `currentScale` screen pixels.
-            //
-            // To keep the pinch focal point visually fixed we compute the
-            // required pre-scale translate at nextScale:
-            //
-            //   The focal point in screen-space (relative to centre):
-            //     focalScreen = startFocalX - sw/2
-            //
-            //   In pre-savedScale space (where savedTranslate lives):
-            //     focalPre = focalScreen / savedScale
-            //
-            //   The translate that keeps focalPre fixed after scaling:
-            //     newTx = savedTx - focalPre * (scaleRatio - 1)
-            //           = savedTx + focalPre * (1 - scaleRatio)
-            //
-            //   Finger drift (midpoint moving) in pre-nextScale space:
-            //     driftPre = (focalX - startFocalX) / nextScale
-            //
-            const scaleRatio = nextScale / savedScale.value;
             const focalScreenX = pinchStartFocalX.value - sw / 2;
             const focalScreenY = pinchStartFocalY.value - sh / 2;
 
+            // Mathematically correct focal zoom translation
             const rawX = savedTranslateX.value
-                + (focalScreenX / savedScale.value) * (1 - scaleRatio)
+                + focalScreenX * (1 / nextScale - 1 / s0)
                 + (e.focalX - pinchStartFocalX.value) / nextScale;
             const rawY = savedTranslateY.value
-                + (focalScreenY / savedScale.value) * (1 - scaleRatio)
+                + focalScreenY * (1 / nextScale - 1 / s0)
                 + (e.focalY - pinchStartFocalY.value) / nextScale;
+
+            if (!Number.isFinite(rawX) || !Number.isFinite(rawY)) return;
 
             const clamped = clampTranslate(rawX, rawY, nextScale);
 
@@ -267,50 +262,71 @@ export function ImageGallery({
                 const clamped = clampTranslate(translateX.value, translateY.value, 5);
                 translateX.value = withSpring(clamped.x);
                 translateY.value = withSpring(clamped.y);
-                // Save the current (pre-spring) position as baseline so that any
-                // concurrent pan gesture doesn't jump when it reads savedTranslate*.
-                savedTranslateX.value = translateX.value;
-                savedTranslateY.value = translateY.value;
+                // Crucial: Save the target clamped value, not the currently over-zoomed one
+                savedTranslateX.value = clamped.x;
+                savedTranslateY.value = clamped.y;
             } else {
                 savedScale.value = scale.value;
                 const clamped = clampTranslate(translateX.value, translateY.value, scale.value);
-                if (clamped.x !== translateX.value || clamped.y !== translateY.value) {
-                    translateX.value = withSpring(clamped.x);
-                    translateY.value = withSpring(clamped.y);
-                }
-                // Save the current (pre-spring) position as baseline so that any
-                // concurrent pan gesture doesn't jump when it reads savedTranslate*.
-                savedTranslateX.value = translateX.value;
-                savedTranslateY.value = translateY.value;
+                translateX.value = withSpring(clamped.x);
+                translateY.value = withSpring(clamped.y);
+                savedTranslateX.value = clamped.x;
+                savedTranslateY.value = clamped.y;
             }
+        })
+        .onFinalize(() => {
+            'worklet';
+            isPinching.value = false;
         });
 
     const panGesture = Gesture.Pan()
         .averageTouches(true)
-        .maxPointers(1)
-        .onStart(() => {
+        .onStart((e) => {
             'worklet';
+            // Defensive: Reset if values are somehow invalid
+            if (!Number.isFinite(scale.value)) scale.value = 1;
+            if (!Number.isFinite(translateX.value)) translateX.value = 0;
+            if (!Number.isFinite(translateY.value)) translateY.value = 0;
+
             savedOffset.value = totalOffset.value;
             savedScale.value = scale.value;
             savedTranslateX.value = translateX.value;
             savedTranslateY.value = translateY.value;
+            lastPanX.value = e.translationX;
+            lastPanY.value = e.translationY;
+
+            // Track the initial number of fingers
+            prevPanPointers.value = e.numberOfPointers;
         })
         .onUpdate((e) => {
             'worklet';
+            // PREVENT CENTROID JUMP: Detect if a finger was added or removed
+            const pointersChanged = e.numberOfPointers !== prevPanPointers.value;
+            prevPanPointers.value = e.numberOfPointers;
+
+            // Always track the last pan position so deltas are fresh,
+            // even if we are currently ignoring them due to pinching.
+            const dx = e.translationX - lastPanX.value;
+            const dy = e.translationY - lastPanY.value;
+            lastPanX.value = e.translationX;
+            lastPanY.value = e.translationY;
+
+            // Abort the visual update if we are pinching OR if the finger count just changed
+            if (isPinching.value || pointersChanged) return;
+
             if (scale.value > 1.05) {
-                // Zoomed — pan around the image, clamped to borders.
-                // e.translationX/Y are in screen pixels, but translateX/Y live in
-                // PRE-SCALE space. Divide by scale to convert:
-                //   preScaleDelta = screenDelta / scale
                 const s = scale.value;
+                // Use manual deltas (dx/dy) added to current translate,
+                // completely avoiding the baseline jump
                 const clamped = clampTranslate(
-                    savedTranslateX.value + e.translationX / s,
-                    savedTranslateY.value + e.translationY / s,
+                    translateX.value + dx / s,
+                    translateY.value + dy / s,
                     s
                 );
                 translateX.value = clamped.x;
                 translateY.value = clamped.y;
             } else {
+                // Keep absolute e.translationX for standard page swiping/dismissing
                 const isHorizontal = Math.abs(e.translationX) > Math.abs(e.translationY);
                 if (isHorizontal) {
                     const sw = screenWidthSV.value;
@@ -328,12 +344,11 @@ export function ImageGallery({
         .onEnd((e) => {
             'worklet';
             if (scale.value > 1.05) {
-                // Save clamped position
                 const clamped = clampTranslate(translateX.value, translateY.value, scale.value);
                 savedTranslateX.value = clamped.x;
                 savedTranslateY.value = clamped.y;
             } else {
-                // Dismiss check
+                // ... Your existing page snap logic stays exactly the same here
                 if (dismissY.value > DISMISS_THRESHOLD || e.velocityY > 800) {
                     dismissY.value = withTiming(screenHeightSV.value, { duration: 200 }, () => {
                         if (onClose) scheduleOnRN(onClose);
@@ -343,7 +358,6 @@ export function ImageGallery({
                     dismissY.value = withTiming(0, { duration: 150 });
                 }
 
-                // Snap to nearest page
                 const sw = screenWidthSV.value;
                 const currentPage = Math.round(savedOffset.value / sw);
                 let targetPage: number;

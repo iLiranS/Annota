@@ -209,7 +209,10 @@ export const Details = TiptapDetails.extend({
     },
 
     addProseMirrorPlugins() {
+        const parentPlugins = this.parent?.() || [];
+
         return [
+            ...parentPlugins,
             new Plugin({
                 key: new PluginKey('preventNestedDetails'),
                 props: {
@@ -308,6 +311,36 @@ export const Details = TiptapDetails.extend({
                     }
                 },
             }),
+            new Plugin({
+                key: new PluginKey('no-details-nesting'),
+                props: {
+                    handleDrop(view, event, slice) {
+                        if (!event) return false;
+
+                        let isDraggingDetails = false;
+                        slice.content.descendants((node) => {
+                            if (node.type.name === 'details') {
+                                isDraggingDetails = true;
+                            }
+                        });
+
+                        if (!isDraggingDetails) return false;
+
+                        const pos = view.posAtCoords({ left: event.clientX, top: event.clientY });
+                        if (!pos) return false;
+
+                        const $pos = view.state.doc.resolve(pos.pos);
+                        for (let i = $pos.depth; i > 0; i--) {
+                            const targetName = $pos.node(i).type.name;
+                            if (targetName === 'details' || targetName === 'table') {
+                                event.preventDefault();
+                                return true; // Blocks the drop safely
+                            }
+                        }
+                        return false;
+                    }
+                }
+            })
         ];
     },
 

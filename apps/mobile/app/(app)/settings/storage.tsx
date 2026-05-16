@@ -2,7 +2,7 @@ import { HapticPressable } from '@/components/ui/haptic-pressable';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { StorageService, useUserStore as useAuthStore } from '@annota/core';
 import { Ionicons } from '@expo/vector-icons';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -16,6 +16,7 @@ function formatBytes(bytes: number, decimals = 2) {
 }
 
 export default function StorageSettings() {
+    const router = useRouter();
     const { user } = useAuthStore();
     const { colors } = useAppTheme();
     const [stats, setStats] = useState<{
@@ -142,7 +143,23 @@ export default function StorageSettings() {
 
     return (
         <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
-            <Stack.Screen options={{ title: 'Storage & Debug' }} />
+            <Stack.Screen options={{ title: 'Storage & Database' }} />
+
+            <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                    <Text style={[styles.sectionTitle, { color: colors.text }]}>Media Library</Text>
+                </View>
+                <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                    <SettingItem
+                        label="Browse All Media"
+                        description="View and manage all images and PDFs"
+                        icon="images"
+                        iconBg="#ec4899"
+                        onPress={() => router.push('/settings/media')}
+                        colors={colors}
+                    />
+                </View>
+            </View>
 
             {availableDbs.length > 1 && (
                 <View style={styles.section}>

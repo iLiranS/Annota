@@ -6,6 +6,20 @@ import type { DbOrTx } from '../types';
 import { safeGet, safeGetAll } from '../utils';
 
 export type { FileRecord } from '../schema';
+import { noteMetadata } from '../schema';
+
+// ============ TYPES ============
+
+export interface MediaNoteAssociation {
+    noteId: string;
+    noteTitle: string;
+    folderId: string | null;
+    isLatest: boolean;
+}
+
+export interface MediaItem extends FileRecord {
+    notes: MediaNoteAssociation[];
+}
 
 // ============ FILE OPERATIONS ============
 
@@ -365,4 +379,137 @@ export async function getPendingDownloads(tx: DbOrTx = getDb()): Promise<Downloa
     // Fetch all pending downloads to retry them
     const result = await tx.select().from(fileDownloadQueue).all();
     return safeGetAll<DownloadQueueRecord>(result);
+}
+
+/**
+ * High-performance paginated media fetcher for the secondary sidebar.
+ * Handles search (across note titles/content), adaptive grid pagination,
+ * and identifies which notes/versions each file belongs to.
+ */
+export async function getPaginatedMedia(
+    page: number,
+    pageSize: number = 20,
+    searchQuery?: string,
+    tx: DbOrTx = getDb()
+): Promise<{ items: MediaItem[], totalCount: number, hasMore: boolean }> {
+    const offset = (page - 1) * pageSize;
+
+    // 1. Build the base query for files
+    let fileQuery = tx.select({ file: files })
+        .from(files)
+        .where(
+            or(
+                eq(files.fileType, 'image'),
+                eq(files.fileType, 'pdf')
+            )
+        );
+
+    // 2. Apply search filter if provided (using FTS5 for performance)
+    if (searchQuery && searchQuery.trim()) {
+        const pattern = `${searchQuery.trim().replace(/"/g, '""')}*`;
+        fileQuery = tx.select({ file: files })
+            .from(files)
+            .where(
+                and(
+                    or(
+                        eq(files.fileType, 'image'),
+                        eq(files.fileType, 'pdf')
+                    ),
+                    sql`${files.id} IN (
+                        SELECT vf.file_id 
+                        FROM ${versionFiles} vf
+                        JOIN ${noteVersions} nv ON vf.version_id = nv.id
+                        WHERE nv.note_id IN (
+                            SELECT id FROM notes_fts WHERE notes_fts MATCH ${pattern}
+                        )
+                    )`
+                )
+            );
+    }
+
+    // 3. Get total count
+    const countResult = await tx.select({ count: sql<number>`count(*)` })
+        .from(fileQuery.as('filtered_files'))
+        .get();
+    const totalCount = safeGet<{ count: number }>(countResult)?.count ?? 0;
+
+    if (totalCount === 0) return { items: [], totalCount: 0, hasMore: false };
+
+    // 4. Fetch paginated files
+    const paginatedFiles = await fileQuery
+        .orderBy(sql`${files.createdAt} DESC`)
+        .limit(pageSize)
+        .offset(offset)
+        .all();
+
+    const safeFiles = safeGetAll<{ file: FileRecord }>(paginatedFiles).map(r => r.file);
+    if (safeFiles.length === 0) return { items: [], totalCount, hasMore: false };
+
+    const fileIds = safeFiles.map(f => f.id);
+
+    // Optimize: Identify the latest version ID for each note using a window function
+    const latestVersionsSubquery = tx.select({
+        noteId: noteVersions.noteId,
+        id: noteVersions.id,
+        rank: sql<number>`row_number() OVER (PARTITION BY ${noteVersions.noteId} ORDER BY ${noteVersions.createdAt} DESC)`.as('rank')
+    })
+    .from(noteVersions)
+    .as('lv');
+
+    const associations = await tx.select({
+        fileId: versionFiles.fileId,
+        noteId: noteMetadata.id,
+        noteTitle: noteMetadata.title,
+        folderId: noteMetadata.folderId,
+        versionId: noteVersions.id,
+        isLatest: sql<boolean>`lv.rank = 1`
+    })
+    .from(versionFiles)
+    .innerJoin(noteVersions, eq(versionFiles.versionId, noteVersions.id))
+    .innerJoin(noteMetadata, eq(noteVersions.noteId, noteMetadata.id))
+    .leftJoin(latestVersionsSubquery, and(
+        eq(noteMetadata.id, latestVersionsSubquery.noteId),
+        eq(noteVersions.id, latestVersionsSubquery.id)
+    ))
+    .where(inArray(versionFiles.fileId, fileIds))
+    .all();
+
+    const safeAssociations = safeGetAll<{
+        fileId: string;
+        noteId: string;
+        noteTitle: string;
+        folderId: string | null;
+        versionId: string;
+        isLatest: boolean;
+    }>(associations);
+
+    // 6. Group associations by fileId
+    const associationsByFile = new Map<string, MediaNoteAssociation[]>();
+    for (const assoc of safeAssociations) {
+        if (!associationsByFile.has(assoc.fileId)) {
+            associationsByFile.set(assoc.fileId, []);
+        }
+        
+        const existing = associationsByFile.get(assoc.fileId)!.find(a => a.noteId === assoc.noteId);
+        if (existing) {
+            if (assoc.isLatest) existing.isLatest = true;
+        } else {
+            associationsByFile.get(assoc.fileId)!.push({
+                noteId: assoc.noteId,
+                noteTitle: assoc.noteTitle,
+                folderId: assoc.folderId,
+                isLatest: assoc.isLatest
+            });
+        }
+    }
+
+    // 7. Combine files with their associations
+    const items: MediaItem[] = safeFiles.map(file => ({
+        ...file,
+        notes: associationsByFile.get(file.id) || []
+    }));
+
+    const hasMore = offset + items.length < totalCount;
+
+    return { items, totalCount, hasMore };
 }

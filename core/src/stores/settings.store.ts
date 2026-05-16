@@ -32,7 +32,7 @@ export interface GeneralSettings {
     isSecondarySidebarSticky: boolean;
     showNotesCountInFolder: boolean;
     isAiEnabled: boolean;
-    secondarySidebarTab: 'ai' | 'info';
+    secondarySidebarTab: 'ai' | 'info' | 'media';
 }
 
 export interface SettingsState {

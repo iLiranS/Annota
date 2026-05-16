@@ -1,5 +1,5 @@
 import type { PlatformAdapters } from '@annota/core/platform';
-import { invoke } from '@tauri-apps/api/core';
+import { convertFileSrc, invoke } from '@tauri-apps/api/core';
 import { appCacheDir, appDataDir, join } from '@tauri-apps/api/path';
 import { copyFile, mkdir, readFile, remove, stat, writeFile } from '@tauri-apps/plugin-fs';
 import { fetch } from '@tauri-apps/plugin-http';
@@ -239,28 +239,21 @@ export function createDesktopAdapters(): PlatformAdapters {
       },
       toImageUrl: async (path: string) => {
         try {
-          // 1. Read the raw bytes. If Tauri blocks the absolute path, this will throw.
-          const fileBytes = await readFile(path);
+          if (!path) return "";
+          
+          let absolutePath = path;
+          // If it's not an absolute path, resolve it relative to the 'files' scoped directory
+          if (!path.startsWith('/') && !path.startsWith('\\') && !path.includes(':')) {
+            const baseDir = await ensureScopedDir('files');
+            absolutePath = await join(baseDir, path);
+          }
 
-          // 2. Map the correct mime type
-          const mime = path.endsWith('.webp') ? 'image/webp' :
-            path.endsWith('.png') ? 'image/png' : 'image/jpeg';
-
-          // 3. Use the native browser engine to handle the base64 conversion.
-          // This is lightning fast and handles massive files without crashing.
-          const base64Uri = await new Promise<string>((resolve, reject) => {
-            const blob = new Blob([fileBytes], { type: mime });
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob); // Directly outputs "data:image/jpeg;base64,..."
-          });
-
-          return base64Uri;
+          // Use Tauri's optimized asset loader instead of manual base64 conversion.
+          // This is lightning fast and avoids "forbidden path" errors for properly scoped files.
+          return convertFileSrc(absolutePath);
         } catch (error) {
-          // If you see this in your terminal/console, Tauri is blocking the path.
           console.error("Desktop Adapter: Failed to load image at path:", path, error);
-          return ""; // Return empty to prevent malformed src injection
+          return "";
         }
       },
       openFile: async (path: string) => {

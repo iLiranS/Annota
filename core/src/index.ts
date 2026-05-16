@@ -1,4 +1,5 @@
 // Re-export core modules
+export * from './adapters';
 export * from './api';
 export * from './db';
 export * from './services';

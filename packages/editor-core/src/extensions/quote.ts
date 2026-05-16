@@ -1,6 +1,7 @@
 import './quote.css';
 import { Blockquote } from '@tiptap/extension-blockquote';
 import { mergeAttributes } from '@tiptap/core';
+import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { createBlockMenuButton } from './block-menu-button';
 
 /** Strip the `dir` attribute so quote nodes inherit direction from the editor root */
@@ -135,6 +136,43 @@ export const Quote = Blockquote.extend<any>({
             'Mod-Shift-u': () => this.editor.commands.toggleBlockquote(),
             'Mod-Shift-b': () => false,
         };
+    },
+
+    addProseMirrorPlugins() {
+        const parentPlugins = this.parent?.() || [];
+
+        return [
+            ...parentPlugins,
+            new Plugin({
+                key: new PluginKey('no-quote-nesting'),
+                props: {
+                    handleDrop(view, event, slice) {
+                        if (!event) return false;
+
+                        let isDraggingQuote = false;
+                        slice.content.descendants((node) => {
+                            if (node.type.name === 'blockquote') {
+                                isDraggingQuote = true;
+                            }
+                        });
+
+                        if (!isDraggingQuote) return false;
+
+                        const pos = view.posAtCoords({ left: event.clientX, top: event.clientY });
+                        if (!pos) return false;
+
+                        const $pos = view.state.doc.resolve(pos.pos);
+                        for (let i = $pos.depth; i > 0; i--) {
+                            if ($pos.node(i).type.name === 'blockquote') {
+                                event.preventDefault();
+                                return true; // Blocks the drop safely
+                            }
+                        }
+                        return false;
+                    }
+                }
+            })
+        ];
     },
 
     addCommands() {

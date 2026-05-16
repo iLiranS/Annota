@@ -387,7 +387,7 @@
     cursor: grabbing;
     opacity: 1 !important;
     color: var(--accent-color);
-    background-color: color-mix(in srgb, var(--accent-color) 18%, transparent);
+    background-color: color-mix(in srgb, var(--accent-color) 50%, transparent);
 }
 
 /* Subtle highlight on the block currently under the drag handle */
