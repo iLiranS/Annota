@@ -264,6 +264,12 @@ export const getExtensions = async (options: Parameters<typeof getBaseExtensions
                         strategy: 'absolute',
                     },
                     onNodeChange({ node, editor: _editor }) {
+                        // FIX: Do not modify DOM classes if the user has an active text selection.
+                        // Mutating the DOM inside contenteditable cancels the browser's selection.
+                        if (!_editor.state.selection.empty) {
+                            return;
+                        }
+
                         document.querySelectorAll('.drag-handle-hover').forEach(el => {
                             el.classList.remove('drag-handle-hover');
                         });

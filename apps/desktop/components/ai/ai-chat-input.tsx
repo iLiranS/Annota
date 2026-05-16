@@ -123,7 +123,6 @@ export function AiChatInput({
     };
 
     const isNearLimit = content.length > MAX_LENGTH * 0.8;
-    console.log(isFloating)
     return (
         <div className={cn("flex flex-col gap-2 ", isFloating ? "m-1 " : " ")}>
             <div className="w-full bg-background border rounded-3xl  focus-within:shadow-md focus-within:border-primary/30 group p-1.5 flex flex-col gap-1 transition-all duration-300">

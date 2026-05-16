@@ -52,10 +52,14 @@ export function SidebarHeaderSection({
     return (
         <SidebarHeader
             style={{
-                backgroundColor: color + "30",
+                backgroundColor: `${color}25`,      // subtle tinted background
+                borderColor: `${color}30`,          // soft border
+                boxShadow: `0 4px 10px ${color}15`,
             }}
             className={cn(
-                "py-2 justify-center rounded-lg shadow",
+                "py-2 justify-center rounded-xl border",
+                "transition-all duration-300",
+                "dark:shadow-none",
                 dir === "rtl" && "animate-content-from-right",
                 dir === "ltr" && "animate-content-from-left"
             )}
