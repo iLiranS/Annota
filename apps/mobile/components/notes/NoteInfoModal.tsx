@@ -71,10 +71,14 @@ export default function NoteInfoModal({ visible, onClose, noteId, onScrollToElem
     };
 
     const isVisible = (index: number) => {
+        let currentLevel = toc[index].level;
         for (let i = index - 1; i >= 0; i--) {
             const prevItem = toc[i];
-            if (collapsedIds.has(prevItem.id) && prevItem.level < toc[index].level) {
-                return false;
+            if (prevItem.level < currentLevel) {
+                if (collapsedIds.has(prevItem.id)) {
+                    return false;
+                }
+                currentLevel = prevItem.level;
             }
         }
         return true;

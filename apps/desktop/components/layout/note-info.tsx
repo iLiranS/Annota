@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import { calculateNoteStats, useNotesStore } from "@annota/core";
 import { format } from "date-fns";
-import { Calendar, ChevronDown, ChevronRight, Clock, FileText, HardDrive, Hash } from "lucide-react";
+import { Calendar, ChevronDown, ChevronRight, Clock, FileText, HardDrive, Hash, ListTree } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 interface TocItem {
@@ -89,10 +89,14 @@ export function NoteInfo({ noteId }: { noteId: string }) {
     };
 
     const isVisible = (index: number) => {
+        let currentLevel = toc[index].level;
         for (let i = index - 1; i >= 0; i--) {
             const prevItem = toc[i];
-            if (collapsedIds.has(prevItem.id) && prevItem.level < toc[index].level) {
-                return false;
+            if (prevItem.level < currentLevel) {
+                if (collapsedIds.has(prevItem.id)) {
+                    return false;
+                }
+                currentLevel = prevItem.level;
             }
         }
         return true;
@@ -113,10 +117,11 @@ export function NoteInfo({ noteId }: { noteId: string }) {
     if (!note) return null;
 
     return (
-        <div className="flex flex-col h-full bg-sidebar/50 p-4 overflow-hidden">
+        <div className="flex flex-col h-full overflow-hidden">
             {/* Top: TOC Section (Scrollable) */}
             <div className="flex-1 min-h-0 flex flex-col">
-                <h3 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 px-1 mb-3 shrink-0">
+                <h3 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 px-1 mb-3 shrink-0 flex items-center gap-1.5">
+                    <ListTree size={12} className="opacity-70" />
                     Table of Contents
                 </h3>
                 <div className="flex-1 overflow-y-auto pr-2 premium-scrollbar">
@@ -176,7 +181,7 @@ export function NoteInfo({ noteId }: { noteId: string }) {
             </div>
 
             {/* Bottom: Stats and Metadata */}
-            <div className="pt-2 border-t border-border/60 space-y-6 shrink-0">
+            <div className="pt-2   space-y-6 shrink-0 pb-4 px-2  border border-border/60 bg-accent/10 rounded-xl ">
                 {/* Statistics */}
                 <div className="grid grid-cols-3 gap-2">
                     <div className="flex flex-col gap-1 p-2.5 rounded-xl bg-muted/30 border border-border/20">
@@ -213,8 +218,7 @@ export function NoteInfo({ noteId }: { noteId: string }) {
                             <span className="font-semibold text-muted-foreground/70">
                                 {format(new Date(note.createdAt), "MMM d, yyyy")}
                             </span>
-                            <span className="text-muted-foreground/20 text-[10px]">•</span>
-                            <span className="text-muted-foreground/40 tabular-nums font-medium">
+                            <span className="text-muted-foreground/40 tabular-nums font-medium text-[10px]">
                                 {format(new Date(note.createdAt), "HH:mm")}
                             </span>
                         </div>
@@ -228,8 +232,7 @@ export function NoteInfo({ noteId }: { noteId: string }) {
                             <span className="font-semibold text-muted-foreground/70">
                                 {format(new Date(note.updatedAt), "MMM d, yyyy")}
                             </span>
-                            <span className="text-muted-foreground/20 text-[10px]">•</span>
-                            <span className="text-muted-foreground/40 tabular-nums font-medium">
+                            <span className="text-muted-foreground/40 tabular-nums font-medium text-[10px]">
                                 {format(new Date(note.updatedAt), "HH:mm")}
                             </span>
                         </div>

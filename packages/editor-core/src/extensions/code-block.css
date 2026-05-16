@@ -54,7 +54,9 @@
     top: 0;
     left: 0;
     right: 0;
-    z-index: 10;
+    /* z-index raised here creates a stacking context — the drag handle wrapper
+       sits outside this element and must be higher to appear above the header */
+    z-index: 2;
     pointer-events: none;
 }
 

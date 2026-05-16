@@ -4,8 +4,8 @@ import { useSettingsStore } from "@annota/core";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Outlet } from "react-router-dom";
 import { MainNavbar } from "../navbar/main-navbar";
-import { SecondarySidebar } from "./secondary-sidebar";
 import { AppSidebar } from "./app-sidebar";
+import { SecondarySidebar } from "./secondary-sidebar";
 
 /**
  * Main app shell: shadcn SidebarProvider wrapping the primary sidebar + routed content.
@@ -130,18 +130,21 @@ export default function AppShell() {
                         </div>
                     </div>
 
-                    {/* AI Sidebar Container (Outside the main note card) */}
+                    {/* Secondary Sidebar Container (Outside the main note card) */}
                     <div
                         ref={sidebarRef}
                         className={cn(
                             general.secondarySidebarMode === 'pinned'
-                                ? "relative h-full"
+                                ? cn(
+                                    "relative mb-2 ",
+                                    general.appDirection === "rtl" ? "ml-2" : "mr-2"
+                                )
                                 : cn(
                                     "absolute z-50",
                                     "top-10 bottom-3",
                                     general.appDirection === "rtl" ? "left-3" : "right-3"
                                 ),
-                            "flex shrink-0 overflow-hidden",
+                            "flex shrink-0 ",
                             // Only animate on open/close, not during drag
                             !isResizing && "transition-[width,opacity] duration-300 ease-in-out",
                             general.isSecondarySidebarOpen
@@ -157,11 +160,10 @@ export default function AppShell() {
                             <div
                                 onMouseDown={startResizing}
                                 className={cn(
-                                    "absolute top-0 bottom-0 w-3   cursor-col-resize z-50 flex items-center justify-center group",
+                                    "absolute top-0 bottom-0 w-1 hover:bg-border cursor-col-resize z-50 flex items-center justify-center group",
+                                    general.secondarySidebarMode === 'floating' ? "" : general.appDirection === "rtl" ? " translate-x-2" : " -translate-x-2"
                                 )}
-                            >
-                                <div className="w-px h-full bg-transparent group-hover:bg-primary/40 group-hover:w-0.5 transition-all" />
-                            </div>
+                            />
                         )}
 
                         <SecondarySidebar width={sidebarWidth} isResizing={isResizing} />

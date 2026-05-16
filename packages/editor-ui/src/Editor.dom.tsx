@@ -1,6 +1,6 @@
 import { useSettingsStore } from '@annota/core';
 import { NoteFileService } from '@annota/core/platform';
-import { dispatchEditorCommand, getEditorProps, getEditorState, getExtensions } from '@annota/editor-core';
+import { dispatchEditorCommand, getBaseExtensions, getEditorProps, getEditorState, getExtensions } from '@annota/editor-core';
 import '@annota/editor-core/highlight-theme.css';
 import '@annota/editor-core/styles.css';
 import { DOMSerializer } from '@tiptap/pm/model';
@@ -75,59 +75,28 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
         useEffect(() => { onOpenLinkMenuRef.current = onOpenLinkMenu; }, [onOpenLinkMenu]);
         const onOpenTableMenuRef = useRef(onOpenTableMenu);
         useEffect(() => { onOpenTableMenuRef.current = onOpenTableMenu; }, [onOpenTableMenu]);
+        const onSearchResultsRef = useRef(onSearchResults);
+        useEffect(() => { onSearchResultsRef.current = onSearchResults; }, [onSearchResults]);
+        const onOpenBlockMenuRef = useRef(onOpenBlockMenu);
+        useEffect(() => { onOpenBlockMenuRef.current = onOpenBlockMenu; }, [onOpenBlockMenu]);
+        const onOpenFileMenuRef = useRef(onOpenFileMenu);
+        useEffect(() => { onOpenFileMenuRef.current = onOpenFileMenu; }, [onOpenFileMenu]);
+        const onCodeBlockSelectedRef = useRef(onCodeBlockSelected);
+        useEffect(() => { onCodeBlockSelectedRef.current = onCodeBlockSelected; }, [onCodeBlockSelected]);
+        const onSlashCommandRef = useRef(onSlashCommand);
+        useEffect(() => { onSlashCommandRef.current = onSlashCommand; }, [onSlashCommand]);
+        const onTagCommandRef = useRef(onTagCommand);
+        useEffect(() => { onTagCommandRef.current = onTagCommand; }, [onTagCommand]);
+        const onNoteLinkCommandRef = useRef(onNoteLinkCommand);
+        useEffect(() => { onNoteLinkCommandRef.current = onNoteLinkCommand; }, [onNoteLinkCommand]);
+        const onGalleryVisibilityChangeRef = useRef(onGalleryVisibilityChange);
+        useEffect(() => { onGalleryVisibilityChangeRef.current = onGalleryVisibilityChange; }, [onGalleryVisibilityChange]);
+        const handleCommandRef = useRef<any>(null);
+        const openGalleryRef = useRef(openGallery);
+        useEffect(() => { openGalleryRef.current = openGallery; }, [openGallery]);
 
-        const extensions = useMemo(() => getExtensions({
-            placeholder,
-            onMathSelected: (latex) => {
-                setCurrentLatex(latex);
-                setActivePopup('math');
-            },
-            onOpenFile: (data) => handleCommand('openFile', data),
-            onSearchResults,
-            onOpenBlockMenu,
-            onOpenFileMenu,
-            onOpenTableMenu,
-            onCodeBlockSelected,
-            onSlashCommand,
-            onTagCommand,
-            onNoteLinkCommand,
-            onImageSelected: (data) => {
-                // Drop focus so the cursor doesn't blink behind the dark overlay
-                if (editorRef.current) {
-                    editorRef.current.commands.blur();
-                }
-                openGallery(data.images, data.currentIndex);
-            },
-            onResolveImageIds: (data) => {
-                if (data.imageIds.length > 0) {
-                    NoteFileService.resolveFileSources(data.imageIds).then((fileMap) => {
-                        if (Object.keys(fileMap).length > 0) {
-                            isHydrating.current = true;
-                            (editorRef.current.commands as any).resolveImages({ imageMap: fileMap });
-                            isHydrating.current = false;
-                        }
-                    });
-                }
-            },
-            onImagePasted: (data) => {
-                console.log("[EditorDom] Paste detected!", data.imageId);
-            },
+        const [extensions, setExtensions] = useState<any[]>(() => getBaseExtensions({ placeholder }));
 
-            defaultCodeLanguage: editorSettings.defaultCodeLanguage,
-        }), [
-            placeholder,
-            noteId,
-            editorSettings.defaultCodeLanguage,
-            onSearchResults,
-            onOpenBlockMenu,
-            onOpenFileMenu,
-            onOpenTableMenu,
-            onCodeBlockSelected,
-            onSlashCommand,
-            onTagCommand,
-            onNoteLinkCommand,
-            onGalleryVisibilityChange,
-        ]);
 
         const editorProps = useMemo(() => {
             const baseProps = getEditorProps({
@@ -275,7 +244,7 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
         const editor = useEditor({
             editable,
             content: initialContent,
-            extensions: extensions as any,
+            extensions: (extensions || []) as any,
             editorProps: editorProps as any,
             onCreate: ({ editor }) => {
                 editorRef.current = editor;
@@ -347,7 +316,7 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
             onTransaction: ({ editor }) => {
                 setEditorState(getEditorState(editor) as unknown as EditorState);
             },
-        }, [noteId]);
+        }, [noteId, extensions]);
 
         // Update editor options when they change
         useEffect(() => {
@@ -495,6 +464,56 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
             // Otherwise, dispatch to TipTap
             if (editor) await dispatchEditorCommand(editor as any, cmd, params || {});
         }, [editor]);
+        handleCommandRef.current = handleCommand;
+
+        useEffect(() => {
+            let isMounted = true;
+            getExtensions({
+                placeholder,
+                onMathSelected: (latex) => {
+                    setCurrentLatex(latex);
+                    setActivePopup('math');
+                },
+                onOpenFile: (data) => handleCommandRef.current?.('openFile', data),
+                onSearchResults: (count, index) => onSearchResultsRef.current?.(count, index),
+                onOpenBlockMenu: (e, res) => onOpenBlockMenuRef.current?.(e, res),
+                onOpenFileMenu: (e, res) => onOpenFileMenuRef.current?.(e, res),
+                onOpenTableMenu: (e, res) => onOpenTableMenuRef.current?.(e, res),
+                onCodeBlockSelected: (e, res) => onCodeBlockSelectedRef.current?.(e, res),
+                onSlashCommand: (data) => onSlashCommandRef.current?.(data),
+                onTagCommand: (data) => onTagCommandRef.current?.(data),
+                onNoteLinkCommand: (data) => onNoteLinkCommandRef.current?.(data),
+                onImageSelected: (data) => {
+                    // Drop focus so the cursor doesn't blink behind the dark overlay
+                    if (editorRef.current) {
+                        editorRef.current.commands.blur();
+                    }
+                    openGalleryRef.current?.(data.images, data.currentIndex);
+                },
+                onResolveImageIds: (data) => {
+                    if (data.imageIds.length > 0) {
+                        NoteFileService.resolveFileSources(data.imageIds).then((fileMap) => {
+                            if (Object.keys(fileMap).length > 0) {
+                                isHydrating.current = true;
+                                (editorRef.current.commands as any).resolveImages({ imageMap: fileMap });
+                                isHydrating.current = false;
+                            }
+                        });
+                    }
+                },
+                onImagePasted: (data) => {
+                    console.log("[EditorDom] Paste detected!", data.imageId);
+                },
+
+                defaultCodeLanguage: editorSettings.defaultCodeLanguage,
+            }).then(exts => {
+                if (isMounted) setExtensions(exts);
+            });
+            return () => { isMounted = false; };
+        }, [
+            placeholder,
+            editorSettings.defaultCodeLanguage,
+        ]);
 
         useImperativeHandle(ref, () => ({
             getContent: () => Promise.resolve(editor?.getHTML() || ''),
@@ -791,7 +810,7 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                             </AutoShowHeader>
                         )}
                         {renderStaticHeader && renderStaticHeader()}
-                        <EditorContent editor={editor} style={{ outline: 'none', paddingTop: contentPaddingTop, paddingBottom: initialContent && initialContent.length > 100 ? 100 : 0 }} />
+                        {extensions && <EditorContent editor={editor} style={{ outline: 'none', paddingTop: contentPaddingTop, paddingBottom: initialContent && initialContent.length > 100 ? 100 : 0 }} />}
                     </div>
                 </div>
                 {gallery.isVisible && renderImageGallery?.({

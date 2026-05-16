@@ -234,7 +234,7 @@ export class ExportService {
 
                     try {
                         const utf8 = unescape(encodeURIComponent(code));
-                        const b64 = typeof btoa !== 'undefined' ? btoa(utf8) : Buffer.from(utf8).toString('base64');
+                        const b64 = typeof btoa !== 'undefined' ? btoa(utf8) : (globalThis as any).Buffer.from(utf8).toString('base64');
                         node.innerHTML = `<img src="https://mermaid.ink/svg/${b64}" style="max-width: 100%; height: auto; margin: 1.5em auto; display: block;" />`;
                         node.removeAttribute('code');
                     } catch (e) {

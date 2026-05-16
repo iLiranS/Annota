@@ -24,17 +24,14 @@ export function SecondarySidebar({ width, isResizing }: { width?: number, isResi
 
     return (
         <div
-            dir="ltr"
             className="flex flex-col h-full w-full overflow-hidden"
             style={{ minWidth: isResizing ? undefined : width }}
         >
             <div className={cn(
                 "flex flex-col h-full w-full overflow-hidden transition-all duration-300",
-                isFloating
-                    ? "rounded-2xl border border-border/40 bg-sidebar "
-                    : "bg-sidebar/50"
+                isFloating && "bg-sidebar  rounded-2xl border border-sidebar-border"
             )}>
-                <header className="flex items-center justify-center shrink-0 h-12 px-3 border-b border-border/30 bg-sidebar/60">
+                <header className="flex items-center justify-center shrink-0 h-12 px-3  bg-sidebar/60">
                     <div className="flex items-center gap-2 min-w-0">
                         {general.isAiEnabled ? (
                             <div className="flex bg-muted/40 p-0.5 rounded-xl border border-border/20">
@@ -81,7 +78,7 @@ export function SecondarySidebar({ width, isResizing }: { width?: number, isResi
                                 className={cn(
                                     "h-7 w-7 rounded-lg transition-all active:scale-95",
                                     general.isSecondarySidebarSticky
-                                        ? "text-primary bg-primary/10"
+                                        ? "text-primary bg-primary/10 hover:bg-primary/10"
                                         : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
                                 )}
                                 onClick={() => updateGeneralSettings({ isSecondarySidebarSticky: !general.isSecondarySidebarSticky })}
@@ -95,7 +92,7 @@ export function SecondarySidebar({ width, isResizing }: { width?: number, isResi
 
                 <div className="flex-1 overflow-hidden">
                     {activeTab === 'ai' ? (
-                        <AiSidebar />
+                        <AiSidebar isFloating={isFloating} />
                     ) : (
                         activeNoteId && <NoteInfo noteId={activeNoteId} />
                     )}

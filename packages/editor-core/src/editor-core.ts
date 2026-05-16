@@ -153,7 +153,7 @@ const serializeCommandData = (data: any) => {
 
 // Setup logic
 // We accept options to configure the editor initial state
-export function setupEditor(options: any) {
+export async function setupEditor(options: any) {
     const {
         isDark = false,
         colors = {},
@@ -269,6 +269,46 @@ export function setupEditor(options: any) {
 
     try {
         currentDefaultCodeLanguage = defaultCodeLanguage;
+        const extensions = await getExtensions({
+            placeholder,
+            editorOrigin,
+            onMathSelected: (latex, isBlock, pos) => {
+                if (window.editor) {
+                    if (typeof pos === 'number') {
+                        window.editor.chain().setNodeSelection(pos).run();
+                    }
+                    sendMessage({ type: 'mathSelected', latex, isBlock });
+                }
+            },
+            onOpenBlockMenu: (_, resolve) => {
+                const res = resolve();
+                if (res) sendMessage({ type: 'openBlockMenu', ...res.message, pos: res.pos });
+            },
+            onOpenFileMenu: (_, resolve) => {
+                const res = resolve();
+                if (res) sendMessage({ type: 'openOpenFileMenu', ...res.message, pos: res.pos });
+            },
+            onOpenTableMenu: (_, resolve) => {
+                const res = resolve();
+                if (res) sendMessage({ type: 'openTableMenu', ...res.message, pos: res.pos });
+            },
+            onCodeBlockSelected: (_, resolve) => {
+                const res = resolve();
+                if (res) sendMessage({ type: 'codeBlockSelected', ...res.message, pos: res.pos });
+            },
+            onImagePasted: (data) => {
+                sendMessage({ type: 'imagePasted', ...data });
+            },
+            onResolveImageIds: (data) => {
+                sendMessage({ type: 'resolveImageIds', ...data });
+            },
+            defaultCodeLanguage,
+            onSlashCommand: (data) => sendMessage({ type: 'slashCommand', ...serializeCommandData(data) }),
+            onTagCommand: (data) => sendMessage({ type: 'tagCommand', ...serializeCommandData(data) }),
+            onNoteLinkCommand: (data) => sendMessage({ type: 'noteLinkCommand', ...serializeCommandData(data) }),
+            onSearchResults: (count, currentIndex) => { sendMessage({ type: 'searchResults', count, currentIndex }); console.log('onSearchResults', count, currentIndex) },
+        });
+
         window.editor = new Editor({
             editable: shouldDeferEditable ? false : editable,
             // Disable TipTap's built-in TextDirection extension entirely.
@@ -284,45 +324,7 @@ export function setupEditor(options: any) {
                 autocapitalize,
                 autocomplete
             }),
-            extensions: getExtensions({
-                placeholder,
-                editorOrigin,
-                onMathSelected: (latex, isBlock, pos) => {
-                    if (window.editor) {
-                        if (typeof pos === 'number') {
-                            window.editor.chain().setNodeSelection(pos).run();
-                        }
-                        sendMessage({ type: 'mathSelected', latex, isBlock });
-                    }
-                },
-                onOpenBlockMenu: (_, resolve) => {
-                    const res = resolve();
-                    if (res) sendMessage({ type: 'openBlockMenu', ...res.message, pos: res.pos });
-                },
-                onOpenFileMenu: (_, resolve) => {
-                    const res = resolve();
-                    if (res) sendMessage({ type: 'openOpenFileMenu', ...res.message, pos: res.pos });
-                },
-                onOpenTableMenu: (_, resolve) => {
-                    const res = resolve();
-                    if (res) sendMessage({ type: 'openTableMenu', ...res.message, pos: res.pos });
-                },
-                onCodeBlockSelected: (_, resolve) => {
-                    const res = resolve();
-                    if (res) sendMessage({ type: 'codeBlockSelected', ...res.message, pos: res.pos });
-                },
-                onImagePasted: (data) => {
-                    sendMessage({ type: 'imagePasted', ...data });
-                },
-                onResolveImageIds: (data) => {
-                    sendMessage({ type: 'resolveImageIds', ...data });
-                },
-                defaultCodeLanguage,
-                onSlashCommand: (data) => sendMessage({ type: 'slashCommand', ...serializeCommandData(data) }),
-                onTagCommand: (data) => sendMessage({ type: 'tagCommand', ...serializeCommandData(data) }),
-                onNoteLinkCommand: (data) => sendMessage({ type: 'noteLinkCommand', ...serializeCommandData(data) }),
-                onSearchResults: (count, currentIndex) => { sendMessage({ type: 'searchResults', count, currentIndex }); console.log('onSearchResults', count, currentIndex) },
-            }),
+            extensions,
             content: '', // Start empty to ensure view mounts before complex nodes (like fileAttachment) render
 
             autofocus: autofocus, // Pass directly

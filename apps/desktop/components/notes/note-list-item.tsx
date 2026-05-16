@@ -7,8 +7,9 @@ import {
     ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { Ionicons } from "@/components/ui/ionicons";
+import { useSmartNavigate } from "@/hooks/use-smart-navigate";
 import { cn } from "@/lib/utils";
-import { NoteMetadata, useNotesStore, useSettingsStore } from "@annota/core";
+import { NoteMetadata, useNavigationStore, useNotesStore, useSettingsStore } from "@annota/core";
 import { NoteFileService } from "@annota/core/platform";
 import { emitTo, listen } from "@tauri-apps/api/event";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
@@ -68,6 +69,8 @@ export function NoteListItem({
 }: NoteListItemProps) {
     const { updateNoteMetadata, tags, restoreNote, permanentlyDeleteNote } = useNotesStore();
     const { general } = useSettingsStore();
+    const setSidebarTab = useNavigationStore(s => s.setSidebarTab);
+    const navigateSmart = useSmartNavigate();
 
     const isCompact = (general.compactMode || forceCompact);
 
@@ -243,9 +246,11 @@ export function NoteListItem({
                                         </p>
                                     </div>
 
-                                    <div className="flex items-center gap-2 shrink-0 my-auto">
+                                    <div className="flex items-center gap-2  shrink-0 my-auto">
                                         {note.isPinned && !isInQuickAccess && (
-                                            <Pin size={12} className="text-accent-full" />
+                                            <div className="bg-accent/40 rounded shadow p-1">
+                                                <Pin size={12} className="text-accent-full fill-current" />
+                                            </div>
                                         )}
                                         {suffix}
                                     </div>
@@ -266,16 +271,21 @@ export function NoteListItem({
                                         const noteTags = tagIds.map(id => tags.find(t => t.id === id)).filter(Boolean) as any[];
                                         if (noteTags.length === 0) return null;
                                         return (
-                                            <div className="flex gap-1  mt-1 overflow-hidden">
+                                            <div className="flex gap-1 mt-1 overflow-hidden">
                                                 {noteTags.map(t => (
                                                     <span
                                                         key={t.id}
                                                         title={t.name}
-                                                        className="px-1.5 py-0.5 rounded text-[9px] font-medium border truncate min-w-[40px] max-w-fit flex-1"
+                                                        className="px-1.5 py-0.5 rounded text-[9px] font-medium border truncate min-w-[40px] max-w-fit flex-1 cursor-pointer hover:brightness-110 active:scale-95 transition-all"
                                                         style={{
                                                             backgroundColor: `${t.color}1A`,
                                                             color: t.color,
                                                             borderColor: `${t.color}40`
+                                                        }}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setSidebarTab('notes');
+                                                            navigateSmart(`/notes?tagId=${t.id}`);
                                                         }}
                                                     >
                                                         {t.name}

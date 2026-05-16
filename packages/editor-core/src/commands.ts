@@ -24,7 +24,7 @@ export function setupCommands() {
         if (command === 'setOptions') {
             if (params) {
                 try {
-                    setupEditor(params);
+                    await setupEditor(params);
                 } catch (e) {
                     console.error('Error in setupEditor:', e);
                     showError('Setup failed: ' + e);

@@ -1,6 +1,6 @@
-import './styles/highlight-theme.css'; // Support both light and dark mode
 import 'katex/dist/katex.min.css';
 import './styles/editor.css';
+import './styles/highlight-theme.css'; // Support both light and dark mode
 
 import { loadingEl, sendMessage } from './bridge';
 import { setupCommands } from './commands';
@@ -253,8 +253,8 @@ const inIframe = window !== window.parent;
 if (!window.ReactNativeWebView && !inIframe) {
     if (loadingEl) loadingEl.textContent = 'No Bridge detected. Auto-init...';
     console.log('No WebView bridge found, auto-initializing defaults...');
-    setTimeout(() => {
-        setupEditor({
+    setTimeout(async () => {
+        await setupEditor({
             content: '<p>Debug Mode (No Bridge)</p><p>Math: <span data-type="math" data-latex="E=mc^2"></span></p>',
             autofocus: true
         });

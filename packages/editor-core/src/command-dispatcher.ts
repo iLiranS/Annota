@@ -200,9 +200,9 @@ export async function dispatchEditorCommand(editor: Editor, command: string, par
             let bgColor = params?.color as string | undefined;
 
             if (bgColor && bgColor.startsWith('#') && bgColor.length === 7) {
-                const isDark = document.body.classList.contains('dark') || 
-                              document.querySelector('.native-editor-container')?.classList.contains('dark') ||
-                              document.querySelector('#editor-container')?.classList.contains('dark');
+                const isDark = document.body.classList.contains('dark') ||
+                    document.querySelector('.native-editor-container')?.classList.contains('dark') ||
+                    document.querySelector('#editor-container')?.classList.contains('dark');
                 // Light mode: 30% visibility (4D), Dark mode: 20% visibility (33)
                 bgColor += isDark ? '33' : '4D';
             }
@@ -280,12 +280,12 @@ export async function dispatchEditorCommand(editor: Editor, command: string, par
         case 'insertContent': {
             let content = params?.content;
             if (!content) return true;
-            
+
             // If it looks like Markdown (contains common markers and doesn't look like HTML), convert it.
             if (typeof content === 'string' && !content.trim().startsWith('<')) {
                 content = await convertMarkdownToAnnotaHTML(content);
             }
-            
+
             chain.insertContent(content, params?.options).focus().run();
             return true;
         }
@@ -293,11 +293,11 @@ export async function dispatchEditorCommand(editor: Editor, command: string, par
             const pos = params?.pos;
             let content = params?.content;
             if (pos === undefined || content === undefined) return true;
-            
+
             if (typeof content === 'string' && !content.trim().startsWith('<')) {
                 content = await convertMarkdownToAnnotaHTML(content);
             }
-            
+
             const options = params?.options;
             chain.insertContentAt(pos, content, options).focus().run();
             return true;

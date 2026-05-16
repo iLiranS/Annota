@@ -87,7 +87,7 @@ export async function convertMarkdownToAnnotaHTML(markdown: string): Promise<str
     // 3. Run through TipTap roundtrip to "Annotize" headings etc.
     //    Placeholders survive as plain text nodes.
     try {
-        const extensions = getExtensions({});
+        const extensions = await getExtensions({});
         const json = generateJSON(html, extensions);
         processNodes(json);
         html = generateHTML(json, extensions);

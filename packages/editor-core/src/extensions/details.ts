@@ -30,7 +30,12 @@ export const Details = TiptapDetails.extend({
     // Custom NodeView to handle height animation
     addNodeView() {
         return ({ node }) => {
+            const container = document.createElement('div');
+            container.classList.add('details-node-wrapper');
+            container.setAttribute('data-node-view-wrapper', '');
+
             const dom = document.createElement('div');
+            container.appendChild(dom);
 
             const updateDOM = (attrs: any) => {
                 // Ensure editor DOM has all necessary classes and data-attributes for CSS/JS
@@ -62,8 +67,14 @@ export const Details = TiptapDetails.extend({
             updateDOM(node.attrs);
 
             return {
-                dom,
+                dom: container,
                 contentDOM: dom,
+                ignoreMutation: (mutation) => {
+                    if (!dom.contains(mutation.target as Node) && dom !== mutation.target) {
+                        return true;
+                    }
+                    return false;
+                },
                 update: (newNode) => {
                     if (newNode.type.name !== node.type.name) return false;
 
@@ -404,6 +415,7 @@ export const DetailsSummary = TiptapDetailsSummary.extend<any>({
     addNodeView() {
         return ({ HTMLAttributes, getPos, editor }: { node: any, HTMLAttributes: Record<string, any>, getPos: any, editor: any }) => {
             const dom = document.createElement('div');
+            dom.setAttribute('data-node-view-wrapper', '');
             Object.entries(stripDir(HTMLAttributes)).forEach(([key, value]) => {
                 dom.setAttribute(key as string, value as string);
             });
@@ -504,9 +516,10 @@ export const DetailsSummary = TiptapDetailsSummary.extend<any>({
                 dom,
                 contentDOM: content,
                 ignoreMutation: (mutation) => {
-                    const target = mutation.target as Node;
-                    if (!target) return false;
-                    return target === menuBtn || menuBtn.contains(target) || target === toggleBtn || toggleBtn.contains(target);
+                    if (!content.contains(mutation.target as Node) && content !== mutation.target) {
+                        return true;
+                    }
+                    return false;
                 },
                 stopEvent: (e: Event) => {
                     const target = e.target as Node;

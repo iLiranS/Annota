@@ -101,6 +101,8 @@ export const Quote = Blockquote.extend<any>({
             container.appendChild(menuBtn);
             container.appendChild(content);
 
+            container.setAttribute('data-node-view-wrapper', '');
+
             return {
                 dom: container,
                 contentDOM: content,
@@ -115,8 +117,10 @@ export const Quote = Blockquote.extend<any>({
                     return true;
                 },
                 ignoreMutation: (mutation) => {
-                    const target = mutation.target as Node;
-                    return menuBtn.contains(target);
+                    if (!content.contains(mutation.target as Node) && content !== mutation.target) {
+                        return true;
+                    }
+                    return false;
                 },
                 stopEvent: (e) => {
                     const target = e.target as Node;

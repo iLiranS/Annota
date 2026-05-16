@@ -18,7 +18,7 @@ const updateColumns = (
     colgroup: HTMLTableColElement,
     table: HTMLTableElement,
     minCellWidth: number,
-    defaultCellWidth: number,
+    _defaultCellWidth: number,
     overrideCol?: number,
     overrideValue?: number,
 ) => {
@@ -38,9 +38,9 @@ const updateColumns = (
 
                 const hasWidth = typeof storedWidth === 'number' && storedWidth > 0 ? storedWidth : undefined;
                 const cssWidth = hasWidth ? `${Math.max(hasWidth, minCellWidth)}px` : '';
-                
+
                 totalWidth += hasWidth || minCellWidth;
-                
+
                 if (!hasWidth) {
                     fixedWidth = false;
                 }
@@ -113,7 +113,7 @@ const tableHasStoredWidths = (node: ProseMirrorNode): boolean => {
  * never falls back to defaultCellWidth again.
  */
 const persistNaturalWidths = (
-    node: ProseMirrorNode,
+    _node: ProseMirrorNode,
     table: HTMLTableElement,
     view: EditorView,
     getPos: () => number | undefined,

@@ -48,7 +48,8 @@ export const CustomCodeBlock = CodeBlockLowlight.extend<any>({
         return ({ node, editor, getPos }) => {
             // Container wrapper
             const container = document.createElement('div');
-            container.className = 'code-block-wrapper';
+            container.className = 'code-block-wrapper ';
+            container.setAttribute('data-node-view-wrapper', '');
 
             // The actual pre element
             const pre = document.createElement('pre');
@@ -154,7 +155,7 @@ export const CustomCodeBlock = CodeBlockLowlight.extend<any>({
                 dom: container,
                 contentDOM: code,
                 ignoreMutation(mutation) {
-                    if (header.contains(mutation.target as Node) || header === mutation.target) {
+                    if (!code.contains(mutation.target as Node) && code !== mutation.target) {
                         return true;
                     }
                     return false;

@@ -111,7 +111,10 @@
     padding-bottom: 80px;
     min-height: 100vh;
     position: relative;
-    overflow-x: hidden;
+    /* clip prevents horizontal scrollbar without creating a scroll container.
+       overflow-x:hidden would clip position:absolute children (the drag handle)
+       because it creates a new BFC that acts as a containing block. */
+    overflow-x: clip;
     container-type: inline-size;
 }
 
@@ -328,4 +331,84 @@
     pointer-events: none;
     z-index: 5;
     border-radius: inherit;
+}
+
+/* ─── Drag Handle (desktop only) ─────────────────────────────────────────── */
+
+/*
+ * Add left padding only on pointer/hover-capable devices (desktop).
+ * This ensures mobile WebView editors are never affected.
+ */
+@media (hover: hover) and (pointer: fine) {
+    .ProseMirror {
+        padding-left: 36px;
+    }
+}
+
+/* The floating handle element rendered by DragHandle.configure({ render }) */
+.annota-drag-handle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 24px;
+    border-radius: 4px;
+    /* Visible by default with accent tint so it's easy to spot */
+    color: color-mix(in srgb, var(--accent-color) 60%, var(--text-color));
+    opacity: 0;
+    cursor: grab;
+    transition: opacity 0.12s ease, color 0.12s ease, background-color 0.12s ease;
+    transform: translate(-4px, 4px);
+    user-select: none;
+    -webkit-user-select: none;
+    /* Must sit above code-block stacking contexts (z-index: 2) */
+    z-index: 10;
+    position: relative;
+}
+
+.annota-drag-handle svg {
+    display: block;
+    flex-shrink: 0;
+    pointer-events: none;
+}
+
+/* The plugin shows the handle by clearing visibility; hidden = opacity 0 */
+.annota-drag-handle:not([style*="visibility: hidden"]) {
+    opacity: 0.65;
+}
+
+.annota-drag-handle:hover {
+    opacity: 1 !important;
+    color: var(--accent-color);
+    background-color: color-mix(in srgb, var(--accent-color) 12%, transparent);
+}
+
+.annota-drag-handle:active {
+    cursor: grabbing;
+    opacity: 1 !important;
+    color: var(--accent-color);
+    background-color: color-mix(in srgb, var(--accent-color) 18%, transparent);
+}
+
+/* Subtle highlight on the block currently under the drag handle */
+.drag-handle-hover {
+    border-radius: 4px;
+    outline: 1.5px solid color-mix(in srgb, var(--accent-color) 35%, transparent);
+    outline-offset: 2px;
+}
+
+/* Don't double-highlight blocks that are already selected */
+.drag-handle-hover.ProseMirror-selectednode {
+    outline: none;
+}
+
+/* Blocks with their own borders/backgrounds look noisy with an extra outline */
+.drag-handle-hover.tableWrapper,
+.drag-handle-hover.quote-wrapper,
+.drag-handle-hover.details-wrapper,
+.drag-handle-hover.details-node-wrapper,
+.drag-handle-hover[data-type="details"],
+.drag-handle-hover.yt-wrapper,
+.drag-handle-hover.code-block-wrapper {
+    outline: none;
 }

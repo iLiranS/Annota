@@ -1,5 +1,5 @@
 .ProseMirror blockquote {
-    border-inline-start: 3px solid var(--quote-border-color, var(--accent-color));
+    /* border-inline-start: 3px solid var(--quote-border-color, var(--accent-color)); */
     margin: 0;
     margin-bottom: var(--editor-paragraph-spacing);
     padding-inline-start: 16px;
@@ -17,7 +17,8 @@
     margin-bottom: var(--editor-paragraph-spacing);
     border-radius: 8px;
     transition: background-color 0.2s ease;
-    overflow: hidden;
+    /* Must NOT be overflow:hidden — that clips the absolutely-positioned drag handle */
+    overflow: visible;
     /* Default background color derived from accent for better visibility */
     background-color: color-mix(in srgb, var(--accent-color), transparent 85%);
 }

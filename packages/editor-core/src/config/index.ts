@@ -1,4 +1,5 @@
 
+// import { DragHandle } from '@tiptap/extension-drag-handle';
 import { Link } from '@tiptap/extension-link';
 import { Placeholder } from '@tiptap/extension-placeholder';
 import { TableRow } from '@tiptap/extension-table-row';
@@ -9,6 +10,23 @@ import { Underline } from '@tiptap/extension-underline';
 import { DOMSerializer, Slice } from '@tiptap/pm/model';
 import { CellSelection } from '@tiptap/pm/tables';
 import { StarterKit } from '@tiptap/starter-kit';
+
+const hasDOM = typeof document !== 'undefined';
+const isDesktop = hasDOM && typeof window !== 'undefined' && !(window as any).ReactNativeWebView;
+// Shared flag: suppress PM's automatic scroll-into-view after a drag-drop
+// (the drop transaction always carries scrollIntoView which causes random jumps)
+if (isDesktop && typeof globalThis !== 'undefined' && !(globalThis as any).__annotaDragBlock) {
+    let _isDraggingBlock = false;
+    (globalThis as any).__annotaDragBlock = {
+        setDragging(v: boolean) {
+            _isDraggingBlock = v;
+        },
+        isDragging() {
+            return _isDraggingBlock;
+        },
+    };
+}
+
 
 import { BlockMath, InlineMath, Mathematics } from '@tiptap/extension-mathematics';
 
@@ -86,7 +104,7 @@ export function resolveFontFamily(value?: string) {
     return value;
 }
 
-export const getExtensions = (options: {
+export const getBaseExtensions = (options: {
     placeholder?: string;
     editorOrigin?: string;
     onMathSelected?: (latex: string, isBlock: boolean, pos: number) => void;
@@ -103,7 +121,8 @@ export const getExtensions = (options: {
     onSlashCommand?: (data: any) => void;
     onTagCommand?: (data: any) => void;
     onNoteLinkCommand?: (data: any) => void;
-}) => [
+}) => {
+    return [
         StarterKit.configure({
             heading: false,
             codeBlock: false,
@@ -219,6 +238,64 @@ export const getExtensions = (options: {
             onOpenBlockMenu: options.onOpenBlockMenu,
         }),
     ];
+};
+
+export const getExtensions = async (options: Parameters<typeof getBaseExtensions>[0]) => {
+    const extensions = getBaseExtensions(options);
+
+    if (isDesktop) {
+        try {
+            const { DragHandle } = await import('@tiptap/extension-drag-handle');
+            extensions.push(
+                DragHandle.configure({
+                    render() {
+                        const el = document.createElement('div');
+                        el.classList.add('annota-drag-handle');
+                        el.setAttribute('aria-label', 'Drag to reorder block');
+                        el.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 16" width="10" height="16" fill="currentColor"><circle cx="3" cy="2" r="1.2"/><circle cx="7" cy="2" r="1.2"/><circle cx="3" cy="6" r="1.2"/><circle cx="7" cy="6" r="1.2"/><circle cx="3" cy="10" r="1.2"/><circle cx="7" cy="10" r="1.2"/><circle cx="3" cy="14" r="1.2"/><circle cx="7" cy="14" r="1.2"/></svg>`;
+
+                        el.addEventListener('dragstart', () => {
+                            (globalThis as any).__annotaDragBlock?.setDragging(true);
+                        });
+                        return el;
+                    },
+                    computePositionConfig: {
+                        placement: 'left-start',
+                        strategy: 'absolute',
+                    },
+                    onNodeChange({ node, editor: _editor }) {
+                        document.querySelectorAll('.drag-handle-hover').forEach(el => {
+                            el.classList.remove('drag-handle-hover');
+                        });
+                        if (!node) return;
+
+                        _editor.state.doc.descendants((docNode, pos) => {
+                            if (docNode === node) {
+                                const dom = _editor.view.nodeDOM(pos) as HTMLElement | null;
+                                if (dom instanceof HTMLElement) {
+                                    dom.classList.add('drag-handle-hover');
+                                }
+                                return false;
+                            }
+                            return true;
+                        });
+                    },
+                    onElementDragEnd() {
+                        document.querySelectorAll('.drag-handle-hover').forEach(el => {
+                            el.classList.remove('drag-handle-hover');
+                        });
+                        (globalThis as any).__annotaDragBlock?.setDragging(false);
+                    },
+                })
+            );
+        } catch (e) {
+            console.warn('Failed to load DragHandle extension:', e);
+        }
+    }
+
+    return extensions;
+};
+
 
 export const getEditorProps = (callbacks: {
     onScroll?: () => void;
@@ -239,6 +316,11 @@ export const getEditorProps = (callbacks: {
     scrollMargin: { top: 30, bottom: 85, left: 0, right: 0 },
     scrollThreshold: 10,
     handleScrollToSelection: () => {
+        // While a block drag is in flight (or just finished), block PM's automatic
+        // scrollIntoView so the viewport doesn't jump to the dropped node.
+        if ((globalThis as any).__annotaDragBlock?.isDragging()) {
+            return true;
+        }
         if (callbacks.onScroll) {
             callbacks.onScroll();
             return true;
