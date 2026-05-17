@@ -127,6 +127,7 @@ export function NoteListItem({
             hiddenTitle: true,
             transparent: false,
             titleBarStyle: "overlay",
+            dragDropEnabled: false,
         });
 
         // Listen for the child's "I'm ready" signal, then send it everything it needs.

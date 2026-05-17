@@ -73,6 +73,7 @@ export function useOpenNoteInNewWindow() {
             decorations: true,
             transparent: false,
             titleBarStyle: "overlay",
+            dragDropEnabled: false,
         });
     }, []);
 }

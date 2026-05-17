@@ -18,5 +18,7 @@ export * from './indentation';
 export * from './flashcard';
 export * from './marks';
 export * from './selection-manager';
+export * from './custom-lists';
+export * from './custom-paragraph';
 import './task-list.css';
 import './math.css';

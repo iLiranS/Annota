@@ -366,6 +366,8 @@
     position: relative;
 }
 
+
+
 .annota-drag-handle svg {
     display: block;
     flex-shrink: 0;
@@ -393,22 +395,16 @@
 /* Subtle highlight on the block currently under the drag handle */
 .drag-handle-hover {
     border-radius: 4px;
+    outline: none;
+}
+
+/* Show the outline ONLY when hovering the actual drag handle */
+:has(.annota-drag-handle:hover) .drag-handle-hover {
     outline: 1.5px solid color-mix(in srgb, var(--accent-color) 35%, transparent);
     outline-offset: 2px;
 }
 
 /* Don't double-highlight blocks that are already selected */
-.drag-handle-hover.ProseMirror-selectednode {
-    outline: none;
-}
-
-/* Blocks with their own borders/backgrounds look noisy with an extra outline */
-.drag-handle-hover.tableWrapper,
-.drag-handle-hover.quote-wrapper,
-.drag-handle-hover.details-wrapper,
-.drag-handle-hover.details-node-wrapper,
-.drag-handle-hover[data-type="details"],
-.drag-handle-hover.yt-wrapper,
-.drag-handle-hover.code-block-wrapper {
+:has(.annota-drag-handle:hover) .drag-handle-hover.ProseMirror-selectednode {
     outline: none;
 }

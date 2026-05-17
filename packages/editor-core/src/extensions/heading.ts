@@ -23,6 +23,46 @@ export const CustomHeading = TiptapHeading.extend({
         };
     },
 
+    /**
+     * NodeView where dom === contentDOM === the native <h1>/<h2>/etc element.
+     * No wrapper div — serialized HTML is identical to native heading output.
+     * Registering a NodeView makes posAtDOM resolve correctly for the drag handle.
+     */
+    addNodeView() {
+        return ({ node, HTMLAttributes }: { node: any; HTMLAttributes: Record<string, any> }) => {
+            const tag = `h${node.attrs.level}` as keyof HTMLElementTagNameMap;
+            const heading = document.createElement(tag);
+            heading.setAttribute('data-node-view-wrapper', '');
+
+            Object.entries(HTMLAttributes).forEach(([k, v]) => {
+                if (v != null) heading.setAttribute(k, String(v));
+            });
+
+            return {
+                dom: heading,
+                contentDOM: heading,
+                update: (updatedNode: any) => {
+                    if (updatedNode.type.name !== 'heading') return false;
+                    // If level changed (h1→h2), return false to let Tiptap recreate the element
+                    if (updatedNode.attrs.level !== node.attrs.level) return false;
+                    if (updatedNode.attrs.id) {
+                        heading.setAttribute('data-id', updatedNode.attrs.id);
+                    } else {
+                        heading.removeAttribute('data-id');
+                    }
+                    node = updatedNode;
+                    return true;
+                },
+                ignoreMutation: (mutation: any) => {
+                    if (mutation.type === 'attributes' && mutation.target === heading) {
+                        return true;
+                    }
+                    return false;
+                },
+            };
+        };
+    },
+
     addProseMirrorPlugins() {
         return [
             ...this.parent?.() || [],

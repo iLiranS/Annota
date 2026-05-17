@@ -1,10 +1,8 @@
-
 // import { DragHandle } from '@tiptap/extension-drag-handle';
 import { Link } from '@tiptap/extension-link';
 import { Placeholder } from '@tiptap/extension-placeholder';
 import { TableRow } from '@tiptap/extension-table-row';
 import { TaskItem } from '@tiptap/extension-task-item';
-import { TaskList } from '@tiptap/extension-task-list';
 import { FontFamily } from '@tiptap/extension-text-style';
 import { Underline } from '@tiptap/extension-underline';
 import { DOMSerializer, Slice } from '@tiptap/pm/model';
@@ -78,6 +76,8 @@ import {
     SlashCommandExtension,
     TagCommandExtension
 } from '../extensions';
+import { CustomBulletList, CustomOrderedList, CustomTaskList } from '../extensions/custom-lists';
+import { CustomParagraph } from '../extensions/custom-paragraph';
 import { CustomYoutube } from '../extensions/custom-yotube';
 
 export const WEB_FONT_FAMILIES: Record<string, string> = {
@@ -127,6 +127,9 @@ export const getBaseExtensions = (options: {
             heading: false,
             codeBlock: false,
             blockquote: false,
+            paragraph: false,
+            bulletList: false,
+            orderedList: false,
             // @ts-ignore - Some versions of StarterKit might include these
             link: false,
             // @ts-ignore - Some versions of StarterKit might include these
@@ -143,7 +146,10 @@ export const getBaseExtensions = (options: {
         ShortcutManager,
         ListItemReorder,
         AnnotaAutolink,
+        CustomParagraph,
         CustomHeading.configure({ levels: [1, 2, 3, 4, 5, 6] }),
+        CustomBulletList,
+        CustomOrderedList,
         Underline,
         Placeholder.configure({ placeholder: options.placeholder ?? 'Write something...' }),
         Link.configure({
@@ -182,7 +188,7 @@ export const getBaseExtensions = (options: {
         TableRow,
         CustomTableCell,
         CustomTableHeader,
-        TaskList,
+        CustomTaskList,
         TaskItem.configure({ nested: true }),
         CustomCodeBlock.configure({
             onOpenBlockMenu: options.onOpenBlockMenu,
@@ -264,16 +270,18 @@ export const getExtensions = async (options: Parameters<typeof getBaseExtensions
                         strategy: 'absolute',
                     },
                     onNodeChange({ node, editor: _editor }) {
-                        // FIX: Do not modify DOM classes if the user has an active text selection.
-                        // Mutating the DOM inside contenteditable cancels the browser's selection.
-                        if (!_editor.state.selection.empty) {
-                            return;
-                        }
-
+                        // Always clear previous hover class first — this is safe outside
+                        // contenteditable and does not disturb the browser's text selection.
                         document.querySelectorAll('.drag-handle-hover').forEach(el => {
                             el.classList.remove('drag-handle-hover');
                         });
+
                         if (!node) return;
+
+                        // Only mutate classes on nodes *inside* the editor when the selection
+                        // is collapsed; mutating contenteditable DOM during a range-selection
+                        // cancels the selection in some browsers.
+                        if (!_editor.state.selection.empty) return;
 
                         _editor.state.doc.descendants((docNode, pos) => {
                             if (docNode === node) {
