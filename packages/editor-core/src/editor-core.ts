@@ -352,6 +352,12 @@ export async function setupEditor(options: any) {
                     return;
                 }
 
+                // If the document content hasn't changed (e.g., only selection, focus, or editable state changed),
+                // do not trigger updates or persist anything.
+                if (transaction && !transaction.docChanged) {
+                    return;
+                }
+
                 // Suppress content messages during initial editor setup
                 // (font application, math migration, autofocus heading, etc.)
                 if (suppressContentUpdates) {
