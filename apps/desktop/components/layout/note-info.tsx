@@ -120,8 +120,8 @@ export function NoteInfo({ noteId }: { noteId: string }) {
         <div className="flex flex-col h-full overflow-hidden">
             {/* Top: TOC Section (Scrollable) */}
             <div className="flex-1 min-h-0 flex flex-col">
-                <h3 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 px-1 mb-3 shrink-0 flex items-center gap-1.5">
-                    <ListTree size={12} className="opacity-70" />
+                <h3 className="text-[10px] font-bold uppercase tracking-wider mb-1 text-muted-foreground/60 px-1 shrink-0 flex items-center gap-1.5">
+                    <ListTree size={12} className="opacity-70 text-accent-full" />
                     Table of Contents
                 </h3>
                 <div className="flex-1 overflow-y-auto pr-2 premium-scrollbar">

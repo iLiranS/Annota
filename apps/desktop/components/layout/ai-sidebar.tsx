@@ -315,7 +315,7 @@ export function AiSidebar({ width, isResizing, isFloating }: { width?: number, i
     return (
         <div className="flex flex-col h-full w-full overflow-hidden">
             <header className={cn(
-                "relative flex gap-2 items-center justify-between shrink-0 h-11  px-2 bg-accent-foreground/5 rounded-lg shadow border",
+                "relative flex gap-2 items-center justify-between shrink-0 h-11  px-2 bg-accent/20 rounded-lg shadow border border-accent/40",
                 isFloating && "mx-2"
             )}>
                 <div className="flex items-center gap-2 min-w-0 z-10">
@@ -452,7 +452,7 @@ export function AiSidebar({ width, isResizing, isFloating }: { width?: number, i
                         className="flex-1 min-h-0 overflow-y-auto premium-scrollbar"
                         onScroll={handleChatScroll}
                     >
-                        <div className="flex flex-col gap-4 px-3 py-4">
+                        <div className="flex flex-col gap-4  py-4">
                             {visibleMessages.map((m, idx) => (
                                 <AiChatMessage
                                     key={m.id || idx}
@@ -466,7 +466,7 @@ export function AiSidebar({ width, isResizing, isFloating }: { width?: number, i
                         </div>
                     </div>
 
-                    <div className="p-2 pt-1 shrink-0">
+                    <div className=" pt-1 shrink-0">
                         <AiChatInput
                             onSend={handleSendMessage}
                             onSummarize={handleSummarize}

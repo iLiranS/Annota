@@ -9,6 +9,7 @@ import {
     View,
 } from 'react-native';
 import { useAppTheme } from '../../hooks/use-app-theme';
+import { MediaSearchBrowser } from './media-search-browser';
 
 interface SearchOverlayProps {
     visible: boolean;
@@ -40,10 +41,20 @@ export function SearchOverlay({
     const [localValue, setLocalValue] = useState(searchTerm);
     const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+    // Active filter state ('in-note' or 'media')
+    const [activeFilter, setActiveFilter] = useState<'in-note' | 'media'>('in-note');
+
     // Sync local value with prop when prop changes from outside (e.g. cleared)
     useEffect(() => {
         setLocalValue(searchTerm);
     }, [searchTerm]);
+
+    // Reset tab filter when closing overlay
+    useEffect(() => {
+        if (!visible) {
+            setActiveFilter('in-note');
+        }
+    }, [visible]);
 
     useEffect(() => {
         if (visible) {
@@ -107,113 +118,170 @@ export function SearchOverlay({
             : '';
 
     return (
-        <Animated.View
-            style={[
-                styles.container,
-                {
-                    backgroundColor: colors.card,
-                    borderBottomColor: colors.border,
-                    transform: [{ translateY }],
-                    opacity,
-                },
-                topOffset > 0 && {
-                    marginHorizontal: 12,
-                    borderRadius: 12,
-                    borderWidth: 1,
-                    borderBottomWidth: 1, // Ensure consistent border when floating
-                    borderColor: colors.border,
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.15,
-                    shadowRadius: 10,
-                    elevation: 5,
-                }
-            ]}
-        >
-            <View style={styles.content}>
-                {/* Search Input */}
-                <View
-                    style={[
-                        styles.inputContainer,
-                        { backgroundColor: colors.background, borderColor: colors.border },
-                    ]}
-                >
-                    <Ionicons name="search" size={18} color={colors.text + '60'} />
-                    <TextInput
-                        ref={inputRef}
-                        style={[styles.input, { color: colors.text }]}
-                        value={localValue}
-                        onChangeText={handleTextChange}
-                        placeholder="Search in note..."
-                        placeholderTextColor={colors.text + '60'}
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                        returnKeyType="search"
-                    />
-                    {localValue.length > 0 && (
-                        <Pressable
-                            onPress={handleClear}
-                            hitSlop={8}
-                            style={styles.clearButton}
-                        >
-                            <Ionicons name="close-circle" size={18} color={colors.text + '60'} />
-                        </Pressable>
+        <>
+            <Animated.View
+                style={[
+                    styles.container,
+                    {
+                        backgroundColor: colors.card,
+                        borderBottomColor: colors.border,
+                        transform: [{ translateY }],
+                        opacity,
+                    },
+                    topOffset > 0 && {
+                        marginHorizontal: 12,
+                        borderRadius: 12,
+                        borderWidth: 1,
+                        borderBottomWidth: 1, // Ensure consistent border when floating
+                        borderColor: colors.border,
+                        shadowOffset: { width: 0, height: 4 },
+                        shadowOpacity: 0.15,
+                        shadowRadius: 10,
+                        elevation: 5,
+                    }
+                ]}
+            >
+                <View style={styles.content}>
+                    {/* Search Input */}
+                    <View
+                        style={[
+                            styles.inputContainer,
+                            { backgroundColor: colors.background, borderColor: colors.border },
+                        ]}
+                    >
+                        <Ionicons name="search" size={18} color={colors.text + '60'} />
+                        <TextInput
+                            ref={inputRef}
+                            style={[styles.input, { color: colors.text }]}
+                            value={localValue}
+                            onChangeText={handleTextChange}
+                            placeholder={activeFilter === 'media' ? "Search media library..." : "Search in note..."}
+                            placeholderTextColor={colors.text + '60'}
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                            returnKeyType="search"
+                        />
+                        {localValue.length > 0 && (
+                            <Pressable
+                                onPress={handleClear}
+                                hitSlop={8}
+                                style={styles.clearButton}
+                            >
+                                <Ionicons name="close-circle" size={18} color={colors.text + '60'} />
+                            </Pressable>
+                        )}
+                    </View>
+
+                    {activeFilter === 'in-note' && (
+                        <>
+                            {/* Results Counter */}
+                            <Text style={[styles.resultText, { color: colors.text + '80' }]}>
+                                {resultText}
+                            </Text>
+
+                            {/* Navigation Arrows */}
+                            <View style={styles.navButtons}>
+                                <Pressable
+                                    onPress={onPrev}
+                                    disabled={!hasResults}
+                                    style={({ pressed }) => [
+                                        styles.navButton,
+                                        !hasResults && styles.navButtonDisabled,
+                                        pressed && hasResults && { opacity: 0.7 },
+                                    ]}
+                                    hitSlop={8}
+                                >
+                                    <Ionicons
+                                        name="chevron-up"
+                                        size={22}
+                                        color={hasResults ? colors.primary : colors.text + '30'}
+                                    />
+                                </Pressable>
+                                <Pressable
+                                    onPress={onNext}
+                                    disabled={!hasResults}
+                                    style={({ pressed }) => [
+                                        styles.navButton,
+                                        !hasResults && styles.navButtonDisabled,
+                                        pressed && hasResults && { opacity: 0.7 },
+                                    ]}
+                                    hitSlop={8}
+                                >
+                                    <Ionicons
+                                        name="chevron-down"
+                                        size={22}
+                                        color={hasResults ? colors.primary : colors.text + '30'}
+                                    />
+                                </Pressable>
+                            </View>
+                        </>
                     )}
-                </View>
 
-                {/* Results Counter */}
-                <Text style={[styles.resultText, { color: colors.text + '80' }]}>
-                    {resultText}
-                </Text>
-
-                {/* Navigation Arrows */}
-                <View style={styles.navButtons}>
+                    {/* Close Button */}
                     <Pressable
-                        onPress={onPrev}
-                        disabled={!hasResults}
+                        onPress={onClose}
                         style={({ pressed }) => [
-                            styles.navButton,
-                            !hasResults && styles.navButtonDisabled,
-                            pressed && hasResults && { opacity: 0.7 },
+                            styles.closeButton,
+                            pressed && { opacity: 0.7 },
                         ]}
                         hitSlop={8}
                     >
-                        <Ionicons
-                            name="chevron-up"
-                            size={22}
-                            color={hasResults ? colors.primary : colors.text + '30'}
-                        />
-                    </Pressable>
-                    <Pressable
-                        onPress={onNext}
-                        disabled={!hasResults}
-                        style={({ pressed }) => [
-                            styles.navButton,
-                            !hasResults && styles.navButtonDisabled,
-                            pressed && hasResults && { opacity: 0.7 },
-                        ]}
-                        hitSlop={8}
-                    >
-                        <Ionicons
-                            name="chevron-down"
-                            size={22}
-                            color={hasResults ? colors.primary : colors.text + '30'}
-                        />
+                        <Ionicons name="close" size={24} color={colors.text} />
                     </Pressable>
                 </View>
 
-                {/* Close Button */}
-                <Pressable
-                    onPress={onClose}
-                    style={({ pressed }) => [
-                        styles.closeButton,
-                        pressed && { opacity: 0.7 },
-                    ]}
-                    hitSlop={8}
-                >
-                    <Ionicons name="close" size={24} color={colors.text} />
-                </Pressable>
-            </View>
-        </Animated.View>
+                {/* Segmented Filter Control */}
+                <View style={[styles.tabsContainer, { backgroundColor: colors.background + '80', borderColor: colors.border }]}>
+                    <Pressable
+                        onPress={() => setActiveFilter('in-note')}
+                        style={[
+                            styles.tabButton,
+                            activeFilter === 'in-note' && { backgroundColor: colors.primary }
+                        ]}
+                    >
+                        <Ionicons 
+                            name="document-text-outline" 
+                            size={16} 
+                            color={activeFilter === 'in-note' ? '#ffffff' : colors.text + '80'} 
+                        />
+                        <Text style={[
+                            styles.tabText,
+                            { color: activeFilter === 'in-note' ? '#ffffff' : colors.text }
+                        ]}>
+                            In Note
+                        </Text>
+                    </Pressable>
+                    <Pressable
+                        onPress={() => setActiveFilter('media')}
+                        style={[
+                            styles.tabButton,
+                            activeFilter === 'media' && { backgroundColor: colors.primary }
+                        ]}
+                    >
+                        <Ionicons 
+                            name="images-outline" 
+                            size={16} 
+                            color={activeFilter === 'media' ? '#ffffff' : colors.text + '80'} 
+                        />
+                        <Text style={[
+                            styles.tabText,
+                            { color: activeFilter === 'media' ? '#ffffff' : colors.text }
+                        ]}>
+                            Media Library
+                        </Text>
+                    </Pressable>
+                </View>
+            </Animated.View>
+
+            {/* Dedicated Media Search Browser Overlay */}
+            {activeFilter === 'media' && (
+                <MediaSearchBrowser
+                    searchQuery={localValue}
+                    topOffset={topOffset}
+                    onClose={onClose}
+                />
+            )}
+        </>
     );
 }
 
@@ -270,5 +338,27 @@ const styles = StyleSheet.create({
     },
     closeButton: {
         padding: 4,
+    },
+    tabsContainer: {
+        flexDirection: 'row',
+        marginHorizontal: 12,
+        marginBottom: 8,
+        borderRadius: 8,
+        borderWidth: 1,
+        padding: 4,
+        gap: 4,
+    },
+    tabButton: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        paddingVertical: 8,
+        borderRadius: 6,
+    },
+    tabText: {
+        fontSize: 13,
+        fontWeight: '600',
     },
 });

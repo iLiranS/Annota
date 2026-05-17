@@ -7,7 +7,8 @@ import {
     StyleSheet,
     Text,
     View,
-    useWindowDimensions
+    useWindowDimensions,
+    Modal
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -449,40 +450,48 @@ export function ImageGallery({
     if (!visible) return null;
 
     return (
-        <Animated.View style={[styles.fullScreenContainer, containerAnimatedStyle]}>
-            <GestureDetector gesture={combined}>
-                <View style={styles.imageContainer}>
-                    {visibleIndices.map(i => (
-                        <GallerySlide
-                            key={i}
-                            image={images[i]}
-                            index={i}
-                            totalOffset={totalOffset}
-                            screenWidthSV={screenWidthSV}
-                            zoomScale={scale}
-                            zoomTranslateX={translateX}
-                            zoomTranslateY={translateY}
-                            isActive={i === activeIndex}
-                        />
-                    ))}
-                </View>
-            </GestureDetector>
+        <Modal
+            visible={visible}
+            transparent
+            animationType="none"
+            statusBarTranslucent
+            onRequestClose={onClose}
+        >
+            <Animated.View style={[styles.fullScreenContainer, containerAnimatedStyle]}>
+                <GestureDetector gesture={combined}>
+                    <View style={styles.imageContainer}>
+                        {visibleIndices.map(i => (
+                            <GallerySlide
+                                key={i}
+                                image={images[i]}
+                                index={i}
+                                totalOffset={totalOffset}
+                                screenWidthSV={screenWidthSV}
+                                zoomScale={scale}
+                                zoomTranslateX={translateX}
+                                zoomTranslateY={translateY}
+                                isActive={i === activeIndex}
+                            />
+                        ))}
+                    </View>
+                </GestureDetector>
 
-            {/* Header overlay */}
-            <View style={[styles.header, { paddingTop: insets.top + 8 }]} pointerEvents="box-none">
-                <View style={styles.counterContainer}>
-                    <Text style={styles.counterText}>
-                        {activeIndex + 1} / {images.length}
-                    </Text>
+                {/* Header overlay */}
+                <View style={[styles.header, { paddingTop: insets.top + 8 }]} pointerEvents="box-none">
+                    <View style={styles.counterContainer}>
+                        <Text style={styles.counterText}>
+                            {activeIndex + 1} / {images.length}
+                        </Text>
+                    </View>
+                    <Pressable
+                        style={({ pressed }) => [styles.closeButton, pressed && styles.buttonPressed]}
+                        onPress={handleClose}
+                    >
+                        <MaterialCommunityIcons name="close" size={24} color="#FFFFFF" />
+                    </Pressable>
                 </View>
-                <Pressable
-                    style={({ pressed }) => [styles.closeButton, pressed && styles.buttonPressed]}
-                    onPress={handleClose}
-                >
-                    <MaterialCommunityIcons name="close" size={24} color="#FFFFFF" />
-                </Pressable>
-            </View>
-        </Animated.View>
+            </Animated.View>
+        </Modal>
     );
 }
 

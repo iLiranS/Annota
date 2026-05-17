@@ -1,27 +1,38 @@
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useSettingsStore } from "@annota/core";
-import { Image, Info, Pin, Sparkles } from "lucide-react";
+import { CheckSquare, Info, Pin, Sparkles } from "lucide-react";
 import { useEffect } from "react";
 import { useActiveNoteId } from "../../hooks/use-active-note-id";
 import { AiSidebar } from "./ai-sidebar";
-import { MediaSidebar } from "./media-sidebar";
 import { NoteInfo } from "./note-info";
+import { TasksSidebar } from "./tasks-sidebar";
 
 export function SecondarySidebar({ width, isResizing }: { width?: number, isResizing?: boolean }) {
     const { general, updateGeneralSettings } = useSettingsStore();
     const activeTab = general.secondarySidebarTab;
-    const setActiveTab = (tab: 'ai' | 'info' | 'media') => updateGeneralSettings({ secondarySidebarTab: tab });
+    const setActiveTab = (tab: 'ai' | 'info' | 'tasks') => updateGeneralSettings({ secondarySidebarTab: tab });
     const activeNoteId = useActiveNoteId();
 
-    // Force info tab if AI is disabled
+    // Force info tab if AI is disabled or if the active tab is a legacy value
     useEffect(() => {
         if (!general.isAiEnabled && activeTab === 'ai') {
+            setActiveTab('info');
+        } else if ((activeTab as any) === 'media') {
             setActiveTab('info');
         }
     }, [general.isAiEnabled, activeTab]);
 
     const isFloating = general.secondarySidebarMode === 'floating';
+    const isRtl = general.appDirection === 'rtl';
+
+    const TABS = [
+        ...(general.isAiEnabled ? [{ id: 'ai' as const, label: 'AI Chat', icon: Sparkles }] : []),
+        { id: 'tasks' as const, label: 'Tasks', icon: CheckSquare },
+        { id: 'info' as const, label: 'Note', icon: Info },
+    ];
+
+    const activeIndex = TABS.findIndex(t => t.id === activeTab);
 
     return (
         <div
@@ -32,59 +43,41 @@ export function SecondarySidebar({ width, isResizing }: { width?: number, isResi
                 "flex flex-col h-full w-full overflow-hidden transition-all duration-300",
                 isFloating && "bg-sidebar  rounded-2xl border border-sidebar-border"
             )}>
-                <header className="flex items-center justify-center shrink-0 h-12 px-3  bg-sidebar/60">
-                    <div className="flex items-center gap-2 min-w-0">
-                        {general.isAiEnabled ? (
-                            <div className="flex bg-muted/40 p-0.5 rounded-xl border border-border/20">
-                                <button
-                                    onClick={() => setActiveTab('ai')}
-                                    className={cn(
-                                        "flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all",
-                                        activeTab === 'ai'
-                                            ? "bg-background text-primary shadow-sm"
-                                            : "text-muted-foreground/60 hover:text-muted-foreground"
-                                    )}
-                                >
-                                    <Sparkles size={11} className={cn(activeTab === 'ai' ? "text-primary" : "text-muted-foreground/40")} />
-                                    AI Chat
-                                </button>
-                                <button
-                                    onClick={() => setActiveTab('info')}
-                                    className={cn(
-                                        "flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all",
-                                        activeTab === 'info'
-                                            ? "bg-background text-primary shadow-sm"
-                                            : "text-muted-foreground/60 hover:text-muted-foreground"
-                                    )}
-                                >
-                                    <Info size={11} className={cn(activeTab === 'info' ? "text-primary" : "text-muted-foreground/40")} />
-                                    Note Info
-                                </button>
-                                <button
-                                    onClick={() => setActiveTab('media')}
-                                    className={cn(
-                                        "flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all",
-                                        activeTab === 'media'
-                                            ? "bg-background text-primary shadow-sm"
-                                            : "text-muted-foreground/60 hover:text-muted-foreground"
-                                    )}
-                                >
-                                    <Image size={11} className={cn(activeTab === 'media' ? "text-primary" : "text-muted-foreground/40")} />
-                                    Media
-                                </button>
-                            </div>
-                        ) : (
-                            <div className="flex items-center gap-2 px-1 text-primary/80">
-                                <Info size={14} />
-                                <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/70">
-                                    Note Info
-                                </span>
-                            </div>
-                        )}
+                <header dir="ltr" className="relative flex items-center justify-center shrink-0 h-12 px-3 bg-sidebar/60 ">
+                    <div className="relative overflow-hidden flex items-center w-full max-w-[260px] h-9 p-1 rounded-xl bg-sidebar-accent/50 dark:bg-sidebar-accent/70 border border-sidebar-border/40 shadow-sm outline-none isolate">
+                        {/* Sliding Active Indicator */}
+                        <div
+                            className="absolute top-1 bottom-1 rounded-lg bg-background shadow-sm border border-border/40 transition-all duration-400 ease-[cubic-bezier(0.34,1.56,0.64,1)] transform-gpu"
+                            style={{
+                                width: `calc((100% - 8px - ${(TABS.length - 1) * 4}px) / ${TABS.length})`,
+                                transform: `translateX(calc(${activeIndex} * (100% + 4px)))`,
+                                left: '4px',
+                                willChange: 'transform',
+                            }}
+                        />
+
+                        {TABS.map(({ id, label, icon: Icon }) => (
+                            <button
+                                key={id}
+                                onClick={() => setActiveTab(id)}
+                                className={cn(
+                                    "relative z-10 flex flex-1 items-center justify-center gap-1.5 h-7 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors duration-300 whitespace-nowrap focus:outline-none focus-visible:ring-0 active:transform-none",
+                                    activeTab === id
+                                        ? "text-primary"
+                                        : "text-muted-foreground/50 hover:text-muted-foreground/80"
+                                )}
+                            >
+                                <Icon size={12} className={cn("transition-colors duration-300", activeTab === id ? "text-accent-full" : "text-muted-foreground/40")} />
+                                <span>{label}</span>
+                            </button>
+                        ))}
                     </div>
 
-                    <div className="flex items-center gap-0.5 shrink-0">
-                        {isFloating && (
+                    {isFloating && (
+                        <div className={cn(
+                            "absolute top-2.5",
+                            isRtl ? "left-3" : "right-3"
+                        )}>
                             <Button
                                 variant="ghost"
                                 size="icon"
@@ -99,15 +92,15 @@ export function SecondarySidebar({ width, isResizing }: { width?: number, isResi
                             >
                                 <Pin size={14} className={cn("fill-current transition-transform", general.isSecondarySidebarSticky && "rotate-45 text-accent-full")} />
                             </Button>
-                        )}
-                    </div>
+                        </div>
+                    )}
                 </header>
 
-                <div className="flex-1 overflow-hidden">
+                <div dir="ltr" className="flex-1 overflow-hidden">
                     {activeTab === 'ai' ? (
                         <AiSidebar isFloating={isFloating} />
-                    ) : activeTab === 'media' ? (
-                        <MediaSidebar />
+                    ) : activeTab === 'tasks' ? (
+                        <TasksSidebar />
                     ) : (
                         activeNoteId && <NoteInfo noteId={activeNoteId} />
                     )}

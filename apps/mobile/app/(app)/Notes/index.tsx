@@ -34,8 +34,11 @@ import {
     Platform,
     StyleSheet,
     TextInput,
-    View
+    View,
+    Pressable,
+    Text
 } from 'react-native';
+import { MediaSearchBrowser } from '@/components/notes/media-search-browser';
 import Animated, {
     Extrapolation,
     FadeIn,
@@ -104,6 +107,7 @@ export default function NotesList() {
     const isCompact = general.compactMode;
 
     const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
+    const [activeFilter, setActiveFilter] = useState<'all' | 'media'>('all');
 
 
     // Sync local query only when it's cleared from outside
@@ -212,6 +216,7 @@ export default function NotesList() {
         setIsSearchActive(false);
         setLocalSearchQuery('');
         resetSearch();
+        setActiveFilter('all');
     }, [resetSearch]);
 
     const handleSearchChange = useCallback((text: string) => {
@@ -495,6 +500,57 @@ export default function NotesList() {
                 }}
             />
 
+            {isSearchActive && (
+                <View style={[styles.tabsContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                    <Pressable
+                        onPress={() => setActiveFilter('all')}
+                        style={[
+                            styles.tabButton,
+                            activeFilter === 'all' && { backgroundColor: colors.primary }
+                        ]}
+                    >
+                        <Ionicons 
+                            name="document-text-outline" 
+                            size={16} 
+                            color={activeFilter === 'all' ? '#ffffff' : colors.text + '80'} 
+                        />
+                        <Text style={[
+                            styles.tabText,
+                            { color: activeFilter === 'all' ? '#ffffff' : colors.text }
+                        ]}>
+                            All
+                        </Text>
+                    </Pressable>
+                    <Pressable
+                        onPress={() => setActiveFilter('media')}
+                        style={[
+                            styles.tabButton,
+                            activeFilter === 'media' && { backgroundColor: colors.primary }
+                        ]}
+                    >
+                        <Ionicons 
+                            name="images-outline" 
+                            size={16} 
+                            color={activeFilter === 'media' ? '#ffffff' : colors.text + '80'} 
+                        />
+                        <Text style={[
+                            styles.tabText,
+                            { color: activeFilter === 'media' ? '#ffffff' : colors.text }
+                        ]}>
+                            Media Library
+                        </Text>
+                    </Pressable>
+                </View>
+            )}
+
+            {isSearchActive && activeFilter === 'media' && (
+                <MediaSearchBrowser
+                    searchQuery={localSearchQuery}
+                    top={48}
+                    onClose={handleCloseSearch}
+                />
+            )}
+
             <AiChatModal
                 visible={isAiChatVisible}
                 onClose={() => setIsAiChatVisible(false)}
@@ -628,5 +684,27 @@ const styles = StyleSheet.create({
                 elevation: 4,
             },
         }),
+    },
+    tabsContainer: {
+        flexDirection: 'row',
+        marginHorizontal: 12,
+        marginVertical: 8,
+        borderRadius: 8,
+        borderWidth: 1,
+        padding: 4,
+        gap: 4,
+    },
+    tabButton: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        paddingVertical: 8,
+        borderRadius: 6,
+    },
+    tabText: {
+        fontSize: 13,
+        fontWeight: '600',
     },
 });

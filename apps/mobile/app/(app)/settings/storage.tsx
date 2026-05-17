@@ -145,22 +145,6 @@ export default function StorageSettings() {
         <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
             <Stack.Screen options={{ title: 'Storage & Database' }} />
 
-            <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                    <Text style={[styles.sectionTitle, { color: colors.text }]}>Media Library</Text>
-                </View>
-                <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                    <SettingItem
-                        label="Browse All Media"
-                        description="View and manage all images and PDFs"
-                        icon="images"
-                        iconBg="#ec4899"
-                        onPress={() => router.push('/settings/media')}
-                        colors={colors}
-                    />
-                </View>
-            </View>
-
             {availableDbs.length > 1 && (
                 <View style={styles.section}>
                     <View style={styles.sectionHeader}>

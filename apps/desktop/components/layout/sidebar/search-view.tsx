@@ -3,10 +3,11 @@ import { SidebarMenu, SidebarMenuItem } from "@/components/ui/sidebar";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { cn } from "@/lib/utils";
 import { useNotesStore, useSearchStore, useSettingsStore } from "@annota/core";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { FolderListItem } from "../../notes/folder-list-item";
 import { NoteListItem } from "../../notes/note-list-item";
 import { Ionicons } from "../../ui/ionicons";
+import { MediaSidebar } from "../media-sidebar";
 
 interface SearchViewProps {
     onNoteClick: (note: any) => void;
@@ -17,6 +18,11 @@ interface SearchViewProps {
     onCreateSubFolder: (parent: any) => void;
     onCreateNote: (folderId: string) => void;
 }
+
+const FILTERS = [
+    { id: 'all' as const, label: 'All', icon: 'search-outline' as const },
+    { id: 'media' as const, label: 'Media', icon: 'images-outline' as const },
+];
 
 export function SearchView({
     onNoteClick,
@@ -36,6 +42,8 @@ export function SearchView({
         dbResults,
         setSearchQuery,
     } = useSearchStore();
+
+    const [activeFilter, setActiveFilter] = useState<'all' | 'media'>('all');
 
     const folderResults = useMemo(() => dbResults.filter(r => r.type === 'folder'), [dbResults]);
     const noteResults = useMemo(() => dbResults.filter(r => r.type === 'note'), [dbResults]);
@@ -69,7 +77,7 @@ export function SearchView({
             "flex flex-col flex-1 min-h-0",
             general.appDirection === 'rtl' ? "animate-content-from-right" : "animate-content-from-left"
         )}>
-            <div className="px-3 py-2 sticky top-0  z-10">
+            <div className="px-3 py-2 sticky top-0 z-10 bg-sidebar/80 backdrop-blur-md space-y-2 border-b border-border/10 shrink-0">
                 <div className="relative group">
                     <Ionicons
                         name={isSearching ? "sync" : "search-outline"}
@@ -81,7 +89,7 @@ export function SearchView({
                     />
                     <Input
                         autoFocus
-                        placeholder="Search Your Notes..."
+                        placeholder={activeFilter === 'media' ? "Search Your Media..." : "Search Your Notes..."}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value, null)}
                         className="flex h-9 w-full rounded-md border border-input/40 bg-transparent pl-7 pr-7 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground/60 placeholder:text-[12px] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50" />
@@ -94,72 +102,98 @@ export function SearchView({
                         </button>
                     )}
                 </div>
+
+                <div className="flex items-center gap-1.5 px-0.5 pb-1">
+                    {FILTERS.map((filter) => {
+                        const isActive = activeFilter === filter.id;
+                        return (
+                            <button
+                                key={filter.id}
+                                onClick={() => setActiveFilter(filter.id)}
+                                className={cn(
+                                    "flex items-center gap-1 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-[0.06em] transition-all select-none border cursor-pointer active:scale-95",
+                                    isActive
+                                        ? "border-transparent text-white shadow-sm"
+                                        : "bg-muted/30 text-muted-foreground/60 border-border/20 hover:text-muted-foreground hover:bg-muted/60"
+                                )}
+                                style={isActive ? { backgroundColor: colors.primary } : undefined}
+                            >
+                                <Ionicons name={filter.icon} size={10} />
+                                <span>{filter.label}</span>
+                            </button>
+                        );
+                    })}
+                </div>
             </div>
 
-            <div data-tauri-drag-region className="flex-1 overflow-y-auto premium-scrollbar px-1">
+            {activeFilter === 'media' ? (
+                <div className="flex-1 min-h-0 overflow-hidden">
+                    <MediaSidebar />
+                </div>
+            ) : (
+                <div data-tauri-drag-region className="flex-1 overflow-y-auto premium-scrollbar px-1">
+                    {searchQuery && !isSearching && dbResults.length === 0 && (
+                        <div className="flex flex-col items-center justify-center py-20 text-center">
+                            <p className="text-xs font-bold text-muted-foreground/60">No results found</p>
+                        </div>
+                    )}
 
+                    {(folderResults.length > 0 || noteResults.length > 0) && (
+                        <SidebarMenu className="gap-4 pb-4">
+                            {folderResults.length > 0 && (
+                                <div className="space-y-1">
+                                    <div className="px-3 py-1 text-[9px] font-black uppercase tracking-[0.15em] text-muted-foreground/50 flex items-center gap-2">
+                                        <Ionicons name="folder-outline" size={10} />
+                                        <span>Folders</span>
+                                    </div>
+                                    <div className="space-y-0.5">
+                                        {folderResults.map((result) => (
+                                            <SidebarMenuItem key={result.id}>
+                                                <FolderListItem
+                                                    folder={result.data}
+                                                    onClick={() => onFolderClick(result.data)}
+                                                    onEdit={onEditFolder}
+                                                    onDelete={onDeleteFolder}
+                                                    onCreateSubFolder={onCreateSubFolder}
+                                                    onCreateNote={(f) => onCreateNote(f.id)}
+                                                    searchQuery={searchQuery}
+                                                    isSearchResult
+                                                    className="hover:bg-primary/5 border-none"
+                                                />
+                                            </SidebarMenuItem>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
-                {searchQuery && !isSearching && dbResults.length === 0 && (
-                    <div className="flex flex-col items-center justify-center py-20 text-center">
-                        <p className="text-xs font-bold text-muted-foreground/60">No results found</p>
-                    </div>
-                )}
-
-                {(folderResults.length > 0 || noteResults.length > 0) && (
-                    <SidebarMenu className="gap-4 pb-4">
-                        {folderResults.length > 0 && (
-                            <div className="space-y-1">
-                                <div className="px-3 py-1 text-[9px] font-black uppercase tracking-[0.15em] text-muted-foreground/50 flex items-center gap-2">
-                                    <Ionicons name="folder-outline" size={10} />
-                                    <span>Folders</span>
+                            {noteResults.length > 0 && (
+                                <div className="space-y-1">
+                                    <div className="px-3 py-1 text-[9px] font-black uppercase tracking-[0.15em] text-muted-foreground/50 flex items-center gap-2">
+                                        <Ionicons name="document-text-outline" size={10} />
+                                        <span>Notes</span>
+                                    </div>
+                                    <div className="space-y-0.5">
+                                        {noteResults.map((result) => (
+                                            <SidebarMenuItem key={result.id}>
+                                                <NoteListItem
+                                                    note={result.data}
+                                                    onClick={() => onNoteClick(result.data)}
+                                                    onDelete={() => onDeleteNote(result.data.id)}
+                                                    isActive={false}
+                                                    searchQuery={searchQuery}
+                                                    isInList={true}
+                                                    suffix={<FolderBadge folderId={result.data.folderId} />}
+                                                    className="hover:bg-primary/5 border-none"
+                                                />
+                                            </SidebarMenuItem>
+                                        ))}
+                                    </div>
                                 </div>
-                                <div className="space-y-0.5">
-                                    {folderResults.map((result) => (
-                                        <SidebarMenuItem key={result.id}>
-                                            <FolderListItem
-                                                folder={result.data}
-                                                onClick={() => onFolderClick(result.data)}
-                                                onEdit={onEditFolder}
-                                                onDelete={onDeleteFolder}
-                                                onCreateSubFolder={onCreateSubFolder}
-                                                onCreateNote={(f) => onCreateNote(f.id)}
-                                                searchQuery={searchQuery}
-                                                isSearchResult
-                                                className="hover:bg-primary/5 border-none"
-                                            />
-                                        </SidebarMenuItem>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {noteResults.length > 0 && (
-                            <div className="space-y-1">
-                                <div className="px-3 py-1 text-[9px] font-black uppercase tracking-[0.15em] text-muted-foreground/50 flex items-center gap-2">
-                                    <Ionicons name="document-text-outline" size={10} />
-                                    <span>Notes</span>
-                                </div>
-                                <div className="space-y-0.5">
-                                    {noteResults.map((result) => (
-                                        <SidebarMenuItem key={result.id}>
-                                            <NoteListItem
-                                                note={result.data}
-                                                onClick={() => onNoteClick(result.data)}
-                                                onDelete={() => onDeleteNote(result.data.id)}
-                                                isActive={false}
-                                                searchQuery={searchQuery}
-                                                isInList={true}
-                                                suffix={<FolderBadge folderId={result.data.folderId} />}
-                                                className="hover:bg-primary/5 border-none"
-                                            />
-                                        </SidebarMenuItem>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </SidebarMenu>
-                )}
-            </div>
+                            )}
+                        </SidebarMenu>
+                    )}
+                </div>
+            )}
         </div>
     );
 }

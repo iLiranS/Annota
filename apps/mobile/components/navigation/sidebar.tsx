@@ -5,12 +5,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useGlobalSearchParams, usePathname, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-    Linking,
     Pressable,
     ScrollView,
     StyleSheet,
     Text,
-    View,
+    View
 } from 'react-native';
 import Animated, {
     Easing,
@@ -335,6 +334,14 @@ export default function Sidebar({ onNavigate, ...props }: SidebarProps & React.C
         navigateToNotes(DAILY_NOTES_FOLDER_ID);
     };
 
+    const navigateToTasks = () => {
+        if (pathname.toLowerCase() === '/tasks') {
+            closeDrawer();
+            return;
+        }
+        resetStackAndReplace('/tasks');
+    };
+
     const navigateToTag = (tagId: string) => {
         // Check if we are already at this tag
         const normalizedPath = pathname.toLowerCase();
@@ -429,6 +436,19 @@ export default function Sidebar({ onNavigate, ...props }: SidebarProps & React.C
                                 const dailyFolder = folders.find(f => f.id === DAILY_NOTES_FOLDER_ID);
                                 if (dailyFolder) setEditingFolder(dailyFolder);
                             }}
+                        />
+
+                        <SidebarItem
+                            renderIcon={() => (
+                                <Ionicons
+                                    name="checkbox-outline"
+                                    size={22}
+                                    color={"#10B981"}
+                                />
+                            )}
+                            label="Tasks"
+                            isActive={pathname.toLowerCase() === '/tasks'}
+                            onPress={navigateToTasks}
                         />
 
                         <Animated.View layout={LinearTransition.duration(350).easing(Easing.bezier(0.4, 0, 0.2, 1))}>
