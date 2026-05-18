@@ -65,6 +65,7 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
         const [editorState, setEditorState] = useState<EditorState>(initialEditorState);
         const [activePopup, setActivePopup] = useState<PopupType>(null);
         const [currentLatex, setCurrentLatex] = useState<string | null>(null);
+        const [isBlockMath, setIsBlockMath] = useState<boolean>(false);
         const { gallery, openGallery, closeGallery, setGalleryIndex } = useSharedEditorUI(onGalleryVisibilityChange);
         const containerRef = useRef<HTMLDivElement>(null);
         const scrollerRef = useRef<HTMLDivElement>(null);
@@ -279,15 +280,21 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
             onSelectionUpdate: ({ editor }) => {
                 const { selection } = editor.state;
                 let latex = '';
+                let isBlock = false;
 
                 // Extract latex if we clicked on a math node, or extract highlighted text
                 if ((selection as any).node?.type.name === 'inlineMath') {
                     latex = (selection as any).node.attrs.latex;
+                    isBlock = false;
+                } else if ((selection as any).node?.type.name === 'blockMath') {
+                    latex = (selection as any).node.attrs.latex;
+                    isBlock = true;
                 } else if (!selection.empty) {
                     latex = editor.state.doc.textBetween(selection.from, selection.to, ' ');
                 }
 
                 setCurrentLatex(latex || null);
+                setIsBlockMath(isBlock);
                 setEditorState(getEditorState(editor) as unknown as EditorState);
 
                 if (onSelectionChange) {
@@ -416,14 +423,20 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
 
                     const { selection } = editor.state;
                     let latex = '';
+                    let isBlock = false;
 
                     if ((selection as any).node?.type.name === 'inlineMath') {
                         latex = (selection as any).node.attrs.latex;
+                        isBlock = false;
+                    } else if ((selection as any).node?.type.name === 'blockMath') {
+                        latex = (selection as any).node.attrs.latex;
+                        isBlock = true;
                     } else {
                         latex = editor.state.doc.textBetween(selection.from, selection.to, ' ');
                     }
 
                     setCurrentLatex(latex || null);
+                    setIsBlockMath(isBlock);
                     requestAnimationFrame(() => {
                         setActivePopup('math');
                     });
@@ -445,7 +458,7 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
             // Intercept UI commands and open popups
             if (['openMathModal', 'openFileModal', 'openLinkModal', 'openYoutubeModal'].includes(cmd)) {
                 switch (cmd) {
-                    case 'openMathModal': setCurrentLatex(null); setActivePopup('math'); return;
+                    case 'openMathModal': setCurrentLatex(null); setIsBlockMath(false); setActivePopup('math'); return;
                     case 'openFileModal': setActivePopup('file'); return;
                     case 'openLinkModal': setActivePopup('link'); return;
                     case 'openYoutubeModal': setActivePopup('youtube'); return;
@@ -470,8 +483,9 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
             let isMounted = true;
             getExtensions({
                 placeholder,
-                onMathSelected: (latex) => {
+                onMathSelected: (latex, isBlock) => {
                     setCurrentLatex(latex);
+                    setIsBlockMath(isBlock);
                     setActivePopup('math');
                 },
                 onOpenFile: (data) => handleCommandRef.current?.('openFile', data),
@@ -784,6 +798,7 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                         }
                     },
                     currentLatex,
+                    isBlockMath,
                     blockData: null,
                     onInsertMath: () => {
                         setActivePopup('math');

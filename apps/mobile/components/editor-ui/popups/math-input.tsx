@@ -1,36 +1,57 @@
 import { useTheme } from '@react-navigation/native';
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Keyboard, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 
 interface MathInputProps {
     currentLatex: string | null;
-    onSubmit: (latex: string) => void;
+    isBlock?: boolean;
+    onSubmit: (latex: string, isBlock?: boolean) => void;
     onClose: () => void;
 }
 
-export function MathInput({ currentLatex, onSubmit, onClose }: MathInputProps) {
+export function MathInput({ currentLatex, isBlock = false, onSubmit, onClose }: MathInputProps) {
     const { colors, dark } = useTheme();
     const [latex, setLatex] = useState(currentLatex || '');
+    const [debouncedLatex, setDebouncedLatex] = useState(currentLatex || '');
     const [previewLoading, setPreviewLoading] = useState(true);
+    const [isBlockInput, setIsBlockInput] = useState(isBlock);
     const inputRef = useRef<TextInput>(null);
+    const webViewRef = useRef<WebView>(null);
 
     useEffect(() => {
-        // Focus input when opened - only when there is no given input
-        if (currentLatex) return
+        setIsBlockInput(isBlock);
+    }, [isBlock]);
+
+    useEffect(() => {
+        if (currentLatex) return;
         setTimeout(() => inputRef.current?.focus(), 200);
     }, []);
+
+    // Debounce latex → debouncedLatex by 600ms
+    useEffect(() => {
+        const id = setTimeout(() => setDebouncedLatex(latex), 600);
+        return () => clearTimeout(id);
+    }, [latex]);
+
+    useEffect(() => {
+        if (webViewRef.current && !previewLoading) {
+            webViewRef.current.postMessage(JSON.stringify({
+                tex: debouncedLatex,
+                displayMode: isBlockInput
+            }));
+        }
+    }, [debouncedLatex, isBlockInput, previewLoading]);
 
     const handleSubmit = () => {
         const trimmedLatex = latex.trim();
         if (trimmedLatex) {
-            onSubmit(trimmedLatex);
+            onSubmit(trimmedLatex, isBlockInput);
         }
     };
 
     const isValid = latex.trim().length > 0;
 
-    // Minimal HTML for KaTeX preview - Left aligned and Scrollable
     const previewHtml = `
         <!DOCTYPE html>
         <html>
@@ -39,10 +60,13 @@ export function MathInput({ currentLatex, onSubmit, onClose }: MathInputProps) {
             <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
             <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
             <style>
+                * { box-sizing: border-box; }
                 body {
-                    display: block;
+                    display: flex;
+                    align-items: center;
                     margin: 0;
-                    padding: 20px 10px;
+                    padding: 0 12px;
+                    min-height: 100vh;
                     background-color: transparent;
                     color: ${colors.text};
                     font-size: 1rem;
@@ -57,86 +81,130 @@ export function MathInput({ currentLatex, onSubmit, onClose }: MathInputProps) {
                     margin: 0;
                     text-align: left;
                 }
-                /* Ensure KaTeX itself doesn't force center */
                 .katex {
                     text-align: left !important;
                     white-space: nowrap;
+                }
+                .error {
+                    color: #FF453A;
+                    font-size: 12px;
+                    font-family: monospace;
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    opacity: 0.9;
+                    line-height: 1.4;
                 }
             </style>
         </head>
         <body>
             <div id="math"></div>
             <script>
-                function render(tex) {
+                let currentDisplayMode = ${isBlockInput ? 'true' : 'false'};
+                function render(tex, displayMode) {
                     const el = document.getElementById('math');
                     if (!tex) {
                         el.innerHTML = '';
                         return;
                     }
+                    if (displayMode !== undefined) {
+                        currentDisplayMode = displayMode;
+                    }
                     try {
                         katex.render(tex, el, {
-                            throwOnError: false,
-                            displayMode: true,
+                            throwOnError: true,
+                            displayMode: currentDisplayMode,
                             leqno: false,
                             fleqn: true
                         });
                     } catch (err) {
-                        el.innerHTML = '<span style="color: #FF453A; font-size: 12px;">' + err.message + '</span>';
+                        const msg = err.message.replace(/^KaTeX parse error:\\s*/i, '');
+                        el.innerHTML = '<span class="error">⚠ ' + msg + '</span>';
                     }
                 }
-                render(${JSON.stringify(latex)});
+                render(${JSON.stringify(debouncedLatex)}, currentDisplayMode);
                 window.addEventListener('message', (event) => {
-                    render(event.data);
+                    try {
+                        const data = JSON.parse(event.data);
+                        render(data.tex, data.displayMode);
+                    } catch (e) {
+                        render(event.data);
+                    }
                 });
             </script>
         </body>
         </html>
     `;
 
-    // Inject JS into WebView to update preview without reload
-    const webViewRef = useRef<WebView>(null);
-    useEffect(() => {
-        if (webViewRef.current && !previewLoading) {
-            webViewRef.current.postMessage(latex);
-        }
-    }, [latex, previewLoading]);
-
     return (
-        <View style={styles.container}>
+        // Outer pressable catches taps anywhere outside the input and dismisses keyboard
+        <Pressable style={styles.container} onPress={Keyboard.dismiss}>
             <Text style={[styles.title, { color: colors.text }]}>
                 {currentLatex ? 'Edit Formula' : 'Insert Formula'}
             </Text>
 
             <View style={styles.section}>
                 <Text style={[styles.label, { color: colors.text, opacity: 0.6 }]}>LATEX INPUT</Text>
-                <TextInput
-                    ref={inputRef}
-                    style={[
-                        styles.latexInput,
-                        {
-                            backgroundColor: dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
-                            color: colors.text,
-                            borderColor: colors.border,
-                        },
-                    ]}
-                    placeholder="e = mc^2"
-                    placeholderTextColor={dark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)'}
-                    value={latex}
-                    onChangeText={setLatex}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    multiline={true}
-                    numberOfLines={4}
-                    blurOnSubmit={false}
-                />
+                {/* Stop propagation so tapping inside the input doesn't dismiss the keyboard */}
+                <Pressable onPress={(e) => e.stopPropagation()}>
+                    <TextInput
+                        ref={inputRef}
+                        style={[
+                            styles.latexInput,
+                            {
+                                backgroundColor: dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+                                color: colors.text,
+                                borderColor: colors.border,
+                            },
+                        ]}
+                        placeholder="e = mc^2"
+                        placeholderTextColor={dark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)'}
+                        value={latex}
+                        onChangeText={setLatex}
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        multiline={true}
+                        numberOfLines={4}
+                        blurOnSubmit={false}
+                    />
+                </Pressable>
             </View>
+
+            {!currentLatex && (
+                <View style={styles.toggleRow}>
+                    <Text style={[styles.toggleLabel, { color: colors.text, opacity: 0.6 }]}>DISPLAY MODE</Text>
+                    <View style={[styles.toggleContainer, { backgroundColor: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)', borderColor: colors.border }]}>
+                        <Pressable
+                            style={[
+                                styles.toggleButton,
+                                !isBlockInput && [styles.toggleActiveButton, { backgroundColor: colors.card }],
+                            ]}
+                            onPress={() => setIsBlockInput(false)}
+                        >
+                            <Text style={[styles.toggleButtonText, { color: colors.text, fontWeight: !isBlockInput ? '600' : '400' }]}>Inline</Text>
+                        </Pressable>
+                        <Pressable
+                            style={[
+                                styles.toggleButton,
+                                isBlockInput && [styles.toggleActiveButton, { backgroundColor: colors.card }],
+                            ]}
+                            onPress={() => setIsBlockInput(true)}
+                        >
+                            <Text style={[styles.toggleButtonText, { color: colors.text, fontWeight: isBlockInput ? '600' : '400' }]}>Block</Text>
+                        </Pressable>
+                    </View>
+                </View>
+            )}
 
             <View style={styles.section}>
                 <Text style={[styles.label, { color: colors.text, opacity: 0.6 }]}>PREVIEW</Text>
-                <View style={[styles.previewContainer, {
-                    backgroundColor: dark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
-                    borderColor: colors.border
-                }]}>
+                <Pressable
+                    onPress={Keyboard.dismiss}
+                    style={[styles.previewContainer, {
+                        backgroundColor: dark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+                        borderColor: colors.border,
+                    }]}
+                >
                     {latex ? (
                         <WebView
                             ref={webViewRef}
@@ -160,21 +228,26 @@ export function MathInput({ currentLatex, onSubmit, onClose }: MathInputProps) {
                             <ActivityIndicator size="small" color={colors.primary} style={{ flex: 1 }} />
                         </View>
                     )}
-                </View>
+                </Pressable>
             </View>
 
             <View style={styles.footer}>
                 <Pressable
-                    style={[styles.button, styles.cancelButton]}
+                    style={({ pressed }) => [
+                        styles.button,
+                        styles.cancelButton,
+                        pressed && styles.buttonPressed
+                    ]}
                     onPress={onClose}
                 >
                     <Text style={[styles.buttonText, { color: colors.text, opacity: 0.7 }]}>Cancel</Text>
                 </Pressable>
                 <Pressable
-                    style={[
+                    style={({ pressed }) => [
                         styles.button,
                         styles.submitButton,
-                        { backgroundColor: isValid ? colors.primary : colors.border }
+                        { backgroundColor: isValid ? colors.primary : colors.border },
+                        isValid && pressed && styles.buttonPressed
                     ]}
                     onPress={handleSubmit}
                     disabled={!isValid}
@@ -184,7 +257,7 @@ export function MathInput({ currentLatex, onSubmit, onClose }: MathInputProps) {
                     </Text>
                 </Pressable>
             </View>
-        </View>
+        </Pressable>
     );
 }
 
@@ -257,5 +330,45 @@ const styles = StyleSheet.create({
     buttonText: {
         fontSize: 16,
         fontWeight: '600',
+    },
+    buttonPressed: {
+        opacity: 0.8,
+        transform: [{ scale: 0.98 }],
+    },
+    toggleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: 4,
+    },
+    toggleLabel: {
+        fontSize: 10,
+        fontWeight: 'bold',
+        letterSpacing: 1,
+    },
+    toggleContainer: {
+        flexDirection: 'row',
+        borderRadius: 8,
+        borderWidth: 1,
+        padding: 2,
+        alignItems: 'center',
+    },
+    toggleButton: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 6,
+        minWidth: 70,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    toggleActiveButton: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.12,
+        shadowRadius: 1.5,
+        elevation: 1,
+    },
+    toggleButtonText: {
+        fontSize: 12,
     },
 });

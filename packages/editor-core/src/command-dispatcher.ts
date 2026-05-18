@@ -134,13 +134,23 @@ export async function dispatchEditorCommand(editor: Editor, command: string, par
                 //@ts-ignore
                 chain.updateAttributes(selection.node.type.name, { latex: params.latex }).focus().run();
             } else {
-                chain
-                    .insertContent([
-                        { type: 'inlineMath', attrs: { latex: params.latex } },
-                        { type: 'text', text: ' ' },
-                    ])
-                    .focus()
-                    .run();
+                if (params?.isBlock) {
+                    chain
+                        .insertContent([
+                            { type: 'blockMath', attrs: { latex: params.latex } },
+                            { type: 'paragraph' }
+                        ])
+                        .focus()
+                        .run();
+                } else {
+                    chain
+                        .insertContent([
+                            { type: 'inlineMath', attrs: { latex: params.latex } },
+                            { type: 'text', text: ' ' },
+                        ])
+                        .focus()
+                        .run();
+                }
             }
             return true;
         }

@@ -285,6 +285,7 @@ export function ToolbarPopup(props: ToolbarPopupProps) {
                 return (
                     <MathInput
                         currentLatex={(props as MathPopupProps).currentLatex}
+                        isBlock={(props as MathPopupProps).isBlock}
                         onSubmit={(props as MathPopupProps).onSubmit}
                         onClose={onClose}
                     />

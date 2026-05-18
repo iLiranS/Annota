@@ -56,6 +56,7 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
         const [activePopup, setActivePopup] = useState<PopupType>(null);
         const [toolbarHeight, setToolbarHeight] = useState(50);
         const [currentLatex, setCurrentLatex] = useState<string | null>(null);
+        const [isBlockMath, setIsBlockMath] = useState<boolean>(false);
         const { gallery, openGallery, closeGallery, setGalleryIndex } = useSharedEditorUI(props.onGalleryVisibilityChange);
         const contentResolverRef = useRef<((html: string) => void) | null>(null);
         const [blockData, setBlockData] = useState<any>(null);
@@ -88,7 +89,7 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
         const sendMessage = useCallback((command: string, params: Record<string, any>) => {
             if (['openMathModal', 'openFileModal', 'openLinkModal', 'openYoutubeModal'].includes(command)) {
                 switch (command) {
-                    case 'openMathModal': setCurrentLatex(null); setActivePopup('math'); setIsPopupOpen(true); return;
+                    case 'openMathModal': setCurrentLatex(null); setIsBlockMath(false); setActivePopup('math'); setIsPopupOpen(true); return;
                     case 'openFileModal': setActivePopup('file'); setIsPopupOpen(true); return;
                     case 'openLinkModal': setActivePopup('link'); setIsPopupOpen(true); return;
                     case 'openYoutubeModal': setActivePopup('youtube'); setIsPopupOpen(true); return;
@@ -130,6 +131,7 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                     break;
                 case 'mathSelected':
                     setCurrentLatex(data.latex);
+                    setIsBlockMath(!!data.isBlock);
                     setActivePopup('math');
                     setIsPopupOpen(true);
                     break;
@@ -408,6 +410,7 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                             onPopupStateChange: (isOpen) => { if (!isOpen) setIsPopupOpen(false); },
                             onInsertFile: handleInsertFile,
                             currentLatex,
+                            isBlockMath,
                             blockData,
                             onInsertMath: () => { setActivePopup('math'); setIsPopupOpen(true); }
                         })}

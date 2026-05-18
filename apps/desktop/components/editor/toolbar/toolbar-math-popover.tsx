@@ -9,8 +9,8 @@ import {
 import type { ToolbarRenderProps } from '@annota/editor-ui';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
-import { Sigma } from 'lucide-react';
-import React, { useEffect, useRef, useState } from 'react';
+import { AlertCircle, Sigma } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 
 import { cn } from '@/lib/utils';
 
@@ -36,49 +36,82 @@ interface MathPopoverProps {
     isMenu?: boolean;
     visible?: boolean;
     currentLatex?: string | null;
+    isBlockMath?: boolean;
 }
 
-export function MathPopover({ sendCommand, onOpenChange, visible, currentLatex }: MathPopoverProps) {
+export function MathPopover({ sendCommand, onOpenChange, visible, currentLatex, isBlockMath = false }: MathPopoverProps) {
     const [latex, setLatex] = useState(currentLatex || '');
     const [internalOpen, setInternalOpen] = useState(false);
-    const previewRef = useRef<HTMLDivElement>(null);
-    // Controlled opening if visible prop is provided
+    // debouncedLatex is what actually gets rendered / validated
+    const [debouncedLatex, setDebouncedLatex] = useState(currentLatex || '');
+    const [katexError, setKatexError] = useState<string | null>(null);
+    const [previewEl, setPreviewEl] = useState<HTMLDivElement | null>(null);
+    const [isBlockInput, setIsBlockInput] = useState(isBlockMath);
+
     const open = visible !== undefined ? visible : internalOpen;
 
+    // Debounce latex → debouncedLatex by 600 ms
     useEffect(() => {
-        if (!open) {
-            setLatex(currentLatex || '');
-        }
-    }, [currentLatex, open]);
+        if (latex === debouncedLatex) return;
+        const id = setTimeout(() => setDebouncedLatex(latex), 600);
+        return () => clearTimeout(id);
+    }, [latex, debouncedLatex]);
 
+    // Keep state in sync with currentLatex when dialog opens/closes
     useEffect(() => {
-        if (previewRef.current && latex) {
-            try {
-                katex.render(latex, previewRef.current, {
-                    throwOnError: false,
-                    displayMode: true,
-                });
-            } catch (err) {
-                console.error('KaTeX rendering error:', err);
-            }
-        } else if (previewRef.current) {
-            previewRef.current.innerHTML = '';
+        setLatex(currentLatex || '');
+        setDebouncedLatex(currentLatex || '');
+        setKatexError(null);
+        setIsBlockInput(isBlockMath);
+    }, [currentLatex, open, isBlockMath]);
+
+    // Render / validate only on the debounced value
+    useEffect(() => {
+        if (!previewEl) return;
+
+        if (!debouncedLatex) {
+            previewEl.innerHTML = '';
+            setKatexError(null);
+            return;
         }
-    }, [latex, open, previewRef.current]);
+
+        try {
+            katex.render(debouncedLatex, previewEl, {
+                throwOnError: true,
+                displayMode: isBlockInput,
+            });
+            setKatexError(null);
+        } catch (err: unknown) {
+            previewEl.innerHTML = '';
+            if (err instanceof Error) {
+                const msg = err.message.replace(/^KaTeX parse error:\s*/i, '');
+                setKatexError(msg);
+            } else {
+                setKatexError('Invalid LaTeX expression');
+            }
+        }
+    }, [debouncedLatex, previewEl, isBlockInput]);
 
     const handleOpenChange = (val: boolean) => {
-        if (visible === undefined) {
-            setInternalOpen(val);
-        }
+        if (visible === undefined) setInternalOpen(val);
         onOpenChange?.(val);
         if (val && !currentLatex) setLatex('');
     };
 
     const handleInsert = (value: string) => {
-        if (value) {
-            sendCommand('setMath', { latex: value });
+        if (value && !katexError) {
+            sendCommand('setMath', { latex: value, isBlock: isBlockInput });
             setLatex('');
+            setKatexError(null);
             handleOpenChange(false);
+        }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        const isMacOrCtrl = e.metaKey || e.ctrlKey;
+        if (isMacOrCtrl && (e.key === 'Enter' || e.key === 's')) {
+            e.preventDefault();
+            handleInsert(latex);
         }
     };
 
@@ -88,7 +121,7 @@ export function MathPopover({ sendCommand, onOpenChange, visible, currentLatex }
                 <DialogTitle className="text-xl font-bold">Math Formula</DialogTitle>
             </DialogHeader>
 
-            <div className="flex-1 overflow-y-auto  pr-2 -mr-2">
+            <div className="flex-1 overflow-y-auto pr-2 -mr-2">
                 <div className="space-y-2">
                     <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-70">LaTeX Input</label>
                     <Textarea
@@ -96,37 +129,75 @@ export function MathPopover({ sendCommand, onOpenChange, visible, currentLatex }
                         placeholder="e = mc^2"
                         value={latex}
                         onChange={(e) => setLatex(e.target.value)}
-                        onKeyDown={(e) => {
-                            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-                                e.preventDefault();
-                                handleInsert(latex);
-                            }
-                        }}
+                        onKeyDown={handleKeyDown}
                         style={{ resize: "none", height: 160 }}
                         autoFocus
                     />
                 </div>
 
-                <div className="space-y-2 ">
+                {!currentLatex && (
+                    <div className="flex items-center justify-between py-2 my-2 border-b border-border/40 animate-in fade-in duration-200">
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-70">Display Mode</span>
+                        <div className="flex bg-muted/60 p-0.5 rounded-lg border border-border/40 select-none">
+                            <button
+                                type="button"
+                                onClick={() => setIsBlockInput(false)}
+                                className={cn(
+                                    "px-3 py-1 text-xs font-semibold rounded-md transition-all duration-200",
+                                    !isBlockInput 
+                                        ? "bg-background text-foreground shadow-sm scale-100" 
+                                        : "text-muted-foreground hover:text-foreground opacity-80 hover:opacity-100"
+                                )}
+                            >
+                                Inline
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setIsBlockInput(true)}
+                                className={cn(
+                                    "px-3 py-1 text-xs font-semibold rounded-md transition-all duration-200",
+                                    isBlockInput 
+                                        ? "bg-background text-foreground shadow-sm scale-100" 
+                                        : "text-muted-foreground hover:text-foreground opacity-80 hover:opacity-100"
+                                )}
+                            >
+                                Block
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                <div className="space-y-2">
                     <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-70">Preview</label>
                     <div
-                        className=" h-[140px] overflow-y-auto custom-scrollbar  rounded-xl border bg-muted/10 px-2 transition-all  shadow-inner"
+                        className="h-[140px] overflow-y-auto custom-scrollbar rounded-xl border bg-muted/10 px-2 transition-all shadow-inner"
                         style={{ fontSize: '1rem' }}
                     >
+                        {/* Empty state */}
                         <div
                             className={cn(
-                                "flex flex-col select-none  gap-2 opacity-40 w-full h-full justify-center items-center animate-in fade-in duration-200",
+                                "flex flex-col select-none gap-2 opacity-40 w-full h-full justify-center items-center animate-in fade-in duration-200",
                                 latex ? "hidden" : "flex"
                             )}
                         >
                             <Sigma className="h-10 w-10 stroke-[1.5]" />
                             <span className="text-[11px] font-medium italic">Preview will appear here</span>
                         </div>
+
+                        {/* Error state — shown inside the preview box */}
+                        {katexError && latex && (
+                            <div className="flex flex-col items-center justify-center gap-2 w-full h-full text-destructive animate-in fade-in duration-200">
+                                <AlertCircle className="h-5 w-5 shrink-0 opacity-80" />
+                                <p className="text-[11px] font-mono text-center leading-snug px-2 opacity-90">{katexError}</p>
+                            </div>
+                        )}
+
+                        {/* Rendered KaTeX output */}
                         <div
-                            ref={previewRef}
+                            ref={setPreviewEl}
                             className={cn(
                                 "w-fit self-start",
-                                !latex && "hidden"
+                                (!latex || katexError) && "hidden"
                             )}
                         />
                     </div>
@@ -146,7 +217,7 @@ export function MathPopover({ sendCommand, onOpenChange, visible, currentLatex }
                     size="sm"
                     className="px-8 h-10 rounded-full shadow-lg shadow-primary/20 font-semibold"
                     onClick={() => handleInsert(latex)}
-                    disabled={!latex}
+                    disabled={!latex || !!katexError}
                 >
                     {currentLatex ? 'Update Formula' : 'Insert Formula'}
                 </Button>
@@ -156,7 +227,7 @@ export function MathPopover({ sendCommand, onOpenChange, visible, currentLatex }
 
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>
-            <DialogContent aria-describedby={undefined} className="sm:max-w-[700px]  p-4 gap-0 shadow-2xl border-primary/10 rounded-2xl flex flex-col overflow-hidden outline-none">
+            <DialogContent aria-describedby={undefined} className="sm:max-w-[700px] p-4 gap-0 shadow-2xl border-primary/10 rounded-2xl flex flex-col overflow-hidden outline-none">
                 {content}
             </DialogContent>
         </Dialog>

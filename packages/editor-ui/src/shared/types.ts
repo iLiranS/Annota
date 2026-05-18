@@ -12,6 +12,7 @@ export interface ToolbarRenderProps {
     onPopupStateChange: (isOpen: boolean) => void;
     onInsertFile: (source: 'url' | 'library' | 'camera' | 'document', value?: string) => Promise<boolean>;
     currentLatex: string | null;
+    isBlockMath?: boolean;
     blockData: any;
     onInsertMath: () => void;
 }
@@ -355,7 +356,8 @@ export interface ImageInfo {
 export interface MathPopupProps extends BasePopupProps {
     type: 'math';
     currentLatex: string | null;
-    onSubmit: (latex: string) => void;
+    isBlock?: boolean;
+    onSubmit: (latex: string, isBlock?: boolean) => void;
 }
 
 export interface DetailsBackgroundPopupProps extends BasePopupProps {

@@ -43,8 +43,20 @@ const CustomBlockMath = BlockMath.extend({
 const CustomMathematics = Mathematics.extend({
     addExtensions() {
         return [
-            CustomBlockMath.configure({ ...this.options.blockOptions, katexOptions: this.options.katexOptions }),
-            CustomInlineMath.configure({ ...this.options.inlineOptions, katexOptions: this.options.katexOptions })
+            CustomBlockMath.configure({
+                ...this.options.blockOptions,
+                katexOptions: {
+                    ...this.options.katexOptions,
+                    displayMode: true
+                }
+            }),
+            CustomInlineMath.configure({
+                ...this.options.inlineOptions,
+                katexOptions: {
+                    ...this.options.katexOptions,
+                    displayMode: false
+                }
+            })
         ];
     }
 });

@@ -31,6 +31,7 @@ export function EditorToolbar({
     onPopupStateChange,
 
     currentLatex,
+    isBlockMath,
     blockData,
     onInsertMath,
     onInsertFile,
@@ -481,8 +482,9 @@ export function EditorToolbar({
                     visible={true}
                     type="math"
                     currentLatex={currentLatex || null}
-                    onSubmit={(latex: string) => {
-                        onCommand('setMath', { latex });
+                    isBlock={isBlockMath}
+                    onSubmit={(latex: string, isBlock?: boolean) => {
+                        onCommand('setMath', { latex, isBlock: isBlock ?? isBlockMath });
                         closePopup();
                     }}
                     onClose={closePopup}

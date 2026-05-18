@@ -110,3 +110,14 @@
     display: none !important;
     content: "" !important;
 }
+
+/* Ensure math nodes on mobile (inside .native-editor-container) have highly readable size */
+.native-editor-container [data-type="math"] .katex,
+.native-editor-container [data-type="inlineMath"] .katex,
+.native-editor-container [data-type="inline-math"] .katex,
+.native-editor-container [data-type="blockMath"] .katex,
+.native-editor-container [data-type="block-math"] .katex,
+.native-editor-container .tiptap-mathematics-render .katex,
+.native-editor-container .math-node .katex {
+    font-size: 1.15em !important;
+}

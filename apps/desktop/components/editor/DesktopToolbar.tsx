@@ -42,6 +42,7 @@ export function DesktopToolbar({
     onInsertFile: onInsertFile,
     activePopup,
     currentLatex,
+    isBlockMath,
     onActivePopupChange,
 }: ToolbarRenderProps) {
     const { colors } = useAppTheme();
@@ -228,7 +229,7 @@ export function DesktopToolbar({
                     variant="ghost"
                     size="icon"
                     className={cn(
-                        "h-9 w-9 shrink-0 hover:bg-accent/50 transition-colors"
+                        "h-9 w-9 shrink-0  transition-colors"
                     )}
                     style={activeStyle(activePopup === 'math')}
                     onClick={(e) => {
@@ -627,6 +628,7 @@ export function DesktopToolbar({
                 }}
                 visible={activePopup === 'math'}
                 currentLatex={currentLatex}
+                isBlockMath={isBlockMath}
             />
 
             {/* Global Link Popover */}
