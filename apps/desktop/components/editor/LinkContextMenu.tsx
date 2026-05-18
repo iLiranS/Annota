@@ -7,6 +7,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { ExternalLink, Eye, Pencil, Trash2 } from "lucide-react";
+import { useNotesStore, useSettingsStore } from "@annota/core";
+import { useNoteTabsStore } from "../../hooks/use-note-tabs";
+import { useNavigate } from "react-router-dom";
 import { useMemo } from "react";
 
 export interface LinkContextMenuProps {
@@ -31,6 +34,11 @@ export function LinkContextMenu({
     onDelete,
 }: LinkContextMenuProps) {
 
+    const { general } = useSettingsStore();
+    const navigate = useNavigate();
+    const addTab = useNoteTabsStore(s => s.addTab);
+    const notes = useNotesStore(s => s.notes);
+
     const noteId = useMemo(() => {
         if (!url) return null;
         const match = url.match(/annota:\/\/note\/([^?#\s]+)/);
@@ -39,11 +47,16 @@ export function LinkContextMenu({
 
     if (!anchorRect) return null;
 
-    const handleAction = async (action: 'preview' | 'open' | 'edit' | 'delete' | 'external') => {
+    const handleAction = async (action: 'preview' | 'open' | 'edit' | 'delete' | 'external' | 'open_new_tab') => {
         if (action === 'preview' && noteId) {
             onPreview(noteId);
         } else if (action === 'open' && noteId) {
             onOpenInNewWindow(noteId);
+        } else if (action === 'open_new_tab' && noteId) {
+            const note = notes.find(n => n.id === noteId);
+            const folderId = note?.folderId || 'root';
+            addTab({ noteId, folderId });
+            navigate(`/notes/${folderId}/${noteId}`);
         } else if (action === 'external') {
             try {
                 await openUrl(url);
@@ -85,6 +98,12 @@ export function LinkContextMenu({
                             <DropdownMenuItem onClick={() => handleAction('open')}>
                                 <ExternalLink className="mr-2 h-4 w-4" />
                                 <span>Open in New Window</span>
+                            </DropdownMenuItem>
+                        )}
+                        {general.enableNoteTabs !== false && (
+                            <DropdownMenuItem onClick={() => handleAction('open_new_tab')}>
+                                <ExternalLink className="mr-2 h-4 w-4" />
+                                <span>Open in New Tab</span>
                             </DropdownMenuItem>
                         )}
                     </>

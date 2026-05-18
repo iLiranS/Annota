@@ -5,6 +5,7 @@ import { DailyNotesCalendar } from "./components/daily-notes-calendar";
 import { TrashContent } from "./components/trash-content";
 import NoteEditor from "./note-editor";
 import NotesEmpty from "./notes-empty";
+import { useNoteTabsStore } from "../../../hooks/use-note-tabs";
 
 /**
  * NotesViewManager handles the logic of what to display in the notes content area.
@@ -18,9 +19,11 @@ export default function NotesViewManager() {
     const notes = useNotesStore(s => s.notes);
     const lastViewedNoteId = useSettingsStore(s => s.lastViewedNoteId);
     const lastViewedFolderId = useSettingsStore(s => s.lastViewedFolderId);
+    const general = useSettingsStore(s => s.general);
     const quickAccessNoteId = useNavigationStore(s => s.quickAccessNoteId);
     const quickAccessFolderId = useNavigationStore(s => s.quickAccessFolderId);
     const clearQuickAccessView = useNavigationStore(s => s.clearQuickAccessView);
+    const tabs = useNoteTabsStore(s => s.tabs);
 
     const searchFolderId = searchParams.get("folderId");
     const isTrashView = routeFolderId === TRASH_FOLDER_ID || searchFolderId === TRASH_FOLDER_ID;
@@ -61,7 +64,7 @@ export default function NotesViewManager() {
     }
 
     // 5. Priority: Fallback: Sticky Note (Last Viewed)
-    if (lastViewedNoteId) {
+    if (lastViewedNoteId && (general.enableNoteTabs === false || tabs.length > 0)) {
         const note = notes.find(n => n.id === lastViewedNoteId);
         if (note && !note.isDeleted) {
             return <NoteEditor key={`${lastViewedFolderId}-${lastViewedNoteId}`} noteId={lastViewedNoteId} folderId={lastViewedFolderId || 'root'} />;

@@ -60,6 +60,7 @@ export default function AppShell() {
             if (sidebarRef.current) {
                 sidebarRef.current.style.width = `${newWidth}px`;
             }
+            window.dispatchEvent(new CustomEvent('sidebar-resize', { detail: { width: newWidth, side: 'right' } }));
         }
     }, []);
 

@@ -2,6 +2,7 @@ import { useNavigationStore, useSearchStore, useSettingsStore } from "@annota/co
 import { useEffect } from "react";
 import { useAlwaysOnTop } from "./use-always-on-top";
 import { useCreateNote } from "./use-create-note";
+import { useNoteTabsStore } from "./use-note-tabs";
 
 export function useGlobalShortcuts(options: { isStandalone?: boolean } = {}) {
     const { isStandalone = false } = options;
@@ -12,8 +13,53 @@ export function useGlobalShortcuts(options: { isStandalone?: boolean } = {}) {
     const { toggleAlwaysOnTop } = useAlwaysOnTop();
 
     useEffect(() => {
+        const rotateSidebarTab = (direction: 'next' | 'prev') => {
+            const tabs: ('folders' | 'notes' | 'tags' | 'search')[] = ['folders', 'notes', 'tags', 'search'];
+            const currentTab = useNavigationStore.getState().sidebarTab;
+            const currentIndex = tabs.indexOf(currentTab);
+            if (currentIndex === -1) return;
+
+            let nextIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
+            if (nextIndex >= tabs.length) nextIndex = 0;
+            if (nextIndex < 0) nextIndex = tabs.length - 1;
+
+            useNavigationStore.getState().setSidebarTab(tabs[nextIndex]);
+            window.dispatchEvent(new CustomEvent("open-sidebar"));
+        };
+
         const handleKeyDown = (e: KeyboardEvent) => {
             const isMod = e.metaKey || e.ctrlKey;
+
+            const rotateNoteTab = (direction: 'next' | 'prev') => {
+                const tabs = useNoteTabsStore.getState().tabs;
+                if (tabs.length <= 1) return;
+                
+                const currentNoteId = useSettingsStore.getState().lastViewedNoteId;
+                const locationPath = window.location.pathname;
+                
+                // If we are currently on a note route, figure out which tab it is
+                let currentIndex = -1;
+                const match = locationPath.match(/\/notes\/[^\/]+\/([^\/]+)/);
+                if (match) {
+                    currentIndex = tabs.findIndex(t => t.noteId === match[1]);
+                } else if (currentNoteId) {
+                    currentIndex = tabs.findIndex(t => t.noteId === currentNoteId);
+                }
+
+                if (currentIndex === -1) currentIndex = 0;
+
+                let nextIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
+                if (nextIndex >= tabs.length) nextIndex = 0;
+                if (nextIndex < 0) nextIndex = tabs.length - 1;
+
+                const nextTab = tabs[nextIndex];
+                
+                // Since this is a global shortcut outside router context, we emit a custom event 
+                // for the navbar to handle navigation, OR we can navigate if we can access navigate.
+                // Wait, use-global-shortcuts.ts is in App.tsx inside React Router but outside Routes.
+                // Let's dispatch a custom event that NoteTabs listens to.
+                window.dispatchEvent(new CustomEvent('navigate-note-tab', { detail: nextTab }));
+            };
 
             // 1. Prevent Backspace from navigating back in history when not in an editable context
             if (e.key === 'Backspace' && !isMod) {
@@ -29,7 +75,32 @@ export function useGlobalShortcuts(options: { isStandalone?: boolean } = {}) {
                 }
             }
 
-            // 2. Handle global shortcuts
+            // 2. App-wide sidebar navigation / rotation shortcuts (Only in main window)
+            if (!isStandalone) {
+                // Ctrl+Tab (rotate forward) and Ctrl+Shift+Tab (rotate backward) for Note Tabs
+                if (e.key === 'Tab' && e.ctrlKey) {
+                    e.preventDefault();
+                    const direction = e.shiftKey ? 'prev' : 'next';
+                    rotateNoteTab(direction);
+                    return;
+                }
+
+                // Cmd+Option+Right / Cmd+Option+] / Ctrl+Alt+Right / Ctrl+Alt+] (Rotate next sidebar tab)
+                if (isMod && e.altKey && (e.key === 'ArrowRight' || e.key === ']')) {
+                    e.preventDefault();
+                    rotateSidebarTab('next');
+                    return;
+                }
+
+                // Cmd+Option+Left / Cmd+Option+[ / Ctrl+Alt+Left / Ctrl+Alt+[ (Rotate prev)
+                if (isMod && e.altKey && (e.key === 'ArrowLeft' || e.key === '[')) {
+                    e.preventDefault();
+                    rotateSidebarTab('prev');
+                    return;
+                }
+            }
+
+            // 3. Handle global shortcuts
             if (isMod && !e.altKey) {
                 const key = e.key.toLowerCase();
                 const code = e.code;

@@ -8,6 +8,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { useAlwaysOnTop } from "../../hooks/use-always-on-top"
 import { Ionicons } from "../ui/ionicons"
+import { NoteTabs } from "./note-tabs"
 
 
 /**
@@ -100,6 +101,44 @@ export function MainNavbar() {
     };
 
 
+    const { open } = useSidebar();
+
+    const [primaryWidth, setPrimaryWidth] = useState(() => {
+        const saved = localStorage.getItem("sidebar_width");
+        return saved ? parseInt(saved, 10) : 260;
+    });
+
+    const [secondaryWidth, setSecondaryWidth] = useState(() => {
+        const saved = localStorage.getItem("ai-sidebar-width");
+        return saved ? parseInt(saved, 10) : 380;
+    });
+
+    useEffect(() => {
+        const handleResize = (e: Event) => {
+            const detail = (e as CustomEvent).detail;
+            if (detail.side === 'left') setPrimaryWidth(detail.width);
+            if (detail.side === 'right') setSecondaryWidth(detail.width);
+        };
+        window.addEventListener('sidebar-resize', handleResize);
+        return () => window.removeEventListener('sidebar-resize', handleResize);
+    }, []);
+
+    const isPaddingOnLeft = needsWindowControlsPadding && windowControlsSide === 'left';
+    const isPaddingOnRight = needsWindowControlsPadding && windowControlsSide === 'right';
+
+    const isRtl = general.appDirection === 'rtl';
+
+    let leftSectionPadding = 12;
+    let rightSectionPadding = 12;
+
+    if (isRtl) {
+        if (isPaddingOnRight) leftSectionPadding = 80;
+        if (isPaddingOnLeft) rightSectionPadding = 80;
+    } else {
+        if (isPaddingOnLeft) leftSectionPadding = 80;
+        if (isPaddingOnRight) rightSectionPadding = 80;
+    }
+
     return (
         <header
             data-tauri-drag-region
@@ -108,13 +147,20 @@ export function MainNavbar() {
                 "flex h-9 w-full shrink-0 rotate-0 items-center justify-between border-sidebar-border bg-sidebar px-3",
                 "select-none transition-[width,height,transform,opacity,border-color] duration-200 ease-in-out",
                 windowControlsPaddingClass,
-                general.appDirection === 'rtl' ? 'flex-row-reverse' : 'flex-row'
+                isRtl ? 'flex-row-reverse' : 'flex-row'
             )}
 
         >
             {/* Left Section: Sidebar Toggle & Search */}
-            <div className={cn("flex items-center gap-3", general.appDirection === 'rtl' && "flex-row-reverse")}>
-                <div className={cn("flex items-center gap-1", general.appDirection === 'rtl' && "flex-row-reverse")}>
+            <div
+                data-tauri-drag-region
+                className={cn("flex items-center gap-3 shrink-0 transition-all duration-300", isRtl && "flex-row-reverse")}
+                style={{
+                    width: open ? Math.max(0, primaryWidth - leftSectionPadding) : 'auto',
+                    minWidth: open ? Math.max(0, primaryWidth - leftSectionPadding) : 'auto'
+                }}
+            >
+                <div className={cn("flex items-center gap-1", isRtl && "flex-row-reverse")}>
                     <Tooltip>
                         <TooltipTrigger asChild>
                             <Button
@@ -123,7 +169,7 @@ export function MainNavbar() {
                                 className="h-6 w-6 transition-transform hover:bg-sidebar-accent hover:text-foreground active:scale-95 text-foreground/50"
                                 onClick={toggleSidebar}
                             >
-                                {general.appDirection === 'rtl' ? <PanelRight size={16} /> : <PanelLeft size={16} />}
+                                {isRtl ? <PanelRight size={16} /> : <PanelLeft size={16} />}
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent side="bottom" className="text-[10px]">
@@ -137,18 +183,18 @@ export function MainNavbar() {
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    disabled={general.appDirection === 'rtl' ? !canGoForward : !canGoBack}
+                                    disabled={isRtl ? !canGoForward : !canGoBack}
                                     className={cn(
                                         "h-6 w-6 text-muted-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-foreground",
-                                        (general.appDirection === 'rtl' ? !canGoForward : !canGoBack) && "opacity-30 cursor-not-allowed"
+                                        (isRtl ? !canGoForward : !canGoBack) && "opacity-30 cursor-not-allowed"
                                     )}
-                                    onClick={() => navigate(general.appDirection === 'rtl' ? 1 : -1)}
+                                    onClick={() => navigate(isRtl ? 1 : -1)}
                                 >
                                     <Ionicons name="chevron-back" size={15} />
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent side="bottom" className="text-[10px]">
-                                {general.appDirection === 'rtl' ? "Forward" : "Back"}
+                                {isRtl ? "Forward" : "Back"}
                             </TooltipContent>
                         </Tooltip>
 
@@ -157,27 +203,35 @@ export function MainNavbar() {
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    disabled={general.appDirection === 'rtl' ? !canGoBack : !canGoForward}
+                                    disabled={isRtl ? !canGoBack : !canGoForward}
                                     className={cn(
                                         "h-6 w-6 text-muted-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-foreground",
-                                        (general.appDirection === 'rtl' ? !canGoBack : !canGoForward) && "opacity-30 cursor-not-allowed"
+                                        (isRtl ? !canGoBack : !canGoForward) && "opacity-30 cursor-not-allowed"
                                     )}
-                                    onClick={() => navigate(general.appDirection === 'rtl' ? -1 : 1)}
+                                    onClick={() => navigate(isRtl ? -1 : 1)}
                                 >
                                     <Ionicons name="chevron-forward" size={15} />
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent side="bottom" className="text-[10px]">
-                                {general.appDirection === 'rtl' ? "Back" : "Forward"}
+                                {isRtl ? "Back" : "Forward"}
                             </TooltipContent>
                         </Tooltip>
                     </div>
                 </div>
-
             </div>
 
+            {general.enableNoteTabs !== false ? <NoteTabs /> : <div data-tauri-drag-region className="flex-1 h-full" />}
+
             {/* Right Section: Actions */}
-            <div className={cn("flex items-center gap-1.5", general.appDirection === 'rtl' && "flex-row-reverse")}>
+            <div
+                data-tauri-drag-region
+                className={cn("flex items-center gap-1.5 shrink-0 transition-all duration-300", isRtl ? "flex-row-reverse justify-end" : "justify-end")}
+                style={{
+                    width: general.isSecondarySidebarOpen && general.secondarySidebarMode === 'pinned' ? Math.max(0, secondaryWidth - rightSectionPadding) : 'auto',
+                    minWidth: general.isSecondarySidebarOpen && general.secondarySidebarMode === 'pinned' ? Math.max(0, secondaryWidth - rightSectionPadding) : 'auto'
+                }}
+            >
 
 
                 {session?.user?.id && <div className={cn(

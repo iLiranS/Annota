@@ -149,6 +149,14 @@ export function AppSidebar() {
     }, [isSearchOpen, setOpen, setIsSearchOpen]);
 
     useEffect(() => {
+        const handleOpenSidebar = () => {
+            setOpen(true);
+        };
+        window.addEventListener("open-sidebar", handleOpenSidebar);
+        return () => window.removeEventListener("open-sidebar", handleOpenSidebar);
+    }, [setOpen]);
+
+    useEffect(() => {
         localStorage.setItem("sidebar_active_tab", activeTab);
     }, [activeTab]);
 
@@ -204,6 +212,7 @@ export function AppSidebar() {
             const newWidth = isRtl ? window.innerWidth - e.clientX : e.clientX - 10;
             if (newWidth >= 180 && newWidth <= 450) {
                 setWidth(newWidth);
+                window.dispatchEvent(new CustomEvent('sidebar-resize', { detail: { width: newWidth, side: 'left' } }));
             }
         };
 

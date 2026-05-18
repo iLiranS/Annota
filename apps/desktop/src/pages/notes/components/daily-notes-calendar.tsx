@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import {
     DAILY_NOTES_FOLDER_ID,
     useNotesStore,
+    useSettingsStore,
 } from "@annota/core";
 import { eachDayOfInterval, endOfMonth, endOfWeek, format, isToday, startOfMonth, startOfWeek, } from "date-fns";
 import { BookOpen, ChevronLeft, ChevronRight, Plus } from "lucide-react";
@@ -14,6 +15,8 @@ import { toast } from "sonner";
 export function DailyNotesCalendar() {
     const navigate = useNavigate();
     const { notes, createNote } = useNotesStore();
+    const startOfWeekSetting = useSettingsStore((state) => state.general.startOfWeek);
+    const weekStartsOn = startOfWeekSetting === 'monday' ? 1 : 0;
 
 
     const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -23,14 +26,22 @@ export function DailyNotesCalendar() {
         return notes.filter(n => n.folderId === DAILY_NOTES_FOLDER_ID && !n.isDeleted);
     }, [notes]);
 
+    const weekDays = useMemo(() => {
+        const baseDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        if (startOfWeekSetting === 'monday') {
+            return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        }
+        return baseDays;
+    }, [startOfWeekSetting]);
+
     const calendarDays = useMemo(() => {
         const startOfSelectedMonth = startOfMonth(currentMonth);
         const endOfSelectedMonth = endOfMonth(currentMonth);
-        const startDate = startOfWeek(startOfSelectedMonth);
-        const endDate = endOfWeek(endOfSelectedMonth);
+        const startDate = startOfWeek(startOfSelectedMonth, { weekStartsOn });
+        const endDate = endOfWeek(endOfSelectedMonth, { weekStartsOn });
 
         return eachDayOfInterval({ start: startDate, end: endDate });
-    }, [currentMonth]);
+    }, [currentMonth, weekStartsOn]);
 
     const dailyNotesMap = useMemo(() => {
         const map: Record<string, any> = {};
@@ -120,7 +131,7 @@ export function DailyNotesCalendar() {
                 <div className="max-w-4xl w-full h-full flex flex-col items-center justify-start">
                     <div className="w-full bg-border/40 p-px rounded-xl overflow-hidden border border-border shadow-sm flex flex-col h-fit max-h-full">
                         <div className="grid grid-cols-7 bg-muted/50 border-b border-border">
-                            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                            {weekDays.map(day => (
                                 <div key={day} className="text-center text-[9px] font-bold text-muted-foreground uppercase tracking-widest py-2.5">
                                     {day}
                                 </div>

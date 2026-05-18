@@ -33,6 +33,8 @@ export interface GeneralSettings {
     showNotesCountInFolder: boolean;
     isAiEnabled: boolean;
     secondarySidebarTab: 'ai' | 'info' | 'tasks';
+    openNoteInNewTab: boolean;
+    enableNoteTabs: boolean;
 }
 
 export interface SettingsState {
@@ -88,6 +90,8 @@ const DEFAULT_GENERAL_SETTINGS: GeneralSettings = {
     showNotesCountInFolder: true,
     isAiEnabled: true,
     secondarySidebarTab: 'ai',
+    openNoteInNewTab: true,
+    enableNoteTabs: true,
 };
 
 export const useSettingsStore = create<SettingsState>()(

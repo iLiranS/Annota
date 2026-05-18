@@ -16,12 +16,13 @@ import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
+import { useNoteTabsStore } from "../../hooks/use-note-tabs";
 import { LocationPickerModal } from "../location-picker-modal";
 import { FolderEditModal } from "./folder-edit-modal";
 import { NotePreviewModal } from "./note-preview-modal";
 
 import { Slot } from "@radix-ui/react-slot";
-import { Pin, Star } from "lucide-react";
+import { PictureInPicture2, Pin, Star } from "lucide-react";
 
 interface NoteListItemProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     note: NoteMetadata;
@@ -180,6 +181,11 @@ export function NoteListItem({
         });
     }, [note.id, note.title]);
 
+    const handleOpenInNewTab = useCallback(() => {
+        useNoteTabsStore.getState().addTab({ noteId: note.id, folderId: note.folderId || 'root' });
+        navigateSmart(`/notes/${note.folderId || 'root'}/${note.id}`);
+    }, [note.id, note.folderId, navigateSmart]);
+
     const Comp = asChild ? Slot : "button";
 
     const Highlight = ({ text, query }: { text: string; query?: string }) => {
@@ -265,7 +271,7 @@ export function NoteListItem({
 
 
                                 {(() => {
-                                    if (!note.tags || note.tags === '[]' || (forceCompact && isInQuickAccess)) return null;
+                                    if (!note.tags || note.tags === '[]' || general.compactMode || (forceCompact && isInQuickAccess)) return null;
                                     try {
                                         const tagIds: string[] = JSON.parse(note.tags);
                                         if (tagIds.length === 0) return null;
@@ -338,8 +344,17 @@ export function NoteListItem({
                                     onSelect={handleOpenInNewWindow}
                                     onPointerUp={(e) => e.button === 2 && e.preventDefault()}
                                 >
-                                    <Ionicons name="open-outline" size={16} />
+                                    <PictureInPicture2 size={16} />
                                     <span>Open in New Window</span>
+                                </ContextMenuItem>
+                            )}
+                            {general.enableNoteTabs !== false && (
+                                <ContextMenuItem
+                                    onSelect={handleOpenInNewTab}
+                                    onPointerUp={(e) => e.button === 2 && e.preventDefault()}
+                                >
+                                    <Ionicons name="albums-outline" size={16} />
+                                    <span>Open in New Tab</span>
                                 </ContextMenuItem>
                             )}
 
