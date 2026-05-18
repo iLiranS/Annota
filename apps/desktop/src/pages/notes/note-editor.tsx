@@ -9,7 +9,7 @@ import { NotePreviewModal } from "@/components/notes/note-preview-modal";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useOpenNoteInNewWindow } from "@/hooks/use-open-note-in-new-window";
-import { cn } from "@/lib/utils";
+import { cn, isRtl } from "@/lib/utils";
 import { NoteMetadata, TRASH_FOLDER_ID, useNotesStore, useSettingsStore } from "@annota/core";
 import TipTapEditor, { TipTapEditorRef } from "@annota/editor-ui";
 import { FileText, Loader2 } from "lucide-react";
@@ -20,11 +20,11 @@ import { NoteFloatingActions } from "./components/note-floating-actions";
 import { NoteRestoreButton } from "./components/note-restore-button";
 import { NoteSearch } from "./components/note-search";
 import { NoteTags } from "./components/note-tags";
-import { useNoteEditorContent } from "./hooks/use-note-editor-content";
-import { useNoteEditorSearch } from "./hooks/use-note-editor-search";
 import { useBlockMenuHandler } from "./hooks/use-block-menu-handler";
 import { useNoteEditorAI } from "./hooks/use-note-editor-ai";
 import { useNoteEditorCommands } from "./hooks/use-note-editor-commands";
+import { useNoteEditorContent } from "./hooks/use-note-editor-content";
+import { useNoteEditorSearch } from "./hooks/use-note-editor-search";
 
 export interface NoteEditorProps {
     noteId?: string;
@@ -50,6 +50,9 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
     const setLastViewed = useSettingsStore((s) => s.setLastViewed);
     const direction = useSettingsStore((s) => s.editor.direction);
     const note = notes.find((n) => n.id === noteId);
+    const resolvedDirection = direction === 'auto'
+        ? (note?.title && isRtl(note.title) ? 'rtl' : 'ltr')
+        : direction;
     const { isDark, colors } = useAppTheme();
 
     const editorRef = useRef<TipTapEditorRef>(null);
@@ -269,14 +272,17 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
                             contentPaddingTop={0}
                             placeholder="Start typing..."
                             renderStaticHeader={() => (
-                                <div className={cn("py-2 px-1", direction === 'rtl' ? "pl-20" : "pr-20")}>
+                                <div 
+                                    dir={resolvedDirection}
+                                    className={cn("py-2 px-1", resolvedDirection === 'rtl' ? "pl-20" : "pr-20")}
+                                >
                                     <NoteTags noteId={noteId ?? ''} onTagClick={onTagClick} />
                                 </div>
                             )}
                             renderHeader={() => (
                                 <NoteFloatingActions
                                     note={note}
-                                    direction={direction === 'auto' ? 'ltr' : direction}
+                                    direction={resolvedDirection}
                                     onToggleSearch={() => setIsSearching(prev => !prev)}
                                     onRevert={(content) => {
                                         setInitialContent(content);
@@ -284,7 +290,7 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
                                     }}
                                     className={cn(
                                         "absolute top-2  pointer-events-auto shadow-md",
-                                        direction === 'rtl' ? "left-4" : "right-4"
+                                        resolvedDirection === 'rtl' ? "left-4" : "right-4"
                                     )}
                                 />
                             )}
@@ -386,7 +392,7 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
                         isLoading={isAiStreaming}
                         anchorRect={aiSelection.anchorRect}
                         cursorPosition={aiSelection.cursorPosition}
-                        direction={direction}
+                        direction={resolvedDirection}
                         onAction={handleAIAction}
                         onClose={hideAISelection}
                         onStop={stopAiChat}

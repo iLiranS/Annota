@@ -406,13 +406,31 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                             }, toolbarHeight,
                             onDismissKeyboard: () => { dispatchCommand('blur'); Keyboard.dismiss(); },
                             activePopup,
-                            onActivePopupChange: (type) => { setActivePopup(type); setIsPopupOpen(!!type); },
-                            onPopupStateChange: (isOpen) => { if (!isOpen) setIsPopupOpen(false); },
+                            onActivePopupChange: (type) => {
+                                setActivePopup(type);
+                                setIsPopupOpen(!!type);
+                                if (!type) {
+                                    setCurrentLatex(null);
+                                    setIsBlockMath(false);
+                                }
+                            },
+                            onPopupStateChange: (isOpen) => {
+                                if (!isOpen) {
+                                    setIsPopupOpen(false);
+                                    setCurrentLatex(null);
+                                    setIsBlockMath(false);
+                                }
+                            },
                             onInsertFile: handleInsertFile,
                             currentLatex,
                             isBlockMath,
                             blockData,
-                            onInsertMath: () => { setActivePopup('math'); setIsPopupOpen(true); }
+                            onInsertMath: () => {
+                                setCurrentLatex(null);
+                                setIsBlockMath(false);
+                                setActivePopup('math');
+                                setIsPopupOpen(true);
+                            }
                         })}
                     </View>
                 )}

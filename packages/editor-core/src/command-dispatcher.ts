@@ -132,7 +132,27 @@ export async function dispatchEditorCommand(editor: Editor, command: string, par
 
             if (isMathNode && selection.node) {
                 //@ts-ignore
-                chain.updateAttributes(selection.node.type.name, { latex: params.latex }).focus().run();
+                const currentType = selection.node.type.name;
+                const newType = params.isBlock ? 'blockMath' : 'inlineMath';
+                if (currentType === newType) {
+                    //@ts-ignore
+                    chain.updateAttributes(currentType, { latex: params.latex }).focus().run();
+                } else {
+                    // Replace the node with the other type
+                    chain.deleteSelection();
+                    if (params.isBlock) {
+                        chain.insertContent([
+                            { type: 'blockMath', attrs: { latex: params.latex } },
+                            { type: 'paragraph' }
+                        ]);
+                    } else {
+                        chain.insertContent([
+                            { type: 'inlineMath', attrs: { latex: params.latex } },
+                            { type: 'text', text: ' ' },
+                        ]);
+                    }
+                    chain.focus().run();
+                }
             } else {
                 if (params?.isBlock) {
                     chain

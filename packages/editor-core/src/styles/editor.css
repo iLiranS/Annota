@@ -363,7 +363,7 @@
     -webkit-user-select: none;
     /* Must sit above code-block stacking contexts (z-index: 2) */
     z-index: 10;
-    position: relative;
+    position: absolute;
 }
 
 

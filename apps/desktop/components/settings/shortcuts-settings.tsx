@@ -49,6 +49,7 @@ export function ShortcutsSettings() {
                     <ShortcutItem label="Settings" keys={[modKey, ","]} />
                     <ShortcutItem label="Always on Top" keys={[modKey, "Shift", "T"]} />
                     <ShortcutItem label="Rotate Note Tabs" keys={["Ctrl", "Tab"]} description="Rotate between opened note tabs" />
+                    <ShortcutItem label="Close Current Tab" keys={[modKey, "W"]} description="Close the active note tab" />
                     <ShortcutItem label="Next Sidebar Tab" keys={isMac ? [modKey, "⌥", "→"] : [modKey, "Alt", "→"]} description={`Also works with ${isMac ? "⌘+⌥+]" : "Ctrl+Alt+]"}`} />
                     <ShortcutItem label="Previous Sidebar Tab" keys={isMac ? [modKey, "⌥", "←"] : [modKey, "Alt", "←"]} description={`Also works with ${isMac ? "⌘+⌥+[" : "Ctrl+Alt+["}`} />
                     <ShortcutItem label="Zoom In" keys={[modKey, "+"]} />

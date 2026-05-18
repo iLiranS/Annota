@@ -1,9 +1,3 @@
-import { cn } from "@/lib/utils";
-import { useNotesStore, useSettingsStore } from "@annota/core";
-import { X, XCircle } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { useNoteTabsStore } from "../../hooks/use-note-tabs";
 import {
     ContextMenu,
     ContextMenuContent,
@@ -11,67 +5,116 @@ import {
     ContextMenuSeparator,
     ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import { cn } from "@/lib/utils";
+import { DAILY_NOTES_FOLDER_ID, TRASH_FOLDER_ID, useNavigationStore, useNotesStore, useSettingsStore } from "@annota/core";
+import { FileText, Pin, X, XCircle } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useNoteTabsStore } from "../../hooks/use-note-tabs";
 
 export function NoteTabs() {
     const { folderId: routeFolderId, noteId: routeNoteId } = useParams();
+    const [searchParams] = useSearchParams();
     const location = useLocation();
     const navigate = useNavigate();
     const { general } = useSettingsStore();
+    const quickAccessNoteId = useNavigationStore(s => s.quickAccessNoteId);
+    const setQuickAccessView = useNavigationStore(s => s.setQuickAccessView);
 
     const tabs = useNoteTabsStore(s => s.tabs);
     const addTab = useNoteTabsStore(s => s.addTab);
     const removeTab = useNoteTabsStore(s => s.removeTab);
     const setTabs = useNoteTabsStore(s => s.setTabs);
     const reorderTabs = useNoteTabsStore(s => s.reorderTabs);
+    const togglePinTab = useNoteTabsStore(s => s.togglePinTab);
 
     const notes = useNotesStore(s => s.notes);
 
     const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
     const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
-    const lastRouteNoteIdRef = useRef(routeNoteId);
+    const searchFolderId = searchParams.get("folderId");
+    const isSpecialView = searchFolderId === DAILY_NOTES_FOLDER_ID || searchFolderId === TRASH_FOLDER_ID || routeFolderId === TRASH_FOLDER_ID;
+    const lastViewedNoteId = useSettingsStore(s => s.lastViewedNoteId);
+
+    const activeNoteId = useMemo(() => {
+        if (isSpecialView) return null;
+        if (quickAccessNoteId) return quickAccessNoteId;
+        if (routeNoteId) return routeNoteId;
+        if (lastViewedNoteId) return lastViewedNoteId;
+        return null;
+    }, [isSpecialView, quickAccessNoteId, routeNoteId, lastViewedNoteId]);
+
+    const lastRouteNoteIdRef = useRef(activeNoteId);
 
     // 1. Sync current route to tabs
     useEffect(() => {
-        if (routeNoteId && location.pathname.startsWith('/notes')) {
+        if (activeNoteId && location.pathname.startsWith('/notes')) {
             const currentTabs = useNoteTabsStore.getState().tabs;
-            const existingTab = currentTabs.find(t => t.noteId === routeNoteId);
+            const existingTab = currentTabs.find(t => t.noteId === activeNoteId);
 
             if (!existingTab) {
                 if (general.openNoteInNewTab === false) {
-                    // Replace the previously active tab with the new one
+                    // Replace the previously active tab with the new one, unless it is pinned
                     const lastId = lastRouteNoteIdRef.current;
                     const newTabs = [...currentTabs];
                     const indexToReplace = newTabs.findIndex(t => t.noteId === lastId);
-                    
-                    if (indexToReplace !== -1) {
-                        newTabs[indexToReplace] = { noteId: routeNoteId, folderId: routeFolderId || 'root' };
+
+                    const tabToReplace = indexToReplace !== -1 ? newTabs[indexToReplace] : null;
+                    const isPinned = tabToReplace?.isPinned === true;
+
+                    if (indexToReplace !== -1 && !isPinned) {
+                        newTabs[indexToReplace] = { noteId: activeNoteId, folderId: routeFolderId || 'root' };
                         setTabs(newTabs);
-                    } else if (newTabs.length > 0) {
-                        // Fallback: replace the first tab
-                        newTabs[0] = { noteId: routeNoteId, folderId: routeFolderId || 'root' };
+                    } else if (newTabs.length > 0 && !isPinned && !newTabs[0].isPinned) {
+                        // Fallback: replace the first tab if it is not pinned
+                        newTabs[0] = { noteId: activeNoteId, folderId: routeFolderId || 'root' };
                         setTabs(newTabs);
                     } else {
-                        setTabs([{ noteId: routeNoteId, folderId: routeFolderId || 'root' }]);
+                        addTab({ noteId: activeNoteId, folderId: routeFolderId || 'root' });
                     }
                 } else {
-                    addTab({ noteId: routeNoteId, folderId: routeFolderId || 'root' });
+                    addTab({ noteId: activeNoteId, folderId: routeFolderId || 'root' });
                 }
             }
         }
-        lastRouteNoteIdRef.current = routeNoteId;
-    }, [routeNoteId, routeFolderId, location.pathname, addTab, general.openNoteInNewTab, setTabs]);
+        lastRouteNoteIdRef.current = activeNoteId;
+    }, [activeNoteId, routeFolderId, location.pathname, addTab, general.openNoteInNewTab, setTabs]);
 
     useEffect(() => {
         const handleNavigate = (e: Event) => {
             const customEvent = e as CustomEvent;
             if (customEvent.detail && customEvent.detail.noteId) {
-                navigate(`/notes/${customEvent.detail.folderId}/${customEvent.detail.noteId}`);
+                const folderId = routeFolderId || "root";
+                setQuickAccessView(customEvent.detail.noteId, folderId);
+                navigate(`/notes/${folderId}/${customEvent.detail.noteId}`);
             }
         };
         window.addEventListener('navigate-note-tab', handleNavigate);
         return () => window.removeEventListener('navigate-note-tab', handleNavigate);
-    }, [navigate]);
+    }, [navigate, routeFolderId, setQuickAccessView]);
+
+    useEffect(() => {
+        const handleCloseCurrentTab = () => {
+            if (activeNoteId) {
+                const tabIndex = tabs.findIndex(t => t.noteId === activeNoteId);
+                if (tabIndex === -1) return;
+
+                if (tabs.length > 1) {
+                    const nextTab = tabs[tabIndex === tabs.length - 1 ? tabIndex - 1 : tabIndex + 1];
+                    const folderId = routeFolderId || "root";
+                    setQuickAccessView(nextTab.noteId, folderId);
+                    navigate(`/notes/${folderId}/${nextTab.noteId}`);
+                } else {
+                    navigate('/notes');
+                }
+
+                removeTab(activeNoteId);
+            }
+        };
+        window.addEventListener('close-current-note-tab', handleCloseCurrentTab);
+        return () => window.removeEventListener('close-current-note-tab', handleCloseCurrentTab);
+    }, [activeNoteId, tabs, routeFolderId, navigate, setQuickAccessView, removeTab]);
 
     // 2. Validate tabs (remove deleted/missing notes)
     useEffect(() => {
@@ -96,10 +139,12 @@ export function NoteTabs() {
         const tabIndex = tabs.findIndex(t => t.noteId === tabId);
         if (tabIndex === -1) return;
 
-        if (tabId === routeNoteId) {
+        if (tabId === activeNoteId) {
             if (tabs.length > 1) {
                 const nextTab = tabs[tabIndex === tabs.length - 1 ? tabIndex - 1 : tabIndex + 1];
-                navigate(`/notes/${nextTab.folderId}/${nextTab.noteId}`);
+                const folderId = routeFolderId || "root";
+                setQuickAccessView(nextTab.noteId, folderId);
+                navigate(`/notes/${folderId}/${nextTab.noteId}`);
             } else {
                 navigate('/notes');
             }
@@ -109,33 +154,79 @@ export function NoteTabs() {
     };
 
     const handleCloseOtherTabs = (tabId: string) => {
-        const tabToKeep = tabs.find(t => t.noteId === tabId);
-        if (tabToKeep) {
-            setTabs([tabToKeep]);
-            navigate(`/notes/${tabToKeep.folderId}/${tabToKeep.noteId}`);
+        const keptTabs = tabs.filter(t => t.noteId === tabId || t.isPinned);
+        setTabs(keptTabs);
+
+        const stillHasActive = keptTabs.some(t => t.noteId === activeNoteId);
+        if (!stillHasActive && keptTabs.length > 0) {
+            const firstTab = keptTabs[0];
+            const folderId = routeFolderId || "root";
+            setQuickAccessView(firstTab.noteId, folderId);
+            navigate(`/notes/${folderId}/${firstTab.noteId}`);
+        } else if (keptTabs.length === 0) {
+            navigate('/notes');
         }
+    };
+
+    const handleOpenNote = (noteId: string) => {
+        const note = notes.find(n => n.id === noteId);
+        if (!note) return;
+
+        const folderId = note.folderId || 'root';
+        const currentTabs = useNoteTabsStore.getState().tabs;
+        const existingTab = currentTabs.find(t => t.noteId === noteId);
+
+        if (!existingTab) {
+            addTab({ noteId, folderId });
+        }
+
+        const currentFolderId = routeFolderId || "root";
+        setQuickAccessView(noteId, currentFolderId);
+        navigate(`/notes/${currentFolderId}/${noteId}`);
     };
 
     const containerRef = useRef<HTMLDivElement>(null);
 
     // Auto scroll to active tab
     useEffect(() => {
-        if (routeNoteId && containerRef.current) {
-            const activeEl = containerRef.current.querySelector(`[data-tab-id="${routeNoteId}"]`);
+        if (activeNoteId && containerRef.current) {
+            const activeEl = containerRef.current.querySelector(`[data-tab-id="${activeNoteId}"]`);
             if (activeEl) {
                 activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
             }
         }
-    }, [routeNoteId, tabs]);
+    }, [activeNoteId, tabs]);
 
-    if (tabs.length === 0) return <div className="flex-1" style={{ WebkitAppRegion: 'drag' } as any} />;
+    if (tabs.length === 0) {
+        return (
+            <div
+                data-tauri-drag-region
+                className="flex-1 h-full"
+                style={{ WebkitAppRegion: 'drag' } as any}
+                onDragOver={(e) => {
+                    if (e.dataTransfer.types.includes("application/annota-note-id")) {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = "copy";
+                    }
+                }}
+                onDrop={(e) => {
+                    if (e.dataTransfer.types.includes("application/annota-note-id")) {
+                        const noteId = e.dataTransfer.getData("application/annota-note-id");
+                        if (noteId) {
+                            e.preventDefault();
+                            handleOpenNote(noteId);
+                        }
+                    }
+                }}
+            />
+        );
+    }
 
     return (
         <div
-
             ref={containerRef}
             className={cn(
-                "flex-1 flex items-end h-full overflow-x-auto overflow-y-hidden ml-2 mr-2",
+                "flex-1 flex items-center h-full overflow-x-auto overflow-y-hidden ml-2 mr-2",
                 general.appDirection === 'rtl' ? 'flex-row-reverse' : 'flex-row'
             )}
             style={{
@@ -143,20 +234,53 @@ export function NoteTabs() {
                 scrollbarWidth: 'none',
                 msOverflowStyle: 'none'
             } as any}
+            onDragOver={(e) => {
+                if (e.dataTransfer.types.includes("application/annota-note-id")) {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = "copy";
+                }
+            }}
+            onDrop={(e) => {
+                if (e.dataTransfer.types.includes("application/annota-note-id")) {
+                    const noteId = e.dataTransfer.getData("application/annota-note-id");
+                    if (noteId) {
+                        e.preventDefault();
+                        handleOpenNote(noteId);
+                    }
+                }
+            }}
         >
             <style>{`
                 .note-tabs-container::-webkit-scrollbar {
                     display: none;
                 }
             `}</style>
-            <div data-tauri-drag-region className={cn(
-                "note-tabs-container flex w-full h-full items-end gap-0.5 transition-all duration-300 px-5",
-                general.appDirection === 'rtl' ? 'flex-row-reverse' : 'flex-row'
-            )}>
+            <div
+                data-tauri-drag-region
+                className={cn(
+                    "note-tabs-container flex w-full h-full items-center gap-1.5  px-5",
+                    general.appDirection === 'rtl' ? 'flex-row-reverse' : 'flex-row'
+                )}
+                onDragOver={(e) => {
+                    if (e.dataTransfer.types.includes("application/annota-note-id")) {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = "copy";
+                    }
+                }}
+                onDrop={(e) => {
+                    if (e.dataTransfer.types.includes("application/annota-note-id")) {
+                        const noteId = e.dataTransfer.getData("application/annota-note-id");
+                        if (noteId) {
+                            e.preventDefault();
+                            handleOpenNote(noteId);
+                        }
+                    }
+                }}
+            >
                 {tabs.map((tab, index) => {
                     const note = notes.find(n => n.id === tab.noteId);
                     if (!note) return null;
-                    const isActive = tab.noteId === routeNoteId;
+                    const isActive = tab.noteId === activeNoteId;
 
                     return (
                         <ContextMenu key={tab.noteId}>
@@ -169,6 +293,11 @@ export function NoteTabs() {
                                         e.dataTransfer.effectAllowed = "move";
                                     }}
                                     onDragOver={(e) => {
+                                        if (e.dataTransfer.types.includes("application/annota-note-id")) {
+                                            e.preventDefault();
+                                            e.dataTransfer.dropEffect = "copy";
+                                            return;
+                                        }
                                         e.preventDefault(); // Necessary to allow dropping
                                         if (draggedIndex !== null && draggedIndex !== index) {
                                             setDragOverIndex(index);
@@ -184,6 +313,14 @@ export function NoteTabs() {
                                         setDragOverIndex(null);
                                     }}
                                     onDrop={(e) => {
+                                        if (e.dataTransfer.types.includes("application/annota-note-id")) {
+                                            const noteId = e.dataTransfer.getData("application/annota-note-id");
+                                            if (noteId) {
+                                                e.preventDefault();
+                                                handleOpenNote(noteId);
+                                            }
+                                            return;
+                                        }
                                         e.preventDefault();
                                         if (draggedIndex !== null && draggedIndex !== index) {
                                             reorderTabs(draggedIndex, index);
@@ -191,46 +328,62 @@ export function NoteTabs() {
                                         setDraggedIndex(null);
                                         setDragOverIndex(null);
                                     }}
-                                    onClick={() => navigate(`/notes/${tab.folderId}/${tab.noteId}`)}
+                                    onClick={() => {
+                                        const folderId = routeFolderId || "root";
+                                        setQuickAccessView(tab.noteId, folderId);
+                                        navigate(`/notes/${folderId}/${tab.noteId}`);
+                                    }}
                                     className={cn(
-                                        "group relative flex h-[28px] cursor-pointer items-center justify-between gap-2 rounded-t-md border-x border-t px-3 text-xs transition-all duration-300 ease-in-out",
+                                        "group relative flex h-9/12 cursor-pointer items-center justify-between gap-2 rounded border px-1 text-xs select-none",
                                         isActive
-                                            ? "bg-accent/30 border-border text-foreground z-10 before:absolute before:-bottom-px before:left-0 before:right-0 before:h-px before:bg-background shrink-0 min-w-[120px] max-w-[220px] w-auto"
-                                            : "bg-sidebar border-transparent text-muted-foreground hover:bg-sidebar-accent hover:text-foreground z-0 shrink min-w-[45px] max-w-[220px] w-auto",
+                                            ? "bg-note-bg dark:bg-primary/10 border-border text-primary  z-10 shrink min-w-[120px] max-w-[220px] w-auto font-medium"
+                                            : "bg-transparent border-transparent text-muted-foreground/60 hover:bg-primary/5 hover:text-muted-foreground/80 hover:border-border/30 z-0 shrink min-w-[120px] max-w-[220px] w-auto",
                                         draggedIndex === index && "opacity-50",
                                         dragOverIndex === index && "bg-sidebar-accent",
                                         general.appDirection === 'rtl' ? 'flex-row-reverse' : 'flex-row'
                                     )}
                                 >
-                                    <span className="truncate flex-1 text-[11px] font-medium select-none">
+                                    {tab.isPinned ? (
+                                        <Pin size={11} className={cn(
+                                            "shrink-0  rotate-45 fill-current",
+                                            isActive ? "text-accent-full" : "text-muted-foreground/40 group-hover:text-muted-foreground/70"
+                                        )} />
+                                    ) : (
+                                        <FileText size={11} className={cn(
+                                            "shrink-0 ",
+                                            isActive ? "text-accent-full" : "text-muted-foreground/40 group-hover:text-muted-foreground/70"
+                                        )} />
+                                    )}
+
+                                    <span style={{ direction: general.appDirection === 'rtl' ? 'rtl' : 'ltr' }} className={cn(
+                                        "truncate flex-1 text-[11px] select-none",
+                                        isActive ? "font-semibold" : "font-medium"
+                                    )}>
                                         {note.title || "Untitled"}
                                     </span>
 
                                     <div
                                         className={cn(
-                                            "flex h-4 w-4 shrink-0 items-center justify-center rounded-sm transition-colors",
-                                            isActive ? "opacity-100 hover:bg-accent hover:text-foreground" : "opacity-0 group-hover:opacity-100 hover:bg-background/80 hover:text-foreground"
+                                            "flex p-0.5 shrink-0 items-center justify-center rounded-full ",
+                                            isActive ? "opacity-85 hover:bg-primary/10 hover:text-primary" : "opacity-0 group-hover:opacity-60 hover:bg-sidebar-accent hover:text-foreground"
                                         )}
                                         onClick={(e) => handleClose(e, tab.noteId)}
                                     >
-                                        <X size={12} strokeWidth={2.5} />
+                                        <X size={14} strokeWidth={2.5} />
                                     </div>
-
-                                    {/* Visual separator for inactive tabs */}
-                                    {!isActive && (
-                                        <div className={cn(
-                                            "absolute top-1/4 bottom-1/4 w-px bg-border/40 transition-opacity group-hover:opacity-0",
-                                            general.appDirection === 'rtl' ? 'left-px' : 'right-px'
-                                        )} />
-                                    )}
                                 </div>
                             </ContextMenuTrigger>
                             <ContextMenuContent className="w-48">
+                                <ContextMenuItem onClick={() => togglePinTab(tab.noteId)} className="gap-2">
+                                    <Pin size={15} className={cn("text-muted-foreground", tab.isPinned && "rotate-45 fill-current")} />
+                                    <span>{tab.isPinned ? "Unpin Tab" : "Pin Tab"}</span>
+                                </ContextMenuItem>
+                                <ContextMenuSeparator />
+
                                 <ContextMenuItem onClick={() => handleCloseOtherTabs(tab.noteId)} className="gap-2">
                                     <XCircle size={15} className="text-muted-foreground" />
                                     <span>Close Other Tabs</span>
                                 </ContextMenuItem>
-                                <ContextMenuSeparator />
                                 <ContextMenuItem onClick={(e) => handleClose(e as any, tab.noteId)} className="gap-2 text-destructive focus:bg-destructive/10 focus:text-destructive">
                                     <X size={15} />
                                     <span>Close Tab</span>

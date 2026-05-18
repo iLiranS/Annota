@@ -268,6 +268,10 @@ export const getExtensions = async (options: Parameters<typeof getBaseExtensions
                 DragHandle.configure({
                     render() {
                         const el = document.createElement('div');
+                        // Set inline visibility hidden initially so that the CSS selector
+                        // not([style*="visibility: hidden"]) correctly matches it as hidden
+                        // and prevents showing it at top-left before the first hover/recalculation.
+                        el.style.visibility = 'hidden';
                         el.classList.add('annota-drag-handle');
                         el.setAttribute('aria-label', 'Drag to reorder block');
                         el.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 16" width="10" height="16" fill="currentColor"><circle cx="3" cy="2" r="1.2"/><circle cx="7" cy="2" r="1.2"/><circle cx="3" cy="6" r="1.2"/><circle cx="7" cy="6" r="1.2"/><circle cx="3" cy="10" r="1.2"/><circle cx="7" cy="10" r="1.2"/><circle cx="3" cy="14" r="1.2"/><circle cx="7" cy="14" r="1.2"/></svg>`;
@@ -282,6 +286,7 @@ export const getExtensions = async (options: Parameters<typeof getBaseExtensions
                         strategy: 'absolute',
                     },
                     onNodeChange({ node, editor: _editor }) {
+
                         // Always clear previous hover class first — this is safe outside
                         // contenteditable and does not disturb the browser's text selection.
                         document.querySelectorAll('.drag-handle-hover').forEach(el => {

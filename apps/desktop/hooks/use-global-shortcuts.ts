@@ -134,6 +134,9 @@ export function useGlobalShortcuts(options: { isStandalone?: boolean } = {}) {
                     } else if ((code === 'Comma' || key === ',') && !e.shiftKey) {
                         e.preventDefault();
                         setSettingsOpen(true);
+                    } else if (code === 'KeyW' && !e.shiftKey) {
+                        e.preventDefault();
+                        window.dispatchEvent(new CustomEvent('close-current-note-tab'));
                     }
                 }
             }

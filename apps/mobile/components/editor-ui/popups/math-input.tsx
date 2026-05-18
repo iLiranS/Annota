@@ -170,31 +170,29 @@ export function MathInput({ currentLatex, isBlock = false, onSubmit, onClose }: 
                 </Pressable>
             </View>
 
-            {!currentLatex && (
-                <View style={styles.toggleRow}>
-                    <Text style={[styles.toggleLabel, { color: colors.text, opacity: 0.6 }]}>DISPLAY MODE</Text>
-                    <View style={[styles.toggleContainer, { backgroundColor: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)', borderColor: colors.border }]}>
-                        <Pressable
-                            style={[
-                                styles.toggleButton,
-                                !isBlockInput && [styles.toggleActiveButton, { backgroundColor: colors.card }],
-                            ]}
-                            onPress={() => setIsBlockInput(false)}
-                        >
-                            <Text style={[styles.toggleButtonText, { color: colors.text, fontWeight: !isBlockInput ? '600' : '400' }]}>Inline</Text>
-                        </Pressable>
-                        <Pressable
-                            style={[
-                                styles.toggleButton,
-                                isBlockInput && [styles.toggleActiveButton, { backgroundColor: colors.card }],
-                            ]}
-                            onPress={() => setIsBlockInput(true)}
-                        >
-                            <Text style={[styles.toggleButtonText, { color: colors.text, fontWeight: isBlockInput ? '600' : '400' }]}>Block</Text>
-                        </Pressable>
-                    </View>
+            <View style={styles.toggleRow}>
+                <Text style={[styles.toggleLabel, { color: colors.text, opacity: 0.6 }]}>DISPLAY MODE</Text>
+                <View style={[styles.toggleContainer, { backgroundColor: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)', borderColor: colors.border }]}>
+                    <Pressable
+                        style={[
+                            styles.toggleButton,
+                            !isBlockInput && [styles.toggleActiveButton, { backgroundColor: colors.card }],
+                        ]}
+                        onPress={() => setIsBlockInput(false)}
+                    >
+                        <Text style={[styles.toggleButtonText, { color: colors.text, fontWeight: !isBlockInput ? '600' : '400' }]}>Inline</Text>
+                    </Pressable>
+                    <Pressable
+                        style={[
+                            styles.toggleButton,
+                            isBlockInput && [styles.toggleActiveButton, { backgroundColor: colors.card }],
+                        ]}
+                        onPress={() => setIsBlockInput(true)}
+                    >
+                        <Text style={[styles.toggleButtonText, { color: colors.text, fontWeight: isBlockInput ? '600' : '400' }]}>Block</Text>
+                    </Pressable>
                 </View>
-            )}
+            </View>
 
             <View style={styles.section}>
                 <Text style={[styles.label, { color: colors.text, opacity: 0.6 }]}>PREVIEW</Text>

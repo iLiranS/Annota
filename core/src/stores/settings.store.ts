@@ -70,7 +70,7 @@ const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
     paragraphSpacing: 8,
     fontFamily: 'system',
     floatingNoteHeader: true,
-    noteWidth: 900,
+    noteWidth: 1000,
 
     defaultCodeLanguage: null,
     spellcheck: true,

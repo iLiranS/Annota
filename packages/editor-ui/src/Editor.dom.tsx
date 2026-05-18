@@ -756,8 +756,20 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                     toolbarHeight: 50,
                     onDismissKeyboard: () => editor?.commands.blur(),
                     activePopup: activePopup as any,
-                    onActivePopupChange: setActivePopup as any,
-                    onPopupStateChange: (isOpen) => { if (!isOpen) setActivePopup(null); },
+                    onActivePopupChange: (type) => {
+                        setActivePopup(type as any);
+                        if (!type) {
+                            setCurrentLatex(null);
+                            setIsBlockMath(false);
+                        }
+                    },
+                    onPopupStateChange: (isOpen) => {
+                        if (!isOpen) {
+                            setActivePopup(null);
+                            setCurrentLatex(null);
+                            setIsBlockMath(false);
+                        }
+                    },
                     onInsertFile: async (source: 'url' | 'library' | 'camera' | 'document', value?: string) => {
                         if (!noteId) return false;
                         try {
@@ -801,6 +813,8 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                     isBlockMath,
                     blockData: null,
                     onInsertMath: () => {
+                        setCurrentLatex(null);
+                        setIsBlockMath(false);
                         setActivePopup('math');
                     }
                 })}

@@ -135,37 +135,35 @@ export function MathPopover({ sendCommand, onOpenChange, visible, currentLatex, 
                     />
                 </div>
 
-                {!currentLatex && (
-                    <div className="flex items-center justify-between py-2 my-2 border-b border-border/40 animate-in fade-in duration-200">
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-70">Display Mode</span>
-                        <div className="flex bg-muted/60 p-0.5 rounded-lg border border-border/40 select-none">
-                            <button
-                                type="button"
-                                onClick={() => setIsBlockInput(false)}
-                                className={cn(
-                                    "px-3 py-1 text-xs font-semibold rounded-md transition-all duration-200",
-                                    !isBlockInput 
-                                        ? "bg-background text-foreground shadow-sm scale-100" 
-                                        : "text-muted-foreground hover:text-foreground opacity-80 hover:opacity-100"
-                                )}
-                            >
-                                Inline
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setIsBlockInput(true)}
-                                className={cn(
-                                    "px-3 py-1 text-xs font-semibold rounded-md transition-all duration-200",
-                                    isBlockInput 
-                                        ? "bg-background text-foreground shadow-sm scale-100" 
-                                        : "text-muted-foreground hover:text-foreground opacity-80 hover:opacity-100"
-                                )}
-                            >
-                                Block
-                            </button>
-                        </div>
+                <div className="flex items-center justify-between py-2 my-2 border-b border-border/40 animate-in fade-in duration-200">
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-70">Display Mode</span>
+                    <div className="flex bg-muted/60 p-0.5 rounded-lg border border-border/40 select-none">
+                        <button
+                            type="button"
+                            onClick={() => setIsBlockInput(false)}
+                            className={cn(
+                                "px-3 py-1 text-xs font-semibold rounded-md transition-all duration-200",
+                                !isBlockInput 
+                                    ? "bg-background text-foreground shadow-sm scale-100" 
+                                    : "text-muted-foreground hover:text-foreground opacity-80 hover:opacity-100"
+                            )}
+                        >
+                            Inline
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setIsBlockInput(true)}
+                            className={cn(
+                                "px-3 py-1 text-xs font-semibold rounded-md transition-all duration-200",
+                                isBlockInput 
+                                    ? "bg-background text-foreground shadow-sm scale-100" 
+                                    : "text-muted-foreground hover:text-foreground opacity-80 hover:opacity-100"
+                            )}
+                        >
+                            Block
+                        </button>
                     </div>
-                )}
+                </div>
 
                 <div className="space-y-2">
                     <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-70">Preview</label>
