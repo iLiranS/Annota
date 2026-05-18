@@ -346,6 +346,13 @@ function MediaCard({
                         <Ionicons name="time-outline" size={10} color="#fff" />
                     </View>
                 )}
+
+                {item.notes.length > 0 && (
+                    <View style={styles.notesCountBadge}>
+                        <Ionicons name="document-text" size={10} color="#fff" />
+                        <Text style={styles.notesCountText}>{item.notes.length}</Text>
+                    </View>
+                )}
             </View>
         </HapticPressable>
     );
@@ -395,6 +402,24 @@ const styles = StyleSheet.create({
         paddingHorizontal: 6,
         paddingVertical: 2,
         borderRadius: 4,
+    },
+    notesCountBadge: {
+        position: 'absolute',
+        bottom: 6,
+        right: 6,
+        backgroundColor: 'rgba(0, 0, 0, 0.65)',
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 8,
+        gap: 3,
+    },
+    notesCountText: {
+        color: '#fff',
+        fontSize: 10,
+        fontWeight: 'bold',
+        lineHeight: 12,
     },
     emptyContainer: {
         flex: 1,

@@ -47,7 +47,7 @@ export function StandaloneNavbar({ title }: { title: string }) {
                             size="icon"
                             className={cn(
                                 "h-7 w-7 rounded-full transition-all active:scale-95",
-                                isAlwaysOnTop ? "text-accent-full bg-sidebar-accent/50 hover:bg-sidebar-accent" : "text-muted-foreground/60 hover:bg-sidebar-accent hover:text-foreground"
+                                isAlwaysOnTop ? "text-accent-full hover:text-accent-full bg-sidebar-accent/50 hover:bg-sidebar-accent" : "text-muted-foreground/60 hover:bg-sidebar-accent hover:text-foreground"
                             )}
                             onClick={toggleAlwaysOnTop}
                         >

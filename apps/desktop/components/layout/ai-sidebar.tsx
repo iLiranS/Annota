@@ -315,8 +315,9 @@ export function AiSidebar({ width, isResizing, isFloating }: { width?: number, i
     return (
         <div className="flex flex-col h-full w-full overflow-hidden">
             <header className={cn(
-                "relative flex gap-2 items-center justify-between shrink-0 h-11  px-2 bg-accent/20 rounded-lg shadow border border-accent/40",
-                isFloating && "mx-2"
+                "relative flex gap-2 items-center justify-between shrink-0 h-11  px-2  rounded-lg ",
+                isFloating && "mx-2",
+                activeChat ? ' bg-accent/20 shadow border border-accent/40' : ''
             )}>
                 <div className="flex items-center gap-2 min-w-0 z-10">
                     {activeChatId ? (

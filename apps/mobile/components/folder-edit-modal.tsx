@@ -1,6 +1,7 @@
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { TRASH_FOLDER_ID, useNotesStore, type Folder } from '@annota/core';
 import { COLOR_PALETTE } from '@annota/core/constants/colors';
+import { FOLDER_ICONS } from '@annota/core/constants/icons';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { PlatformPressable } from '@react-navigation/elements';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -17,29 +18,6 @@ import {
 import Toast from 'react-native-toast-message';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import LocationPickerModal from './location-picker-modal';
-
-// Available folder icons
-const FOLDER_ICONS = [
-    'folder', 'briefcase', 'person', 'people',
-    'home', 'star', 'heart', 'bookmark', 'flag',
-    'calendar', 'time', 'alarm', 'notifications', 'mail',
-    'document', 'documents', 'archive', 'file-tray',
-    'book', 'library', 'school', 'code', 'terminal',
-    'globe', 'earth', 'cloud', 'server', 'git-branch',
-    'camera', 'image', 'images', 'film', 'musical-notes',
-    'cart', 'card', 'cash', 'wallet', 'gift',
-    'airplane', 'car', 'bicycle', 'train', 'boat',
-    'fitness', 'medical', 'nutrition', 'restaurant', 'cafe',
-    'analytics', 'attach', 'bar-chart', 'basket', 'build',
-    'chatbox', 'construct', 'cube', 'diamond', 'flask',
-    'game-controller', 'hammer', 'key', 'leaf', 'mic',
-    'paw', 'pencil', 'planet', 'rocket',
-    'shirt', 'trophy', 'umbrella', 'videocam', 'wine',
-    'bulb', 'color-palette', 'compass', 'cut',
-    'flash', 'glasses', 'ice-cream', 'magnet', 'map',
-    'pint', 'podium', 'ribbon', 'skull', 'speedometer',
-    'thermometer', 'thunderstorm', 'watch', 'water', 'ellipse-outline', 'ellipse'
-];
 
 const ALL_IONICON_KEYS = Object.keys(Ionicons.glyphMap);
 

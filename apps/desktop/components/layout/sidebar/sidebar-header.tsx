@@ -4,7 +4,7 @@ import { SidebarHeader } from "@/components/ui/sidebar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { SortType } from "@annota/core";
-import { CheckSquare, MoreVertical, SquarePen } from "lucide-react";
+import { CheckSquare, FolderPen, MoreVertical, SquarePen } from "lucide-react";
 import { AnnotaIcon } from "../../custom-ui/annota-icon";
 import { Ionicons } from "../../ui/ionicons";
 
@@ -26,6 +26,25 @@ interface SidebarHeaderSectionProps {
     selectionMode?: boolean;
     setSelectionMode?: (mode: boolean) => void;
     dir: "ltr" | "rtl"
+}
+
+function getSortTypeIcon(sortType: SortType): string {
+    switch (sortType) {
+        case 'UPDATED_LAST':
+            return 'time';
+        case 'UPDATED_FIRST':
+            return 'time-outline';
+        case 'CREATED_LAST':
+            return 'calendar';
+        case 'CREATED_FIRST':
+            return 'calendar-outline';
+        case 'NAME_ASC':
+            return 'text-outline';
+        case 'NAME_DESC':
+            return 'text';
+        default:
+            return 'funnel-outline';
+    }
 }
 
 export function SidebarHeaderSection({
@@ -120,7 +139,7 @@ export function SidebarHeaderSection({
 
                                     {!isRoot && onEditFolder && (
                                         <DropdownMenuItem onClick={onEditFolder} className="gap-2 cursor-pointer">
-                                            <Ionicons name="create-outline" size={16} />
+                                            <FolderPen size={16} />
                                             <span>Edit Folder</span>
                                         </DropdownMenuItem>
                                     )}
@@ -140,21 +159,35 @@ export function SidebarHeaderSection({
                                             <span>Sort by</span>
                                         </DropdownMenuSubTrigger>
                                         <DropdownMenuSubContent className="w-52">
-                                            {sortOptions.map((option) => (
-                                                <DropdownMenuItem
-                                                    key={option}
-                                                    className={cn(
-                                                        "flex items-center justify-between cursor-pointer",
-                                                        currentSortType === option && "bg-primary/10 text-primary font-medium"
-                                                    )}
-                                                    onClick={() => onSortChange(option)}
-                                                >
-                                                    <span>{getSortTypeLabel(option)}</span>
-                                                    {currentSortType === option && (
-                                                        <Ionicons name="checkmark" size={14} />
-                                                    )}
-                                                </DropdownMenuItem>
-                                            ))}
+                                            {sortOptions.map((option) => {
+                                                const active = currentSortType === option;
+                                                return (
+                                                    <DropdownMenuItem
+                                                        key={option}
+                                                        className={cn(
+                                                            "flex items-center justify-between cursor-pointer",
+                                                            active && "bg-primary/10 text-primary font-medium"
+                                                        )}
+                                                        onClick={() => onSortChange(option)}
+                                                    >
+                                                        <div className="flex items-center gap-2">
+                                                            <Ionicons
+                                                                name={getSortTypeIcon(option)}
+                                                                size={14}
+                                                                className={cn(
+                                                                    active
+                                                                        ? "text-primary"
+                                                                        : "text-muted-foreground/60"
+                                                                )}
+                                                            />
+                                                            <span>{getSortTypeLabel(option)}</span>
+                                                        </div>
+                                                        {active && (
+                                                            <Ionicons name="checkmark" size={14} className="text-primary" />
+                                                        )}
+                                                    </DropdownMenuItem>
+                                                );
+                                            })}
                                         </DropdownMenuSubContent>
                                     </DropdownMenuSub>
                                 </DropdownMenuContent>

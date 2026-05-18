@@ -23,9 +23,10 @@ export function AiChatListItem({
     const now = new Date();
     const isToday = updatedAt.toDateString() === now.toDateString();
 
+    const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const formattedDate = isToday
         ? updatedAt.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false })
-        : `${updatedAt.getDate()}.${updatedAt.getMonth() + 1}`;
+        : `${updatedAt.getDate()} ${MONTHS[updatedAt.getMonth()]}`;
 
     return (
         <div
@@ -47,7 +48,7 @@ export function AiChatListItem({
                 <span dir="auto" className="truncate font-medium text-[12px] flex-1">
                     {chat.title}
                 </span>
-                <span className="text-[9px]  text-muted-foreground/40 tracking-tight shrink-0 group-hover:opacity-0 transition-opacity">
+                <span className="text-[10px]  text-muted-foreground/40 tracking-tight shrink-0 group-hover:opacity-0 transition-opacity">
                     {formattedDate}
                 </span>
             </div>
@@ -68,7 +69,7 @@ export function AiChatListItem({
                 <Button
                     variant="ghost"
                     size="icon"
-                    className="h-6 w-6 shrink-0 hover:text-destructive hover:bg-destructive/10 transition-colors rounded-lg"
+                    className="h-6 w-6 shrink-0 text-muted-foreground/60 hover:text-destructive transition-colors rounded-lg"
                     onClick={onDelete}
                     title="Delete chat"
                 >

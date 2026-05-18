@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
     },
     toolbarText: {
-        fontSize: 12,
+        fontSize: 13,
         fontWeight: '700',
         textTransform: 'uppercase',
         letterSpacing: 1.5,
@@ -411,13 +411,13 @@ const styles = StyleSheet.create({
     badge: {
         borderRadius: 10,
         paddingHorizontal: 6,
-        paddingVertical: 1,
-        minWidth: 18,
+        paddingVertical: 1.5,
+        minWidth: 20,
         alignItems: 'center',
         justifyContent: 'center',
     },
     taskCountText: {
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: 'bold',
     },
     openNoteButton: {

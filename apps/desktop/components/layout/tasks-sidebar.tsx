@@ -36,7 +36,7 @@ function TaskNoteGroup({ group, onTaskComplete, onNavigate, completingKeys }: Ta
                 <span className="text-[11px] font-bold text-foreground/80 truncate flex-1">
                     {group.noteTitle}
                 </span>
-                <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 shrink-0 tabular-nums">
+                <span className="text-[11px] font-black uppercase tracking-widest text-muted-foreground/45 shrink-0 tabular-nums">
                     {group.tasks.length}
                 </span>
                 <button
@@ -174,7 +174,7 @@ export function TasksSidebar() {
         <div className="flex flex-col h-full overflow-hidden">
             {/* Toolbar */}
             <div className="flex items-center justify-between px-3 py-2 border-b border-border/10 shrink-0">
-                <span className="text-[9px] font-black uppercase tracking-[0.15em] text-muted-foreground/40">
+                <span className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground/40">
                     {loading ? 'Loading...' : `${totalTasks} pending task${totalTasks !== 1 ? 's' : ''}`}
                 </span>
                 <button

@@ -49,10 +49,16 @@ export function NoteFloatingActions({
             "p-1",
             "rounded-2xl",
             "z-30",
-            "bg-note-bg",
-            "border border-border",
-            "shadow-sm",
             "will-change-transform",
+            "bg-linear-to-r from-background/25 via-background/15 to-background/25",
+            "backdrop-blur-2xl",
+            "border border-background/20",
+            "ring-1 ring-background/10",
+            "shadow-[0_14px_30px_rgba(15,23,42,0.35)]",
+            "dark:bg-linear-to-r dark:from-stone-900/70 dark:via-stone-900/40 dark:to-stone-900/70",
+            "dark:border-background/20",
+            "dark:ring-background/10",
+            "dark:shadow-[0_18px_40px_rgba(0,0,0,0.6)]",
             className
         )}
         >
