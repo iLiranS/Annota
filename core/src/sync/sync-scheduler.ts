@@ -92,7 +92,7 @@ export class SyncScheduler {
         );
 
         // Hydrate the sync pointer from storage, then do the initial pull
-        useSyncStore.getState().loadLastSyncAt(userId).then(() => {
+        useSyncStore.getState().loadSyncCursors(userId).then(() => {
             if (!this.disposed) this.executeSyncPull();
         });
     }

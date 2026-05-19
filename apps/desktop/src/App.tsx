@@ -2,6 +2,7 @@ import { useAppTheme } from "@/hooks/use-app-theme";
 import { useDailyCleanup } from "@/hooks/use-daily-cleanup";
 import { useGlobalShortcuts } from "@/hooks/use-global-shortcuts";
 import { useNoteWindowSync } from "@/hooks/use-note-window-sync";
+import { useNoteTabsStore } from "@/hooks/use-note-tabs";
 import {
   authApi,
   fileSyncService,
@@ -351,6 +352,7 @@ function App() {
           useNotesStore.getState().reset();
           useSearchStore.getState().reset();
           useSyncStore.getState().reset();
+          useNoteTabsStore.getState().reset();
         }
 
         setSession(newSession);
@@ -365,6 +367,7 @@ function App() {
         useNotesStore.getState().reset();
         useSearchStore.getState().reset();
         useSyncStore.getState().reset();
+        useNoteTabsStore.getState().reset();
         setRunId((v) => v + 1);
       }
     });

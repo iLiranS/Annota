@@ -60,34 +60,37 @@ export async function performSyncPush(masterKey: string, saltHex: string) {
             const dirtyFolders = await getDirtyFolders();
             if (dirtyFolders.length === 0) return;
 
-            const payloadFolders = await Promise.all(dirtyFolders.map(async (folder) => {
-                const isTombstone = folder.isPermDeleted;
-                const { encryptedData, nonce } = await encryptPayload(JSON.stringify(folder), notesKey);
-                return {
-                    id: folder.id,
-                    user_id: userId,
-                    updated_at: now.toISOString(),
-                    created_at: folder.createdAt.toISOString(),
-                    is_deleted: isTombstone || false,
-                    encrypted_data: encryptedData,
-                    nonce: nonce,
-                };
-            }));
+            for (let i = 0; i < dirtyFolders.length; i += 50) {
+                const chunk = dirtyFolders.slice(i, i + 50);
+                const payloadFolders = await Promise.all(chunk.map(async (folder) => {
+                    const isTombstone = folder.isPermDeleted;
+                    const { encryptedData, nonce } = await encryptPayload(JSON.stringify(folder), notesKey);
+                    return {
+                        id: folder.id,
+                        user_id: userId,
+                        updated_at: now.toISOString(),
+                        created_at: folder.createdAt.toISOString(),
+                        is_deleted: isTombstone || false,
+                        encrypted_data: encryptedData,
+                        nonce: nonce,
+                    };
+                }));
 
-            const { error } = await syncApi.upsertFolders(payloadFolders);
-            if (error) throw error;
+                const { error } = await syncApi.upsertFolders(payloadFolders);
+                if (error) throw error;
 
-            const tombstones = dirtyFolders.filter((f: any) => f.isPermDeleted);
-            if (tombstones.length > 0) {
-                for (const f of tombstones) {
-                    await db.delete(schema.folders).where(eq(schema.folders.id, f.id)).execute();
+                const tombstones = chunk.filter((f: any) => f.isPermDeleted);
+                if (tombstones.length > 0) {
+                    for (const f of tombstones) {
+                        await db.delete(schema.folders).where(eq(schema.folders.id, f.id)).execute();
+                    }
+                    didDeleteTombstones = true;
                 }
-                didDeleteTombstones = true;
-            }
 
-            const aliveFolders = dirtyFolders.filter((f: any) => !f.isPermDeleted);
-            if (aliveFolders.length > 0) {
-                await clearDirtyFolders(aliveFolders.map((f: any) => f.id));
+                const aliveFolders = chunk.filter((f: any) => !f.isPermDeleted);
+                if (aliveFolders.length > 0) {
+                    await clearDirtyFolders(aliveFolders.map((f: any) => f.id));
+                }
             }
         };
 
@@ -95,34 +98,37 @@ export async function performSyncPush(masterKey: string, saltHex: string) {
             const dirtyTags = await getDirtyTags();
             if (dirtyTags.length === 0) return;
 
-            const payloadTags = await Promise.all(dirtyTags.map(async (tag) => {
-                const isTombstone = tag.isPermDeleted;
-                const { encryptedData, nonce } = await encryptPayload(JSON.stringify(tag), notesKey);
-                return {
-                    id: tag.id,
-                    user_id: userId,
-                    updated_at: now.toISOString(),
-                    created_at: tag.createdAt.toISOString(),
-                    is_deleted: isTombstone || false,
-                    encrypted_data: encryptedData,
-                    nonce: nonce,
-                };
-            }));
+            for (let i = 0; i < dirtyTags.length; i += 50) {
+                const chunk = dirtyTags.slice(i, i + 50);
+                const payloadTags = await Promise.all(chunk.map(async (tag) => {
+                    const isTombstone = tag.isPermDeleted;
+                    const { encryptedData, nonce } = await encryptPayload(JSON.stringify(tag), notesKey);
+                    return {
+                        id: tag.id,
+                        user_id: userId,
+                        updated_at: now.toISOString(),
+                        created_at: tag.createdAt.toISOString(),
+                        is_deleted: isTombstone || false,
+                        encrypted_data: encryptedData,
+                        nonce: nonce,
+                    };
+                }));
 
-            const { error } = await syncApi.upsertTags(payloadTags);
-            if (error) throw error;
+                const { error } = await syncApi.upsertTags(payloadTags);
+                if (error) throw error;
 
-            const tombstones = dirtyTags.filter((t: any) => t.isPermDeleted);
-            if (tombstones.length > 0) {
-                for (const t of tombstones) {
-                    await db.delete(schema.tags).where(eq(schema.tags.id, t.id)).execute();
+                const tombstones = chunk.filter((t: any) => t.isPermDeleted);
+                if (tombstones.length > 0) {
+                    for (const t of tombstones) {
+                        await db.delete(schema.tags).where(eq(schema.tags.id, t.id)).execute();
+                    }
+                    didDeleteTombstones = true;
                 }
-                didDeleteTombstones = true;
-            }
 
-            const aliveTags = dirtyTags.filter((t: any) => !t.isPermDeleted);
-            if (aliveTags.length > 0) {
-                await clearDirtyTags(aliveTags.map((t: any) => t.id));
+                const aliveTags = chunk.filter((t: any) => !t.isPermDeleted);
+                if (aliveTags.length > 0) {
+                    await clearDirtyTags(aliveTags.map((t: any) => t.id));
+                }
             }
         };
 
@@ -134,41 +140,44 @@ export async function performSyncPush(masterKey: string, saltHex: string) {
 
             pushedNoteIds = dirtyNotes.map((n: any) => n.id);
 
-            const payloadNotes = await Promise.all(dirtyNotes.map(async (metadata: any) => {
-                const isTombstone = metadata.isPermDeleted;
-                const content = await getNoteContent(metadata.id);
-                const dataToEncrypt = { ...metadata, content };
+            for (let i = 0; i < dirtyNotes.length; i += 50) {
+                const chunk = dirtyNotes.slice(i, i + 50);
+                const payloadNotes = await Promise.all(chunk.map(async (metadata: any) => {
+                    const isTombstone = metadata.isPermDeleted;
+                    const content = await getNoteContent(metadata.id);
+                    const dataToEncrypt = { ...metadata, content };
 
-                const { encryptedData, nonce } = await encryptPayload(JSON.stringify(dataToEncrypt), notesKey);
-                return {
-                    id: metadata.id,
-                    user_id: userId,
-                    updated_at: now.toISOString(),
-                    created_at: metadata.createdAt.toISOString(),
-                    is_deleted: isTombstone || false,
-                    encrypted_data: encryptedData,
-                    nonce: nonce,
-                };
-            }));
+                    const { encryptedData, nonce } = await encryptPayload(JSON.stringify(dataToEncrypt), notesKey);
+                    return {
+                        id: metadata.id,
+                        user_id: userId,
+                        updated_at: now.toISOString(),
+                        created_at: metadata.createdAt.toISOString(),
+                        is_deleted: isTombstone || false,
+                        encrypted_data: encryptedData,
+                        nonce: nonce,
+                    };
+                }));
 
-            const { error } = await syncApi.upsertNotes(payloadNotes);
-            if (error) throw error;
+                const { error } = await syncApi.upsertNotes(payloadNotes);
+                if (error) throw error;
 
-            const tombstones = dirtyNotes.filter((n: any) => n.isPermDeleted);
-            if (tombstones.length > 0) {
-                await db.transaction(async (tx: any) => {
-                    for (const n of tombstones) {
-                        await tx.delete(schema.noteContent).where(eq(schema.noteContent.id, n.id)).execute();
-                        await tx.delete(schema.noteVersions).where(eq(schema.noteVersions.noteId, n.id)).execute();
-                        await tx.delete(schema.noteMetadata).where(eq(schema.noteMetadata.id, n.id)).execute();
-                    }
-                });
-                didDeleteTombstones = true;
-            }
+                const tombstones = chunk.filter((n: any) => n.isPermDeleted);
+                if (tombstones.length > 0) {
+                    await db.transaction(async (tx: any) => {
+                        for (const n of tombstones) {
+                            await tx.delete(schema.noteContent).where(eq(schema.noteContent.id, n.id)).execute();
+                            await tx.delete(schema.noteVersions).where(eq(schema.noteVersions.noteId, n.id)).execute();
+                            await tx.delete(schema.noteMetadata).where(eq(schema.noteMetadata.id, n.id)).execute();
+                        }
+                    });
+                    didDeleteTombstones = true;
+                }
 
-            const aliveNotes = dirtyNotes.filter((n: any) => !n.isPermDeleted);
-            if (aliveNotes.length > 0) {
-                await clearDirtyNotes(aliveNotes.map((n: any) => n.id));
+                const aliveNotes = chunk.filter((n: any) => !n.isPermDeleted);
+                if (aliveNotes.length > 0) {
+                    await clearDirtyNotes(aliveNotes.map((n: any) => n.id));
+                }
             }
         };
 
@@ -205,19 +214,34 @@ export async function performSyncPull(masterKey: string, saltHex: string) {
 
         const db = getDb();
         const userId = session.user.id;
-        const { lastSyncAt } = useSyncStore.getState();
-        const lastSyncTime = lastSyncAt ?? new Date('2000-01-01T00:00:00Z');
+        const { syncCursors } = useSyncStore.getState();
+
+        const defaultCursor = { time: '1970-01-01T00:00:00.000Z', id: '00000000-0000-0000-0000-000000000000' };
+        
+        const currentCursors = {
+            notes: syncCursors?.notes || defaultCursor,
+            folders: syncCursors?.folders || defaultCursor,
+            tags: syncCursors?.tags || defaultCursor,
+        };
 
         let didDeleteTombstones = false;
-
         const { notesKey } = await getDerivedKeys(masterKey, saltHex);
 
-        const { data, error } = await syncApi.pullSyncData(lastSyncTime.toISOString());
-        if (error) throw error;
+        let hasMoreNotes = true;
+        let hasMoreFolders = true;
+        let hasMoreTags = true;
 
-        const cloudFolders = data.folders || [];
-        const cloudTags = data.tags || [];
-        const cloudNotes = data.notes || [];
+        while (hasMoreNotes || hasMoreFolders || hasMoreTags) {
+            const { data, error } = await syncApi.pullSyncData(
+                currentCursors.notes.time, currentCursors.notes.id,
+                currentCursors.folders.time, currentCursors.folders.id,
+                currentCursors.tags.time, currentCursors.tags.id
+            );
+            if (error) throw error;
+
+            const cloudFolders = data.folders || [];
+            const cloudTags = data.tags || [];
+            const cloudNotes = data.notes || [];
 
         // Pull Folders
         if (cloudFolders.length > 0) {
@@ -276,7 +300,10 @@ export async function performSyncPull(masterKey: string, saltHex: string) {
                 if (deletedIds.length > 0) didDeleteTombstones = true;
                 await new Promise(resolve => setTimeout(resolve, 0));
             }
+            const lastFolder = cloudFolders[cloudFolders.length - 1];
+            currentCursors.folders = { time: lastFolder.updated_at, id: lastFolder.id };
         }
+        if (cloudFolders.length < 100) hasMoreFolders = false;
 
 
         // Pull Tags
@@ -336,7 +363,10 @@ export async function performSyncPull(masterKey: string, saltHex: string) {
                 if (deletedIds.length > 0) didDeleteTombstones = true;
                 await new Promise(resolve => setTimeout(resolve, 0));
             }
+            const lastTag = cloudTags[cloudTags.length - 1];
+            currentCursors.tags = { time: lastTag.updated_at, id: lastTag.id };
         }
+        if (cloudTags.length < 100) hasMoreTags = false;
 
         // Pull Notes
         let fetchedNoteIds: string[] = [];
@@ -415,49 +445,59 @@ export async function performSyncPull(masterKey: string, saltHex: string) {
                 if (deletedIds.length > 0) didDeleteTombstones = true;
                 await new Promise(resolve => setTimeout(resolve, 0));
             }
+            const lastNote = cloudNotes[cloudNotes.length - 1];
+            currentCursors.notes = { time: lastNote.updated_at, id: lastNote.id };
         }
+        if (cloudNotes.length < 100) hasMoreNotes = false;
+
+        useSyncStore.getState().updateSyncCursors(currentCursors);
+
+        // Background Files Pull
+        if (fetchedNoteIds.length > 0) {
+            console.log(`[Sync] Requesting file links for ${fetchedNoteIds.length} notes`);
+            const { data: cloudLinks, error: linkError } = await storageApi.getUserFileLinks(userId, fetchedNoteIds);
+            
+            if (linkError) {
+                console.error(`[Sync] Error fetching user file links:`, linkError);
+                throw linkError;
+            }
+
+            if (cloudLinks && cloudLinks.length > 0) {
+                const uniqueFileIds = Array.from(new Set(cloudLinks.map(l => l.file_id as string)));
+                const localFiles = await getFilesByIds(uniqueFileIds);
+                const localFileIds = new Set(localFiles.map((i: any) => i.id));
+                const missingIds = uniqueFileIds.filter(id => !localFileIds.has(id));
+
+                if (missingIds.length > 0) {
+                    const { data: cloudMeta, error: metaError } = await storageApi.getEncryptedFilesMetadata(userId, missingIds);
+                    
+                    if (metaError) {
+                        console.error(`[Sync] Error fetching encrypted files metadata:`, metaError);
+                        throw metaError;
+                    }
+
+                    if (cloudMeta) {
+                        const downloadQueue = cloudMeta.map(meta => ({
+                            fileId: meta.id,
+                            noteId: '',
+                            nonce: meta.nonce,
+                            masterKey,
+                            saltHex,
+                            userId
+                        }));
+                        fileSyncService.queueFilesForDownload(downloadQueue);
+                    }
+                }
+            }
+        }
+        
+        } // End of while loop
 
         if (didDeleteTombstones) {
             await new Promise(resolve => setTimeout(resolve, 50));
             await StorageService.runGarbageCollection(true);
         }
 
-        // Background Files Pull
-        console.log(`[Sync] Requesting file links for ${fetchedNoteIds.length} notes`);
-        const { data: cloudLinks, error: linkError } = await storageApi.getUserFileLinks(userId, fetchedNoteIds);
-        
-        if (linkError) {
-            console.error(`[Sync] Error fetching user file links:`, linkError);
-            throw linkError;
-        }
-
-        if (cloudLinks && cloudLinks.length > 0) {
-            const uniqueFileIds = Array.from(new Set(cloudLinks.map(l => l.file_id as string)));
-            const localFiles = await getFilesByIds(uniqueFileIds);
-            const localFileIds = new Set(localFiles.map((i: any) => i.id));
-            const missingIds = uniqueFileIds.filter(id => !localFileIds.has(id));
-
-            if (missingIds.length > 0) {
-                const { data: cloudMeta, error: metaError } = await storageApi.getEncryptedFilesMetadata(userId, missingIds);
-                
-                if (metaError) {
-                    console.error(`[Sync] Error fetching encrypted files metadata:`, metaError);
-                    throw metaError;
-                }
-
-                if (cloudMeta) {
-                    const downloadQueue = cloudMeta.map(meta => ({
-                        fileId: meta.id,
-                        noteId: '',
-                        nonce: meta.nonce,
-                        masterKey,
-                        saltHex,
-                        userId
-                    }));
-                    fileSyncService.queueFilesForDownload(downloadQueue);
-                }
-            }
-        }
     } catch (e: any) {
         if (e?.status === 401) {
             console.warn('[Sync] Pull failed with 401: setting authRequired');
@@ -507,10 +547,8 @@ export async function syncPull(masterKey: string, saltHex: string): Promise<bool
     }
 
     store.setSyncing(true);
-    const syncStartTime = new Date();
     try {
         await performSyncPull(masterKey, saltHex);
-        store.setLastSyncAt(syncStartTime);
         return true;
     } catch (err) {
         const msg = err instanceof Error ? err.message : 'Unknown error';

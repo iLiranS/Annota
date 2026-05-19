@@ -14,6 +14,7 @@ interface NoteTabsState {
     setTabs: (tabs: NoteTab[]) => void;
     reorderTabs: (startIndex: number, endIndex: number) => void;
     togglePinTab: (noteId: string) => void;
+    reset: () => void;
 }
 
 export const useNoteTabsStore = create<NoteTabsState>()(
@@ -47,6 +48,7 @@ export const useNoteTabsStore = create<NoteTabsState>()(
                 const unpinned = newTabs.filter(t => !t.isPinned);
                 return { tabs: [...pinned, ...unpinned] };
             }),
+            reset: () => set({ tabs: [] }),
         }),
         {
             name: 'annota-note-tabs',

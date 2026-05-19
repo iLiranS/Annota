@@ -2,6 +2,17 @@ import { Buffer } from 'buffer';
 import { create } from 'zustand';
 import { createStorageAdapter } from './config';
 
+export interface SyncCursor {
+    time: string;
+    id: string;
+}
+
+export interface SyncCursors {
+    notes: SyncCursor | null;
+    folders: SyncCursor | null;
+    tags: SyncCursor | null;
+}
+
 const getSyncTimeKey = (userId: string) => `${userId}_last_sync_time`;
 const storage = createStorageAdapter();
 
@@ -11,8 +22,8 @@ interface SyncState {
     isSyncing: boolean;
     /** Mirrors NetInfo connectivity */
     isOnline: boolean;
-    /** Timestamp of last successful sync */
-    lastSyncAt: Date | null;
+    /** Multi-cursor state for resuming syncs */
+    syncCursors: SyncCursors | null;
     /** Latest error message (cleared on success) */
     syncError: string | null;
 
@@ -34,14 +45,14 @@ interface SyncState {
 
     setSyncing: (v: boolean) => void;
     setOnline: (v: boolean) => void;
-    setLastSyncAt: (d: Date) => void;
+    updateSyncCursors: (cursors: Partial<SyncCursors>) => void;
     setSyncError: (e: string | null) => void;
     setAuthRequired: (v: boolean) => void;
     setDerivedKeys: (mnemonic: string | null, saltHex: string | null, keys: { masterKey: Buffer; notesKey: Buffer; filesKey: Buffer } | null) => void;
     clearDerivedKeys: () => void;
     forceSync: () => Promise<void>;
-    /** Hydrate lastSyncAt from persistent storage for the given user. */
-    loadLastSyncAt: (userId: string) => Promise<void>;
+    /** Hydrate cursors from persistent storage for the given user. */
+    loadSyncCursors: (userId: string) => Promise<void>;
     /** Clear all in-memory sync state (does NOT touch storage). */
     reset: () => void;
     /** Clear sync pointer from both memory and persistent storage for a specific user. */
@@ -51,7 +62,7 @@ interface SyncState {
 export const useSyncStore = create<SyncState>((set, get) => ({
     isSyncing: false,
     isOnline: true, // Optimistic default
-    lastSyncAt: null,
+    syncCursors: null,
     syncError: null,
     derivedMasterKey: null,
     notesKey: null,
@@ -63,12 +74,16 @@ export const useSyncStore = create<SyncState>((set, get) => ({
 
     setSyncing: (isSyncing) => set({ isSyncing }),
     setOnline: (isOnline) => set({ isOnline }),
-    setLastSyncAt: (lastSyncAt) => {
-        set({ lastSyncAt, syncError: null });
-        // Persist to storage under the user-scoped key
-        const { syncUserId } = get();
+    updateSyncCursors: (newCursors) => {
+        const { syncCursors, syncUserId } = get();
+        const updated = {
+            notes: newCursors.notes !== undefined ? newCursors.notes : syncCursors?.notes || null,
+            folders: newCursors.folders !== undefined ? newCursors.folders : syncCursors?.folders || null,
+            tags: newCursors.tags !== undefined ? newCursors.tags : syncCursors?.tags || null,
+        };
+        set({ syncCursors: updated, syncError: null });
         if (syncUserId) {
-            storage.setItem(getSyncTimeKey(syncUserId), lastSyncAt.toISOString());
+            storage.setItem(getSyncTimeKey(syncUserId), JSON.stringify(updated));
         }
     },
     setSyncError: (syncError) => set({ syncError }),
@@ -104,22 +119,21 @@ export const useSyncStore = create<SyncState>((set, get) => ({
         }
     },
 
-    loadLastSyncAt: async (userId: string) => {
+    loadSyncCursors: async (userId: string) => {
         const raw = await storage.getItem(getSyncTimeKey(userId));
-        let parsed: Date | null = null;
+        let parsed: SyncCursors | null = null;
         if (raw) {
             try {
-                const d = new Date(raw);
-                if (!isNaN(d.getTime())) parsed = d;
+                parsed = JSON.parse(raw);
             } catch { /* ignore */ }
         }
-        set({ lastSyncAt: parsed, syncUserId: userId });
+        set({ syncCursors: parsed, syncUserId: userId });
     },
 
     reset: () => {
         set({
             isSyncing: false,
-            lastSyncAt: null,
+            syncCursors: null,
             syncError: null,
             derivedMasterKey: null,
             notesKey: null,
@@ -135,7 +149,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
         await storage.removeItem(getSyncTimeKey(userId));
         set({
             isSyncing: false,
-            lastSyncAt: null,
+            syncCursors: null,
             syncError: null,
             derivedMasterKey: null,
             notesKey: null,

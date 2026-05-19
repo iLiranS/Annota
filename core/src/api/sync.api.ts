@@ -9,9 +9,18 @@ export type SyncPayload = {
 
 export const syncApi = {
     /** Pull all sync data via the remote RPC function */
-    pullSyncData: async (lastSync: string) => {
+    pullSyncData: async (
+        p_last_sync: string, p_notes_id: string,
+        p_folders_time: string, p_folders_id: string,
+        p_tags_time: string, p_tags_id: string
+    ) => {
         return await supabase.rpc('pull_sync_data', {
-            p_last_sync: lastSync,
+            p_last_sync,
+            p_notes_id,
+            p_folders_time,
+            p_folders_id,
+            p_tags_time,
+            p_tags_id,
         });
     },
 

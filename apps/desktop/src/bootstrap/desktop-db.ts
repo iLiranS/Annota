@@ -34,6 +34,7 @@ export async function initDesktopSqlite(userId: string | null, dbKey: string, sk
   // Switching users — clear the previous Drizzle instance.
   if (activeUserKey !== null && activeUserKey !== cacheKey) {
     resetDb();
+    userDbCache.clear();
   }
 
   if (!userDbCache.has(cacheKey)) {
