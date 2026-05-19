@@ -44,7 +44,7 @@ function TaskNoteGroup({ group, onTaskComplete, onNavigate, completingKeys }: Ta
                         e.stopPropagation();
                         onNavigate(group.noteId, group.folderId);
                     }}
-                    className="shrink-0  transition-opacity text-muted-foreground/50 hover:text-primary p-0.5 rounded cursor-pointer"
+                    className="shrink-0  transition-opacity text-accent-full/80 hover:text-accent-full p-0.5 rounded cursor-pointer"
                     title="Open note"
                 >
                     <ExternalLink size={10} />

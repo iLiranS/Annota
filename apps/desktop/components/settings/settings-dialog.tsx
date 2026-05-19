@@ -9,6 +9,7 @@ import { GeneralSettings } from "./general-settings";
 import { HelpSettings } from "./help-settings";
 import { ShortcutsSettings } from "./shortcuts-settings";
 
+import { Button } from "@/components/ui/button";
 import {
     Dialog,
     DialogContent,
@@ -100,20 +101,15 @@ export default function SettingsDialog() {
                 <div className="flex flex-1 min-h-0">
                     {/* Left nav */}
                     <nav className="w-[200px] flex flex-col border-r border-border p-3 bg-muted/30">
-                        <div className="flex-1 space-y-0.5">
+                        <div className="flex-1 space-y-0.5 flex flex-col gap-1">
                             {tabs
                                 .filter((t) => !["account", "help", "shortcuts"].includes(t.id))
                                 .map((tab) => (
-                                    <button
+                                    <Button
                                         key={tab.id}
-                                        type="button"
+                                        variant={activeTab === tab.id ? 'secondary' : "ghost"}
                                         onClick={() => setActiveTab(tab.id)}
-                                        className={cn(
-                                            "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors",
-                                            activeTab === tab.id
-                                                ? "bg-accent font-medium"
-                                                : "hover:bg-accent/50",
-                                        )}
+                                        className="w-full justify-start gap-2.5 font-normal"
                                     >
                                         <span
                                             className={cn(
@@ -124,7 +120,7 @@ export default function SettingsDialog() {
                                             {tab.icon}
                                         </span>
                                         <span>{tab.label}</span>
-                                    </button>
+                                    </Button>
                                 ))}
                         </div>
 
@@ -132,16 +128,11 @@ export default function SettingsDialog() {
                             {tabs
                                 .filter((t) => ["account", "help", "shortcuts"].includes(t.id))
                                 .map((tab) => (
-                                    <button
+                                    <Button
                                         key={tab.id}
-                                        type="button"
+                                        variant={activeTab === tab.id ? "secondary" : "ghost"}
                                         onClick={() => setActiveTab(tab.id)}
-                                        className={cn(
-                                            "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors",
-                                            activeTab === tab.id
-                                                ? "bg-accent font-medium"
-                                                : "hover:bg-accent/50",
-                                        )}
+                                        className="w-full justify-start gap-2.5 font-normal"
                                     >
                                         <span
                                             className={cn(
@@ -152,7 +143,7 @@ export default function SettingsDialog() {
                                             {tab.icon}
                                         </span>
                                         <span>{tab.label}</span>
-                                    </button>
+                                    </Button>
                                 ))}
                         </div>
                         <p

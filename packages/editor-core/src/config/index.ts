@@ -236,7 +236,6 @@ export const getBaseExtensions = (options: {
         }),
         SearchExtension.configure({
             onResults: (data: any) => {
-                console.log('onSearchResults [editor-core]', data.count, data.currentIndex)
                 options.onSearchResults?.(data.count, data.currentIndex);
             }
         }),

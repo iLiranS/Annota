@@ -62,6 +62,19 @@ export function AiSettings() {
         }
     };
 
+    const handleRemoveOpenAiKey = async () => {
+        setIsSavingOpenAi(true);
+        try {
+            await removeApiKey('openai');
+            setHasOpenAiKey(false);
+            setLocalOpenAiKey('');
+        } catch (error) {
+            console.error("Failed to remove OpenAI key:", error);
+        } finally {
+            setIsSavingOpenAi(false);
+        }
+    };
+
     const handleSaveAnthropicKey = async () => {
         setIsSavingAnthropic(true);
         try {
@@ -80,6 +93,19 @@ export function AiSettings() {
         }
     };
 
+    const handleRemoveAnthropicKey = async () => {
+        setIsSavingAnthropic(true);
+        try {
+            await removeApiKey('anthropic');
+            setHasAnthropicKey(false);
+            setLocalAnthropicKey('');
+        } catch (error) {
+            console.error("Failed to remove Anthropic key:", error);
+        } finally {
+            setIsSavingAnthropic(false);
+        }
+    };
+
     const handleSaveGoogleKey = async () => {
         setIsSavingGoogle(true);
         try {
@@ -93,6 +119,19 @@ export function AiSettings() {
             }
         } catch (error) {
             console.error("Failed to save Google key:", error);
+        } finally {
+            setIsSavingGoogle(false);
+        }
+    };
+
+    const handleRemoveGoogleKey = async () => {
+        setIsSavingGoogle(true);
+        try {
+            await removeApiKey('google');
+            setHasGoogleKey(false);
+            setLocalGoogleKey('');
+        } catch (error) {
+            console.error("Failed to remove Google key:", error);
         } finally {
             setIsSavingGoogle(false);
         }
@@ -201,14 +240,26 @@ export function AiSettings() {
                                         placeholder={hasOpenAiKey ? "sk-••••••••••••• (Key configured)" : "sk-..."}
                                         className="h-9 rounded-xl border-border/40 font-mono text-[13px] flex-1"
                                     />
-                                    <Button
-                                        onClick={handleSaveOpenAiKey}
-                                        disabled={isSavingOpenAi || (!localOpenAiKey.trim() && hasOpenAiKey)}
-                                        size="sm"
-                                        className="h-9 rounded-xl px-4"
-                                    >
-                                        {isSavingOpenAi ? "Saving..." : "Save"}
-                                    </Button>
+                                    {hasOpenAiKey && !localOpenAiKey.trim() ? (
+                                        <Button
+                                            onClick={handleRemoveOpenAiKey}
+                                            disabled={isSavingOpenAi}
+                                            variant="destructive"
+                                            size="sm"
+                                            className="h-9 rounded-xl px-4"
+                                        >
+                                            {isSavingOpenAi ? "Removing..." : "Remove"}
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            onClick={handleSaveOpenAiKey}
+                                            disabled={isSavingOpenAi || (!localOpenAiKey.trim() && hasOpenAiKey)}
+                                            size="sm"
+                                            className="h-9 rounded-xl px-4"
+                                        >
+                                            {isSavingOpenAi ? "Saving..." : "Save"}
+                                        </Button>
+                                    )}
                                 </div>
                                 <div className="flex items-center gap-1 text-[10px] text-muted-foreground/60">
                                     <span>Stored locally in secure vault.</span>
@@ -240,14 +291,26 @@ export function AiSettings() {
                                         placeholder={hasAnthropicKey ? "sk-ant-••••••••••••• (Key configured)" : "sk-ant-..."}
                                         className="h-9 rounded-xl border-border/40 font-mono text-[13px] flex-1"
                                     />
-                                    <Button
-                                        onClick={handleSaveAnthropicKey}
-                                        disabled={isSavingAnthropic || (!localAnthropicKey.trim() && hasAnthropicKey)}
-                                        size="sm"
-                                        className="h-9 rounded-xl px-4"
-                                    >
-                                        {isSavingAnthropic ? "Saving..." : "Save"}
-                                    </Button>
+                                    {hasAnthropicKey && !localAnthropicKey.trim() ? (
+                                        <Button
+                                            onClick={handleRemoveAnthropicKey}
+                                            disabled={isSavingAnthropic}
+                                            variant="destructive"
+                                            size="sm"
+                                            className="h-9 rounded-xl px-4"
+                                        >
+                                            {isSavingAnthropic ? "Removing..." : "Remove"}
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            onClick={handleSaveAnthropicKey}
+                                            disabled={isSavingAnthropic || (!localAnthropicKey.trim() && hasAnthropicKey)}
+                                            size="sm"
+                                            className="h-9 rounded-xl px-4"
+                                        >
+                                            {isSavingAnthropic ? "Saving..." : "Save"}
+                                        </Button>
+                                    )}
                                 </div>
                                 <div className="flex items-center gap-1 text-[10px] text-muted-foreground/60">
                                     <span>Stored locally in secure vault.</span>
@@ -279,14 +342,26 @@ export function AiSettings() {
                                         placeholder={hasGoogleKey ? "••••••••••••• (Key configured)" : "Paste your API key here..."}
                                         className="h-9 rounded-xl border-border/40 font-mono text-[13px] flex-1"
                                     />
-                                    <Button
-                                        onClick={handleSaveGoogleKey}
-                                        disabled={isSavingGoogle || (!localGoogleKey.trim() && hasGoogleKey)}
-                                        size="sm"
-                                        className="h-9 rounded-xl px-4"
-                                    >
-                                        {isSavingGoogle ? "Saving..." : "Save"}
-                                    </Button>
+                                    {hasGoogleKey && !localGoogleKey.trim() ? (
+                                        <Button
+                                            onClick={handleRemoveGoogleKey}
+                                            disabled={isSavingGoogle}
+                                            variant="destructive"
+                                            size="sm"
+                                            className="h-9 rounded-xl px-4"
+                                        >
+                                            {isSavingGoogle ? "Removing..." : "Remove"}
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            onClick={handleSaveGoogleKey}
+                                            disabled={isSavingGoogle || (!localGoogleKey.trim() && hasGoogleKey)}
+                                            size="sm"
+                                            className="h-9 rounded-xl px-4"
+                                        >
+                                            {isSavingGoogle ? "Saving..." : "Save"}
+                                        </Button>
+                                    )}
                                 </div>
                                 <div className="flex items-center gap-1 text-[10px] text-muted-foreground/60">
                                     <span>Stored locally in secure vault. Uses OpenAI compatibility endpoint.</span>

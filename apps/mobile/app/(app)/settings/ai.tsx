@@ -65,6 +65,21 @@ export default function AiSettings() {
         }
     };
 
+    const handleRemoveKey = async (provider: 'openai' | 'anthropic' | 'google') => {
+        const setHasKey = provider === 'openai' ? setHasOpenAiKey : provider === 'anthropic' ? setHasAnthropicKey : setHasGoogleKey;
+
+        setSaving(prev => ({ ...prev, [provider]: true }));
+        try {
+            await removeApiKey(provider);
+            setHasKey(false);
+            setLocalKeys(prev => ({ ...prev, [provider]: '' }));
+        } catch (error) {
+            console.error(`Failed to remove ${provider} key:`, error);
+        } finally {
+            setSaving(prev => ({ ...prev, [provider]: false }));
+        }
+    };
+
     const providers = [
         { id: 'openai', label: 'OpenAI', icon: 'logo-github', color: '#10a37f' }, // Using github icon as placeholder for openai if no dedicated
         { id: 'anthropic', label: 'Anthropic', icon: 'sparkles', color: '#d97757' },
@@ -140,13 +155,23 @@ export default function AiSettings() {
                                     placeholderTextColor={colors.text + '40'}
                                     secureTextEntry
                                 />
-                                <TouchableOpacity 
-                                    style={[styles.saveButton, { backgroundColor: colors.primary }]}
-                                    onPress={() => handleSaveKey('openai')}
-                                    disabled={saving.openai || (!localKeys.openai.trim() && hasOpenAiKey)}
-                                >
-                                    {saving.openai ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={styles.saveButtonText}>Save</Text>}
-                                </TouchableOpacity>
+                                {hasOpenAiKey && !localKeys.openai.trim() ? (
+                                    <TouchableOpacity 
+                                        style={[styles.saveButton, { backgroundColor: '#ef4444' }]}
+                                        onPress={() => handleRemoveKey('openai')}
+                                        disabled={saving.openai}
+                                    >
+                                        {saving.openai ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={styles.saveButtonText}>Remove</Text>}
+                                    </TouchableOpacity>
+                                ) : (
+                                    <TouchableOpacity 
+                                        style={[styles.saveButton, { backgroundColor: colors.primary }]}
+                                        onPress={() => handleSaveKey('openai')}
+                                        disabled={saving.openai || (!localKeys.openai.trim() && hasOpenAiKey)}
+                                    >
+                                        {saving.openai ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={styles.saveButtonText}>Save</Text>}
+                                    </TouchableOpacity>
+                                )}
                             </View>
                             <TouchableOpacity onPress={() => Linking.openURL('https://platform.openai.com/api-keys')}>
                                 <Text style={[styles.link, { color: colors.primary }]}>Get API Key from OpenAI</Text>
@@ -170,13 +195,23 @@ export default function AiSettings() {
                                     placeholderTextColor={colors.text + '40'}
                                     secureTextEntry
                                 />
-                                <TouchableOpacity 
-                                    style={[styles.saveButton, { backgroundColor: colors.primary }]}
-                                    onPress={() => handleSaveKey('anthropic')}
-                                    disabled={saving.anthropic || (!localKeys.anthropic.trim() && hasAnthropicKey)}
-                                >
-                                    {saving.anthropic ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={styles.saveButtonText}>Save</Text>}
-                                </TouchableOpacity>
+                                {hasAnthropicKey && !localKeys.anthropic.trim() ? (
+                                    <TouchableOpacity 
+                                        style={[styles.saveButton, { backgroundColor: '#ef4444' }]}
+                                        onPress={() => handleRemoveKey('anthropic')}
+                                        disabled={saving.anthropic}
+                                    >
+                                        {saving.anthropic ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={styles.saveButtonText}>Remove</Text>}
+                                    </TouchableOpacity>
+                                ) : (
+                                    <TouchableOpacity 
+                                        style={[styles.saveButton, { backgroundColor: colors.primary }]}
+                                        onPress={() => handleSaveKey('anthropic')}
+                                        disabled={saving.anthropic || (!localKeys.anthropic.trim() && hasAnthropicKey)}
+                                    >
+                                        {saving.anthropic ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={styles.saveButtonText}>Save</Text>}
+                                    </TouchableOpacity>
+                                )}
                             </View>
                             <TouchableOpacity onPress={() => Linking.openURL('https://console.anthropic.com/settings/keys')}>
                                 <Text style={[styles.link, { color: colors.primary }]}>Get API Key from Anthropic</Text>
@@ -200,13 +235,23 @@ export default function AiSettings() {
                                     placeholderTextColor={colors.text + '40'}
                                     secureTextEntry
                                 />
-                                <TouchableOpacity 
-                                    style={[styles.saveButton, { backgroundColor: colors.primary }]}
-                                    onPress={() => handleSaveKey('google')}
-                                    disabled={saving.google || (!localKeys.google.trim() && hasGoogleKey)}
-                                >
-                                    {saving.google ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={styles.saveButtonText}>Save</Text>}
-                                </TouchableOpacity>
+                                {hasGoogleKey && !localKeys.google.trim() ? (
+                                    <TouchableOpacity 
+                                        style={[styles.saveButton, { backgroundColor: '#ef4444' }]}
+                                        onPress={() => handleRemoveKey('google')}
+                                        disabled={saving.google}
+                                    >
+                                        {saving.google ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={styles.saveButtonText}>Remove</Text>}
+                                    </TouchableOpacity>
+                                ) : (
+                                    <TouchableOpacity 
+                                        style={[styles.saveButton, { backgroundColor: colors.primary }]}
+                                        onPress={() => handleSaveKey('google')}
+                                        disabled={saving.google || (!localKeys.google.trim() && hasGoogleKey)}
+                                    >
+                                        {saving.google ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={styles.saveButtonText}>Save</Text>}
+                                    </TouchableOpacity>
+                                )}
                             </View>
                             <TouchableOpacity onPress={() => Linking.openURL('https://aistudio.google.com/app/apikey')}>
                                 <Text style={[styles.link, { color: colors.primary }]}>Get API Key from Google AI Studio</Text>

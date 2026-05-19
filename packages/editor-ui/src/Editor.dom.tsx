@@ -475,7 +475,7 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
             }
 
             // Otherwise, dispatch to TipTap
-            if (editor) await dispatchEditorCommand(editor as any, cmd, params || {});
+            if (editor && !editor.isDestroyed) await dispatchEditorCommand(editor as any, cmd, params || {});
         }, [editor]);
         handleCommandRef.current = handleCommand;
 
@@ -499,7 +499,7 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                 onNoteLinkCommand: (data) => onNoteLinkCommandRef.current?.(data),
                 onImageSelected: (data) => {
                     // Drop focus so the cursor doesn't blink behind the dark overlay
-                    if (editorRef.current) {
+                    if (editorRef.current && !editorRef.current.isDestroyed) {
                         editorRef.current.commands.blur();
                     }
                     openGalleryRef.current?.(data.images, data.currentIndex);
@@ -507,7 +507,7 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                 onResolveImageIds: (data) => {
                     if (data.imageIds.length > 0) {
                         NoteFileService.resolveFileSources(data.imageIds).then((fileMap) => {
-                            if (Object.keys(fileMap).length > 0) {
+                            if (editorRef.current && !editorRef.current.isDestroyed && Object.keys(fileMap).length > 0) {
                                 isHydrating.current = true;
                                 (editorRef.current.commands as any).resolveImages({ imageMap: fileMap });
                                 isHydrating.current = false;
@@ -530,13 +530,25 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
         ]);
 
         useImperativeHandle(ref, () => ({
-            getContent: () => Promise.resolve(editor?.getHTML() || ''),
-            setContent: (content: string) => editor?.commands.setContent(content),
-            focus: () => editor?.commands.focus(),
-            blur: () => editor?.commands.blur(),
+            getContent: () => Promise.resolve(editor && !editor.isDestroyed ? editor.getHTML() : ''),
+            setContent: (content: string) => {
+                if (editor && !editor.isDestroyed) {
+                    editor.commands.setContent(content);
+                }
+            },
+            focus: () => {
+                if (editor && !editor.isDestroyed) {
+                    editor.commands.focus();
+                }
+            },
+            blur: () => {
+                if (editor && !editor.isDestroyed) {
+                    editor.commands.blur();
+                }
+            },
             onCommand: handleCommand,
             getSelection: () => {
-                if (!editor) return { text: '', html: '', range: { from: 0, to: 0 } };
+                if (!editor || editor.isDestroyed) return { text: '', html: '', range: { from: 0, to: 0 } };
                 const { selection } = editor.state;
                 const { from, to } = selection;
 
@@ -556,10 +568,26 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                     range: { from, to }
                 };
             },
-            search: (term: string) => (editor?.commands as any).search(term),
-            searchNext: () => (editor?.commands as any).searchNext(),
-            searchPrev: () => (editor?.commands as any).searchPrev(),
-            clearSearch: () => (editor?.commands as any).clearSearch(),
+            search: (term: string) => {
+                if (editor && !editor.isDestroyed) {
+                    return (editor.commands as any).search(term);
+                }
+            },
+            searchNext: () => {
+                if (editor && !editor.isDestroyed) {
+                    return (editor.commands as any).searchNext();
+                }
+            },
+            searchPrev: () => {
+                if (editor && !editor.isDestroyed) {
+                    return (editor.commands as any).searchPrev();
+                }
+            },
+            clearSearch: () => {
+                if (editor && !editor.isDestroyed) {
+                    return (editor.commands as any).clearSearch();
+                }
+            },
             scrollToElement: (id: string) => {
                 // Desktop is native DOM. We don't need to fight TipTap's virtual state.
                 // Just poll the DOM until the element renders, then scroll to it.
@@ -610,11 +638,11 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
         }), [editor]);
 
         useEffect(() => {
-            if (editor && initialContent) {
+            if (editor && !editor.isDestroyed && initialContent) {
                 const imageIds = extractImageIds(initialContent);
                 if (imageIds.length > 0) {
                     NoteFileService.resolveFileSources(imageIds).then((fileMap: any) => {
-                        if (Object.keys(fileMap).length > 0) {
+                        if (editor && !editor.isDestroyed && Object.keys(fileMap).length > 0) {
                             isHydrating.current = true;
                             (editor.commands as any).resolveImages({ imageMap: fileMap });
                             isHydrating.current = false;
@@ -754,7 +782,11 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                     sendCommand: handleCommand,
                     onCommand: handleCommand,
                     toolbarHeight: 50,
-                    onDismissKeyboard: () => editor?.commands.blur(),
+                    onDismissKeyboard: () => {
+                        if (editor && !editor.isDestroyed) {
+                            editor.commands.blur();
+                        }
+                    },
                     activePopup: activePopup as any,
                     onActivePopupChange: (type) => {
                         setActivePopup(type as any);
