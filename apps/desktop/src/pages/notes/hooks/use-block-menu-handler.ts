@@ -1,6 +1,6 @@
-import { useCallback, useState } from "react";
-import { TipTapEditorRef } from "@annota/editor-ui";
 import { copyImageToClipboard, writeText } from "@/lib/clipboard";
+import { TipTapEditorRef } from "@annota/editor-ui";
+import { useCallback, useState } from "react";
 
 interface UseBlockMenuHandlerProps {
     editorRef: React.RefObject<TipTapEditorRef | null>;
@@ -19,10 +19,14 @@ export function useBlockMenuHandler({ editorRef, noteId }: UseBlockMenuHandlerPr
         const result = resolve();
         if (!result) return;
 
+        const targetEl = e.target as HTMLElement;
+        const anchorEl = targetEl.closest('button') || targetEl;
+
+
         setActiveBlockMenu({
             type: result.message.blockType || "details",
             data: result.message,
-            anchorRect: (e.target as HTMLElement).getBoundingClientRect(),
+            anchorRect: anchorEl.getBoundingClientRect(),
             onResolve: resolve,
         });
     }, []);
@@ -31,10 +35,13 @@ export function useBlockMenuHandler({ editorRef, noteId }: UseBlockMenuHandlerPr
         const result = resolve();
         if (!result) return;
 
+        const targetEl = e.target as HTMLElement;
+        const anchorEl = targetEl.closest('button') || targetEl;
+
         setActiveBlockMenu({
             type: "codeBlock",
             data: result.message,
-            anchorRect: (e.target as HTMLElement).getBoundingClientRect(),
+            anchorRect: anchorEl.getBoundingClientRect(),
             onResolve: resolve,
         });
     }, []);
@@ -43,10 +50,13 @@ export function useBlockMenuHandler({ editorRef, noteId }: UseBlockMenuHandlerPr
         const result = resolve();
         if (!result) return;
 
+        const targetEl = e.target as HTMLElement;
+        const anchorEl = targetEl.closest('button') || targetEl;
+
         setActiveBlockMenu({
             type: result.message.type === 'openOpenFileMenu' && (result.message as any).fileId ? "file" : "image",
             data: result.message,
-            anchorRect: (e.target as HTMLElement).getBoundingClientRect(),
+            anchorRect: anchorEl.getBoundingClientRect(),
             onResolve: resolve,
         });
     }, []);
@@ -55,10 +65,13 @@ export function useBlockMenuHandler({ editorRef, noteId }: UseBlockMenuHandlerPr
         const result = resolve();
         if (!result) return;
 
+        const targetEl = e.target as HTMLElement;
+        const anchorEl = targetEl.closest('button') || targetEl;
+
         setActiveBlockMenu({
             type: "table",
             data: result.message,
-            anchorRect: (e.target as HTMLElement).getBoundingClientRect(),
+            anchorRect: anchorEl.getBoundingClientRect(),
             onResolve: resolve,
         });
     }, []);

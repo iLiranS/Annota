@@ -210,6 +210,7 @@ export function AISelectionPopover({ anchorRect, isVisible, isLoading, onAction,
                             size="sm"
                             className="relative z-10 h-8 rounded-full px-3 gap-1.5 hover:bg-transparent group"
                             onMouseEnter={handleMouseEnter}
+                            onMouseDown={(e) => e.preventDefault()}
                             onClick={(e) => { e.stopPropagation(); setIsExpanded(true); }}
                         >
                             <Pencil className="h-3.5 w-3.5 text-primary transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12" />
@@ -221,6 +222,7 @@ export function AISelectionPopover({ anchorRect, isVisible, isLoading, onAction,
                             size="sm"
                             className="relative z-10 h-8 rounded-full px-3 gap-1.5 hover:bg-transparent group"
                             onMouseEnter={handleMouseEnter}
+                            onMouseDown={(e) => e.preventDefault()}
                             onClick={(e) => { e.stopPropagation(); onAction?.('send-to-chat'); }}
                         >
                             <BotMessageSquare className="h-3.5 w-3.5 text-primary transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-12" />

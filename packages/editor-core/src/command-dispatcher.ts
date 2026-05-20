@@ -1,6 +1,7 @@
 import { Editor } from "@tiptap/core";
 import { DOMSerializer } from "@tiptap/pm/model";
 import { NodeSelection } from "@tiptap/pm/state";
+import { prepareMarksHTMLForClipboard } from "./extensions/marks";
 import { convertMarkdownToAnnotaHTML } from "./markdown-parser";
 
 
@@ -377,7 +378,7 @@ export async function dispatchEditorCommand(editor: Editor, command: string, par
                 const div = document.createElement('div');
                 const serializer = DOMSerializer.fromSchema(editor.schema);
                 div.appendChild(serializer.serializeFragment(fragment));
-                html = div.innerHTML;
+                html = prepareMarksHTMLForClipboard(div.innerHTML);
             } catch (e) {
                 console.error('Failed to serialize content to HTML', e);
             }

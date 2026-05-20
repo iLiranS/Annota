@@ -20,6 +20,7 @@ export interface EditorSettings {
     autocorrect: boolean;
     autocapitalize: boolean;
     autocomplete: boolean;
+    numberedLines: boolean;
 }
 
 export interface GeneralSettings {
@@ -77,6 +78,7 @@ const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
     autocorrect: false,
     autocapitalize: false,
     autocomplete: false,
+    numberedLines: true,
 };
 
 const DEFAULT_GENERAL_SETTINGS: GeneralSettings = {

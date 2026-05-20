@@ -91,6 +91,13 @@ export default function EditorSettings() {
                         onPress={() => router.push('/settings/code-language')}
                         icon="code-slash-outline"
                     />
+                    <SettingItem
+                        label="Numbered Lines"
+                        type="toggle"
+                        value={editor.numberedLines}
+                        onToggle={(val) => updateEditorSettings({ numberedLines: val })}
+                        icon="list-outline"
+                    />
                 </View>
             </View>
 

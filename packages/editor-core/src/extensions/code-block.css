@@ -9,7 +9,7 @@
 }
 
 .ProseMirror pre {
-    padding: 0px 12px 12px 12px;
+    padding: 12px 12px 12px 12px;
     border-radius: 12px;
     overflow-x: auto;
     margin: 0;
@@ -20,16 +20,21 @@
     position: relative;
     direction: ltr !important;
     unicode-bidi: isolate !important;
+    white-space: pre !important;
+    word-break: normal !important;
+    overflow-wrap: normal !important;
 }
 
 .ProseMirror pre code {
-    background: none;
-    padding: 0;
+    background: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
     font-size: inherit;
     font-family: inherit;
+    display: inline !important;
 }
 
-/* Code block wrapper with header */
+/* Code block wrapper with header — uses CSS grid for gutter + pre layout */
 .code-block-wrapper {
     position: relative;
     margin: 0;
@@ -38,14 +43,22 @@
     unicode-bidi: isolate !important;
     background-color: var(--code-block-bg);
     border-radius: 12px;
+    display: grid;
+    grid-template-columns: auto 1fr;
+}
+
+.code-block-wrapper.no-line-numbers {
+    grid-template-columns: 1fr;
 }
 
 .code-block-wrapper pre {
     margin: 0;
+    min-width: 0;
 }
 
 /* Header bar for code block */
 .code-block-header {
+    grid-column: 1 / -1;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -111,4 +124,31 @@
     width: 20px;
     height: 20px;
     flex-shrink: 0;
+}
+
+/* Line number gutter — sits in grid column 1, pre sits in column 2 */
+.code-gutter {
+    display: flex;
+    flex-direction: column;
+    align-self: stretch;
+    user-select: none;
+    text-align: right;
+    color: color-mix(in srgb, var(--text-color) 30%, transparent);
+    padding: 12px 4px 12px 12px;
+    /* min-width: 36px; */
+    box-sizing: border-box;
+    pointer-events: none;
+    flex-shrink: 0;
+    font-family: 'FiraCode', 'SF Mono', Monaco, Consolas, 'Courier New', monospace;
+    font-size: calc(var(--editor-font-size) * 0.8125);
+    line-height: 1.6;
+}
+
+.code-gutter span {
+    display: block;
+    box-sizing: border-box;
+    color: inherit;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
 }

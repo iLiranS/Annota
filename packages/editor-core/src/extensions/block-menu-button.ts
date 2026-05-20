@@ -36,6 +36,7 @@ export function createBlockMenuButton(options: BlockMenuButtonOptions): HTMLButt
     const { className, iconSize = 'normal', onResolve, onClick } = options;
 
     const btn = document.createElement('button');
+    btn.type = 'button';
     btn.className = className;
     btn.innerHTML = iconSize === 'small' ? THREE_DOTS_SVG_18 : THREE_DOTS_SVG_24;
     btn.contentEditable = 'false';
@@ -43,7 +44,6 @@ export function createBlockMenuButton(options: BlockMenuButtonOptions): HTMLButt
     btn.onclick = (e) => {
         e.preventDefault();
         e.stopPropagation();
-
         if (onClick) {
             onClick(e, onResolve);
             return;

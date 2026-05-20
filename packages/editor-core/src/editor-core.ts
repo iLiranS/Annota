@@ -175,6 +175,11 @@ export async function setupEditor(options: any) {
         autocomplete = false
     } = options;
 
+    (window as any).editorSettings = {
+        numberedLines: options.numberedLines !== undefined ? options.numberedLines : true,
+    };
+    window.dispatchEvent(new CustomEvent('annota-settings-change', { detail: (window as any).editorSettings }));
+
     // Set CSS variables and attributes for theme
     const container = document.getElementById('editor-container') || document.documentElement;
     const listItemSpacing = Math.max(2, Math.round(paragraphSpacing / 3));

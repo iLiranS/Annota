@@ -6,6 +6,7 @@ import { TaskItem } from '@tiptap/extension-task-item';
 import { FontFamily } from '@tiptap/extension-text-style';
 import { Underline } from '@tiptap/extension-underline';
 import { DOMSerializer, Slice } from '@tiptap/pm/model';
+import { NodeSelection } from '@tiptap/pm/state';
 import { CellSelection } from '@tiptap/pm/tables';
 import { StarterKit } from '@tiptap/starter-kit';
 
@@ -86,7 +87,9 @@ import {
     SelectionManager,
     ShortcutManager,
     SlashCommandExtension,
-    TagCommandExtension
+    TagCommandExtension,
+    prepareMarksHTMLForClipboard,
+    lowlight
 } from '../extensions';
 import { CustomBulletList, CustomOrderedList, CustomTaskList } from '../extensions/custom-lists';
 import { CustomParagraph } from '../extensions/custom-paragraph';
@@ -203,9 +206,10 @@ export const getBaseExtensions = (options: {
         CustomTaskList,
         TaskItem.configure({ nested: true }),
         CustomCodeBlock.configure({
+            lowlight,
             onOpenBlockMenu: options.onOpenBlockMenu,
             onCodeBlockSelected: options.onCodeBlockSelected,
-            defaultLanguage: options.defaultCodeLanguage,
+            defaultLanguage: options.defaultCodeLanguage || null,
         }),
         // @ts-ignore - Type mismatch due to tiptap version difference between packages
         Details,
@@ -358,6 +362,28 @@ export const getEditorProps = (callbacks: {
         return false; // Allow default Prosemirror scroll with margin
     },
     handleDOMEvents: {
+        copy: (view: any, event: ClipboardEvent) => {
+            const { selection } = view.state;
+            if (selection.empty || !event.clipboardData) return false;
+
+            if (selection instanceof NodeSelection && selection.node.type.name === 'image') {
+                return false;
+            }
+
+            try {
+                const slice = selection.content();
+                const serializer = DOMSerializer.fromSchema(view.state.schema);
+                const div = document.createElement('div');
+                div.appendChild(serializer.serializeFragment(slice.content));
+
+                event.clipboardData.setData('text/plain', slice.content.textBetween(0, slice.content.size, ' '));
+                event.clipboardData.setData('text/html', prepareMarksHTMLForClipboard(div.innerHTML));
+                event.preventDefault();
+                return true;
+            } catch {
+                return false;
+            }
+        },
         mousedown: (view: any, event: MouseEvent) => {
             // Check if the mouse event is a right-click (button 2)
             if (event.button === 2) {
@@ -444,7 +470,7 @@ export const getEditorState = (editor: any) => {
         const fragment = DOMSerializer.fromSchema(e.schema).serializeFragment(slice.content);
         const div = document.createElement('div');
         div.appendChild(fragment);
-        selectedHtml = div.innerHTML;
+        selectedHtml = prepareMarksHTMLForClipboard(div.innerHTML);
         selectedText = slice.content.textBetween(0, slice.content.size, ' ');
     }
 

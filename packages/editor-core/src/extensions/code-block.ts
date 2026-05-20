@@ -1,3 +1,4 @@
+import { textblockTypeInputRule } from '@tiptap/core';
 import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight';
 import { common, createLowlight } from 'lowlight';
 import { sendMessage } from '../bridge';
@@ -35,6 +36,40 @@ export const CODE_LANGUAGES = [
     { value: 'dockerfile', label: 'Docker' },
 ];
 
+export const backtickInputRegex = /^```([a-zA-Z0-9_+\-#]+)?[\s\n]$/;
+export const tildeInputRegex = /^~~~([a-zA-Z0-9_+\-#]+)?[\s\n]$/;
+
+function mapLanguageAlias(alias: string | undefined): string | null {
+    if (!alias) return null;
+    const lower = alias.toLowerCase().trim();
+    
+    // Direct match against CODE_LANGUAGES value
+    const match = CODE_LANGUAGES.find(l => l.value === lower);
+    if (match) return match.value;
+    
+    // Explicit alias mappings
+    const aliases: Record<string, string> = {
+        'js': 'javascript',
+        'ts': 'typescript',
+        'py': 'python',
+        'md': 'markdown',
+        'yml': 'yaml',
+        'docker': 'dockerfile',
+        'c++': 'cpp',
+        'c#': 'csharp',
+        'cs': 'csharp',
+        'sh': 'bash',
+        'shell': 'bash',
+        'rs': 'rust',
+        'rb': 'ruby',
+        'text': 'plaintext',
+        'txt': 'plaintext',
+        'htm': 'html',
+    };
+    
+    return aliases[lower] || lower;
+}
+
 // Custom CodeBlock with native interaction
 export const CustomCodeBlock = CodeBlockLowlight.extend<any>({
     addOptions() {
@@ -43,6 +78,28 @@ export const CustomCodeBlock = CodeBlockLowlight.extend<any>({
             onOpenBlockMenu: null,
             onCodeBlockSelected: null,
         };
+    },
+    addInputRules() {
+        return [
+            textblockTypeInputRule({
+                find: backtickInputRegex,
+                type: this.type,
+                getAttributes: match => {
+                    return {
+                        language: mapLanguageAlias(match[1]),
+                    };
+                },
+            }),
+            textblockTypeInputRule({
+                find: tildeInputRegex,
+                type: this.type,
+                getAttributes: match => {
+                    return {
+                        language: mapLanguageAlias(match[1]),
+                    };
+                },
+            }),
+        ];
     },
     addNodeView() {
         return ({ node, editor, getPos }) => {
@@ -148,21 +205,76 @@ export const CustomCodeBlock = CodeBlockLowlight.extend<any>({
             header.appendChild(langButton);
             header.appendChild(menuButton);
 
+            // === LINE NUMBER GUTTER ===
+            const gutter = document.createElement('div');
+            gutter.className = 'code-gutter';
+            gutter.contentEditable = 'false';
+
+            let currentSettings = (window as any).editorSettings || { numberedLines: true };
+            if (currentSettings.numberedLines === false) {
+                container.classList.add('no-line-numbers');
+                gutter.style.display = 'none';
+            }
+
+            let rafId: number | null = null;
+            const syncGutter = () => {
+                const text = code.textContent || '';
+                const lineCount = text.split('\n').length;
+                gutter.innerHTML = '';
+                const fragment = document.createDocumentFragment();
+                for (let i = 1; i <= lineCount; i++) {
+                    const span = document.createElement('span');
+                    span.textContent = String(i);
+                    fragment.appendChild(span);
+                }
+                gutter.appendChild(fragment);
+            };
+
+            const queueSync = () => {
+                if (rafId !== null) return;
+                rafId = requestAnimationFrame(() => {
+                    rafId = null;
+                    syncGutter();
+                });
+            };
+
+            const gutterObserver = new MutationObserver(() => queueSync());
+            gutterObserver.observe(code, { characterData: true, childList: true, subtree: true });
+
+            const handleSettingsChange = (e: any) => {
+                currentSettings = e?.detail ?? (window as any).editorSettings ?? currentSettings;
+                const isNumbered = currentSettings.numberedLines !== false;
+                if (isNumbered) {
+                    container.classList.remove('no-line-numbers');
+                    gutter.style.display = '';
+                    queueSync();
+                } else {
+                    container.classList.add('no-line-numbers');
+                    gutter.style.display = 'none';
+                }
+            };
+            window.addEventListener('annota-settings-change', handleSettingsChange);
+
+            setTimeout(queueSync, 0);
+
+            // Assemble DOM: header spans full width, gutter + pre sit side-by-side via CSS grid
             container.appendChild(header);
+            container.appendChild(gutter);
             container.appendChild(pre);
 
             return {
                 dom: container,
                 contentDOM: code,
                 ignoreMutation(mutation) {
+                    // Ignore mutations outside contentDOM (header, gutter, etc.)
                     if (!code.contains(mutation.target as Node) && code !== mutation.target) {
                         return true;
                     }
                     return false;
                 },
                 stopEvent: (event) => {
-                    // Prevent Prosemirror from interfering with header clicks
-                    if (header.contains(event.target as Node)) {
+                    // Prevent ProseMirror from interfering with header/gutter interactions
+                    if (header.contains(event.target as Node) || gutter.contains(event.target as Node)) {
                         return true;
                     }
                     return false;
@@ -177,7 +289,13 @@ export const CustomCodeBlock = CodeBlockLowlight.extend<any>({
                     code.className = `hljs language-${lang}`;
                     const updatedLang = CODE_LANGUAGES.find(l => l.value === lang) || CODE_LANGUAGES[0];
                     langButton.textContent = updatedLang.label;
+                    queueSync();
                     return true;
+                },
+                destroy() {
+                    gutterObserver.disconnect();
+                    window.removeEventListener('annota-settings-change', handleSettingsChange);
+                    if (rafId !== null) cancelAnimationFrame(rafId);
                 },
             };
         };

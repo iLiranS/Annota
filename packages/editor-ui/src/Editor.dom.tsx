@@ -1,6 +1,6 @@
 import { useSettingsStore } from '@annota/core';
 import { NoteFileService } from '@annota/core/platform';
-import { dispatchEditorCommand, getBaseExtensions, getEditorProps, getEditorState, getExtensions } from '@annota/editor-core';
+import { dispatchEditorCommand, getBaseExtensions, getEditorProps, getEditorState, getExtensions, prepareMarksHTMLForClipboard } from '@annota/editor-core';
 import '@annota/editor-core/highlight-theme.css';
 import '@annota/editor-core/styles.css';
 import { DOMSerializer } from '@tiptap/pm/model';
@@ -340,6 +340,20 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                     dom.setAttribute('autocapitalize', editorSettings.autocapitalize ? 'on' : 'off');
                     dom.setAttribute('autocomplete', editorSettings.autocomplete ? 'on' : 'off');
                 }
+
+                // Update settings window object and dispatch event for code block view
+                (window as any).editorSettings = {
+                    numberedLines: editorSettings.numberedLines !== undefined ? editorSettings.numberedLines : true,
+                };
+                window.dispatchEvent(new CustomEvent('annota-settings-change', { detail: (window as any).editorSettings }));
+
+                // Dynamically update the codeBlock default language
+                const extension = editor.extensionManager.extensions.find((e: any) => e.name === 'codeBlock');
+                if (extension) {
+                    (editor as any).setOptions('codeBlock', {
+                        defaultLanguage: editorSettings.defaultCodeLanguage
+                    });
+                }
             }
         }, [editor, editorProps, editorSettings]);
 
@@ -526,7 +540,6 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
             return () => { isMounted = false; };
         }, [
             placeholder,
-            editorSettings.defaultCodeLanguage,
         ]);
 
         useImperativeHandle(ref, () => ({
@@ -559,7 +572,7 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                     const fragment = DOMSerializer.fromSchema(editor.schema).serializeFragment(slice.content);
                     const div = document.createElement('div');
                     div.appendChild(fragment);
-                    html = div.innerHTML;
+                    html = prepareMarksHTMLForClipboard(div.innerHTML);
                 }
 
                 return {

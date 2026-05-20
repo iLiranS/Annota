@@ -14,6 +14,7 @@ import {
     Check,
     ChevronRight,
     Languages,
+    List,
     Maximize2,
     MousePointer2,
     Pilcrow,
@@ -266,6 +267,22 @@ export function EditorSettings() {
                             ))}
                         </DropdownMenuContent>
                     </DropdownMenu>
+
+                    <SettingItem
+                        label="Numbered Lines"
+                        description="Show line numbers inside code blocks"
+                        icon={<List size={18} />}
+                        iconBg="bg-blue-500"
+                        action={
+                            <Checkbox
+                                className="data-[state=checked]:bg-accent-full data-[state=checked]:border-accent-full dark:data-[state=checked]:bg-accent-full dark:data-[state=checked]:border-accent-full"
+                                checked={editor.numberedLines}
+                                onCheckedChange={(checked) => updateEditorSettings({ numberedLines: !!checked })}
+                            />
+                        }
+                        onClick={() => updateEditorSettings({ numberedLines: !editor.numberedLines })}
+                    />
+
                 </div>
             </section>
 

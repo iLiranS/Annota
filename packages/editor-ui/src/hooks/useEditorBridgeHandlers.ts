@@ -69,6 +69,7 @@ export function useEditorBridgeHandlers({
                     lineSpacing: editorSettings.lineSpacing,
                     editable,
                     defaultCodeLanguage: editorSettings.defaultCodeLanguage,
+                    numberedLines: editorSettings.numberedLines !== undefined ? editorSettings.numberedLines : true,
                 });
 
                 onReady?.();

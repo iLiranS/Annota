@@ -14,6 +14,7 @@ type EditorSettings = {
     lineSpacing: number;
     noteWidth: number;
     paragraphSpacing: number;
+    numberedLines?: boolean;
 };
 
 type UseEditorThemeVariablesArgs = {
@@ -27,6 +28,11 @@ export function useEditorThemeVariables({ colors, dark, editorSettings, rootRef 
     useEffect(() => {
         const root = rootRef.current;
         if (!root) return;
+
+        (window as any).editorSettings = {
+            numberedLines: editorSettings.numberedLines !== undefined ? editorSettings.numberedLines : true,
+        };
+        window.dispatchEvent(new CustomEvent('annota-settings-change', { detail: (window as any).editorSettings }));
 
         root.style.setProperty('--bg-color', dark ? 'transparent' : colors.background);
         root.style.setProperty('--text-color', dark ? 'rgba(255, 255, 255, 0.85)' : colors.text);
