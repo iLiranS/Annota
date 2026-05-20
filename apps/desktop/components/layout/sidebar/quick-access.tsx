@@ -8,13 +8,12 @@ import { useEffect, useState } from "react";
 
 interface QuickAccessSectionProps {
     notes: NoteMetadata[];
-    activeNoteId?: string;
     onNoteClick: (note: NoteMetadata) => void;
     onDeleteNote: (id: string) => void;
     general?: any;
 }
 
-export function QuickAccessSection({ notes, activeNoteId, onNoteClick, onDeleteNote, general }: QuickAccessSectionProps) {
+export function QuickAccessSection({ notes, onNoteClick, onDeleteNote, general }: QuickAccessSectionProps) {
     const [isOpen, setIsOpen] = useState(() => {
         const saved = localStorage.getItem("sidebar_quick_access_open");
         return saved !== null ? saved === "true" : true;
@@ -28,7 +27,7 @@ export function QuickAccessSection({ notes, activeNoteId, onNoteClick, onDeleteN
 
     return (
         <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-            <SidebarGroup className="py-1">
+            <SidebarGroup className="py-1 border-t border-border/60">
                 <SidebarGroupLabel asChild className="text-[10px]  font-bold uppercase tracking-wider text-muted-foreground/70">
                     <CollapsibleTrigger className="flex w-full items-center gap-2 hover:bg-sidebar-accent/50 px-2 py-1 rounded">
                         <Star size={12} strokeWidth={2.5} className="shrink-0" />
@@ -44,7 +43,6 @@ export function QuickAccessSection({ notes, activeNoteId, onNoteClick, onDeleteN
                                     note={note}
                                     onDelete={() => onDeleteNote(note.id)}
                                     onClick={() => onNoteClick(note)}
-                                    isActive={activeNoteId === note.id}
                                     isInList={true}
                                     isInQuickAccess={true}
                                     forceCompact={true}

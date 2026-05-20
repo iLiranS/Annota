@@ -358,7 +358,7 @@
     opacity: 0;
     cursor: grab;
     transition: opacity 0.12s ease, color 0.12s ease, background-color 0.12s ease;
-    transform: translate(-4px, 4px);
+    transform: translate(-4px, 2px);
     user-select: none;
     -webkit-user-select: none;
     /* Must sit above code-block stacking contexts (z-index: 2) */

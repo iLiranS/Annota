@@ -179,7 +179,6 @@ export function SearchView({
                                                     note={result.data}
                                                     onClick={() => onNoteClick(result.data)}
                                                     onDelete={() => onDeleteNote(result.data.id)}
-                                                    isActive={false}
                                                     searchQuery={searchQuery}
                                                     isInList={true}
                                                     suffix={<FolderBadge folderId={result.data.folderId} />}

@@ -136,7 +136,7 @@ export function AppSidebar() {
         setTimeout(() => setRetryCooldown(false), 10_000);
     }, [retryCooldown]);
 
-    const { open, setOpen } = useSidebar();
+    const { open, setOpen, toggleSidebar } = useSidebar();
 
     const { isOpen: isSearchOpen, setIsOpen: setIsSearchOpen } = useSearchStore();
 
@@ -152,9 +152,16 @@ export function AppSidebar() {
         const handleOpenSidebar = () => {
             setOpen(true);
         };
+        const handleToggleSidebar = () => {
+            toggleSidebar();
+        };
         window.addEventListener("open-sidebar", handleOpenSidebar);
-        return () => window.removeEventListener("open-sidebar", handleOpenSidebar);
-    }, [setOpen]);
+        window.addEventListener("toggle-sidebar", handleToggleSidebar);
+        return () => {
+            window.removeEventListener("open-sidebar", handleOpenSidebar);
+            window.removeEventListener("toggle-sidebar", handleToggleSidebar);
+        };
+    }, [setOpen, toggleSidebar]);
 
     useEffect(() => {
         localStorage.setItem("sidebar_active_tab", activeTab);

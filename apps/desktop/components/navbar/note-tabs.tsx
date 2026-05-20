@@ -6,11 +6,13 @@ import {
     ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { cn } from "@/lib/utils";
-import { DAILY_NOTES_FOLDER_ID, TRASH_FOLDER_ID, useNavigationStore, useNotesStore, useSettingsStore } from "@annota/core";
-import { FileText, Pin, X, XCircle } from "lucide-react";
+import { DAILY_NOTES_FOLDER_ID, NoteMetadata, TRASH_FOLDER_ID, useNavigationStore, useNotesStore, useSearchStore, useSettingsStore } from "@annota/core";
+import { FileText, Pin, Plus, X, XCircle } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { toast } from "sonner";
 import { useNoteTabsStore } from "../../hooks/use-note-tabs";
+import { NoteContextMenuContent, useNoteModals } from "../notes/note-context-menu";
 
 export function NoteTabs() {
     const { folderId: routeFolderId, noteId: routeNoteId } = useParams();
@@ -29,9 +31,14 @@ export function NoteTabs() {
     const togglePinTab = useNoteTabsStore(s => s.togglePinTab);
 
     const notes = useNotesStore(s => s.notes);
+    const deleteNote = useNotesStore(s => s.deleteNote);
 
     const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
     const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+    // Track the currently right-clicked note for modal rendering
+    const [selectedNote, setSelectedNote] = useState<NoteMetadata | null>(null);
+    const { openLocationPicker, renderModals } = useNoteModals(selectedNote);
 
     const searchFolderId = searchParams.get("folderId");
     const isSpecialView = searchFolderId === DAILY_NOTES_FOLDER_ID || searchFolderId === TRASH_FOLDER_ID || routeFolderId === TRASH_FOLDER_ID;
@@ -49,7 +56,7 @@ export function NoteTabs() {
 
     // 1. Sync current route to tabs
     useEffect(() => {
-        if (activeNoteId && location.pathname.startsWith('/notes')) {
+        if (activeNoteId && location.pathname.startsWith('/notes') && routeNoteId) {
             const currentTabs = useNoteTabsStore.getState().tabs;
             const existingTab = currentTabs.find(t => t.noteId === activeNoteId);
 
@@ -79,20 +86,20 @@ export function NoteTabs() {
             }
         }
         lastRouteNoteIdRef.current = activeNoteId;
-    }, [activeNoteId, routeFolderId, location.pathname, addTab, general.openNoteInNewTab, setTabs]);
+    }, [activeNoteId, routeFolderId, routeNoteId, location.pathname, addTab, general.openNoteInNewTab, setTabs]);
 
     useEffect(() => {
         const handleNavigate = (e: Event) => {
             const customEvent = e as CustomEvent;
             if (customEvent.detail && customEvent.detail.noteId) {
-                const folderId = routeFolderId || "root";
+                const folderId = searchFolderId || routeFolderId || "root";
                 setQuickAccessView(customEvent.detail.noteId, folderId);
                 navigate(`/notes/${folderId}/${customEvent.detail.noteId}`);
             }
         };
         window.addEventListener('navigate-note-tab', handleNavigate);
         return () => window.removeEventListener('navigate-note-tab', handleNavigate);
-    }, [navigate, routeFolderId, setQuickAccessView]);
+    }, [navigate, routeFolderId, searchFolderId, setQuickAccessView]);
 
     useEffect(() => {
         const handleCloseCurrentTab = () => {
@@ -102,11 +109,15 @@ export function NoteTabs() {
 
                 if (tabs.length > 1) {
                     const nextTab = tabs[tabIndex === tabs.length - 1 ? tabIndex - 1 : tabIndex + 1];
-                    const folderId = routeFolderId || "root";
+                    const folderId = searchFolderId || routeFolderId || "root";
                     setQuickAccessView(nextTab.noteId, folderId);
                     navigate(`/notes/${folderId}/${nextTab.noteId}`);
                 } else {
-                    navigate('/notes');
+                    if (routeFolderId && routeFolderId !== "root") {
+                        navigate(`/notes?folderId=${routeFolderId}`);
+                    } else {
+                        navigate('/notes');
+                    }
                 }
 
                 removeTab(activeNoteId);
@@ -114,7 +125,7 @@ export function NoteTabs() {
         };
         window.addEventListener('close-current-note-tab', handleCloseCurrentTab);
         return () => window.removeEventListener('close-current-note-tab', handleCloseCurrentTab);
-    }, [activeNoteId, tabs, routeFolderId, navigate, setQuickAccessView, removeTab]);
+    }, [activeNoteId, tabs, routeFolderId, searchFolderId, navigate, setQuickAccessView, removeTab]);
 
     // 2. Validate tabs (remove deleted/missing notes)
     useEffect(() => {
@@ -142,11 +153,15 @@ export function NoteTabs() {
         if (tabId === activeNoteId) {
             if (tabs.length > 1) {
                 const nextTab = tabs[tabIndex === tabs.length - 1 ? tabIndex - 1 : tabIndex + 1];
-                const folderId = routeFolderId || "root";
+                const folderId = searchFolderId || routeFolderId || "root";
                 setQuickAccessView(nextTab.noteId, folderId);
                 navigate(`/notes/${folderId}/${nextTab.noteId}`);
             } else {
-                navigate('/notes');
+                if (routeFolderId && routeFolderId !== "root") {
+                    navigate(`/notes?folderId=${routeFolderId}`);
+                } else {
+                    navigate('/notes');
+                }
             }
         }
 
@@ -160,11 +175,15 @@ export function NoteTabs() {
         const stillHasActive = keptTabs.some(t => t.noteId === activeNoteId);
         if (!stillHasActive && keptTabs.length > 0) {
             const firstTab = keptTabs[0];
-            const folderId = routeFolderId || "root";
+            const folderId = searchFolderId || routeFolderId || "root";
             setQuickAccessView(firstTab.noteId, folderId);
             navigate(`/notes/${folderId}/${firstTab.noteId}`);
         } else if (keptTabs.length === 0) {
-            navigate('/notes');
+            if (routeFolderId && routeFolderId !== "root") {
+                navigate(`/notes?folderId=${routeFolderId}`);
+            } else {
+                navigate('/notes');
+            }
         }
     };
 
@@ -180,7 +199,7 @@ export function NoteTabs() {
             addTab({ noteId, folderId });
         }
 
-        const currentFolderId = routeFolderId || "root";
+        const currentFolderId = searchFolderId || routeFolderId || "root";
         setQuickAccessView(noteId, currentFolderId);
         navigate(`/notes/${currentFolderId}/${noteId}`);
     };
@@ -225,10 +244,8 @@ export function NoteTabs() {
     return (
         <div
             ref={containerRef}
-            className={cn(
-                "flex-1 flex items-center h-full overflow-x-auto overflow-y-hidden ml-2 mr-2",
-                general.appDirection === 'rtl' ? 'flex-row-reverse' : 'flex-row'
-            )}
+            dir={general.appDirection === 'rtl' ? 'rtl' : 'ltr'}
+            className="flex-1 flex flex-row items-center h-full overflow-x-auto overflow-y-hidden ml-2 mr-2 min-w-0 note-tabs-scrollbar-hide"
             style={{
                 WebkitAppRegion: 'no-drag',
                 scrollbarWidth: 'none',
@@ -251,16 +268,14 @@ export function NoteTabs() {
             }}
         >
             <style>{`
+                .note-tabs-scrollbar-hide::-webkit-scrollbar,
                 .note-tabs-container::-webkit-scrollbar {
                     display: none;
                 }
             `}</style>
             <div
                 data-tauri-drag-region
-                className={cn(
-                    "note-tabs-container flex w-full h-full items-center gap-1.5  px-5",
-                    general.appDirection === 'rtl' ? 'flex-row-reverse' : 'flex-row'
-                )}
+                className="note-tabs-container flex flex-row min-w-full w-max h-full items-center gap-1.5 px-5"
                 onDragOver={(e) => {
                     if (e.dataTransfer.types.includes("application/annota-note-id")) {
                         e.preventDefault();
@@ -283,7 +298,7 @@ export function NoteTabs() {
                     const isActive = tab.noteId === activeNoteId;
 
                     return (
-                        <ContextMenu key={tab.noteId}>
+                        <ContextMenu key={tab.noteId} onOpenChange={(open) => open && setSelectedNote(note)}>
                             <ContextMenuTrigger asChild>
                                 <div
                                     data-tab-id={tab.noteId}
@@ -329,27 +344,26 @@ export function NoteTabs() {
                                         setDragOverIndex(null);
                                     }}
                                     onClick={() => {
-                                        const folderId = routeFolderId || "root";
+                                        const folderId = searchFolderId || routeFolderId || "root";
                                         setQuickAccessView(tab.noteId, folderId);
                                         navigate(`/notes/${folderId}/${tab.noteId}`);
                                     }}
                                     className={cn(
-                                        "group relative flex h-9/12 cursor-pointer items-center justify-between gap-2 rounded border px-1 text-xs select-none",
+                                        "group relative flex h-9/12 cursor-pointer items-center justify-between gap-2 rounded border px-1 text-xs select-none flex-row",
                                         isActive
                                             ? "bg-note-bg dark:bg-primary/10 border-border text-primary  z-10 shrink min-w-[120px] max-w-[220px] w-auto font-medium"
                                             : "bg-transparent border-transparent text-muted-foreground/60 hover:bg-primary/5 hover:text-muted-foreground/80 hover:border-border/30 z-0 shrink min-w-[120px] max-w-[220px] w-auto",
                                         draggedIndex === index && "opacity-50",
-                                        dragOverIndex === index && "bg-sidebar-accent",
-                                        general.appDirection === 'rtl' ? 'flex-row-reverse' : 'flex-row'
+                                        dragOverIndex === index && "bg-sidebar-accent"
                                     )}
                                 >
                                     {tab.isPinned ? (
-                                        <Pin size={11} className={cn(
+                                        <Pin size={12} className={cn(
                                             "shrink-0  rotate-45 fill-current",
                                             isActive ? "text-accent-full" : "text-muted-foreground/40 group-hover:text-muted-foreground/70"
                                         )} />
                                     ) : (
-                                        <FileText size={11} className={cn(
+                                        <FileText size={12} className={cn(
                                             "shrink-0 ",
                                             isActive ? "text-accent-full" : "text-muted-foreground/40 group-hover:text-muted-foreground/70"
                                         )} />
@@ -373,26 +387,66 @@ export function NoteTabs() {
                                     </div>
                                 </div>
                             </ContextMenuTrigger>
-                            <ContextMenuContent className="w-48">
+                            <ContextMenuContent className="w-52">
+
                                 <ContextMenuItem onClick={() => togglePinTab(tab.noteId)} className="gap-2">
                                     <Pin size={15} className={cn("text-muted-foreground", tab.isPinned && "rotate-45 fill-current")} />
                                     <span>{tab.isPinned ? "Unpin Tab" : "Pin Tab"}</span>
                                 </ContextMenuItem>
-                                <ContextMenuSeparator />
-
                                 <ContextMenuItem onClick={() => handleCloseOtherTabs(tab.noteId)} className="gap-2">
                                     <XCircle size={15} className="text-muted-foreground" />
                                     <span>Close Other Tabs</span>
                                 </ContextMenuItem>
-                                <ContextMenuItem onClick={(e) => handleClose(e as any, tab.noteId)} className="gap-2 text-destructive focus:bg-destructive/10 focus:text-destructive">
-                                    <X size={15} />
+                                <ContextMenuItem onClick={(e) => handleClose(e as any, tab.noteId)} className="gap-2">
+                                    <X size={15} className="text-muted-foreground" />
                                     <span>Close Tab</span>
                                 </ContextMenuItem>
+                                <ContextMenuSeparator />
+
+                                <NoteContextMenuContent
+                                    note={note}
+                                    onMoveNote={openLocationPicker}
+                                    onDelete={async () => {
+                                        const tabId = tab.noteId;
+                                        const tabIndex = tabs.findIndex(t => t.noteId === tabId);
+                                        if (tabIndex !== -1) {
+                                            if (tabId === activeNoteId) {
+                                                if (tabs.length > 1) {
+                                                    const nextTab = tabs[tabIndex === tabs.length - 1 ? tabIndex - 1 : tabIndex + 1];
+                                                    const folderId = searchFolderId || routeFolderId || "root";
+                                                    setQuickAccessView(nextTab.noteId, folderId);
+                                                    navigate(`/notes/${folderId}/${nextTab.noteId}`);
+                                                } else {
+                                                    if (routeFolderId && routeFolderId !== "root") {
+                                                        navigate(`/notes?folderId=${routeFolderId}`);
+                                                    } else {
+                                                        navigate('/notes');
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        removeTab(tabId);
+                                        await deleteNote(tabId);
+                                        toast.success("Note moved to Trash");
+                                    }}
+                                    disabledActions={["openInNewTab", "preview"]}
+                                />
+
+
                             </ContextMenuContent>
                         </ContextMenu>
                     );
                 })}
+                <button
+                    type="button"
+                    onClick={() => useSearchStore.getState().setIsOpen(true)}
+                    className="h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground/40 hover:bg-primary/10 hover:text-primary active:scale-90 transition-all cursor-pointer shrink-0 ml-1  "
+                    title="Open Search (Cmd+P)"
+                >
+                    <Plus size={14} strokeWidth={2.5} />
+                </button>
             </div>
+            {renderModals()}
         </div>
     );
 }

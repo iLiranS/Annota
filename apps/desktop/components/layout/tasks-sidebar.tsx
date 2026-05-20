@@ -188,7 +188,7 @@ export function TasksSidebar() {
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto premium-scrollbar px-2 py-2 space-y-2">
+            <div data-tauri-drag-region className="flex-1 overflow-y-auto premium-scrollbar px-2 py-2 space-y-2">
                 {loading && groups.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
                         <Loader2 size={20} className="animate-spin text-primary/30" />

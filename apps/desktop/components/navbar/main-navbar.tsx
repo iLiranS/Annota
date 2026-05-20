@@ -173,7 +173,7 @@ export function MainNavbar() {
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent side="bottom" className="text-[10px]">
-                            Toggle Sidebar <span className="opacity-50 ml-1">{isMac ? "⌘+⇧+D" : "Ctrl+Shift+D"}</span>
+                            Toggle Sidebar <span className="opacity-50 ml-1">{isMac ? "⌘S" : "Ctrl+S"}</span>
                         </TooltipContent>
                     </Tooltip>
 

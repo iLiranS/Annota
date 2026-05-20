@@ -342,6 +342,11 @@ function App() {
     document.addEventListener("click", handleGlobalClick);
 
     const subscription = authApi.onAuthStateChange((event, newSession) => {
+      // Ignore auth changes during application bootstrapping/hydration
+      if (bootstrapStateRef.current !== "ready") {
+        return;
+      }
+
       const prevUserId = useUserStore.getState().user?.id ?? null;
 
       if (newSession) {
@@ -430,7 +435,14 @@ function App() {
     const isAtRoot = location.pathname === "/" || location.pathname === "/notes";
     if (isAtRoot) {
       hasRestoredLastViewRef.current = true;
-      const { lastViewedNoteId } = useSettingsStore.getState();
+      const { lastViewedNoteId, general } = useSettingsStore.getState();
+      const tabs = useNoteTabsStore.getState().tabs;
+
+      // Skip restoring last viewed note if note tabs are enabled but there are no tabs open.
+      if (general?.enableNoteTabs !== false && tabs.length === 0) {
+        return;
+      }
+
       if (lastViewedNoteId) {
         const note = useNotesStore.getState().notes.find((n) => n.id === lastViewedNoteId && !n.isDeleted);
         if (note) {

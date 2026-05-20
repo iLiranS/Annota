@@ -45,6 +45,7 @@ export function ShortcutsSettings() {
                 <div className="bg-card border rounded-2xl overflow-hidden shadow-sm divide-y">
                     <ShortcutItem label="New Note" keys={[modKey, "N"]} />
                     <ShortcutItem label="Quick Search" keys={[modKey, "P"]} />
+                    <ShortcutItem label="Toggle Sidebar" keys={[modKey, "S"]} />
                     <ShortcutItem label="Toggle Secondary Sidebar" keys={[modKey, "E"]} />
                     <ShortcutItem label="Settings" keys={[modKey, ","]} />
                     <ShortcutItem label="Always on Top" keys={[modKey, "Shift", "T"]} />

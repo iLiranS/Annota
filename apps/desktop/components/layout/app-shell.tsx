@@ -112,7 +112,7 @@ export default function AppShell() {
                 <MainNavbar />
 
                 {/* Main page content container */}
-                <div className="flex-1 overflow-hidden flex min-w-0">
+                <div className="flex-1 overflow-hidden flex min-w-0 ">
                     <AppSidebar />
 
                     {/* Primary Note Card (Rounded, Bordered) */}
@@ -137,8 +137,9 @@ export default function AppShell() {
                         className={cn(
                             general.secondarySidebarMode === 'pinned'
                                 ? cn(
-                                    "relative mb-2 ",
-                                    general.appDirection === "rtl" ? "ml-2" : "mr-2"
+                                    "relative",
+                                    general.isSecondarySidebarOpen && "mb-2",
+                                    general.isSecondarySidebarOpen && (general.appDirection === "rtl" ? "ml-2" : "mr-2")
                                 )
                                 : cn(
                                     "absolute z-50",

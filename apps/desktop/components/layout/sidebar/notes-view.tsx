@@ -1,21 +1,21 @@
-import { useMemo } from "react";
-import { 
-    useNotesStore, 
-    useNavigationStore, 
-    useSettingsStore, 
-    DAILY_NOTES_FOLDER_ID, 
-    TRASH_FOLDER_ID, 
-    sortNotes, 
+import { useAppTheme } from "@/hooks/use-app-theme";
+import { useCreateNote } from "@/hooks/use-create-note";
+import { cn } from "@/lib/utils";
+import {
+    DAILY_NOTES_FOLDER_ID,
+    TRASH_FOLDER_ID,
     getSortTypeLabel,
+    sortNotes,
+    useNavigationStore,
+    useNotesStore,
+    useSettingsStore,
     type Folder,
     type SortType
 } from "@annota/core";
-import { useAppTheme } from "@/hooks/use-app-theme";
-import { useCreateNote } from "@/hooks/use-create-note";
-import { SidebarHeaderSection } from "./sidebar-header";
+import { useMemo } from "react";
 import { NotesList } from "./notes-list";
 import { QuickAccessSection } from "./quick-access";
-import { cn } from "@/lib/utils";
+import { SidebarHeaderSection } from "./sidebar-header";
 
 interface NotesViewBaseProps {
     currentFolderId: string | undefined;
@@ -122,7 +122,6 @@ export function NotesViewHeader({
 export function NotesViewContent({
     currentFolderId,
     tagId,
-    routeNoteId,
     selectionMode,
     selectedNoteIds,
     onToggleSelection,
@@ -131,13 +130,12 @@ export function NotesViewContent({
     onNavigate,
 }: NotesViewContentProps) {
     const { general } = useSettingsStore();
-    const { 
-        notes, 
-        deleteNote, 
-        getNotesInFolder, 
-        getSortType 
+    const {
+        notes,
+        deleteNote,
+        getNotesInFolder,
+        getSortType
     } = useNotesStore();
-    const quickAccessNoteId = useNavigationStore((s) => s.quickAccessNoteId);
     const setQuickAccessView = useNavigationStore((s) => s.setQuickAccessView);
 
     const isTrash = currentFolderId === TRASH_FOLDER_ID;
@@ -172,10 +170,8 @@ export function NotesViewContent({
             <NotesList
                 key={currentFolderId ?? tagId ?? 'root'}
                 notes={browseNotes}
-                activeNoteId={quickAccessNoteId || routeNoteId}
                 onNoteClick={(note) => onNavigate(`/notes/${note.folderId || "root"}/${note.id}`)}
                 onDeleteNote={deleteNote}
-                general={general}
                 selectionMode={selectionMode}
                 selectedNoteIds={selectedNoteIds}
                 onToggleSelection={onToggleSelection}
@@ -187,7 +183,6 @@ export function NotesViewContent({
             {!isTrash && !tagId && (
                 <QuickAccessSection
                     notes={quickAccessNotes}
-                    activeNoteId={quickAccessNoteId || routeNoteId}
                     onNoteClick={(note) => {
                         setQuickAccessView(note.id, currentFolderId || "root");
                         onNavigate(`/notes/${currentFolderId || "root"}/${note.id}`);

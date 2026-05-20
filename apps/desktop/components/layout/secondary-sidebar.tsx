@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useSettingsStore } from "@annota/core";
-import { CheckSquare, Info, Pin, Sparkles } from "lucide-react";
+import { CheckSquare, Pin, ScrollText, Sparkles } from "lucide-react";
 import { useEffect } from "react";
 import { useActiveNoteId } from "../../hooks/use-active-note-id";
 import { AiSidebar } from "./ai-sidebar";
@@ -29,7 +29,7 @@ export function SecondarySidebar({ width, isResizing }: { width?: number, isResi
     const TABS = [
         ...(general.isAiEnabled ? [{ id: 'ai' as const, label: 'AI Chat', icon: Sparkles }] : []),
         { id: 'tasks' as const, label: 'Tasks', icon: CheckSquare },
-        { id: 'info' as const, label: 'Note', icon: Info },
+        { id: 'info' as const, label: 'Note', icon: ScrollText },
     ];
 
     const activeIndex = TABS.findIndex(t => t.id === activeTab);

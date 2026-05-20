@@ -124,7 +124,7 @@ export function NoteInfo({ noteId }: { noteId: string }) {
                     <ListTree size={12} className="opacity-70 text-accent-full" />
                     Table of Contents
                 </h3>
-                <div className="flex-1 overflow-y-auto pr-2 premium-scrollbar">
+                <div data-tauri-drag-region className="flex-1 overflow-y-auto pr-2 premium-scrollbar">
                     {toc.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-12 text-center bg-muted/20 rounded-xl border border-dashed border-border/40">
                             <p className="text-[11px] text-muted-foreground/40 italic">

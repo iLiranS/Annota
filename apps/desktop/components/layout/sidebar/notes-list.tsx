@@ -1,19 +1,19 @@
 import { ConfirmDialog } from "@/components/custom-ui/confirm-dialog";
 import { LocationPickerModal } from "@/components/location-picker-modal";
 import { NoteListItem } from "@/components/notes/note-list-item";
-import { SidebarGroup, SidebarMenu, SidebarMenuItem } from "@/components/ui/sidebar";
+import { SidebarGroup, SidebarMenu, SidebarMenuItem, SidebarGroupLabel } from "@/components/ui/sidebar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { NoteMetadata, useNotesStore } from "@annota/core";
-import { FolderEdit, Trash2, X } from "lucide-react";
-import { useState } from "react";
+import { NoteMetadata, useNotesStore, useSettingsStore } from "@annota/core";
+import { FolderEdit, Trash2, X, ChevronRight } from "lucide-react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { cn } from "@/lib/utils";
 
 interface NotesListProps {
     notes: NoteMetadata[];
-    activeNoteId?: string;
     onNoteClick: (note: NoteMetadata) => void;
     onDeleteNote: (id: string) => void;
-    general?: any;
     selectionMode?: boolean;
     selectedNoteIds?: string[];
     onToggleSelection?: (noteId: string) => void;
@@ -26,7 +26,6 @@ interface NotesListProps {
 
 export function NotesList({
     notes,
-    activeNoteId,
     onNoteClick,
     onDeleteNote,
     selectionMode = false,
@@ -34,11 +33,36 @@ export function NotesList({
     onToggleSelection,
     onClearSelection,
     currentFolderId,
+    isTrash,
 }: NotesListProps) {
     const bulkDeleteNotes = useNotesStore(state => state.bulkDeleteNotes);
     const bulkMoveNotes = useNotesStore(state => state.bulkMoveNotes);
+    const { general } = useSettingsStore();
     const [isLocationPickerOpen, setIsLocationPickerOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
+    // Separate pinned and regular notes
+    const pinnedNotes = notes.filter(n => n.isPinned);
+    const regularNotes = notes.filter(n => !n.isPinned);
+
+    // Collapsible states with localStorage persistence
+    const [isPinnedOpen, setIsPinnedOpen] = useState(() => {
+        const saved = localStorage.getItem("sidebar_pinned_notes_open");
+        return saved !== null ? saved === "true" : true;
+    });
+
+    const [isRegularOpen, setIsRegularOpen] = useState(() => {
+        const saved = localStorage.getItem("sidebar_regular_notes_open");
+        return saved !== null ? saved === "true" : true;
+    });
+
+    useEffect(() => {
+        localStorage.setItem("sidebar_pinned_notes_open", String(isPinnedOpen));
+    }, [isPinnedOpen]);
+
+    useEffect(() => {
+        localStorage.setItem("sidebar_regular_notes_open", String(isRegularOpen));
+    }, [isRegularOpen]);
 
     const handleBulkDelete = async () => {
         try {
@@ -120,46 +144,120 @@ export function NotesList({
                     </div>
                 )}
 
-                <div className="flex-1 overflow-y-auto premium-scrollbar  mt-0.5 ">
-                    <SidebarMenu data-tauri-drag-region className="gap-0.5 min-h-full">
-                        {notes.length === 0 ? (
-                            <div className="px-4 py-8 text-center">
-                                <p className="text-xs text-muted-foreground italic">No notes here</p>
-                            </div>
-                        ) : (
-                            <>
-                                {notes.filter(n => n.isPinned).map((note) => (
-                                    <SidebarMenuItem key={note.id}>
-                                        <NoteListItem
-                                            note={note}
-                                            onDelete={() => onDeleteNote(note.id)}
-                                            onClick={() => onNoteClick(note)}
-                                            isActive={activeNoteId === note.id}
-                                            isInList={true}
-                                            selectionMode={selectionMode}
-                                            isSelected={selectedNoteIds.includes(note.id)}
-                                            onToggleSelection={onToggleSelection}
-                                        />
-                                    </SidebarMenuItem>
-                                ))}
+                <div className="flex-1 overflow-y-auto premium-scrollbar mt-0.5">
+                    {notes.length === 0 ? (
+                        <div className="px-4 py-8 text-center">
+                            <p className="text-xs text-muted-foreground italic">No notes here</p>
+                        </div>
+                    ) : (!isTrash && pinnedNotes.length > 0) ? (
+                        <div className="flex flex-col gap-4 min-h-full pb-4">
+                            {/* Pinned Section */}
+                            <Collapsible open={isPinnedOpen} onOpenChange={setIsPinnedOpen}>
+                                <div className="px-1">
+                                    <SidebarGroupLabel asChild className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
+                                        <CollapsibleTrigger className="flex w-full items-center gap-2 hover:bg-sidebar-accent/50 px-2 py-1 rounded transition-colors group/trigger">
+                                            <span className="flex-1 text-start">Pinned</span>
+                                            <span className="text-[9px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded font-mono font-medium leading-none">
+                                                {pinnedNotes.length}
+                                            </span>
+                                            <ChevronRight
+                                                size={11}
+                                                className={cn(
+                                                    "transition-transform text-muted-foreground/50 group-hover/trigger:text-muted-foreground",
+                                                    general?.appDirection === 'rtl'
+                                                        ? (isPinnedOpen ? "rotate-90" : "rotate-180")
+                                                        : (isPinnedOpen && "rotate-90")
+                                                )}
+                                            />
+                                        </CollapsibleTrigger>
+                                    </SidebarGroupLabel>
+                                    <CollapsibleContent className="mt-1">
+                                        <SidebarMenu data-tauri-drag-region className="gap-0.5 px-0.5">
+                                            {pinnedNotes.map((note) => (
+                                                <SidebarMenuItem key={note.id}>
+                                                    <NoteListItem
+                                                        note={note}
+                                                        onDelete={() => onDeleteNote(note.id)}
+                                                        onClick={() => onNoteClick(note)}
+                                                        isInList={true}
+                                                        selectionMode={selectionMode}
+                                                        isSelected={selectedNoteIds.includes(note.id)}
+                                                        onToggleSelection={onToggleSelection}
+                                                        hidePinIcon={true}
+                                                    />
+                                                </SidebarMenuItem>
+                                            ))}
+                                        </SidebarMenu>
+                                    </CollapsibleContent>
+                                </div>
+                            </Collapsible>
 
-                                {notes.filter(n => !n.isPinned).map((note) => (
-                                    <SidebarMenuItem key={note.id}>
-                                        <NoteListItem
-                                            note={note}
-                                            onDelete={() => onDeleteNote(note.id)}
-                                            onClick={() => onNoteClick(note)}
-                                            isActive={activeNoteId === note.id}
-                                            isInList={true}
-                                            selectionMode={selectionMode}
-                                            isSelected={selectedNoteIds.includes(note.id)}
-                                            onToggleSelection={onToggleSelection}
-                                        />
-                                    </SidebarMenuItem>
-                                ))}
-                            </>
-                        )}
-                    </SidebarMenu>
+                            {/* Regular Notes Section */}
+                            <Collapsible open={isRegularOpen} onOpenChange={setIsRegularOpen}>
+                                <div className="px-1">
+                                    <SidebarGroupLabel asChild className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
+                                        <CollapsibleTrigger className="flex w-full items-center gap-2 hover:bg-sidebar-accent/50 px-2 py-1 rounded transition-colors group/trigger">
+                                            <span className="flex-1 text-start">Notes</span>
+                                            <span className="text-[9px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded font-mono font-medium leading-none">
+                                                {regularNotes.length}
+                                            </span>
+                                            <ChevronRight
+                                                size={11}
+                                                className={cn(
+                                                    "transition-transform text-muted-foreground/50 group-hover/trigger:text-muted-foreground",
+                                                    general?.appDirection === 'rtl'
+                                                        ? (isRegularOpen ? "rotate-90" : "rotate-180")
+                                                        : (isRegularOpen && "rotate-90")
+                                                )}
+                                            />
+                                        </CollapsibleTrigger>
+                                    </SidebarGroupLabel>
+                                    <CollapsibleContent className="mt-1">
+                                        <SidebarMenu data-tauri-drag-region className="gap-0.5 px-0.5">
+                                            {regularNotes.length === 0 ? (
+                                                <div className="px-4 py-4 text-center">
+                                                    <p className="text-xs text-muted-foreground/70 italic">No other notes</p>
+                                                </div>
+                                            ) : (
+                                                regularNotes.map((note) => (
+                                                    <SidebarMenuItem key={note.id}>
+                                                        <NoteListItem
+                                                            note={note}
+                                                            onDelete={() => onDeleteNote(note.id)}
+                                                            onClick={() => onNoteClick(note)}
+                                                            isInList={true}
+                                                            selectionMode={selectionMode}
+                                                            isSelected={selectedNoteIds.includes(note.id)}
+                                                            onToggleSelection={onToggleSelection}
+                                                            hidePinIcon={true}
+                                                        />
+                                                    </SidebarMenuItem>
+                                                ))
+                                            )}
+                                        </SidebarMenu>
+                                    </CollapsibleContent>
+                                </div>
+                            </Collapsible>
+                        </div>
+                    ) : (
+                        // If no pinned notes exist, render a clean, unified list with no section headers
+                        <SidebarMenu data-tauri-drag-region className="gap-0.5 min-h-full px-1.5">
+                            {notes.map((note) => (
+                                <SidebarMenuItem key={note.id}>
+                                    <NoteListItem
+                                        note={note}
+                                        onDelete={() => onDeleteNote(note.id)}
+                                        onClick={() => onNoteClick(note)}
+                                        isInList={true}
+                                        selectionMode={selectionMode}
+                                        isSelected={selectedNoteIds.includes(note.id)}
+                                        onToggleSelection={onToggleSelection}
+                                        hidePinIcon={true}
+                                    />
+                                </SidebarMenuItem>
+                            ))}
+                        </SidebarMenu>
+                    )}
                 </div>
             </SidebarGroup>
 

@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { NoteMetadata, useSettingsStore } from "@annota/core";
-import { Info, Search } from "lucide-react";
+import { ScrollText, Search } from "lucide-react";
 import { useState } from "react";
 import { NoteActionsMenu } from "./note-actions-menu";
 
@@ -103,7 +103,7 @@ export function NoteFloatingActions({
                                 )}
                                 onClick={toggleNoteInfo}
                             >
-                                <Info className="h-3.5 w-3.5" />
+                                <ScrollText className="h-3.5 w-3.5" />
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent side="bottom" sideOffset={12} className="text-[10px] font-medium">

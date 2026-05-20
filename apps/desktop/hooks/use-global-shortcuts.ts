@@ -128,6 +128,9 @@ export function useGlobalShortcuts(options: { isStandalone?: boolean } = {}) {
                     } else if (code === 'KeyP' && !e.shiftKey) {
                         e.preventDefault();
                         setIsSearchOpen(true);
+                    } else if (code === 'KeyS' && !e.shiftKey) {
+                        e.preventDefault();
+                        window.dispatchEvent(new CustomEvent('toggle-sidebar'));
                     } else if (code === 'KeyE' && !e.shiftKey) {
                         e.preventDefault();
                         updateGeneralSettings({ isSecondarySidebarOpen: !general.isSecondarySidebarOpen });
