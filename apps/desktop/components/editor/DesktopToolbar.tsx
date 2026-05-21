@@ -105,7 +105,7 @@ export function DesktopToolbar({
     const activeStyle = useCallback((active: boolean) => ({
         color: active ? colors.primary : undefined,
         opacity: active ? 1 : 0.7,
-        backgroundColor: active ? `${colors.primary}15` : undefined,
+        backgroundColor: active ? `${colors.primary}20` : undefined,
         borderRadius: '8px',
         transition: 'opacity 0.2s ease, background-color 0.2s ease'
     }), [colors.primary]);
@@ -511,16 +511,12 @@ export function DesktopToolbar({
                             rounded-2xl
                             z-50
 
-                            bg-linear-to-r from-background/25 via-background/15 to-background/25
-                            backdrop-blur-2xl
-                            border border-background/20
-                            ring-1 ring-background/10
-                            shadow-[0_14px_30px_rgba(15,23,42,0.35)]
-
-                            dark:bg-linear-to-r dark:from-stone-900/70 dark:via-stone-900/40 dark:to-stone-900/70
-                            dark:border-background/20
-                            dark:ring-background/10
-                            dark:shadow-[0_18px_40px_rgba(0,0,0,0.6)]
+                           bg-note-bg/80
+                            backdrop-blur-xl saturate-200
+                            border border-border/40
+                            shadow-[inset_0_1px_0_rgba(255,255,255,1),0_6px_20px_rgba(0,0,0,0.10)]
+                            dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_12px_32px_rgba(0,0,0,0.45)]
+                            
                             "
             >
                 <div ref={rowRef} className="flex items-center gap-0.5 w-full px-1">

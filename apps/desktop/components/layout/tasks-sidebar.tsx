@@ -36,7 +36,7 @@ function TaskNoteGroup({ group, onTaskComplete, onNavigate, completingKeys }: Ta
                 <span className="text-[11px] font-bold text-foreground/80 truncate flex-1">
                     {group.noteTitle}
                 </span>
-                <span className="text-[11px] font-black uppercase tracking-widest text-muted-foreground/45 shrink-0 tabular-nums">
+                <span className="text-[11px] font-black uppercase  text-muted-foreground/45 shrink-0 tabular-nums">
                     {group.tasks.length}
                 </span>
                 <button

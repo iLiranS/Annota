@@ -99,8 +99,9 @@ export function AISelectionPopover({ anchorRect, isVisible, isLoading, onAction,
                     isLoading
                         ? "w-48 rounded-2xl p-1"
                         : isExpanded
-                            ? "w-64 p-2 gap-2 rounded-2xl"
+                            ? "w-64 p-1 gap-1 rounded-xl"
                             : "w-auto rounded-[24px] p-[3px]"
+
                 )}
                 onOpenAutoFocus={(e) => e.preventDefault()}
             >
@@ -165,7 +166,7 @@ export function AISelectionPopover({ anchorRect, isVisible, isLoading, onAction,
                 <div className="light-streak" />
                 {isLoading ? (
                     // ── Loading state ────────────────────────────────────────
-                    <div className="flex items-center gap-3 px-3 py-2 animate-in fade-in zoom-in-95 duration-300">
+                    <div className="flex items-center gap-3 px-3 py-1 animate-in fade-in zoom-in-95 duration-300">
                         <Button
                             variant="ghost"
                             size="icon"
@@ -232,7 +233,7 @@ export function AISelectionPopover({ anchorRect, isVisible, isLoading, onAction,
 
                 ) : (
                     // ── Expanded rewrite panel ───────────────────────────────
-                    <div className="flex flex-col gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <div className="flex flex-col gap-1.5 animate-in fade-in slide-in-from-bottom-2 duration-300">
                         {/* <div className="flex items-center gap-2 px-1">
                             <Sparkles className="h-4 w-4 text-primary" />
                             <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">AI Rewrite</span>
@@ -253,7 +254,7 @@ export function AISelectionPopover({ anchorRect, isVisible, isLoading, onAction,
                                         onAction?.('rewrite', instructions);
                                     }
                                 }}
-                                className="min-h-[36px] w-full py-2 pr-9 text-xs focus-visible:ring-0 ring-0 rounded-xl resize-none overflow-y-auto no-scrollbar"
+                                className="min-h-[36px] w-full py-1.5 pr-9 text-xs focus-visible:ring-0 ring-0 rounded-xl resize-none overflow-y-auto no-scrollbar"
                                 autoFocus
                                 maxLength={2000}
                                 rows={1}
@@ -272,6 +273,35 @@ export function AISelectionPopover({ anchorRect, isVisible, isLoading, onAction,
                                 <Send className="h-4 w-4" />
                             </Button>
                         </div>
+
+                        {!instructions.trim() && (
+                            <div className="flex items-center gap-1 mt-0.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="flex-1 h-6 px-1.5 rounded-full border border-primary/10 hover:border-primary/25 hover:bg-primary/5 text-[10px] font-semibold tracking-tight transition-all duration-200"
+                                    onClick={() => onAction?.('rewrite', "Rewrite the following text to be more understandable, clear, and readable. Keep the length approximately the same as the original text, avoiding making it longer. Maintain formatting if applicable.")}
+                                >
+                                    Rewrite
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="flex-1 h-6 px-1.5 rounded-full border border-primary/10 hover:border-primary/25 hover:bg-primary/5 text-[10px] font-semibold tracking-tight transition-all duration-200"
+                                    onClick={() => onAction?.('rewrite', "Elaborate and expand on the following text. Add relevant details, clarify concepts, and continue the thought naturally to make it more comprehensive and detailed while keeping a professional and natural tone.")}
+                                >
+                                    Expand
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="flex-1 h-6 px-1.5 rounded-full border border-primary/10 hover:border-primary/25 hover:bg-primary/5 text-[10px] font-semibold tracking-tight transition-all duration-200"
+                                    onClick={() => onAction?.('rewrite', "Shorten the following text. Summarize the key points, remove any fluff, wordiness, or unnecessary details, and make it concise while retaining all important information.")}
+                                >
+                                    Shorten
+                                </Button>
+                            </div>
+                        )}
                     </div>
                 )}
             </PopoverContent>

@@ -72,7 +72,7 @@ export function HeadingSelector({ editorState, sendCommand, onOpenChange, isMenu
                     style={{
                         color: currentHeadingLabel !== 'T' ? activeColor : undefined,
                         opacity: currentHeadingLabel !== 'T' ? 1 : 0.7,
-                        backgroundColor: currentHeadingLabel !== 'T' && activeColor ? `${activeColor}15` : undefined,
+                        backgroundColor: currentHeadingLabel !== 'T' && activeColor ? `${activeColor}20` : undefined,
                         borderRadius: currentHeadingLabel !== 'T' ? '8px' : undefined,
                         transition: 'opacity 0.2s ease, background-color 0.2s ease'
                     }}

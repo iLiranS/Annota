@@ -50,15 +50,12 @@ export function NoteFloatingActions({
             "rounded-2xl",
             "z-30",
             "will-change-transform",
-            "bg-linear-to-r from-background/25 via-background/15 to-background/25",
-            "backdrop-blur-2xl",
-            "border border-background/20",
-            "ring-1 ring-background/10",
-            "shadow-[0_14px_30px_rgba(15,23,42,0.35)]",
-            "dark:bg-linear-to-r dark:from-stone-900/70 dark:via-stone-900/40 dark:to-stone-900/70",
-            "dark:border-background/20",
-            "dark:ring-background/10",
-            "dark:shadow-[0_18px_40px_rgba(0,0,0,0.6)]",
+            "bg-note-bg/80",
+            "backdrop-blur-xl saturate-200",
+            "border border-border/40",
+            "shadow-[inset_0_1px_0_rgba(255,255,255,1),0_6px_20px_rgba(0,0,0,0.10)]",
+            "dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_12px_32px_rgba(0,0,0,0.45)]",
+            "text-gray-900 dark:text-white/90",
             className
         )}
         >
@@ -72,7 +69,7 @@ export function NoteFloatingActions({
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8 rounded-xl hover:bg-white/10 dark:hover:bg-white/5 shrink-0 text-muted-foreground/60 hover:text-foreground"
+                                className="h-8 w-8 rounded-xl hover:bg-white/10 dark:hover:bg-white/5 shrink-0 text-muted-foreground hover:text-foreground"
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     onToggleSearch();
@@ -99,7 +96,7 @@ export function NoteFloatingActions({
                                     "h-8 w-8 rounded-xl hover:bg-white/10 dark:hover:bg-white/5 shrink-0 transition-all",
                                     general.isSecondarySidebarOpen && general.secondarySidebarTab === 'info'
                                         ? "text-primary bg-primary/10"
-                                        : "text-muted-foreground/60 hover:text-foreground"
+                                        : "text-muted-foreground hover:text-foreground"
                                 )}
                                 onClick={toggleNoteInfo}
                             >
