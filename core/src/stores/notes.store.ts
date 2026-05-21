@@ -41,7 +41,7 @@ interface NotesState {
     updateNoteMetadata: (noteId: string, updates: Partial<Omit<NoteMetadata, 'id' | 'createdAt'>>) => Promise<void>;
     deleteNote: (noteId: string) => Promise<void>;
     permanentlyDeleteNote: (noteId: string) => Promise<void>;
-    restoreNote: (noteId: string, targetFolderId?: string | null) => Promise<void>;
+    restoreNote: (noteId: string, targetFolderId?: string | null) => Promise<NoteMetadata | null>;
     getNoteById: (noteId: string) => NoteMetadata | undefined;
 
     // Tag operations
@@ -310,6 +310,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
             }));
         }
         SyncScheduler.instance?.notifyContentChange();
+        return restoredNote;
     },
 
     getNoteById: (noteId) => {

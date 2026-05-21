@@ -1,7 +1,7 @@
 import { HapticPressable } from '@/components/ui/haptic-pressable';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { MenuView } from '@react-native-menu/menu';
+import { MenuAction, MenuView } from '@react-native-menu/menu';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -12,6 +12,8 @@ interface NoteHeaderMenuProps {
     isQuickAccess?: boolean;
     /** Whether the note is pinned */
     isPinned?: boolean;
+    /** Whether the note is deleted */
+    isDeleted?: boolean;
     /** Callback when search is triggered */
     onSearch?: () => void;
     /** Callback when quick access toggle is pressed */
@@ -26,6 +28,8 @@ interface NoteHeaderMenuProps {
     onExport?: () => void;
     /** Callback when delete is pressed */
     onDelete?: () => void;
+    /** Callback when restore is pressed */
+    onRestore?: () => void;
     /** Callback when note info is pressed */
     onNoteInfo?: () => void;
 }
@@ -34,6 +38,7 @@ export default function NoteHeaderMenu({
     noteId,
     isQuickAccess = false,
     isPinned = false,
+    isDeleted = false,
     onSearch,
     onToggleQuickAccess,
     onTogglePin,
@@ -41,6 +46,7 @@ export default function NoteHeaderMenu({
     onCopyLink,
     onExport,
     onDelete,
+    onRestore,
     onNoteInfo,
 }: NoteHeaderMenuProps) {
     const { colors } = useAppTheme();
@@ -59,71 +65,114 @@ export default function NoteHeaderMenu({
         }
         else if (id === 'settings') router.push('/settings');
         else if (id === 'delete') onDelete?.();
+        else if (id === 'restore') onRestore?.();
     };
+
+    const actions: MenuAction[] = isDeleted
+        ? [
+            {
+                id: 'search',
+                title: 'Search in note',
+                image: 'magnifyingglass',
+                imageColor: colors.primary,
+            },
+            {
+                id: 'version-history',
+                title: 'Version History',
+                image: 'clock',
+                imageColor: colors.primary,
+            },
+            {
+                id: 'note-info',
+                title: 'Note Info',
+                image: 'info.circle',
+                imageColor: colors.primary,
+            },
+            {
+                id: 'export',
+                title: 'Export',
+                image: 'square.and.arrow.up',
+                imageColor: colors.primary,
+            },
+            {
+                id: 'settings',
+                title: 'Settings',
+                image: 'gear',
+                imageColor: colors.primary,
+            },
+            {
+                id: 'restore',
+                title: 'Restore Note',
+                image: 'arrow.uturn.backward',
+                imageColor: "#22C55E",
+                titleColor: "#22C55E"
+            },
+        ]
+        : [
+            {
+                id: 'search',
+                title: 'Search in note',
+                image: 'magnifyingglass',
+                imageColor: colors.primary,
+            },
+            {
+                id: 'quick-access',
+                title: 'Quick Access',
+                image: isQuickAccess ? 'star.fill' : 'star',
+                imageColor: '#FBBF24',
+                state: isQuickAccess ? 'on' : 'off',
+            },
+            {
+                id: 'pin',
+                title: 'Pin Note',
+                image: isPinned ? 'pin.fill' : 'pin',
+                imageColor: colors.primary,
+                state: isPinned ? 'on' : 'off',
+            },
+            {
+                id: 'version-history',
+                title: 'Version History',
+                image: 'clock',
+                imageColor: colors.primary,
+            },
+            {
+                id: 'note-info',
+                title: 'Note Info',
+                image: 'info.circle',
+                imageColor: colors.primary,
+            },
+            {
+                id: 'copy-link',
+                title: 'Copy Link',
+                image: 'link',
+                imageColor: colors.primary,
+            },
+            {
+                id: 'export',
+                title: 'Export',
+                image: 'square.and.arrow.up',
+                imageColor: colors.primary,
+            },
+            {
+                id: 'settings',
+                title: 'Settings',
+                image: 'gear',
+                imageColor: colors.primary,
+            },
+            {
+                id: 'delete',
+                title: 'Delete Note',
+                image: 'trash',
+                imageColor: '#FF3B30',
+                attributes: { destructive: true },
+            },
+        ];
 
     return (
         <MenuView
-            title="Note Options"
+
             onPressAction={({ nativeEvent }) => handleAction(nativeEvent.event)}
-            actions={[
-                {
-                    id: 'search',
-                    title: 'Search in note',
-                    image: 'magnifyingglass',
-                    imageColor: colors.primary,
-                },
-                {
-                    id: 'quick-access',
-                    title: 'Quick Access',
-                    image: isQuickAccess ? 'star.fill' : 'star',
-                    imageColor: '#FBBF24',
-                    state: isQuickAccess ? 'on' : 'off',
-                },
-                {
-                    id: 'pin',
-                    title: 'Pin Note',
-                    image: isPinned ? 'pin.fill' : 'pin',
-                    imageColor: colors.primary,
-                    state: isPinned ? 'on' : 'off',
-                },
-                {
-                    id: 'version-history',
-                    title: 'Version History',
-                    image: 'clock',
-                    imageColor: colors.primary,
-                },
-                {
-                    id: 'note-info',
-                    title: 'Note Info',
-                    image: 'info.circle',
-                    imageColor: colors.primary,
-                },
-                {
-                    id: 'copy-link',
-                    title: 'Copy Link',
-                    image: 'link',
-                    imageColor: colors.primary,
-                },
-                {
-                    id: 'export',
-                    title: 'Export',
-                    image: 'square.and.arrow.up',
-                    imageColor: colors.primary,
-                },
-                {
-                    id: 'settings',
-                    title: 'Settings',
-                    image: 'gear',
-                    imageColor: colors.primary,
-                },
-                {
-                    id: 'delete',
-                    title: 'Delete Note',
-                    image: 'trash',
-                    imageColor: '#FF3B30',
-                    attributes: { destructive: true },
-                },
-            ]}
+            actions={actions}
         >
             <View>
                 <HapticPressable

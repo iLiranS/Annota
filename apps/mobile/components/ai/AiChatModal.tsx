@@ -1,4 +1,4 @@
-import { AiChat, aiChats, aiMessages, generateId, getDb, useAiChat, useAiStore, useNotesStore, ANTHROPIC_MODELS, GOOGLE_MODELS, OPENAI_MODELS } from '@annota/core';
+import { AiChat, aiChats, aiMessages, ANTHROPIC_MODELS, generateId, getDb, GOOGLE_MODELS, OPENAI_MODELS, useAiChat, useAiStore, useNotesStore } from '@annota/core';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { MenuView } from '@react-native-menu/menu';
 import { useTheme } from '@react-navigation/native';
@@ -30,11 +30,11 @@ export default function AiChatModal({ visible, onClose, initialContext, initialF
     const { colors } = useTheme();
     const insets = useSafeAreaInsets();
     const router = useRouter();
-    const { 
-        activeProvider, 
-        hasOpenAiKey, 
-        hasAnthropicKey, 
-        hasGoogleKey, 
+    const {
+        activeProvider,
+        hasOpenAiKey,
+        hasAnthropicKey,
+        hasGoogleKey,
         refreshTicket,
         availableModels,
         selectedModel,
@@ -283,7 +283,7 @@ export default function AiChatModal({ visible, onClose, initialContext, initialF
                     <View style={styles.headerRight}>
                         {!showHistory ? (
                             <MenuView
-                                title="Select Model"
+
                                 onPressAction={({ nativeEvent }) => handleSetModel(nativeEvent.event)}
                                 actions={[
                                     ...(availableModels.length > 0 ? [

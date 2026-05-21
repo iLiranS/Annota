@@ -237,6 +237,7 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                 sendMessage('setOptions', {
                     isDark: dark,
                     colors,
+                    editable,
                     fontSize: editorSettings.fontSize,
                     lineSpacing: editorSettings.lineSpacing,
                     paragraphSpacing: editorSettings.paragraphSpacing,
@@ -251,7 +252,7 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                     numberedLines: editorSettings.numberedLines !== undefined ? editorSettings.numberedLines : true,
                 });
             }
-        }, [isReady, dark, colors, editorSettings, sendMessage]);
+        }, [isReady, dark, colors, editable, editorSettings, sendMessage]);
 
 
         useImperativeHandle(ref, () => ({
@@ -380,9 +381,10 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                         style={[styles.webView, { height: Math.max(editorHeight, 100) }]}
                         scrollEnabled={false}
                         keyboardDisplayRequiresUserAction={false}
+                        pointerEvents={editable ? 'auto' : 'none'}
                     />
                 </ScrollView>
-                {renderToolbar && (
+                {renderToolbar && editable && (
                     <View
                         style={[
                             styles.toolbar,

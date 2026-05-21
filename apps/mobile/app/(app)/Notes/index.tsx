@@ -26,6 +26,7 @@ import {
 } from '@annota/core';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect, useTheme } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -109,6 +110,17 @@ export default function NotesList() {
     const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
     const [activeFilter, setActiveFilter] = useState<'all' | 'media'>('all');
 
+    useEffect(() => {
+        const clearLastViewed = async () => {
+            try {
+                await AsyncStorage.removeItem('@last_viewed_note_id');
+                await AsyncStorage.removeItem('@last_viewed_note_at');
+            } catch (e) {
+                console.error('Failed to clear last viewed note in NotesList', e);
+            }
+        };
+        clearLastViewed();
+    }, []);
 
     // Sync local query only when it's cleared from outside
     useEffect(() => {

@@ -40,7 +40,6 @@ export default function OptionsMenu({
 
     return (
         <MenuView
-            title="Options"
             onPressAction={({ nativeEvent }) => {
                 const { event } = nativeEvent;
                 if (event === 'new-folder') onNewFolder();

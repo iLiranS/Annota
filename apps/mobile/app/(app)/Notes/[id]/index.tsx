@@ -12,6 +12,7 @@ import { HapticPressable } from '@/components/ui/haptic-pressable';
 import { ContextMode, generateTitle, purifyNoteHtml, useAiChat, useAiStore, useNotesStore, useSettingsStore } from '@annota/core';
 import TipTapEditor, { TipTapEditorRef, ToolbarRenderProps } from '@annota/editor-ui';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '@react-navigation/native';
 import * as ExpoClipboard from 'expo-clipboard';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -26,6 +27,7 @@ import {
     View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 
 /**
  * Extracts title from HTML content.
@@ -43,8 +45,8 @@ export default function NoteEditor() {
 
 
 
-    const { getNoteById, updateNoteMetadata, getNoteContent, updateNoteContent, deleteNote } = useNotesStore();
-    const currentNote = id ? getNoteById(id) : undefined;
+    const { updateNoteMetadata, getNoteContent, updateNoteContent, deleteNote, restoreNote } = useNotesStore();
+    const currentNote = useNotesStore(useCallback(state => id ? state.notes.find(n => n.id === id) : undefined, [id]));
 
     // Lazy-loaded content state
     const [content, setContent] = useState<string | null>(null);
@@ -68,6 +70,54 @@ export default function NoteEditor() {
     const [noteLinkCommandState, setNoteLinkCommandState] = useState<{ active: boolean; query?: string; range?: { from: number; to: number } }>({ active: false });
     const [isAiChatVisible, setIsAiChatVisible] = useState(false);
     const [isNoteInfoVisible, setIsNoteInfoVisible] = useState(false);
+
+    const isDeletingRef = useRef(false);
+    const isInitialized = useNotesStore(state => state.isInitialized);
+
+    // Track last viewed note
+    useEffect(() => {
+        if (id) {
+            const saveLastViewed = async () => {
+                try {
+                    await AsyncStorage.setItem('@last_viewed_note_id', id);
+                    await AsyncStorage.setItem('@last_viewed_note_at', Date.now().toString());
+                } catch (e) {
+                    console.error('Failed to save last viewed note', e);
+                }
+            };
+            saveLastViewed();
+        }
+
+        return () => {
+            const clearLastViewed = async () => {
+                try {
+                    await AsyncStorage.removeItem('@last_viewed_note_id');
+                    await AsyncStorage.removeItem('@last_viewed_note_at');
+                } catch (e) {
+                    console.error('Failed to clear last viewed note', e);
+                }
+            };
+            clearLastViewed();
+        };
+    }, [id]);
+
+    // Handle note deletion/sync edge case
+    useEffect(() => {
+        if (isInitialized && id && !isDeletingRef.current) {
+            if (!currentNote || currentNote.isPermDeleted) {
+                Toast.show({
+                    type: 'info',
+                    text1: 'Note no longer available',
+                    text2: 'This note was deleted or synced out.',
+                });
+                if (router.canGoBack()) {
+                    router.back();
+                } else {
+                    router.replace('/Notes');
+                }
+            }
+        }
+    }, [isInitialized, id, currentNote]);
 
     const handleNoteInfo = useCallback(() => {
         setIsNoteInfoVisible(true);
@@ -242,9 +292,9 @@ export default function NoteEditor() {
         router.push({ pathname: '/Notes/[id]/history', params: { id } });
     }, [id, router]);
 
-    // Menu handlers
     const handleDelete = useCallback(async () => {
         if (!id) return;
+        isDeletingRef.current = true;
         await deleteNote(id);
         if (source === 'Notes' && router.canGoBack()) {
             router.back();
@@ -254,6 +304,20 @@ export default function NoteEditor() {
             router.back();
         }
     }, [id, deleteNote, router, source]);
+
+    const handleRestore = useCallback(async () => {
+        if (!id) return;
+        const restored = await restoreNote(id);
+        Toast.show({
+            type: 'success',
+            text1: 'Note restored',
+        });
+        if (restored?.folderId) {
+            router.replace({ pathname: '/Notes', params: { folderId: restored.folderId } });
+        } else {
+            router.replace('/Notes');
+        }
+    }, [id, restoreNote, router]);
 
     const handleToggleQuickAccess = useCallback((value: boolean) => {
         if (!id) return;
@@ -416,7 +480,7 @@ export default function NoteEditor() {
                     headerBackVisible: false,
                     headerRight: () => (
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                            {general.isAiEnabled && (
+                            {general.isAiEnabled && !currentNote?.isDeleted && (
                                 <HapticPressable
                                     onPress={() => setIsAiChatVisible(true)}
                                     style={[styles.headerButton, { marginLeft: 8 }]}
@@ -429,8 +493,10 @@ export default function NoteEditor() {
                                 noteId={id}
                                 isPinned={currentNote?.isPinned}
                                 isQuickAccess={currentNote?.isQuickAccess}
+                                isDeleted={currentNote?.isDeleted}
                                 onSearch={handleOpenSearch}
                                 onDelete={handleDelete}
+                                onRestore={handleRestore}
                                 onTogglePin={handleTogglePin}
                                 onToggleQuickAccess={handleToggleQuickAccess}
                                 onVersionHistory={handleVersionHistory}
@@ -478,6 +544,7 @@ export default function NoteEditor() {
                     <TipTapEditor
                         ref={editorRef}
                         noteId={id}
+                        editable={currentNote && !currentNote.isPermDeleted && !currentNote.isDeleted}
                         initialContent={content ?? ''}
                         onContentChange={handleContentChange}
                         onSearchResults={handleSearchResults}

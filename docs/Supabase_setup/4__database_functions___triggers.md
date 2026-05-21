@@ -168,7 +168,7 @@ END;
 
 These functions are executed directly from the frontend via `supabase.rpc()`.
 
-**1\.** `pull_sync_data` Optimized fetching mechanism for the client. Returns all modified entities since the provided timestamp in a single JSON payload. RLS is automatically applied based on the authenticated user.
+**1\.** `pull_sync_data` Optimized fetching mechanism for the client. Returns all modified entities since the provided timestamps and IDs (using cursors for pagination) in a single JSON payload. RLS is automatically applied based on the authenticated user.
 
 SQL
 
@@ -177,17 +177,35 @@ declare
   v_folders json;
   v_notes json;
   v_tags json;
+  v_actual_folders_time timestamp;
+  v_actual_tags_time timestamp;
 begin
+  -- Fallback for legacy clients calling with only p_last_sync
+  v_actual_folders_time := case when p_folders_time = '1970-01-01'::timestamp then p_last_sync else p_folders_time end;
+  v_actual_tags_time := case when p_tags_time = '1970-01-01'::timestamp then p_last_sync else p_tags_time end;
+
   select json_agg(t) into v_folders from (
-    select * from encrypted_folders where updated_at > p_last_sync
+    select * from encrypted_folders 
+    where (updated_at > v_actual_folders_time) 
+       or (updated_at = v_actual_folders_time and id > p_folders_id)
+    order by updated_at asc, id asc
+    limit 100
   ) t;
 
   select json_agg(t) into v_notes from (
-    select * from encrypted_notes where updated_at > p_last_sync
+    select * from encrypted_notes 
+    where (updated_at > p_last_sync)  -- p_last_sync acts as p_notes_time here
+       or (updated_at = p_last_sync and id > p_notes_id)
+    order by updated_at asc, id asc
+    limit 100
   ) t;
 
   select json_agg(t) into v_tags from (
-    select * from encrypted_tags where updated_at > p_last_sync
+    select * from encrypted_tags 
+    where (updated_at > v_actual_tags_time) 
+       or (updated_at = v_actual_tags_time and id > p_tags_id)
+    order by updated_at asc, id asc
+    limit 100
   ) t;
 
   return json_build_object(
