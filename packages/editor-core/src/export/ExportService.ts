@@ -3,12 +3,28 @@ import hljs from 'highlight.js';
 import TurndownService from 'turndown';
 import { gfm } from 'turndown-plugin-gfm';
 import { ExportAdapter } from './types';
+import { SHORT_TO_HEX } from '../extensions/marks';
+import { GENERATED_CORE_STYLES } from './generated-styles';
+
+const SHORT_TO_RGBA: Record<string, string> = {
+    yw: 'rgba(255, 224, 102, 0.3)',
+    or: 'rgba(255, 169, 77, 0.3)',
+    re: 'rgba(255, 107, 107, 0.3)',
+    pi: 'rgba(247, 131, 172, 0.3)',
+    in: 'rgba(129, 140, 248, 0.3)',
+    bl: 'rgba(116, 192, 252, 0.3)',
+    te: 'rgba(32, 201, 151, 0.3)',
+    gr: 'rgba(81, 207, 102, 0.3)',
+    gy: 'rgba(114, 114, 114, 0.3)',
+    br: 'rgba(160, 120, 85, 0.3)',
+};
 
 export interface ExportOptions {
     fontSize?: number;
     lineHeight?: number;
     paragraphSpacing?: number;
     accentColor?: string;
+    numberedLines?: boolean;
 }
 
 export class ExportService {
@@ -182,7 +198,7 @@ export class ExportService {
     ): Promise<void> {
         // Ensure DOM polyfills are set up (needed for preprocessHtmlForPrint on mobile)
         await this.ensureTurndown();
-        const processedHtml = await this.preprocessHtmlForPrint(rawHtml);
+        const processedHtml = await this.preprocessHtmlForPrint(rawHtml, options);
         const printReadyHtml = this.generatePrintableHtml(title, processedHtml, options);
         const safeTitle = this.sanitizeFilename(title);
         await this.adapter.exportPdf(safeTitle, printReadyHtml);
@@ -190,7 +206,7 @@ export class ExportService {
 
     // ─── Pre-processing ───────────────────────────────────────────────────────
 
-    private async preprocessHtmlForPrint(html: string): Promise<string> {
+    private async preprocessHtmlForPrint(html: string, options?: ExportOptions): Promise<string> {
         const g = globalThis as Record<string, unknown>;
         const activeDoc: any =
             typeof document !== 'undefined' ? document : (g['document'] ?? null);
@@ -201,6 +217,28 @@ export class ExportService {
             typeof DOMParser !== 'undefined' ? DOMParser : (g['DOMParser'] as any);
 
         const doc: any = new DOMParserCtor().parseFromString(html, 'text/html');
+
+        // 0. Promote highlight and text color classes to inline styles for print compatibility ───
+        doc.querySelectorAll('[class*="tc-"], [class*="hl-"]').forEach((node: any) => {
+            const el = node as HTMLElement;
+            const classes = Array.from(el.classList);
+            for (const className of classes) {
+                if (className.startsWith('tc-')) {
+                    const short = className.slice(3);
+                    const hex = SHORT_TO_HEX[short];
+                    if (hex) {
+                        el.style.color = hex;
+                    }
+                } else if (className.startsWith('hl-')) {
+                    const short = className.slice(3);
+                    const rgba = SHORT_TO_RGBA[short];
+                    if (rgba) {
+                        el.style.backgroundColor = rgba;
+                        el.style.color = 'inherit';
+                    }
+                }
+            }
+        });
 
         // 1. Handle Mermaid diagrams ───────────────────────────────────────────
         const hasBrowserDOM = typeof window !== 'undefined' && typeof window.getComputedStyle === 'function';
@@ -363,9 +401,12 @@ export class ExportService {
         for (const node of codeNodes) {
             const el = node as HTMLElement;
             // 1. Get the language from class or data-language
-            const classMatch = el.className.match(/language-(\w+)/);
+            const classMatch = el.className.match(/language-([a-zA-Z0-9_+\-#]+)/);
             const parentLang = el.parentElement?.getAttribute('data-language');
-            const lang = classMatch ? classMatch[1] : (parentLang || 'plaintext');
+            let lang = classMatch ? classMatch[1] : (parentLang || 'plaintext');
+            if (lang === 'null' || lang === 'undefined' || lang === 'auto') {
+                lang = 'plaintext';
+            }
 
             // 2. Skip if it already contains span tags (already highlighted)
             if (el.querySelector('span')) continue;
@@ -385,6 +426,54 @@ export class ExportService {
             }
         }
 
+        // 6. Handle code block line numbers ──────────────────────────────────
+        if (options?.numberedLines !== false) {
+            doc.querySelectorAll('pre').forEach((pre: any) => {
+                // Walk up the DOM using a simple compatible loop to see if we are inside a mermaid block
+                let isInsideMermaid = false;
+                let current = pre;
+                while (current) {
+                    if (current.getAttribute?.('data-type') === 'mermaid' || current.classList?.contains('mermaid-block')) {
+                        isInsideMermaid = true;
+                        break;
+                    }
+                    current = current.parentNode;
+                }
+                
+                // Skip if inside mermaid or already wrapped
+                if (isInsideMermaid || pre.parentElement?.classList?.contains('code-block-wrapper')) {
+                    return;
+                }
+
+                const codeEl = pre.querySelector('code');
+                const text = codeEl?.textContent || pre.textContent || '';
+                
+                // Remove trailing newline to match editor line counting exactly
+                const lines = text.replace(/\n$/, '').split('\n');
+                const lineCount = lines.length;
+
+                // Create code wrapper
+                const wrapper = doc.createElement('div');
+                wrapper.className = 'code-block-wrapper';
+
+                // Create gutter
+                const gutter = doc.createElement('div');
+                gutter.className = 'code-gutter';
+                gutter.setAttribute('contenteditable', 'false');
+
+                for (let i = 1; i <= lineCount; i++) {
+                    const span = doc.createElement('span');
+                    span.textContent = String(i);
+                    gutter.appendChild(span);
+                }
+
+                // Insert wrapper and relocate components
+                pre.parentNode?.insertBefore(wrapper, pre);
+                wrapper.appendChild(gutter);
+                wrapper.appendChild(pre);
+            });
+        }
+
         return doc.body.innerHTML;
     }
 
@@ -394,324 +483,8 @@ export class ExportService {
     private generatePrintableHtml(title: string, html: string, options?: ExportOptions): string {
         const fontSize = options?.fontSize ?? 16;
         const lineHeight = options?.lineHeight ?? 1.6;
-        const paragraphSpacing = (options?.paragraphSpacing ?? 8) / 2; // Split for top/bottom
+        const paragraphSpacing = options?.paragraphSpacing ?? 8;
         const accentColor = options?.accentColor ?? '#007AFF';
-
-        const styles = /* css */ `
-            /* Force all backgrounds to print — critical for WebKit / WKWebView */
-            * {
-                -webkit-print-color-adjust: exact !important;
-                        print-color-adjust: exact !important;
-                box-sizing: border-box;
-            }
-
-            :root {
-                --primary:      ${accentColor};
-                --text:         #1a1a1a;
-                --bg:           #ffffff;
-                --border:       #e0e0e0;
-                --code-bg:      #f5f5f5;
-                --table-header: #f8f9fa;
-            }
-
-            @media print {
-                @page { margin: 2cm; }
-                body  { padding: 0; max-width: none !important; width: 100% !important; }
-                .no-print { display: none; }
-                [data-type="details"],
-                .details-wrapper { break-inside: avoid; }
-                table { break-inside: auto; }
-                tr { break-inside: avoid; break-after: auto; }
-            }
-
-            body {
-                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
-                             Roboto, Helvetica, Arial, sans-serif;
-                line-height:      ${lineHeight};
-                font-size:        ${fontSize}px;
-                color:            var(--text);
-                max-width:        900px;
-                margin:           0 auto;
-                padding:          40px;
-                background-color: var(--bg);
-            }
-
-            h1, h2, h3, h4, h5, h6, p, li, blockquote, summary, [data-type="detailsSummary"], td, th {
-                unicode-bidi: plaintext;
-                text-align: start;
-            }
-
-            h1, h2, h3, h4, h5, h6 {
-                margin: 0;
-                padding-top: ${paragraphSpacing * 2.5}px;
-                padding-bottom: ${paragraphSpacing * 1.5}px;
-                font-weight:   500;
-                color:         #000;
-                line-height:   1.2;
-            }
-            h1 { 
-                font-size: 2.1em; 
-                border-bottom: 1.5px solid #f2f2f2; 
-                padding-bottom: .2em; 
-                margin-top: ${paragraphSpacing * 1.5}px;
-                font-weight: 700;
-            }
-            h2 { 
-                font-size: 1.7em; 
-                border-bottom: 1px solid #f2f2f2; 
-                padding-bottom: .2em;
-                margin-top: ${paragraphSpacing * 1.25}px;
-            }
-            h3 { font-size: 1.4em; }
-
-            p { 
-                margin: 0;
-                padding-top: ${paragraphSpacing}px;
-                padding-bottom: ${paragraphSpacing}px;
-            }
-            a { color: var(--primary); text-decoration: underline; }
-
-            hr {
-                border: none;
-                height: 1px;
-                background-color: var(--border);
-                opacity: 0.5;
-                margin: ${paragraphSpacing * 2}px 0;
-            }
-
-            img {
-                max-width:     100%;
-                height:        auto;
-                border-radius: 8px;
-                margin:        1em 0;
-                box-shadow:    0 4px 12px rgba(0,0,0,.1);
-            }
-
-            /* ── Code Blocks (Atom One Light Theme) ───────────────────────── */
-            pre, .code-block-wrapper pre {
-                font-family: 'FiraCode', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
-                font-size:   0.85em !important;
-                position:    relative !important;
-                padding:     1.2em !important;
-                margin:      1.5em 0 !important;
-                background-color: #f6f8fa !important;
-                border:      1px solid #d0d7de !important;
-                border-radius: 12px !important;
-                line-height: 1.5 !important;
-                display:     block !important;
-                white-space: pre-wrap !important;
-                word-break:  break-all !important;
-                color:       #383a42 !important;
-                overflow:    visible !important;
-                direction:   ltr !important;
-                unicode-bidi: isolate !important;
-            }
-
-            /* ── Inline Code ─────────────────────────────────────────────── */
-            :not(pre) > code {
-                font-family: 'FiraCode', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
-                font-size:   0.85em !important;
-                background-color: rgba(0, 0, 0, 0.05) !important;
-                color:       rgba(0, 0, 0, 0.7) !important;
-                padding:     2px 6px !important;
-                border-radius: 4px !important;
-                white-space: normal !important;
-                direction:   ltr !important;
-                unicode-bidi: isolate !important;
-            }
-
-            pre code, .code-block-wrapper code {
-                font-family: inherit !important;
-                background:  none !important;
-                padding:     0 !important;
-                border:      none !important;
-                color:       inherit !important;
-            }
-            
-            .hljs-comment, .hljs-quote { color: #a0a1a7 !important; font-style: italic; }
-            .hljs-doctag, .hljs-keyword, .hljs-formula { color: #a626a4 !important; }
-            .hljs-section, .hljs-name, .hljs-selector-tag, .hljs-deletion, .hljs-subst { color: #e45649 !important; }
-            .hljs-literal { color: #0184bb !important; }
-            .hljs-string, .hljs-regexp, .hljs-addition, .hljs-attribute, .hljs-meta .hljs-string { color: #50a14f !important; }
-            .hljs-attr, .hljs-variable, .hljs-template-variable, .hljs-type, .hljs-selector-class, .hljs-selector-attr, .hljs-selector-pseudo, .hljs-number { color: #986801 !important; }
-            .hljs-symbol, .hljs-bullet, .hljs-link, .hljs-meta, .hljs-selector-id, .hljs-title { color: #4078f2 !important; }
-            .hljs-built_in, .hljs-title.class_, .hljs-class .hljs-title { color: #c18401 !important; }
-            .hljs-emphasis { font-style: italic; }
-            .hljs-strong { font-weight: 500; }
-            .hljs-link { text-decoration: underline; }
-
-            /* ── Lists ──────────────────────────────────────────────────────── */
-            ul, ol { 
-                margin: ${paragraphSpacing}px 0; 
-                padding-inline-start: 1.5em; /* Use logical padding for RTL support */
-            }
-            li { padding-bottom: ${paragraphSpacing / 2}px; }
-            ul li::marker { color: var(--primary); }
-            ol li::marker { color: var(--primary); font-weight: 600; }
-
-            /* ── Math ───────────────────────────────────────────────────────── */
-            .katex-display, 
-            .katex,
-            .math-node,
-            [data-type="math"],
-            [data-type="inlineMath"],
-            [data-type="inline-math"],
-            [data-type="blockMath"],
-            [data-type="block-math"],
-            [data-type="mathBlock"],
-            [data-latex],
-            [data-formula],
-            .tiptap-mathematics-render,
-            .Tiptap-mathematics-render {
-                direction: ltr !important;
-                unicode-bidi: isolate !important;
-            }
-            .katex-display { 
-                margin: 1.2em 0 !important; 
-                text-align: center;
-            }
-            .katex { font-size: 1.15em !important; }
-
-            /* Don't style mermaid <pre> as code blocks */
-            pre.mermaid { background: none !important; border: none !important; padding: 0 !important; margin: 0 !important; }
-
-            blockquote {
-                margin:           1.5em 0;
-                padding:          .8em 1.5em;
-                color:            #555;
-                background:       #fafafa;
-                border-inline-start: 5px solid var(--primary);
-                border-radius:    0 8px 8px 0;
-                font-style:       italic;
-            }
-
-            /* ── Tables ─────────────────────────────────────────────────────── */
-            table {
-                display:         table !important;
-                width:           100% !important;
-                min-width:       100% !important;
-                border-collapse: separate;
-                border-spacing:  0;
-                margin:          2em 0;
-                font-size:       .95em;
-                table-layout:    auto;
-                border:          1px solid var(--border);
-                border-radius:   12px;
-                overflow:        hidden;
-            }
-            .tableWrapper {
-                width:           100% !important;
-                margin:          2em 0 !important;
-                overflow:        visible !important;
-            }
-            th, td {
-                padding:        10px 14px;
-                border-bottom:  1px solid var(--border);
-                border-inline-end: 1px solid var(--border);
-                text-align:     start;
-                vertical-align: top;
-                word-break:     break-word;
-                overflow-wrap:  anywhere;
-            }
-            tr:last-child td {
-                border-bottom: none;
-            }
-            th:last-child, td:last-child {
-                border-inline-end: none;
-            }
-            th {
-                background-color: var(--table-header) !important;
-                font-weight:      700;
-                color:            #333;
-            }
-            tr:nth-child(even) td { background-color: #fafafa !important; }
-
-            /* ── Details / Summary ──────────────────────────────────────────── */
-            [data-type="details"],
-            .details-wrapper,
-            details {
-                border:        1px solid var(--border);
-                border-radius: 8px;
-                margin:        1.5em 0;
-                overflow:      hidden;
-                box-shadow:    0 2px 5px rgba(0,0,0,.05);
-            }
-            [data-type="detailsSummary"],
-            summary {
-                padding:     6px 14px;
-                font-weight: 700;
-                display:     flex;
-                align-items: center;
-                gap:         8px;
-                list-style:  none;
-            }
-            summary h1, summary h2, summary h3, summary h4, summary h5, summary h6, summary p,
-            [data-type="detailsSummary"] h1, [data-type="detailsSummary"] h2, [data-type="detailsSummary"] h3, 
-            [data-type="detailsSummary"] h4, [data-type="detailsSummary"] h5, [data-type="detailsSummary"] h6, 
-            [data-type="detailsSummary"] p {
-                margin: 0 !important;
-                padding: 0 !important;
-                border: none !important;
-                line-height: 1.2 !important;
-            }
-            [data-type="detailsContent"],
-            .details-content {
-                padding: 0px 14px;
-            }
-
-            /* ── Mermaid ────────────────────────────────────────────────────── */
-            [data-type="mermaid"],
-            .mermaid-block {
-                display:         flex;
-                justify-content: center;
-                margin:          2.5em 0;
-                padding:         1em;
-                border:          1px solid var(--border);
-                border-radius:   14px;
-                background:      #fff;
-                direction:       ltr !important;
-                unicode-bidi:    isolate !important;
-            }
-            svg { max-width: 100%; height: auto; }
-
-            /* ── Task lists ─────────────────────────────────────────────────── */
-            ul.task-list, [data-type="taskList"] {
-                list-style: none !important;
-                padding-left: 0.5em !important;
-                margin: 1em 0 !important;
-            }
-            li.task-list-item, li[data-type="taskItem"] {
-                display:       flex !important;
-                align-items:   flex-start !important;
-                gap:           12px !important;
-                margin-bottom: 4px !important;
-                list-style:    none !important;
-            }
-            li.task-list-item > label, li[data-type="taskItem"] > label {
-                margin-top:    0.3em !important;
-                flex-shrink:   0 !important;
-                display:       flex !important;
-                align-items:   center !important;
-            }
-            li.task-list-item > div, li[data-type="taskItem"] > div {
-                flex:          1 !important;
-                min-width:     0 !important;
-            }
-            li.task-list-item p, li[data-type="taskItem"] p {
-                margin: 0 !important;
-                padding: 0 !important;
-            }
-            input[type="checkbox"] {
-                width: 1.15em !important;
-                height: 1.15em !important;
-                margin: 0 !important;
-                cursor: pointer !important;
-                accent-color: var(--primary) !important;
-            }
-
-            mark { border-radius: 3px; padding: 0 2px; }
-            .page-break { page-break-after: always; }
-        `;
 
         return `<!DOCTYPE html>
 <html lang="en" dir="auto">
@@ -720,10 +493,75 @@ export class ExportService {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${title}</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.43/dist/katex.min.css">
-    <style>${styles}</style>
+    <style>
+        /* Force WebKit/Blink print backgrounds */
+        * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            box-sizing: border-box;
+        }
+
+        :root {
+            /* Map theme tokens to what extensions consume */
+            --primary:                  ${accentColor};
+            --accent-color:             ${accentColor};
+            --border-color:             rgba(0, 0, 0, 0.15);
+            --border:                   #e0e0e0;
+            --bg-color:                 #ffffff;
+            --text-color:               #1a1a1a;
+            --text:                     #1a1a1a;
+            --bg:                       #ffffff;
+            --code-block-bg:            #f6f8fa;
+            --code-bg:                  rgba(0, 0, 0, 0.05);
+            --quote-bg:                 #fafafa;
+            --table-header-bg:          #f8f9fa;
+            --table-header:             #f8f9fa;
+
+            /* Spacing/Font controls passed from Options */
+            --editor-font-family:       -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --editor-font-size:         ${fontSize}px;
+            --editor-line-height:       ${lineHeight};
+            --editor-paragraph-spacing: ${paragraphSpacing}px;
+            --editor-list-item-spacing: ${paragraphSpacing / 4}px;
+        }
+
+        @media print {
+            @page { margin: 2cm; }
+            body { padding: 0; max-width: none !important; width: 100% !important; }
+            .no-print { display: none; }
+        }
+
+        body {
+            font-family: var(--editor-font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px;
+        }
+
+        .print-mode {
+            /* Force light-theme syntax highlighting for print/PDF */
+            --hljs-bg:                  #f6f8fa;
+            --hljs-color:               #383a42;
+            --hljs-comment:             #a0a1a7;
+            --hljs-keyword:             #a626a4;
+            --hljs-section:             #e45649;
+            --hljs-literal:             #0184bb;
+            --hljs-string:              #50a14f;
+            --hljs-attr:                #986801;
+            --hljs-symbol:              #4078f2;
+            --hljs-built_in:            #c18401;
+        }
+
+        /* Inject all generated styles (editor.css, highlight-theme.css, extension stylesheets) */
+        ${GENERATED_CORE_STYLES}
+    </style>
 </head>
 <body>
-    <article>${html}</article>
+    <div class="ProseMirror print-mode">
+        <article>${html}</article>
+    </div>
 </body>
 </html>`;
     }

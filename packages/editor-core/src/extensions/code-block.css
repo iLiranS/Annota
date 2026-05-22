@@ -152,3 +152,48 @@
     font-size: inherit;
     line-height: inherit;
 }
+
+/* ========================================
+   Print Mode Overrides
+   ======================================= */
+
+/* Style static code blocks in print mode where .code-block-wrapper is absent */
+.ProseMirror.print-mode pre {
+    background-color: var(--code-block-bg) !important;
+    border: 1px solid var(--border-color) !important;
+    padding: 16px !important;
+    border-radius: 12px !important;
+    color: var(--text-color) !important;
+    white-space: pre-wrap !important;
+    word-break: break-all !important;
+    overflow-wrap: anywhere !important;
+}
+
+.ProseMirror.print-mode pre code {
+    white-space: pre-wrap !important;
+    word-break: break-all !important;
+    background: none !important;
+    padding: 0 !important;
+}
+
+/* Style code block wrapper and gutter in print mode if line numbers are enabled */
+.ProseMirror.print-mode .code-block-wrapper {
+    border: 1px solid var(--border-color) !important;
+    background-color: var(--code-block-bg) !important;
+    margin-bottom: var(--editor-paragraph-spacing) !important;
+}
+
+/* Reset individual pre styling inside the wrapper to prevent duplication */
+.ProseMirror.print-mode .code-block-wrapper pre {
+    background: none !important;
+    border: none !important;
+    padding: 12px 12px 12px 0 !important; /* Left padding is handled by the gutter */
+    margin: 0 !important;
+    border-radius: 0 !important;
+}
+
+.ProseMirror.print-mode .code-block-wrapper .code-gutter {
+    padding: 12px 8px 12px 12px !important;
+    border-right: 1px solid color-mix(in srgb, var(--border-color) 40%, transparent) !important;
+    margin-right: 8px !important;
+}

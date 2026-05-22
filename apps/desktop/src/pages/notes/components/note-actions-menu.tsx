@@ -143,7 +143,8 @@ export function NoteActionsMenu({ note, onRevert, onOpenChange, direction }: Not
                                 fontSize: settings.fontSize,
                                 lineHeight: settings.lineSpacing,
                                 paragraphSpacing: settings.paragraphSpacing,
-                                accentColor: useSettingsStore.getState().accentColor
+                                accentColor: useSettingsStore.getState().accentColor,
+                                numberedLines: settings.numberedLines
                             });
                             toast.success("PDF export triggered");
                         }}

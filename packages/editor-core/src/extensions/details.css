@@ -161,3 +161,23 @@
     outline: 2px solid var(--accent-color);
     outline-offset: -2px;
 }
+
+/* ========================================
+   Print Mode Overrides
+   ======================================== */
+
+/* Keep collapsible details expanded in PDF print output */
+.ProseMirror.print-mode [data-type="details"] .details-content,
+.ProseMirror.print-mode [data-type="details"] [data-type="detailsContent"] {
+    height: auto !important;
+    opacity: 1 !important;
+    padding-top: calc(var(--editor-paragraph-spacing) / 2) !important;
+    padding-bottom: calc(var(--editor-paragraph-spacing) / 2) !important;
+    pointer-events: auto !important;
+}
+
+/* Hide interactive toggle controls in PDF exports */
+.ProseMirror.print-mode .details-toggle,
+.ProseMirror.print-mode .details-menu-btn {
+    display: none !important;
+}

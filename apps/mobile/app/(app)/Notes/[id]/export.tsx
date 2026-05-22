@@ -54,7 +54,8 @@ export default function ExportScreen() {
                 fontSize: settings.fontSize,
                 lineHeight: settings.lineSpacing,
                 paragraphSpacing: settings.paragraphSpacing,
-                accentColor: useSettingsStore.getState().accentColor
+                accentColor: useSettingsStore.getState().accentColor,
+                numberedLines: settings.numberedLines
             });
         } catch (error) {
             Alert.alert('Export Failed', 'Could not generate or share PDF.');

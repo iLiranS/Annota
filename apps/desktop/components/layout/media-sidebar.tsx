@@ -133,9 +133,7 @@ export function MediaSidebar() {
                             </span>
                         </div>
                     )}
-                    {!hasMore && items.length > 0 && (
-                        <div className="h-px w-full bg-linear-to-r from-transparent via-border/40 to-transparent" />
-                    )}
+
                 </div>
             </div>
 
@@ -244,7 +242,7 @@ function MediaItemCard({ item, onNavigate, onSelectImage }: {
 
                     {/* History Icon Overlay */}
                     {isHistoryOnly && (
-                        <div className="absolute top-2 right-2 z-10 bg-sidebar border border-orange-500/30 text-orange-500 p-1 rounded-md shadow-sm">
+                        <div className="absolute top-1 right-1 z-10 bg-sidebar border border-orange-500/30 text-orange-500 p-1 rounded-md shadow-sm">
                             <History className="w-3.5 h-3.5" />
                         </div>
                     )}
@@ -263,7 +261,7 @@ function MediaItemCard({ item, onNavigate, onSelectImage }: {
                     </div>
 
                     {/* Note Associations Overlay */}
-                    <div className="absolute bottom-1.5 left-1.5 right-1.5 z-20 flex items-center gap-1 min-w-0" onClick={(e) => e.stopPropagation()}>
+                    <div className="absolute bottom-1 left-1 right-1 z-20 flex items-center gap-1 min-w-0" onClick={(e) => e.stopPropagation()}>
                         {item.notes.length === 0 ? (
                             <div className="flex items-center gap-1 bg-black/90 text-white/70 text-[8px] px-1.5 py-0.5 rounded border border-white/10 italic truncate">
                                 <Trash2 size={8} /> Orphaned

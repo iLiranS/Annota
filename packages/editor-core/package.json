@@ -13,6 +13,8 @@
     "./dist/editor-html": "./dist/editor-html.ts"
   },
   "scripts": {
+    "predev": "node scripts/generate-print-styles.cjs",
+    "prebuild": "node scripts/generate-print-styles.cjs",
     "dev": "vite",
     "build": "vite build && node scripts/emit-editor-html.cjs",
     "preview": "vite preview",

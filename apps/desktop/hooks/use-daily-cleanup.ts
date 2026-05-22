@@ -1,6 +1,24 @@
 import { getStorageEngine, useDbStore, vacuumDatabase } from '@annota/core';
+import { appCacheDir, join } from '@tauri-apps/api/path';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { readDir, remove } from '@tauri-apps/plugin-fs';
 import { useEffect } from 'react';
+
+async function cleanupPdfExportCache() {
+    try {
+        const cacheDir = await appCacheDir();
+        const entries = await readDir(cacheDir);
+        for (const entry of entries) {
+            if (entry.isFile && entry.name.startsWith('annota_export_') && entry.name.endsWith('.html')) {
+                const filePath = await join(cacheDir, entry.name);
+                await remove(filePath);
+            }
+        }
+        console.log("[DAILY_CLEANUP] PDF export cache cleared successfully");
+    } catch (error) {
+        console.error("[DAILY_CLEANUP] Failed to clear PDF export cache:", error);
+    }
+}
 
 export function useDailyCleanup() {
     const isReady = useDbStore(state => state.isReady);
@@ -33,12 +51,14 @@ export function useDailyCleanup() {
                         shouldRun = true;
                     }
                 }
-
                 if (shouldRun) {
                     // 1. Vacuum the database to reclaim space
                     await vacuumDatabase();
 
-                    // 2. Update the last run time
+                    // 2. Clean up temporary PDF export files in the cache directory
+                    await cleanupPdfExportCache();
+
+                    // 3. Update the last run time
                     await storage.setItem(storageKey, now.toISOString());
                     console.log("[DAILY_CLEANUP] Daily cleanup completed successfully");
                 }

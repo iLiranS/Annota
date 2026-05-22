@@ -22,9 +22,17 @@ function TaskNoteGroup({ group, onTaskComplete, onNavigate, completingKeys }: Ta
     return (
         <div className="border border-border/30 rounded-xl overflow-hidden bg-sidebar/40">
             {/* Note Header */}
-            <button
-                className="w-full flex items-center gap-2 px-3 py-2 hover:bg-muted transition-colors text-left group"
+            <div
+                role="button"
+                tabIndex={0}
+                className="w-full flex items-center gap-2 px-3 py-2 hover:bg-muted transition-colors text-left group cursor-pointer select-none outline-none"
                 onClick={() => setCollapsed(c => !c)}
+                onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setCollapsed(c => !c);
+                    }
+                }}
             >
                 <ChevronDown
                     size={12}
@@ -49,7 +57,7 @@ function TaskNoteGroup({ group, onTaskComplete, onNavigate, completingKeys }: Ta
                 >
                     <ExternalLink size={10} />
                 </button>
-            </button>
+            </div>
 
             {/* Task Items */}
             {!collapsed && (
