@@ -100,6 +100,8 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
         const handleCommandRef = useRef<any>(null);
         const openGalleryRef = useRef(openGallery);
         useEffect(() => { openGalleryRef.current = openGallery; }, [openGallery]);
+        const noteIdRef = useRef(noteId);
+        useEffect(() => { noteIdRef.current = noteId; }, [noteId]);
 
         const [extensions, setExtensions] = useState<any[]>(() => getBaseExtensions({ placeholder }));
 
@@ -562,6 +564,21 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                 },
                 onImagePasted: (data) => {
                     console.log("[EditorDom] Paste detected!", data.imageId);
+                },
+                onFilePasted: async (data) => {
+                    if (!noteIdRef.current) return;
+                    try {
+                        const processed = await NoteFileService.processAndInsertFile(noteIdRef.current, data.localPath, 'application/pdf');
+                        handleCommandRef.current?.('insertFileAttachment', {
+                            fileId: processed.fileId,
+                            fileName: processed.fileName,
+                            fileSize: processed.fileSize,
+                            localPath: processed.localPath,
+                            mimeType: processed.mimeType
+                        });
+                    } catch (err) {
+                        console.error('[EditorDom] Failed to process pasted PDF:', err);
+                    }
                 },
 
                 defaultCodeLanguage: editorSettings.defaultCodeLanguage,

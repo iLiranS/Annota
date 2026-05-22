@@ -581,8 +581,21 @@ export function EditorToolbar({
                                 })();
                                 break;
                             case 'copy':
-                                copyFileToClipboardMobile(blockData.src, blockData.imageId);
-                                onCommand('copyImage', { pos: blockData.position });
+                                const isImage = !blockData.mimeType || blockData.mimeType.startsWith('image/');
+                                if (isImage) {
+                                    copyFileToClipboardMobile(blockData.src, blockData.imageId);
+                                    onCommand('copyImage', { pos: blockData.position });
+                                } else {
+                                    (async () => {
+                                        try {
+                                            const resolved = await FileService.resolveLocalUri(blockData.localPath);
+                                            const Clipboard = require('expo-clipboard');
+                                            await Clipboard.setStringAsync(resolved);
+                                        } catch (err) {
+                                            console.error('Failed to copy PDF file path:', err);
+                                        }
+                                    })();
+                                }
                                 closePopup();
                                 break;
                             case 'cut':

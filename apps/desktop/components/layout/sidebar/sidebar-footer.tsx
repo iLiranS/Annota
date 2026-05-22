@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { SidebarFooter } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { Ionicons } from "../../ui/ionicons";
 
 import { type SidebarTab } from "@annota/core";
@@ -94,7 +95,13 @@ export function SidebarFooterSection({
                             variant="ghost"
                             size="sm"
                             className="h-5 px-1.5 text-[9px] font-bold text-blue-500"
-                            onClick={() => window.open(isWindows ? 'https://github.com/iLiranS/Annota/releases/latest' : 'https://annota.online/download', '_blank')}
+                            onClick={() => {
+                                const url = isWindows ? 'https://github.com/iLiranS/Annota/releases/latest' : 'https://annota.online/download';
+                                openUrl(url).catch((err) => {
+                                    console.error("Failed to open URL:", err);
+                                    window.open(url, '_blank');
+                                });
+                            }}
                         >
                             Get
                         </Button>

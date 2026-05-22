@@ -129,6 +129,23 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                         scrollViewRef.current.scrollTo({ y: data.y, animated: true });
                     }
                     break;
+                case 'filePasted':
+                    (async () => {
+                        if (!noteId) return;
+                        try {
+                            const processed = await NoteFileService.processAndInsertFile(noteId, data.localPath, 'application/pdf');
+                            sendMessage('insertFileAttachment', {
+                                fileId: processed.fileId,
+                                fileName: processed.fileName,
+                                fileSize: processed.fileSize,
+                                localPath: processed.localPath,
+                                mimeType: processed.mimeType
+                            });
+                        } catch (err) {
+                            console.error("[EditorNative] Failed to process pasted PDF:", err);
+                        }
+                    })();
+                    break;
                 case 'mathSelected':
                     setCurrentLatex(data.latex);
                     setIsBlockMath(!!data.isBlock);

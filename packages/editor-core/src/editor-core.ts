@@ -307,6 +307,9 @@ export async function setupEditor(options: any) {
             onResolveImageIds: (data) => {
                 sendMessage({ type: 'resolveImageIds', ...data });
             },
+            onFilePasted: (data) => {
+                sendMessage({ type: 'filePasted', ...data });
+            },
             defaultCodeLanguage,
             onSlashCommand: (data) => sendMessage({ type: 'slashCommand', ...serializeCommandData(data) }),
             onTagCommand: (data) => sendMessage({ type: 'tagCommand', ...serializeCommandData(data) }),

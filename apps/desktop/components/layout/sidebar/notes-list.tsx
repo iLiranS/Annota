@@ -1,14 +1,14 @@
 import { ConfirmDialog } from "@/components/custom-ui/confirm-dialog";
 import { LocationPickerModal } from "@/components/location-picker-modal";
 import { NoteListItem } from "@/components/notes/note-list-item";
-import { SidebarGroup, SidebarMenu, SidebarMenuItem, SidebarGroupLabel } from "@/components/ui/sidebar";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { NoteMetadata, useNotesStore, useSettingsStore } from "@annota/core";
-import { FolderEdit, Trash2, X, ChevronRight } from "lucide-react";
-import { useState, useEffect } from "react";
-import { toast } from "sonner";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuItem } from "@/components/ui/sidebar";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { NoteMetadata, useNotesStore, useSettingsStore } from "@annota/core";
+import { ChevronRight, FileText, FolderEdit, Pin, Trash2, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 interface NotesListProps {
     notes: NoteMetadata[];
@@ -150,12 +150,13 @@ export function NotesList({
                             <p className="text-xs text-muted-foreground italic">No notes here</p>
                         </div>
                     ) : (!isTrash && pinnedNotes.length > 0) ? (
-                        <div className="flex flex-col gap-4 min-h-full pb-4">
+                        <div className="flex flex-col  min-h-full pb-4">
                             {/* Pinned Section */}
                             <Collapsible open={isPinnedOpen} onOpenChange={setIsPinnedOpen}>
                                 <div className="px-1">
                                     <SidebarGroupLabel asChild className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
                                         <CollapsibleTrigger className="flex w-full items-center gap-2 hover:bg-sidebar-accent/50 px-2 py-1 rounded transition-colors group/trigger">
+                                            <Pin size={11} className="text-muted-foreground/60 shrink-0" />
                                             <span className="flex-1 text-start">Pinned</span>
                                             <span className="text-[9px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded font-mono font-medium leading-none">
                                                 {pinnedNotes.length}
@@ -197,6 +198,7 @@ export function NotesList({
                                 <div className="px-1">
                                     <SidebarGroupLabel asChild className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
                                         <CollapsibleTrigger className="flex w-full items-center gap-2 hover:bg-sidebar-accent/50 px-2 py-1 rounded transition-colors group/trigger">
+                                            <FileText size={11} className="text-muted-foreground/60 shrink-0" />
                                             <span className="flex-1 text-start">Notes</span>
                                             <span className="text-[9px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded font-mono font-medium leading-none">
                                                 {regularNotes.length}

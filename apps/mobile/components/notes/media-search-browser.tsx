@@ -18,6 +18,8 @@ import {
     View,
 } from 'react-native';
 import { useAppTheme } from '../../hooks/use-app-theme';
+import { copyFileToClipboardMobile } from '@/utils/clipboard';
+import * as Clipboard from 'expo-clipboard';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -197,7 +199,7 @@ export function MediaSearchBrowser({
             <View style={[styles.tipBanner, { borderColor: colors.border, backgroundColor: colors.background }]}>
                 <Ionicons name="information-circle-outline" size={14} color={colors.text + '40'} />
                 <Text style={[styles.tipText, { color: colors.text + '50' }]}>
-                    Long-press any media card to view its associated notes
+                    Long-press any media card to view its references
                 </Text>
             </View>
         </View>
@@ -217,7 +219,28 @@ function NotesModal({
     onClose: () => void,
     onPressNote: (id: string) => void
 }) {
+    const [copied, setCopied] = useState(false);
+
     if (!item) return null;
+
+    const handleCopy = async () => {
+        try {
+            const resolved = await resolveLocalUri(item.localPath);
+            let success = false;
+            if (item.fileType === 'image') {
+                success = await copyFileToClipboardMobile(resolved, item.id);
+            } else {
+                await Clipboard.setStringAsync(resolved);
+                success = true;
+            }
+            if (success) {
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+            }
+        } catch (err) {
+            console.error('Failed to copy media:', err);
+        }
+    };
 
     return (
         <Modal
@@ -232,7 +255,22 @@ function NotesModal({
             >
                 <View style={[styles.modalContent, { backgroundColor: colors.card, borderColor: colors.border }]}>
                     <View style={styles.modalHeader}>
-                        <Text style={[styles.modalTitle, { color: colors.text }]}>Associated Notes</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <Text style={[styles.modalTitle, { color: colors.text }]}>References</Text>
+                            <HapticPressable
+                                onPress={handleCopy}
+                                style={({ pressed }) => [
+                                    styles.copyButton,
+                                    pressed && { opacity: 0.7 }
+                                ]}
+                            >
+                                <Ionicons
+                                    name={copied ? "checkmark-circle" : "copy-outline"}
+                                    size={18}
+                                    color={copied ? '#10B981' : colors.primary}
+                                />
+                            </HapticPressable>
+                        </View>
                         <HapticPressable onPress={onClose}>
                             <Ionicons name="close" size={24} color={colors.text} />
                         </HapticPressable>
@@ -517,5 +555,11 @@ const styles = StyleSheet.create({
     tipText: {
         fontSize: 11,
         fontWeight: '500',
+    },
+    copyButton: {
+        padding: 4,
+        borderRadius: 8,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
 });

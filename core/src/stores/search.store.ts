@@ -41,6 +41,8 @@ export const useSearchStore = create<SearchState>()(
             return;
         }
 
+        set({ isSearching: true });
+
         searchTimeout = setTimeout(() => {
             get().performSearch(currentFolderId);
         }, 300);

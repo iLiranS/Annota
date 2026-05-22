@@ -1,18 +1,26 @@
 import ThemedText from '@/components/themed-text';
 import { HapticPressable } from '@/components/ui/haptic-pressable';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 
 interface SectionHeaderProps {
     title: string;
     iconName: keyof typeof Ionicons.glyphMap;
-    isCollapsed: boolean;
-    onToggle: () => void;
+    isCollapsed?: boolean;
+    onToggle?: () => void;
     colors: any;
+    hideToggle?: boolean;
 }
 
-export const SectionHeader = ({ title, iconName, isCollapsed, onToggle, colors }: SectionHeaderProps) => {
+export const SectionHeader = ({ 
+    title, 
+    iconName, 
+    isCollapsed = false, 
+    onToggle, 
+    colors,
+    hideToggle = false
+}: SectionHeaderProps) => {
     const chevronStyle = useAnimatedStyle(() => ({
         transform: [{
             rotate: withTiming(!isCollapsed ? '90deg' : '0deg', {
@@ -22,11 +30,8 @@ export const SectionHeader = ({ title, iconName, isCollapsed, onToggle, colors }
         }]
     }));
 
-    return (
-        <HapticPressable
-            onPress={onToggle}
-            style={styles.sectionHeaderRow}
-        >
+    const content = (
+        <>
             <Ionicons name={iconName} size={14} color={colors.text + '50'} />
             <ThemedText style={[
                 styles.sectionHeaderText,
@@ -34,9 +39,28 @@ export const SectionHeader = ({ title, iconName, isCollapsed, onToggle, colors }
             ]}>
                 {title}
             </ThemedText>
-            <Animated.View style={chevronStyle}>
-                <Ionicons name="chevron-forward" size={16} color={colors.text + '50'} />
-            </Animated.View>
+            {!hideToggle && onToggle && (
+                <Animated.View style={chevronStyle}>
+                    <Ionicons name="chevron-forward" size={16} color={colors.text + '50'} />
+                </Animated.View>
+            )}
+        </>
+    );
+
+    if (hideToggle || !onToggle) {
+        return (
+            <View style={styles.sectionHeaderRow}>
+                {content}
+            </View>
+        );
+    }
+
+    return (
+        <HapticPressable
+            onPress={onToggle}
+            style={styles.sectionHeaderRow}
+        >
+            {content}
         </HapticPressable>
     );
 };

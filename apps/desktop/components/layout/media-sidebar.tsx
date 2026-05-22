@@ -1,10 +1,16 @@
 import { ImageGallery } from "@/components/notes/image-gallery";
-import { Badge } from "@/components/ui/badge";
+import {
+    ContextMenu,
+    ContextMenuContent,
+    ContextMenuItem,
+    ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useSmartNavigate } from "@/hooks/use-smart-navigate";
+import { copyImageToClipboard, writeText } from "@/lib/clipboard";
 import { cn } from "@/lib/utils";
 import { getPaginatedMedia, getPlatformAdapters, resolveLocalUri, useSearchStore, type MediaItem } from "@annota/core";
-import { FileText, History, Loader2, Search, Trash2 } from "lucide-react";
+import { Copy, FileText, History, Loader2, Search, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 const ADAPTERS = () => getPlatformAdapters();
@@ -123,7 +129,7 @@ export function MediaSidebar() {
                         <div className="flex flex-col items-center gap-2">
                             <Loader2 className="w-5 h-5 animate-spin text-primary/40" />
                             <span className="text-[10px] font-medium text-muted-foreground/40">
-                                {items.length === 0 ? "Loading media..." : "Loading more..."}
+                                {pageRef.current === 1 ? "Loading media..." : "Loading more..."}
                             </span>
                         </div>
                     )}
@@ -156,6 +162,23 @@ function MediaItemCard({ item, onNavigate, onSelectImage }: {
 }) {
     const [imgUrl, setImgUrl] = useState<string | null>(null);
     const [isHovered, setIsHovered] = useState(false);
+
+    const handleCopy = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (item.fileType === 'image') {
+            if (imgUrl) {
+                await copyImageToClipboard(imgUrl, item.id);
+            } else {
+                const adapters = ADAPTERS();
+                const absPath = await resolveLocalUri(item.localPath);
+                const url = await adapters.fileSystem.toImageUrl(absPath);
+                await copyImageToClipboard(url, item.id);
+            }
+        } else {
+            const absPath = await resolveLocalUri(item.localPath);
+            await writeText(absPath);
+        }
+    };
 
     useEffect(() => {
         let cancelled = false;
@@ -192,113 +215,118 @@ function MediaItemCard({ item, onNavigate, onSelectImage }: {
     const isHistoryOnly = item.notes.length > 0 && item.notes.every(n => !n.isLatest);
 
     return (
-        <div
-            className="group relative aspect-square bg-sidebar/50 rounded-lg overflow-hidden border border-border/50 hover:border-primary/30 transition-all cursor-pointer w-full flex items-center justify-center"
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
-            onClick={handleCardClick}
-        >
-            {item.fileType === 'image' ? (
-                imgUrl ? (
-                    <img
-                        src={imgUrl}
-                        alt={item.localPath}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                        loading="lazy"
-                    />
-                ) : (
-                    <Loader2 className="w-4 h-4 animate-spin text-muted-foreground/20" />
-                )
-            ) : (
-                <div className="flex flex-col items-center gap-2">
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                        <FileText size={20} />
+        <ContextMenu>
+            <ContextMenuTrigger asChild>
+                <div
+                    className="group relative aspect-square bg-sidebar/50 rounded-lg overflow-hidden border border-border/50 hover:border-primary/30 transition-all cursor-pointer w-full flex items-center justify-center"
+                    onMouseEnter={() => setIsHovered(true)}
+                    onMouseLeave={() => setIsHovered(false)}
+                    onClick={handleCardClick}
+                >
+                    {item.fileType === 'image' ? (
+                        imgUrl ? (
+                            <img
+                                src={imgUrl}
+                                alt={item.localPath}
+                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                loading="lazy"
+                            />
+                        ) : (
+                            <Loader2 className="w-4 h-4 animate-spin text-muted-foreground/20" />
+                        )
+                    ) : (
+                        <div className="flex flex-col items-center gap-1">
+                            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                                <FileText size={20} />
+                            </div>
+                        </div>
+                    )}
+
+                    {/* History Icon Overlay */}
+                    {isHistoryOnly && (
+                        <div className="absolute top-2 right-2 z-10 bg-sidebar border border-orange-500/30 text-orange-500 p-1 rounded-md shadow-sm">
+                            <History className="w-3.5 h-3.5" />
+                        </div>
+                    )}
+
+                    {/* Hover Metadata Overlay */}
+                    <div className={cn(
+                        "absolute inset-0 bg-black/85 transition-opacity duration-300 flex flex-col justify-end p-2 pb-8 z-10",
+                        isHovered ? "opacity-100" : "opacity-0 pointer-events-none"
+                    )}>
+                        <div className="text-[8px] font-medium text-white/60 mb-0.5">
+                            {item.fileType.toUpperCase()} • {formatSize(item.sizeBytes || 0)}
+                        </div>
+                        <div className="text-[9px] font-bold text-white truncate w-full">
+                            {item.localPath}
+                        </div>
                     </div>
-                    <span className="text-[10px] font-black uppercase tracking-tighter text-primary/60">PDF</span>
-                </div>
-            )}
 
-            {/* History Badge Overlay */}
-            {isHistoryOnly && (
-                <div className="absolute top-2 left-2 z-10">
-                    <Badge variant="secondary" className="bg-orange-500/10 text-orange-600 border-orange-500/20 text-[8px] h-4 px-1.5 font-bold backdrop-blur-md">
-                        HISTORY ONLY
-                    </Badge>
-                </div>
-            )}
+                    {/* Note Associations Overlay */}
+                    <div className="absolute bottom-1.5 left-1.5 right-1.5 z-20 flex items-center gap-1 min-w-0" onClick={(e) => e.stopPropagation()}>
+                        {item.notes.length === 0 ? (
+                            <div className="flex items-center gap-1 bg-black/90 text-white/70 text-[8px] px-1.5 py-0.5 rounded border border-white/10 italic truncate">
+                                <Trash2 size={8} /> Orphaned
+                            </div>
+                        ) : (
+                            <>
+                                {/* First Note */}
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onNavigate(item.notes[0].noteId, item.notes[0].folderId);
+                                    }}
+                                    className={cn(
+                                        "flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-semibold transition-all duration-200 truncate min-w-0 shadow-xs border cursor-pointer hover:scale-[1.03] active:scale-95",
+                                        "bg-black hover:bg-white hover:text-black border-white/15 hover:border-white text-white"
+                                    )}
+                                    title={item.notes[0].noteTitle}
+                                >
+                                    {!item.notes[0].isLatest && <History className="w-2 h-2 text-accent-full shrink-0" />}
+                                    <span className="truncate">{item.notes[0].noteTitle}</span>
+                                </button>
 
-            {/* Hover Metadata Overlay */}
-            <div className={cn(
-                "absolute inset-0 bg-black/60 backdrop-blur-[2px] transition-opacity duration-300 flex flex-col justify-end p-2 pb-8 z-10",
-                isHovered ? "opacity-100" : "opacity-0 pointer-events-none"
-            )}>
-                <div className="text-[8px] font-medium text-white/60 mb-0.5">
-                    {item.fileType.toUpperCase()} • {formatSize(item.sizeBytes || 0)}
-                </div>
-                <div className="text-[9px] font-bold text-white truncate w-full">
-                    {item.localPath}
-                </div>
-            </div>
-
-            {/* Note Associations Overlay */}
-            <div className="absolute bottom-1.5 left-1.5 right-1.5 z-20 flex items-center gap-1 min-w-0" onClick={(e) => e.stopPropagation()}>
-                {item.notes.length === 0 ? (
-                    <div className="flex items-center gap-1 bg-black/60 backdrop-blur-md text-white/70 text-[8px] px-1.5 py-0.5 rounded border border-white/10 italic truncate">
-                        <Trash2 size={8} /> Orphaned
-                    </div>
-                ) : (
-                    <>
-                        {/* First Note */}
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onNavigate(item.notes[0].noteId, item.notes[0].folderId);
-                            }}
-                            className={cn(
-                                "flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-semibold transition-all duration-200 truncate min-w-0 shadow-xs border cursor-pointer hover:scale-[1.03] active:scale-95",
-                                item.notes[0].isLatest
-                                    ? "bg-black/65 hover:bg-white hover:text-black border-white/15 hover:border-white text-white backdrop-blur-xs"
-                                    : "bg-muted/75 hover:bg-white hover:text-black border-border/45 hover:border-white text-muted-foreground"
-                            )}
-                            title={item.notes[0].noteTitle}
-                        >
-                            {!item.notes[0].isLatest && <History className="w-2 h-2 text-accent-full shrink-0" />}
-                            <span className="truncate">{item.notes[0].noteTitle}</span>
-                        </button>
-
-                        {/* Extra Notes Dropdown */}
-                        {item.notes.length > 1 && (
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <button
-                                        onClick={(e) => e.stopPropagation()}
-                                        className="shrink-0 flex items-center justify-center px-1.5 py-0.5 rounded bg-black/65 hover:bg-white hover:text-black border border-white/15 hover:border-white text-[8px] font-bold text-white backdrop-blur-xs transition-all duration-200 cursor-pointer shadow-xs hover:scale-[1.03] active:scale-95"
-                                    >
-                                        +{item.notes.length - 1}
-                                    </button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-48">
-                                    {item.notes.slice(1).map((note) => (
-                                        <DropdownMenuItem
-                                            key={note.noteId}
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                onNavigate(note.noteId, note.folderId);
-                                            }}
-                                            className="flex items-center gap-2 text-xs"
-                                        >
-                                            {!note.isLatest && <History className="w-3.5 h-3.5 text-accent-full" />}
-                                            <span className={cn("truncate", !note.isLatest && "opacity-60")}>
-                                                {note.noteTitle}
-                                            </span>
-                                        </DropdownMenuItem>
-                                    ))}
-                                </DropdownMenuContent>
-                            </DropdownMenu>
+                                {/* Extra Notes Dropdown */}
+                                {item.notes.length > 1 && (
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <button
+                                                onClick={(e) => e.stopPropagation()}
+                                                className="shrink-0 flex items-center justify-center px-1.5 py-0.5 rounded bg-black hover:bg-white hover:text-black border border-white/15 hover:border-white text-[8px] font-bold text-white transition-all duration-200 cursor-pointer shadow-xs hover:scale-[1.03] active:scale-95"
+                                            >
+                                                +{item.notes.length - 1}
+                                            </button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end" className="w-48">
+                                            {item.notes.slice(1).map((note) => (
+                                                <DropdownMenuItem
+                                                    key={note.noteId}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        onNavigate(note.noteId, note.folderId);
+                                                    }}
+                                                    className="flex items-center gap-2 text-xs"
+                                                >
+                                                    {!note.isLatest && <History className="w-3.5 h-3.5 text-accent-full" />}
+                                                    <span className={cn("truncate", !note.isLatest && "opacity-60")}>
+                                                        {note.noteTitle}
+                                                    </span>
+                                                </DropdownMenuItem>
+                                            ))}
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                )}
+                            </>
                         )}
-                    </>
-                )}
-            </div>
-        </div>
+                    </div>
+                </div>
+            </ContextMenuTrigger>
+            <ContextMenuContent className="w-40">
+                <ContextMenuItem onClick={handleCopy}>
+                    <Copy className="mr-2 h-3.5 w-3.5" />
+                    <span>Copy</span>
+                </ContextMenuItem>
+            </ContextMenuContent>
+        </ContextMenu>
     );
 }

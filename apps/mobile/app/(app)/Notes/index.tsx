@@ -282,6 +282,19 @@ export default function NotesList() {
     const displayData = useMemo((): ListItem[] => {
         if (isSearchActive) {
             const items: ListItem[] = [];
+
+            if (!localSearchQuery) {
+                const activeNotes = notes.filter(n => !n.isDeleted);
+                const sorted = [...activeNotes]
+                    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+                    .slice(0, 10);
+                if (sorted.length > 0) {
+                    items.push({ type: 'section-header', title: 'Recent Notes' });
+                    sorted.forEach(n => items.push({ type: 'note', data: n }));
+                }
+                return items;
+            }
+
             const searchFolders = dbResults.filter(r => r.type === 'folder');
             const searchNotes = dbResults.filter(r => r.type === 'note');
 
@@ -320,7 +333,7 @@ export default function NotesList() {
             }
         }
         return items;
-    }, [browseFolders, browseNotes, isSearchActive, dbResults, collapsedSections]);
+    }, [browseFolders, browseNotes, isSearchActive, dbResults, collapsedSections, notes, localSearchQuery]);
 
     // Animations & Scroll
     const scrollHandler = useAnimatedScrollHandler({
@@ -365,6 +378,7 @@ export default function NotesList() {
                     isCollapsed={collapsedSections.has(item.title)}
                     onToggle={() => toggleSection(item.title)}
                     colors={colors}
+                    hideToggle={isSearchActive}
                 />
             );
         }

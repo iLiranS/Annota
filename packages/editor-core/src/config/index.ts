@@ -132,6 +132,7 @@ export const getBaseExtensions = (options: {
     onCodeBlockSelected?: (e: MouseEvent, resolve: () => any) => void;
     onImagePasted?: (data: { base64: string, imageId?: string, src?: string }) => void;
     onResolveImageIds?: (data: { imageIds: string[] }) => void;
+    onFilePasted?: (data: { localPath: string }) => void;
     defaultCodeLanguage?: string | null;
     onSlashCommand?: (data: any) => void;
     onTagCommand?: (data: any) => void;
@@ -192,6 +193,7 @@ export const getBaseExtensions = (options: {
         FileAttachment.configure({
             onOpenFile: options.onOpenFile,
             onOpenFileMenu: options.onOpenFileMenu,
+            onFilePasted: options.onFilePasted,
         }),
         CustomTable.configure({
             resizable: true,

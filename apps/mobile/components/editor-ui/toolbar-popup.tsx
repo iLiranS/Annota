@@ -133,7 +133,7 @@ function FileActionMenu({ mimeType, onAction, onClose }: { mimeType?: string, on
     const { colors } = useTheme();
     const isImage = !mimeType || mimeType.startsWith('image/');
 
-    const filteredActions = isImage ? FILE_ACTIONS : FILE_ACTIONS.filter(a => a.id === 'delete');
+    const filteredActions = isImage ? FILE_ACTIONS : FILE_ACTIONS.filter(a => a.id === 'delete' || a.id === 'copy');
 
 
     return (
@@ -167,7 +167,9 @@ function FileActionMenu({ mimeType, onAction, onClose }: { mimeType?: string, on
                         }}
                     >
                         <MaterialIcons name={item.icon as any} size={20} color={item.id === 'delete' ? '#FF453A' : colors.text} style={{ marginRight: 12 }} />
-                        <Text style={{ fontSize: 16, color: item.id === 'delete' ? '#FF453A' : colors.text }}>{item.label}</Text>
+                        <Text style={{ fontSize: 16, color: item.id === 'delete' ? '#FF453A' : colors.text }}>
+                            {item.id === 'copy' && !isImage ? 'Copy File Path' : item.label}
+                        </Text>
                     </TouchableOpacity>
                 ))}
             </View>

@@ -89,8 +89,13 @@ export function useBlockMenuHandler({ editorRef, noteId }: UseBlockMenuHandlerPr
                 if (type === "image") {
                     const src = data.src || "";
                     copyImageToClipboard(src, data.imageId);
-                }
-                else {
+                } else if (type === "file") {
+                    if (data.localPath) {
+                        const { resolveLocalUri } = await import("@annota/core");
+                        const absPath = await resolveLocalUri(data.localPath);
+                        await writeText(absPath);
+                    }
+                } else {
                     editorRef.current.onCommand("copyToClipboard", { pos: data.pos });
                 }
                 break;

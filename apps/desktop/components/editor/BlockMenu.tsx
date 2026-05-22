@@ -98,6 +98,10 @@ export function BlockMenu({
                             <Link className="mr-2 h-4 w-4" />
                             <span>Open File</span>
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAction("copy")}>
+                            <Copy className="mr-2 h-4 w-4" />
+                            <span>Copy File Path</span>
+                        </DropdownMenuItem>
                         <DropdownMenuSeparator />
 
                         <DropdownMenuItem

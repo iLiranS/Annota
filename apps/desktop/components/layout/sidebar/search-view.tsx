@@ -34,7 +34,7 @@ export function SearchView({
     onCreateNote
 }: SearchViewProps) {
     const { colors } = useAppTheme();
-    const { getFolderById } = useNotesStore();
+    const { getFolderById, notes } = useNotesStore();
     const { general } = useSettingsStore();
     const {
         searchQuery,
@@ -45,8 +45,29 @@ export function SearchView({
 
     const [activeFilter, setActiveFilter] = useState<'all' | 'media'>('all');
 
-    const folderResults = useMemo(() => dbResults.filter(r => r.type === 'folder'), [dbResults]);
-    const noteResults = useMemo(() => dbResults.filter(r => r.type === 'note'), [dbResults]);
+    const folderResults = useMemo(() => {
+        if (!searchQuery) return [];
+        return dbResults.filter(r => r.type === 'folder');
+    }, [dbResults, searchQuery]);
+
+    const noteResults = useMemo(() => {
+        if (!searchQuery) {
+            const activeNotes = notes.filter(n => !n.isDeleted);
+            const sorted = [...activeNotes]
+                .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+                .slice(0, 10);
+            return sorted.map(note => ({
+                id: note.id,
+                type: 'note' as const,
+                title: note.title,
+                subtitle: note.preview,
+                score: 1,
+                updatedAt: new Date(note.updatedAt),
+                data: note
+            }));
+        }
+        return dbResults.filter(r => r.type === 'note');
+    }, [dbResults, searchQuery, notes]);
 
     const FolderBadge = ({ folderId }: { folderId: string | null }) => {
         const folder = folderId ? getFolderById(folderId) : null;
@@ -170,7 +191,7 @@ export function SearchView({
                                 <div className="space-y-1">
                                     <div className="px-3 py-1 text-[9px] font-black uppercase tracking-[0.15em] text-muted-foreground/50 flex items-center gap-2">
                                         <Ionicons name="document-text-outline" size={10} />
-                                        <span>Notes</span>
+                                        <span>{searchQuery ? "Notes" : "Recent Notes"}</span>
                                     </div>
                                     <div className="space-y-0.5">
                                         {noteResults.map((result) => (

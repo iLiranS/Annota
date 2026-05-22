@@ -1,8 +1,8 @@
-import './file-attachment.css';
 import { Node, mergeAttributes, type NodeViewRenderer } from '@tiptap/core';
-import { NodeSelection } from '@tiptap/pm/state';
+import { NodeSelection, Plugin } from '@tiptap/pm/state';
 import { sendMessage } from '../bridge';
 import { createBlockMenuButton } from './block-menu-button';
+import './file-attachment.css';
 
 export const FileAttachment = Node.create({
     name: 'fileAttachment',
@@ -13,6 +13,7 @@ export const FileAttachment = Node.create({
         return {
             onOpenFile: null as ((data: { localPath: string; mimeType: string }) => void) | null,
             onOpenFileMenu: null as ((e: MouseEvent, resolve: () => { pos: number; message: Record<string, unknown> } | null) => void) | null,
+            onFilePasted: null as ((data: { localPath: string }) => void) | null,
         };
     },
 
@@ -157,6 +158,33 @@ export const FileAttachment = Node.create({
                 },
             };
         }) as NodeViewRenderer;
+    },
+
+    addProseMirrorPlugins() {
+        const options = this.options;
+        return [
+            new Plugin({
+                props: {
+                    handlePaste(_view, event) {
+                        const text = event.clipboardData?.getData('text/plain')?.trim();
+                        if (!text) return false;
+
+                        // Check if the pasted text matches a local PDF file path or file:// URL
+                        // e.g. /Users/liran/Library/.../*.pdf or file:///var/.../*.pdf or C:\.../*.pdf
+                        const isLocalPdf = /^(?:file:\/\/|\/|[a-zA-Z]:\\).*\.pdf$/i.test(text);
+                        if (!isLocalPdf) return false;
+
+                        // Call paste handler callback if registered, or post message
+                        if (options.onFilePasted) {
+                            options.onFilePasted({ localPath: text });
+                        } else {
+                            sendMessage({ type: 'filePasted', localPath: text });
+                        }
+                        return true;
+                    }
+                }
+            })
+        ];
     },
 
 });

@@ -440,7 +440,7 @@ export function NoteTabs() {
                 <button
                     type="button"
                     onClick={() => useSearchStore.getState().setIsOpen(true)}
-                    className="h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground/40 hover:bg-primary/10 hover:text-primary active:scale-90 transition-all cursor-pointer shrink-0 ml-1  "
+                    className="h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground/40 hover:bg-primary/10 hover:text-primary active:scale-90 transition-all cursor-pointer shrink-0  "
                     title="Open Search (Cmd+P)"
                 >
                     <Plus size={14} strokeWidth={2.5} />
