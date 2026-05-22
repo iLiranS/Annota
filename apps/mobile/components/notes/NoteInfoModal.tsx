@@ -2,9 +2,11 @@ import { calculateNoteStats, useNotesStore } from '@annota/core';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
 import { format } from 'date-fns';
+import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
     Modal,
+    Pressable,
     ScrollView,
     StyleSheet,
     Text,
@@ -28,18 +30,31 @@ interface NoteInfoModalProps {
 
 export default function NoteInfoModal({ visible, onClose, noteId, onScrollToElement }: NoteInfoModalProps) {
     const { colors } = useTheme();
+    const router = useRouter();
     const insets = useSafeAreaInsets();
-    const { getNoteById, getNoteContent } = useNotesStore();
+    const { getNoteById, getNoteContent, getForwardLinks, getBacklinks } = useNotesStore();
     const note = getNoteById(noteId);
 
     const [content, setContent] = useState<string | null>(null);
     const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
+    const [forwardLinks, setForwardLinks] = useState<any[]>([]);
+    const [backlinks, setBacklinks] = useState<any[]>([]);
+
+    const hasForward = forwardLinks.length > 0;
+    const hasBack = backlinks.length > 0;
 
     useEffect(() => {
         if (visible && noteId) {
             getNoteContent(noteId).then(setContent);
+            getForwardLinks(noteId).then(setForwardLinks);
+            getBacklinks(noteId).then(setBacklinks);
         }
-    }, [visible, noteId, getNoteContent]);
+        return () => {
+            setContent(null);
+            setForwardLinks([]);
+            setBacklinks([]);
+        };
+    }, [visible, noteId, getNoteContent, getForwardLinks, getBacklinks]);
 
     const stats = useMemo(() => {
         return calculateNoteStats(content || "");
@@ -146,35 +161,157 @@ export default function NoteInfoModal({ visible, onClose, noteId, onScrollToElem
                                                         color={colors.primary + '40'}
                                                     />
                                                 </TouchableOpacity>
-                                                <TouchableOpacity
+                                                <Pressable
                                                     onPress={() => {
                                                         onScrollToElement(item.id);
                                                         onClose();
                                                     }}
-                                                    style={styles.tocTextButton}
+                                                    style={({ pressed }) => [
+                                                        styles.tocTextButton,
+                                                        pressed && { backgroundColor: colors.primary + '25' }
+                                                    ]}
                                                 >
-                                                    <Text
-                                                        numberOfLines={1}
-                                                        style={[
-                                                            styles.tocText,
-                                                            { color: colors.text + '80' },
-                                                            item.level === 1 && styles.tocTextH1,
-                                                            item.level === 2 && styles.tocTextH2,
-                                                        ]}
-                                                    >
-                                                        {item.text}
-                                                    </Text>
-                                                </TouchableOpacity>
+                                                    {({ pressed }) => (
+                                                        <Text
+                                                            numberOfLines={1}
+                                                            style={[
+                                                                styles.tocText,
+                                                                { color: pressed ? colors.primary : colors.text + '80' },
+                                                                item.level === 1 && styles.tocTextH1,
+                                                                item.level === 2 && styles.tocTextH2,
+                                                            ]}
+                                                        >
+                                                            {item.text}
+                                                        </Text>
+                                                    )}
+                                                </Pressable>
                                             </View>
                                         );
                                     })}
                                 </View>
                             )}
                         </View>
+
                     </ScrollView>
 
+                    {/* Forward and Back Links */}
+                    {hasForward || hasBack ? (
+                        <View style={[
+                            styles.linksCard,
+                            {
+                                backgroundColor: colors.card + '30',
+                                borderColor: colors.border,
+                            }
+                        ]}>
+                            <View style={hasForward && hasBack ? styles.twoColContainer : styles.oneColContainer}>
+                                {/* Forward Links Column */}
+                                {hasForward && (
+                                    <View style={hasForward && hasBack ? styles.col : null}>
+                                        <View style={styles.colHeader}>
+                                            <Ionicons name="arrow-forward-outline" size={12} color={colors.primary} />
+                                            <Text style={[styles.colTitle, { color: colors.text + '60' }]}>FORWARD LINKS</Text>
+                                            <Text style={[styles.colTitle, { color: colors.text + '40', fontWeight: '500' }]}>
+                                                ({forwardLinks.length})
+                                            </Text>
+                                        </View>
+                                        <ScrollView style={styles.colScroll} nestedScrollEnabled>
+                                            <View style={styles.colList}>
+                                                {forwardLinks.map((link) => (
+                                                    <Pressable
+                                                        key={link.id}
+                                                        onPress={() => {
+                                                            onClose();
+                                                            router.push({
+                                                                pathname: '/Notes/[id]',
+                                                                params: {
+                                                                    id: link.id,
+                                                                    source: 'link',
+                                                                    ...(link.blockId ? { blockId: link.blockId } : {})
+                                                                }
+                                                            });
+                                                        }}
+                                                        style={({ pressed }) => [
+                                                            styles.mobileLinkItem,
+                                                            pressed && { backgroundColor: colors.primary + '30' }
+                                                        ]}
+                                                    >
+                                                        {({ pressed }) => (
+                                                            <>
+                                                                <Text numberOfLines={1} style={[
+                                                                    styles.mobileLinkText,
+                                                                    { color: pressed ? colors.primary : colors.text + '90' }
+                                                                ]}>
+                                                                    {link.title || 'Untitled Note'}
+                                                                </Text>
+                                                                <Ionicons name="link-outline" size={11} color={colors.primary} style={[styles.mobileLinkIcon, pressed && { opacity: 1 }]} />
+                                                            </>
+                                                        )}
+                                                    </Pressable>
+                                                ))}
+                                            </View>
+                                        </ScrollView>
+                                    </View>
+                                )}
+
+                                {/* Divider if both exist */}
+                                {hasForward && hasBack && (
+                                    <View style={[styles.colDivider, { backgroundColor: colors.border }]} />
+                                )}
+
+                                {/* Backlinks Column */}
+                                {hasBack && (
+                                    <View style={[hasForward && hasBack ? styles.col : null, hasForward && { paddingLeft: 12 }]}>
+                                        <View style={styles.colHeader}>
+                                            <Ionicons name="arrow-back-outline" size={12} color={colors.primary} />
+                                            <Text style={[styles.colTitle, { color: colors.text + '60' }]}>BACK LINKS</Text>
+                                            <Text style={[styles.colTitle, { color: colors.text + '40', fontWeight: '500' }]}>
+                                                ({backlinks.length})
+                                            </Text>
+                                        </View>
+                                        <ScrollView style={styles.colScroll} nestedScrollEnabled>
+                                            <View style={styles.colList}>
+                                                {backlinks.map((link) => (
+                                                    <Pressable
+                                                        key={link.id}
+                                                        onPress={() => {
+                                                            onClose();
+                                                            router.push({
+                                                                pathname: '/Notes/[id]',
+                                                                params: {
+                                                                    id: link.id,
+                                                                    source: 'link',
+                                                                    ...(link.blockId ? { blockId: link.blockId } : {})
+                                                                }
+                                                            });
+                                                        }}
+                                                        style={({ pressed }) => [
+                                                            styles.mobileLinkItem,
+                                                            pressed && { backgroundColor: colors.primary + '30' }
+                                                        ]}
+                                                    >
+                                                        {({ pressed }) => (
+                                                            <>
+                                                                <Text numberOfLines={1} style={[
+                                                                    styles.mobileLinkText,
+                                                                    { color: pressed ? colors.primary : colors.text + '90' }
+                                                                ]}>
+                                                                    {link.title || 'Untitled Note'}
+                                                                </Text>
+                                                                <Ionicons name="link-outline" size={11} color={colors.primary} style={[styles.mobileLinkIcon, pressed && { opacity: 1 }]} />
+                                                            </>
+                                                        )}
+                                                    </Pressable>
+                                                ))}
+                                            </View>
+                                        </ScrollView>
+                                    </View>
+                                )}
+                            </View>
+                        </View>
+                    ) : null}
+
                     {/* Bottom: Anchored Stats & Metadata */}
-                    <View style={[styles.footer, { borderTopColor: colors.border, paddingBottom: insets.bottom + 20 }]}>
+                    <View style={[styles.footer, { paddingBottom: insets.bottom }]}>
                         {/* Stats */}
                         <View style={styles.statsGrid}>
                             <View style={[styles.statBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -297,6 +434,8 @@ const styles = StyleSheet.create({
     tocTextButton: {
         flex: 1,
         paddingVertical: 8,
+        paddingHorizontal: 6,
+        borderRadius: 6,
     },
     tocText: {
         fontSize: 13,
@@ -310,8 +449,8 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
     footer: {
-        borderTopWidth: 1,
-        padding: 20,
+
+        paddingHorizontal: 20,
         gap: 24,
     },
     statsGrid: {
@@ -369,5 +508,78 @@ const styles = StyleSheet.create({
     metaTime: {
         fontSize: 13,
         fontWeight: '500',
+    },
+    linksContainer: {
+        gap: 8,
+    },
+    linkItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 12,
+        borderRadius: 12,
+        gap: 8,
+    },
+    linkText: {
+        fontSize: 14,
+        fontWeight: '500',
+        flex: 1,
+    },
+    linksCard: {
+        marginHorizontal: 20,
+        marginVertical: 12,
+        padding: 12,
+        borderRadius: 16,
+        borderWidth: 1,
+    },
+    twoColContainer: {
+        flexDirection: 'row',
+        alignItems: 'stretch',
+    },
+    oneColContainer: {
+        flexDirection: 'column',
+    },
+    col: {
+        flex: 1,
+    },
+    colHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginBottom: 6,
+        paddingHorizontal: 4,
+    },
+    colTitle: {
+        fontSize: 9,
+        fontWeight: '700',
+        letterSpacing: 0.5,
+    },
+    colScroll: {
+        maxHeight: 98,
+    },
+    colList: {
+        gap: 4,
+    },
+    colDivider: {
+        width: 1,
+        marginHorizontal: 12,
+        alignSelf: 'stretch',
+    },
+    mobileLinkItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: 6,
+        paddingHorizontal: 6,
+        borderRadius: 6,
+        gap: 8,
+        height: 30,
+    },
+    mobileLinkText: {
+        fontSize: 12,
+        fontWeight: '500',
+        flex: 1,
+    },
+    mobileLinkIcon: {
+        opacity: 0.7,
     },
 });

@@ -7,11 +7,11 @@ interface UseNoteEditorContentProps {
     noteId: string | undefined;
     editorRef: React.RefObject<TipTapEditorRef | null>;
     onNoteSync?: (noteId: string, content: string, title: string) => void;
-    elementId?: string | null;
+    blockId?: string | null;
     initialContent?: string;
 }
 
-export function useNoteEditorContent({ noteId, editorRef, onNoteSync, elementId, initialContent: propInitialContent }: UseNoteEditorContentProps) {
+export function useNoteEditorContent({ noteId, editorRef, onNoteSync, blockId, initialContent: propInitialContent }: UseNoteEditorContentProps) {
     const getNoteContent = useNotesStore((s) => s.getNoteContent);
     const { updateNoteContent, updateNoteMetadata } = useNotesStore();
     const notes = useNotesStore((s) => s.notes);
@@ -231,8 +231,6 @@ export function useNoteEditorContent({ noteId, editorRef, onNoteSync, elementId,
         const { error } = await updateNoteContent(noteId, html);
         if (!error) {
             updateNoteMetadata(noteId, { title });
-            // Notify other components (like Sidebar Note Info) that content changed
-            window.dispatchEvent(new CustomEvent('annota-note-content-updated', { detail: { noteId } }));
         }
     }, [noteId, updateNoteContent, updateNoteMetadata, onNoteSync]);
 
@@ -246,16 +244,16 @@ export function useNoteEditorContent({ noteId, editorRef, onNoteSync, elementId,
 
     // Deep linking
     useEffect(() => {
-        if (!elementId || !editorRef.current || !initialContent) return;
+        if (!blockId || !editorRef.current || !initialContent) return;
         if (hasScrolledRef.current) return;
 
         const timer = setTimeout(() => {
-            editorRef.current?.scrollToElement(elementId);
+            editorRef.current?.scrollToElement(blockId);
             hasScrolledRef.current = true;
         }, 150);
 
         return () => clearTimeout(timer);
-    }, [elementId, initialContent, editorRef]);
+    }, [blockId, initialContent, editorRef]);
 
     return {
         initialContent,

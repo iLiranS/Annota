@@ -9,8 +9,7 @@ import { Redirect, useLocalSearchParams } from 'expo-router';
  * this entry in the navigation stack so pressing back won't land here.
  */
 export default function NoteDeepLinkRedirect() {
-    const { id, elementId, blockId } = useLocalSearchParams<{ id: string; elementId?: string; blockId?: string }>();
-    const targetElementId = elementId || blockId;
+    const { id, blockId } = useLocalSearchParams<{ id: string; blockId?: string }>();
 
     return (
         <Redirect
@@ -19,7 +18,7 @@ export default function NoteDeepLinkRedirect() {
                 params: {
                     id: id,
                     source: 'link',
-                    ...(targetElementId ? { scrollToElementId: targetElementId } : {}),
+                    ...(blockId ? { blockId } : {}),
                 },
             }}
         />

@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray, isNull, lte, sql, or } from 'drizzle-orm';
+import { and, desc, eq, getTableColumns, gte, inArray, isNull, lte, or, sql } from 'drizzle-orm';
 import { deleteFile } from '../../services/files/file.service';
 import { getDb } from '../../stores/db.store';
 import { generateId } from '../../utils/id';
@@ -15,7 +15,7 @@ export const MAX_NOTE_SIZE = 145000;
 export const MAX_CONTENT_SIZE = MAX_NOTE_SIZE; // Deprecated, keep for compat if needed, otherwise use MAX_NOTE_SIZE everywhere
 export function normalizeStoredContent(content: string): string {
     if (!content) return content ?? '';
-    
+
     // 1. Handle legacy image nodes: Keep data-image-id, strip heavy base64 src
     let normalized = content.replace(/<img\b[^>]*>/gi, (imgTag) => {
         if (!/data-image-id\s*=\s*["'][^"']+["']/i.test(imgTag)) {
@@ -35,7 +35,7 @@ export function normalizeStoredContent(content: string): string {
 
     // 2. Handle file-attachment nodes (already clean, but ensure consistency if needed)
     // No heavy payload stripping needed for now as they don't use src.
-    
+
     return normalized;
 }
 
@@ -45,7 +45,7 @@ export function normalizeStoredContent(content: string): string {
  */
 function extractFileIdsFromContent(content: string): string[] {
     const ids = new Set<string>();
-    
+
     // Legacy image IDs: data-image-id="..."
     const imageIdRegex = /data-image-id\s*=\s*(["'])(.*?)\1/gi;
     let match;
@@ -58,7 +58,7 @@ function extractFileIdsFromContent(content: string): string[] {
     while ((match = fileIdRegex.exec(content)) !== null) {
         ids.add(match[2]);
     }
-    
+
     return Array.from(ids);
 }
 
@@ -66,6 +66,49 @@ function extractFileIdsFromContent(content: string): string[] {
 
 
 // ============ SYNC OPERATIONS ============
+
+/**
+ * Parses note content to find internal links and updates the note_links table.
+ */
+async function updateNoteLinks(sourceId: string, content: string, tx: DbOrTx): Promise<void> {
+    // 1. Delete existing links where this note is the source
+    await tx.delete(schema.noteLinks).where(eq(schema.noteLinks.sourceId, sourceId)).run();
+
+    // 2. Extract links using regex
+    // Matches href="annota://note/<targetId>" or href="annota://note/<targetId>?blockId=<blockId>"
+    const linkRegex = /href=["']annota:\/\/note\/([a-zA-Z0-9-]+)(?:\?blockId=([a-zA-Z0-9-]+))?["']/gi;
+    const links = new Map<string, string | null>();
+
+    let match;
+    while ((match = linkRegex.exec(content)) !== null) {
+        const targetId = match[1];
+        const blockId = match[2] || null;
+        
+        // A note cannot link to itself
+        if (targetId === sourceId) {
+            continue;
+        }
+
+        if (!links.has(targetId)) {
+            links.set(targetId, blockId);
+        }
+    }
+
+    // 3. Insert new links
+    if (links.size > 0) {
+        const newLinks = Array.from(links.entries()).map(([targetId, blockId]) => ({
+            sourceId,
+            targetId,
+            blockId,
+        }));
+
+        await tx.insert(schema.noteLinks)
+            .values(newLinks)
+            .onConflictDoNothing({ target: [schema.noteLinks.sourceId, schema.noteLinks.targetId] })
+            .run();
+    }
+}
+
 
 export async function getDirtyNotes(): Promise<NoteMetadata[]> {
     const result = await getDb().select().from(schema.noteMetadata).where(eq(schema.noteMetadata.isDirty, true)).all();
@@ -107,7 +150,7 @@ export async function upsertSyncedNote(noteFullData: any, tx: DbOrTx = getDb()):
         // 2. MIGRATION: Upgrade ID and references in noteContent and noteVersions
         if (existing.id === hyphenlessId && id !== hyphenlessId) {
             console.log(`[Sync] Migrating legacy Note ID and content link: ${hyphenlessId} -> ${id}`);
-            
+
             // Update Note Metadata ID
             await tx.update(schema.noteMetadata).set({ id }).where(eq(schema.noteMetadata.id, hyphenlessId)).run();
             // Update Note Content ID
@@ -202,6 +245,7 @@ export async function upsertSyncedNote(noteFullData: any, tx: DbOrTx = getDb()):
     }
 
     await FilesRepo.setFilesForVersion(activeVersionId, fileIds, tx);
+    await updateNoteLinks(metadataDetails.id, content, tx);
 
 }
 
@@ -498,6 +542,44 @@ export async function getDeletedNotes(): Promise<NoteMetadata[]> {
 
 // ============ CONTENT OPERATIONS (lazy loaded) ============
 
+export async function getForwardLinks(noteId: string): Promise<(NoteMetadata & { blockId: string | null })[]> {
+    const result = await getDb()
+        .select({
+            ...getTableColumns(schema.noteMetadata),
+            blockId: schema.noteLinks.blockId,
+        })
+        .from(schema.noteLinks)
+        .innerJoin(schema.noteMetadata, eq(schema.noteLinks.targetId, schema.noteMetadata.id))
+        .where(
+            and(
+                eq(schema.noteLinks.sourceId, noteId),
+                eq(schema.noteMetadata.isDeleted, false),
+                eq(schema.noteMetadata.isPermDeleted, false)
+            )
+        )
+        .all();
+    return safeGetAll<NoteMetadata & { blockId: string | null }>(result as any);
+}
+
+export async function getBacklinks(noteId: string): Promise<(NoteMetadata & { blockId: string | null })[]> {
+    const result = await getDb()
+        .select({
+            ...getTableColumns(schema.noteMetadata),
+            blockId: schema.noteLinks.blockId,
+        })
+        .from(schema.noteLinks)
+        .innerJoin(schema.noteMetadata, eq(schema.noteLinks.sourceId, schema.noteMetadata.id))
+        .where(
+            and(
+                eq(schema.noteLinks.targetId, noteId),
+                eq(schema.noteMetadata.isDeleted, false),
+                eq(schema.noteMetadata.isPermDeleted, false)
+            )
+        )
+        .all();
+    return safeGetAll<NoteMetadata & { blockId: string | null }>(result as any);
+}
+
 export async function getNoteContent(noteId: string): Promise<string> {
     const result = await getDb()
         .select()
@@ -611,6 +693,9 @@ export async function updateNoteContent(noteId: string, content: string, preview
         for (const path of deletedFilePaths) {
             await deleteFile(path);
         }
+
+        // Update links
+        await updateNoteLinks(noteId, normalizedContent, tx);
     });
 }
 

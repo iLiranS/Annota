@@ -43,6 +43,8 @@ interface NotesState {
     permanentlyDeleteNote: (noteId: string) => Promise<void>;
     restoreNote: (noteId: string, targetFolderId?: string | null) => Promise<NoteMetadata | null>;
     getNoteById: (noteId: string) => NoteMetadata | undefined;
+    getForwardLinks: (noteId: string) => Promise<(NoteMetadata & { blockId: string | null })[]>;
+    getBacklinks: (noteId: string) => Promise<(NoteMetadata & { blockId: string | null })[]>;
 
     // Tag operations
     addTagToNote: (noteId: string, tag: { id?: string, name: string, color?: string }) => Promise<{ error: string | null }>;
@@ -315,6 +317,14 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
     getNoteById: (noteId) => {
         return get().notes.find(n => n.id === noteId);
+    },
+
+    getForwardLinks: async (noteId) => {
+        return await NoteService.getForwardLinks(noteId);
+    },
+
+    getBacklinks: async (noteId) => {
+        return await NoteService.getBacklinks(noteId);
     },
 
     // ============ TAG OPERATIONS ============

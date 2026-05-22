@@ -262,7 +262,7 @@ function App() {
 
       try {
         const parsedUrl = new URL(url);
-        // Parse 'annota://note/123?elementId=456'
+        // Parse 'annota://note/123?blockId=456'
         if (parsedUrl.host === "note") {
           if (bootstrapStateRef.current !== "ready") {
             setPendingDeepLink(url);
@@ -270,15 +270,15 @@ function App() {
           }
 
           const noteId = parsedUrl.pathname.replace("/", "");
-          const elementId = parsedUrl.searchParams.get("elementId") || parsedUrl.searchParams.get("blockId");
+          const blockId = parsedUrl.searchParams.get("blockId");
 
           // Try to find the note to get its folderId for the route
           const note = useNotesStore.getState().notes.find((n) => n.id === noteId);
           if (note) {
             const folderId = note.folderId || "root";
             let routePath = `/notes/${folderId}/${noteId}`;
-            if (elementId) {
-              routePath += `?elementId=${elementId}`;
+            if (blockId) {
+              routePath += `?blockId=${blockId}`;
             }
             navigate(routePath);
             const win = getCurrentWindow();
@@ -416,12 +416,12 @@ function App() {
         const parsedUrl = new URL(url);
         if (parsedUrl.host === "note") {
           const noteId = parsedUrl.pathname.replace("/", "");
-          const elementId = parsedUrl.searchParams.get("elementId") || parsedUrl.searchParams.get("blockId");
+          const blockId = parsedUrl.searchParams.get("blockId");
           const note = useNotesStore.getState().notes.find((n) => n.id === noteId);
           if (note) {
-            const folderId = note.folderId || "root";
+            const folderId = note.folderId || 'root';
             let routePath = `/notes/${folderId}/${noteId}`;
-            if (elementId) routePath += `?elementId=${elementId}`;
+            if (blockId) routePath += `?blockId=${blockId}`;
             navigate(routePath, { replace: true });
           }
         }

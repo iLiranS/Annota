@@ -42,6 +42,15 @@ export const CREATE_TABLES_SQL = `
     created_at INTEGER NOT NULL
   );
 
+  CREATE TABLE IF NOT EXISTS note_links (
+    source_id TEXT NOT NULL,
+    target_id TEXT NOT NULL,
+    block_id TEXT,
+    PRIMARY KEY (source_id, target_id),
+    FOREIGN KEY(source_id) REFERENCES note_metadata(id) ON DELETE CASCADE,
+    FOREIGN KEY(target_id) REFERENCES note_metadata(id) ON DELETE CASCADE
+  );
+
   CREATE TABLE IF NOT EXISTS folders (
     id TEXT PRIMARY KEY,
     parent_id TEXT,
@@ -111,6 +120,7 @@ export const CREATE_TABLES_SQL = `
   CREATE INDEX IF NOT EXISTS idx_files_compressed_hash ON files(compressed_hash);
   CREATE INDEX IF NOT EXISTS idx_version_files_version_id ON version_files(version_id);
   CREATE INDEX IF NOT EXISTS idx_version_files_file_id ON version_files(file_id);
+  CREATE INDEX IF NOT EXISTS idx_note_links_target ON note_links(target_id);
   
   CREATE TABLE IF NOT EXISTS file_download_queue (
     file_id TEXT PRIMARY KEY,
@@ -206,6 +216,20 @@ export async function initDatabase(
         sql: [
           'ALTER TABLE ai_messages ADD COLUMN reasoning_content TEXT;',
           'ALTER TABLE ai_messages ADD COLUMN tool_calls TEXT;'
+        ]
+      },
+      {
+        name: '006_add_note_links',
+        sql: [
+          `CREATE TABLE IF NOT EXISTS note_links (
+            source_id TEXT NOT NULL,
+            target_id TEXT NOT NULL,
+            block_id TEXT,
+            PRIMARY KEY (source_id, target_id),
+            FOREIGN KEY(source_id) REFERENCES note_metadata(id) ON DELETE CASCADE,
+            FOREIGN KEY(target_id) REFERENCES note_metadata(id) ON DELETE CASCADE
+          );`,
+          `CREATE INDEX IF NOT EXISTS idx_note_links_target ON note_links(target_id);`
         ]
       }
     ];

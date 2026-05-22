@@ -36,6 +36,8 @@
     "core:window:allow-start-dragging",
     "core:window:allow-create",
     "core:window:allow-set-theme",
+    "core:window:allow-unminimize",
+    "core:window:allow-set-focus",
     "core:event:default",
     "core:event:allow-listen",
     "core:event:allow-unlisten",

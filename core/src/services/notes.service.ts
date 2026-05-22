@@ -22,6 +22,14 @@ export const NoteService = {
         return await notesRepo.getNoteMetadataById(noteId);
     },
 
+    getForwardLinks: async (noteId: string): Promise<(NoteMetadata & { blockId: string | null })[]> => {
+        return await notesRepo.getForwardLinks(noteId);
+    },
+
+    getBacklinks: async (noteId: string): Promise<(NoteMetadata & { blockId: string | null })[]> => {
+        return await notesRepo.getBacklinks(noteId);
+    },
+
     getNoteContent: async (noteId: string): Promise<string> => {
         return await notesRepo.getNoteContent(noteId);
     },

@@ -36,7 +36,7 @@ import Toast from 'react-native-toast-message';
 
 
 export default function NoteEditor() {
-    const { id, source, scrollToElementId, elementId, blockId } = useLocalSearchParams<{ id: string, source: string, scrollToElementId?: string, elementId?: string, blockId?: string }>();
+    const { id, source, blockId } = useLocalSearchParams<{ id: string, source: string, blockId?: string }>();
     const { colors } = useTheme();
     const router = useRouter();
     const insets = useSafeAreaInsets();
@@ -134,7 +134,6 @@ export default function NoteEditor() {
 
 
 
-    const pendingScrollElementIdRef = useRef<string | null>(null);
     const isEmptyContent = (html: string) => {
         const normalized = html
             .replace(/&nbsp;/gi, '')
@@ -147,6 +146,7 @@ export default function NoteEditor() {
     const isContentReady = !id || content !== null;
 
     const lastSavedContentRef = useRef<string | null>(null);
+    const lastScrolledElementIdRef = useRef<string | null>(null);
 
     // Load content from database on mount
     useEffect(() => {
@@ -168,7 +168,6 @@ export default function NoteEditor() {
                 } finally {
                     if (!cancelled) {
                         setIsLoading(false);
-                        pendingScrollElementIdRef.current = scrollToElementId ?? elementId ?? blockId ?? null;
                     }
                 }
             } else {
@@ -176,7 +175,6 @@ export default function NoteEditor() {
                     setContent(null);
                     lastSavedContentRef.current = null;
                     setIsLoading(false);
-                    pendingScrollElementIdRef.current = null;
                 }
             }
         };
@@ -187,24 +185,28 @@ export default function NoteEditor() {
         return () => {
             cancelled = true;
         };
-    }, [id, getNoteContent, scrollToElementId, elementId, blockId]);
+    }, [id, getNoteContent]);
 
-    // Mobile Frontend
+    // Mobile Frontend Scroll Effect
     useEffect(() => {
-        // 1. Wait for DB load to finish, ensure we have an ID, and ensure ref exists
-        if (isLoading || !pendingScrollElementIdRef.current || !editorRef.current) return;
+        if (!blockId || isLoading || !editorRef.current || content === null) return;
 
-        const targetId = pendingScrollElementIdRef.current;
+        // If we already scrolled to this block, skip it
+        if (lastScrolledElementIdRef.current === blockId) return;
 
-        // 2. The React Native WebView takes ~300ms to receive the HTML 
-        // over the bridge and render it.
+        // The React Native WebView takes ~300ms to receive the HTML and render it
         const timer = setTimeout(() => {
-            editorRef.current?.scrollToElement(targetId);
-            pendingScrollElementIdRef.current = null;
-        }, 400);
+            editorRef.current?.scrollToElement(blockId);
+            lastScrolledElementIdRef.current = blockId;
+        }, 350);
 
         return () => clearTimeout(timer);
-    }, [isLoading]);
+    }, [blockId, isLoading, content]);
+
+    // Reset the scrolled ref when note ID changes
+    useEffect(() => {
+        lastScrolledElementIdRef.current = null;
+    }, [id]);
 
     useEffect(() => {
         const onBackPress = () => {
@@ -338,9 +340,9 @@ export default function NoteEditor() {
         }, 500);
     }, [id]);
 
-    const handleCopyBlockLink = useCallback(async (elementId: string) => {
+    const handleCopyBlockLink = useCallback(async (blockId: string) => {
         if (!id) return;
-        const link = `annota://note/${id}?elementId=${elementId}`;
+        const link = `annota://note/${id}?blockId=${blockId}`;
         await ExpoClipboard.setStringAsync(link);
         setTimeout(() => {
             Alert.alert('Block Link Copied!', 'The link to this specific block has been copied to your clipboard.');

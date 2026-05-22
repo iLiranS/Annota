@@ -71,6 +71,11 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
         const scrollerRef = useRef<HTMLDivElement>(null);
         const isHydrating = useRef(false);
         const editorRef = useRef<any>(null);
+        // Content debounce: mirrors mobile's editor-core.ts pattern (300ms there, 750ms here)
+        const contentDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+        const pendingHtmlRef = useRef<string | null>(null);
+        const onContentChangeRef = useRef(onContentChange);
+        useEffect(() => { onContentChangeRef.current = onContentChange; }, [onContentChange]);
         // Use a ref so the contextmenu handler always calls the latest callback (avoids stale closure)
         const onOpenLinkMenuRef = useRef(onOpenLinkMenu);
         useEffect(() => { onOpenLinkMenuRef.current = onOpenLinkMenu; }, [onOpenLinkMenu]);
@@ -273,9 +278,19 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
             },
             onUpdate: ({ editor }) => {
                 if (isHydrating.current) return;
-                const html = editor.getHTML();
-                onContentChange?.(html);
                 setEditorState(getEditorState(editor) as unknown as EditorState);
+
+                // Debounce content change to prevent per-keystroke DB writes.
+                // Same pattern as mobile's editor-core.ts (line 382-388).
+                // The editor UI stays responsive because TipTap manages its own DOM state.
+                if (contentDebounceRef.current) clearTimeout(contentDebounceRef.current);
+                pendingHtmlRef.current = 'pending'; // mark that a flush is needed
+                contentDebounceRef.current = setTimeout(() => {
+                    if (editor.isDestroyed) return;
+                    const html = editor.getHTML();
+                    pendingHtmlRef.current = null;
+                    onContentChangeRef.current?.(html);
+                }, 750);
             },
             onSelectionUpdate: ({ editor }) => {
                 const { selection } = editor.state;
@@ -324,6 +339,22 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                 setEditorState(getEditorState(editor) as unknown as EditorState);
             },
         }, [noteId, extensions]);
+
+        // Safety net: flush pending content on unmount or noteId change.
+        // Must run BEFORE useEditor's cleanup destroys the editor instance.
+        useEffect(() => {
+            return () => {
+                if (contentDebounceRef.current) {
+                    clearTimeout(contentDebounceRef.current);
+                    contentDebounceRef.current = null;
+                }
+                if (pendingHtmlRef.current && editorRef.current && !editorRef.current.isDestroyed) {
+                    const html = editorRef.current.getHTML();
+                    pendingHtmlRef.current = null;
+                    onContentChangeRef.current?.(html);
+                }
+            };
+        }, [noteId]);
 
         // Update editor options when they change
         useEffect(() => {

@@ -26,6 +26,15 @@ export const noteContent = sqliteTable('note_content', {
     content: text('content').notNull().default(''), // Heavy content, loaded lazily
 });
 
+// ============ NOTE LINKS (derived, local only) ============
+export const noteLinks = sqliteTable('note_links', {
+    sourceId: text('source_id').notNull().references(() => noteMetadata.id, { onDelete: 'cascade' }),
+    targetId: text('target_id').notNull().references(() => noteMetadata.id, { onDelete: 'cascade' }),
+    blockId: text('block_id'),
+}, (t) => ({
+    pk: primaryKey({ columns: [t.sourceId, t.targetId] }),
+}));
+
 // ============ NOTE FTS5 (Virtual table, created via raw SQL migration) ============
 export const notesFts = sqliteTable('notes_fts', {
     id: text('id'),

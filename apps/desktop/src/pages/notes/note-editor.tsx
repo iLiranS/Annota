@@ -40,7 +40,7 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
     const params = useParams<{ folderId: string; noteId: string }>();
     const location = useLocation()
     const queryParams = new URLSearchParams(location.search);
-    const elementId = queryParams.get('elementId') || queryParams.get('blockId');
+    const blockId = queryParams.get('blockId');
 
     const noteId = propNoteId || params.noteId;
     const routeFolderId = propFolderId || params.folderId;
@@ -79,7 +79,7 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
         noteId,
         editorRef,
         onNoteSync,
-        elementId,
+        blockId,
         initialContent: propInitialContent
     });
 
