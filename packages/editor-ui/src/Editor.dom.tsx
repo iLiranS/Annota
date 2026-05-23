@@ -10,7 +10,6 @@ import 'katex/dist/katex.min.css';
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { useEditorThemeVariables } from './hooks/useEditorThemeVariables';
 import { useSharedEditorUI } from './hooks/useSharedEditorUI';
-import { AutoShowHeader } from './shared/AutoShowHeader';
 import { DESKTOP_SELECTION_STYLES } from './shared/desktopSelectionStyles';
 import { EditorState, initialEditorState, PopupType, TipTapEditorProps, TipTapEditorRef } from './shared/types';
 
@@ -926,15 +925,11 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                         margin: '0 auto',
                         minHeight: '100%'
                     }}>
-                        {renderHeader && (
-                            <AutoShowHeader scrollContainerRef={scrollerRef}>
-                                {renderHeader()}
-                            </AutoShowHeader>
-                        )}
                         {renderStaticHeader && renderStaticHeader()}
                         {extensions && <EditorContent editor={editor} style={{ outline: 'none', paddingTop: contentPaddingTop, paddingBottom: initialContent && initialContent.length > 100 ? 100 : 0 }} />}
                     </div>
                 </div>
+                {renderHeader && renderHeader()}
                 {gallery.isVisible && renderImageGallery?.({
                     images: gallery.images,
                     initialIndex: gallery.currentIndex,

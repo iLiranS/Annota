@@ -21,7 +21,7 @@ export function NoteFloatingActions({
     className,
     direction
 }: NoteFloatingActionsProps) {
-    const [_, setIsMenuOpen] = useState(false);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
 
     const isMac = typeof window !== 'undefined' && (/Mac|iPod|iPhone|iPad/.test(navigator.platform) || /Mac/.test(navigator.userAgent));
@@ -43,29 +43,27 @@ export function NoteFloatingActions({
         }
     };
 
+    const isInfoOpen = general.isSecondarySidebarOpen && general.secondarySidebarTab === 'info';
+    const isActive = isMenuOpen || isInfoOpen;
+
     return (
         <div className={cn(
-            "flex items-center",
-            "p-1",
-            "rounded-2xl",
+            "flex items-center bg-sidebar border border-border rounded-xl top-2 transition-all duration-200",
             "z-30",
-            "will-change-transform",
-            "bg-note-bg/80",
-            "backdrop-blur-xl saturate-200",
-            "border border-border/40",
-            "shadow-[inset_0_1px_0_rgba(255,255,255,1),0_6px_20px_rgba(0,0,0,0.10)]",
-            "dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_12px_32px_rgba(0,0,0,0.45)]",
-            "text-gray-900 dark:text-white/90",
+            isActive
+                ? "opacity-100 border-border/80 shadow-xs"
+                : "opacity-60 hover:opacity-100 border-border/60  hover:border-border/80 hover:shadow-xs",
             className
         )}
         >
-            <div className="flex items-center gap-1 flex-nowrap">
+            <div className="flex flex-col items-center gap-0.5 flex-nowrap">
                 <TooltipProvider delayDuration={0}>
                     <Tooltip
                         open={activeTooltip === 'search'}
                         onOpenChange={(o) => setActiveTooltip(o ? 'search' : null)}
                     >
                         <TooltipTrigger asChild>
+
                             <Button
                                 variant="ghost"
                                 size="icon"
@@ -78,7 +76,7 @@ export function NoteFloatingActions({
                                 <Search className="h-3.5 w-3.5" />
                             </Button>
                         </TooltipTrigger>
-                        <TooltipContent side="bottom" sideOffset={12} className="text-[10px] font-medium">
+                        <TooltipContent side={direction === 'rtl' ? 'right' : 'left'} sideOffset={12} className="text-[10px] font-medium">
                             Search
                             <span className="ml-2 text-[10px] opacity-60 bg-white/10 px-1 rounded-sm border border-white/10"> {MOD + ' + ' + 'F'}</span>
                         </TooltipContent>
@@ -92,18 +90,20 @@ export function NoteFloatingActions({
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                className={cn(
-                                    "h-8 w-8 rounded-xl hover:bg-white/10 dark:hover:bg-white/5 shrink-0 transition-all",
-                                    general.isSecondarySidebarOpen && general.secondarySidebarTab === 'info'
-                                        ? "text-primary bg-primary/10"
-                                        : "text-muted-foreground hover:text-foreground"
-                                )}
+                                className="h-8 w-8 rounded shrink-0 text-muted-foreground hover:text-foreground flex items-center justify-center focus-visible:ring-0 focus-visible:ring-offset-0"
                                 onClick={toggleNoteInfo}
                             >
-                                <ScrollText className="h-3.5 w-3.5" />
+                                <div className={cn(
+                                    "p-1.5 rounded transition-all hover:bg-white/10 dark:hover:bg-white/5",
+                                    general.isSecondarySidebarOpen && general.secondarySidebarTab === 'info'
+                                        ? "text-primary bg-primary/10"
+                                        : ""
+                                )}>
+                                    <ScrollText className="h-3.5 w-3.5" />
+                                </div>
                             </Button>
                         </TooltipTrigger>
-                        <TooltipContent side="bottom" sideOffset={12} className="text-[10px] font-medium">
+                        <TooltipContent side={direction === 'rtl' ? 'right' : 'left'} sideOffset={12} className="text-[10px] font-medium">
                             Note Info
                         </TooltipContent>
                     </Tooltip>

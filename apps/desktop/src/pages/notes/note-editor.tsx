@@ -268,7 +268,7 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
                             contentPaddingTop={0}
                             placeholder="Start typing..."
                             renderStaticHeader={() => (
-                                <div 
+                                <div
                                     dir={resolvedDirection}
                                     className={cn("py-2 px-1", resolvedDirection === 'rtl' ? "pl-20" : "pr-20")}
                                 >
@@ -285,7 +285,7 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
                                         editorRef.current?.setContent(content);
                                     }}
                                     className={cn(
-                                        "absolute top-2  pointer-events-auto shadow-md",
+                                        "absolute pointer-events-auto ",
                                         resolvedDirection === 'rtl' ? "left-4" : "right-4"
                                     )}
                                 />

@@ -125,13 +125,13 @@ export function ColorPicker({
                 <Button
                     variant="ghost"
                     size="icon"
-                    className="h-9 w-9"
+                    className="h-8 w-8"
                     title={title}
                     style={{
                         color: currentColor ? withAlpha(currentColor, 'FF') : undefined,
                         opacity: currentColor ? 1 : 0.7,
                         backgroundColor: currentColor ? withAlpha(currentColor, '30') : undefined,
-                        borderRadius: currentColor ? '8px' : undefined,
+                        borderRadius: currentColor ? '6px' : undefined,
                         transition: 'opacity 0.2s ease, background-color 0.2s ease'
                     }}
                 >

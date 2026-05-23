@@ -68,12 +68,12 @@ export function HeadingSelector({ editorState, sendCommand, onOpenChange, isMenu
                 <Button
                     variant="ghost"
                     size="sm"
-                    className="h-9 w-12 px-3 font-bold"
+                    className="h-8 w-10 px-2.5 font-bold"
                     style={{
                         color: currentHeadingLabel !== 'T' ? activeColor : undefined,
                         opacity: currentHeadingLabel !== 'T' ? 1 : 0.7,
                         backgroundColor: currentHeadingLabel !== 'T' && activeColor ? `${activeColor}20` : undefined,
-                        borderRadius: currentHeadingLabel !== 'T' ? '8px' : undefined,
+                        borderRadius: currentHeadingLabel !== 'T' ? '6px' : undefined,
                         transition: 'opacity 0.2s ease, background-color 0.2s ease'
                     }}
                 >

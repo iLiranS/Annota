@@ -60,7 +60,12 @@ export function NoteActionsMenu({ note, onRevert, onOpenChange, direction }: Not
                         <MoreVertical className="h-3.5 w-3.5" />
                     </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align={direction === 'rtl' ? "start" : "end"} className="w-56 p-1 mt-1 rounded-xl">
+                <DropdownMenuContent
+                    side={direction === 'rtl' ? "right" : "left"}
+                    align="start"
+                    sideOffset={8}
+                    className="w-56 p-1 rounded-xl"
+                >
                     <DropdownMenuItem
                         className="rounded-lg gap-3 py-2 cursor-pointer"
                         onClick={handleToggleQuickAccess}

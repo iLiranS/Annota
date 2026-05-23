@@ -186,9 +186,9 @@ export function ToolbarFileUpload({ onInsertFile, onOpenChange, isMenu, visible,
             <Button
                 variant="ghost"
                 size="icon"
-                className="h-9 w-9 shrink-0 outline-none"
+                className="h-8 w-8 shrink-0 outline-none"
                 style={{
-                    borderRadius: '8px',
+                    borderRadius: '6px',
                     opacity: 0.7,
                     transition: 'opacity 0.2s ease, background-color 0.2s ease'
                 }}
