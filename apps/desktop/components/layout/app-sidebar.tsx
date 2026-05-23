@@ -161,6 +161,15 @@ export function AppSidebar() {
         navigateSmart(to);
     }, [navigateSmart]);
 
+    const handleFolderSelect = useCallback((folderId: string | null) => {
+        const id = folderId || 'root';
+        setSelectedFolderId(id);
+        setActiveTab('notes');
+        if (id === DAILY_NOTES_FOLDER_ID || id === TRASH_FOLDER_ID) {
+            navigateWithHistory('/notes');
+        }
+    }, [setSelectedFolderId, setActiveTab, navigateWithHistory]);
+
     const quickAccessNotes = useMemo(() => {
         return notes.filter((n) => n.isQuickAccess && !n.isDeleted);
     }, [notes]);
@@ -170,9 +179,8 @@ export function AppSidebar() {
     }, [navigateWithHistory]);
 
     const handleFolderCreated = useCallback((id: string) => {
-        setSelectedFolderId(id);
-        setActiveTab('notes');
-    }, [setSelectedFolderId, setActiveTab]);
+        handleFolderSelect(id);
+    }, [handleFolderSelect]);
 
     const [width, setWidth] = useState(() => {
         const saved = localStorage.getItem("sidebar_width");
@@ -258,10 +266,7 @@ export function AppSidebar() {
                         <FoldersTree
                             isFoldersOpen={true}
                             setIsFoldersOpen={() => { }}
-                             onNavigate={(id) => {
-                                 setSelectedFolderId(id || 'root');
-                                 setActiveTab('notes');
-                             }}
+                             onNavigate={handleFolderSelect}
                              onEdit={handleEditFolder}
                              onDelete={setFolderToDelete}
                              onCreateSubFolder={handleCreateSubFolder}
@@ -309,10 +314,7 @@ export function AppSidebar() {
                              onNoteClick={(note) => {
                                  navigateWithHistory(`/notes/${note.id}`);
                              }}
-                             onFolderClick={(folder) => {
-                                 setSelectedFolderId(folder.id || 'root');
-                                 setActiveTab('notes');
-                             }}
+                             onFolderClick={(folder) => handleFolderSelect(folder.id)}
                              onDeleteNote={deleteNote}
                              onEditFolder={handleEditFolder}
                              onDeleteFolder={setFolderToDelete}

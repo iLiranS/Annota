@@ -114,7 +114,6 @@ function FolderCard({ folder, onPress, onRestore, onPermanentDelete, isFirst, is
                         <OriginalFolderBadge folderId={folder.originalParentId} />
                     </View>
                 </View>
-                <Ionicons name="chevron-forward" size={18} color={colors.text + '50'} />
             </ThemedPressable>
         </SwipeableItem>
     );
@@ -428,10 +427,22 @@ export default function TrashScreen() {
                     title: headerTitle,
                     gestureEnabled: false,
                     headerLeft: () => {
-                        const canGoBack = router.canGoBack();
+                        const isInSubfolder = currentFolderId !== TRASH_FOLDER_ID;
+                        const canGoBack = isInSubfolder || router.canGoBack();
+                        
+                        const handleBack = () => {
+                            if (isInSubfolder) {
+                                setCurrentFolderId(currentFolder?.parentId ?? TRASH_FOLDER_ID);
+                            } else if (router.canGoBack()) {
+                                router.back();
+                            } else {
+                                toggle();
+                            }
+                        };
+
                         return (
                             <HapticPressable 
-                                onPress={() => canGoBack ? router.back() : toggle()} 
+                                onPress={handleBack} 
                                 style={styles.headerButton} 
                                 hitSlop={8}
                             >

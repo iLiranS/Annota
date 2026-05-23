@@ -1,10 +1,9 @@
-import { cn } from "@/lib/utils";
-import { type SidebarTab } from "@annota/core";
-import { NotebookTabs } from "lucide-react";
-import { Ionicons } from "../../ui/ionicons";
 import { useSidebar } from "@/components/ui/sidebar";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+import { useSettingsStore, type SidebarTab } from "@annota/core";
+import { NotebookTabs } from "lucide-react";
 import * as React from "react";
+import { Ionicons } from "../../ui/ionicons";
 
 interface SidebarTabsProps {
     activeTab: SidebarTab;
@@ -23,6 +22,7 @@ const TABS: { id: SidebarTab; icon: React.ReactNode; label: string }[] = [
 
 export function SidebarTabs({ activeTab, setActiveTab, colors }: SidebarTabsProps) {
     const { open, setOpen, toggleSidebar } = useSidebar();
+    const { general } = useSettingsStore()
 
     const handleTabClick = (tabId: SidebarTab) => {
         if (activeTab === tabId) {
@@ -35,23 +35,41 @@ export function SidebarTabs({ activeTab, setActiveTab, colors }: SidebarTabsProp
         }
     };
 
+    const activeIndex = TABS.findIndex((tab) => tab.id === activeTab);
+    const isRtl = general.appDirection === 'rtl';
+    const translationIndex = isRtl ? (TABS.length - 1 - activeIndex) : activeIndex;
+
     return (
-        <div className="flex items-center gap-0.5">
+        <div
+            className={cn("relative flex items-center gap-0.5 p-0.5 rounded-md border border-sidebar-border/40 bg-sidebar-accent/20 isolate h-7",
+                isRtl && 'flex-row-reverse'
+            )}
+        >
+            {/* Sliding Active Indicator */}
+            {activeIndex !== -1 && (
+                <div
+                    className="absolute top-[2px] bottom-[2px] rounded-[4px] bg-background shadow-sm border border-border/40 transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] transform-gpu z-0"
+                    style={{
+                        width: '24px',
+                        height: '24px',
+                        transform: `translateX(calc(${translationIndex} * (24px + 2px)))`,
+                        left: '2px',
+                        opacity: open ? 1 : 0,
+                        pointerEvents: 'none',
+                        willChange: 'transform, opacity',
+                    }}
+                />
+            )}
+
             {TABS.map((tab) => (
-                <Tooltip key={tab.id}>
-                    <TooltipTrigger asChild>
-                        <TabButton
-                            active={activeTab === tab.id && open}
-                            onClick={() => handleTabClick(tab.id)}
-                            icon={tab.icon}
-                            label={tab.label}
-                            color={colors.primary}
-                        />
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="text-[10px]">
-                        {tab.label}
-                    </TooltipContent>
-                </Tooltip>
+                <TabButton
+                    key={tab.id}
+                    active={activeTab === tab.id && open}
+                    onClick={() => handleTabClick(tab.id)}
+                    icon={tab.icon}
+                    label={tab.label}
+                    color={colors.primary}
+                />
             ))}
         </div>
     );
@@ -72,10 +90,10 @@ const TabButton = React.forwardRef<
             ref={ref}
             onClick={onClick}
             className={cn(
-                "relative flex flex-none items-center justify-center w-7 h-7 rounded-lg transition-colors duration-200 focus:outline-none focus-visible:ring-0 active:scale-95",
+                "relative z-10 flex flex-none items-center justify-center w-6 h-6 rounded-[4px] transition-colors duration-200 focus:outline-none focus-visible:ring-0 active:scale-95",
                 active
-                    ? "bg-sidebar-accent/50 text-primary"
-                    : "text-muted-foreground/60 hover:bg-sidebar-accent hover:text-foreground"
+                    ? "text-primary"
+                    : "text-muted-foreground/60 hover:text-foreground hover:bg-sidebar-accent/30"
             )}
             style={active ? { color: color } : {}}
             {...props}
@@ -87,6 +105,8 @@ const TabButton = React.forwardRef<
     );
 });
 TabButton.displayName = "TabButton";
+
+
 
 
 

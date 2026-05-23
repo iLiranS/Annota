@@ -145,13 +145,14 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
         // 2. Now it is completely safe to open read cursors
         const allFolders = await FolderService.getFoldersInFolder(null, true);
+        const trashFolders = await FolderService.getFoldersInFolder(TRASH_FOLDER_ID, true);
         const allNotes = await NoteService.getNotesInFolder(null, true);
         const allTags = await TagService.getAllTags();
 
         // Recursively load all folders
         const loadAllFolders = async (): Promise<Folder[]> => {
             const result: Folder[] = [];
-            const queue = [...allFolders];
+            const queue = [...allFolders, ...trashFolders];
 
             while (queue.length > 0) {
                 const folder = queue.shift()!;
@@ -178,9 +179,6 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
         const baseFolders = await loadAllFolders();
         const baseNotes = await loadAllNotes(); // Pulls the regular notes
-
-        // We MUST pull virtual folders because "system-trash" isn't caught by loadAllNotes
-        const trashFolders = await FolderService.getFoldersInFolder(TRASH_FOLDER_ID, true);
         const trashNotes = await NoteService.getNotesInFolder(TRASH_FOLDER_ID, true);
         const dailyNotes = await NoteService.getNotesInFolder(DAILY_NOTES_FOLDER_ID, true);
 

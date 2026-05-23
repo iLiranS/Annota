@@ -202,9 +202,9 @@ export function NoteInfo({ noteId }: { noteId: string }) {
 
             {/* Forward and Back Links */}
             {hasForward || hasBack ? (
-                <div className="pt-3 space-y-4 shrink-0 pb-4 px-2.5 mb-3 border border-border/60 bg-accent/5 rounded-xl">
+                <div className="space-y-4 shrink-0 py-2 px-2.5 mb-2 border border-border/60 bg-accent/5 rounded-xl">
                     <div className={cn(
-                        "grid gap-4",
+                        "grid gap-1",
                         hasForward && hasBack ? "grid-cols-2" : "grid-cols-1"
                     )}>
                         {/* Forward Links Column */}
@@ -212,7 +212,7 @@ export function NoteInfo({ noteId }: { noteId: string }) {
                             <div className="min-w-0">
                                 <h3 className="text-[10px] font-bold uppercase tracking-wider mb-1 text-muted-foreground/60  shrink-0 flex items-center gap-1.5">
                                     <ArrowRightFromLine size={12} className="text-accent-full" />
-                                    <span>Forward Links</span>
+                                    <span>Links To</span>
                                     <span className="text-muted-foreground/40 font-normal">({forwardLinks.length})</span>
                                 </h3>
                                 <div className="space-y-0.5 max-h-[100px] overflow-y-auto premium-scrollbar pr-1">
@@ -234,11 +234,11 @@ export function NoteInfo({ noteId }: { noteId: string }) {
 
                         {/* Backlinks Column */}
                         {hasBack && (
-                            <div className={cn("min-w-0", hasForward && "pl-4")}>
-                                <h3 className="text-[10px] font-bold uppercase tracking-wider mb-1 text-muted-foreground/60  shrink-0 flex items-center gap-1.5">
-                                    <ArrowLeftFromLine size={12} className="text-accent-full" />
-                                    <span>Back links</span>
+                            <div className={cn("min-w-0", hasForward && "")}>
+                                <h3 className="text-[10px] font-bold uppercase tracking-wider mb-1 text-muted-foreground/60 shrink-0 flex items-center gap-1.5 w-full">
+                                    <span>Linked From</span>
                                     <span className="text-muted-foreground/40 font-normal">({backlinks.length})</span>
+                                    <ArrowLeftFromLine size={12} className="text-accent-full ml-auto" />
                                 </h3>
                                 <div className="space-y-0.5 max-h-[100px] overflow-y-auto premium-scrollbar pr-1">
                                     {backlinks.map(link => (
@@ -261,29 +261,29 @@ export function NoteInfo({ noteId }: { noteId: string }) {
             ) : null}
 
             {/* Bottom: Stats and Metadata */}
-            <div className="pt-3 space-y-6 shrink-0 pb-4 px-2.5 border border-border/60 bg-accent/10 rounded-xl">
+            <div className=" space-y-3 shrink-0 p-2 border border-border/60 bg-accent/5  rounded-xl">
                 {/* Statistics */}
                 <div className="grid grid-cols-3 gap-2">
-                    <div className="flex flex-col gap-1 p-2.5 rounded-xl bg-muted/30 border border-border/20">
-                        <div className="flex items-center gap-1 text-muted-foreground">
-                            <FileText size={12} className="text-accent-full" />
+                    <div className="flex flex-col gap-0.5 p-1.5 rounded-lg bg-muted/15 border border-border/20">
+                        <div className="flex items-center gap-1 text-muted-foreground/70">
+                            <FileText size={10} className="text-accent-full" />
                             <span className="text-[9px] font-medium uppercase tracking-tight">Words</span>
                         </div>
-                        <span className="text-sm font-bold tabular-nums text-muted-foreground">{stats.words}</span>
+                        <span className="text-xs text-center font-bold tabular-nums text-muted-foreground">{stats.words}</span>
                     </div>
-                    <div className="flex flex-col gap-1 p-2.5 rounded-xl bg-muted/30 border border-border/20">
-                        <div className="flex items-center gap-1 text-muted-foreground">
-                            <Hash size={12} className="text-accent-full" />
+                    <div className="flex flex-col gap-0.5 p-1.5 rounded-lg bg-muted/15 border border-border/20">
+                        <div className="flex items-center gap-1 text-muted-foreground/70">
+                            <Hash size={10} className="text-accent-full" />
                             <span className="text-[9px] font-medium uppercase tracking-tight">Chars</span>
                         </div>
-                        <span className="text-sm font-bold tabular-nums text-muted-foreground">{stats.chars}</span>
+                        <span className="text-xs text-center font-bold tabular-nums text-muted-foreground">{stats.chars}</span>
                     </div>
-                    <div className="flex flex-col gap-1 p-2.5 rounded-xl bg-muted/30 border border-border/20">
-                        <div className="flex items-center gap-1 text-muted-foreground">
-                            <HardDrive size={12} className="text-accent-full" />
+                    <div className="flex flex-col gap-0.5 p-1.5 rounded-lg bg-muted/15 border border-border/20">
+                        <div className="flex items-center gap-1 text-muted-foreground/70">
+                            <HardDrive size={10} className="text-accent-full" />
                             <span className="text-[9px] font-medium uppercase tracking-tight">Size</span>
                         </div>
-                        <span className="text-sm font-bold tabular-nums whitespace-nowrap text-muted-foreground">{formatSize(stats.size)}</span>
+                        <span className="text-xs text-center font-bold tabular-nums whitespace-nowrap text-muted-foreground">{formatSize(stats.size)}</span>
                     </div>
                 </div>
 

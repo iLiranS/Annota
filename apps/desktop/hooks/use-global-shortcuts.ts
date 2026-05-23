@@ -19,7 +19,12 @@ export function useGlobalShortcuts(options: { isStandalone?: boolean } = {}) {
             const currentIndex = tabs.indexOf(currentTab);
             if (currentIndex === -1) return;
 
-            let nextIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
+            const isRtl = useSettingsStore.getState().general.appDirection === 'rtl';
+            const effectiveDirection = isRtl
+                ? (direction === 'next' ? 'prev' : 'next')
+                : direction;
+
+            let nextIndex = effectiveDirection === 'next' ? currentIndex + 1 : currentIndex - 1;
             if (nextIndex >= tabs.length) nextIndex = 0;
             if (nextIndex < 0) nextIndex = tabs.length - 1;
 

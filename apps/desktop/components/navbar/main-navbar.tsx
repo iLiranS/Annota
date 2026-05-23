@@ -179,7 +179,7 @@ export function MainNavbar() {
                     />
                 </div>
 
-                <div className={cn("flex items-center ml-2.5 shrink-0", isRtl && "flex-row-reverse mr-2.5 ml-0")}>
+                <div className={cn("flex items-center ml-1.5 shrink-0", isRtl && "flex-row-reverse mr-1.5 ml-0")}>
                     <div className={cn("flex items-center gap-0.5 rounded-md border border-sidebar-border/40 bg-sidebar-accent/20 p-0.5")}>
                         <Tooltip>
                             <TooltipTrigger asChild>

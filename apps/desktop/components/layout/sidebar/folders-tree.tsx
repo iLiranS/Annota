@@ -144,7 +144,8 @@ export function FoldersTree({
 }
 
 function FolderTreeItem({ folder, onNavigate, onEdit, onDelete, onCreateSubFolder, onCreateNote, general, getFoldersInFolder, currentFolderId }: any) {
-    const children = getFoldersInFolder(folder.id).filter((f: any) => !f.isSystem);
+    const isTrash = folder.id === TRASH_FOLDER_ID;
+    const children = isTrash ? [] : getFoldersInFolder(folder.id).filter((f: any) => !f.isSystem);
     const hasChildren = children.length > 0;
     const [isOpen, setIsOpen] = useState(() => localStorage.getItem(`sidebar_folder_open_${folder.id}`) === "true");
     const isActive = folder.id === currentFolderId || (folder.id === 'root' && !currentFolderId);

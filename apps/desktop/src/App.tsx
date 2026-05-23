@@ -1,8 +1,8 @@
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useDailyCleanup } from "@/hooks/use-daily-cleanup";
 import { useGlobalShortcuts } from "@/hooks/use-global-shortcuts";
-import { useNoteWindowSync } from "@/hooks/use-note-window-sync";
 import { useNoteTabsStore } from "@/hooks/use-note-tabs";
+import { useNoteWindowSync } from "@/hooks/use-note-window-sync";
 import {
   authApi,
   fileSyncService,
@@ -16,10 +16,10 @@ import {
   useUserStore
 } from "@annota/core";
 import {
-  SyncScheduler,
   areAdaptersInitialized,
   getMasterKey,
   getPlatformAdapters,
+  SyncScheduler,
 } from "@annota/core/platform";
 import { emit, listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -125,6 +125,7 @@ function App() {
   const tabs = useNoteTabsStore((state) => state.tabs);
   const general = useSettingsStore((state) => state.general);
   const lastViewedNoteId = useNavigationStore((state) => state.lastViewedNoteId);
+  const selectedFolderId = useNavigationStore((state) => state.selectedFolderId);
 
   useEffect(() => {
     let cancelled = false;
@@ -357,7 +358,7 @@ function App() {
 
       if (newSession) {
         const isNewUser = newSession.user.id !== prevUserId;
-        
+
         if (isNewUser) {
           // Explicitly reset stores before switching identities
           useNotesStore.getState().reset();
@@ -370,7 +371,7 @@ function App() {
         setSession(newSession);
         useUserStore.getState().checkMasterKey();
         useUserStore.getState().getUserProfile();
-        
+
         if (isNewUser) {
           setRunId((v) => v + 1);
         }
@@ -447,6 +448,8 @@ function App() {
         return;
       }
 
+
+
       if (lastViewedNoteId) {
         const note = notes.find((n) => n.id === lastViewedNoteId && !n.isDeleted);
         if (note) {
@@ -459,7 +462,7 @@ function App() {
         hasRestoredLastViewRef.current = true;
       }
     }
-  }, [bootstrapState, pendingDeepLink, navigate, location.pathname, notes, isNotesInitialized, tabs, general, lastViewedNoteId]);
+  }, [bootstrapState, pendingDeepLink, navigate, location.pathname, notes, isNotesInitialized, tabs, general, lastViewedNoteId, selectedFolderId]);
 
 
   // Sync Scheduler

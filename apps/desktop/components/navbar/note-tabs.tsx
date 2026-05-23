@@ -44,7 +44,7 @@ export function NoteTabs() {
 
     const selectedFolderId = useNavigationStore(s => s.selectedFolderId);
     const activeNote = routeNoteId ? notes.find(n => n.id === routeNoteId) : null;
-    const isSpecialView = selectedFolderId === DAILY_NOTES_FOLDER_ID || selectedFolderId === TRASH_FOLDER_ID || (activeNote?.isDeleted === true);
+    const isSpecialView = (!routeNoteId && (selectedFolderId === DAILY_NOTES_FOLDER_ID || selectedFolderId === TRASH_FOLDER_ID)) || (activeNote?.isDeleted === true);
     const lastViewedNoteId = useNavigationStore(s => s.lastViewedNoteId);
 
     const activeNoteId = useMemo(() => {

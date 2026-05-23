@@ -75,7 +75,7 @@ export function TrashContent() {
                         <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => setCurrentFolderId(TRASH_FOLDER_ID)}
+                            onClick={() => setCurrentFolderId(currentFolder?.parentId ?? TRASH_FOLDER_ID)}
                         >
                             <Ionicons name="chevron-back" size={20} />
                         </Button>
