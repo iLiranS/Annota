@@ -56,7 +56,7 @@ export function LinkContextMenu({
             const note = notes.find(n => n.id === noteId);
             const folderId = note?.folderId || 'root';
             addTab({ noteId, folderId });
-            navigate(`/notes/${folderId}/${noteId}`);
+            navigate(`/notes/${noteId}`);
         } else if (action === 'external') {
             try {
                 await openUrl(url);

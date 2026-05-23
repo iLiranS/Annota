@@ -1,32 +1,58 @@
 import { create } from 'zustand';
+import { createJSONStorage, persist } from 'zustand/middleware';
+import { createStorageAdapter } from './config';
 
 export type SidebarTab = 'folders' | 'notes' | 'tags' | 'search';
 
-interface NavigationState {
-    quickAccessNoteId: string | null;
-    quickAccessFolderId: string | null;
+export interface NavigationState {
     sidebarTab: SidebarTab;
     isSettingsOpen: boolean;
-    setQuickAccessView: (noteId: string, folderId: string | null) => void;
-    clearQuickAccessView: () => void;
+    selectedFolderId: string | null;
+    selectedTagId: string | null;
+    lastViewedNoteId: string | null;
+    lastViewedFolderId: string | null;
+
     setSidebarTab: (tab: SidebarTab) => void;
     setSettingsOpen: (open: boolean) => void;
+    setSelectedFolderId: (folderId: string | null) => void;
+    setSelectedTagId: (tagId: string | null) => void;
+    setLastViewed: (noteId: string | null, folderId: string | null) => void;
+    reset: () => void;
 }
 
-export const useNavigationStore = create<NavigationState>((set) => ({
-    quickAccessNoteId: null,
-    quickAccessFolderId: null,
-    sidebarTab: 'notes',
-    isSettingsOpen: false,
-    setQuickAccessView: (noteId, folderId) => set({
-        quickAccessNoteId: noteId,
-        quickAccessFolderId: folderId,
-    }),
-    clearQuickAccessView: () => set({
-        quickAccessNoteId: null,
-        quickAccessFolderId: null,
-    }),
-    setSidebarTab: (tab) => set({ sidebarTab: tab }),
-    setSettingsOpen: (open) => set({ isSettingsOpen: open }),
-}));
+export const useNavigationStore = create<NavigationState>()(
+    persist(
+        (set) => ({
+            sidebarTab: 'notes',
+            isSettingsOpen: false,
+            selectedFolderId: null,
+            selectedTagId: null,
+            lastViewedNoteId: null,
+            lastViewedFolderId: null,
+
+            setSidebarTab: (tab) => set({ sidebarTab: tab }),
+            setSettingsOpen: (open) => set({ isSettingsOpen: open }),
+            setSelectedFolderId: (folderId) => set({ selectedFolderId: folderId, selectedTagId: null }),
+            setSelectedTagId: (tagId) => set({ selectedTagId: tagId, selectedFolderId: null }),
+            setLastViewed: (noteId, folderId) => set({
+                lastViewedNoteId: noteId,
+                lastViewedFolderId: folderId
+            }),
+            reset: () => set({
+                sidebarTab: 'notes',
+                isSettingsOpen: false,
+                selectedFolderId: null,
+                selectedTagId: null,
+                lastViewedNoteId: null,
+                lastViewedFolderId: null,
+            }),
+        }),
+        {
+            name: 'navigation-store',
+            storage: createJSONStorage(() => createStorageAdapter()),
+            skipHydration: true,
+        }
+    )
+);
+
 

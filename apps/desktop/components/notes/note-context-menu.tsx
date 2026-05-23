@@ -8,7 +8,6 @@ import { NoteMetadata, useNavigationStore, useNotesStore, useSettingsStore } fro
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { FolderOpen, PictureInPicture2, Pin, Star } from "lucide-react";
 import { useCallback, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useNoteTabsStore } from "../../hooks/use-note-tabs";
 import { useOpenNoteInNewWindow } from "../../hooks/use-open-note-in-new-window";
@@ -47,7 +46,6 @@ export function NoteContextMenuContent({
     const { general } = useSettingsStore();
     const setSidebarTab = useNavigationStore((s) => s.setSidebarTab);
     const navigateSmart = useSmartNavigate();
-    const navigate = useNavigate();
     const openNoteInNewWindow = useOpenNoteInNewWindow();
 
     const handleRestoreNote = useCallback(async () => {
@@ -87,15 +85,15 @@ export function NoteContextMenuContent({
 
     const handleOpenInNewTab = useCallback(() => {
         useNoteTabsStore.getState().addTab({ noteId: note.id, folderId: note.folderId || "root" });
-        navigateSmart(`/notes/${note.folderId || "root"}/${note.id}`);
-    }, [note.id, note.folderId, navigateSmart]);
+        navigateSmart(`/notes/${note.id}`);
+    }, [note.id, navigateSmart]);
 
     const handleShowFolder = useCallback(() => {
         const folderId = note.folderId || "root";
         setSidebarTab("notes");
-        navigate(`/notes?folderId=${folderId}`);
+        useNavigationStore.getState().setSelectedFolderId(folderId);
         onShowFolder?.();
-    }, [note.folderId, navigate, setSidebarTab, onShowFolder]);
+    }, [note.folderId, setSidebarTab, onShowFolder]);
 
     const isWindows = typeof window !== "undefined" && /windows/i.test(navigator.userAgent);
 

@@ -2,11 +2,13 @@ import { Button } from "@/components/ui/button"
 import { useSidebar } from "@/components/ui/sidebar"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
-import { useNavigationStore, useSettingsStore, useSyncStore, useUserStore } from "@annota/core"
+import { useNavigationStore, useSettingsStore, useSyncStore, useUserStore, type SidebarTab } from "@annota/core"
 import { Layers2, PanelLeft, PanelRight } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { useAlwaysOnTop } from "../../hooks/use-always-on-top"
+import { useAppTheme } from "../../hooks/use-app-theme"
+import { SidebarTabs } from "../layout/sidebar/sidebar-tabs"
 import { Ionicons } from "../ui/ionicons"
 import { NoteTabs } from "./note-tabs"
 
@@ -33,8 +35,18 @@ export function MainNavbar() {
     const { isSyncing } = useSyncStore()
     const { session } = useUserStore();
     const { general, updateGeneralSettings } = useSettingsStore();
-    const { toggleSidebar } = useSidebar();
+    const { open, setOpen } = useSidebar();
     const setSettingsOpen = useNavigationStore(s => s.setSettingsOpen);
+    const activeTab = useNavigationStore(s => s.sidebarTab);
+    const setActiveTab = useNavigationStore(s => s.setSidebarTab);
+    const { colors } = useAppTheme();
+
+    const handleTabChange = (tab: SidebarTab) => {
+        setActiveTab(tab);
+        if (!open) {
+            setOpen(true);
+        }
+    };
 
     const { isAlwaysOnTop, toggleAlwaysOnTop } = useAlwaysOnTop();
 
@@ -101,7 +113,6 @@ export function MainNavbar() {
     };
 
 
-    const { open } = useSidebar();
 
     const [primaryWidth, setPrimaryWidth] = useState(() => {
         const saved = localStorage.getItem("sidebar_width");
@@ -154,30 +165,22 @@ export function MainNavbar() {
             {/* Left Section: Sidebar Toggle & Search */}
             <div
                 data-tauri-drag-region
-                className={cn("flex items-center gap-3 shrink-0 transition-all duration-300", isRtl && "flex-row-reverse")}
+                className={cn("flex items-center  shrink-0 transition-all duration-300", isRtl && "flex-row-reverse")}
                 style={{
-                    width: open ? Math.max(0, primaryWidth - leftSectionPadding) : 'auto',
-                    minWidth: open ? Math.max(0, primaryWidth - leftSectionPadding) : 'auto'
+                    width: open ? Math.max(188, primaryWidth - leftSectionPadding) : 'auto',
+                    minWidth: open ? Math.max(188, primaryWidth - leftSectionPadding) : 'auto'
                 }}
             >
-                <div className={cn("flex items-center gap-1", isRtl && "flex-row-reverse")}>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 transition-transform hover:bg-sidebar-accent hover:text-foreground active:scale-95 text-foreground/50"
-                                onClick={toggleSidebar}
-                            >
-                                {isRtl ? <PanelRight size={16} /> : <PanelLeft size={16} />}
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom" className="text-[10px]">
-                            Toggle Sidebar <span className="opacity-50 ml-1">{isMac ? "⌘S" : "Ctrl+S"}</span>
-                        </TooltipContent>
-                    </Tooltip>
+                <div className="flex items-center shrink-0">
+                    <SidebarTabs
+                        activeTab={activeTab}
+                        setActiveTab={handleTabChange}
+                        colors={colors}
+                    />
+                </div>
 
-                    <div className={cn("flex items-center gap-0")}>
+                <div className={cn("flex items-center ml-2.5 shrink-0", isRtl && "flex-row-reverse mr-2.5 ml-0")}>
+                    <div className={cn("flex items-center gap-0.5 rounded-md border border-sidebar-border/40 bg-sidebar-accent/20 p-0.5")}>
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <Button
@@ -185,7 +188,7 @@ export function MainNavbar() {
                                     size="icon"
                                     disabled={isRtl ? !canGoForward : !canGoBack}
                                     className={cn(
-                                        "h-6 w-6 text-muted-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-foreground",
+                                        "h-6 w-6 rounded-[4px] text-muted-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-foreground",
                                         (isRtl ? !canGoForward : !canGoBack) && "opacity-30 cursor-not-allowed"
                                     )}
                                     onClick={() => navigate(isRtl ? 1 : -1)}
@@ -205,7 +208,7 @@ export function MainNavbar() {
                                     size="icon"
                                     disabled={isRtl ? !canGoBack : !canGoForward}
                                     className={cn(
-                                        "h-6 w-6 text-muted-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-foreground",
+                                        "h-6 w-6 rounded-[4px] text-muted-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-foreground",
                                         (isRtl ? !canGoBack : !canGoForward) && "opacity-30 cursor-not-allowed"
                                     )}
                                     onClick={() => navigate(isRtl ? -1 : 1)}

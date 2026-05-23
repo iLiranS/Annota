@@ -14,9 +14,7 @@ export function NoteRestoreButton({ noteId }: { noteId: string }) {
         await restoreNote(noteId);
         const restoredNote = getNoteById(noteId);
         if (restoredNote) {
-            // Redirect to the note in its restored folder context using path params
-            const folderId = restoredNote.folderId && restoredNote.folderId !== 'system-trash' ? restoredNote.folderId : 'root';
-            navigateSmart(`/notes/${folderId}/${noteId}`, { replace: true });
+            navigateSmart(`/notes/${noteId}`, { replace: true });
         }
     }, [noteId, restoreNote, getNoteById, navigateSmart]);
 

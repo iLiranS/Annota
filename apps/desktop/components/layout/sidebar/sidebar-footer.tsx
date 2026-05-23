@@ -4,19 +4,12 @@ import { cn } from "@/lib/utils";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { Ionicons } from "../../ui/ionicons";
 
-import { type SidebarTab } from "@annota/core";
-
-import { SidebarTabs } from "./sidebar-tabs";
 
 interface SidebarFooterSectionProps {
     showOfflineBanner: boolean;
     retryCooldown: boolean;
     onRetry: () => void;
-    activeTab: SidebarTab;
-    setActiveTab: (tab: SidebarTab) => void;
-    colors: {
-        primary: string;
-    };
+
     updateAvailable: boolean;
     latestVersion: string | null;
     currentVersion: string;
@@ -30,9 +23,7 @@ export function SidebarFooterSection({
     showOfflineBanner,
     retryCooldown,
     onRetry,
-    activeTab,
-    setActiveTab,
-    colors,
+
     updateAvailable,
     latestVersion,
     currentVersion,
@@ -118,13 +109,7 @@ export function SidebarFooterSection({
                 </div>
             )}
 
-            <div className="flex items-center justify-center text-muted-foreground/70">
-                <SidebarTabs
-                    activeTab={activeTab}
-                    setActiveTab={setActiveTab}
-                    colors={colors}
-                />
-            </div>
+
         </SidebarFooter>
     );
 }

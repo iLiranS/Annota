@@ -159,7 +159,7 @@ export function TrashContent() {
                                                 key={note.id}
                                                 note={note}
                                                 onPress={() =>
-                                                    navigate(`/notes/${TRASH_FOLDER_ID}/${note.id}`)
+                                                    navigate(`/notes/${note.id}`)
                                                 }
                                                 onRestore={() => restoreNote(note.id)}
                                                 onDelete={() => permanentlyDeleteNote(note.id)}

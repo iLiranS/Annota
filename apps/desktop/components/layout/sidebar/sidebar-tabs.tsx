@@ -1,9 +1,10 @@
 import { cn } from "@/lib/utils";
-import { useSettingsStore, type SidebarTab } from "@annota/core";
+import { type SidebarTab } from "@annota/core";
 import { NotebookTabs } from "lucide-react";
 import { Ionicons } from "../../ui/ionicons";
-
-
+import { useSidebar } from "@/components/ui/sidebar";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import * as React from "react";
 
 interface SidebarTabsProps {
     activeTab: SidebarTab;
@@ -14,75 +15,78 @@ interface SidebarTabsProps {
 }
 
 const TABS: { id: SidebarTab; icon: React.ReactNode; label: string }[] = [
-    { id: 'folders', icon: <Ionicons name="folder-outline" size={16} />, label: 'Folders' },
-    { id: 'notes', icon: <NotebookTabs size={16} />, label: 'Notes' },
-    { id: 'tags', icon: <Ionicons name="pricetag-outline" size={16} />, label: 'Tags' },
-    { id: 'search', icon: <Ionicons name="search-outline" size={16} />, label: 'Search' },
+    { id: 'folders', icon: <Ionicons name="folder-outline" size={15} />, label: 'Folders' },
+    { id: 'notes', icon: <NotebookTabs size={15} />, label: 'Notes' },
+    { id: 'tags', icon: <Ionicons name="pricetag-outline" size={15} />, label: 'Tags' },
+    { id: 'search', icon: <Ionicons name="search-outline" size={15} />, label: 'Search' },
 ];
 
 export function SidebarTabs({ activeTab, setActiveTab, colors }: SidebarTabsProps) {
-    const { general } = useSettingsStore();
-    const isRtl = general.appDirection === 'rtl';
+    const { open, setOpen, toggleSidebar } = useSidebar();
 
-
-    const activeIndex = TABS.findIndex(t => t.id === activeTab);
+    const handleTabClick = (tabId: SidebarTab) => {
+        if (activeTab === tabId) {
+            toggleSidebar();
+        } else {
+            setActiveTab(tabId);
+            if (!open) {
+                setOpen(true);
+            }
+        }
+    };
 
     return (
-        <div
-            className="relative overflow-hidden flex items-center w-[150px] h-10 gap-1 p-1 rounded-xl bg-sidebar-accent/50 dark:bg-sidebar-accent/70 border border-sidebar-border/40 shadow-sm outline-none isolate"
-        >
-            {/* Sliding Active Indicator */}
-            <div
-                className="absolute inset-s-1 top-1 h-8 w-8 rounded-lg bg-background shadow-sm border border-border/40 transition-transform duration-400 ease-[cubic-bezier(0.34,1.56,0.64,1)] transform-gpu"
-                style={{
-                    transform: `translateX(${isRtl ? -(activeIndex * 36) : activeIndex * 36}px)`,
-                    willChange: 'transform',
-                }}
-            />
-
+        <div className="flex items-center gap-0.5">
             {TABS.map((tab) => (
-                <TabButton
-                    key={tab.id}
-                    active={activeTab === tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    icon={tab.icon}
-                    label={tab.label}
-                    color={colors.primary}
-                />
+                <Tooltip key={tab.id}>
+                    <TooltipTrigger asChild>
+                        <TabButton
+                            active={activeTab === tab.id && open}
+                            onClick={() => handleTabClick(tab.id)}
+                            icon={tab.icon}
+                            label={tab.label}
+                            color={colors.primary}
+                        />
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="text-[10px]">
+                        {tab.label}
+                    </TooltipContent>
+                </Tooltip>
             ))}
         </div>
     );
 }
 
-function TabButton({
-    active,
-    onClick,
-    icon,
-    color
-}: {
-    active: boolean;
-    onClick: () => void;
-    icon: React.ReactNode;
-    label: string;
-    color: string
-}) {
+const TabButton = React.forwardRef<
+    HTMLButtonElement,
+    {
+        active: boolean;
+        onClick: () => void;
+        icon: React.ReactNode;
+        label: string;
+        color: string;
+    }
+>(({ active, onClick, icon, color, ...props }, ref) => {
     return (
         <button
+            ref={ref}
             onClick={onClick}
             className={cn(
-                "relative z-10 flex flex-none items-center active:transform-none justify-center w-8 h-8 rounded-lg transition-colors duration-300 focus:outline-none focus-visible:ring-0 ",
+                "relative flex flex-none items-center justify-center w-7 h-7 rounded-lg transition-colors duration-200 focus:outline-none focus-visible:ring-0 active:scale-95",
                 active
-                    ? "text-primary"
-                    : "text-muted-foreground/40 hover:text-muted-foreground/80 hover:bg-sidebar-accent/30"
+                    ? "bg-sidebar-accent/50 text-primary"
+                    : "text-muted-foreground/60 hover:bg-sidebar-accent hover:text-foreground"
             )}
-            style={{ ...active ? { color: color } : {}, willChange: 'transform' }}
+            style={active ? { color: color } : {}}
+            {...props}
         >
             <span className="flex items-center justify-center w-4 h-4 pointer-events-none">
                 {icon}
             </span>
         </button>
     );
-}
+});
+TabButton.displayName = "TabButton";
 
 
 

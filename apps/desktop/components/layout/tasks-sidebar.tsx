@@ -218,7 +218,7 @@ export function TasksSidebar() {
                             key={group.noteId}
                             group={group}
                             onTaskComplete={handleTaskComplete}
-                            onNavigate={(id, folderId) => navigateSmart(`/notes/${folderId || 'root'}/${id}`)}
+                            onNavigate={(id) => navigateSmart(`/notes/${id}`)}
                             completingKeys={completingKeys}
                         />
                     ))

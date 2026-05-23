@@ -116,7 +116,7 @@ export function MediaSidebar() {
                             <MediaItemCard
                                 key={item.id}
                                 item={item}
-                                onNavigate={(id, folderId) => navigateSmart(`/notes/${folderId || 'root'}/${id}`)}
+                                onNavigate={(id) => navigateSmart(`/notes/${id}`)}
                                 onSelectImage={(src, title) => setSelectedImage({ src, title })}
                             />
                         ))}

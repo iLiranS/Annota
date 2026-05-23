@@ -102,8 +102,8 @@ export function FoldersTree({
     if (rootFolders.length === 0) return null;
 
     return (
-        <SidebarGroup className={cn("py-2 px-0", general?.appDirection === 'rtl' ? "animate-content-from-right" : "animate-content-from-left")}>
-            <SidebarMenu className="px-1 overflow-y-auto compact-scrollbar">
+        <SidebarGroup className={cn("py-2 px-0 flex-1 min-h-0 flex flex-col", general?.appDirection === 'rtl' ? "animate-content-from-right" : "animate-content-from-left")}>
+            <SidebarMenu className="px-1 overflow-y-auto compact-scrollbar flex-1 min-h-0">
                 {systemFolders.map((folder) => (
                     <FolderTreeItem
                         key={folder.id}

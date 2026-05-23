@@ -34,7 +34,7 @@ export function useGlobalShortcuts(options: { isStandalone?: boolean } = {}) {
                 const tabs = useNoteTabsStore.getState().tabs;
                 if (tabs.length <= 1) return;
                 
-                const currentNoteId = useSettingsStore.getState().lastViewedNoteId;
+                const currentNoteId = useNavigationStore.getState().lastViewedNoteId;
                 const locationPath = window.location.pathname;
                 
                 // If we are currently on a note route, figure out which tab it is

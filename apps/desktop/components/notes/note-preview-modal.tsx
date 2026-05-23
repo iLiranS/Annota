@@ -36,8 +36,7 @@ export function NotePreviewModal({
         if (onExpand) {
             onExpand(note);
         } else {
-            const folderId = note.folderId || "root";
-            navigate(`/notes/${folderId}/${note.id}`);
+            navigate(`/notes/${note.id}`);
             onOpenChange(false);
         }
     };

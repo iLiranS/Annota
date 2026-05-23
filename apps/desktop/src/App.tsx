@@ -8,6 +8,7 @@ import {
   fileSyncService,
   isCloudEnabled,
   useAiStore,
+  useNavigationStore,
   useNotesStore,
   useSearchStore,
   useSettingsStore,
@@ -119,6 +120,12 @@ function App() {
   const hasMasterKey = useUserStore((state) => state.hasMasterKey);
   const saltHex = useUserStore((state) => state.saltHex);
 
+  const notes = useNotesStore((state) => state.notes);
+  const isNotesInitialized = useNotesStore((state) => state.isInitialized);
+  const tabs = useNoteTabsStore((state) => state.tabs);
+  const general = useSettingsStore((state) => state.general);
+  const lastViewedNoteId = useNavigationStore((state) => state.lastViewedNoteId);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -132,6 +139,7 @@ function App() {
         await useUserStore.persist.rehydrate();
         await useSettingsStore.persist.rehydrate();
         await useAiStore.persist.rehydrate();
+        await useNavigationStore.persist.rehydrate();
 
 
         // 2. Fetch/Apply remote app config (blocking sync if needed)
@@ -272,11 +280,9 @@ function App() {
           const noteId = parsedUrl.pathname.replace("/", "");
           const blockId = parsedUrl.searchParams.get("blockId");
 
-          // Try to find the note to get its folderId for the route
           const note = useNotesStore.getState().notes.find((n) => n.id === noteId);
           if (note) {
-            const folderId = note.folderId || "root";
-            let routePath = `/notes/${folderId}/${noteId}`;
+            let routePath = `/notes/${noteId}`;
             if (blockId) {
               routePath += `?blockId=${blockId}`;
             }
@@ -358,6 +364,7 @@ function App() {
           useSearchStore.getState().reset();
           useSyncStore.getState().reset();
           useNoteTabsStore.getState().reset();
+          useNavigationStore.getState().reset();
         }
 
         setSession(newSession);
@@ -373,6 +380,7 @@ function App() {
         useSearchStore.getState().reset();
         useSyncStore.getState().reset();
         useNoteTabsStore.getState().reset();
+        useNavigationStore.getState().reset();
         setRunId((v) => v + 1);
       }
     });
@@ -417,10 +425,9 @@ function App() {
         if (parsedUrl.host === "note") {
           const noteId = parsedUrl.pathname.replace("/", "");
           const blockId = parsedUrl.searchParams.get("blockId");
-          const note = useNotesStore.getState().notes.find((n) => n.id === noteId);
+          const note = notes.find((n) => n.id === noteId);
           if (note) {
-            const folderId = note.folderId || 'root';
-            let routePath = `/notes/${folderId}/${noteId}`;
+            let routePath = `/notes/${noteId}`;
             if (blockId) routePath += `?blockId=${blockId}`;
             navigate(routePath, { replace: true });
           }
@@ -431,27 +438,28 @@ function App() {
       return;
     }
 
-    // 2. Priority: Restore Last Viewed Note (only if at root routes)
-    const isAtRoot = location.pathname === "/" || location.pathname === "/notes";
+    // 2. Priority: Restore Last Viewed Note (only if at notes root)
+    const isAtRoot = location.pathname === "/notes";
     if (isAtRoot) {
-      hasRestoredLastViewRef.current = true;
-      const { lastViewedNoteId, general } = useSettingsStore.getState();
-      const tabs = useNoteTabsStore.getState().tabs;
-
       // Skip restoring last viewed note if note tabs are enabled but there are no tabs open.
       if (general?.enableNoteTabs !== false && tabs.length === 0) {
+        hasRestoredLastViewRef.current = true;
         return;
       }
 
       if (lastViewedNoteId) {
-        const note = useNotesStore.getState().notes.find((n) => n.id === lastViewedNoteId && !n.isDeleted);
+        const note = notes.find((n) => n.id === lastViewedNoteId && !n.isDeleted);
         if (note) {
-          const folderId = note.folderId || 'root';
-          navigate(`/notes/${folderId}/${lastViewedNoteId}`, { replace: true });
+          hasRestoredLastViewRef.current = true;
+          navigate(`/notes/${lastViewedNoteId}`, { replace: true });
+        } else if (isNotesInitialized) {
+          hasRestoredLastViewRef.current = true;
         }
+      } else {
+        hasRestoredLastViewRef.current = true;
       }
     }
-  }, [bootstrapState, pendingDeepLink, navigate, location.pathname]);
+  }, [bootstrapState, pendingDeepLink, navigate, location.pathname, notes, isNotesInitialized, tabs, general, lastViewedNoteId]);
 
 
   // Sync Scheduler
@@ -531,9 +539,9 @@ function App() {
           </p>
           <button
             onClick={() => {
-              const { lastViewedNoteId, lastViewedFolderId } = useSettingsStore.getState();
+              const { lastViewedNoteId } = useNavigationStore.getState();
               if (lastViewedNoteId) {
-                navigate(`/notes/${lastViewedFolderId || 'root'}/${lastViewedNoteId}`);
+                navigate(`/notes/${lastViewedNoteId}`);
               } else {
                 navigate('/notes');
               }
@@ -569,7 +577,7 @@ function App() {
             {/* Notes */}
             <Route path="notes" element={<NotesLayout />}>
               <Route index element={<NotesViewManager />} />
-              <Route path=":folderId/:noteId" element={<NotesViewManager />} />
+              <Route path=":noteId" element={<NotesViewManager />} />
             </Route>
           </Route>
         </Route>

@@ -57,7 +57,7 @@ export function DailyNotesCalendar() {
         const existingNote = dailyNotesMap[dateStr];
 
         if (existingNote) {
-            navigate(`/notes/${DAILY_NOTES_FOLDER_ID}/${existingNote.id}`);
+            navigate(`/notes/${existingNote.id}`);
         } else {
             if (isToday(date)) {
                 const { data: newNote, error } = await createNote({ folderId: DAILY_NOTES_FOLDER_ID });
@@ -66,7 +66,7 @@ export function DailyNotesCalendar() {
                     return;
                 }
                 if (newNote) {
-                    navigate(`/notes/${DAILY_NOTES_FOLDER_ID}/${newNote.id}`);
+                    navigate(`/notes/${newNote.id}`);
                 }
             }
         }

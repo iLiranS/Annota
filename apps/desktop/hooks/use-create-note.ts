@@ -22,9 +22,7 @@ export function useCreateNote() {
             }
 
             if (note?.id) {
-                const targetFolderId = folderId || "root";
-                const search = tagId ? `?tagId=${tagId}` : "";
-                const targetPath = `/notes/${targetFolderId}/${note.id}${search}`;
+                const targetPath = `/notes/${note.id}`;
 
                 navigate(targetPath);
             }

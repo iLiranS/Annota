@@ -10,7 +10,7 @@ import { useSidebar } from "@/components/ui/sidebar";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useOpenNoteInNewWindow } from "@/hooks/use-open-note-in-new-window";
 import { cn, isRtl } from "@/lib/utils";
-import { NoteMetadata, TRASH_FOLDER_ID, useNotesStore, useSettingsStore } from "@annota/core";
+import { NoteMetadata, TRASH_FOLDER_ID, useNavigationStore, useNotesStore, useSettingsStore } from "@annota/core";
 import TipTapEditor, { TipTapEditorRef } from "@annota/editor-ui";
 import { FileText, Loader2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -37,19 +37,19 @@ export interface NoteEditorProps {
 
 export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId, onNoteSync, onTagClick, isStandalone, initialContent: propInitialContent }: NoteEditorProps) {
     const navigate = useNavigate();
-    const params = useParams<{ folderId: string; noteId: string }>();
+    const params = useParams<{ noteId: string }>();
     const location = useLocation()
     const queryParams = new URLSearchParams(location.search);
     const blockId = queryParams.get('blockId');
 
     const noteId = propNoteId || params.noteId;
-    const routeFolderId = propFolderId || params.folderId;
 
     const notes = useNotesStore((s) => s.notes);
     const folders = useNotesStore((s) => s.folders);
-    const setLastViewed = useSettingsStore((s) => s.setLastViewed);
+    const setLastViewed = useNavigationStore((s) => s.setLastViewed);
     const direction = useSettingsStore((s) => s.editor.direction);
     const note = notes.find((n) => n.id === noteId);
+    const routeFolderId = propFolderId || (note?.isDeleted ? TRASH_FOLDER_ID : (note?.folderId || 'root'));
     const resolvedDirection = direction === 'auto'
         ? (note?.title && isRtl(note.title) ? 'rtl' : 'ltr')
         : direction;
@@ -201,16 +201,12 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
 
         if (routeFolderId !== TRASH_FOLDER_ID) {
             if (note.isDeleted) {
-                const targetFolderId = note.originalFolderId || "root";
-                const isTargetStillValid = folders.find(f => f.id === targetFolderId && !f.isDeleted);
-                const finalFolder = isTargetStillValid ? targetFolderId : "root";
-                const path = finalFolder === "root" ? "/notes" : `/notes?folderId=${finalFolder}`;
-                navigate(path, { replace: true });
+                navigate('/notes', { replace: true });
                 return;
             }
 
-            if (routeFolderId && routeFolderId !== 'root') {
-                const currentFolder = folders.find(f => f.id === routeFolderId);
+            if (note.folderId) {
+                const currentFolder = folders.find(f => f.id === note.folderId);
                 if (currentFolder?.isDeleted) {
                     navigate('/notes', { replace: true });
                 }

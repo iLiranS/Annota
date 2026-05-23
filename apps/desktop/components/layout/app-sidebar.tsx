@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useLocation, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 
 import { Sidebar, SidebarContent, useSidebar } from "@/components/ui/sidebar";
-import { useAppTheme } from "@/hooks/use-app-theme";
 import { useCreateNote } from "@/hooks/use-create-note";
 import { useSmartNavigate } from "@/hooks/use-smart-navigate";
 import { DAILY_NOTES_FOLDER_ID, TRASH_FOLDER_ID, useChangelog, useNavigationStore, useNotesStore, useSearchStore, useSettingsStore, useSyncStore, useUserStore, type Folder, type SidebarTab } from "@annota/core";
@@ -14,6 +13,7 @@ import { ConfirmDialog } from "../custom-ui/confirm-dialog";
 import { FolderEditModal } from "../notes/folder-edit-modal";
 import { FoldersTree } from "./sidebar/folders-tree";
 import { NotesViewContent, NotesViewHeader } from "./sidebar/notes-view";
+import { QuickAccessSection } from "./sidebar/quick-access";
 import { SearchView } from "./sidebar/search-view";
 import { SidebarFooterSection } from "./sidebar/sidebar-footer";
 import { TagsList } from "./sidebar/tags-list";
@@ -25,15 +25,17 @@ import { TagsList } from "./sidebar/tags-list";
 
 export function AppSidebar() {
     const navigateSmart = useSmartNavigate();
-    const location = useLocation();
-    const { folderId: routeFolderId, noteId: routeNoteId } = useParams();
-    const { colors } = useAppTheme();
+    const { noteId: routeNoteId } = useParams();
     const { general } = useSettingsStore();
-    const clearQuickAccessView = useNavigationStore((s) => s.clearQuickAccessView);
     const activeTab = useNavigationStore((s) => s.sidebarTab);
     const setActiveTab = useNavigationStore((s) => s.setSidebarTab);
+    const selectedFolderId = useNavigationStore((s) => s.selectedFolderId);
+    const setSelectedFolderId = useNavigationStore((s) => s.setSelectedFolderId);
+    const selectedTagId = useNavigationStore((s) => s.selectedTagId);
+    const setSelectedTagId = useNavigationStore((s) => s.setSelectedTagId);
 
     const {
+        notes,
         tags,
         deleteFolder,
         deleteNote,
@@ -48,47 +50,17 @@ export function AppSidebar() {
     const { createAndNavigate: createNote } = useCreateNote();
     const { updateAvailable, latestVersion, currentVersion, dismissUpdate } = useChangelog('desktop');
 
-    const [pendingFolderId, setPendingFolderId] = useState<string | undefined | null>(null);
+    const currentFolderId = selectedFolderId || undefined;
+    const tagId = selectedTagId;
 
-    const { tagId, searchFolderId } = useMemo(() => {
-        const params = new URLSearchParams(location.search);
-        return {
-            tagId: params.get("tagId"),
-            searchFolderId: params.get("folderId")
-        };
-    }, [location.search]);
-
-    const currentFolderId = useMemo(() => {
-        // 1. Priority: Optimistic update for tab switching/navigation
-        if (pendingFolderId !== null) return pendingFolderId === 'root' ? undefined : (pendingFolderId as string);
-
-        // 2. Tags view takes precedence (no folder)
-        if (tagId) return undefined;
-
-        // 3. Search folder ID (query param) - handles /notes?folderId=...
-        // We prioritize this over path params as it's the primary way we navigate folders in the sidebar
-        if (searchFolderId !== null) {
-            if (['root', 'null', 'undefined', ''].includes(searchFolderId)) return undefined;
-            return searchFolderId;
-        }
-
-        // 4. Route folder ID (path param) - handles /notes/:folderId/:noteId
-        if (routeFolderId && !['root', 'null', 'undefined'].includes(routeFolderId)) return routeFolderId;
-
-        return undefined;
-    }, [routeFolderId, searchFolderId, tagId, pendingFolderId]);
-
-    // Clear pending ID once URL catches up
     useEffect(() => {
-        if (pendingFolderId === null) return;
-
-        const normalizedActual = searchFolderId || routeFolderId || 'root';
-        const normalizedPending = pendingFolderId || 'root';
-
-        if (normalizedActual === normalizedPending) {
-            setPendingFolderId(null);
+        if (!selectedFolderId && !selectedTagId && routeNoteId) {
+            const note = useNotesStore.getState().notes.find(n => n.id === routeNoteId);
+            if (note && note.folderId) {
+                setSelectedFolderId(note.folderId);
+            }
         }
-    }, [searchFolderId, routeFolderId, pendingFolderId]);
+    }, [routeNoteId, selectedFolderId, selectedTagId, setSelectedFolderId]);
 
     const [retryCooldown, setRetryCooldown] = useState(false);
 
@@ -186,19 +158,21 @@ export function AppSidebar() {
     }, [deleteFolder, folderToDelete]);
 
     const navigateWithHistory = useCallback((to: string) => {
-        // If we're navigating to the same URL, we need to clear quick access manually
-        // because the location key might not change, and we want to "close" the quick access view.
-        if (location.pathname + location.search === to) {
-            clearQuickAccessView();
-        }
         navigateSmart(to);
-    }, [navigateSmart, location.pathname, location.search, clearQuickAccessView]);
+    }, [navigateSmart]);
+
+    const quickAccessNotes = useMemo(() => {
+        return notes.filter((n) => n.isQuickAccess && !n.isDeleted);
+    }, [notes]);
+
+    const handleNoteClick = useCallback((note: any) => {
+        navigateWithHistory(`/notes/${note.id}`);
+    }, [navigateWithHistory]);
 
     const handleFolderCreated = useCallback((id: string) => {
-        setPendingFolderId(id);
+        setSelectedFolderId(id);
         setActiveTab('notes');
-        navigateWithHistory(`/notes?folderId=${id}`);
-    }, [navigateWithHistory, setActiveTab]);
+    }, [setSelectedFolderId, setActiveTab]);
 
     const [width, setWidth] = useState(() => {
         const saved = localStorage.getItem("sidebar_width");
@@ -284,19 +258,18 @@ export function AppSidebar() {
                         <FoldersTree
                             isFoldersOpen={true}
                             setIsFoldersOpen={() => { }}
-                            onNavigate={(id) => {
-                                setPendingFolderId(id || 'root');
-                                setActiveTab('notes');
-                                navigateWithHistory(`/notes?folderId=${id}`);
-                            }}
-                            onEdit={handleEditFolder}
-                            onDelete={setFolderToDelete}
-                            onCreateSubFolder={handleCreateSubFolder}
-                            onCreateNote={(id) => {
-                                setPendingFolderId(id || 'root');
-                                createNote(id);
-                                setActiveTab('notes');
-                            }}
+                             onNavigate={(id) => {
+                                 setSelectedFolderId(id || 'root');
+                                 setActiveTab('notes');
+                             }}
+                             onEdit={handleEditFolder}
+                             onDelete={setFolderToDelete}
+                             onCreateSubFolder={handleCreateSubFolder}
+                             onCreateNote={(id) => {
+                                 setSelectedFolderId(id || 'root');
+                                 createNote(id);
+                                 setActiveTab('notes');
+                             }}
                             getFoldersInFolder={getFoldersInFolder}
                             general={general}
                             currentFolderId={currentFolderId ?? null}
@@ -324,9 +297,8 @@ export function AppSidebar() {
                             setIsTagsOpen={() => { }}
                             activeTagId={tagId}
                             onTagClick={(id) => {
-                                setPendingFolderId(null);
-                                navigateWithHistory(`/notes?tagId=${id}`);
-                                setActiveTab('notes');
+                                 setSelectedTagId(id);
+                                 setActiveTab('notes');
                             }}
                             general={general}
                         />
@@ -334,23 +306,31 @@ export function AppSidebar() {
 
                     {activeTab === 'search' && (
                         <SearchView
-                            onNoteClick={(note) => {
-                                navigateWithHistory(`/notes/${note.folderId || "root"}/${note.id}`);
-                            }}
-                            onFolderClick={(folder) => {
-                                setPendingFolderId(folder.id || 'root');
-                                navigateWithHistory(`/notes?folderId=${folder.id}`);
-                                setActiveTab('notes');
-                            }}
+                             onNoteClick={(note) => {
+                                 navigateWithHistory(`/notes/${note.id}`);
+                             }}
+                             onFolderClick={(folder) => {
+                                 setSelectedFolderId(folder.id || 'root');
+                                 setActiveTab('notes');
+                             }}
+                             onDeleteNote={deleteNote}
+                             onEditFolder={handleEditFolder}
+                             onDeleteFolder={setFolderToDelete}
+                             onCreateSubFolder={handleCreateSubFolder}
+                             onCreateNote={(id) => {
+                                 setSelectedFolderId(id || 'root');
+                                 createNote(id);
+                                 setActiveTab('notes');
+                             }}
+                        />
+                    )}
+
+                    {activeTab !== 'search' && (
+                        <QuickAccessSection
+                            notes={quickAccessNotes}
+                            onNoteClick={handleNoteClick}
                             onDeleteNote={deleteNote}
-                            onEditFolder={handleEditFolder}
-                            onDeleteFolder={setFolderToDelete}
-                            onCreateSubFolder={handleCreateSubFolder}
-                            onCreateNote={(id) => {
-                                setPendingFolderId(id || 'root');
-                                createNote(id);
-                                setActiveTab('notes');
-                            }}
+                            general={general}
                         />
                     )}
                 </SidebarContent>
@@ -360,9 +340,6 @@ export function AppSidebar() {
                         showOfflineBanner={showOfflineBanner}
                         retryCooldown={retryCooldown}
                         onRetry={handleRetry}
-                        activeTab={activeTab}
-                        setActiveTab={setActiveTab}
-                        colors={colors}
                         updateAvailable={updateAvailable}
                         latestVersion={latestVersion}
                         currentVersion={currentVersion}

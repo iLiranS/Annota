@@ -6,7 +6,6 @@ import {
     TRASH_FOLDER_ID,
     getSortTypeLabel,
     sortNotes,
-    useNavigationStore,
     useNotesStore,
     useSettingsStore,
     type Folder,
@@ -14,7 +13,6 @@ import {
 } from "@annota/core";
 import { useMemo } from "react";
 import { NotesList } from "./notes-list";
-import { QuickAccessSection } from "./quick-access";
 import { SidebarHeaderSection } from "./sidebar-header";
 
 interface NotesViewBaseProps {
@@ -136,7 +134,7 @@ export function NotesViewContent({
         getNotesInFolder,
         getSortType
     } = useNotesStore();
-    const setQuickAccessView = useNavigationStore((s) => s.setQuickAccessView);
+
 
     const isTrash = currentFolderId === TRASH_FOLDER_ID;
     const isDaily = currentFolderId === DAILY_NOTES_FOLDER_ID;
@@ -158,10 +156,6 @@ export function NotesViewContent({
         return sortNotes(list, sortType);
     }, [notes, currentFolderId, currentSortType, tagId, isDaily, isTrash, getNotesInFolder]);
 
-    const quickAccessNotes = useMemo(() => {
-        return notes.filter((n) => n.isQuickAccess && !n.isDeleted);
-    }, [notes]);
-
     return (
         <div className={cn(
             "flex-1 overflow-hidden flex flex-col",
@@ -170,7 +164,9 @@ export function NotesViewContent({
             <NotesList
                 key={currentFolderId ?? tagId ?? 'root'}
                 notes={browseNotes}
-                onNoteClick={(note) => onNavigate(`/notes/${note.folderId || "root"}/${note.id}`)}
+                onNoteClick={(note) => {
+                    onNavigate(`/notes/${note.id}`);
+                }}
                 onDeleteNote={deleteNote}
                 selectionMode={selectionMode}
                 selectedNoteIds={selectedNoteIds}
@@ -180,17 +176,6 @@ export function NotesViewContent({
                 isTrash={isTrash}
                 setSelectionMode={setSelectionMode}
             />
-            {!isTrash && !tagId && (
-                <QuickAccessSection
-                    notes={quickAccessNotes}
-                    onNoteClick={(note) => {
-                        setQuickAccessView(note.id, currentFolderId || "root");
-                        onNavigate(`/notes/${currentFolderId || "root"}/${note.id}`);
-                    }}
-                    onDeleteNote={deleteNote}
-                    general={general}
-                />
-            )}
         </div>
     );
 }

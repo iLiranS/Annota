@@ -62,8 +62,8 @@ export function TagsList({
                 }}
                 tag={tagToEdit}
             />
-            <SidebarGroup className={cn("py-2 px-0", general.appDirection === 'rtl' ? "animate-content-from-right" : "animate-content-from-left")}>
-                <SidebarMenu className="px-1 overflow-y-auto compact-scrollbar">
+            <SidebarGroup className={cn("py-2 px-0 flex-1 min-h-0 flex flex-col", general.appDirection === 'rtl' ? "animate-content-from-right" : "animate-content-from-left")}>
+                <SidebarMenu className="px-1 overflow-y-auto compact-scrollbar flex-1 min-h-0">
                     <SidebarMenuItem className="">
                         <SidebarMenuButton
                             onClick={() => setIsCreateModalOpen(true)}
@@ -84,7 +84,8 @@ export function TagsList({
                                         onClick={() => onTagClick(tag.id)}
                                         isActive={activeTagId === tag.id}
                                         style={{ "--tag-color": tag.color } as React.CSSProperties}
-                                        className="h-8 text-xs hover:bg-(--tag-color)/5 active:bg-(--tag-color)/10 flex items-center justify-between group"
+                                        className={cn("h-8 text-xs hover:bg-(--tag-color)/5 active:bg-(--tag-color)/10 flex items-center justify-between group",
+                                            activeTagId === tag.id && "bg-(--tag-color)/15!")}
                                     >
                                         <div className="flex items-center gap-2.5 truncate">
                                             <Ionicons name="ellipse" size={10} style={{ color: tag.color }} />
