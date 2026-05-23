@@ -2467,7 +2467,7 @@ body.is-resizing-image {
     content: '';
     position: absolute;
     left: 50%;
-    top: 48%;
+    top: 50%;
     width: 4px;
     height: 8px;
     border: solid white;
@@ -2511,6 +2511,36 @@ body.is-resizing-image {
 .ProseMirror ul[data-type="taskList"] li[data-checked="true"]>div > *:not(ul[data-type="taskList"]) ::selection {
     background-color: var(--accent-color);
     color: white;
+}
+
+/* ─── Print / Export: clean serialized format (no label/div wrappers) ─── */
+/* In exported HTML, children like <p> are direct children of <li> */
+
+.ProseMirror ul[data-type="taskList"] li[data-checked="true"] > *:not(label):not(div):not(ul[data-type="taskList"]) {
+    color: color-mix(in srgb, var(--text-color) 50%, transparent);
+    filter: grayscale(0.9) brightness(0.9);
+}
+
+.ProseMirror ul[data-type="taskList"] li[data-checked="true"] > *:not(label):not(div):not(ul[data-type="taskList"]) a {
+    color: color-mix(in srgb, var(--accent-color) 50%, transparent);
+}
+
+.ProseMirror ul[data-type="taskList"] li[data-checked="true"] > *:not(label):not(div):not(ul[data-type="taskList"]) img,
+.ProseMirror ul[data-type="taskList"] li[data-checked="true"] > *:not(label):not(div):not(ul[data-type="taskList"]) video,
+.ProseMirror ul[data-type="taskList"] li[data-checked="true"] > *:not(label):not(div):not(ul[data-type="taskList"]) audio,
+.ProseMirror ul[data-type="taskList"] li[data-checked="true"] > *:not(label):not(div):not(ul[data-type="taskList"]) iframe,
+.ProseMirror ul[data-type="taskList"] li[data-checked="true"] > *:not(label):not(div):not(ul[data-type="taskList"]) [data-type*="math"] {
+    opacity: 0.5;
+}
+
+.ProseMirror ul[data-type="taskList"] li[data-checked="true"] > *:not(label):not(div):not(ul[data-type="taskList"]) code,
+.ProseMirror ul[data-type="taskList"] li[data-checked="true"] > *:not(label):not(div):not(ul[data-type="taskList"]) mark,
+.ProseMirror ul[data-type="taskList"] li[data-checked="true"] > *:not(label):not(div):not(ul[data-type="taskList"]) span[class*="tc-"],
+.ProseMirror ul[data-type="taskList"] li[data-checked="true"] > *:not(label):not(div):not(ul[data-type="taskList"]) span[class*="hl-"],
+.ProseMirror ul[data-type="taskList"] li[data-checked="true"] > *:not(label):not(div):not(ul[data-type="taskList"]) span[style*="color"],
+.ProseMirror ul[data-type="taskList"] li[data-checked="true"] > *:not(label):not(div):not(ul[data-type="taskList"]) span[style*="background-color"],
+.ProseMirror ul[data-type="taskList"] li[data-checked="true"] > *:not(label):not(div):not(ul[data-type="taskList"]) [data-color] {
+    opacity: 0.5;
 }
 
 

@@ -169,8 +169,8 @@ export class ExportService {
         md = md.replace(/<div[^>]*data-type="details"[^>]*>(.*?)<\/div>/gis, '\n<details>\n$1\n</details>\n');
         md = md.replace(/<div[^>]*data-type="detailsSummary"[^>]*>(.*?)<\/div>/gis, '<summary>$1</summary>\n');
         md = md.replace(/<div[^>]*data-type="detailsContent"[^>]*>(.*?)<\/div>/gis, '$1\n');
-        md = md.replace(/<li[^>]*task-list-item[^>]*data-checked="true"[^>]*>(.*?)<\/li>/gis, '- [x] $1\n');
-        md = md.replace(/<li[^>]*task-list-item[^>]*data-checked="false"[^>]*>(.*?)<\/li>/gis, '- [ ] $1\n');
+        md = md.replace(/<li[^>]*data-checked="true"[^>]*>(.*?)<\/li>/gis, '- [x] $1\n');
+        md = md.replace(/<li[^>]*data-checked="false"[^>]*>(.*?)<\/li>/gis, '- [ ] $1\n');
         md = md.replace(/<mark[^>]*>(.*?)<\/mark>/gis, '==$1==');
 
         // 2. Standard HTML Tags
@@ -279,6 +279,40 @@ export class ExportService {
                         console.error('ExportService: Mermaid base64 encoding failed on mobile', e);
                     }
                 }
+            }
+        }
+        // 1b. Hydrate task items for print ──────────────────────────────────────
+        // The clean serialized format has no <label>/<input>/<div> wrappers,
+        // but the print CSS expects them for checkbox rendering and flex layout.
+        // Inject the checkbox UI and wrap content in a <div> to match the
+        // editor's NodeView DOM structure that the CSS targets.
+        const taskLists: any[] = Array.from(doc.querySelectorAll('ul[data-type="taskList"]'));
+        for (const ul of taskLists) {
+            const items: any[] = Array.from(ul.querySelectorAll(':scope > li[data-checked]'));
+            for (const li of items) {
+                // Skip if already hydrated (has a <label> child)
+                if (li.querySelector(':scope > label')) continue;
+
+                const isChecked = li.getAttribute('data-checked') === 'true';
+
+                // Create checkbox label
+                const label = doc.createElement('label');
+                label.setAttribute('contenteditable', 'false');
+                const input = doc.createElement('input');
+                input.setAttribute('type', 'checkbox');
+                if (isChecked) input.setAttribute('checked', 'checked');
+                const span = doc.createElement('span');
+                label.appendChild(input);
+                label.appendChild(span);
+
+                // Wrap existing children in a <div>
+                const contentDiv = doc.createElement('div');
+                while (li.firstChild) {
+                    contentDiv.appendChild(li.firstChild);
+                }
+
+                li.appendChild(label);
+                li.appendChild(contentDiv);
             }
         }
 
@@ -516,6 +550,7 @@ export class ExportService {
             --quote-bg:                 #fafafa;
             --table-header-bg:          #f8f9fa;
             --table-header:             #f8f9fa;
+            --placeholder-color:        #adb5bd;
 
             /* Spacing/Font controls passed from Options */
             --editor-font-family:       -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -603,7 +638,8 @@ export class ExportService {
 
         td.addRule('taskItem', {
             filter: (node) =>
-                node.nodeName === 'LI' && node.classList.contains('task-list-item'),
+                node.nodeName === 'LI' &&
+                (node.hasAttribute('data-checked') || node.classList.contains('task-list-item')),
             replacement: (content, node) => {
                 const checked =
                     (node as HTMLElement).getAttribute('data-checked') === 'true' ||

@@ -2,7 +2,7 @@
 import { Link } from '@tiptap/extension-link';
 import { Placeholder } from '@tiptap/extension-placeholder';
 import { TableRow } from '@tiptap/extension-table-row';
-import { TaskItem } from '@tiptap/extension-task-item';
+
 import { FontFamily } from '@tiptap/extension-text-style';
 import { Underline } from '@tiptap/extension-underline';
 import { DOMSerializer, Slice } from '@tiptap/pm/model';
@@ -73,6 +73,7 @@ import {
     CustomTableCell,
     CustomTableHeader,
     CustomTextStyle,
+    CustomTaskItem,
     Details,
     DetailsContent,
     DetailsSummary,
@@ -206,7 +207,7 @@ export const getBaseExtensions = (options: {
         CustomTableCell,
         CustomTableHeader,
         CustomTaskList,
-        TaskItem.configure({ nested: true }),
+        CustomTaskItem.configure({ nested: true }),
         CustomCodeBlock.configure({
             lowlight,
             onOpenBlockMenu: options.onOpenBlockMenu,

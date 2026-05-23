@@ -20,5 +20,6 @@ export * from './marks';
 export * from './selection-manager';
 export * from './custom-lists';
 export * from './custom-paragraph';
+export * from './custom-task-item';
 import './task-list.css';
 import './math.css';
