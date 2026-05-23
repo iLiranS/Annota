@@ -2479,63 +2479,36 @@ body.is-resizing-image {
     flex: 1;
 }
 
-.ProseMirror ul[data-type="taskList"] li[data-checked="true"]>div {
+.ProseMirror ul[data-type="taskList"] li[data-checked="true"]>div > *:not(ul[data-type="taskList"]) {
     color: color-mix(in srgb, var(--text-color) 50%, transparent);
     filter: grayscale(0.9) brightness(0.9);
 }
 
-.ProseMirror ul[data-type="taskList"] li[data-checked="true"]>div a {
+.ProseMirror ul[data-type="taskList"] li[data-checked="true"]>div > *:not(ul[data-type="taskList"]) a {
     color: color-mix(in srgb, var(--accent-color) 50%, transparent);
 }
 
 /* Dim images and other media elements, as they don't have text selection */
-.ProseMirror ul[data-type="taskList"] li[data-checked="true"]>div img,
-.ProseMirror ul[data-type="taskList"] li[data-checked="true"]>div video,
-.ProseMirror ul[data-type="taskList"] li[data-checked="true"]>div audio,
-.ProseMirror ul[data-type="taskList"] li[data-checked="true"]>div iframe,
-.ProseMirror ul[data-type="taskList"] li[data-checked="true"]>div [data-type*="math"] {
+.ProseMirror ul[data-type="taskList"] li[data-checked="true"]>div > *:not(ul[data-type="taskList"]) img,
+.ProseMirror ul[data-type="taskList"] li[data-checked="true"]>div > *:not(ul[data-type="taskList"]) video,
+.ProseMirror ul[data-type="taskList"] li[data-checked="true"]>div > *:not(ul[data-type="taskList"]) audio,
+.ProseMirror ul[data-type="taskList"] li[data-checked="true"]>div > *:not(ul[data-type="taskList"]) iframe,
+.ProseMirror ul[data-type="taskList"] li[data-checked="true"]>div > *:not(ul[data-type="taskList"]) [data-type*="math"] {
     opacity: 0.5;
 }
 
 /* Dim elements with explicit colors, highlights, or custom backgrounds as they bypass inherited text color */
-.ProseMirror ul[data-type="taskList"] li[data-checked="true"]>div code,
-.ProseMirror ul[data-type="taskList"] li[data-checked="true"]>div mark,
-.ProseMirror ul[data-type="taskList"] li[data-checked="true"]>div span[class*="tc-"],
-.ProseMirror ul[data-type="taskList"] li[data-checked="true"]>div span[class*="hl-"],
-.ProseMirror ul[data-type="taskList"] li[data-checked="true"]>div span[style*="color"],
-.ProseMirror ul[data-type="taskList"] li[data-checked="true"]>div span[style*="background-color"],
-.ProseMirror ul[data-type="taskList"] li[data-checked="true"]>div [data-color] {
+.ProseMirror ul[data-type="taskList"] li[data-checked="true"]>div > *:not(ul[data-type="taskList"]) code,
+.ProseMirror ul[data-type="taskList"] li[data-checked="true"]>div > *:not(ul[data-type="taskList"]) mark,
+.ProseMirror ul[data-type="taskList"] li[data-checked="true"]>div > *:not(ul[data-type="taskList"]) span[class*="tc-"],
+.ProseMirror ul[data-type="taskList"] li[data-checked="true"]>div > *:not(ul[data-type="taskList"]) span[class*="hl-"],
+.ProseMirror ul[data-type="taskList"] li[data-checked="true"]>div > *:not(ul[data-type="taskList"]) span[style*="color"],
+.ProseMirror ul[data-type="taskList"] li[data-checked="true"]>div > *:not(ul[data-type="taskList"]) span[style*="background-color"],
+.ProseMirror ul[data-type="taskList"] li[data-checked="true"]>div > *:not(ul[data-type="taskList"]) [data-color] {
     opacity: 0.5;
 }
 
-.ProseMirror ul[data-type="taskList"] li[data-checked="true"] li[data-checked="true"]>div {
-    color: var(--text-color);
-    filter: none;
-}
-
-.ProseMirror ul[data-type="taskList"] li[data-checked="true"] li[data-checked="true"]>div a {
-    color: var(--accent-color);
-}
-
-.ProseMirror ul[data-type="taskList"] li[data-checked="true"] li[data-checked="true"]>div img,
-.ProseMirror ul[data-type="taskList"] li[data-checked="true"] li[data-checked="true"]>div video,
-.ProseMirror ul[data-type="taskList"] li[data-checked="true"] li[data-checked="true"]>div audio,
-.ProseMirror ul[data-type="taskList"] li[data-checked="true"] li[data-checked="true"]>div iframe,
-.ProseMirror ul[data-type="taskList"] li[data-checked="true"] li[data-checked="true"]>div [data-type*="math"] {
-    opacity: 1;
-}
-
-.ProseMirror ul[data-type="taskList"] li[data-checked="true"] li[data-checked="true"]>div code,
-.ProseMirror ul[data-type="taskList"] li[data-checked="true"] li[data-checked="true"]>div mark,
-.ProseMirror ul[data-type="taskList"] li[data-checked="true"] li[data-checked="true"]>div span[class*="tc-"],
-.ProseMirror ul[data-type="taskList"] li[data-checked="true"] li[data-checked="true"]>div span[class*="hl-"],
-.ProseMirror ul[data-type="taskList"] li[data-checked="true"] li[data-checked="true"]>div span[style*="color"],
-.ProseMirror ul[data-type="taskList"] li[data-checked="true"] li[data-checked="true"]>div span[style*="background-color"],
-.ProseMirror ul[data-type="taskList"] li[data-checked="true"] li[data-checked="true"]>div [data-color] {
-    opacity: 1;
-}
-
-.ProseMirror ul[data-type="taskList"] li[data-checked="true"]>div ::selection {
+.ProseMirror ul[data-type="taskList"] li[data-checked="true"]>div > *:not(ul[data-type="taskList"]) ::selection {
     background-color: var(--accent-color);
     color: white;
 }

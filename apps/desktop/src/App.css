@@ -298,3 +298,29 @@ html[data-theme="dark"] .premium-scrollbar::-webkit-scrollbar-thumb {
 html[data-theme="dark"] .sidebar::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.26);
 }
+
+/* Sidebar header tinted card background and border styling */
+.sidebar-header-tinted {
+  --bg-mix-1: 15%;
+  --bg-mix-2: 7%;
+  --border-mix: 15%;
+  --shadow-mix-1: 8%;
+  --shadow-mix-2: 5%;
+
+  background: linear-gradient(135deg,
+      color-mix(in srgb, var(--note-color) var(--bg-mix-1), transparent),
+      color-mix(in srgb, var(--note-color) var(--bg-mix-2), transparent));
+  border-color: color-mix(in srgb, var(--note-color) var(--border-mix), transparent);
+  box-shadow: 0 4px 16px -2px color-mix(in srgb, var(--note-color) var(--shadow-mix-1), transparent),
+    0 1px 2px color-mix(in srgb, var(--note-color) var(--shadow-mix-2), transparent);
+}
+
+/* Subtle values in dark mode for less strength in colors and border */
+:is(.dark, [data-theme="dark"]) .sidebar-header-tinted {
+  --bg-mix-1: 7%;
+  --bg-mix-2: 3%;
+  --border-mix: 6%;
+  --shadow-mix-1: 0%;
+  --shadow-mix-2: 0%;
+  box-shadow: none;
+}

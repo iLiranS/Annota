@@ -71,32 +71,29 @@ export function SidebarHeaderSection({
     return (
         <SidebarHeader
             style={{
-                backgroundColor: `${color}25`,      // subtle tinted background
-                borderColor: `${color}30`,          // soft border
-                boxShadow: `0 4px 10px ${color}15`,
-            }}
+                "--note-color": color,
+            } as React.CSSProperties}
             className={cn(
-                "py-2 justify-center rounded-xl border",
-                "transition-all duration-300",
-                "dark:shadow-none",
+                "py-1 px-1 justify-center rounded-xl border transition-all duration-300",
+                "sidebar-header-tinted",
                 dir === "rtl" && "animate-content-from-right",
                 dir === "ltr" && "animate-content-from-left"
             )}
         >
-            <div className="flex items-center justify-between gap-1 w-full">
+            <div className="flex items-center justify-between gap-1.5 w-full">
                 <div data-tauri-drag-region
-                    className="flex items-center gap-1 overflow-hidden flex-1  transition-opacity"
+                    className="flex items-center gap-0.5 overflow-hidden flex-1 transition-opacity"
                 >
-                    <div className="flex h-6 w-6 shrink-0 items-center justify-center">
+                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition-colors">
                         {isRoot ? (
-                            <AnnotaIcon color={color} size={20} />
+                            <AnnotaIcon color={color} size={15} />
                         ) : isDaily ? (
-                            <Ionicons name="calendar" color={color} size={16} />
+                            <Ionicons name="calendar" color={color} size={13} />
                         ) : (
-                            <Ionicons name={icon} color={color} size={16} />
+                            <Ionicons name={icon} color={color} size={13} />
                         )}
                     </div>
-                    <h2 style={{ color: color }} className="text-sm font-bold tracking-tight truncate">
+                    <h2 style={{ color: color }} className="text-sm font-semibold tracking-tight truncate">
                         {title}
                     </h2>
                 </div>
@@ -109,9 +106,12 @@ export function SidebarHeaderSection({
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-7 w-7 hover:bg-primary/10 transition-colors"
+                                        className="h-7 w-7 rounded-md hover:bg-(--hover-bg) active:scale-95 transition-all duration-200"
                                         onClick={onCreateNote}
-                                        style={{ color: color }}
+                                        style={{
+                                            color: color,
+                                            '--hover-bg': `${color}18`
+                                        } as React.CSSProperties}
                                     >
                                         <SquarePen className="h-4 w-4" />
                                     </Button>
@@ -125,8 +125,11 @@ export function SidebarHeaderSection({
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-7 w-7 text-muted-foreground/60 hover:bg-primary/10 transition-colors"
-                                        style={{ color: color }}
+                                        className="h-7 w-7 rounded-md text-muted-foreground/60 hover:bg-(--hover-bg) active:scale-95 transition-all duration-200"
+                                        style={{
+                                            color: color,
+                                            '--hover-bg': `${color}18`
+                                        } as React.CSSProperties}
                                     >
                                         <MoreVertical className="h-4 w-4" />
                                     </Button>

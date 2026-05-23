@@ -55,7 +55,7 @@ export function NoteActionsMenu({ note, onRevert, onOpenChange, direction }: Not
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 rounded-xl hover:bg-white/10 dark:hover:bg-white/5 shrink-0 text-muted-foreground hover:text-foreground"
+                        className="h-8 w-8 rounded-xl hover:bg-transparent shrink-0 text-muted-foreground hover:text-foreground"
                     >
                         <MoreVertical className="h-3.5 w-3.5" />
                     </Button>

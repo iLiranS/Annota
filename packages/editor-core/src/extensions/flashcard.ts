@@ -671,7 +671,7 @@ export const FlashcardBlock = Node.create({
 
                     // Allow ProseMirror to handle events on the block itself and non-interactive areas
                     // for proper NodeSelection and drag behavior.
-                    if (target.closest('button, input, textarea, .flashcard-nav-overlay-btn, .flashcard-action-btn')) {
+                    if (target.closest('button, input, textarea, .flashcard-nav-overlay-btn, .flashcard-action-btn, .flashcard-card-container')) {
                         return true;
                     }
 
