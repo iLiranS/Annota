@@ -651,8 +651,95 @@ export class ExportService {
         td.addRule('highlight', {
             filter: (node) =>
                 node.nodeName === 'MARK' ||
-                (node.nodeName === 'SPAN' && !!(node as HTMLElement).style?.backgroundColor),
-            replacement: (content) => `==${content}==`,
+                (node.nodeName === 'SPAN' && (
+                    Array.from((node as HTMLElement).classList || []).some(c => c.startsWith('hl-')) ||
+                    !!(node as HTMLElement).style?.backgroundColor
+                )),
+            replacement: (content, node) => {
+                const el = node as HTMLElement;
+                
+                let hlClass = '';
+                if (el.classList) {
+                    for (const cls of Array.from(el.classList)) {
+                        if (cls.startsWith('hl-')) {
+                            hlClass = cls;
+                            break;
+                        }
+                    }
+                }
+                
+                if (hlClass) {
+                    const short = hlClass.slice(3);
+                    const rgba = SHORT_TO_RGBA[short];
+                    if (rgba) {
+                        return `<mark style="background-color: ${rgba}">${content}</mark>`;
+                    }
+                }
+                
+                if (el.style?.backgroundColor) {
+                    return `<mark style="background-color: ${el.style.backgroundColor}">${content}</mark>`;
+                }
+                
+                if (el.nodeName === 'SPAN') {
+                    return content;
+                }
+                
+                return `==${content}==`;
+            },
+        });
+
+        td.addRule('textColor', {
+            filter: (node) =>
+                node.nodeName === 'SPAN' && (
+                    Array.from((node as HTMLElement).classList || []).some(c => c.startsWith('tc-')) ||
+                    !!(node as HTMLElement).style?.color
+                ),
+            replacement: (content, node) => {
+                const el = node as HTMLElement;
+                
+                let tcClass = '';
+                if (el.classList) {
+                    for (const cls of Array.from(el.classList)) {
+                        if (cls.startsWith('tc-')) {
+                            tcClass = cls;
+                            break;
+                        }
+                    }
+                }
+                
+                if (tcClass) {
+                    const short = tcClass.slice(3);
+                    const hex = SHORT_TO_HEX[short];
+                    if (hex) {
+                        return `<span style="color: ${hex}">${content}</span>`;
+                    }
+                }
+                
+                if (el.style?.color) {
+                    return `<span style="color: ${el.style.color}">${content}</span>`;
+                }
+                
+                return content;
+            },
+        });
+
+        td.addRule('tableCell', {
+            filter: ['th', 'td'],
+            replacement: (content, node) => {
+                const cleanContent = content
+                    .trim()
+                    .replace(/\r?\n/g, ' ')
+                    .replace(/\s+/g, ' ');
+                
+                const parent = node.parentNode;
+                if (!parent) return cleanContent;
+                
+                const siblings = Array.from(parent.childNodes);
+                const index = siblings.indexOf(node);
+                
+                const prefix = index === 0 ? '| ' : ' ';
+                return prefix + cleanContent + ' |';
+            }
         });
     }
 

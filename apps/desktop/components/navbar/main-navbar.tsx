@@ -162,13 +162,13 @@ export function MainNavbar() {
             )}
 
         >
-            {/* Left Section: Sidebar Toggle & Search */}
+            {/* Left Section: Sidebar Toggle */}
             <div
                 data-tauri-drag-region
-                className={cn("flex items-center  shrink-0 transition-all duration-300", isRtl && "flex-row-reverse")}
+                className={cn("flex items-center shrink-0 transition-all duration-300", isRtl && "flex-row-reverse")}
                 style={{
-                    width: open ? Math.max(188, primaryWidth - leftSectionPadding) : 'auto',
-                    minWidth: open ? Math.max(188, primaryWidth - leftSectionPadding) : 'auto'
+                    width: open ? Math.max(132, primaryWidth + 16 - leftSectionPadding) : 'auto',
+                    minWidth: open ? Math.max(132, primaryWidth + 16 - leftSectionPadding) : 'auto'
                 }}
             >
                 <div className="flex items-center shrink-0">
@@ -178,8 +178,19 @@ export function MainNavbar() {
                         colors={colors}
                     />
                 </div>
+            </div>
 
-                <div className={cn("flex items-center ml-1.5 shrink-0", isRtl && "flex-row-reverse mr-1.5 ml-0")}>
+            {/* Middle Section: Navigation & Note Tabs */}
+            <div
+                data-tauri-drag-region
+                className={cn(
+                    "flex-1 flex items-center min-w-0 h-full gap-2 px-2",
+                    isRtl ? "flex-row-reverse" : "flex-row",
+
+                )}
+            >
+                {/* Navigation Arrows */}
+                <div className={cn("flex items-center shrink-0")}>
                     <div className={cn("flex items-center gap-0.5 rounded-md border border-sidebar-border/40 bg-sidebar-accent/20 p-0.5")}>
                         <Tooltip>
                             <TooltipTrigger asChild>
@@ -222,9 +233,14 @@ export function MainNavbar() {
                         </Tooltip>
                     </div>
                 </div>
-            </div>
 
-            {general.enableNoteTabs !== false ? <NoteTabs /> : <div data-tauri-drag-region className="flex-1 h-full" />}
+                {/* Note Tabs */}
+                {general.enableNoteTabs !== false ? (
+                    <NoteTabs />
+                ) : (
+                    <div data-tauri-drag-region className="flex-1 h-full" />
+                )}
+            </div>
 
             {/* Right Section: Actions */}
             <div

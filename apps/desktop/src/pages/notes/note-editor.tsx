@@ -284,6 +284,7 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
                                         setInitialContent(content);
                                         editorRef.current?.setContent(content);
                                     }}
+                                    isStandalone={isStandalone}
                                     className={cn(
                                         "absolute pointer-events-auto ",
                                         resolvedDirection === 'rtl' ? "left-4" : "right-4"

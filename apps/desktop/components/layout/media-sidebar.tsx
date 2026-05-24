@@ -28,14 +28,22 @@ export function MediaSidebar() {
     const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const loadingRef = useRef(false);
     const pageRef = useRef(1);
-    const isInitialMount = useRef(true);
+    const prevQueryRef = useRef<string | null>(null);
+    const activeFetchRef = useRef<{ search: string; pageNum: number } | null>(null);
 
     const fetchMedia = useCallback(async (pageNum: number, search: string, append: boolean = true) => {
-        if (loadingRef.current) return;
+        if (append && loadingRef.current) return;
         loadingRef.current = true;
         setLoading(true);
+
+        const currentRequest = { search, pageNum };
+        activeFetchRef.current = currentRequest;
+
         try {
             const result = await getPaginatedMedia(pageNum, 20, search);
+            
+            if (activeFetchRef.current !== currentRequest) return;
+
             if (append) {
                 setItems(prev => [...prev, ...result.items]);
             } else {
@@ -46,13 +54,29 @@ export function MediaSidebar() {
         } catch (error) {
             console.error("Failed to fetch media:", error);
         } finally {
-            loadingRef.current = false;
-            setLoading(false);
+            if (activeFetchRef.current === currentRequest) {
+                loadingRef.current = false;
+                setLoading(false);
+            }
         }
     }, []);
 
     // Initial fetch and search debouncing
     useEffect(() => {
+        if (prevQueryRef.current === null) {
+            prevQueryRef.current = searchQuery;
+            pageRef.current = 1;
+            setHasMore(true);
+            fetchMedia(1, searchQuery, false);
+            return;
+        }
+
+        if (prevQueryRef.current === searchQuery) {
+            return;
+        }
+
+        prevQueryRef.current = searchQuery;
+
         if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
 
         const triggerFetch = () => {
@@ -61,13 +85,8 @@ export function MediaSidebar() {
             fetchMedia(1, searchQuery, false);
         };
 
-        if (isInitialMount.current) {
-            isInitialMount.current = false;
-            triggerFetch();
-        } else {
-            setLoading(true);
-            searchTimeoutRef.current = setTimeout(triggerFetch, 300);
-        }
+        setLoading(true);
+        searchTimeoutRef.current = setTimeout(triggerFetch, 300);
 
         return () => {
             if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);

@@ -14,10 +14,10 @@ interface SidebarTabsProps {
 }
 
 const TABS: { id: SidebarTab; icon: React.ReactNode; label: string }[] = [
-    { id: 'folders', icon: <Ionicons name="folder-outline" size={15} />, label: 'Folders' },
-    { id: 'notes', icon: <NotebookTabs size={15} />, label: 'Notes' },
-    { id: 'tags', icon: <Ionicons name="pricetag-outline" size={15} />, label: 'Tags' },
-    { id: 'search', icon: <Ionicons name="search-outline" size={15} />, label: 'Search' },
+    { id: 'folders', icon: <Ionicons name="folder-outline" size={17} />, label: 'Folders' },
+    { id: 'notes', icon: <NotebookTabs size={17} />, label: 'Notes' },
+    { id: 'tags', icon: <Ionicons name="pricetag-outline" size={17} />, label: 'Tags' },
+    { id: 'search', icon: <Ionicons name="search-outline" size={17} />, label: 'Search' },
 ];
 
 export function SidebarTabs({ activeTab, setActiveTab, colors }: SidebarTabsProps) {
@@ -35,32 +35,14 @@ export function SidebarTabs({ activeTab, setActiveTab, colors }: SidebarTabsProp
         }
     };
 
-    const activeIndex = TABS.findIndex((tab) => tab.id === activeTab);
     const isRtl = general.appDirection === 'rtl';
-    const translationIndex = isRtl ? (TABS.length - 1 - activeIndex) : activeIndex;
 
     return (
         <div
-            className={cn("relative flex items-center gap-0.5 p-0.5 rounded-md border border-sidebar-border/40 bg-sidebar-accent/20 isolate h-7",
+            className={cn("flex items-center gap-1 h-8",
                 isRtl && 'flex-row-reverse'
             )}
         >
-            {/* Sliding Active Indicator */}
-            {activeIndex !== -1 && (
-                <div
-                    className="absolute top-[2px] bottom-[2px] rounded-[4px] bg-background shadow-sm border border-border/40 transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] transform-gpu z-0"
-                    style={{
-                        width: '24px',
-                        height: '24px',
-                        transform: `translateX(calc(${translationIndex} * (24px + 2px)))`,
-                        left: '2px',
-                        opacity: open ? 1 : 0,
-                        pointerEvents: 'none',
-                        willChange: 'transform, opacity',
-                    }}
-                />
-            )}
-
             {TABS.map((tab) => (
                 <TabButton
                     key={tab.id}
@@ -84,26 +66,26 @@ const TabButton = React.forwardRef<
         label: string;
         color: string;
     }
->(({ active, onClick, icon, color, ...props }, ref) => {
+>((({ active, onClick, icon, color, ...props }, ref) => {
     return (
         <button
             ref={ref}
             onClick={onClick}
             className={cn(
-                "relative z-10 flex flex-none items-center justify-center w-6 h-6 rounded-[4px] transition-colors duration-200 focus:outline-none focus-visible:ring-0 active:scale-95",
+                "relative flex flex-none items-center justify-center w-[30px] h-[30px] rounded-md transition-all duration-200 focus:outline-none focus-visible:ring-0 active:scale-90",
                 active
-                    ? "text-primary"
-                    : "text-muted-foreground/60 hover:text-foreground hover:bg-sidebar-accent/30"
+                    ? "text-primary bg-sidebar-accent/50 shadow-sm border border-sidebar-border/20"
+                    : "text-muted-foreground/60 hover:text-foreground hover:bg-sidebar-accent/40"
             )}
             style={active ? { color: color } : {}}
             {...props}
         >
-            <span className="flex items-center justify-center w-4 h-4 pointer-events-none">
+            <span className="flex items-center justify-center pointer-events-none">
                 {icon}
             </span>
         </button>
     );
-});
+}));
 TabButton.displayName = "TabButton";
 
 

@@ -5,7 +5,6 @@ import {
     ContextMenuSeparator,
     ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import { useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { DAILY_NOTES_FOLDER_ID, NoteMetadata, TRASH_FOLDER_ID, useNavigationStore, useNotesStore, useSearchStore, useSettingsStore } from "@annota/core";
 import { FileText, Pin, Plus, X, XCircle } from "lucide-react";
@@ -19,7 +18,6 @@ import { NoteContextMenuContent, useNoteModals } from "../notes/note-context-men
 export function NoteTabs() {
     const { noteId: routeNoteId } = useParams();
 
-    const { open } = useSidebar()
     const location = useLocation();
     const navigate = useNavigate();
     const { general } = useSettingsStore();
@@ -228,7 +226,7 @@ export function NoteTabs() {
         <div
             ref={containerRef}
             dir={general.appDirection === 'rtl' ? 'rtl' : 'ltr'}
-            className={cn("flex-1 flex flex-row items-center h-full overflow-x-auto overflow-y-hidden ml-2 mr-2 min-w-0 note-tabs-scrollbar-hide", open && "px-5")}
+            className="flex-1 flex flex-row items-center h-full overflow-x-auto overflow-y-hidden min-w-0 note-tabs-scrollbar-hide"
             style={{
                 WebkitAppRegion: 'no-drag',
                 scrollbarWidth: 'none',

@@ -7,6 +7,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Ionicons } from "@/components/ui/ionicons";
+import { cn } from "@/lib/utils";
 import { NoteMetadata, useNotesStore, useSettingsStore } from "@annota/core";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { Check, MoreVertical, Pin, Star } from "lucide-react";
@@ -19,9 +20,10 @@ interface NoteActionsMenuProps {
     onRevert?: (content: string) => void;
     onOpenChange?: (open: boolean) => void;
     direction: 'ltr' | 'rtl';
+    triggerClassName?: string;
 }
 
-export function NoteActionsMenu({ note, onRevert, onOpenChange, direction }: NoteActionsMenuProps) {
+export function NoteActionsMenu({ note, onRevert, onOpenChange, direction, triggerClassName }: NoteActionsMenuProps) {
     const { updateNoteMetadata } = useNotesStore();
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
@@ -55,7 +57,10 @@ export function NoteActionsMenu({ note, onRevert, onOpenChange, direction }: Not
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 rounded-xl hover:bg-transparent shrink-0 text-muted-foreground hover:text-foreground"
+                        className={cn(
+                            "h-8 w-8 rounded-xl hover:bg-transparent shrink-0 text-muted-foreground hover:text-foreground",
+                            triggerClassName
+                        )}
                     >
                         <MoreVertical className="h-3.5 w-3.5" />
                     </Button>
