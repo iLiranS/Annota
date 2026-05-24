@@ -4,6 +4,7 @@ import FolderEditModal from '@/components/folder-edit-modal';
 import FolderCard from '@/components/folders/folder-card';
 import LocationPickerModal from '@/components/location-picker-modal';
 import NoteLocationModal from '@/components/note-location-modal';
+import { MediaSearchBrowser } from '@/components/notes/media-search-browser';
 import NoteCard from '@/components/notes/note-card';
 import { SectionHeader } from '@/components/notes/section-header';
 import OptionsMenu from '@/components/options-menu';
@@ -25,8 +26,8 @@ import {
     type Folder
 } from '@annota/core';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useFocusEffect, useTheme } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect, useTheme } from '@react-navigation/native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -35,11 +36,8 @@ import {
     Platform,
     StyleSheet,
     TextInput,
-    View,
-    Pressable,
-    Text
+    View
 } from 'react-native';
-import { MediaSearchBrowser } from '@/components/notes/media-search-browser';
 import Animated, {
     Extrapolation,
     FadeIn,
@@ -446,7 +444,7 @@ export default function NotesList() {
                                 <TextInput
                                     ref={searchInputRef}
                                     style={[styles.searchInput, { color: colors.text }]}
-                                    placeholder="Search notes & folders..."
+                                    placeholder={activeFilter === 'all' ? "Search notes & folders..." : "Search media library..."}
                                     placeholderTextColor={colors.text + '50'}
                                     value={localSearchQuery}
                                     onChangeText={handleSearchChange}
@@ -493,26 +491,53 @@ export default function NotesList() {
                     },
                     headerRight: () => (
                         <View style={styles.headerRightContainer}>
-                            {!isSearchActive && general.isAiEnabled && (
-                                <HapticPressable
-                                    onPress={() => setIsAiChatVisible(true)}
-                                    style={styles.headerButton}
-                                    hitSlop={8}
-                                >
-                                    <Ionicons name="sparkles" size={22} color={colors.primary} />
-                                </HapticPressable>
-                            )}
-                            {!isSearchActive && (
-                                <OptionsMenu
-                                    currentSortType={currentSortType}
-                                    onNewFolder={() => setIsCreatingFolder(true)}
-                                    onSortChange={(s: SortType) => setFolderSortType(currentFolderId, s)}
-                                    onTrash={() => router.push('/Notes/trash')}
-                                    onSettings={() => router.push('/settings')}
-                                    selectionMode={selectionMode}
-                                    onToggleSelectionMode={handleToggleSelectionMode}
-                                    isHeader
-                                />
+                            {isSearchActive ? (
+                                <>
+                                    <HapticPressable
+                                        onPress={() => setActiveFilter('all')}
+                                        style={styles.headerButton}
+                                        hitSlop={8}
+                                    >
+                                        <Ionicons
+                                            name="document-text-outline"
+                                            size={22}
+                                            color={activeFilter === 'all' ? colors.primary : colors.text + '40'}
+                                        />
+                                    </HapticPressable>
+                                    <HapticPressable
+                                        onPress={() => setActiveFilter('media')}
+                                        style={styles.headerButton}
+                                        hitSlop={8}
+                                    >
+                                        <Ionicons
+                                            name="images-outline"
+                                            size={22}
+                                            color={activeFilter === 'media' ? colors.primary : colors.text + '40'}
+                                        />
+                                    </HapticPressable>
+                                </>
+                            ) : (
+                                <>
+                                    {general.isAiEnabled && (
+                                        <HapticPressable
+                                            onPress={() => setIsAiChatVisible(true)}
+                                            style={styles.headerButton}
+                                            hitSlop={8}
+                                        >
+                                            <Ionicons name="sparkles" size={22} color={colors.primary} />
+                                        </HapticPressable>
+                                    )}
+                                    <OptionsMenu
+                                        currentSortType={currentSortType}
+                                        onNewFolder={() => setIsCreatingFolder(true)}
+                                        onSortChange={(s: SortType) => setFolderSortType(currentFolderId, s)}
+                                        onTrash={() => router.push('/Notes/trash')}
+                                        onSettings={() => router.push('/settings')}
+                                        selectionMode={selectionMode}
+                                        onToggleSelectionMode={handleToggleSelectionMode}
+                                        isHeader
+                                    />
+                                </>
                             )}
                             <HapticPressable
                                 onPress={() => isSearchActive ? handleCloseSearch() : setIsSearchActive(true)}
@@ -526,53 +551,10 @@ export default function NotesList() {
                 }}
             />
 
-            {isSearchActive && (
-                <View style={[styles.tabsContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                    <Pressable
-                        onPress={() => setActiveFilter('all')}
-                        style={[
-                            styles.tabButton,
-                            activeFilter === 'all' && { backgroundColor: colors.primary }
-                        ]}
-                    >
-                        <Ionicons 
-                            name="document-text-outline" 
-                            size={16} 
-                            color={activeFilter === 'all' ? '#ffffff' : colors.text + '80'} 
-                        />
-                        <Text style={[
-                            styles.tabText,
-                            { color: activeFilter === 'all' ? '#ffffff' : colors.text }
-                        ]}>
-                            All
-                        </Text>
-                    </Pressable>
-                    <Pressable
-                        onPress={() => setActiveFilter('media')}
-                        style={[
-                            styles.tabButton,
-                            activeFilter === 'media' && { backgroundColor: colors.primary }
-                        ]}
-                    >
-                        <Ionicons 
-                            name="images-outline" 
-                            size={16} 
-                            color={activeFilter === 'media' ? '#ffffff' : colors.text + '80'} 
-                        />
-                        <Text style={[
-                            styles.tabText,
-                            { color: activeFilter === 'media' ? '#ffffff' : colors.text }
-                        ]}>
-                            Media Library
-                        </Text>
-                    </Pressable>
-                </View>
-            )}
-
             {isSearchActive && activeFilter === 'media' && (
                 <MediaSearchBrowser
                     searchQuery={localSearchQuery}
-                    top={48}
+                    top={0}
                     onClose={handleCloseSearch}
                 />
             )}
@@ -589,7 +571,7 @@ export default function NotesList() {
                 keyExtractor={(item, index) => item.type === 'section-header' ? `h-${item.title}` : item.data.id}
                 onScroll={scrollHandler}
                 scrollEventThrottle={16}
-                contentContainerStyle={[styles.listContent, { flexGrow: 1 }]}
+                contentContainerStyle={{ flexGrow: 1 }}
                 itemLayoutAnimation={LinearTransition}
                 renderItem={renderItem}
                 ListHeaderComponent={isSearching ? (
@@ -673,7 +655,6 @@ const styles = StyleSheet.create({
     container: { flex: 1 },
     headerButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
     headerRightContainer: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-    listContent: { paddingTop: 16 },
     headerTitleContainer: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -710,27 +691,5 @@ const styles = StyleSheet.create({
                 elevation: 4,
             },
         }),
-    },
-    tabsContainer: {
-        flexDirection: 'row',
-        marginHorizontal: 12,
-        marginVertical: 8,
-        borderRadius: 8,
-        borderWidth: 1,
-        padding: 4,
-        gap: 4,
-    },
-    tabButton: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 6,
-        paddingVertical: 8,
-        borderRadius: 6,
-    },
-    tabText: {
-        fontSize: 13,
-        fontWeight: '600',
     },
 });

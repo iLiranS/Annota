@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     Animated,
     Pressable,
@@ -219,6 +219,33 @@ export function SearchOverlay({
                         </>
                     )}
 
+                    {showTabs && (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                            <Pressable
+                                onPress={() => setActiveFilter('in-note')}
+                                style={styles.typeButton}
+                                hitSlop={8}
+                            >
+                                <Ionicons
+                                    name="document-text-outline"
+                                    size={20}
+                                    color={activeFilter === 'in-note' ? colors.primary : colors.text + '40'}
+                                />
+                            </Pressable>
+                            <Pressable
+                                onPress={() => setActiveFilter('media')}
+                                style={styles.typeButton}
+                                hitSlop={8}
+                            >
+                                <Ionicons
+                                    name="images-outline"
+                                    size={20}
+                                    color={activeFilter === 'media' ? colors.primary : colors.text + '40'}
+                                />
+                            </Pressable>
+                        </View>
+                    )}
+
                     {/* Close Button */}
                     <Pressable
                         onPress={onClose}
@@ -231,57 +258,13 @@ export function SearchOverlay({
                         <Ionicons name="close" size={24} color={colors.text} />
                     </Pressable>
                 </View>
-
-                {/* Segmented Filter Control */}
-                {showTabs && (
-                    <View style={[styles.tabsContainer, { backgroundColor: colors.background + '80', borderColor: colors.border }]}>
-                        <Pressable
-                            onPress={() => setActiveFilter('in-note')}
-                            style={[
-                                styles.tabButton,
-                                activeFilter === 'in-note' && { backgroundColor: colors.primary }
-                            ]}
-                        >
-                            <Ionicons 
-                                name="document-text-outline" 
-                                size={16} 
-                                color={activeFilter === 'in-note' ? '#ffffff' : colors.text + '80'} 
-                            />
-                            <Text style={[
-                                styles.tabText,
-                                { color: activeFilter === 'in-note' ? '#ffffff' : colors.text }
-                            ]}>
-                                In Note
-                            </Text>
-                        </Pressable>
-                        <Pressable
-                            onPress={() => setActiveFilter('media')}
-                            style={[
-                                styles.tabButton,
-                                activeFilter === 'media' && { backgroundColor: colors.primary }
-                            ]}
-                        >
-                            <Ionicons 
-                                name="images-outline" 
-                                size={16} 
-                                color={activeFilter === 'media' ? '#ffffff' : colors.text + '80'} 
-                            />
-                            <Text style={[
-                                styles.tabText,
-                                { color: activeFilter === 'media' ? '#ffffff' : colors.text }
-                            ]}>
-                                Media Library
-                            </Text>
-                        </Pressable>
-                    </View>
-                )}
             </Animated.View>
 
             {/* Dedicated Media Search Browser Overlay */}
             {showTabs && activeFilter === 'media' && (
                 <MediaSearchBrowser
                     searchQuery={localValue}
-                    topOffset={topOffset}
+                    top={topOffset + 54}
                     onClose={onClose}
                 />
             )}
@@ -343,26 +326,9 @@ const styles = StyleSheet.create({
     closeButton: {
         padding: 4,
     },
-    tabsContainer: {
-        flexDirection: 'row',
-        marginHorizontal: 12,
-        marginBottom: 8,
-        borderRadius: 8,
-        borderWidth: 1,
-        padding: 4,
-        gap: 4,
-    },
-    tabButton: {
-        flex: 1,
-        flexDirection: 'row',
+    typeButton: {
+        padding: 2,
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 6,
-        paddingVertical: 8,
-        borderRadius: 6,
-    },
-    tabText: {
-        fontSize: 13,
-        fontWeight: '600',
     },
 });

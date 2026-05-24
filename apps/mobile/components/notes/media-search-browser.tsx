@@ -1,7 +1,9 @@
 import { ImageGallery } from '@/components/editor-ui/image-gallery';
 import { HapticPressable } from '@/components/ui/haptic-pressable';
+import { copyFileToClipboardMobile } from '@/utils/clipboard';
 import { getPaginatedMedia, resolveLocalUri, type MediaItem } from '@annota/core';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import * as Clipboard from 'expo-clipboard';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -18,8 +20,6 @@ import {
     View,
 } from 'react-native';
 import { useAppTheme } from '../../hooks/use-app-theme';
-import { copyFileToClipboardMobile } from '@/utils/clipboard';
-import * as Clipboard from 'expo-clipboard';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -130,7 +130,7 @@ export function MediaSearchBrowser({
                 {
                     backgroundColor: colors.card,
                     borderColor: colors.border,
-                    top: top !== undefined ? top + 8 : topOffset + 96,
+                    top: top !== undefined ? top : topOffset + 96,
                 },
                 isFloating ? {
                     marginHorizontal: 12,
@@ -241,6 +241,7 @@ function NotesModal({
             console.error('Failed to copy media:', err);
         }
     };
+    console.log(item)
 
     return (
         <Modal
@@ -270,7 +271,7 @@ function NotesModal({
                                     color={copied ? '#10B981' : colors.text}
                                 />
                                 <Text style={{ fontSize: 13, color: copied ? '#10B981' : colors.text, fontWeight: '500' }}>
-                                    {copied ? 'Copied!' : (item.mimeType === 'application/pdf' ? 'Copy PDF Path' : 'Copy Image')}
+                                    {copied ? 'Copied!' : (item.fileType === 'pdf' || item.mimeType === 'application/pdf' ? 'Copy PDF Path' : 'Copy Image')}
                                 </Text>
                             </HapticPressable>
                             <HapticPressable onPress={onClose}>
