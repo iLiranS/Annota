@@ -29,9 +29,10 @@ export async function copyFileToClipboardMobile(src: string, imageId?: string): 
         // Write the pure image data to the native mobile clipboard
         await Clipboard.setImageAsync(base64Data);
 
-        // Optional: Save the ID to a temporary global memory state for internal deduplication
+        // Save the ID and timestamp to a temporary global memory state for internal deduplication
         if (imageId) {
             (global as any).lastCopiedMobileImageId = imageId;
+            (global as any).lastCopiedMobileImageTimestamp = Date.now();
         }
 
         return true;

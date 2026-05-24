@@ -72,6 +72,13 @@ export function useEditorBridgeHandlers({
                     numberedLines: editorSettings.numberedLines !== undefined ? editorSettings.numberedLines : true,
                 });
 
+                if ((global as any).lastCopiedMobileImageId) {
+                    sendMessage('syncCopiedImage', {
+                        imageId: (global as any).lastCopiedMobileImageId,
+                        timestamp: (global as any).lastCopiedMobileImageTimestamp
+                    });
+                }
+
                 onReady?.();
                 break;
 
@@ -108,6 +115,12 @@ export function useEditorBridgeHandlers({
                     }
                 }
                 break;
+                
+            case 'imageCopied':
+                (global as any).lastCopiedMobileImageId = data.imageId;
+                (global as any).lastCopiedMobileImageTimestamp = data.timestamp;
+                break;
+
             case 'imagePasted':
                 handleFilePaste({
                     noteId,

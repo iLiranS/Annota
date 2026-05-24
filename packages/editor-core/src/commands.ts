@@ -14,8 +14,28 @@ function copyImageAtPosition(pos: number): boolean {
     const node = e.state.doc.nodeAt(pos);
     if (node?.type.name !== 'image') return false;
 
+    if (node.attrs.imageId) {
+        (window as any).__lastCopiedImageId = node.attrs.imageId;
+        (window as any).__lastCopiedImageTimestamp = Date.now();
+        sendMessage({ type: 'imageCopied', imageId: node.attrs.imageId, timestamp: Date.now() });
+    }
+
     e.chain().focus().setNodeSelection(pos).run();
     return document.execCommand('copy');
+}
+
+// Clear internal image copy state if user copies plain text or anything else
+if (typeof document !== 'undefined') {
+    document.addEventListener('copy', (_e: ClipboardEvent) => {
+        // We only clear if the clipboard event doesn't seem to be an image from TipTap
+        // TipTap handles image copying natively by cancelling the event or managing its own payload.
+        // We can just check if our window state was set *extremely* recently (like < 100ms ago) by `copyImageAtPosition`
+        // or by the image extension. If not, clear it.
+        const ts = (window as any).__lastCopiedImageTimestamp || 0;
+        if (Date.now() - ts > 1000) {
+            (window as any).__lastCopiedImageId = null;
+        }
+    });
 }
 
 export function setupCommands() {
@@ -72,6 +92,11 @@ export function setupCommands() {
                 break;
             case 'getContent':
                 sendMessage({ type: 'contentResponse', html: e.getHTML() });
+                handled = true;
+                break;
+            case 'syncCopiedImage':
+                (window as any).__lastCopiedImageId = params?.imageId;
+                (window as any).__lastCopiedImageTimestamp = params?.timestamp;
                 handled = true;
                 break;
             case 'insertLocalImage':

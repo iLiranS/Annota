@@ -455,6 +455,13 @@ export const CustomImage = Image.extend<any>({
 
                             const imageId = selection.node.attrs.imageId ?? null;
                             const src = selection.node.attrs.src ?? null;
+
+                            if (imageId) {
+                                (window as any).__lastCopiedImageId = imageId;
+                                (window as any).__lastCopiedImageTimestamp = Date.now();
+                                sendMessage({ type: 'imageCopied', imageId, timestamp: Date.now() });
+                            }
+
                             return setImageClipboardPayload(clipboardEvent, imageId, src);
                         },
                         cut(view, event) {
@@ -469,6 +476,12 @@ export const CustomImage = Image.extend<any>({
                             const copied = setImageClipboardPayload(clipboardEvent, imageId, src);
                             if (!copied) return false;
 
+                            if (imageId) {
+                                (window as any).__lastCopiedImageId = imageId;
+                                (window as any).__lastCopiedImageTimestamp = Date.now();
+                                sendMessage({ type: 'imageCopied', imageId, timestamp: Date.now() });
+                            }
+
                             view.dispatch(view.state.tr.deleteSelection());
                             return true;
                         },
@@ -478,12 +491,32 @@ export const CustomImage = Image.extend<any>({
                         const { schema } = view.state;
 
                         // 1. Internal copy/paste path: reuse existing imageId (no re-upload).
-                        const internalImageId = getCopiedImageId(event.clipboardData);
+                        let internalImageId = getCopiedImageId(event.clipboardData);
+                        let src = '';
+
                         if (internalImageId) {
                             const html = event.clipboardData?.getData('text/html');
                             const srcMatch = html?.match(/src=["']([^"']+)["']/i);
-                            const src = srcMatch?.[1] || '';
+                            src = srcMatch?.[1] || '';
+                        } else {
+                            // HACK FOR MOBILE: Mobile clipboard often strips custom MIME/HTML.
+                            // We check if we copied an image within the last 30 seconds internally.
+                            const lastId = (window as any).__lastCopiedImageId;
+                            const lastTs = (window as any).__lastCopiedImageTimestamp || 0;
 
+                            if (lastId && (Date.now() - lastTs < 30_000)) {
+                                // Make sure the clipboard actually contains an image to avoid falsely replacing text pastes
+                                const hasImage = items.some(i => i.type.startsWith('image/'));
+                                if (hasImage) {
+                                    internalImageId = lastId;
+                                    // We don't have the src, NoteFileService will resolve it
+                                    // Consume the global state so it's not reused for subsequent external pastes
+                                    (window as any).__lastCopiedImageId = null;
+                                }
+                            }
+                        }
+
+                        if (internalImageId) {
                             if (options.onImagePasted) {
                                 // Important: We pass the found ID and Source to onImagePasted
                                 // so NativeEditor can do the "Magic Check" and insert it directly.

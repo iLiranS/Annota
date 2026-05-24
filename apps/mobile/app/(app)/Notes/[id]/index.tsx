@@ -541,6 +541,7 @@ export default function NoteEditor() {
                         onNext={handleSearchNext}
                         onPrev={handleSearchPrev}
                         topOffset={editor.floatingNoteHeader ? insets.top + 50 : 0}
+                        showTabs={false}
                     />
 
                     <TipTapEditor

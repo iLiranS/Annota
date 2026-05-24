@@ -21,6 +21,7 @@ interface SearchOverlayProps {
     onNext: () => void;
     onPrev: () => void;
     topOffset?: number;
+    showTabs?: boolean;
 }
 
 export function SearchOverlay({
@@ -33,6 +34,7 @@ export function SearchOverlay({
     onNext,
     onPrev,
     topOffset = 0,
+    showTabs = true,
 }: SearchOverlayProps) {
     const { colors } = useAppTheme();
     const inputRef = useRef<TextInput>(null);
@@ -231,50 +233,52 @@ export function SearchOverlay({
                 </View>
 
                 {/* Segmented Filter Control */}
-                <View style={[styles.tabsContainer, { backgroundColor: colors.background + '80', borderColor: colors.border }]}>
-                    <Pressable
-                        onPress={() => setActiveFilter('in-note')}
-                        style={[
-                            styles.tabButton,
-                            activeFilter === 'in-note' && { backgroundColor: colors.primary }
-                        ]}
-                    >
-                        <Ionicons 
-                            name="document-text-outline" 
-                            size={16} 
-                            color={activeFilter === 'in-note' ? '#ffffff' : colors.text + '80'} 
-                        />
-                        <Text style={[
-                            styles.tabText,
-                            { color: activeFilter === 'in-note' ? '#ffffff' : colors.text }
-                        ]}>
-                            In Note
-                        </Text>
-                    </Pressable>
-                    <Pressable
-                        onPress={() => setActiveFilter('media')}
-                        style={[
-                            styles.tabButton,
-                            activeFilter === 'media' && { backgroundColor: colors.primary }
-                        ]}
-                    >
-                        <Ionicons 
-                            name="images-outline" 
-                            size={16} 
-                            color={activeFilter === 'media' ? '#ffffff' : colors.text + '80'} 
-                        />
-                        <Text style={[
-                            styles.tabText,
-                            { color: activeFilter === 'media' ? '#ffffff' : colors.text }
-                        ]}>
-                            Media Library
-                        </Text>
-                    </Pressable>
-                </View>
+                {showTabs && (
+                    <View style={[styles.tabsContainer, { backgroundColor: colors.background + '80', borderColor: colors.border }]}>
+                        <Pressable
+                            onPress={() => setActiveFilter('in-note')}
+                            style={[
+                                styles.tabButton,
+                                activeFilter === 'in-note' && { backgroundColor: colors.primary }
+                            ]}
+                        >
+                            <Ionicons 
+                                name="document-text-outline" 
+                                size={16} 
+                                color={activeFilter === 'in-note' ? '#ffffff' : colors.text + '80'} 
+                            />
+                            <Text style={[
+                                styles.tabText,
+                                { color: activeFilter === 'in-note' ? '#ffffff' : colors.text }
+                            ]}>
+                                In Note
+                            </Text>
+                        </Pressable>
+                        <Pressable
+                            onPress={() => setActiveFilter('media')}
+                            style={[
+                                styles.tabButton,
+                                activeFilter === 'media' && { backgroundColor: colors.primary }
+                            ]}
+                        >
+                            <Ionicons 
+                                name="images-outline" 
+                                size={16} 
+                                color={activeFilter === 'media' ? '#ffffff' : colors.text + '80'} 
+                            />
+                            <Text style={[
+                                styles.tabText,
+                                { color: activeFilter === 'media' ? '#ffffff' : colors.text }
+                            ]}>
+                                Media Library
+                            </Text>
+                        </Pressable>
+                    </View>
+                )}
             </Animated.View>
 
             {/* Dedicated Media Search Browser Overlay */}
-            {activeFilter === 'media' && (
+            {showTabs && activeFilter === 'media' && (
                 <MediaSearchBrowser
                     searchQuery={localValue}
                     topOffset={topOffset}

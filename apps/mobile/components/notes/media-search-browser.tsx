@@ -255,25 +255,28 @@ function NotesModal({
             >
                 <View style={[styles.modalContent, { backgroundColor: colors.card, borderColor: colors.border }]}>
                     <View style={styles.modalHeader}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                            <Text style={[styles.modalTitle, { color: colors.text }]}>References</Text>
+                        <Text style={[styles.modalTitle, { color: colors.text }]}>References</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
                             <HapticPressable
                                 onPress={handleCopy}
                                 style={({ pressed }) => [
-                                    styles.copyButton,
+                                    { flexDirection: 'row', alignItems: 'center', gap: 4 },
                                     pressed && { opacity: 0.7 }
                                 ]}
                             >
                                 <Ionicons
                                     name={copied ? "checkmark-circle" : "copy-outline"}
-                                    size={18}
-                                    color={copied ? '#10B981' : colors.primary}
+                                    size={16}
+                                    color={copied ? '#10B981' : colors.text}
                                 />
+                                <Text style={{ fontSize: 13, color: copied ? '#10B981' : colors.text, fontWeight: '500' }}>
+                                    {copied ? 'Copied!' : (item.mimeType === 'application/pdf' ? 'Copy PDF Path' : 'Copy Image')}
+                                </Text>
+                            </HapticPressable>
+                            <HapticPressable onPress={onClose}>
+                                <Ionicons name="close" size={24} color={colors.text} />
                             </HapticPressable>
                         </View>
-                        <HapticPressable onPress={onClose}>
-                            <Ionicons name="close" size={24} color={colors.text} />
-                        </HapticPressable>
                     </View>
 
                     <ScrollView style={styles.modalScroll}>
