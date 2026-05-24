@@ -1,6 +1,28 @@
 import { Image } from "@tauri-apps/api/image";
 import { writeImage, writeText } from "@tauri-apps/plugin-clipboard-manager";
 
+function getPathFromAssetUrl(urlStr: string): string | null {
+    try {
+        if (
+            urlStr.startsWith('asset:') ||
+            urlStr.startsWith('tauri:') ||
+            urlStr.startsWith('http://asset.') ||
+            urlStr.startsWith('https://asset.') ||
+            urlStr.includes('.localhost/')
+        ) {
+            const parsed = new URL(urlStr);
+            let path = decodeURIComponent(parsed.pathname);
+            if (path.startsWith('/') && path.match(/^\/[a-zA-Z]:/)) {
+                path = path.slice(1);
+            }
+            return path;
+        }
+    } catch (e) {
+        console.error("Failed to parse asset URL:", e);
+    }
+    return null;
+}
+
 /**
  * Enhanced clipboard utility for images and text.
  * Generates a "Rich Payload" (PNG + HTML) and securely passes it to the OS clipboard
@@ -20,9 +42,30 @@ export function copyImageToClipboard(src: string, imageId?: string): Promise<boo
             let objectUrl = src;
 
             if (!src.startsWith('data:image')) {
-                const response = await fetch(src);
-                const blob = await response.blob();
-                objectUrl = URL.createObjectURL(blob);
+                let localPath = getPathFromAssetUrl(src);
+                if (!localPath && !src.includes('://')) {
+                    localPath = src;
+                }
+
+                if (localPath) {
+                    try {
+                        const { readFile } = await import("@tauri-apps/plugin-fs");
+                        const bytes = await readFile(localPath);
+                        const ext = localPath.split('.').pop()?.toLowerCase();
+                        const mimeType = ext === 'webp' ? 'image/webp' : (ext === 'png' ? 'image/png' : 'image/jpeg');
+                        const blob = new Blob([bytes], { type: mimeType });
+                        objectUrl = URL.createObjectURL(blob);
+                    } catch (fsError) {
+                        console.warn("Failed to read file from fs directly, falling back to fetch:", fsError);
+                        const response = await fetch(src);
+                        const blob = await response.blob();
+                        objectUrl = URL.createObjectURL(blob);
+                    }
+                } else {
+                    const response = await fetch(src);
+                    const blob = await response.blob();
+                    objectUrl = URL.createObjectURL(blob);
+                }
             }
 
             const img = new window.Image();
