@@ -266,15 +266,15 @@ export function AppSidebar() {
                         <FoldersTree
                             isFoldersOpen={true}
                             setIsFoldersOpen={() => { }}
-                             onNavigate={handleFolderSelect}
-                             onEdit={handleEditFolder}
-                             onDelete={setFolderToDelete}
-                             onCreateSubFolder={handleCreateSubFolder}
-                             onCreateNote={(id) => {
-                                 setSelectedFolderId(id || 'root');
-                                 createNote(id);
-                                 setActiveTab('notes');
-                             }}
+                            onNavigate={handleFolderSelect}
+                            onEdit={handleEditFolder}
+                            onDelete={setFolderToDelete}
+                            onCreateSubFolder={handleCreateSubFolder}
+                            onCreateNote={(id) => {
+                                setSelectedFolderId(id || 'root');
+                                createNote(id);
+                                setActiveTab('notes');
+                            }}
                             getFoldersInFolder={getFoldersInFolder}
                             general={general}
                             currentFolderId={currentFolderId ?? null}
@@ -302,8 +302,8 @@ export function AppSidebar() {
                             setIsTagsOpen={() => { }}
                             activeTagId={tagId}
                             onTagClick={(id) => {
-                                 setSelectedTagId(id);
-                                 setActiveTab('notes');
+                                setSelectedTagId(id);
+                                setActiveTab('notes');
                             }}
                             general={general}
                         />
@@ -311,19 +311,19 @@ export function AppSidebar() {
 
                     {activeTab === 'search' && (
                         <SearchView
-                             onNoteClick={(note) => {
-                                 navigateWithHistory(`/notes/${note.id}`);
-                             }}
-                             onFolderClick={(folder) => handleFolderSelect(folder.id)}
-                             onDeleteNote={deleteNote}
-                             onEditFolder={handleEditFolder}
-                             onDeleteFolder={setFolderToDelete}
-                             onCreateSubFolder={handleCreateSubFolder}
-                             onCreateNote={(id) => {
-                                 setSelectedFolderId(id || 'root');
-                                 createNote(id);
-                                 setActiveTab('notes');
-                             }}
+                            onNoteClick={(note) => {
+                                navigateWithHistory(`/notes/${note.id}`);
+                            }}
+                            onFolderClick={(folder) => handleFolderSelect(folder.id)}
+                            onDeleteNote={deleteNote}
+                            onEditFolder={handleEditFolder}
+                            onDeleteFolder={setFolderToDelete}
+                            onCreateSubFolder={handleCreateSubFolder}
+                            onCreateNote={(id) => {
+                                setSelectedFolderId(id || 'root');
+                                createNote(id);
+                                setActiveTab('notes');
+                            }}
                         />
                     )}
 
@@ -337,7 +337,7 @@ export function AppSidebar() {
                     )}
                 </SidebarContent>
 
-                <div className={cn("mt-auto  ")}>
+                <div>
                     <SidebarFooterSection
                         showOfflineBanner={showOfflineBanner}
                         retryCooldown={retryCooldown}

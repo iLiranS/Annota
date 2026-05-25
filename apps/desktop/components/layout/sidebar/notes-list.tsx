@@ -144,7 +144,7 @@ export function NotesList({
                     </div>
                 )}
 
-                <div className="flex-1 overflow-y-auto premium-scrollbar mt-0.5">
+                <div data-tauri-drag-region className="flex-1 overflow-y-auto premium-scrollbar mt-0.5">
                     {notes.length === 0 ? (
                         <div className="px-4 py-8 text-center">
                             <p className="text-xs text-muted-foreground italic">No notes here</p>
@@ -173,7 +173,7 @@ export function NotesList({
                                         </CollapsibleTrigger>
                                     </SidebarGroupLabel>
                                     <CollapsibleContent className="mt-1">
-                                        <SidebarMenu data-tauri-drag-region className="gap-0.5 px-0.5">
+                                        <SidebarMenu className="gap-0.5 px-0.5">
                                             {pinnedNotes.map((note) => (
                                                 <SidebarMenuItem key={note.id}>
                                                     <NoteListItem

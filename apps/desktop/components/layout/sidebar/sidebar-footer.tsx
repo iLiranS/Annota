@@ -36,7 +36,7 @@ export function SidebarFooterSection({
     const isWindows = typeof navigator !== 'undefined' && /Win/i.test(navigator.platform || "");
 
     return (
-        <SidebarFooter className={cn(" px-0 ")}>
+        <SidebarFooter className={cn(" p-0 mt-auto ")}>
             {authRequired && !isGuest && (
                 <div className="mb-2 px-2 flex items-center gap-2 rounded-lg bg-red-500/10 py-1.5 border border-red-500/20 animate-in fade-in slide-in-from-bottom-1">
                     <Ionicons name="lock-closed" size={12} className="text-red-500" />

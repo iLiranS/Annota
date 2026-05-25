@@ -6,6 +6,13 @@ import type { Folder } from "@annota/core";
 import { DAILY_NOTES_FOLDER_ID, TRASH_FOLDER_ID } from "@annota/core";
 import { ChevronRight } from "lucide-react";
 import { useState } from "react";
+import {
+    ContextMenu,
+    ContextMenuContent,
+    ContextMenuItem,
+    ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import { Ionicons } from "@/components/ui/ionicons";
 
 const DAILY_NOTES_FOLDER: Folder = {
     id: DAILY_NOTES_FOLDER_ID,
@@ -102,44 +109,58 @@ export function FoldersTree({
     if (rootFolders.length === 0) return null;
 
     return (
-        <SidebarGroup className={cn("py-2 px-0 flex-1 min-h-0 flex flex-col", general?.appDirection === 'rtl' ? "animate-content-from-right" : "animate-content-from-left")}>
-            <SidebarMenu className="px-1 overflow-y-auto compact-scrollbar flex-1 min-h-0">
-                {systemFolders.map((folder) => (
-                    <FolderTreeItem
-                        key={folder.id}
-                        folder={folder}
-                        general={general}
-                        onNavigate={onNavigate}
-                        onEdit={onEdit}
-                        onDelete={onDelete}
-                        onCreateSubFolder={onCreateSubFolder}
-                        onCreateNote={() => onCreateNote(folder.id === 'root' ? '' : folder.id)}
-                        getFoldersInFolder={getFoldersInFolder}
-                        currentFolderId={currentFolderId}
-                    />
-                ))}
+        <ContextMenu>
+            <ContextMenuTrigger asChild>
+                <SidebarGroup className={cn("py-2 px-0 flex-1 min-h-0 flex flex-col", general?.appDirection === 'rtl' ? "animate-content-from-right" : "animate-content-from-left")}>
+                    <SidebarMenu data-tauri-drag-region className="px-1 overflow-y-auto compact-scrollbar flex-1 min-h-0">
+                        {systemFolders.map((folder) => (
+                            <FolderTreeItem
+                                key={folder.id}
+                                folder={folder}
+                                general={general}
+                                onNavigate={onNavigate}
+                                onEdit={onEdit}
+                                onDelete={onDelete}
+                                onCreateSubFolder={onCreateSubFolder}
+                                onCreateNote={() => onCreateNote(folder.id === 'root' ? '' : folder.id)}
+                                getFoldersInFolder={getFoldersInFolder}
+                                currentFolderId={currentFolderId}
+                            />
+                        ))}
 
-                {regularFolders.length > 0 && (
-                    <div className="h-px bg-border/80 mx-2 my-1 shrink-0 relative">
-                    </div>
-                )}
+                        {regularFolders.length > 0 && (
+                            <div className="h-px bg-border/80 mx-2 my-1 shrink-0 relative">
+                            </div>
+                        )}
 
-                {regularFolders.map((folder) => (
-                    <FolderTreeItem
-                        key={folder.id}
-                        folder={folder}
-                        general={general}
-                        onNavigate={onNavigate}
-                        onEdit={onEdit}
-                        onDelete={onDelete}
-                        onCreateSubFolder={onCreateSubFolder}
-                        onCreateNote={() => onCreateNote(folder.id === 'root' ? '' : folder.id)}
-                        getFoldersInFolder={getFoldersInFolder}
-                        currentFolderId={currentFolderId}
-                    />
-                ))}
-            </SidebarMenu>
-        </SidebarGroup>
+                        {regularFolders.map((folder) => (
+                            <FolderTreeItem
+                                key={folder.id}
+                                folder={folder}
+                                general={general}
+                                onNavigate={onNavigate}
+                                onEdit={onEdit}
+                                onDelete={onDelete}
+                                onCreateSubFolder={onCreateSubFolder}
+                                onCreateNote={() => onCreateNote(folder.id === 'root' ? '' : folder.id)}
+                                getFoldersInFolder={getFoldersInFolder}
+                                currentFolderId={currentFolderId}
+                            />
+                        ))}
+                    </SidebarMenu>
+                </SidebarGroup>
+            </ContextMenuTrigger>
+            <ContextMenuContent className="w-48">
+                <ContextMenuItem onSelect={() => onCreateNote('')} className="gap-2">
+                    <Ionicons name="document-outline" size={16} />
+                    <span>New Note</span>
+                </ContextMenuItem>
+                <ContextMenuItem onSelect={() => onCreateSubFolder({ ...ALL_NOTES_FOLDER, id: '' })} className="gap-2">
+                    <Ionicons name="folder-outline" size={16} />
+                    <span>New Folder</span>
+                </ContextMenuItem>
+            </ContextMenuContent>
+        </ContextMenu>
     );
 }
 

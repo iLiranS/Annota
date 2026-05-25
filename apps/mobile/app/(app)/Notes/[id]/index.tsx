@@ -54,6 +54,7 @@ export default function NoteEditor() {
 
     // Track the current title for the header (updates as user types)
     const [displayTitle, setDisplayTitle] = useState(currentNote?.title || 'Untitled Note');
+    const [isInitialEmpty, setIsInitialEmpty] = useState(false);
 
     // Search state
     const [isSearching, setIsSearching] = useState(false);
@@ -134,15 +135,15 @@ export default function NoteEditor() {
 
 
 
-    const isEmptyContent = (html: string) => {
+    const isEmptyContent = useCallback((html: string) => {
         const normalized = html
             .replace(/&nbsp;/gi, '')
             .replace(/\s/g, '')
             .toLowerCase();
         return normalized === '' || normalized === '<p></p>' || normalized === '<p><br></p>';
-    };
+    }, []);
 
-    const shouldAutofocus = content !== null && isEmptyContent(content);
+    const shouldAutofocus = content !== null && isInitialEmpty;
     const isContentReady = !id || content !== null;
 
     const lastSavedContentRef = useRef<string | null>(null);
@@ -159,11 +160,13 @@ export default function NoteEditor() {
                     if (cancelled) return;
                     setContent(loadedContent);
                     lastSavedContentRef.current = loadedContent;
+                    setIsInitialEmpty(isEmptyContent(loadedContent));
                 } catch (error) {
                     if (!cancelled) {
                         console.error('Failed to load note content', error);
                         setContent('');
                         lastSavedContentRef.current = '';
+                        setIsInitialEmpty(true);
                     }
                 } finally {
                     if (!cancelled) {
@@ -174,6 +177,7 @@ export default function NoteEditor() {
                 if (!cancelled) {
                     setContent(null);
                     lastSavedContentRef.current = null;
+                    setIsInitialEmpty(true);
                     setIsLoading(false);
                 }
             }
@@ -185,7 +189,7 @@ export default function NoteEditor() {
         return () => {
             cancelled = true;
         };
-    }, [id, getNoteContent]);
+    }, [id, getNoteContent, isEmptyContent]);
 
     // Mobile Frontend Scroll Effect
     useEffect(() => {
@@ -555,7 +559,7 @@ export default function NoteEditor() {
                         onTagCommand={setTagCommandState}
                         onNoteLinkCommand={setNoteLinkCommandState}
                         contentPaddingTop={0}
-                        placeholder="Start typing your note..."
+                        placeholder="Start typing..."
                         autofocus={shouldAutofocus}
                         onGalleryVisibilityChange={setIsGalleryOpen}
                         onCopyBlockLink={handleCopyBlockLink}

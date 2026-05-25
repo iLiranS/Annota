@@ -436,10 +436,11 @@ export async function bulkSoftDeleteNotes(noteIds: string[]): Promise<void> {
 export async function bulkMoveNotes(noteIds: string[], targetFolderId: string | null): Promise<void> {
     if (noteIds.length === 0) return;
     const now = new Date();
+    const normalizedFolderId = (targetFolderId === 'root' || targetFolderId === '') ? null : targetFolderId;
     await getDb()
         .update(schema.noteMetadata)
         .set({
-            folderId: targetFolderId,
+            folderId: normalizedFolderId,
             isDirty: true,
             updatedAt: now,
         })
@@ -456,7 +457,7 @@ export async function restoreNote(noteId: string, targetFolderId?: string | null
     // Determine restore location
     let restoredFolderId: string | null = null;
     if (targetFolderId !== undefined) {
-        restoredFolderId = targetFolderId;
+        restoredFolderId = (targetFolderId === 'root' || targetFolderId === '') ? null : targetFolderId;
     } else if (note.originalFolderId) {
         // Check if original folder exists and is not deleted
         const originalFolder = await getDb()
@@ -952,4 +953,26 @@ export async function removeTagFromAllNotes(tagId: string, tx: DbOrTx = getDb())
             .where(eq(schema.noteMetadata.id, note.id))
             .run();
     }
+}
+
+export async function healRootFolderIds(): Promise<void> {
+    const db = getDb();
+    
+    // Self-heal notes where folderId is 'root' or empty string
+    await db.update(schema.noteMetadata)
+        .set({ folderId: null, isDirty: true })
+        .where(or(
+            eq(schema.noteMetadata.folderId, 'root'),
+            eq(schema.noteMetadata.folderId, '')
+        ))
+        .run();
+        
+    // Also self-heal originalFolderId
+    await db.update(schema.noteMetadata)
+        .set({ originalFolderId: null, isDirty: true })
+        .where(or(
+            eq(schema.noteMetadata.originalFolderId, 'root'),
+            eq(schema.noteMetadata.originalFolderId, '')
+        ))
+        .run();
 }

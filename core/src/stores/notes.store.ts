@@ -110,10 +110,11 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     },
 
     bulkMoveNotes: async (noteIds, targetFolderId) => {
-        await NoteService.bulkMove(noteIds, targetFolderId);
+        const normalizedFolderId = (targetFolderId === 'root' || targetFolderId === '') ? null : targetFolderId;
+        await NoteService.bulkMove(noteIds, normalizedFolderId);
         set(state => ({
             notes: state.notes.map(n =>
-                noteIds.includes(n.id) ? { ...n, folderId: targetFolderId, updatedAt: new Date() } : n
+                noteIds.includes(n.id) ? { ...n, folderId: normalizedFolderId, updatedAt: new Date() } : n
             )
         }));
         SyncScheduler.instance?.notifyContentChange();
@@ -129,6 +130,12 @@ export const useNotesStore = create<NotesState>((set, get) => ({
                 await purgeGuestTombstones();
             } catch (err) {
                 console.warn('[Store] Startup maintenance failed, continuing init...', err);
+            }
+
+            try {
+                await NoteService.healRootFolderIds();
+            } catch (err) {
+                console.warn('[Store] Startup self-healing failed:', err);
             }
 
             // Load root settings from storage
@@ -299,7 +306,8 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     },
 
     restoreNote: async (noteId, targetFolderId) => {
-        await NoteService.restore(noteId, targetFolderId);
+        const normalizedFolderId = (targetFolderId === 'root' || targetFolderId === '') ? null : targetFolderId;
+        await NoteService.restore(noteId, normalizedFolderId);
 
         // Fetch the updated note to get the correct restored state
         const restoredNote = await NoteService.getNoteById(noteId);
@@ -649,29 +657,32 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     },
 
     getSortType: (folderId) => {
-        if (folderId === null) {
+        const normalizedFolderId = (folderId === 'root' || folderId === '') ? null : folderId;
+        if (normalizedFolderId === null) {
             return get().rootSettings.sortType;
         }
-        const folder = get().getFolderById(folderId);
+        const folder = get().getFolderById(normalizedFolderId);
         return (folder?.sortType as SortType) ?? 'UPDATED_LAST';
     },
 
     getNotesInFolder: (folderId, includeDeleted = false) => {
+        const normalizedFolderId = (folderId === 'root' || folderId === '') ? null : folderId;
         const { notes, folders } = get();
-        const sortType = get().getSortType(folderId);
+        const sortType = get().getSortType(normalizedFolderId);
 
         // Helper to safely compare Date objects, strings, or numbers
         const getTs = (d: any) => d ? new Date(d).getTime() : 0;
 
         const filtered = notes.filter((note) => {
             // 1. Browsing the Trash Root
-            if (folderId === TRASH_FOLDER_ID) {
+            if (normalizedFolderId === TRASH_FOLDER_ID) {
                 if (!note.isDeleted) return false;
 
                 // Show if originally at the root
-                if (!note.originalFolderId) return true;
+                const origFolderId = (note.originalFolderId === 'root' || note.originalFolderId === '') ? null : note.originalFolderId;
+                if (!origFolderId) return true;
 
-                const origFolder = folders.find(f => f.id === note.originalFolderId);
+                const origFolder = folders.find(f => f.id === origFolderId);
 
                 // Show if original folder is hard-deleted or still active
                 if (!origFolder || !origFolder.isDeleted) return true;
@@ -684,17 +695,19 @@ export const useNotesStore = create<NotesState>((set, get) => ({
             }
 
             // 2. Virtual Folder Override: DAILY NOTES
-            if (folderId === DAILY_NOTES_FOLDER_ID) {
-                return note.folderId === DAILY_NOTES_FOLDER_ID && (includeDeleted ? true : !note.isDeleted);
+            if (normalizedFolderId === DAILY_NOTES_FOLDER_ID) {
+                const noteFolderId = (note.folderId === 'root' || note.folderId === '') ? null : note.folderId;
+                return noteFolderId === DAILY_NOTES_FOLDER_ID && (includeDeleted ? true : !note.isDeleted);
             }
 
             // 3. Browsing INSIDE a deleted folder
             if (note.isDeleted) {
                 if (!includeDeleted) return false;
-                if (note.originalFolderId !== folderId) return false;
+                const noteOriginalFolderId = (note.originalFolderId === 'root' || note.originalFolderId === '') ? null : note.originalFolderId;
+                if (noteOriginalFolderId !== normalizedFolderId) return false;
 
                 // 🚨 NEW: Hide independent deletions from inside the reconstructed folder
-                const origFolder = folders.find(f => f.id === folderId);
+                const origFolder = folders.find(f => f.id === normalizedFolderId);
                 if (origFolder && origFolder.isDeleted) {
                     const noteDeletedTs = getTs(note.deletedAt);
                     const folderDeletedTs = getTs(origFolder.deletedAt);
@@ -707,7 +720,8 @@ export const useNotesStore = create<NotesState>((set, get) => ({
             }
 
             // 4. Standard active notes
-            const folderMatch = note.folderId === folderId;
+            const noteFolderId = (note.folderId === 'root' || note.folderId === '') ? null : note.folderId;
+            const folderMatch = noteFolderId === normalizedFolderId;
             const deletedMatch = includeDeleted ? true : !note.isDeleted;
             return folderMatch && deletedMatch;
         });
@@ -716,18 +730,20 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     },
 
     getFoldersInFolder: (parentId, includeDeleted = false) => {
+        const normalizedParentId = (parentId === 'root' || parentId === '') ? null : parentId;
         const { folders } = get();
-        const sortType = get().getSortType(parentId);
+        const sortType = get().getSortType(normalizedParentId);
 
         const getTs = (d: any) => d ? new Date(d).getTime() : 0;
 
         const filtered = folders.filter((folder) => {
             // 1. Browsing the Trash Root
-            if (parentId === TRASH_FOLDER_ID) {
+            if (normalizedParentId === TRASH_FOLDER_ID) {
                 if (!folder.isDeleted) return false;
-                if (!folder.originalParentId) return true;
+                const origParentId = (folder.originalParentId === 'root' || folder.originalParentId === '') ? null : folder.originalParentId;
+                if (!origParentId) return true;
 
-                const origParent = folders.find(f => f.id === folder.originalParentId);
+                const origParent = folders.find(f => f.id === origParentId);
                 if (!origParent || !origParent.isDeleted) return true;
 
                 // Timestamp check for nested folders
@@ -739,9 +755,10 @@ export const useNotesStore = create<NotesState>((set, get) => ({
             // 2. Browsing INSIDE a deleted folder
             if (folder.isDeleted) {
                 if (!includeDeleted) return false;
-                if (folder.originalParentId !== parentId) return false;
+                const folderOriginalParentId = (folder.originalParentId === 'root' || folder.originalParentId === '') ? null : folder.originalParentId;
+                if (folderOriginalParentId !== normalizedParentId) return false;
 
-                const origParent = folders.find(f => f.id === parentId);
+                const origParent = folders.find(f => f.id === normalizedParentId);
                 if (origParent && origParent.isDeleted) {
                     const folderDeletedTs = getTs(folder.deletedAt);
                     const parentDeletedTs = getTs(origParent.deletedAt);
@@ -752,7 +769,8 @@ export const useNotesStore = create<NotesState>((set, get) => ({
             }
 
             // 3. Standard active folders
-            const parentMatch = (folder.parentId ?? null) === (parentId ?? null);
+            const folderParentId = (folder.parentId === 'root' || folder.parentId === '') ? null : folder.parentId;
+            const parentMatch = folderParentId === normalizedParentId;
             const deletedMatch = includeDeleted ? true : !folder.isDeleted;
             return parentMatch && deletedMatch;
         });

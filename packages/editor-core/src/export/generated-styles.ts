@@ -289,7 +289,13 @@ export const GENERATED_CORE_STYLES = `
     padding: 0 2px;
 }
 
-.ProseMirror p.is-editor-empty:first-child::before {
+.ProseMirror p.is-editor-empty:first-child::before,
+.ProseMirror h1.is-editor-empty:first-child::before,
+.ProseMirror h2.is-editor-empty:first-child::before,
+.ProseMirror h3.is-editor-empty:first-child::before,
+.ProseMirror h4.is-editor-empty:first-child::before,
+.ProseMirror h5.is-editor-empty:first-child::before,
+.ProseMirror h6.is-editor-empty:first-child::before {
     content: attr(data-placeholder);
     color: var(--placeholder-color);
     pointer-events: none;

@@ -18,6 +18,10 @@ export const NoteService = {
         return await notesRepo.getNotesInFolder(folderId, includeDeleted);
     },
 
+    healRootFolderIds: async (): Promise<void> => {
+        await notesRepo.healRootFolderIds();
+    },
+
     getNoteById: async (noteId: string): Promise<NoteMetadata | null> => {
         return await notesRepo.getNoteMetadataById(noteId);
     },
@@ -92,6 +96,13 @@ export const NoteService = {
         try {
             // Validate updates using the partial schema (allows updating single fields)
             const validatedUpdates = insertNoteMetadataSchema.partial().parse(updates);
+
+            if (validatedUpdates.folderId === 'root' || validatedUpdates.folderId === '') {
+                validatedUpdates.folderId = null;
+            }
+            if (validatedUpdates.originalFolderId === 'root' || validatedUpdates.originalFolderId === '') {
+                validatedUpdates.originalFolderId = null;
+            }
 
             // If title is being updated, regenerate it to ensure it's valid (e.g. trimming)
             // validating schema touches title but we might want to ensure consistent generation logic if needed,

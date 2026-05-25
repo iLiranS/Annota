@@ -7,7 +7,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { Keyboard, Linking, Platform, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Keyboard, Linking, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useEditorBridgeHandlers } from './hooks/useEditorBridgeHandlers';
 import { useSharedEditorUI } from './hooks/useSharedEditorUI';
@@ -267,9 +267,11 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                     autocapitalize: editorSettings.autocapitalize,
                     autocomplete: editorSettings.autocomplete,
                     numberedLines: editorSettings.numberedLines !== undefined ? editorSettings.numberedLines : true,
+                    placeholder,
+                    autofocus,
                 });
             }
-        }, [isReady, dark, colors, editable, editorSettings, sendMessage]);
+        }, [isReady, dark, colors, editable, editorSettings, sendMessage, placeholder, autofocus]);
 
 
         useImperativeHandle(ref, () => ({
@@ -400,6 +402,12 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                         keyboardDisplayRequiresUserAction={false}
                         pointerEvents={editable ? 'auto' : 'none'}
                     />
+                    {editable && (
+                        <Pressable
+                            style={{ flex: 1, minHeight: 250 }}
+                            onPress={() => dispatchCommand('focus')}
+                        />
+                    )}
                 </ScrollView>
                 {renderToolbar && editable && (
                     <View

@@ -71,7 +71,7 @@ export function generateNoteMetadata(data: Partial<NoteMetadataInsert>): NoteMet
     const id = generateId();
     const now = new Date();
     let folderId = null
-    if (data && data.folderId && data.folderId.length > 0) folderId = data.folderId
+    if (data && data.folderId && data.folderId.length > 0 && data.folderId !== 'root') folderId = data.folderId
     return {
         id,
         folderId,

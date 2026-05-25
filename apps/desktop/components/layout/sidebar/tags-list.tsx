@@ -63,7 +63,7 @@ export function TagsList({
                 tag={tagToEdit}
             />
             <SidebarGroup className={cn("py-2 px-0 flex-1 min-h-0 flex flex-col", general.appDirection === 'rtl' ? "animate-content-from-right" : "animate-content-from-left")}>
-                <SidebarMenu className="px-1 overflow-y-auto compact-scrollbar flex-1 min-h-0">
+                <SidebarMenu data-tauri-drag-region className="px-1 overflow-y-auto compact-scrollbar flex-1 min-h-0">
                     <SidebarMenuItem className="">
                         <SidebarMenuButton
                             onClick={() => setIsCreateModalOpen(true)}
