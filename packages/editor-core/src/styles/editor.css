@@ -73,6 +73,7 @@
     font-size: var(--editor-font-size);
     line-height: var(--editor-line-height);
     -webkit-text-size-adjust: 100%;
+
     white-space: pre-wrap;
     /* Required for ProseMirror cursor and space handling */
     word-break: break-word;

@@ -12,7 +12,7 @@ export const COLOR_MAP: Record<string, string> = {
     '#74C0FC': 'bl',
     '#20C997': 'te',
     '#51CF66': 'gr',
-    '#727272': 'gy',
+    '#757575': 'gy',
     '#A07855': 'br'
 };
 

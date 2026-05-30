@@ -1856,7 +1856,7 @@ body.is-resizing-image {
 .tc-bl { color: #74C0FC; }
 .tc-te { color: #20C997; }
 .tc-gr { color: #51CF66; }
-.tc-gy { color: #727272; }
+.tc-gy { color: #757575; }
 .tc-br { color: #A07855; }
 
 .hl-yw { background-color: rgba(255, 224, 102, 0.3); color: inherit; }

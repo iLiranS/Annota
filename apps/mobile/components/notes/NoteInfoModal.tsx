@@ -4,6 +4,7 @@ import { useTheme } from '@react-navigation/native';
 import { format } from 'date-fns';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
+import { NoteConnectionsGraph } from './NoteConnectionsGraph';
 import {
     Modal,
     Pressable,
@@ -194,120 +195,14 @@ export default function NoteInfoModal({ visible, onClose, noteId, onScrollToElem
 
                     </ScrollView>
 
-                    {/* Forward and Back Links */}
+                    {/* Connections Map (Connections Graph) */}
                     {hasForward || hasBack ? (
-                        <View style={[
-                            styles.linksCard,
-                            {
-                                backgroundColor: colors.card + '30',
-                                borderColor: colors.border,
-                            }
-                        ]}>
-                            <View style={hasForward && hasBack ? styles.twoColContainer : styles.oneColContainer}>
-                                {/* Forward Links Column */}
-                                {hasForward && (
-                                    <View style={hasForward && hasBack ? styles.col : null}>
-                                        <View style={styles.colHeader}>
-                                            <Ionicons name="arrow-forward-outline" size={12} color={colors.primary} />
-                                            <Text style={[styles.colTitle, { color: colors.text + '60' }]}>FORWARD LINKS</Text>
-                                            <Text style={[styles.colTitle, { color: colors.text + '40', fontWeight: '500' }]}>
-                                                ({forwardLinks.length})
-                                            </Text>
-                                        </View>
-                                        <ScrollView style={styles.colScroll} nestedScrollEnabled>
-                                            <View style={styles.colList}>
-                                                {forwardLinks.map((link) => (
-                                                    <Pressable
-                                                        key={link.id}
-                                                        onPress={() => {
-                                                            onClose();
-                                                            router.push({
-                                                                pathname: '/Notes/[id]',
-                                                                params: {
-                                                                    id: link.id,
-                                                                    source: 'link',
-                                                                    ...(link.blockId ? { blockId: link.blockId } : {})
-                                                                }
-                                                            });
-                                                        }}
-                                                        style={({ pressed }) => [
-                                                            styles.mobileLinkItem,
-                                                            pressed && { backgroundColor: colors.primary + '30' }
-                                                        ]}
-                                                    >
-                                                        {({ pressed }) => (
-                                                            <>
-                                                                <Text numberOfLines={1} style={[
-                                                                    styles.mobileLinkText,
-                                                                    { color: pressed ? colors.primary : colors.text + '90' }
-                                                                ]}>
-                                                                    {link.title || 'Untitled Note'}
-                                                                </Text>
-                                                                <Ionicons name="link-outline" size={11} color={colors.primary} style={[styles.mobileLinkIcon, pressed && { opacity: 1 }]} />
-                                                            </>
-                                                        )}
-                                                    </Pressable>
-                                                ))}
-                                            </View>
-                                        </ScrollView>
-                                    </View>
-                                )}
-
-                                {/* Divider if both exist */}
-                                {hasForward && hasBack && (
-                                    <View style={[styles.colDivider, { backgroundColor: colors.border }]} />
-                                )}
-
-                                {/* Backlinks Column */}
-                                {hasBack && (
-                                    <View style={[hasForward && hasBack ? styles.col : null, hasForward && { paddingLeft: 12 }]}>
-                                        <View style={styles.colHeader}>
-                                            <Ionicons name="arrow-back-outline" size={12} color={colors.primary} />
-                                            <Text style={[styles.colTitle, { color: colors.text + '60' }]}>BACK LINKS</Text>
-                                            <Text style={[styles.colTitle, { color: colors.text + '40', fontWeight: '500' }]}>
-                                                ({backlinks.length})
-                                            </Text>
-                                        </View>
-                                        <ScrollView style={styles.colScroll} nestedScrollEnabled>
-                                            <View style={styles.colList}>
-                                                {backlinks.map((link) => (
-                                                    <Pressable
-                                                        key={link.id}
-                                                        onPress={() => {
-                                                            onClose();
-                                                            router.push({
-                                                                pathname: '/Notes/[id]',
-                                                                params: {
-                                                                    id: link.id,
-                                                                    source: 'link',
-                                                                    ...(link.blockId ? { blockId: link.blockId } : {})
-                                                                }
-                                                            });
-                                                        }}
-                                                        style={({ pressed }) => [
-                                                            styles.mobileLinkItem,
-                                                            pressed && { backgroundColor: colors.primary + '30' }
-                                                        ]}
-                                                    >
-                                                        {({ pressed }) => (
-                                                            <>
-                                                                <Text numberOfLines={1} style={[
-                                                                    styles.mobileLinkText,
-                                                                    { color: pressed ? colors.primary : colors.text + '90' }
-                                                                ]}>
-                                                                    {link.title || 'Untitled Note'}
-                                                                </Text>
-                                                                <Ionicons name="link-outline" size={11} color={colors.primary} style={[styles.mobileLinkIcon, pressed && { opacity: 1 }]} />
-                                                            </>
-                                                        )}
-                                                    </Pressable>
-                                                ))}
-                                            </View>
-                                        </ScrollView>
-                                    </View>
-                                )}
-                            </View>
-                        </View>
+                        <NoteConnectionsGraph 
+                            noteId={noteId} 
+                            backlinks={backlinks} 
+                            forwardLinks={forwardLinks} 
+                            onClose={onClose}
+                        />
                     ) : null}
 
                     {/* Bottom: Anchored Stats & Metadata */}
@@ -581,5 +476,67 @@ const styles = StyleSheet.create({
     },
     mobileLinkIcon: {
         opacity: 0.7,
+    },
+    mapHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginBottom: 10,
+        paddingHorizontal: 4,
+    },
+    mapTitle: {
+        fontSize: 9,
+        fontWeight: '700',
+        letterSpacing: 0.5,
+    },
+    mapContainer: {
+        alignItems: 'center',
+        width: '100%',
+        gap: 2,
+    },
+    mapPillsContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'center',
+        gap: 6,
+        width: '100%',
+        paddingVertical: 2,
+    },
+    mapPill: {
+        borderRadius: 12,
+        paddingVertical: 4,
+        paddingHorizontal: 10,
+        maxWidth: 130,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    mapPillText: {
+        fontSize: 10,
+        fontWeight: '500',
+    },
+    mapConnector: {
+        alignItems: 'center',
+        height: 18,
+        justifyContent: 'center',
+    },
+    mapLine: {
+        width: 1,
+        height: 10,
+    },
+    mapArrowhead: {
+        marginTop: -3,
+    },
+    mapCurrentPill: {
+        borderRadius: 16,
+        borderWidth: 1,
+        paddingVertical: 6,
+        paddingHorizontal: 14,
+        maxWidth: 220,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    mapCurrentText: {
+        fontSize: 11,
+        fontWeight: '700',
     },
 });

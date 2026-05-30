@@ -1,8 +1,9 @@
 import { cn } from "@/lib/utils";
 import { calculateNoteStats, useNotesStore } from "@annota/core";
 import { format } from "date-fns";
-import { ArrowLeftFromLine, ArrowRightFromLine, Calendar, ChevronDown, ChevronRight, Clock, FileText, HardDrive, Hash, Link, ListTree } from "lucide-react";
+import { Calendar, ChevronDown, ChevronRight, Clock, FileText, HardDrive, Hash, ListTree } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { NoteConnectionsGraph } from "../notes/note-connections-graph";
 
 interface TocItem {
     id: string;
@@ -200,64 +201,13 @@ export function NoteInfo({ noteId }: { noteId: string }) {
                 </div>
             </div>
 
-            {/* Forward and Back Links */}
+            {/* Forward and Back Links Map (Connections Graph) */}
             {hasForward || hasBack ? (
-                <div className="space-y-4 shrink-0 py-2 px-2.5 mb-2 border border-border/60 bg-accent/5 rounded-xl">
-                    <div className={cn(
-                        "grid gap-1",
-                        hasForward && hasBack ? "grid-cols-2" : "grid-cols-1"
-                    )}>
-                        {/* Forward Links Column */}
-                        {hasForward && (
-                            <div className="min-w-0">
-                                <h3 className="text-[10px] font-bold uppercase tracking-wider mb-1 text-muted-foreground/60  shrink-0 flex items-center gap-1.5">
-                                    <ArrowRightFromLine size={12} className="text-accent-full" />
-                                    <span>Links To</span>
-                                    <span className="text-muted-foreground/40 font-normal">({forwardLinks.length})</span>
-                                </h3>
-                                <div className="space-y-0.5 max-h-[100px] overflow-y-auto premium-scrollbar pr-1">
-                                    {forwardLinks.map(link => (
-                                        <div key={link.id} className="group flex items-center gap-2 rounded-lg transition-all hover:bg-primary/5 pr-1 min-w-0 pl-1">
-                                            <a
-                                                href={link.blockId ? `annota://note/${link.id}?blockId=${link.blockId}` : `annota://note/${link.id}`}
-                                                className="flex-1 py-1 flex items-center justify-between gap-1.5 transition-colors min-w-0 text-[11px] text-muted-foreground hover:text-primary"
-                                                title={link.title || 'Untitled Note'}
-                                            >
-                                                <span className="truncate">{link.title || 'Untitled Note'}</span>
-                                                <Link size={10} className="shrink-0 text-accent-full opacity-60 group-hover:opacity-100 transition-opacity" />
-                                            </a>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Backlinks Column */}
-                        {hasBack && (
-                            <div className={cn("min-w-0", hasForward && "")}>
-                                <h3 className="text-[10px] font-bold uppercase tracking-wider mb-1 text-muted-foreground/60 shrink-0 flex items-center gap-1.5 w-full">
-                                    <span>Linked From</span>
-                                    <span className="text-muted-foreground/40 font-normal">({backlinks.length})</span>
-                                    <ArrowLeftFromLine size={12} className="text-accent-full ml-auto" />
-                                </h3>
-                                <div className="space-y-0.5 max-h-[100px] overflow-y-auto premium-scrollbar pr-1">
-                                    {backlinks.map(link => (
-                                        <div key={link.id} className="group flex items-center gap-2 rounded-lg transition-all hover:bg-primary/5 pr-1 min-w-0 pl-1">
-                                            <a
-                                                href={link.blockId ? `annota://note/${link.id}?blockId=${link.blockId}` : `annota://note/${link.id}`}
-                                                className="flex-1 py-1 flex items-center justify-between gap-1.5 transition-colors min-w-0 text-[11px] text-muted-foreground hover:text-primary"
-                                                title={link.title || 'Untitled Note'}
-                                            >
-                                                <span className="truncate">{link.title || 'Untitled Note'}</span>
-                                                <Link size={10} className="shrink-0 text-accent-full opacity-60 group-hover:opacity-100 transition-opacity" />
-                                            </a>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
+                <NoteConnectionsGraph
+                    noteId={noteId}
+                    backlinks={backlinks}
+                    forwardLinks={forwardLinks}
+                />
             ) : null}
 
             {/* Bottom: Stats and Metadata */}

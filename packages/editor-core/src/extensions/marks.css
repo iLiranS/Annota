@@ -1,21 +1,89 @@
-.tc-yw { color: #FFE066; }
-.tc-or { color: #FFA94D; }
-.tc-re { color: #FF6B6B; }
-.tc-pi { color: #F783AC; }
-.tc-in { color: #818CF8; }
-.tc-bl { color: #74C0FC; }
-.tc-te { color: #20C997; }
-.tc-gr { color: #51CF66; }
-.tc-gy { color: #727272; }
-.tc-br { color: #A07855; }
+.tc-yw {
+    color: #FFE066;
+}
 
-.hl-yw { background-color: rgba(255, 224, 102, 0.3); color: inherit; }
-.hl-or { background-color: rgba(255, 169, 77, 0.3); color: inherit; }
-.hl-re { background-color: rgba(255, 107, 107, 0.3); color: inherit; }
-.hl-pi { background-color: rgba(247, 131, 172, 0.3); color: inherit; }
-.hl-in { background-color: rgba(129, 140, 248, 0.3); color: inherit; }
-.hl-bl { background-color: rgba(116, 192, 252, 0.3); color: inherit; }
-.hl-te { background-color: rgba(32, 201, 151, 0.3); color: inherit; }
-.hl-gr { background-color: rgba(81, 207, 102, 0.3); color: inherit; }
-.hl-gy { background-color: rgba(114, 114, 114, 0.3); color: inherit; }
-.hl-br { background-color: rgba(160, 120, 85, 0.3); color: inherit; }
+.tc-or {
+    color: #FFA94D;
+}
+
+.tc-re {
+    color: #FF6B6B;
+}
+
+.tc-pi {
+    color: #F783AC;
+}
+
+.tc-in {
+    color: #818CF8;
+}
+
+.tc-bl {
+    color: #74C0FC;
+}
+
+.tc-te {
+    color: #20C997;
+}
+
+.tc-gr {
+    color: #51CF66;
+}
+
+.tc-gy {
+    color: #757575;
+}
+
+.tc-br {
+    color: #A07855;
+}
+
+.hl-yw {
+    background-color: rgba(255, 224, 102, 0.3);
+    color: inherit;
+}
+
+.hl-or {
+    background-color: rgba(255, 169, 77, 0.3);
+    color: inherit;
+}
+
+.hl-re {
+    background-color: rgba(255, 107, 107, 0.3);
+    color: inherit;
+}
+
+.hl-pi {
+    background-color: rgba(247, 131, 172, 0.3);
+    color: inherit;
+}
+
+.hl-in {
+    background-color: rgba(129, 140, 248, 0.3);
+    color: inherit;
+}
+
+.hl-bl {
+    background-color: rgba(116, 192, 252, 0.3);
+    color: inherit;
+}
+
+.hl-te {
+    background-color: rgba(32, 201, 151, 0.3);
+    color: inherit;
+}
+
+.hl-gr {
+    background-color: rgba(81, 207, 102, 0.3);
+    color: inherit;
+}
+
+.hl-gy {
+    background-color: rgba(114, 114, 114, 0.3);
+    color: inherit;
+}
+
+.hl-br {
+    background-color: rgba(160, 120, 85, 0.3);
+    color: inherit;
+}
