@@ -45,21 +45,19 @@
     border: none;
     color: var(--text-color);
     cursor: pointer;
-    opacity: 0.4;
+    opacity: 0.25;
     /* Always visible */
-    transition: opacity 0.2s ease, background-color 0.2s ease;
+    transition: opacity 0.2s ease;
     z-index: 10;
 }
 
 
 .quote-menu-btn:hover {
-    background-color: rgba(128, 128, 128, 0.1);
-    opacity: 1 !important;
+    opacity: 0.7 !important;
 }
 
 @media (max-width: 768px) {
     .quote-menu-btn {
-        opacity: 0.5;
         top: 6px;
         inset-inline-end: 6px;
         width: 24px;

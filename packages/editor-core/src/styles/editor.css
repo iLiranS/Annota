@@ -166,6 +166,11 @@
     border-left: 2px solid var(--accent-color) !important;
 }
 
+.ProseMirror strong,
+.ProseMirror b {
+    font-weight: 600;
+}
+
 .ProseMirror p {
     margin: 0 !important;
     padding-top: calc(var(--editor-paragraph-spacing) * 0.5) !important;
@@ -349,6 +354,11 @@
     .ProseMirror {
         padding-left: 36px;
     }
+
+    .ProseMirror[dir="rtl"] {
+        padding-left: 16px;
+        padding-right: 36px;
+    }
 }
 
 /* The floating handle element rendered by DragHandle.configure({ render }) */
@@ -370,6 +380,10 @@
     /* Must sit above code-block stacking contexts (z-index: 2) */
     z-index: 10;
     position: absolute;
+}
+
+.annota-drag-handle.rtl {
+    transform: translate(4px, 2px);
 }
 
 

@@ -39,7 +39,8 @@ export function SidebarTabs({ activeTab, setActiveTab, colors }: SidebarTabsProp
 
     return (
         <div
-            className={cn("flex items-center gap-1 h-8",
+            className={cn(
+                "flex items-center gap-0.5 rounded-md border border-sidebar-border/40 bg-sidebar-accent/20 p-0.5",
                 isRtl && 'flex-row-reverse'
             )}
         >
@@ -72,10 +73,10 @@ const TabButton = React.forwardRef<
             ref={ref}
             onClick={onClick}
             className={cn(
-                "relative flex flex-none items-center justify-center w-[30px] h-[30px] rounded-md transition-all duration-200 focus:outline-none focus-visible:ring-0 active:scale-90",
+                "relative flex flex-none items-center justify-center w-[26px] h-[26px] rounded-[4px] transition-all duration-200 focus:outline-none focus-visible:ring-0 active:scale-95",
                 active
-                    ? "text-primary bg-sidebar-accent/50 shadow-sm border border-sidebar-border/20"
-                    : "text-muted-foreground/60 hover:text-foreground hover:bg-sidebar-accent/40"
+                    ? "text-primary bg-sidebar shadow-sm border border-sidebar-border/40"
+                    : "text-muted-foreground/60 hover:text-foreground hover:bg-sidebar-accent/30"
             )}
             style={active ? { color: color } : {}}
             {...props}

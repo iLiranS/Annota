@@ -42,12 +42,15 @@ interface SyncState {
     syncUserId: string | null;
     /** Whether re-authentication is required (e.g. 401 error) */
     authRequired: boolean;
+    /** ISO timestamp of the last successful sync completion */
+    lastSyncTime: string | null;
 
     setSyncing: (v: boolean) => void;
     setOnline: (v: boolean) => void;
     updateSyncCursors: (cursors: Partial<SyncCursors>) => void;
     setSyncError: (e: string | null) => void;
     setAuthRequired: (v: boolean) => void;
+    setLastSyncTime: (time: string | null) => void;
     setDerivedKeys: (mnemonic: string | null, saltHex: string | null, keys: { masterKey: Buffer; notesKey: Buffer; filesKey: Buffer } | null) => void;
     clearDerivedKeys: () => void;
     forceSync: () => Promise<void>;
@@ -71,6 +74,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
     activeSaltHex: null,
     syncUserId: null,
     authRequired: false,
+    lastSyncTime: null,
 
     setSyncing: (isSyncing) => set({ isSyncing }),
     setOnline: (isOnline) => set({ isOnline }),
@@ -88,6 +92,13 @@ export const useSyncStore = create<SyncState>((set, get) => ({
     },
     setSyncError: (syncError) => set({ syncError }),
     setAuthRequired: (authRequired) => set({ authRequired }),
+    setLastSyncTime: (lastSyncTime) => {
+        const { syncUserId } = get();
+        set({ lastSyncTime });
+        if (syncUserId && lastSyncTime) {
+            storage.setItem(`${syncUserId}_last_sync_completed_at`, lastSyncTime);
+        }
+    },
     setDerivedKeys: (activeMnemonic, activeSaltHex, keys) => set({
         activeMnemonic,
         activeSaltHex,
@@ -127,7 +138,8 @@ export const useSyncStore = create<SyncState>((set, get) => ({
                 parsed = JSON.parse(raw);
             } catch { /* ignore */ }
         }
-        set({ syncCursors: parsed, syncUserId: userId });
+        const rawTime = await storage.getItem(`${userId}_last_sync_completed_at`);
+        set({ syncCursors: parsed, syncUserId: userId, lastSyncTime: rawTime || null });
     },
 
     reset: () => {
@@ -142,11 +154,13 @@ export const useSyncStore = create<SyncState>((set, get) => ({
             activeSaltHex: null,
             syncUserId: null,
             authRequired: false,
+            lastSyncTime: null,
         });
     },
 
     resetForUser: async (userId: string) => {
         await storage.removeItem(getSyncTimeKey(userId));
+        await storage.removeItem(`${userId}_last_sync_completed_at`);
         set({
             isSyncing: false,
             syncCursors: null,
@@ -158,6 +172,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
             activeSaltHex: null,
             syncUserId: null,
             authRequired: false,
+            lastSyncTime: null,
         });
         console.log(`[SyncStore] Cleared sync pointer for user ${userId}`);
     },

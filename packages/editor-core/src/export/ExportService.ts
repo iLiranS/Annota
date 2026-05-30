@@ -527,6 +527,9 @@ export class ExportService {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${title}</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.43/dist/katex.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&display=swap" rel="stylesheet">
     <style>
         /* Force WebKit/Blink print backgrounds */
         * {
@@ -573,6 +576,11 @@ export class ExportService {
             max-width: 900px;
             margin: 0 auto;
             padding: 40px;
+        }
+
+        /* Ensure code blocks and inline code use the Fira Code web font in PDF export */
+        pre, code, .code-gutter, .ProseMirror pre, .ProseMirror code, .ProseMirror :not(pre)>code {
+            font-family: 'Fira Code', 'FiraCode', 'SF Mono', Monaco, Consolas, 'Courier New', monospace !important;
         }
 
         .print-mode {

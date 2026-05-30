@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import {
     ContextMenu,
     ContextMenuContent,
@@ -5,12 +6,14 @@ import {
     ContextMenuSeparator,
     ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import { Ionicons } from "@/components/ui/ionicons";
 import { cn } from "@/lib/utils";
-import { DAILY_NOTES_FOLDER_ID, NoteMetadata, TRASH_FOLDER_ID, useNavigationStore, useNotesStore, useSearchStore, useSettingsStore } from "@annota/core";
-import { FileText, Pin, Plus, X, XCircle } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { DAILY_NOTES_FOLDER_ID, Folder, NoteMetadata, TRASH_FOLDER_ID, useNavigationStore, useNotesStore, useSettingsStore } from "@annota/core";
+import { Pin, Plus, X, XCircle } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
+import { useCreateNote } from "../../hooks/use-create-note";
 import { useNoteTabsStore } from "../../hooks/use-note-tabs";
 import { NoteContextMenuContent, useNoteModals } from "../notes/note-context-menu";
 
@@ -21,6 +24,7 @@ export function NoteTabs() {
     const location = useLocation();
     const navigate = useNavigate();
     const { general } = useSettingsStore();
+    const { createAndNavigate } = useCreateNote();
 
 
     const tabs = useNoteTabsStore(s => s.tabs);
@@ -39,6 +43,56 @@ export function NoteTabs() {
     // Track the currently right-clicked note for modal rendering
     const [selectedNote, setSelectedNote] = useState<NoteMetadata | null>(null);
     const { openLocationPicker, renderModals } = useNoteModals(selectedNote);
+
+    const folders = useNotesStore(s => s.folders);
+    const setSidebarTab = useNavigationStore(s => s.setSidebarTab);
+    const setSelectedFolderId = useNavigationStore(s => s.setSelectedFolderId);
+
+    const getFolderForNote = useCallback((note: NoteMetadata): Folder => {
+        if (note.isDeleted) {
+            return {
+                id: TRASH_FOLDER_ID,
+                name: "Trash",
+                icon: "trash",
+                color: "#EF4444",
+            } as Folder;
+        }
+        const folderId = note.folderId;
+        if (folderId === DAILY_NOTES_FOLDER_ID) {
+            return {
+                id: DAILY_NOTES_FOLDER_ID,
+                name: "Daily Notes",
+                icon: "calendar",
+                color: "#8B5CF6",
+            } as Folder;
+        }
+        if (!folderId || folderId === "root") {
+            return {
+                id: "root",
+                name: "Annota",
+                icon: "documents",
+                color: "#6366F1",
+            } as Folder;
+        }
+        const customFolder = folders.find(f => f.id === folderId);
+        if (customFolder) {
+            return customFolder;
+        }
+        return {
+            id: "root",
+            name: "Annota",
+            icon: "documents",
+            color: "#6366F1",
+        } as Folder;
+    }, [folders]);
+
+    const handleShowFolder = useCallback((e: React.MouseEvent, note: NoteMetadata) => {
+        e.stopPropagation();
+        e.preventDefault();
+        const folder = getFolderForNote(note);
+        setSidebarTab("notes");
+        setSelectedFolderId(folder.id);
+    }, [getFolderForNote, setSidebarTab, setSelectedFolderId]);
 
     const selectedFolderId = useNavigationStore(s => s.selectedFolderId);
     const activeNote = routeNoteId ? notes.find(n => n.id === routeNoteId) : null;
@@ -253,6 +307,12 @@ export function NoteTabs() {
                 .note-tabs-container::-webkit-scrollbar {
                     display: none;
                 }
+                .inactive-folder-icon {
+                    opacity: 0.6;
+                }
+                .group:hover .inactive-folder-icon {
+                    opacity: 1;
+                }
             `}</style>
             <div
                 data-tauri-drag-region
@@ -328,7 +388,7 @@ export function NoteTabs() {
                                         navigate(`/notes/${tab.noteId}`);
                                     }}
                                     className={cn(
-                                        "group relative flex h-9/12 cursor-pointer items-center justify-between gap-2 rounded border px-1 text-xs select-none flex-row",
+                                        "group relative flex h-9/12 cursor-pointer items-center justify-start gap-1.5 rounded border text-xs select-none flex-row px-1.5",
                                         isActive
                                             ? "bg-note-bg dark:bg-primary/10 border-border text-primary  z-10 shrink min-w-[120px] max-w-[220px] w-auto font-medium"
                                             : "bg-transparent border-transparent text-muted-foreground/60 hover:bg-primary/5 hover:text-muted-foreground/80 hover:border-border/30 z-0 shrink min-w-[120px] max-w-[220px] w-auto",
@@ -342,10 +402,23 @@ export function NoteTabs() {
                                             isActive ? "text-accent-full" : "text-muted-foreground/40 group-hover:text-muted-foreground/70"
                                         )} />
                                     ) : (
-                                        <FileText size={12} className={cn(
-                                            "shrink-0 ",
-                                            isActive ? "text-accent-full" : "text-muted-foreground/40 group-hover:text-muted-foreground/70"
-                                        )} />
+                                        <div
+                                            onClick={(e) => handleShowFolder(e, note)}
+                                            className={cn(
+                                                "flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[4px] transition-all duration-200 shadow-sm border border-black/5 dark:border-white/5 cursor-pointer",
+                                                isActive ? "bg-background/80" : "bg-primary/5 hover:bg-primary/10 inactive-folder-icon"
+                                            )}
+                                            style={{
+                                                backgroundColor: getFolderForNote(note).color ? `${getFolderForNote(note).color}20` : undefined,
+                                            }}
+                                            title={`Show in Sidebar (Folder: ${getFolderForNote(note).name})`}
+                                        >
+                                            <Ionicons
+                                                name={(getFolderForNote(note).icon as any) || "folder"}
+                                                size={10}
+                                                style={{ color: getFolderForNote(note).color || 'var(--accent-full)' }}
+                                            />
+                                        </div>
                                     )}
 
                                     <span style={{ direction: general.appDirection === 'rtl' ? 'rtl' : 'ltr' }} className={cn(
@@ -357,8 +430,11 @@ export function NoteTabs() {
 
                                     <div
                                         className={cn(
-                                            "flex p-0.5 shrink-0 items-center justify-center rounded ",
-                                            isActive ? "opacity-85 hover:bg-primary/10 hover:text-primary" : "opacity-0 group-hover:opacity-60 hover:bg-sidebar-accent hover:text-foreground"
+                                            "flex p-0.5 shrink-0 items-center justify-center rounded",
+                                            isActive
+                                                ? "relative opacity-85 bg-transparent text-primary/75 hover:text-primary hover:bg-foreground/10"
+                                                : "absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 bg-sidebar hover:text-foreground",
+                                            !isActive && (general.appDirection === 'rtl' ? "left-1.5" : "right-1.5")
                                         )}
                                         onClick={(e) => handleClose(e, tab.noteId)}
                                     >
@@ -410,14 +486,16 @@ export function NoteTabs() {
                         </ContextMenu>
                     );
                 })}
-                <button
+                <Button
                     type="button"
-                    onClick={() => useSearchStore.getState().setIsOpen(true)}
-                    className="h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground/40 hover:bg-primary/10 hover:text-primary active:scale-90 transition-all cursor-pointer shrink-0  "
-                    title="Open Search (Cmd+P)"
+                    variant="ghost"
+                    size="icon-xs"
+                    onClick={() => createAndNavigate()}
+                    className="text-muted-foreground/40 hover:bg-primary/10 hover:text-primary active:scale-90 transition-all cursor-pointer shrink-0"
+                    title="New Note (Cmd+N)"
                 >
                     <Plus size={14} strokeWidth={2.5} />
-                </button>
+                </Button>
             </div>
             {renderModals()}
         </div>

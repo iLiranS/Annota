@@ -171,6 +171,11 @@ export const GENERATED_CORE_STYLES = `
     border-left: 2px solid var(--accent-color) !important;
 }
 
+.ProseMirror strong,
+.ProseMirror b {
+    font-weight: 600;
+}
+
 .ProseMirror p {
     margin: 0 !important;
     padding-top: calc(var(--editor-paragraph-spacing) * 0.5) !important;
@@ -354,6 +359,11 @@ export const GENERATED_CORE_STYLES = `
     .ProseMirror {
         padding-left: 36px;
     }
+
+    .ProseMirror[dir="rtl"] {
+        padding-left: 16px;
+        padding-right: 36px;
+    }
 }
 
 /* The floating handle element rendered by DragHandle.configure({ render }) */
@@ -375,6 +385,10 @@ export const GENERATED_CORE_STYLES = `
     /* Must sit above code-block stacking contexts (z-index: 2) */
     z-index: 10;
     position: absolute;
+}
+
+.annota-drag-handle.rtl {
+    transform: translate(4px, 2px);
 }
 
 
@@ -563,18 +577,18 @@ code.hljs {
     padding: 2px 6px;
     border-radius: 4px;
     font-family: 'FiraCode', 'SF Mono', Monaco, Consolas, 'Courier New', monospace;
-    font-size: calc(var(--editor-font-size) * 0.8125);
+    font-size: calc(var(--editor-font-size) * 0.85);
 }
 
 .ProseMirror pre {
     padding: 12px 12px 12px 12px;
-    border-radius: 12px;
+    border-radius: 8px;
     overflow-x: auto;
     margin: 0;
     margin-bottom: var(--editor-paragraph-spacing);
     font-family: 'FiraCode', 'SF Mono', Monaco, Consolas, 'Courier New', monospace;
-    font-size: calc(var(--editor-font-size) * 0.8125);
-    line-height: 1.6;
+    font-size: calc(var(--editor-font-size) * 0.875);
+    line-height: 1.7;
     position: relative;
     direction: ltr !important;
     unicode-bidi: isolate !important;
@@ -600,7 +614,7 @@ code.hljs {
     direction: ltr !important;
     unicode-bidi: isolate !important;
     background-color: var(--code-block-bg);
-    border-radius: 12px;
+    border-radius: 8px;
     display: grid;
     grid-template-columns: auto 1fr;
 }
@@ -698,8 +712,8 @@ code.hljs {
     pointer-events: none;
     flex-shrink: 0;
     font-family: 'FiraCode', 'SF Mono', Monaco, Consolas, 'Courier New', monospace;
-    font-size: calc(var(--editor-font-size) * 0.8125);
-    line-height: 1.6;
+    font-size: calc(var(--editor-font-size) * 0.875);
+    line-height: 1.7;
 }
 
 .code-gutter span {
@@ -720,7 +734,7 @@ code.hljs {
     background-color: var(--code-block-bg) !important;
     border: 1px solid var(--border-color) !important;
     padding: 16px !important;
-    border-radius: 12px !important;
+    border-radius: 8px !important;
     color: var(--text-color) !important;
     white-space: pre-wrap !important;
     word-break: break-all !important;
@@ -745,14 +759,14 @@ code.hljs {
 .ProseMirror.print-mode .code-block-wrapper pre {
     background: none !important;
     border: none !important;
-    padding: 12px 12px 12px 0 !important; /* Left padding is handled by the gutter */
+    padding: 12px 12px 12px 0 !important;
+    /* Left padding is handled by the gutter */
     margin: 0 !important;
     border-radius: 0 !important;
 }
 
 .ProseMirror.print-mode .code-block-wrapper .code-gutter {
     padding: 12px 8px 12px 12px !important;
-    border-right: 1px solid color-mix(in srgb, var(--border-color) 40%, transparent) !important;
     margin-right: 8px !important;
 }
 
@@ -887,7 +901,7 @@ code.hljs {
     margin: 0;
     margin-bottom: calc(var(--editor-paragraph-spacing));
     margin-top: calc(var(--editor-paragraph-spacing));
-    border-radius: 12px;
+    border-radius: 8px;
     border: 1px solid color-mix(in srgb, var(--border-color), transparent 50%);
     overflow: hidden;
     background-color: transparent;
@@ -948,13 +962,12 @@ code.hljs {
     border: none;
     color: var(--text-color);
     cursor: pointer;
-    opacity: 0.5;
+    opacity: 0.25;
     margin-inline-end: 8px;
 }
 
 .details-menu-btn:hover {
-    background-color: rgba(128, 128, 128, 0.1);
-    opacity: 1;
+    opacity: 0.7;
 }
 
 @media (max-width: 768px) {
@@ -1144,16 +1157,14 @@ code.hljs {
 .flashcard-block {
     margin: var(--editor-paragraph-spacing) 0;
     border: 1.5px solid var(--border-color);
-    border-radius: 12px;
+    border-radius: 8px;
     background: var(--bg-color);
     overflow: hidden;
     position: relative;
     user-select: none;
 }
 
-.flashcard-block:hover {
-    border-color: var(--border-color);
-}
+
 
 /* --- Header --- */
 .flashcard-header {
@@ -1360,7 +1371,6 @@ code.hljs {
     align-items: center;
     text-align: center;
     padding: 12px 20px 16px;
-    border-radius: 0;
     font-size: 18px;
     line-height: 1.5;
     color: var(--text-color);
@@ -1465,7 +1475,8 @@ code.hljs {
 
 /* --- Edit Pane --- */
 .flashcard-edit-pane {
-    padding: 12px 12px 48px 12px; /* Extra bottom padding for footer nav */
+    padding: 12px 12px 48px 12px;
+    /* Extra bottom padding for footer nav */
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -1625,13 +1636,11 @@ code.hljs {
     border: none;
     color: var(--text-color);
     cursor: pointer;
-    opacity: 0.5;
-    transition: all 0.15s ease;
+    opacity: 0.25;
 }
 
 .flashcard-menu-btn:hover {
-    background: color-mix(in srgb, var(--border-color), transparent 50%);
-    opacity: 1 !important;
+    opacity: 0.7 !important;
 }
 
 /* Selected state */
@@ -2257,21 +2266,19 @@ body.is-resizing-image {
     border: none;
     color: var(--text-color);
     cursor: pointer;
-    opacity: 0.4;
+    opacity: 0.25;
     /* Always visible */
-    transition: opacity 0.2s ease, background-color 0.2s ease;
+    transition: opacity 0.2s ease;
     z-index: 10;
 }
 
 
 .quote-menu-btn:hover {
-    background-color: rgba(128, 128, 128, 0.1);
-    opacity: 1 !important;
+    opacity: 0.7 !important;
 }
 
 @media (max-width: 768px) {
     .quote-menu-btn {
-        opacity: 0.5;
         top: 6px;
         inset-inline-end: 6px;
         width: 24px;

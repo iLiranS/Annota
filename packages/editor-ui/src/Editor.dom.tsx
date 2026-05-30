@@ -529,6 +529,7 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
             let isMounted = true;
             getExtensions({
                 placeholder,
+                direction,
                 onMathSelected: (latex, isBlock) => {
                     setCurrentLatex(latex);
                     setIsBlockMath(isBlock);
@@ -587,6 +588,7 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
             return () => { isMounted = false; };
         }, [
             placeholder,
+            direction,
         ]);
 
         useImperativeHandle(ref, () => ({

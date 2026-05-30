@@ -7,6 +7,8 @@ function generateId() {
 }
 
 export const CustomHeading = TiptapHeading.extend({
+    marks: 'italic underline strike link textStyle highlight code',
+
     addAttributes() {
         return {
             ...this.parent?.(),

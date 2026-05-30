@@ -277,6 +277,7 @@ export async function setupEditor(options: any) {
         const extensions = await getExtensions({
             placeholder,
             editorOrigin,
+            direction,
             onMathSelected: (latex, isBlock, pos) => {
                 if (window.editor) {
                     if (typeof pos === 'number') {

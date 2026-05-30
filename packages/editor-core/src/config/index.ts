@@ -123,6 +123,7 @@ export function resolveFontFamily(value?: string) {
 export const getBaseExtensions = (options: {
     placeholder?: string;
     editorOrigin?: string;
+    direction?: string;
     onMathSelected?: (latex: string, isBlock: boolean, pos: number) => void;
     onImageSelected?: (data: { images: any[], currentIndex: number }) => void;
     onOpenFile?: (data: { localPath: string; mimeType: string }) => void;
@@ -279,6 +280,9 @@ export const getExtensions = async (options: Parameters<typeof getBaseExtensions
                         // and prevents showing it at top-left before the first hover/recalculation.
                         el.style.visibility = 'hidden';
                         el.classList.add('annota-drag-handle');
+                        if (options.direction === 'rtl') {
+                            el.classList.add('rtl');
+                        }
                         el.setAttribute('aria-label', 'Drag to reorder block');
                         el.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 16" width="10" height="16" fill="currentColor"><circle cx="3" cy="2" r="1.2"/><circle cx="7" cy="2" r="1.2"/><circle cx="3" cy="6" r="1.2"/><circle cx="7" cy="6" r="1.2"/><circle cx="3" cy="10" r="1.2"/><circle cx="7" cy="10" r="1.2"/><circle cx="3" cy="14" r="1.2"/><circle cx="7" cy="14" r="1.2"/></svg>`;
 
@@ -288,7 +292,7 @@ export const getExtensions = async (options: Parameters<typeof getBaseExtensions
                         return el;
                     },
                     computePositionConfig: {
-                        placement: 'left-start',
+                        placement: options.direction === 'rtl' ? 'right-start' : 'left-start',
                         strategy: 'absolute',
                     },
                     onNodeChange({ node, editor: _editor }) {

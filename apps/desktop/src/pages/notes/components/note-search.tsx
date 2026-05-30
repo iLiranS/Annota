@@ -52,19 +52,7 @@ export function NoteSearch({
 
     return (
         <div className="absolute top-5 left-1/2 -translate-x-1/2 z-50 animate-in fade-in zoom-in-95 duration-200 origin-top-right">
-            <div className="flex items-center gap-1 p-0.5 px-1  min-w-[220px]
-                        bg-linear-to-r from-white/85 via-white/75 to-white/85
-            rounded-2xl
-            backdrop-blur-2xl
-            border border-white/20
-            ring-1 ring-white/10
-            shadow-[0_14px_30px_rgba(15,23,42,0.35)]
-
-            dark:bg-linear-to-r dark:from-stone-900/70 dark:via-stone-900/40 dark:to-stone-900/70
-            dark:border-white/10
-            dark:ring-white/5
-            dark:shadow-[0_18px_40px_rgba(0,0,0,0.6)]
-            ">
+            <div className="flex items-center gap-1 p-0.5 px-1 min-w-[220px] bg-popover border border-border rounded-xl shadow-md">
                 <div className="relative flex-1 group">
                     <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground/30" />
                     <Input

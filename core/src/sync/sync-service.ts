@@ -523,6 +523,7 @@ export async function syncPush(masterKey: string, saltHex: string): Promise<bool
     store.setSyncing(true);
     try {
         await performSyncPush(masterKey, saltHex);
+        store.setLastSyncTime(new Date().toISOString());
         return true;
     } catch (err) {
         const msg = err instanceof Error ? err.message : 'Unknown error';
@@ -549,6 +550,7 @@ export async function syncPull(masterKey: string, saltHex: string): Promise<bool
     store.setSyncing(true);
     try {
         await performSyncPull(masterKey, saltHex);
+        store.setLastSyncTime(new Date().toISOString());
         return true;
     } catch (err) {
         const msg = err instanceof Error ? err.message : 'Unknown error';

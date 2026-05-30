@@ -32,14 +32,22 @@ const RTL_LANGS = new Set([
 export function MainNavbar() {
     const navigate = useNavigate();
     const location = useLocation();
-    const { isSyncing } = useSyncStore()
+    const { isSyncing, lastSyncTime } = useSyncStore()
     const { session } = useUserStore();
     const { general, updateGeneralSettings } = useSettingsStore();
     const { open, setOpen } = useSidebar();
     const setSettingsOpen = useNavigationStore(s => s.setSettingsOpen);
+    const setSelectedFolderId = useNavigationStore(s => s.setSelectedFolderId);
+    const setSidebarTab = useNavigationStore(s => s.setSidebarTab);
     const activeTab = useNavigationStore(s => s.sidebarTab);
     const setActiveTab = useNavigationStore(s => s.setSidebarTab);
     const { colors } = useAppTheme();
+
+    const handleGoHome = () => {
+        setSelectedFolderId('root');
+        setSidebarTab('notes');
+        navigate('/notes');
+    };
 
     const handleTabChange = (tab: SidebarTab) => {
         setActiveTab(tab);
@@ -72,6 +80,18 @@ export function MainNavbar() {
     const windowControlsPaddingClass = needsWindowControlsPadding
         ? (windowControlsSide === "left" ? "pl-20" : "pr-20")
         : undefined;
+
+    const formattedTime = useMemo(() => {
+        if (!lastSyncTime) return "Last synced: Never";
+        try {
+            const date = new Date(lastSyncTime);
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `Last synced: ${hours}:${minutes}`;
+        } catch {
+            return "Last synced: Never";
+        }
+    }, [lastSyncTime]);
 
 
 
@@ -189,26 +209,25 @@ export function MainNavbar() {
 
                 )}
             >
-                {/* Navigation Arrows */}
+                {/* Navigation & Home Wrapper */}
                 <div className={cn("flex items-center shrink-0")}>
-                    <div className={cn("flex items-center gap-0.5 rounded-md border border-sidebar-border/40 bg-sidebar-accent/20 p-0.5")}>
+                    <div className={cn(
+                        "flex items-center gap-0.5 rounded-md border border-sidebar-border/40 bg-sidebar-accent/20 p-0.5",
+                        isRtl ? "flex-row-reverse" : "flex-row"
+                    )}>
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    disabled={isRtl ? !canGoForward : !canGoBack}
-                                    className={cn(
-                                        "h-6 w-6 rounded-[4px] text-muted-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-foreground",
-                                        (isRtl ? !canGoForward : !canGoBack) && "opacity-30 cursor-not-allowed"
-                                    )}
-                                    onClick={() => navigate(isRtl ? 1 : -1)}
+                                    className="h-6 w-6 rounded-[4px] text-muted-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-foreground"
+                                    onClick={handleGoHome}
                                 >
-                                    <Ionicons name="chevron-back" size={15} />
+                                    <Ionicons name="home-outline" size={15} />
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent side="bottom" className="text-[10px]">
-                                {isRtl ? "Forward" : "Back"}
+                                Home
                             </TooltipContent>
                         </Tooltip>
 
@@ -217,18 +236,38 @@ export function MainNavbar() {
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    disabled={isRtl ? !canGoBack : !canGoForward}
+                                    disabled={!canGoBack}
                                     className={cn(
                                         "h-6 w-6 rounded-[4px] text-muted-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-foreground",
-                                        (isRtl ? !canGoBack : !canGoForward) && "opacity-30 cursor-not-allowed"
+                                        !canGoBack && "opacity-30 cursor-not-allowed"
                                     )}
-                                    onClick={() => navigate(isRtl ? -1 : 1)}
+                                    onClick={() => navigate(-1)}
                                 >
-                                    <Ionicons name="chevron-forward" size={15} />
+                                    <Ionicons name={isRtl ? "chevron-forward" : "chevron-back"} size={15} />
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent side="bottom" className="text-[10px]">
-                                {isRtl ? "Back" : "Forward"}
+                                Back
+                            </TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    disabled={!canGoForward}
+                                    className={cn(
+                                        "h-6 w-6 rounded-[4px] text-muted-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-foreground",
+                                        !canGoForward && "opacity-30 cursor-not-allowed"
+                                    )}
+                                    onClick={() => navigate(1)}
+                                >
+                                    <Ionicons name={isRtl ? "chevron-back" : "chevron-forward"} size={15} />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom" className="text-[10px]">
+                                Forward
                             </TooltipContent>
                         </Tooltip>
                     </div>
@@ -281,7 +320,7 @@ export function MainNavbar() {
                         </TooltipTrigger>
 
                         <TooltipContent>
-                            {isSyncing ? "Syncing..." : "Force Sync"}
+                            {isSyncing ? "Syncing..." : formattedTime}
                         </TooltipContent>
                     </Tooltip>
 

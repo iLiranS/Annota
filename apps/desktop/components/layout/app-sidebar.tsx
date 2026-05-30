@@ -165,7 +165,7 @@ export function AppSidebar() {
         const id = folderId || 'root';
         setSelectedFolderId(id);
         setActiveTab('notes');
-        if (id === DAILY_NOTES_FOLDER_ID || id === TRASH_FOLDER_ID) {
+        if (id === DAILY_NOTES_FOLDER_ID || id === TRASH_FOLDER_ID || id === 'root') {
             navigateWithHistory('/notes');
         }
     }, [setSelectedFolderId, setActiveTab, navigateWithHistory]);

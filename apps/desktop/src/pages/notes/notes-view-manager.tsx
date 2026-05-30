@@ -2,6 +2,7 @@ import { DAILY_NOTES_FOLDER_ID, TRASH_FOLDER_ID, useNavigationStore, useNotesSto
 import { useParams } from "react-router-dom";
 import { DailyNotesCalendar } from "./components/daily-notes-calendar";
 import { TrashContent } from "./components/trash-content";
+import { AnnotaHome } from "./components/annota-home";
 import NoteEditor from "./note-editor";
 import NotesEmpty from "./notes-empty";
 
@@ -33,6 +34,11 @@ export default function NotesViewManager() {
     // 3. Priority: Trash Content
     if (selectedFolderId === TRASH_FOLDER_ID) {
         return <TrashContent />;
+    }
+
+    // 3.5 Priority: Root (Annota) Home Page
+    if (selectedFolderId === 'root' || !selectedFolderId) {
+        return <AnnotaHome />;
     }
 
     // 4. Priority: Fallback: Empty State
