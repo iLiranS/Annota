@@ -277,7 +277,7 @@ export function AiSidebar({ width, isResizing, isFloating }: { width?: number, i
                         <p className="text-xs text-muted-foreground leading-relaxed">
                             {activeProvider === 'ollama'
                                 ? "Annota uses local AI. Please ensure Ollama is running on your machine."
-                                : `Please configure your ${activeProvider} API key in the AI Models settings.`
+                                : `Please configure your ${activeProvider} API key in the AI settings.`
                             }
                         </p>
                     </div>

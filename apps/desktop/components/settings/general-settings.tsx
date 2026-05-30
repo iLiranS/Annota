@@ -9,7 +9,6 @@ import {
     Hash,
     List,
     PanelRight,
-    Sparkles,
 } from "lucide-react";
 
 import { SettingItem } from "./setting-item";
@@ -38,23 +37,6 @@ export function GeneralSettings() {
 
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-            {/* AI Features Section */}
-            <section className="space-y-3">
-                <h4 className="text-[11px] font-bold text-muted-foreground tracking-wider uppercase px-1">
-                    AI Features
-                </h4>
-                <div className="bg-card border rounded-2xl overflow-hidden shadow-sm">
-                    <SettingItem
-                        label="Enable AI Features"
-                        description="Access AI writing assistant, summaries, and flashcards"
-                        icon={<Sparkles size={18} />}
-                        iconBg="bg-indigo-600"
-                        onClick={() => updateGeneralSettings({ isAiEnabled: !general.isAiEnabled })}
-                        action={<Toggle enabled={general.isAiEnabled} />}
-                    />
-                </div>
-            </section>
-
             {/* Calendar & Date Section */}
             <section className="space-y-3">
                 <h4 className="text-[11px] font-bold text-muted-foreground tracking-wider uppercase px-1">

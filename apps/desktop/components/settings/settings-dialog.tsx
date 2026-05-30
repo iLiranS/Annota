@@ -55,7 +55,7 @@ const tabs: SettingsTab[] = [
     },
     {
         id: "ai",
-        label: "AI Models",
+        label: "AI",
         icon: <Bot className="h-4 w-4 text-white" />,
         iconBg: "bg-blue-600",
     },

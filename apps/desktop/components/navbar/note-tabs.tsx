@@ -313,6 +313,9 @@ export function NoteTabs() {
                 .group:hover .inactive-folder-icon {
                     opacity: 1;
                 }
+                .folder-tab-icon:hover {
+                    background-color: var(--folder-color-hover) !important;
+                }
             `}</style>
             <div
                 data-tauri-drag-region
@@ -405,12 +408,13 @@ export function NoteTabs() {
                                         <div
                                             onClick={(e) => handleShowFolder(e, note)}
                                             className={cn(
-                                                "flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[4px] transition-all duration-200 shadow-sm border border-black/5 dark:border-white/5 cursor-pointer",
+                                                "flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[4px] shadow-sm border border-black/5 dark:border-white/5 cursor-pointer folder-tab-icon hover:scale-105",
                                                 isActive ? "bg-background/80" : "bg-primary/5 hover:bg-primary/10 inactive-folder-icon"
                                             )}
                                             style={{
                                                 backgroundColor: getFolderForNote(note).color ? `${getFolderForNote(note).color}20` : undefined,
-                                            }}
+                                                "--folder-color-hover": getFolderForNote(note).color ? `${getFolderForNote(note).color}40` : undefined,
+                                            } as React.CSSProperties}
                                             title={`Show in Sidebar (Folder: ${getFolderForNote(note).name})`}
                                         >
                                             <Ionicons

@@ -1,27 +1,19 @@
+import { FileCard } from "@/components/notes/file-card";
 import { ImageGallery } from "@/components/notes/image-gallery";
 import { NoteListItem } from "@/components/notes/note-list-item";
 import { Button } from "@/components/ui/button";
-import {
-    ContextMenu,
-    ContextMenuContent,
-    ContextMenuItem,
-    ContextMenuTrigger,
-} from "@/components/ui/context-menu";
 import { Ionicons } from "@/components/ui/ionicons";
 import { useCreateNote } from "@/hooks/use-create-note";
 import { useSmartNavigate } from "@/hooks/use-smart-navigate";
-import { copyImageToClipboard, writeText } from "@/lib/clipboard";
 import {
     DAILY_NOTES_FOLDER_ID,
     getPaginatedMedia,
-    getPlatformAdapters,
-    resolveLocalUri,
     useNotesStore,
     useUserStore,
     type MediaItem
 } from "@annota/core";
 import { format } from "date-fns";
-import { BookOpen, Calendar, Copy, FileText, History, Home, Layers, Loader2, Plus, Tags } from "lucide-react";
+import { BookOpen, Calendar, FileText, History, Home, Layers, Loader2, Plus, Tags } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -252,10 +244,16 @@ export function AnnotaHome() {
                                 ) : (
                                     <div className="grid grid-cols-3 gap-2 overflow-y-auto compact-scrollbar max-h-full pr-0.5">
                                         {mediaItems.map((item) => (
-                                            <RecentMediaCard
+                                            <FileCard
                                                 key={item.id}
-                                                item={item}
+                                                id={item.id}
+                                                type={item.fileType}
+                                                name={item.localPath}
+                                                size={item.sizeBytes}
+                                                locations={item.notes}
+                                                onNavigate={(noteId) => navigate(`/notes/${noteId}`)}
                                                 onSelectImage={(src, title) => setSelectedImage({ src, title })}
+                                                showLocations={true}
                                             />
                                         ))}
                                     </div>
@@ -282,103 +280,4 @@ export function AnnotaHome() {
     );
 }
 
-function RecentMediaCard({
-    item,
-    onSelectImage,
-}: {
-    item: MediaItem;
-    onSelectImage: (src: string, title: string) => void;
-}) {
-    const [imgUrl, setImgUrl] = useState<string | null>(null);
-
-    useEffect(() => {
-        let cancelled = false;
-        if (item.fileType === "image") {
-            resolveLocalUri(item.localPath).then((absPath) => {
-                if (cancelled) return;
-                getPlatformAdapters()
-                    .fileSystem.toImageUrl(absPath)
-                    .then((url) => {
-                        if (!cancelled) setImgUrl(url);
-                    });
-            });
-        }
-        return () => {
-            cancelled = true;
-        };
-    }, [item.localPath, item.fileType]);
-
-    const handleCopy = async (e: React.MouseEvent) => {
-        e.stopPropagation();
-        if (item.fileType === "image") {
-            if (imgUrl) {
-                await copyImageToClipboard(imgUrl, item.id);
-            } else {
-                const adapters = getPlatformAdapters();
-                const absPath = await resolveLocalUri(item.localPath);
-                const url = await adapters.fileSystem.toImageUrl(absPath);
-                await copyImageToClipboard(url, item.id);
-            }
-        } else {
-            const absPath = await resolveLocalUri(item.localPath);
-            await writeText(absPath);
-        }
-    };
-
-    const handleCardClick = async () => {
-        const adapters = getPlatformAdapters();
-        const absPath = await resolveLocalUri(item.localPath);
-        if (item.fileType === "pdf") {
-            adapters.fileSystem.openFile(absPath);
-        } else if (item.fileType === "image" && imgUrl) {
-            onSelectImage(imgUrl, item.localPath);
-        }
-    };
-
-    return (
-        <ContextMenu>
-            <ContextMenuTrigger asChild>
-                <div
-                    onClick={handleCardClick}
-                    className="group relative aspect-square bg-background/60 rounded-lg overflow-hidden border border-border/40 hover:border-primary/30 transition-all cursor-pointer w-full flex items-center justify-center"
-                    title={item.localPath}
-                >
-                    {item.fileType === "image" ? (
-                        imgUrl ? (
-                            <img
-                                src={imgUrl}
-                                alt={item.localPath}
-                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-108"
-                                loading="lazy"
-                            />
-                        ) : (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground/20" />
-                        )
-                    ) : (
-                        <div className="flex flex-col items-center gap-0.5">
-                            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:scale-105 transition-transform">
-                                <FileText size={16} />
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Hover overlay for basic info */}
-                    <div className="absolute inset-0 bg-black/90 transition-opacity duration-300 opacity-0 group-hover:opacity-100 flex flex-col justify-end p-1.5 pb-2 text-white">
-                        <span className="text-[7px] font-bold text-white/55 uppercase tracking-wide">
-                            {item.fileType}
-                        </span>
-                        <span className="text-[8px] font-bold truncate w-full">
-                            {item.localPath.split(/[/\\]/).pop()}
-                        </span>
-                    </div>
-                </div>
-            </ContextMenuTrigger>
-            <ContextMenuContent className="w-40">
-                <ContextMenuItem onClick={handleCopy}>
-                    <Copy className="mr-2 h-3.5 w-3.5" />
-                    <span>Copy</span>
-                </ContextMenuItem>
-            </ContextMenuContent>
-        </ContextMenu>
-    );
-}
+// RecentMediaCard was replaced by the reusable FileCard component
