@@ -206,7 +206,16 @@ export function MediaSearchBrowser({
     );
 }
 
-function NotesModal({
+function formatFileSize(bytes: number | null | undefined): string {
+    if (bytes === null || bytes === undefined) return '';
+    const kb = bytes / 1024;
+    if (kb >= 1000) {
+        return `${(kb / 1024).toFixed(1)} MB`;
+    }
+    return `${kb < 1 ? kb.toFixed(1) : Math.round(kb)} KB`;
+}
+
+export function NotesModal({
     visible,
     item,
     colors,
@@ -241,7 +250,7 @@ function NotesModal({
             console.error('Failed to copy media:', err);
         }
     };
-    console.log(item)
+
 
     return (
         <Modal
@@ -256,7 +265,15 @@ function NotesModal({
             >
                 <View style={[styles.modalContent, { backgroundColor: colors.card, borderColor: colors.border }]}>
                     <View style={styles.modalHeader}>
-                        <Text style={[styles.modalTitle, { color: colors.text }]}>References</Text>
+                        <View style={{ gap: 2 }}>
+                            <Text style={[styles.modalTitle, { color: colors.text }]}>References</Text>
+                            {item.sizeBytes !== null && item.sizeBytes !== undefined && (
+                                <Text style={{ fontSize: 12, color: colors.text + '60', fontWeight: '500' }}>
+                                    {formatFileSize(item.sizeBytes)}
+                                </Text>
+                            )}
+                        </View>
+
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
                             <HapticPressable
                                 onPress={handleCopy}
@@ -327,7 +344,7 @@ function NotesModal({
     );
 }
 
-function MediaCard({
+export function MediaCard({
     item,
     colors,
     itemSize,

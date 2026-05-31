@@ -34,7 +34,7 @@ export default function Index() {
                 console.error('Error checking last viewed note:', e);
             }
 
-            router.replace('/Notes');
+            router.replace('/home');
         };
 
         checkLastViewedNote();

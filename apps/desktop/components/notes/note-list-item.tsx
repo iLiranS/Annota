@@ -61,6 +61,7 @@ export function NoteListItem({
     const { tags } = useNotesStore();
     const { general } = useSettingsStore();
     const setSidebarTab = useNavigationStore(s => s.setSidebarTab);
+    const setSelectedTagId = useNavigationStore(s => s.setSelectedTagId);
     const navigateSmart = useSmartNavigate();
     const activeNoteId = useActiveNoteId();
     const isNoteActive = isActive !== undefined ? isActive : activeNoteId === note.id;
@@ -179,8 +180,9 @@ export function NoteListItem({
                                                         }}
                                                         onClick={(e) => {
                                                             e.stopPropagation();
+                                                            setSelectedTagId(t.id);
                                                             setSidebarTab('notes');
-                                                            navigateSmart(`/notes?tagId=${t.id}`);
+                                                            navigateSmart(`/notes`);
                                                         }}
                                                     >
                                                         {t.name}

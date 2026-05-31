@@ -96,6 +96,7 @@ export default function AppLayout() {
           <RevenueCatInitializer />
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="index" options={{ headerShown: false, animation: 'none' }} />
+            <Stack.Screen name="home" options={{ headerShown: false, animation: 'none' }} />
             <Stack.Screen name="modal" options={{ headerShown: false, presentation: 'modal', title: 'Modal' }} />
             <Stack.Screen name="settings" options={{ headerShown: false, presentation: 'modal', title: 'Settings' }} />
             <Stack.Screen name="changelog" options={{ headerShown: false, presentation: 'modal', title: 'Changelog' }} />

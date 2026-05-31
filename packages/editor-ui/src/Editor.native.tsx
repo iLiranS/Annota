@@ -7,7 +7,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { Keyboard, Linking, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Alert, Keyboard, Linking, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useEditorBridgeHandlers } from './hooks/useEditorBridgeHandlers';
 import { useSharedEditorUI } from './hooks/useSharedEditorUI';
@@ -300,9 +300,53 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
             try {
                 let fileUri: string | undefined;
                 if (source === 'library') {
+                    const permission = await ImagePicker.getMediaLibraryPermissionsAsync();
+                    let granted = permission.granted;
+                    let canAskAgain = permission.canAskAgain;
+
+                    if (!granted && canAskAgain) {
+                        const requestResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                        granted = requestResult.granted;
+                        canAskAgain = requestResult.canAskAgain;
+                    }
+
+                    if (!granted) {
+                        Alert.alert(
+                            "Permission Required",
+                            "Please enable photos/library access in your system settings to insert images from your gallery.",
+                            [
+                                { text: "Cancel", style: "cancel" },
+                                { text: "Open Settings", onPress: () => Linking.openSettings() }
+                            ]
+                        );
+                        return false;
+                    }
+
                     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 1 });
                     if (!result.canceled) fileUri = result.assets[0].uri;
                 } else if (source === 'camera') {
+                    const permission = await ImagePicker.getCameraPermissionsAsync();
+                    let granted = permission.granted;
+                    let canAskAgain = permission.canAskAgain;
+
+                    if (!granted && canAskAgain) {
+                        const requestResult = await ImagePicker.requestCameraPermissionsAsync();
+                        granted = requestResult.granted;
+                        canAskAgain = requestResult.canAskAgain;
+                    }
+
+                    if (!granted) {
+                        Alert.alert(
+                            "Permission Required",
+                            "Please enable camera access in your system settings to take photos.",
+                            [
+                                { text: "Cancel", style: "cancel" },
+                                { text: "Open Settings", onPress: () => Linking.openSettings() }
+                            ]
+                        );
+                        return false;
+                    }
+
                     const result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 1 });
                     if (!result.canceled) fileUri = result.assets[0].uri;
                 } else if (source === 'document') {

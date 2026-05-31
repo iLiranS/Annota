@@ -450,7 +450,7 @@ export function AiSidebar({ width, isResizing, isFloating }: { width?: number, i
             ) : (
                 <>
                     <div
-                        data-tauri-drag-region
+
                         className="flex-1 min-h-0 overflow-y-auto premium-scrollbar"
                         onScroll={handleChatScroll}
                     >

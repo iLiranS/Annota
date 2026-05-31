@@ -334,6 +334,14 @@ export default function Sidebar({ onNavigate, ...props }: SidebarProps & React.C
         navigateToNotes(DAILY_NOTES_FOLDER_ID);
     };
 
+    const navigateToHome = () => {
+        if (pathname.toLowerCase() === '/home') {
+            closeDrawer();
+            return;
+        }
+        resetStackAndReplace('/home');
+    };
+
     const navigateToTasks = () => {
         if (pathname.toLowerCase() === '/tasks') {
             closeDrawer();
@@ -415,9 +423,10 @@ export default function Sidebar({ onNavigate, ...props }: SidebarProps & React.C
                     {/* Top Section */}
                     <View style={styles.section}>
                         <SidebarItem
-                            renderIcon={() => <Ionicons name="documents" size={22} color={colors.primary} />}
-                            label="All Notes"
-                            onPress={() => navigateToNotes()}
+                            renderIcon={() => <Ionicons name="home-outline" size={22} color={colors.primary} />}
+                            label="Home"
+                            isActive={pathname.toLowerCase() === '/home'}
+                            onPress={navigateToHome}
                         />
 
 
@@ -519,6 +528,11 @@ export default function Sidebar({ onNavigate, ...props }: SidebarProps & React.C
 
                     {/* Folders Section */}
                     <View style={styles.section}>
+                        <SidebarItem
+                            renderIcon={() => <Ionicons name="documents-outline" size={22} color={colors.primary} />}
+                            label="All Notes"
+                            onPress={() => navigateToNotes()}
+                        />
                         <View style={styles.folderContainer}>
                             {topLevelFolders.map((folder: any) => {
                                 const nested = getFoldersInFolder(folder.id).filter(f => !f.isSystem);
