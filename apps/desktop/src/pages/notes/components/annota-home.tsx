@@ -1,4 +1,3 @@
-import { AnnotaIcon } from "@/components/custom-ui/annota-icon";
 import { FileCard } from "@/components/notes/file-card";
 import { ImageGallery } from "@/components/notes/image-gallery";
 import { NoteListItem } from "@/components/notes/note-list-item";
