@@ -171,15 +171,31 @@ const SUMMARY_TRIGGERS = /\b(summarize|summary|overview|tldr|what is this|what('
 /**
  * Detects intent and routes to the appropriate trimming strategy.
  */
-export function prepareNoteContext(noteContent: string, query: string): string {
-    // If small enough, send all
-    if (noteContent.length < 15000) return noteContent;
+export function prepareNoteContext(noteContent: string, query: string, budget = 12000): string {
+    // If the entire note fits within the budget, return it completely intact
+    if (noteContent.length <= budget) return noteContent;
 
-    if (SUMMARY_TRIGGERS.test(query)) {
-        return structuredSample(noteContent, 12000);
+    const HEADER_SIZE = 500;
+
+    // Ensure budget is large enough to hold header plus some content
+    if (budget <= HEADER_SIZE + 50) {
+        return noteContent.slice(0, budget);
     }
 
-    return extractRelevantChunks(noteContent, query, 8000);
+    const introHeader = noteContent.slice(0, HEADER_SIZE);
+    const restOfContent = noteContent.slice(HEADER_SIZE);
+
+    const separator = '\n\n[...]\n\n';
+    const remainingBudget = budget - HEADER_SIZE - separator.length;
+
+    let restProcessed = '';
+    if (SUMMARY_TRIGGERS.test(query)) {
+        restProcessed = structuredSample(restOfContent, remainingBudget);
+    } else {
+        restProcessed = extractRelevantChunks(restOfContent, query, remainingBudget);
+    }
+
+    return introHeader + separator + restProcessed;
 }
 
 /**
@@ -356,19 +372,26 @@ export async function buildBulkContext(
 
     // 4. Fetch and Trim Content for the Deep Dive targets
     let deepDiveText = `\n[DEEP DIVE: RELEVANT NOTE CONTENTS]\n`;
-    const budgetPerNote = Math.floor(DEEP_DIVE_BUDGET / (deepDiveTargets.length || 1));
 
-    for (const note of deepDiveTargets) {
+    // Weighted splits: 60/25/15 for 3 notes, 70/30 for 2, 100 for 1
+    const weightsMap: Record<number, number[]> = {
+        1: [1.0],
+        2: [0.7, 0.3],
+        3: [0.6, 0.25, 0.15]
+    };
+    const weights = weightsMap[deepDiveTargets.length] || [1.0 / (deepDiveTargets.length || 1)];
+
+    for (let i = 0; i < deepDiveTargets.length; i++) {
+        const note = deepDiveTargets[i];
         if (!note) continue;
+
+        const weight = weights[i] ?? (1.0 / (deepDiveTargets.length || 1));
+        const budgetPerNote = Math.floor(DEEP_DIVE_BUDGET * weight);
+
         const rawContent = await fetchNoteContent(note.id);
-        const processedContent = prepareNoteContext(rawContent, query);
+        const processedContent = prepareNoteContext(rawContent, query, budgetPerNote);
 
-        // Ensure we don't blow the per-note budget
-        const finalChunk = processedContent.length > budgetPerNote
-            ? structuredSample(processedContent, budgetPerNote)
-            : processedContent;
-
-        deepDiveText += `\n--- Note: ${note.title} ---\n${finalChunk}\n`;
+        deepDiveText += `\n--- Note: ${note.title} ---\n${processedContent}\n`;
     }
 
     return directoryText + deepDiveText;

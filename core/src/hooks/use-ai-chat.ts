@@ -1,7 +1,7 @@
 import { asc, eq } from 'drizzle-orm';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { StreamChunk } from '../ai/types';
-import { buildBulkContext, buildHistoryWindow, prepareNoteContext, purifyNoteHtml } from '../ai/utils';
+import { buildBulkContext, buildHistoryWindow, purifyNoteHtml } from '../ai/utils';
 import {
     aiChats,
     AiMessage,
@@ -382,28 +382,40 @@ export function useAiChat(chatId: string | null) {
                     const relevantIds = await SearchRepository.findRelevantNoteIds(content);
 
                     if (relevantIds.length > 0) {
-                        // Fetch metadata + content for the top matches
-                        const contextParts: string[] = [];
-                        for (const noteId of relevantIds) {
-                            const [meta, body] = await Promise.all([
-                                db.select({ title: noteMetadata.title })
-                                    .from(noteMetadata)
-                                    .where(eq(noteMetadata.id, noteId))
-                                    .get(),
-                                db.select({ content: noteContent.content })
+                        // Fetch metadata for discovered notes
+                        const discoveredNotes = (
+                            await Promise.all(
+                                relevantIds.map(noteId =>
+                                    db.select({
+                                        id: noteMetadata.id,
+                                        title: noteMetadata.title,
+                                        tags: noteMetadata.tags,
+                                        preview: noteMetadata.preview,
+                                        updatedAt: noteMetadata.updatedAt,
+                                    })
+                                        .from(noteMetadata)
+                                        .where(eq(noteMetadata.id, noteId))
+                                        .get()
+                                )
+                            )
+                        ).filter(Boolean);
+
+                        if (discoveredNotes.length > 0) {
+                            const fetchContent = async (noteId: string) => {
+                                const result = await db.select({ content: noteContent.content })
                                     .from(noteContent)
                                     .where(eq(noteContent.id, noteId))
-                                    .get()
-                            ]);
+                                    .get();
+                                return purifyNoteHtml(result?.content || '');
+                            };
 
-                            const title = meta?.title || 'Untitled';
-                            const raw = body?.content || '';
-                            const clean = purifyNoteHtml(raw);
-                            const trimmed = prepareNoteContext(clean, content);
-                            contextParts.push(`--- Note: ${title} ---\n${trimmed}`);
+                            liveNoteContext = await buildBulkContext(
+                                content,
+                                discoveredNotes,
+                                fetchContent,
+                                (q, ids) => SearchRepository.findRelevantNoteIds(q, ids)
+                            );
                         }
-
-                        liveNoteContext = `[AUTO-DISCOVERED RELEVANT NOTES]\n${contextParts.join('\n\n')}`;
                     }
                 } catch (ftsError) {
                     console.warn('[AI] FTS auto-discovery failed, proceeding without context:', ftsError);
