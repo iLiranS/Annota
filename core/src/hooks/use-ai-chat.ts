@@ -435,24 +435,22 @@ export function useAiChat(chatId: string | null) {
 
             // Apply sliding window to the updated history
             const providerHistory = buildHistoryWindow(updatedHistory, 4000);
-            const compactHistoryContext = providerHistory.flatMap((message, index) => {
-                const match = message.content.match(/\n\n\[(Previous assistant context: [\s\S]+)\]$/);
-                return match ? [{ index, role: message.role, context: match[1] }] : [];
-            });
+            const systemInstructions = AI_ACTION_PROMPTS[effectiveMode as keyof typeof AI_ACTION_PROMPTS] || null;
+
+            // Calculate total history length
+            const historyText = providerHistory.map(m => `${m.role}: ${m.content}`).join('\n');
+            const historyChars = historyText.length;
+            const historyTokens = Math.ceil(historyChars / 2);
 
             console.log('\n================ 🤖 AI Request Debug ================');
             console.log('Query:', content);
             console.log('Context Mode:', effectiveMode);
-            console.log('Provider History Messages:', providerHistory.length);
-            console.log('Context Size:', liveNoteContext.length, 'chars');
+            console.log('System Instruction Size:', systemInstructions ? `${systemInstructions.length} chars` : '0 chars (null)');
+            console.log(`Provider History: ${providerHistory.length} messages (${historyChars} chars, ~${historyTokens} tokens)`);
             console.log('Provider History Payload:', providerHistory.map(({ role, content }) => ({ role, content })));
-            if (compactHistoryContext.length > 0) {
-                console.log('Compact History Context:', compactHistoryContext);
-            }
+            console.log('Context Size:', liveNoteContext.length, 'chars');
             console.log('Full Context Payload:', liveNoteContext);
             console.log('=====================================================\n');
-
-            const systemInstructions = AI_ACTION_PROMPTS[effectiveMode as keyof typeof AI_ACTION_PROMPTS] || null;
 
             await adapter.sendMessage(
                 providerHistory,

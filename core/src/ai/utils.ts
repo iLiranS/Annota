@@ -35,9 +35,17 @@ function compactReasoningContext(reasoningContent: string, maxChars = 420): stri
 }
 
 function buildProviderHistoryMessage(message: AiMessage): AiMessage {
+    let cleanContent = message.content || '';
+    const MAX_MESSAGE_CHARS = 4000; // Cap at 4,000 characters (~2,000 tokens) to prevent single-turn bloat
+
+    if (cleanContent.length > MAX_MESSAGE_CHARS) {
+        cleanContent = cleanContent.slice(0, MAX_MESSAGE_CHARS) + '\n\n[... message truncated due to length ...]';
+    }
+
     if (message.role !== 'assistant') {
         return {
             ...message,
+            content: cleanContent,
             reasoningContent: null,
             toolCalls: null,
         };
@@ -60,8 +68,8 @@ function buildProviderHistoryMessage(message: AiMessage): AiMessage {
     return {
         ...message,
         content: processParts.length > 0
-            ? `${message.content}\n\n[Previous assistant context: ${processParts.join('; ')}]`
-            : message.content,
+            ? `${cleanContent}\n\n[Previous assistant context: ${processParts.join('; ')}]`
+            : cleanContent,
         reasoningContent: null,
         toolCalls: null,
     };
@@ -84,7 +92,11 @@ export function buildHistoryWindow(messages: AiMessage[], tokenBudget = 3000): A
 
     for (let i = conversational.length - 1; i >= 0; i--) {
         const estimated = estimateTokens(conversational[i].content); // safer estimate for multilingual support
-        if (tokens + estimated > tokenBudget) break;
+        
+        // Always include the latest message so we never send an empty window
+        const isLatest = i === conversational.length - 1;
+        if (!isLatest && tokens + estimated > tokenBudget) break;
+
         window.unshift(conversational[i]);
         tokens += estimated;
     }
@@ -120,29 +132,112 @@ export function extractRelevantChunks(noteContent: string, query: string, budget
         score: [...queryWords].filter(w => c.text.toLowerCase().includes(w)).length
     }));
 
-    const hasMatches = scored.some(c => c.score > 0);
-    if (!hasMatches) {
-        return structuredSample(noteContent, budget);
+    const selectedIndices = new Set<number>();
+    let currentLength = 0;
+
+    // 1. Skeleton Pool (30% budget allocation)
+    const skeletonBudget = Math.floor(budget * 0.3);
+    const numSkeletonChunks = Math.min(Math.floor(skeletonBudget / CHUNK_SIZE), chunks.length);
+
+    if (numSkeletonChunks > 0) {
+        if (numSkeletonChunks === 1) {
+            const idx = Math.floor(chunks.length / 2);
+            if (currentLength + chunks[idx].text.length <= budget) {
+                selectedIndices.add(idx);
+                currentLength += chunks[idx].text.length;
+            }
+        } else {
+            const stride = (chunks.length - 1) / (numSkeletonChunks - 1);
+            for (let k = 0; k < numSkeletonChunks; k++) {
+                const idx = Math.max(0, Math.min(chunks.length - 1, Math.round(k * stride)));
+                if (!selectedIndices.has(idx) && currentLength + chunks[idx].text.length <= budget) {
+                    selectedIndices.add(idx);
+                    currentLength += chunks[idx].text.length;
+                }
+            }
+        }
     }
 
-    // Take top chunks + their neighbors for coherence
-    const topIndices = new Set(
-        [...scored]
-            .sort((a, b) => b.score - a.score)
-            .slice(0, 6)
-            .flatMap(c => [c.index - 1, c.index, c.index + 1])
-            .filter(i => i >= 0 && i < chunks.length)
-    );
+    // 2. Dense Match Pool (Keyword matches + proximity expansion)
+    const sortedByScore = [...scored]
+        .filter(c => c.score > 0)
+        .sort((a, b) => b.score - a.score);
 
+    const denseMatchIndices = new Set<number>();
+
+    // Seed matching chunks and their neighbors
+    for (const chunk of sortedByScore) {
+        const group = [chunk.index - 1, chunk.index, chunk.index + 1]
+            .filter(i => i >= 0 && i < chunks.length);
+
+        for (const idx of group) {
+            if (selectedIndices.has(idx)) {
+                // Already in selectedIndices (e.g., from skeleton phase).
+                // We add it to denseMatchIndices to grow the bubble from here.
+                denseMatchIndices.add(idx);
+            } else if (currentLength + chunks[idx].text.length <= budget) {
+                selectedIndices.add(idx);
+                denseMatchIndices.add(idx);
+                currentLength += chunks[idx].text.length;
+            }
+        }
+    }
+
+    // Expand outward from denseMatchIndices to form contiguous bubbles
+    let expanded = true;
+    while (expanded && currentLength < budget) {
+        expanded = false;
+        const candidates = new Set<number>();
+        for (const idx of denseMatchIndices) {
+            if (idx > 0 && !selectedIndices.has(idx - 1)) {
+                candidates.add(idx - 1);
+            }
+            if (idx < chunks.length - 1 && !selectedIndices.has(idx + 1)) {
+                candidates.add(idx + 1);
+            }
+        }
+
+        if (candidates.size === 0) break;
+
+        // Sort candidates to prioritize those closest to high-scoring matched indices
+        const sortedCandidates = Array.from(candidates).sort((a, b) => {
+            const distA = Math.min(...sortedByScore.map(s => Math.abs(s.index - a)));
+            const distB = Math.min(...sortedByScore.map(s => Math.abs(s.index - b)));
+            return distA - distB;
+        });
+
+        for (const idx of sortedCandidates) {
+            if (!selectedIndices.has(idx) && currentLength + chunks[idx].text.length <= budget) {
+                selectedIndices.add(idx);
+                denseMatchIndices.add(idx);
+                currentLength += chunks[idx].text.length;
+                expanded = true;
+            }
+        }
+    }
+
+    // 3. Fallback: If budget still remains, fill from the beginning of the note
+    for (let idx = 0; idx < chunks.length; idx++) {
+        if (!selectedIndices.has(idx) && currentLength + chunks[idx].text.length <= budget) {
+            selectedIndices.add(idx);
+            currentLength += chunks[idx].text.length;
+        }
+    }
+
+    // 4. Re-join selected chunks chronologically
     const selected = chunks
-        .filter(c => topIndices.has(c.index))
+        .filter(c => selectedIndices.has(c.index))
         .sort((a, b) => a.index - b.index);
 
-    // Re-join, respecting budget
     let result = '';
-    for (const chunk of selected) {
-        if ((result + chunk.text).length > budget) break;
-        result += (result ? '\n\n' : '') + chunk.text;
+    for (let i = 0; i < selected.length; i++) {
+        if (i === 0) {
+            result = selected[i].text;
+        } else if (selected[i].index === selected[i - 1].index + 1) {
+            result += selected[i].text;
+        } else {
+            result += '\n\n[...]\n\n' + selected[i].text;
+        }
     }
     return result;
 }
@@ -332,7 +427,7 @@ export async function buildBulkContext(
     findFtsWinners: (query: string, noteIds: string[]) => Promise<string[]>,
     totalBudget = 15000
 ): Promise<string> {
-    const DIRECTORY_BUDGET = 3000;
+    const DIRECTORY_BUDGET = selectedNotes.length === 1 ? 200 : 3000;
     const DEEP_DIVE_BUDGET = totalBudget - DIRECTORY_BUDGET;
 
     const folderNoteIds = selectedNotes.map(n => n.id);
