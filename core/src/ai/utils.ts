@@ -1,12 +1,156 @@
 import { AiMessage } from '../db/schema';
 import { stripHtml } from '../utils/html';
 
-function estimateTokens(value: string): number {
+export type ContextBuildMode = 'auto' | 'summary' | 'full' | 'rewrite';
+
+type ContextModeConfig = {
+    globalInputBudgetTokens: number;
+    systemReserveTokens: number;
+    historyTargetTokens: number;
+    historyFloorTokens: number;
+    liveContextMaxTokens: number;
+    manualContextMaxTokens: number;
+    directoryMaxTokens: number;
+    singleNoteDirectoryMaxTokens: number;
+    skeletonShare: number;
+    skeletonMaxTokens: number;
+    maxDeepDiveNotes: number;
+    autoDiscover: boolean;
+};
+
+type ContextBlock = {
+    text: string;
+    priority: number;
+    order: number;
+    section: string;
+    allowTruncate?: boolean;
+};
+
+export type ContextBudgetConfig = ContextModeConfig;
+
+export type ContextBuildMetrics = {
+    estimatedTokens: number;
+    truncatedSections: string[];
+    selectedNoteIds: string[];
+    chunkCount: number;
+    skeletonCount: number;
+    directoryTokens: number;
+    deepDiveTokens: number;
+};
+
+export type BulkContextResult = {
+    text: string;
+    metrics: ContextBuildMetrics;
+};
+
+type NoteContextMetadata = {
+    id: string;
+    title?: string | null;
+    tags?: string | null;
+    preview?: string | null;
+    updatedAt?: Date | string | number | null;
+};
+
+const GLOBAL_INPUT_BUDGET_TOKENS = 10000;
+const SYSTEM_RESERVE_TOKENS = 1000;
+const DEFAULT_HISTORY_TARGET_TOKENS = 2500;
+const DEFAULT_HISTORY_FLOOR_TOKENS = 1200;
+const CHARS_PER_TOKEN_ESTIMATE = 2;
+const TRUNCATION_MARKER = '\n\n[... truncated to fit context budget ...]';
+
+const MODE_CONFIGS: Record<ContextBuildMode, Omit<ContextModeConfig, 'directoryMaxTokens' | 'singleNoteDirectoryMaxTokens'>> = {
+    auto: {
+        globalInputBudgetTokens: GLOBAL_INPUT_BUDGET_TOKENS,
+        systemReserveTokens: SYSTEM_RESERVE_TOKENS,
+        historyTargetTokens: DEFAULT_HISTORY_TARGET_TOKENS,
+        historyFloorTokens: DEFAULT_HISTORY_FLOOR_TOKENS,
+        liveContextMaxTokens: 6500,
+        manualContextMaxTokens: 1800,
+        skeletonShare: 0.15,
+        skeletonMaxTokens: 700,
+        maxDeepDiveNotes: 3,
+        autoDiscover: true,
+    },
+    summary: {
+        globalInputBudgetTokens: GLOBAL_INPUT_BUDGET_TOKENS,
+        systemReserveTokens: SYSTEM_RESERVE_TOKENS,
+        historyTargetTokens: 2200,
+        historyFloorTokens: DEFAULT_HISTORY_FLOOR_TOKENS,
+        liveContextMaxTokens: 6800,
+        manualContextMaxTokens: 2200,
+        skeletonShare: 0.28,
+        skeletonMaxTokens: 1000,
+        maxDeepDiveNotes: 3,
+        autoDiscover: true,
+    },
+    full: {
+        globalInputBudgetTokens: GLOBAL_INPUT_BUDGET_TOKENS,
+        systemReserveTokens: SYSTEM_RESERVE_TOKENS,
+        historyTargetTokens: 1600,
+        historyFloorTokens: 1000,
+        liveContextMaxTokens: 8000,
+        manualContextMaxTokens: 3500,
+        skeletonShare: 0.20,
+        skeletonMaxTokens: 900,
+        maxDeepDiveNotes: 5,
+        autoDiscover: true,
+    },
+    rewrite: {
+        globalInputBudgetTokens: GLOBAL_INPUT_BUDGET_TOKENS,
+        systemReserveTokens: SYSTEM_RESERVE_TOKENS,
+        historyTargetTokens: DEFAULT_HISTORY_TARGET_TOKENS,
+        historyFloorTokens: DEFAULT_HISTORY_FLOOR_TOKENS,
+        liveContextMaxTokens: 5000,
+        manualContextMaxTokens: 3500,
+        skeletonShare: 0.10,
+        skeletonMaxTokens: 500,
+        maxDeepDiveNotes: 3,
+        autoDiscover: false,
+    },
+};
+
+export function estimateContextTokens(value: string): number {
     return Math.ceil(value.length / 2);
 }
 
 function compactWhitespace(value: string): string {
     return value.replace(/\s+/g, ' ').trim();
+}
+
+function normalizeMode(mode: ContextBuildMode = 'auto'): ContextBuildMode {
+    return MODE_CONFIGS[mode] ? mode : 'auto';
+}
+
+export function getContextBudgetConfig(
+    mode: ContextBuildMode = 'auto',
+    selectedNoteCount = 0
+): ContextBudgetConfig {
+    const base = MODE_CONFIGS[normalizeMode(mode)];
+    return {
+        ...base,
+        directoryMaxTokens: selectedNoteCount <= 1 ? 200 : 1200,
+        singleNoteDirectoryMaxTokens: 200,
+    };
+}
+
+export function capTextToTokenBudget(value: string, tokenBudget: number, section = 'context'): { text: string; truncated: boolean } {
+    if (!value || tokenBudget <= 0) {
+        return { text: '', truncated: Boolean(value) };
+    }
+
+    if (estimateContextTokens(value) <= tokenBudget) {
+        return { text: value.trim(), truncated: false };
+    }
+
+    const maxChars = Math.max(0, tokenBudget * CHARS_PER_TOKEN_ESTIMATE - TRUNCATION_MARKER.length - 3);
+    if (maxChars <= 0) {
+        return { text: `[${section} omitted to fit context budget]`, truncated: true };
+    }
+
+    return {
+        text: `${truncateAtWord(value, maxChars)}${TRUNCATION_MARKER}`,
+        truncated: true,
+    };
 }
 
 function truncateAtWord(value: string, maxChars: number): string {
@@ -91,7 +235,7 @@ export function buildHistoryWindow(messages: AiMessage[], tokenBudget = 3000): A
     let tokens = 0;
 
     for (let i = conversational.length - 1; i >= 0; i--) {
-        const estimated = estimateTokens(conversational[i].content); // safer estimate for multilingual support
+        const estimated = estimateContextTokens(conversational[i].content); // safer estimate for multilingual support
         
         // Always include the latest message so we never send an empty window
         const isLatest = i === conversational.length - 1;
@@ -113,133 +257,229 @@ export function buildHistoryWindow(messages: AiMessage[], tokenBudget = 3000): A
     );
 }
 
+function packContextBlocks(blocks: ContextBlock[], tokenBudget: number): { text: string; truncatedSections: string[]; selectedCount: number } {
+    const selected: ContextBlock[] = [];
+    const truncatedSections: string[] = [];
+    let usedTokens = 0;
+
+    const prioritized = [...blocks]
+        .filter(block => block.text.trim().length > 0)
+        .sort((a, b) => b.priority - a.priority || a.order - b.order);
+
+    for (const block of prioritized) {
+        const estimated = estimateContextTokens(block.text);
+        const remaining = tokenBudget - usedTokens;
+        if (remaining <= 0) {
+            truncatedSections.push(block.section);
+            continue;
+        }
+
+        if (estimated <= remaining) {
+            selected.push(block);
+            usedTokens += estimated;
+            continue;
+        }
+
+        if (block.allowTruncate && remaining > 30) {
+            const capped = capTextToTokenBudget(block.text, remaining, block.section);
+            if (capped.text) {
+                selected.push({ ...block, text: capped.text });
+                usedTokens += estimateContextTokens(capped.text);
+            }
+            truncatedSections.push(block.section);
+        } else {
+            truncatedSections.push(block.section);
+        }
+    }
+
+    return {
+        text: selected
+            .sort((a, b) => a.order - b.order)
+            .map(block => block.text.trim())
+            .filter(Boolean)
+            .join('\n\n'),
+        truncatedSections: Array.from(new Set(truncatedSections)),
+        selectedCount: selected.length,
+    };
+}
+
+function getQueryWords(query: string): string[] {
+    return Array.from(new Set(
+        query
+            .toLowerCase()
+            .split(/\W+/)
+            .map(word => word.trim())
+            .filter(word => word.length > 3)
+    ));
+}
+
+function extractOutlineEntry(line: string): string | null {
+    const clean = line.trim();
+    if (clean.length < 3 || clean.length > 160) return null;
+
+    const markdownHeading = clean.match(/^#{1,6}\s+(.+)$/);
+    if (markdownHeading?.[1]) {
+        return truncateAtWord(markdownHeading[1], 120);
+    }
+
+    const detailsHeading = clean.match(/^\[DETAILS:\s*(.+?)\]$/i);
+    if (detailsHeading?.[1]) {
+        return truncateAtWord(detailsHeading[1].replace(/^#{1,6}\s+/, ''), 120);
+    }
+
+    return null;
+}
+
+function extractHeadingMap(noteContent: string, maxLines = 12): string {
+    const seen = new Set<string>();
+    const headings: string[] = [];
+    const lines = noteContent.split(/\n+/);
+
+    for (const line of lines) {
+        const heading = extractOutlineEntry(compactWhitespace(line));
+        const key = heading?.toLowerCase();
+        if (!heading || !key || seen.has(key)) continue;
+
+        seen.add(key);
+        headings.push(`- ${heading}`);
+        if (headings.length >= maxLines) break;
+    }
+
+    return headings.length > 0 ? `[NOTE OUTLINE]\n${headings.join('\n')}` : '';
+}
+
+function buildAnchorSamples(noteContent: string, tokenBudget: number): string {
+    if (tokenBudget <= 30 || !noteContent.trim()) return '';
+    const maxChars = tokenBudget * CHARS_PER_TOKEN_ESTIMATE;
+    const sampleChars = Math.max(120, Math.floor(maxChars / 3));
+    const clean = compactWhitespace(noteContent);
+    if (clean.length <= maxChars) return `[NOTE ANCHORS]\n${clean}`;
+
+    const middleStart = Math.max(0, Math.floor(clean.length / 2) - Math.floor(sampleChars / 2));
+    const samples = [
+        `Start: ${truncateAtWord(clean.slice(0, sampleChars), sampleChars)}`,
+        `Middle: ${truncateAtWord(clean.slice(middleStart, middleStart + sampleChars), sampleChars)}`,
+        `End: ${truncateAtWord(clean.slice(-sampleChars), sampleChars)}`,
+    ];
+
+    return `[NOTE ANCHORS]\n${samples.join('\n')}`;
+}
+
+function buildHybridSkeleton(noteContent: string, budgetTokens: number): string {
+    if (budgetTokens <= 0) return '';
+
+    const headingMap = extractHeadingMap(noteContent);
+    const blocks: ContextBlock[] = [];
+    let order = 0;
+
+    if (headingMap) {
+        blocks.push({
+            text: headingMap,
+            priority: 62,
+            order: order++,
+            section: 'note-outline',
+            allowTruncate: true,
+        });
+    }
+
+    const headingCount = headingMap ? headingMap.split('\n').length - 1 : 0;
+    if (headingCount < 4) {
+        blocks.push({
+            text: buildAnchorSamples(noteContent, Math.max(60, Math.floor(budgetTokens * 0.55))),
+            priority: headingMap ? 70 : 85,
+            order: order++,
+            section: 'note-anchors',
+            allowTruncate: true,
+        });
+    }
+
+    return packContextBlocks(blocks, budgetTokens).text;
+}
+
 /**
  * Extracts relevant chunks from a note based on keyword overlap with the query.
  * Best for specific questions.
  */
-export function extractRelevantChunks(noteContent: string, query: string, budget = 8000): string {
-    const CHUNK_SIZE = 500;
+export function extractRelevantChunks(
+    noteContent: string,
+    query: string,
+    budget = 8000,
+    mode: ContextBuildMode = 'auto',
+    includeSkeleton = true
+): string {
+    const CHUNK_SIZE = 700;
     const chunks: { text: string; index: number }[] = [];
 
     for (let i = 0; i < noteContent.length; i += CHUNK_SIZE) {
         chunks.push({ text: noteContent.slice(i, i + CHUNK_SIZE), index: i / CHUNK_SIZE });
     }
 
-    const queryWords = new Set(query.toLowerCase().split(/\W+/).filter(w => w.length > 3));
+    const queryWords = new Set(getQueryWords(query));
 
     const scored = chunks.map(c => ({
         ...c,
         score: [...queryWords].filter(w => c.text.toLowerCase().includes(w)).length
     }));
 
-    const selectedIndices = new Set<number>();
-    let currentLength = 0;
-
-    // 1. Skeleton Pool (30% budget allocation)
-    const skeletonBudget = Math.floor(budget * 0.3);
-    const numSkeletonChunks = Math.min(Math.floor(skeletonBudget / CHUNK_SIZE), chunks.length);
-
-    if (numSkeletonChunks > 0) {
-        if (numSkeletonChunks === 1) {
-            const idx = Math.floor(chunks.length / 2);
-            if (currentLength + chunks[idx].text.length <= budget) {
-                selectedIndices.add(idx);
-                currentLength += chunks[idx].text.length;
-            }
-        } else {
-            const stride = (chunks.length - 1) / (numSkeletonChunks - 1);
-            for (let k = 0; k < numSkeletonChunks; k++) {
-                const idx = Math.max(0, Math.min(chunks.length - 1, Math.round(k * stride)));
-                if (!selectedIndices.has(idx) && currentLength + chunks[idx].text.length <= budget) {
-                    selectedIndices.add(idx);
-                    currentLength += chunks[idx].text.length;
-                }
-            }
-        }
-    }
-
-    // 2. Dense Match Pool (Keyword matches + proximity expansion)
     const sortedByScore = [...scored]
         .filter(c => c.score > 0)
         .sort((a, b) => b.score - a.score);
 
-    const denseMatchIndices = new Set<number>();
+    const selectedIndices = new Set<number>();
+    const maxBudgetTokens = budget;
+    const blocks: ContextBlock[] = [];
+    let order = 0;
+    const config = getContextBudgetConfig(mode);
+    const skeletonTokens = Math.min(
+        config.skeletonMaxTokens,
+        Math.floor(maxBudgetTokens * config.skeletonShare)
+    );
 
-    // Seed matching chunks and their neighbors
-    for (const chunk of sortedByScore) {
-        const group = [chunk.index - 1, chunk.index, chunk.index + 1]
-            .filter(i => i >= 0 && i < chunks.length);
-
-        for (const idx of group) {
-            if (selectedIndices.has(idx)) {
-                // Already in selectedIndices (e.g., from skeleton phase).
-                // We add it to denseMatchIndices to grow the bubble from here.
-                denseMatchIndices.add(idx);
-            } else if (currentLength + chunks[idx].text.length <= budget) {
-                selectedIndices.add(idx);
-                denseMatchIndices.add(idx);
-                currentLength += chunks[idx].text.length;
-            }
-        }
-    }
-
-    // Expand outward from denseMatchIndices to form contiguous bubbles
-    let expanded = true;
-    while (expanded && currentLength < budget) {
-        expanded = false;
-        const candidates = new Set<number>();
-        for (const idx of denseMatchIndices) {
-            if (idx > 0 && !selectedIndices.has(idx - 1)) {
-                candidates.add(idx - 1);
-            }
-            if (idx < chunks.length - 1 && !selectedIndices.has(idx + 1)) {
-                candidates.add(idx + 1);
-            }
-        }
-
-        if (candidates.size === 0) break;
-
-        // Sort candidates to prioritize those closest to high-scoring matched indices
-        const sortedCandidates = Array.from(candidates).sort((a, b) => {
-            const distA = Math.min(...sortedByScore.map(s => Math.abs(s.index - a)));
-            const distB = Math.min(...sortedByScore.map(s => Math.abs(s.index - b)));
-            return distA - distB;
+    const skeleton = includeSkeleton ? buildHybridSkeleton(noteContent, skeletonTokens) : '';
+    if (skeleton) {
+        blocks.push({
+            text: skeleton,
+            priority: mode === 'summary' ? 95 : 72,
+            order: order++,
+            section: 'skeleton',
+            allowTruncate: true,
         });
-
-        for (const idx of sortedCandidates) {
-            if (!selectedIndices.has(idx) && currentLength + chunks[idx].text.length <= budget) {
-                selectedIndices.add(idx);
-                denseMatchIndices.add(idx);
-                currentLength += chunks[idx].text.length;
-                expanded = true;
-            }
-        }
     }
 
-    // 3. Fallback: If budget still remains, fill from the beginning of the note
-    for (let idx = 0; idx < chunks.length; idx++) {
-        if (!selectedIndices.has(idx) && currentLength + chunks[idx].text.length <= budget) {
+    for (const chunk of sortedByScore) {
+        const group = mode === 'summary'
+            ? [chunk.index]
+            : [chunk.index - 1, chunk.index, chunk.index + 1];
+
+        for (const idx of group.filter(i => i >= 0 && i < chunks.length)) {
+            if (selectedIndices.has(idx)) continue;
             selectedIndices.add(idx);
-            currentLength += chunks[idx].text.length;
+            blocks.push({
+                text: chunks[idx].text,
+                priority: idx === chunk.index ? 92 + chunk.score : 68 + chunk.score,
+                order: order++,
+                section: idx === chunk.index ? 'matched-chunk' : 'neighbor-chunk',
+                allowTruncate: true,
+            });
         }
     }
 
-    // 4. Re-join selected chunks chronologically
-    const selected = chunks
-        .filter(c => selectedIndices.has(c.index))
-        .sort((a, b) => a.index - b.index);
-
-    let result = '';
-    for (let i = 0; i < selected.length; i++) {
-        if (i === 0) {
-            result = selected[i].text;
-        } else if (selected[i].index === selected[i - 1].index + 1) {
-            result += selected[i].text;
-        } else {
-            result += '\n\n[...]\n\n' + selected[i].text;
+    if (mode === 'full' && chunks.length > 0) {
+        const anchorIndices = [0, Math.floor(chunks.length / 2), chunks.length - 1];
+        for (const idx of anchorIndices) {
+            if (idx < 0 || selectedIndices.has(idx)) continue;
+            selectedIndices.add(idx);
+            blocks.push({
+                text: chunks[idx].text,
+                priority: 55,
+                order: order++,
+                section: 'full-anchor-chunk',
+                allowTruncate: true,
+            });
         }
     }
-    return result;
+
+    return packContextBlocks(blocks, maxBudgetTokens).text;
 }
 
 /**
@@ -247,9 +487,10 @@ export function extractRelevantChunks(noteContent: string, query: string, budget
  * Best for summaries/overviews.
  */
 export function structuredSample(noteContent: string, budget = 10000): string {
-    if (noteContent.length <= budget) return noteContent;
+    if (estimateContextTokens(noteContent) <= budget) return noteContent;
 
-    const third = Math.floor(budget / 3);
+    const charBudget = budget * CHARS_PER_TOKEN_ESTIMATE;
+    const third = Math.floor(charBudget / 3);
     const midStart = Math.floor(noteContent.length / 2) - Math.floor(third / 2);
 
     return [
@@ -266,31 +507,51 @@ const SUMMARY_TRIGGERS = /\b(summarize|summary|overview|tldr|what is this|what('
 /**
  * Detects intent and routes to the appropriate trimming strategy.
  */
-export function prepareNoteContext(noteContent: string, query: string, budget = 12000): string {
+export function prepareNoteContext(
+    noteContent: string,
+    query: string,
+    budget = 12000,
+    mode: ContextBuildMode = 'auto'
+): string {
     // If the entire note fits within the budget, return it completely intact
-    if (noteContent.length <= budget) return noteContent;
+    if (estimateContextTokens(noteContent) <= budget) return noteContent;
 
-    const HEADER_SIZE = 500;
+    const config = getContextBudgetConfig(mode);
+    const skeletonBudget = Math.min(config.skeletonMaxTokens, Math.floor(budget * config.skeletonShare));
+    const contentBudget = Math.max(0, budget - skeletonBudget);
+    const blocks: ContextBlock[] = [];
+    let order = 0;
 
-    // Ensure budget is large enough to hold header plus some content
-    if (budget <= HEADER_SIZE + 50) {
-        return noteContent.slice(0, budget);
+    const skeleton = buildHybridSkeleton(noteContent, skeletonBudget);
+    if (skeleton) {
+        blocks.push({
+            text: skeleton,
+            priority: mode === 'summary' ? 80 : 58,
+            order: order++,
+            section: 'note-skeleton',
+            allowTruncate: true,
+        });
     }
 
-    const introHeader = noteContent.slice(0, HEADER_SIZE);
-    const restOfContent = noteContent.slice(HEADER_SIZE);
-
-    const separator = '\n\n[...]\n\n';
-    const remainingBudget = budget - HEADER_SIZE - separator.length;
-
-    let restProcessed = '';
     if (SUMMARY_TRIGGERS.test(query)) {
-        restProcessed = structuredSample(restOfContent, remainingBudget);
+        blocks.push({
+            text: structuredSample(noteContent, contentBudget),
+            priority: 82,
+            order: order++,
+            section: 'summary-sample',
+            allowTruncate: true,
+        });
     } else {
-        restProcessed = extractRelevantChunks(restOfContent, query, remainingBudget);
+        blocks.push({
+            text: extractRelevantChunks(noteContent, query, contentBudget, mode, false),
+            priority: 88,
+            order: order++,
+            section: 'relevant-chunks',
+            allowTruncate: true,
+        });
     }
 
-    return introHeader + separator + restProcessed;
+    return packContextBlocks(blocks, budget).text;
 }
 
 /**
@@ -307,7 +568,17 @@ export function purifyNoteHtml(html: string): string {
             const parser = new DOMParser();
             const doc = parser.parseFromString(html, 'text/html');
 
-            // 1. Math
+            // 1. Headings
+            doc.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach(el => {
+                const level = Number(el.tagName.slice(1)) || 2;
+                const headingText = (el.textContent || '').trim();
+                if (!headingText) return;
+
+                const textNode = doc.createTextNode(`\n${'#'.repeat(level)} ${headingText}\n`);
+                el.parentNode?.replaceChild(textNode, el);
+            });
+
+            // 2. Math
             doc.querySelectorAll('[data-latex]').forEach(el => {
                 const latex = el.getAttribute('data-latex');
                 if (latex) {
@@ -316,13 +587,13 @@ export function purifyNoteHtml(html: string): string {
                 }
             });
 
-            // 2. Code
+            // 3. Code
             doc.querySelectorAll('pre code').forEach(el => {
                 const lang = el.className.replace('language-', '') || 'text';
                 el.textContent = `\n\`\`\`${lang}\n${el.textContent}\n\`\`\`\n`;
             });
 
-            // 3. Tables - Convert to Markdown representation
+            // 4. Tables - Convert to Markdown representation
             doc.querySelectorAll('table').forEach(table => {
                 let tableMd = '\n\n';
                 const rows = Array.from(table.querySelectorAll('tr'));
@@ -342,7 +613,7 @@ export function purifyNoteHtml(html: string): string {
                 table.parentNode?.replaceChild(textNode, table);
             });
 
-            // 4. Mermaid Diagrams
+            // 5. Mermaid Diagrams
             doc.querySelectorAll('div[data-type="mermaid"]').forEach(el => {
                 const code = el.getAttribute('code');
                 if (code) {
@@ -351,7 +622,7 @@ export function purifyNoteHtml(html: string): string {
                 }
             });
 
-            // 5. Lists (Preserve structure)
+            // 6. Lists (Preserve structure)
             doc.querySelectorAll('ul').forEach(ul => {
                 const items = Array.from(ul.querySelectorAll(':scope > li'));
                 const listText = '\n' + items.map(li => `- ${li.textContent?.trim()}`).join('\n') + '\n';
@@ -366,20 +637,20 @@ export function purifyNoteHtml(html: string): string {
                 ol.parentNode?.replaceChild(textNode, ol);
             });
 
-            // 6. Flashcards
+            // 7. Flashcards
             doc.querySelectorAll('[data-fc]').forEach(fc => {
                 const title = fc.getAttribute('data-t') || 'Flashcards';
                 const cardsRaw = fc.getAttribute('data-c');
                 let cardsText = `### ${title}\n`;
                 if (cardsRaw) {
                     try {
-                        const cards = JSON.parse(cardsRaw);
-                        cards.forEach((card: any) => {
+                        const cards = JSON.parse(cardsRaw) as Array<{ front?: unknown; back?: unknown } | [unknown, unknown]>;
+                        cards.forEach((card) => {
                             const front = Array.isArray(card) ? card[0] : card.front;
                             const back = Array.isArray(card) ? card[1] : card.back;
-                            cardsText += `- Q: ${front}\n  A: ${back}\n`;
+                            cardsText += `- Q: ${String(front ?? '')}\n  A: ${String(back ?? '')}\n`;
                         });
-                    } catch (e) {
+                    } catch {
                         cardsText += fc.textContent || '';
                     }
                 } else {
@@ -389,7 +660,7 @@ export function purifyNoteHtml(html: string): string {
                 fc.parentNode?.replaceChild(textNode, fc);
             });
 
-            // 7. Details (Collapsible blocks)
+            // 8. Details (Collapsible blocks)
             const detailsNodes = Array.from(doc.querySelectorAll('div[data-type="details"], div.details-wrapper, details')).reverse();
             detailsNodes.forEach(details => {
                 const summaryEl = details.querySelector('div[data-type="detailsSummary"], div.details-summary, summary');
@@ -422,13 +693,18 @@ export function purifyNoteHtml(html: string): string {
  */
 export async function buildBulkContext(
     query: string,
-    selectedNotes: any[], // Your NoteMetadata type
+    selectedNotes: NoteContextMetadata[],
     fetchNoteContent: (noteId: string) => Promise<string>,
     findFtsWinners: (query: string, noteIds: string[]) => Promise<string[]>,
-    totalBudget = 15000
-): Promise<string> {
-    const DIRECTORY_BUDGET = selectedNotes.length === 1 ? 200 : 3000;
-    const DEEP_DIVE_BUDGET = totalBudget - DIRECTORY_BUDGET;
+    totalBudget = 6500,
+    mode: ContextBuildMode = 'auto'
+): Promise<BulkContextResult> {
+    const config = getContextBudgetConfig(mode, selectedNotes.length);
+    const directoryBudget = selectedNotes.length === 1
+        ? config.singleNoteDirectoryMaxTokens
+        : Math.min(config.directoryMaxTokens, Math.floor(totalBudget * 0.22));
+    const deepDiveBudget = Math.max(0, totalBudget - directoryBudget);
+    const truncatedSections: string[] = [];
 
     const folderNoteIds = selectedNotes.map(n => n.id);
 
@@ -438,56 +714,100 @@ export async function buildBulkContext(
     // 2. Map the winning IDs back to their metadata
     let deepDiveTargets = winnerIds
         .map(id => selectedNotes.find(n => n.id === id))
-        .filter(Boolean);
+        .filter((note): note is NoteContextMetadata => Boolean(note))
+        .slice(0, config.maxDeepDiveNotes);
 
-    console.log('[RAG] FTS Deep Dive Winners:', deepDiveTargets.map(n => n?.title));
+    console.log('[RAG] FTS Deep Dive Winners:', deepDiveTargets.map(n => n.title));
 
     // Fallback: If the user just says "Summarize this folder" and FTS finds no specific keywords, 
     // grab the 3 most recently updated notes.
     if (deepDiveTargets.length === 0) {
         deepDiveTargets = [...selectedNotes]
             .sort((a, b) => {
-                const dateA = a.updatedAt instanceof Date ? a.updatedAt : new Date(a.updatedAt);
-                const dateB = b.updatedAt instanceof Date ? b.updatedAt : new Date(b.updatedAt);
+                const dateA = a.updatedAt instanceof Date ? a.updatedAt : new Date(a.updatedAt || 0);
+                const dateB = b.updatedAt instanceof Date ? b.updatedAt : new Date(b.updatedAt || 0);
                 return dateB.getTime() - dateA.getTime();
             })
-            .slice(0, 3);
+            .slice(0, config.maxDeepDiveNotes);
+    } else if (mode === 'full' && deepDiveTargets.length < config.maxDeepDiveNotes) {
+        const existingIds = new Set(deepDiveTargets.map(note => note.id));
+        const additional = [...selectedNotes]
+            .filter(note => !existingIds.has(note.id))
+            .sort((a, b) => {
+                const dateA = a.updatedAt instanceof Date ? a.updatedAt : new Date(a.updatedAt || 0);
+                const dateB = b.updatedAt instanceof Date ? b.updatedAt : new Date(b.updatedAt || 0);
+                return dateB.getTime() - dateA.getTime();
+            })
+            .slice(0, config.maxDeepDiveNotes - deepDiveTargets.length);
+        deepDiveTargets = [...deepDiveTargets, ...additional];
     }
 
     // 3. Build the Directory (Lightweight context of EVERYTHING in the folder)
     let directoryText = `[FOLDER DIRECTORY]\n`;
+    let includedDirectoryItems = 0;
     for (const note of selectedNotes) {
-        const entry = `- "${note.title}" (Tags: ${note.tags}) | Preview: ${note.preview?.slice(0, 100)}...\n`;
-        if ((directoryText + entry).length > DIRECTORY_BUDGET) {
-            directoryText += `- ... and ${selectedNotes.length - directoryText.split('\n').length} more notes.\n`;
+        const preview = note.preview ? truncateAtWord(note.preview, 120) : 'No preview';
+        const tags = note.tags || 'none';
+        const entry = `- "${note.title || 'Untitled'}" (Tags: ${tags}) | Preview: ${preview}\n`;
+        if (estimateContextTokens(directoryText + entry) > directoryBudget) {
+            const remaining = selectedNotes.length - includedDirectoryItems;
+            if (remaining > 0) {
+                directoryText += `- ... and ${remaining} more notes.\n`;
+            }
+            truncatedSections.push('directory');
             break;
         }
         directoryText += entry;
+        includedDirectoryItems += 1;
     }
 
     // 4. Fetch and Trim Content for the Deep Dive targets
     let deepDiveText = `\n[DEEP DIVE: RELEVANT NOTE CONTENTS]\n`;
 
-    // Weighted splits: 60/25/15 for 3 notes, 70/30 for 2, 100 for 1
     const weightsMap: Record<number, number[]> = {
         1: [1.0],
         2: [0.7, 0.3],
-        3: [0.6, 0.25, 0.15]
+        3: [0.6, 0.25, 0.15],
+        4: [0.45, 0.25, 0.18, 0.12],
+        5: [0.4, 0.22, 0.16, 0.12, 0.1],
     };
     const weights = weightsMap[deepDiveTargets.length] || [1.0 / (deepDiveTargets.length || 1)];
+    let chunkCount = 0;
+    let skeletonCount = 0;
 
     for (let i = 0; i < deepDiveTargets.length; i++) {
         const note = deepDiveTargets[i];
         if (!note) continue;
 
         const weight = weights[i] ?? (1.0 / (deepDiveTargets.length || 1));
-        const budgetPerNote = Math.floor(DEEP_DIVE_BUDGET * weight);
+        const budgetPerNote = Math.floor(deepDiveBudget * weight);
 
         const rawContent = await fetchNoteContent(note.id);
-        const processedContent = prepareNoteContext(rawContent, query, budgetPerNote);
+        const processedContent = prepareNoteContext(rawContent, query, budgetPerNote, mode);
+        chunkCount += processedContent.includes('[...]') || processedContent.includes('[NOTE ANCHORS]') ? 1 : 0;
+        skeletonCount += processedContent.includes('[NOTE OUTLINE]') || processedContent.includes('[NOTE ANCHORS]') ? 1 : 0;
 
-        deepDiveText += `\n--- Note: ${note.title} ---\n${processedContent}\n`;
+        deepDiveText += `\n--- Note: ${note.title || 'Untitled'} ---\n${processedContent}\n`;
     }
 
-    return directoryText + deepDiveText;
+    const packed = packContextBlocks([
+        { text: directoryText, priority: 100, order: 0, section: 'directory', allowTruncate: true },
+        { text: deepDiveText, priority: 90, order: 1, section: 'deep-dive', allowTruncate: true },
+    ], totalBudget);
+
+    const text = packed.text;
+    truncatedSections.push(...packed.truncatedSections);
+
+    return {
+        text,
+        metrics: {
+            estimatedTokens: estimateContextTokens(text),
+            truncatedSections: Array.from(new Set(truncatedSections)),
+            selectedNoteIds: deepDiveTargets.map(note => note.id),
+            chunkCount: Math.max(chunkCount, packed.selectedCount > 0 ? deepDiveTargets.length : 0),
+            skeletonCount,
+            directoryTokens: estimateContextTokens(directoryText),
+            deepDiveTokens: estimateContextTokens(deepDiveText),
+        },
+    };
 }

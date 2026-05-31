@@ -1,7 +1,14 @@
 import { asc, eq } from 'drizzle-orm';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { StreamChunk } from '../ai/types';
-import { buildBulkContext, buildHistoryWindow, purifyNoteHtml } from '../ai/utils';
+import {
+    buildBulkContext,
+    buildHistoryWindow,
+    capTextToTokenBudget,
+    estimateContextTokens,
+    getContextBudgetConfig,
+    purifyNoteHtml
+} from '../ai/utils';
 import {
     aiChats,
     AiMessage,
@@ -23,6 +30,17 @@ type ThinkTagState = {
 };
 
 const THINK_TAGS = ['<think>', '</think>'];
+const SELECTED_CHAT_CONTEXT_MAX_CHARS = 1000;
+
+function truncateSelectedChatContext(value: string): string {
+    const clean = value.trim();
+    if (clean.length <= SELECTED_CHAT_CONTEXT_MAX_CHARS) return clean;
+
+    const sliced = clean.slice(0, SELECTED_CHAT_CONTEXT_MAX_CHARS);
+    const lastSpace = sliced.lastIndexOf(' ');
+    const trimmed = sliced.slice(0, lastSpace > SELECTED_CHAT_CONTEXT_MAX_CHARS * 0.7 ? lastSpace : SELECTED_CHAT_CONTEXT_MAX_CHARS).trim();
+    return `${trimmed}...\n[Selected text truncated to ${SELECTED_CHAT_CONTEXT_MAX_CHARS} characters]`;
+}
 
 function splitThinkTaggedText(value: string, state: ThinkTagState, flush = false): { text: string; reasoning: string } {
     let input = state.pending + value;
@@ -106,8 +124,6 @@ export function useAiChat(chatId: string | null) {
     const [isStreaming, setIsStreaming] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const abortControllerRef = useRef<AbortController | null>(null);
-
-    const { } = useAiStore();
 
     // Throttling stream updates to avoid React render lag
     const streamingContentRef = useRef('');
@@ -256,7 +272,7 @@ export function useAiChat(chatId: string | null) {
     ) => {
         const { overrideChatId, selectedFolderNotes, mode = 'auto', isRetry = false, manualContext, onFinish } = options;
 
-        let effectiveMode = mode;
+        const effectiveMode = mode;
 
         const effectiveChatId = overrideChatId || chatId;
         if (!effectiveChatId) return;
@@ -349,37 +365,92 @@ export function useAiChat(chatId: string | null) {
         setError(null);
 
         try {
-            // Context Preparation with Tiered Trimming
-            let liveNoteContext = '';
+            const systemInstructions = AI_ACTION_PROMPTS[effectiveMode as keyof typeof AI_ACTION_PROMPTS] || null;
+            const budgetConfig = getContextBudgetConfig(effectiveMode, selectedFolderNotes?.length ?? 0);
+            const historyBudget = Math.min(
+                budgetConfig.historyTargetTokens,
+                Math.max(
+                    budgetConfig.historyFloorTokens,
+                    budgetConfig.globalInputBudgetTokens - budgetConfig.systemReserveTokens
+                )
+            );
+            const providerHistory = buildHistoryWindow(updatedHistory, historyBudget);
+            const historyText = providerHistory.map(m => `${m.role}: ${m.content}`).join('\n');
+            const historyTokens = estimateContextTokens(historyText);
+            const maxLiveContextTokens = Math.max(
+                0,
+                budgetConfig.globalInputBudgetTokens - budgetConfig.systemReserveTokens - historyTokens
+            );
+            const liveContextParts: string[] = [];
+            const truncatedSections: string[] = [];
+            const selectedNoteIds: string[] = [];
+            let referencedContextText = '';
+            let remainingLiveContextTokens = maxLiveContextTokens;
+            let contextChunkCount = 0;
+            let contextSkeletonCount = 0;
 
-            // Route C: Manual Context Only (e.g. Highlighted text)
+            const appendLiveContext = (label: string, rawText: string, maxTokens: number) => {
+                if (!rawText.trim() || remainingLiveContextTokens <= 0) return;
+
+                const requestedBudget = Math.min(maxTokens, remainingLiveContextTokens);
+                const capped = capTextToTokenBudget(rawText, requestedBudget, label);
+                if (!capped.text) return;
+
+                liveContextParts.push(capped.text);
+                remainingLiveContextTokens = Math.max(0, remainingLiveContextTokens - estimateContextTokens(capped.text));
+
+                if (capped.truncated) {
+                    truncatedSections.push(label);
+                }
+            };
+
             if (manualContext) {
-                liveNoteContext = `[SELECTED TEXT CONTEXT]\n${purifyNoteHtml(manualContext)}`;
-            }
-            // Route A: Explicit Selection (user explicitly picked notes)
-            else if (selectedFolderNotes && selectedFolderNotes.length > 0) {
-                // Define how to lazily fetch heavy content
-                const fetchContent = async (noteId: string) => {
-                    const result = await db.select({ content: noteContent.content })
-                        .from(noteContent)
-                        .where(eq(noteContent.id, noteId))
-                        .get();
-
-                    const raw = result?.content || '';
-                    return purifyNoteHtml(raw);
-                };
-
-                liveNoteContext = await buildBulkContext(
-                    content,
-                    selectedFolderNotes,
-                    fetchContent,
-                    (q, ids) => SearchRepository.findRelevantNoteIds(q, ids)
+                appendLiveContext(
+                    'selected-text',
+                    `[SELECTED TEXT CONTEXT]\n${purifyNoteHtml(manualContext)}`,
+                    budgetConfig.manualContextMaxTokens
                 );
             }
-            // Route B: FTS Auto-Discovery — no explicit context, search entire database
-            else {
+
+            const { chatContext, setChatContext } = useAiStore.getState();
+            if (chatContext && !isEphemeral) {
+                referencedContextText = truncateSelectedChatContext(
+                    purifyNoteHtml(chatContext.html).trim() || chatContext.text || ''
+                );
+                appendLiveContext(
+                    'selected-chat-context',
+                    [
+                        '[SELECTED NOTE PASSAGE - PRIMARY CHAT CONTEXT]',
+                        'The user explicitly highlighted this passage in the note editor and the next chat message refers to it.',
+                        'Treat this selected passage as the highest-priority context. If broader note context is also provided, use it only to clarify this passage.',
+                        '',
+                        referencedContextText,
+                    ].join('\n'),
+                    Math.max(budgetConfig.manualContextMaxTokens, 2500)
+                );
+                setChatContext(null);
+            }
+
+            const fetchContent = async (noteId: string) => {
+                const result = await db.select({ content: noteContent.content })
+                    .from(noteContent)
+                    .where(eq(noteContent.id, noteId))
+                    .get();
+
+                return purifyNoteHtml(result?.content || '');
+            };
+
+            const explicitSelectedNotes = selectedFolderNotes && selectedFolderNotes.length > 0
+                ? selectedFolderNotes
+                : null;
+            const contextAwareQuery = referencedContextText
+                ? `${content}\n${referencedContextText.slice(0, 3000)}`
+                : content;
+
+            let noteContextTargets = explicitSelectedNotes;
+            if (!noteContextTargets && !manualContext && budgetConfig.autoDiscover) {
                 try {
-                    const relevantIds = await SearchRepository.findRelevantNoteIds(content);
+                    const relevantIds = await SearchRepository.findRelevantNoteIds(contextAwareQuery);
 
                     if (relevantIds.length > 0) {
                         // Fetch metadata for discovered notes
@@ -400,56 +471,71 @@ export function useAiChat(chatId: string | null) {
                             )
                         ).filter(Boolean);
 
-                        if (discoveredNotes.length > 0) {
-                            const fetchContent = async (noteId: string) => {
-                                const result = await db.select({ content: noteContent.content })
-                                    .from(noteContent)
-                                    .where(eq(noteContent.id, noteId))
-                                    .get();
-                                return purifyNoteHtml(result?.content || '');
-                            };
-
-                            liveNoteContext = await buildBulkContext(
-                                content,
-                                discoveredNotes,
-                                fetchContent,
-                                (q, ids) => SearchRepository.findRelevantNoteIds(q, ids)
-                            );
-                        }
+                        noteContextTargets = discoveredNotes.length > 0 ? discoveredNotes : null;
                     }
                 } catch (ftsError) {
                     console.warn('[AI] FTS auto-discovery failed, proceeding without context:', ftsError);
                 }
             }
 
-            const { chatContext, setChatContext } = useAiStore.getState();
-            if (chatContext && !isEphemeral) {
-                const extra = `[USER REFERENCED THE FOLLOWING TEXT FOR CONTEXT]\n"${purifyNoteHtml(chatContext.html)}"`;
-                if (liveNoteContext) {
-                    liveNoteContext = extra + '\n\n' + liveNoteContext;
-                } else {
-                    liveNoteContext = extra;
+            if (noteContextTargets && noteContextTargets.length > 0 && remainingLiveContextTokens > 0) {
+                const bulkContext = await buildBulkContext(
+                    contextAwareQuery,
+                    noteContextTargets,
+                    fetchContent,
+                    (q, ids) => SearchRepository.findRelevantNoteIds(q, ids),
+                    remainingLiveContextTokens,
+                    effectiveMode
+                );
+
+                if (bulkContext.text) {
+                    liveContextParts.push(bulkContext.text);
+                    remainingLiveContextTokens = Math.max(0, remainingLiveContextTokens - estimateContextTokens(bulkContext.text));
+                    truncatedSections.push(...bulkContext.metrics.truncatedSections);
+                    selectedNoteIds.push(...bulkContext.metrics.selectedNoteIds);
+                    contextChunkCount += bulkContext.metrics.chunkCount;
+                    contextSkeletonCount += bulkContext.metrics.skeletonCount;
                 }
-                setChatContext(null);
             }
 
-            // Apply sliding window to the updated history
-            const providerHistory = buildHistoryWindow(updatedHistory, 4000);
-            const systemInstructions = AI_ACTION_PROMPTS[effectiveMode as keyof typeof AI_ACTION_PROMPTS] || null;
+            let liveNoteContext = liveContextParts.join('\n\n');
+            const finalLiveBudget = Math.max(
+                0,
+                budgetConfig.globalInputBudgetTokens - budgetConfig.systemReserveTokens - historyTokens
+            );
 
-            // Calculate total history length
-            const historyText = providerHistory.map(m => `${m.role}: ${m.content}`).join('\n');
-            const historyChars = historyText.length;
-            const historyTokens = Math.ceil(historyChars / 2);
+            const finalLiveContext = capTextToTokenBudget(liveNoteContext, finalLiveBudget, 'live-note-context');
+            liveNoteContext = finalLiveContext.text;
+            if (finalLiveContext.truncated) {
+                truncatedSections.push('live-note-context');
+            }
 
             console.log('\n================ 🤖 AI Request Debug ================');
             console.log('Query:', content);
             console.log('Context Mode:', effectiveMode);
+            console.log('Budget:', {
+                globalTokens: budgetConfig.globalInputBudgetTokens,
+                tokenEstimator: 'Math.ceil(chars / 2)',
+                systemReserveTokens: budgetConfig.systemReserveTokens,
+                historyBudget,
+                historyTokens,
+                historyChars: historyText.length,
+                liveContextTokens: estimateContextTokens(liveNoteContext),
+                liveContextChars: liveNoteContext.length,
+                truncatedSections: Array.from(new Set(truncatedSections)),
+                selectedNoteIds,
+                contextChunkCount,
+                contextSkeletonCount,
+            });
             console.log('System Instruction Size:', systemInstructions ? `${systemInstructions.length} chars` : '0 chars (null)');
-            console.log(`Provider History: ${providerHistory.length} messages (${historyChars} chars, ~${historyTokens} tokens)`);
-            console.log('Provider History Payload:', providerHistory.map(({ role, content }) => ({ role, content })));
-            console.log('Context Size:', liveNoteContext.length, 'chars');
-            console.log('Full Context Payload:', liveNoteContext);
+            console.log(`Provider History: ${providerHistory.length} messages (~${historyTokens} tokens)`);
+            console.log('Provider History Payload:', providerHistory.map(({ role, content }) => ({
+                role,
+                chars: content.length,
+                estimatedTokens: estimateContextTokens(content),
+                content,
+            })));
+            console.log('Live Context Payload:', liveNoteContext || '(none)');
             console.log('=====================================================\n');
 
             await adapter.sendMessage(
