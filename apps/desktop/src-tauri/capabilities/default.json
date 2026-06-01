@@ -35,6 +35,7 @@
     "store:allow-keys",
     "store:allow-entries",
     "deep-link:default",
+    "siwa:allow-get-apple-id-credential",
     "core:window:default",
     "core:window:allow-start-dragging",
     "core:window:allow-create",

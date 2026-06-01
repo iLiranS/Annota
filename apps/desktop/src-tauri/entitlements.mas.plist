@@ -14,5 +14,10 @@
   
   <key>com.apple.developer.team-identifier</key>
   <string>73Q8GTL92B</string>
+
+  <key>com.apple.developer.applesignin</key>
+  <array>
+    <string>Default</string>
+  </array>
 </dict>
 </plist>

@@ -5,6 +5,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { getAppleIdCredential } from "tauri-plugin-siwa-api";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +19,25 @@ import { Separator } from "@/components/ui/separator";
 import logo from "@/src/assets/icon.png";
 
 type OAuthProvider = "google" | "github" | "apple";
+
+function generateRandomNonce(): string {
+    const charset = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+    const result = [];
+    const randomValues = new Uint32Array(32);
+    window.crypto.getRandomValues(randomValues);
+    for (let i = 0; i < randomValues.length; i++) {
+        result.push(charset[randomValues[i] % charset.length]);
+    }
+    return result.join("");
+}
+
+async function sha256(str: string): Promise<string> {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(str);
+    const hashBuffer = await window.crypto.subtle.digest("SHA-256", data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
 
 export default function LoginPage() {
     const [loadingProvider, setLoadingProvider] = useState<string | null>(null);
@@ -85,6 +105,39 @@ export default function LoginPage() {
         }
     };
 
+    const signInWithAppleNative = async () => {
+        setLoadingProvider("apple");
+        try {
+            const rawNonce = generateRandomNonce();
+            const hashedNonce = await sha256(rawNonce);
+
+            const credential = await getAppleIdCredential({
+                scope: ["email", "fullName"],
+                nonce: hashedNonce,
+            });
+
+            if (credential.identityToken) {
+                const { error } = await authApi.signInWithIdToken(
+                    credential.identityToken,
+                    rawNonce
+                );
+
+                if (error) {
+                    console.error("Supabase Auth error:", error.message);
+                    setLoadingProvider(null);
+                    return;
+                }
+
+                navigate("/", { replace: true });
+            } else {
+                throw new Error("No identity token returned from Apple");
+            }
+        } catch (err) {
+            console.error("Native Apple Sign-in failed, falling back to web flow:", err);
+            await signInWithOAuth("apple");
+        }
+    };
+
     const continueAsGuest = () => {
         useUserStore.getState().setGuest(true);
         navigate("/", { replace: true });
@@ -110,7 +163,13 @@ export default function LoginPage() {
                 size="lg"
                 className="w-full justify-center gap-3 text-base font-semibold"
                 disabled={isDisabled}
-                onClick={() => signInWithOAuth(provider)}
+                onClick={() => {
+                    if (provider === "apple" && navigator.userAgent.toLowerCase().includes("mac")) {
+                        signInWithAppleNative();
+                    } else {
+                        signInWithOAuth(provider);
+                    }
+                }}
             >
                 {isLoading ? (
                     <Loader2 className="h-5 w-5 animate-spin" />

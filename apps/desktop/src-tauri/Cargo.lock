@@ -27,6 +27,7 @@ dependencies = [
  "tauri-plugin-opener",
  "tauri-plugin-os",
  "tauri-plugin-single-instance",
+ "tauri-plugin-siwa",
  "tauri-plugin-store",
  "tauri-plugin-window-state",
  "webp",
@@ -5401,6 +5402,20 @@ dependencies = [
  "tracing",
  "windows-sys 0.60.2",
  "zbus",
+]
+
+[[package]]
+name = "tauri-plugin-siwa"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5dcba3d6329e004a5750cc88575c511f0971012ffab34bf1d10de540798ac069"
+dependencies = [
+ "serde",
+ "serde_json",
+ "swift-rs",
+ "tauri",
+ "tauri-plugin",
+ "thiserror 2.0.18",
 ]
 
 [[package]]

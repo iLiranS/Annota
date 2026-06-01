@@ -18,6 +18,15 @@ export const authApi = {
         });
     },
 
+    /** Sign in using native identity token (e.g. Sign in with Apple) */
+    signInWithIdToken: async (token: string, nonce?: string) => {
+        return await supabase.auth.signInWithIdToken({
+            provider: 'apple',
+            token,
+            nonce,
+        });
+    },
+
     /** Exchange an auth code for a session */
     exchangeCodeForSession: async (code: string) => {
         return await supabase.auth.exchangeCodeForSession(code);
