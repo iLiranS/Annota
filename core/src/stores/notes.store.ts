@@ -683,7 +683,8 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     // ============ SORTING & GETTERS ============
 
     setFolderSortType: (folderId, sortType) => {
-        if (folderId === null) {
+        const normalizedFolderId = (folderId === 'root' || folderId === '') ? null : folderId;
+        if (normalizedFolderId === null) {
             set({ rootSettings: { sortType } });
             // Persist root sort type
             try {
@@ -693,7 +694,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
                 console.warn('[Store] Failed to save root sort type:', err);
             }
         } else {
-            get().updateFolder(folderId, { sortType });
+            get().updateFolder(normalizedFolderId, { sortType });
         }
         SyncScheduler.instance?.notifyContentChange();
     },

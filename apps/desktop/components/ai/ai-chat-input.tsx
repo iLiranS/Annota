@@ -3,6 +3,8 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
     DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { cn } from '@/lib/utils';
@@ -39,6 +41,7 @@ export function AiChatInput({
 }: AiChatInputProps) {
     const {
         activeProvider,
+        setActiveProvider,
         availableModels,
         selectedModel,
         setSelectedModel,
@@ -67,21 +70,28 @@ export function AiChatInput({
                 ? selectedModelAnthropic
                 : selectedModelGoogle;
 
-    const getProviderModels = () => {
-        switch (activeProvider) {
-            case 'ollama': return availableModels.map(m => ({ label: m.name, value: m.name }));
-            case 'openai': return OPENAI_MODELS;
-            case 'anthropic': return ANTHROPIC_MODELS;
-            case 'google': return GOOGLE_MODELS;
-            default: return [];
-        }
+    const getModelLabel = (provider: string, value: string) => {
+        if (provider === 'ollama') return value;
+        const models = provider === 'openai' ? OPENAI_MODELS :
+                       provider === 'anthropic' ? ANTHROPIC_MODELS :
+                       GOOGLE_MODELS;
+        return models.find(m => m.value === value)?.label || value;
     };
 
     const handleSetModel = (model: string) => {
-        if (activeProvider === 'ollama') setSelectedModel(model);
-        else if (activeProvider === 'openai') setSelectedModelOpenAi(model);
-        else if (activeProvider === 'anthropic') setSelectedModelAnthropic(model);
-        else if (activeProvider === 'google') setSelectedModelGoogle(model);
+        if (OPENAI_MODELS.some(m => m.value === model)) {
+            setActiveProvider('openai');
+            setSelectedModelOpenAi(model);
+        } else if (ANTHROPIC_MODELS.some(m => m.value === model)) {
+            setActiveProvider('anthropic');
+            setSelectedModelAnthropic(model);
+        } else if (GOOGLE_MODELS.some(m => m.value === model)) {
+            setActiveProvider('google');
+            setSelectedModelGoogle(model);
+        } else {
+            setActiveProvider('ollama');
+            setSelectedModel(model);
+        }
     };
 
     const [content, setContent] = useState('');
@@ -229,31 +239,106 @@ export function AiChatInput({
                                 >
                                     <Bot size={12} className={cn("transition-colors shrink-0", currentModelName ? "text-primary" : "text-muted-foreground")} />
                                     <span className="truncate min-w-0">
-                                        {currentModelName ? (getProviderModels().find(m => m.value === currentModelName)?.label || currentModelName) : "Select Model"}
+                                        {currentModelName ? getModelLabel(activeProvider, currentModelName) : "Select Model"}
                                     </span>
                                     <ChevronDown size={10} className="opacity-50 shrink-0" />
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="start" className="w-max rounded-xl border-border/50 shadow-xl bg-popover/95 backdrop-blur-md">
-                                {getProviderModels().length === 0 ? (
-                                    <div className="p-2 text-xs text-muted-foreground text-center font-medium">No models found</div>
-                                ) : (
-                                    getProviderModels().map(m => (
+                            <DropdownMenuContent align="start" className="w-64 max-h-[350px] overflow-y-auto rounded-xl border-border/50 shadow-xl bg-popover/95 backdrop-blur-md p-1.5 custom-scrollbar">
+                                {availableModels.length > 0 && (
+                                    <>
+                                        <DropdownMenuLabel className="text-[10px] font-bold tracking-wider text-muted-foreground/70 uppercase px-2 py-1">
+                                            Ollama
+                                        </DropdownMenuLabel>
+                                        {availableModels.map(m => {
+                                            const isSelected = activeProvider === 'ollama' && selectedModel === m.name;
+                                            return (
+                                                <DropdownMenuItem
+                                                    key={`ollama-${m.name}`}
+                                                    className={cn(
+                                                        "text-xs rounded-lg cursor-pointer flex items-center gap-2 px-2 py-1.5",
+                                                        isSelected && "bg-primary/10 text-primary focus:bg-primary/20 focus:text-primary"
+                                                    )}
+                                                    onClick={() => handleSetModel(m.name)}
+                                                >
+                                                    <span className="flex w-3.5 h-3.5 items-center justify-center shrink-0">
+                                                        {isSelected && <Check size={12} strokeWidth={3} />}
+                                                    </span>
+                                                    <span className={cn("truncate", isSelected && "font-semibold")}>{m.name}</span>
+                                                </DropdownMenuItem>
+                                            );
+                                        })}
+                                        <DropdownMenuSeparator className="my-1" />
+                                    </>
+                                )}
+
+                                <DropdownMenuLabel className="text-[10px] font-bold tracking-wider text-muted-foreground/70 uppercase px-2 py-1">
+                                    OpenAI
+                                </DropdownMenuLabel>
+                                {OPENAI_MODELS.map(m => {
+                                    const isSelected = activeProvider === 'openai' && selectedModelOpenAi === m.value;
+                                    return (
                                         <DropdownMenuItem
-                                            key={m.value}
+                                            key={`openai-${m.value}`}
                                             className={cn(
-                                                "text-xs rounded-lg cursor-pointer flex items-center gap-2",
-                                                currentModelName === m.value && "bg-primary/10 text-primary focus:bg-primary/20 focus:text-primary"
+                                                "text-xs rounded-lg cursor-pointer flex items-center gap-2 px-2 py-1.5",
+                                                isSelected && "bg-primary/10 text-primary focus:bg-primary/20 focus:text-primary"
                                             )}
                                             onClick={() => handleSetModel(m.value)}
                                         >
-                                            <span className="flex w-3 h-3 items-center justify-center">
-                                                {currentModelName === m.value && <Check size={12} strokeWidth={3} />}
+                                            <span className="flex w-3.5 h-3.5 items-center justify-center shrink-0">
+                                                {isSelected && <Check size={12} strokeWidth={3} />}
                                             </span>
-                                            <span className={cn("truncate", currentModelName === m.value && "font-semibold")}>{m.label}</span>
+                                            <span className={cn("truncate", isSelected && "font-semibold")}>{m.label}</span>
                                         </DropdownMenuItem>
-                                    ))
-                                )}
+                                    );
+                                })}
+                                <DropdownMenuSeparator className="my-1" />
+
+                                <DropdownMenuLabel className="text-[10px] font-bold tracking-wider text-muted-foreground/70 uppercase px-2 py-1">
+                                    Anthropic
+                                </DropdownMenuLabel>
+                                {ANTHROPIC_MODELS.map(m => {
+                                    const isSelected = activeProvider === 'anthropic' && selectedModelAnthropic === m.value;
+                                    return (
+                                        <DropdownMenuItem
+                                            key={`anthropic-${m.value}`}
+                                            className={cn(
+                                                "text-xs rounded-lg cursor-pointer flex items-center gap-2 px-2 py-1.5",
+                                                isSelected && "bg-primary/10 text-primary focus:bg-primary/20 focus:text-primary"
+                                            )}
+                                            onClick={() => handleSetModel(m.value)}
+                                        >
+                                            <span className="flex w-3.5 h-3.5 items-center justify-center shrink-0">
+                                                {isSelected && <Check size={12} strokeWidth={3} />}
+                                            </span>
+                                            <span className={cn("truncate", isSelected && "font-semibold")}>{m.label}</span>
+                                        </DropdownMenuItem>
+                                    );
+                                })}
+                                <DropdownMenuSeparator className="my-1" />
+
+                                <DropdownMenuLabel className="text-[10px] font-bold tracking-wider text-muted-foreground/70 uppercase px-2 py-1">
+                                    Google
+                                </DropdownMenuLabel>
+                                {GOOGLE_MODELS.map(m => {
+                                    const isSelected = activeProvider === 'google' && selectedModelGoogle === m.value;
+                                    return (
+                                        <DropdownMenuItem
+                                            key={`google-${m.value}`}
+                                            className={cn(
+                                                "text-xs rounded-lg cursor-pointer flex items-center gap-2 px-2 py-1.5",
+                                                isSelected && "bg-primary/10 text-primary focus:bg-primary/20 focus:text-primary"
+                                            )}
+                                            onClick={() => handleSetModel(m.value)}
+                                        >
+                                            <span className="flex w-3.5 h-3.5 items-center justify-center shrink-0">
+                                                {isSelected && <Check size={12} strokeWidth={3} />}
+                                            </span>
+                                            <span className={cn("truncate", isSelected && "font-semibold")}>{m.label}</span>
+                                        </DropdownMenuItem>
+                                    );
+                                })}
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>

@@ -27,12 +27,12 @@ export function BreadcrumbsSection({ breadcrumbs, onNavigate, className }: Bread
     if (!breadcrumbs || breadcrumbs.length === 0) return null;
 
     return (
-        <Breadcrumb className={cn("px-3 py-2 border-b border-sidebar-border/5 bg-sidebar-accent/5", className)}>
-            <BreadcrumbList className="flex-nowrap gap-1.5 sm:gap-1.5">
+        <Breadcrumb className={cn("px-3.5 py-1.5 bg-transparent shrink-0 select-none", className)}>
+            <BreadcrumbList className="flex-nowrap gap-1 sm:gap-1">
                 {breadcrumbs.map((crumb, i) => (
-                    <div key={i} className="flex items-center gap-1.5 min-w-0">
+                    <div key={i} className="flex items-center gap-1 min-w-0">
                         {i > 0 && (
-                            <BreadcrumbSeparator className="[&>svg]:size-2.5">
+                            <BreadcrumbSeparator className="[&>svg]:size-2 opacity-50 shrink-0">
                                 <Ionicons name="chevron-forward" />
                             </BreadcrumbSeparator>
                         )}
@@ -60,7 +60,7 @@ export function BreadcrumbsSection({ breadcrumbs, onNavigate, className }: Bread
                                             />
                                         )}
                                         <span
-                                            className="truncate max-w-[80px]"
+                                            className="truncate max-w-[160px]"
                                             style={crumb.color ? { color: crumb.color } : undefined}
                                         >
                                             {crumb.name === "All Notes" ? "Annota" : crumb.name}

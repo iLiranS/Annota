@@ -8,12 +8,14 @@ import {
     sortNotes,
     useNotesStore,
     useSettingsStore,
+    useNavigationStore,
     type Folder,
     type SortType
 } from "@annota/core";
 import { useMemo } from "react";
 import { NotesList } from "./notes-list";
 import { SidebarHeaderSection } from "./sidebar-header";
+import { BreadcrumbsSection, type BreadcrumbData } from "./breadcrumbs";
 
 interface NotesViewBaseProps {
     currentFolderId: string | undefined;
@@ -35,6 +37,9 @@ interface NotesViewContentProps extends NotesViewBaseProps {
     setSelectionMode: (mode: boolean) => void;
     routeNoteId: string | undefined;
     onNavigate: (to: string) => void;
+    onEditFolder?: (folder: Folder) => void;
+    onDeleteFolder?: (folder: Folder) => void;
+    onCreateSubFolder?: (parentFolder: Folder) => void;
 }
 
 const SORT_OPTIONS: SortType[] = [
@@ -65,7 +70,7 @@ export function NotesViewHeader({
 
     const isTrash = currentFolderId === TRASH_FOLDER_ID;
     const isDaily = currentFolderId === DAILY_NOTES_FOLDER_ID;
-    const isRoot = !currentFolderId && !tagId && !isTrash && !isDaily;
+    const isRoot = (!currentFolderId || currentFolderId === 'root') && !tagId && !isTrash && !isDaily;
 
 
 
@@ -126,19 +131,74 @@ export function NotesViewContent({
     onClearSelection,
     setSelectionMode,
     onNavigate,
+    onEditFolder,
+    onDeleteFolder,
+    onCreateSubFolder,
 }: NotesViewContentProps) {
+    const { colors } = useAppTheme();
     const { general } = useSettingsStore();
     const {
         notes,
         deleteNote,
         getNotesInFolder,
-        getSortType
+        getSortType,
+        getFolderById,
     } = useNotesStore();
-
+    const setSelectedFolderId = useNavigationStore(state => state.setSelectedFolderId);
 
     const isTrash = currentFolderId === TRASH_FOLDER_ID;
     const isDaily = currentFolderId === DAILY_NOTES_FOLDER_ID;
     const currentSortType = getSortType(currentFolderId ?? null);
+
+    const browsingFolderId = (currentFolderId === 'root' || !currentFolderId) ? null : currentFolderId;
+
+    const breadcrumbs = useMemo(() => {
+        if (isTrash || isDaily) return null;
+        
+        const crumbs: BreadcrumbData[] = [{
+            id: null,
+            name: "Annota",
+            icon: "annota",
+            color: colors.primary
+        }];
+
+        if (tagId) {
+            return crumbs;
+        }
+
+        if (browsingFolderId) {
+            const path: BreadcrumbData[] = [];
+            let currentFolder = getFolderById(browsingFolderId);
+            let parentId = currentFolder?.parentId ?? null;
+
+            while (parentId) {
+                const parentFolder = getFolderById(parentId);
+                if (parentFolder) {
+                    path.unshift({
+                        id: parentFolder.id,
+                        name: parentFolder.name,
+                        icon: parentFolder.icon || "folder",
+                        color: parentFolder.color
+                    });
+                    parentId = parentFolder.parentId;
+                } else {
+                    break;
+                }
+            }
+
+            if (path.length <= 1) {
+                crumbs.push(...path);
+            } else {
+                crumbs.push({
+                    id: "ellipsis",
+                    name: "...",
+                });
+                crumbs.push(path[path.length - 1]);
+            }
+        }
+
+        return crumbs;
+    }, [browsingFolderId, getFolderById, colors.primary, tagId, isTrash, isDaily]);
 
     const browseNotes = useMemo(() => {
         if (tagId) {
@@ -161,6 +221,12 @@ export function NotesViewContent({
             "flex-1 overflow-hidden flex flex-col",
             general.appDirection === 'rtl' ? "animate-content-from-right" : "animate-content-from-left"
         )}>
+            {(browsingFolderId !== null || tagId !== null) && breadcrumbs && (
+                <BreadcrumbsSection
+                    breadcrumbs={breadcrumbs}
+                    onNavigate={(id) => setSelectedFolderId(id || 'root')}
+                />
+            )}
             <NotesList
                 key={currentFolderId ?? tagId ?? 'root'}
                 notes={browseNotes}
@@ -175,6 +241,9 @@ export function NotesViewContent({
                 currentFolderId={currentFolderId ?? null}
                 isTrash={isTrash}
                 setSelectionMode={setSelectionMode}
+                onEditFolder={onEditFolder}
+                onDeleteFolder={onDeleteFolder}
+                onCreateSubFolder={onCreateSubFolder}
             />
         </div>
     );

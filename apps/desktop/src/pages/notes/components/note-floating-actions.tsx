@@ -72,12 +72,13 @@ export function NoteFloatingActions({
                                     variant="ghost"
                                     size="icon"
                                     className={cn(
-                                        "h-8 w-8 rounded-xl bg-sidebar/80 backdrop-blur-md border border-border/50 shadow-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all duration-200 z-30",
-                                        isMenuOpen && "bg-muted border-border text-foreground",
+                                        "h-9 w-9 rounded-xl bg-sidebar/95 backdrop-blur-md border border-border/80 shadow-md text-muted-foreground/90 transition-all duration-300 ease-out z-30",
+                                        "hover:scale-105  hover:text-accent-full hover:bg-accent-full/10 hover:border-accent-full/40 hover:shadow-lg hover:shadow-accent-full/5",
+                                        isMenuOpen && "bg-accent-full/15 border-accent-full/40 text-accent-full shadow-lg scale-105",
                                         className
                                     )}
                                 >
-                                    <MoreVertical className="h-3.5 w-3.5" />
+                                    <MoreVertical className="h-4 w-4" />
                                 </Button>
                             </DropdownMenuTrigger>
                         </TooltipTrigger>

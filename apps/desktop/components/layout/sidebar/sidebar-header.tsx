@@ -86,11 +86,11 @@ export function SidebarHeaderSection({
                 >
                     <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition-colors">
                         {isRoot ? (
-                            <AnnotaIcon color={color} size={15} />
+                            <AnnotaIcon color={color} size={20} />
                         ) : isDaily ? (
-                            <Ionicons name="calendar" color={color} size={13} />
+                            <Ionicons name="calendar" color={color} size={15} />
                         ) : (
-                            <Ionicons name={icon} color={color} size={13} />
+                            <Ionicons name={icon} color={color} size={15} />
                         )}
                     </div>
                     <h2 style={{ color: color }} className="text-sm font-semibold tracking-tight truncate">

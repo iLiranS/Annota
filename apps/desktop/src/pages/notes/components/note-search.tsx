@@ -48,6 +48,18 @@ export function NoteSearch({
         }
     }, [searchTerm, visible]);
 
+    // Force focus when mod+f is pressed while already open
+    useEffect(() => {
+        const handleForceFocus = () => {
+            if (visible) {
+                inputRef.current?.focus();
+            }
+        };
+
+        window.addEventListener("focus-editor-search", handleForceFocus);
+        return () => window.removeEventListener("focus-editor-search", handleForceFocus);
+    }, [visible]);
+
     if (!visible) return null;
 
     return (
@@ -63,6 +75,11 @@ export function NoteSearch({
                         className="h-7 pl-6 pr-12 bg-transparent dark:bg-transparent border-none focus-visible:ring-0 text-[11px] placeholder:text-muted-foreground/40"
                         onKeyDown={(e) => {
                             if (e.key === 'Enter') {
+                                e.preventDefault();
+                                if (e.shiftKey) onPrev();
+                                else onNext();
+                                inputRef.current?.focus();
+                            } else if (e.key === 'Tab') {
                                 e.preventDefault();
                                 if (e.shiftKey) onPrev();
                                 else onNext();

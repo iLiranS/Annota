@@ -53,6 +53,7 @@ export function useNoteEditorSearch({ editorRef, toggleFullScreen }: UseNoteEdit
             if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "f") {
                 e.preventDefault();
                 handleOpenSearch();
+                window.dispatchEvent(new CustomEvent("focus-editor-search"));
             }
             if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "d") {
                 e.preventDefault();

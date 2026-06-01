@@ -11,7 +11,6 @@ import { DAILY_NOTES_FOLDER_ID, TRASH_FOLDER_ID, useChangelog, useNavigationStor
 import { cn } from "@/lib/utils";
 import { ConfirmDialog } from "../custom-ui/confirm-dialog";
 import { FolderEditModal } from "../notes/folder-edit-modal";
-import { FoldersTree } from "./sidebar/folders-tree";
 import { NotesViewContent, NotesViewHeader } from "./sidebar/notes-view";
 import { QuickAccessSection } from "./sidebar/quick-access";
 import { SearchView } from "./sidebar/search-view";
@@ -39,7 +38,6 @@ export function AppSidebar() {
         tags,
         deleteFolder,
         deleteNote,
-        getFoldersInFolder,
     } = useNotesStore();
 
     const isOnline = useSyncStore((s) => s.isOnline);
@@ -68,7 +66,7 @@ export function AppSidebar() {
     useEffect(() => {
         const saved = localStorage.getItem("sidebar_active_tab");
         if (saved) {
-            setActiveTab(saved as SidebarTab);
+            setActiveTab(saved === 'folders' ? 'notes' : saved as SidebarTab);
         }
 
     }, [setActiveTab]);
@@ -262,25 +260,6 @@ export function AppSidebar() {
                 )}
 
                 <SidebarContent data-tauri-drag-region className={cn("min-w-0 flex flex-col overflow-hidden ")}>
-                    {activeTab === 'folders' && (
-                        <FoldersTree
-                            isFoldersOpen={true}
-                            setIsFoldersOpen={() => { }}
-                            onNavigate={handleFolderSelect}
-                            onEdit={handleEditFolder}
-                            onDelete={setFolderToDelete}
-                            onCreateSubFolder={handleCreateSubFolder}
-                            onCreateNote={(id) => {
-                                setSelectedFolderId(id || 'root');
-                                createNote(id);
-                                setActiveTab('notes');
-                            }}
-                            getFoldersInFolder={getFoldersInFolder}
-                            general={general}
-                            currentFolderId={currentFolderId ?? null}
-                        />
-                    )}
-
                     {activeTab === 'notes' && (
                         <NotesViewContent
                             currentFolderId={currentFolderId}
@@ -292,6 +271,9 @@ export function AppSidebar() {
                             onClearSelection={() => handleSetSelectionMode(false)}
                             setSelectionMode={handleSetSelectionMode}
                             onNavigate={navigateWithHistory}
+                            onEditFolder={handleEditFolder}
+                            onDeleteFolder={setFolderToDelete}
+                            onCreateSubFolder={handleCreateSubFolder}
                         />
                     )}
 

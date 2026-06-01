@@ -84,6 +84,8 @@ function scrollToMatch(view: any, match: { from: number; to: number }) {
     try {
         const coords = view.coordsAtPos(match.from);
         if (coords) {
+            const yOffset = coords.top + window.scrollY;
+
             const element = view.domAtPos(match.from);
             if (element && element.node) {
                 const targetNode = element.node.nodeType === Node.TEXT_NODE
@@ -97,6 +99,9 @@ function scrollToMatch(view: any, match: { from: number; to: number }) {
                     });
                 }
             }
+
+            // For Mobile: Send native scroll message so parent ScrollView scrolls
+            sendMessage({ type: 'scrollToNative', y: Math.max(0, yOffset - 150) });
         }
     } catch (e) {
         console.warn('Failed to scroll to search match:', e);

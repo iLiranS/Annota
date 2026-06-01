@@ -14,7 +14,6 @@ interface SidebarTabsProps {
 }
 
 const TABS: { id: SidebarTab; icon: React.ReactNode; label: string }[] = [
-    { id: 'folders', icon: <Ionicons name="folder-outline" size={17} />, label: 'Folders' },
     { id: 'notes', icon: <NotebookTabs size={17} />, label: 'Notes' },
     { id: 'tags', icon: <Ionicons name="pricetag-outline" size={17} />, label: 'Tags' },
     { id: 'search', icon: <Ionicons name="search-outline" size={17} />, label: 'Search' },
