@@ -9,6 +9,7 @@ import { removeMasterKey } from '../utils/crypto';
 import * as schema from './schema';
 import { seedSystemData } from './seed';
 import type { DbType } from './types';
+import { parsePendingTasks } from './repositories/search.repository';
 
 // SQL for creating tables (CREATE TABLE IF NOT EXISTS)
 export const CREATE_TABLES_SQL = `
@@ -49,6 +50,14 @@ export const CREATE_TABLES_SQL = `
     PRIMARY KEY (source_id, target_id),
     FOREIGN KEY(source_id) REFERENCES note_metadata(id) ON DELETE CASCADE,
     FOREIGN KEY(target_id) REFERENCES note_metadata(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS note_tasks (
+    note_id TEXT NOT NULL,
+    task_index INTEGER NOT NULL,
+    text TEXT NOT NULL,
+    PRIMARY KEY (note_id, task_index),
+    FOREIGN KEY(note_id) REFERENCES note_metadata(id) ON DELETE CASCADE
   );
 
   CREATE TABLE IF NOT EXISTS folders (
@@ -231,10 +240,23 @@ export async function initDatabase(
           );`,
           `CREATE INDEX IF NOT EXISTS idx_note_links_target ON note_links(target_id);`
         ]
+      },
+      {
+        name: '007_add_note_tasks',
+        sql: [
+          `CREATE TABLE IF NOT EXISTS note_tasks (
+            note_id TEXT NOT NULL,
+            task_index INTEGER NOT NULL,
+            text TEXT NOT NULL,
+            PRIMARY KEY (note_id, task_index),
+            FOREIGN KEY(note_id) REFERENCES note_metadata(id) ON DELETE CASCADE
+          );`
+        ]
       }
     ];
 
     // 4. Execute Migrations
+    let appliedMigration007 = false;
     if (nativeDb.selectAsync) {
       for (const m of migrations) {
         const alreadyApplied = await nativeDb.selectAsync(
@@ -258,6 +280,9 @@ export async function initDatabase(
               `INSERT INTO _migrations (name, applied_at) VALUES ('${m.name}', ${Date.now()});`
             );
             console.log(`[DB] Applied migration: ${m.name}`);
+            if (m.name === '007_add_note_tasks') {
+              appliedMigration007 = true;
+            }
           } catch (e: any) {
             const errorMsg = (e?.message || String(e)).toLowerCase();
             // If the column already exists (from a previous ad-hoc attempt), just record it
@@ -270,6 +295,31 @@ export async function initDatabase(
             }
           }
         }
+      }
+    }
+
+    if (appliedMigration007) {
+      console.log('[DB] Migration 007 applied, running note tasks backfill...');
+      try {
+        const noteContents = await drizzleDb.select().from(schema.noteContent).all();
+        console.log(`[DB] Found ${noteContents.length} notes to backfill tasks for.`);
+        for (const row of noteContents) {
+          const tasks = parsePendingTasks(row.content);
+          if (tasks.length > 0) {
+            const newTasks = tasks.map((task) => ({
+              noteId: row.id,
+              taskIndex: task.index,
+              text: task.text,
+            }));
+            await drizzleDb.insert(schema.noteTasks)
+              .values(newTasks)
+              .onConflictDoNothing()
+              .run();
+          }
+        }
+        console.log('[DB] Tasks backfill completed successfully!');
+      } catch (backfillError) {
+        console.error('[DB] Failed to backfill note tasks:', backfillError);
       }
     }
 
@@ -356,6 +406,7 @@ export async function resetAll(): Promise<void> {
       DROP TABLE IF EXISTS note_metadata;
       DROP TABLE IF EXISTS note_content;
       DROP TABLE IF EXISTS note_versions;
+      DROP TABLE IF EXISTS note_tasks;
       DROP TABLE IF EXISTS folders;
       DROP TABLE IF EXISTS tags;
       DROP TABLE IF EXISTS settings;
@@ -437,6 +488,7 @@ export async function deleteDatabase(): Promise<void> {
       DROP TABLE IF EXISTS note_metadata;
       DROP TABLE IF EXISTS note_content;
       DROP TABLE IF EXISTS note_versions;
+      DROP TABLE IF EXISTS note_tasks;
       DROP TABLE IF EXISTS folders;
       DROP TABLE IF EXISTS tags;
       DROP TABLE IF EXISTS settings;

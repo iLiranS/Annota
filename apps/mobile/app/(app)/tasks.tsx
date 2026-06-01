@@ -3,29 +3,28 @@ import ThemedText from '@/components/themed-text';
 import { useSidebar } from '@/context/sidebar-context';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import {
-    SearchRepository,
     useNotesStore,
     type PendingTask,
     type PendingTaskNote
 } from '@annota/core';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useFocusEffect } from '@react-navigation/native';
 import { Stack, useRouter } from 'expo-router';
-import React, { useCallback, useState, useRef } from 'react';
+import React, { useCallback, useState, useRef, useEffect } from 'react';
 import {
     ActivityIndicator,
     FlatList,
     Pressable,
-    RefreshControl,
     StyleSheet,
     Text,
-    View
+    View,
+    Platform
 } from 'react-native';
 import Animated, {
     FadeIn,
     FadeOut,
     LinearTransition
 } from 'react-native-reanimated';
+import { usePullToSync } from '@/hooks/use-pull-to-sync';
 
 /**
  * Safely applies opacity to any hex color string (supporting 3, 6, or 8 characters).
@@ -159,75 +158,26 @@ export default function TasksScreen() {
     const router = useRouter();
     const { toggle } = useSidebar();
 
-    const [groups, setGroups] = useState<PendingTaskNote[]>([]);
-    const [loading, setLoading] = useState(true);
+    const groups = useNotesStore(state => state.tasks);
+    const isInitialized = useNotesStore(state => state.isInitialized);
     const [completingKeys, setCompletingKeys] = useState<Set<string>>(new Set());
     const mountedRef = useRef(true);
 
-    const load = useCallback(async () => {
-        setLoading(true);
-        try {
-            const result = await SearchRepository.findNotesWithPendingTasks();
-            if (mountedRef.current) setGroups(result);
-        } catch (err) {
-            console.error('[Tasks] Failed to load pending tasks:', err);
-        } finally {
-            if (mountedRef.current) setLoading(false);
-        }
-    }, []);
+    const { scrollHandler, spinnerStyle, syncIndicatorStyle } = usePullToSync();
 
-    useFocusEffect(
-        useCallback(() => {
-            mountedRef.current = true;
-            load();
-            return () => {
-                mountedRef.current = false;
-            };
-        }, [load])
-    );
+    useEffect(() => {
+        mountedRef.current = true;
+        return () => {
+            mountedRef.current = false;
+        };
+    }, []);
 
     const handleTaskComplete = useCallback(async (noteId: string, taskIndex: number) => {
         const key = `${noteId}:${taskIndex}`;
         setCompletingKeys(prev => new Set([...prev, key]));
 
         try {
-            // Read the current full HTML content via the store (same as editor)
-            const html = await useNotesStore.getState().getNoteContent(noteId);
-
-            // Replace exactly the n-th occurrence of data-checked="false" → data-checked="true"
-            let occurrence = 0;
-            const updated = html.replace(
-                /(<li[^>]*)(data-checked="false")([^>]*>)/gi,
-                (_match, before, _attr, after) => {
-                    if (occurrence === taskIndex) {
-                        occurrence++;
-                        return `${before}data-checked="true"${after}`;
-                    }
-                    occurrence++;
-                    return `${before}data-checked="false"${after}`;
-                }
-            );
-
-            if (updated === html) return; // Nothing changed, bail
-
-            // Delegate to the store — handles dirty flag, versioning, preview, and sync notification
-            await useNotesStore.getState().updateNoteContent(noteId, updated);
-
-            // Optimistic UI: remove the task from local state
-            if (mountedRef.current) {
-                setGroups(prev =>
-                    prev
-                        .map(g => {
-                            if (g.noteId !== noteId) return g;
-                            const newTasks = g.tasks
-                                .filter(t => t.index !== taskIndex)
-                                // Reindex remaining tasks to stay consistent
-                                .map((t, i) => ({ ...t, index: i }));
-                            return { ...g, tasks: newTasks };
-                        })
-                        .filter(g => g.tasks.length > 0)
-                );
-            }
+            await useNotesStore.getState().toggleTask(noteId, taskIndex);
         } catch (err) {
             console.error('[Tasks] Failed to complete task:', err);
         } finally {
@@ -246,9 +196,16 @@ export default function TasksScreen() {
     }, [router]);
 
     const totalTasks = groups.reduce((acc, g) => acc + g.tasks.length, 0);
+    const loading = !isInitialized;
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
+            <Animated.View style={syncIndicatorStyle} />
+            <Animated.View style={spinnerStyle}>
+                <View style={[styles.spinnerContainer, { backgroundColor: colors.card }]}>
+                    <ActivityIndicator size="small" color={colors.primary} />
+                </View>
+            </Animated.View>
             <Stack.Screen
                 options={{
                     headerShown: true,
@@ -272,17 +229,7 @@ export default function TasksScreen() {
                                 <Ionicons name={canGoBack ? "chevron-back" : "menu"} size={24} color={colors.primary} />
                             </HapticPressable>
                         );
-                    },
-                    headerRight: () => (
-                        <HapticPressable
-                            onPress={load}
-                            disabled={loading}
-                            style={[styles.headerButton, loading && { opacity: 0.3 }]}
-                            hitSlop={8}
-                        >
-                            <Ionicons name="refresh" size={22} color={colors.primary} />
-                        </HapticPressable>
-                    )
+                    }
                 }}
             />
 
@@ -297,18 +244,12 @@ export default function TasksScreen() {
             </View>
 
             {/* Content List */}
-            <FlatList
+            <Animated.FlatList
                 data={groups}
                 keyExtractor={(item) => item.noteId}
                 contentContainerStyle={styles.listContent}
-                refreshControl={
-                    <RefreshControl
-                        refreshing={loading && groups.length > 0}
-                        onRefresh={load}
-                        tintColor={colors.primary}
-                        colors={[colors.primary]}
-                    />
-                }
+                onScroll={scrollHandler}
+                scrollEventThrottle={16}
                 renderItem={({ item }) => (
                     <TaskNoteGroup
                         group={item}
@@ -474,5 +415,23 @@ const styles = StyleSheet.create({
         fontSize: 12,
         textAlign: 'center',
         maxWidth: 240,
+    },
+    spinnerContainer: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+        ...Platform.select({
+            ios: {
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.15,
+                shadowRadius: 4,
+            },
+            android: {
+                elevation: 4,
+            },
+        }),
     },
 });

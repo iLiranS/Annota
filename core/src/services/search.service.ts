@@ -1,4 +1,4 @@
-import { SearchRepository } from '../db/repositories/search.repository';
+import { SearchRepository, type PendingTaskNote } from '../db/repositories/search.repository';
 import { safeGetAll } from '../db/utils';
 import { stripHtml } from '../utils';
 
@@ -78,5 +78,9 @@ export const SearchService = {
         });
 
         return combined;
+    },
+
+    async findNotesWithPendingTasks(): Promise<PendingTaskNote[]> {
+        return await SearchRepository.findNotesWithPendingTasks();
     }
 };

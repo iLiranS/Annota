@@ -269,78 +269,63 @@ export const SearchRepository = {
 
     /**
      * Finds all notes that contain at least one uncompleted task item
-     * (data-checked="false"), using FTS5 for fast pre-filtering.
+     * using the structured note_tasks table.
      * Returns parsed task groups per note.
      */
     async findNotesWithPendingTasks(): Promise<PendingTaskNote[]> {
-        const dbStore = useDbStore.getState();
-        const isDesktop = (dbStore.nativeDb as any)?.selectAsync !== undefined;
+        const db = getDb();
 
-        // Step 1: Fast FTS5 pre-filter — find notes that contain the word "false"
-        // in their content (from data-checked="false"). This is an efficient heuristic.
-        let candidateIds: string[] = [];
-
-        if (isDesktop) {
-            const rawRows = await (dbStore.nativeDb as any).selectAsync(
-                `SELECT id FROM notes_fts WHERE notes_fts MATCH '"false"' GROUP BY id ORDER BY rank`,
-                []
-            ) as any[][];
-            candidateIds = rawRows.map(row => row[0] as string).filter(Boolean);
-        } else {
-            const ftsRows = await getDb().all<{ id: string }>(sql`
-                SELECT id FROM notes_fts WHERE notes_fts MATCH '"false"' GROUP BY id ORDER BY rank
-            `);
-            candidateIds = ftsRows.map((r: any) => r.id).filter(Boolean);
-        }
-
-        if (candidateIds.length === 0) return [];
-
-        // Step 2: Validate metadata (not deleted)
-        const validMeta = await getDb()
-            .select({ id: schema.noteMetadata.id, title: schema.noteMetadata.title, folderId: schema.noteMetadata.folderId, createdAt: schema.noteMetadata.createdAt })
-            .from(schema.noteMetadata)
+        const rows = await db
+            .select({
+                noteId: schema.noteTasks.noteId,
+                noteTitle: schema.noteMetadata.title,
+                folderId: schema.noteMetadata.folderId,
+                createdAt: schema.noteMetadata.createdAt,
+                taskIndex: schema.noteTasks.taskIndex,
+                taskText: schema.noteTasks.text,
+            })
+            .from(schema.noteTasks)
+            .innerJoin(schema.noteMetadata, eq(schema.noteTasks.noteId, schema.noteMetadata.id))
             .where(and(
-                inArray(schema.noteMetadata.id, candidateIds),
                 eq(schema.noteMetadata.isDeleted, false),
                 eq(schema.noteMetadata.isPermDeleted, false),
             ))
             .all();
 
-        const validMetaRows = safeGetAll<{ id: string; title: string | null; folderId: string | null; createdAt: Date | null }>(validMeta);
-        if (validMetaRows.length === 0) return [];
+        const safeRows = safeGetAll<{
+            noteId: string;
+            noteTitle: string | null;
+            folderId: string | null;
+            createdAt: Date | null;
+            taskIndex: number;
+            taskText: string;
+        }>(rows);
 
-        // Step 3: Fetch full HTML content for validated notes only
-        const validIds = validMetaRows.map(m => m.id);
-        const contentRows = await getDb()
-            .select({ id: schema.noteContent.id, content: schema.noteContent.content })
-            .from(schema.noteContent)
-            .where(inArray(schema.noteContent.id, validIds))
-            .all();
+        const groupMap = new Map<string, PendingTaskNote>();
 
-        type MetaItem = { id: string; title: string | null; folderId: string | null; createdAt: Date | null };
-        const contentMap = new Map<string, string>(
-            safeGetAll<{ id: string; content: string }>(contentRows).map((r: { id: string; content: string }) => [r.id, r.content])
-        );
-        const metaMap = new Map<string, MetaItem>(validMetaRows.map((m: MetaItem) => [m.id, m]));
-
-        const results: PendingTaskNote[] = [];
-
-        for (const noteId of validIds) {
-            const html = contentMap.get(noteId) ?? '';
-            // Quick bail: if no unchecked task items, skip expensive parsing
-            if (!html.includes('data-checked="false"')) continue;
-
-            const tasks = parsePendingTasks(html);
-            if (tasks.length === 0) continue;
-
-            const meta = metaMap.get(noteId)!;
-            results.push({
-                noteId,
-                noteTitle: meta.title ?? 'Untitled Note',
-                folderId: meta.folderId,
-                createdAt: meta.createdAt,
-                tasks,
+        for (const row of safeRows) {
+            let group = groupMap.get(row.noteId);
+            if (!group) {
+                group = {
+                    noteId: row.noteId,
+                    noteTitle: row.noteTitle || 'Untitled Note',
+                    folderId: row.folderId,
+                    createdAt: row.createdAt ? new Date(row.createdAt) : null,
+                    tasks: [],
+                };
+                groupMap.set(row.noteId, group);
+            }
+            group.tasks.push({
+                index: row.taskIndex,
+                text: row.taskText,
             });
+        }
+
+        const results = Array.from(groupMap.values());
+
+        // Sort tasks within each note by taskIndex to ensure stable positional order
+        for (const group of results) {
+            group.tasks.sort((a, b) => a.index - b.index);
         }
 
         // Sort by note creation date — newest first, stable regardless of edits
@@ -371,7 +356,7 @@ export type PendingTaskNote = {
  * Parses unchecked task items from raw HTML content.
  * Extracts the text of each <li data-checked="false"> element.
  */
-function parsePendingTasks(html: string): PendingTask[] {
+export function parsePendingTasks(html: string): PendingTask[] {
     const tasks: PendingTask[] = [];
     // Match <li data-checked="false">…</li> — greedy-safe with non-greedy inner
     const liRegex = /<li[^>]*data-checked="false"[^>]*>([\s\S]*?)<\/li>/gi;

@@ -79,9 +79,7 @@ const styles = StyleSheet.create({
     mediaGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        gap: 8,
-        paddingHorizontal: 2,
-        justifyContent: 'center',
+        marginHorizontal: -4,
     },
     mediaLoadingContainer: {
         paddingVertical: 30,

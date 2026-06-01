@@ -26,6 +26,7 @@ export const noteContent = sqliteTable('note_content', {
     content: text('content').notNull().default(''), // Heavy content, loaded lazily
 });
 
+
 // ============ NOTE LINKS (derived, local only) ============
 export const noteLinks = sqliteTable('note_links', {
     sourceId: text('source_id').notNull().references(() => noteMetadata.id, { onDelete: 'cascade' }),
@@ -34,6 +35,16 @@ export const noteLinks = sqliteTable('note_links', {
 }, (t) => ({
     pk: primaryKey({ columns: [t.sourceId, t.targetId] }),
 }));
+
+// ============ NOTE TASKS (derived, local only) ============
+export const noteTasks = sqliteTable('note_tasks', {
+    noteId: text('note_id').notNull().references(() => noteMetadata.id, { onDelete: 'cascade' }),
+    taskIndex: integer('task_index').notNull(),
+    text: text('text').notNull(),
+}, (t) => ({
+    pk: primaryKey({ columns: [t.noteId, t.taskIndex] }),
+}));
+
 
 // ============ NOTE FTS5 (Virtual table, created via raw SQL migration) ============
 export const notesFts = sqliteTable('notes_fts', {
@@ -153,6 +164,8 @@ export type Folder = typeof folders.$inferSelect;
 export type FolderInsert = typeof folders.$inferInsert;
 export type Tag = typeof tags.$inferSelect;
 export type TagInsert = typeof tags.$inferInsert;
+export type NoteTask = typeof noteTasks.$inferSelect;
+export type NoteTaskInsert = typeof noteTasks.$inferInsert;
 
 // Updated File Exports
 export type FileRecord = typeof files.$inferSelect;

@@ -1,12 +1,11 @@
 import { useSmartNavigate } from "@/hooks/use-smart-navigate";
 import { cn } from "@/lib/utils";
 import {
-    SearchRepository,
     useNotesStore,
     type PendingTask,
     type PendingTaskNote,
 } from "@annota/core";
-import { CheckSquare, ChevronDown, ExternalLink, Loader2, RefreshCw } from "lucide-react";
+import { CheckSquare, ChevronDown, ExternalLink, Loader2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 interface TaskNoteGroupProps {
@@ -99,70 +98,25 @@ function TaskNoteGroup({ group, onTaskComplete, onNavigate, completingKeys }: Ta
 }
 
 export function TasksSidebar() {
-    const [groups, setGroups] = useState<PendingTaskNote[]>([]);
-    const [loading, setLoading] = useState(true);
+    const groups = useNotesStore(state => state.tasks);
+    const isInitialized = useNotesStore(state => state.isInitialized);
     const [completingKeys, setCompletingKeys] = useState<Set<string>>(new Set());
     const navigateSmart = useSmartNavigate();
     const mountedRef = useRef(true);
 
-    const load = useCallback(async () => {
-        setLoading(true);
-        try {
-            const result = await SearchRepository.findNotesWithPendingTasks();
-            if (mountedRef.current) setGroups(result);
-        } finally {
-            if (mountedRef.current) setLoading(false);
-        }
-    }, []);
-
     useEffect(() => {
         mountedRef.current = true;
-        load();
         return () => { mountedRef.current = false; };
-    }, [load]);
+    }, []);
+
+
 
     const handleTaskComplete = useCallback(async (noteId: string, taskIndex: number) => {
         const key = `${noteId}:${taskIndex}`;
         setCompletingKeys(prev => new Set([...prev, key]));
 
         try {
-            // Read the current full HTML content via the store (same as editor)
-            const html = await useNotesStore.getState().getNoteContent(noteId);
-
-            // Replace exactly the n-th occurrence of data-checked="false" → data-checked="true"
-            let occurrence = 0;
-            const updated = html.replace(
-                /(<li[^>]*)(data-checked="false")([^>]*>)/gi,
-                (_match, before, _attr, after) => {
-                    if (occurrence === taskIndex) {
-                        occurrence++;
-                        return `${before}data-checked="true"${after}`;
-                    }
-                    occurrence++;
-                    return `${before}data-checked="false"${after}`;
-                }
-            );
-
-            if (updated === html) return; // Nothing changed, bail
-
-            // Delegate to the store — handles dirty flag, versioning, preview, and sync notification
-            await useNotesStore.getState().updateNoteContent(noteId, updated);
-
-            // Optimistic UI: remove the task from local state
-            if (mountedRef.current) {
-                setGroups(prev =>
-                    prev
-                        .map(g => {
-                            if (g.noteId !== noteId) return g;
-                            const newTasks = g.tasks
-                                .filter(t => t.index !== taskIndex)
-                                // Reindex remaining tasks to stay consistent
-                                .map((t, i) => ({ ...t, index: i }));
-                            return { ...g, tasks: newTasks };
-                        })
-                        .filter(g => g.tasks.length > 0)
-                );
-            }
+            await useNotesStore.getState().toggleTask(noteId, taskIndex);
         } catch (err) {
             console.error('[Tasks] Failed to complete task:', err);
         } finally {
@@ -177,6 +131,7 @@ export function TasksSidebar() {
     }, []);
 
     const totalTasks = groups.reduce((acc, g) => acc + g.tasks.length, 0);
+    const loading = !isInitialized;
 
     return (
         <div className="flex flex-col h-full overflow-hidden">
@@ -185,14 +140,6 @@ export function TasksSidebar() {
                 <span className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground/40">
                     {loading ? 'Loading...' : `${totalTasks} pending task${totalTasks !== 1 ? 's' : ''}`}
                 </span>
-                <button
-                    onClick={load}
-                    disabled={loading}
-                    className="text-muted-foreground/40 hover:text-primary transition-colors disabled:opacity-30 p-1 rounded cursor-pointer active:scale-90"
-                    title="Refresh"
-                >
-                    <RefreshCw size={11} className={cn(loading && "animate-spin")} />
-                </button>
             </div>
 
             {/* Content */}

@@ -13,6 +13,7 @@ import {
     getPaginatedMedia,
     useNotesStore,
     useUserStore,
+    useSyncStore,
     type MediaItem,
 } from '@annota/core';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -21,13 +22,15 @@ import { useRouter, Stack } from 'expo-router';
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import {
     Dimensions,
-    ScrollView,
     StyleSheet,
     View,
-    RefreshControl,
+    ActivityIndicator,
+    Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
+import Animated from 'react-native-reanimated';
+import { usePullToSync } from '@/hooks/use-pull-to-sync';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -42,7 +45,6 @@ export default function HomeScreen() {
 
     const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
     const [mediaLoading, setMediaLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
     const [selectedImage, setSelectedImage] = useState<{ src: string } | null>(null);
     const [selectedItemForNotes, setSelectedItemForNotes] = useState<MediaItem | null>(null);
 
@@ -69,12 +71,11 @@ export default function HomeScreen() {
         loadMedia();
     }, [loadMedia]);
 
-    // Handle pull-to-refresh
-    const handleRefresh = async () => {
-        setRefreshing(true);
-        await loadMedia();
-        setRefreshing(false);
-    };
+    // Use custom pull-to-refresh force sync hook
+    const { scrollHandler, spinnerStyle } = usePullToSync({
+        onRefresh: loadMedia,
+        top: insets.top + 12,
+    });
 
     // Time-based greeting greeting text
     const greeting = useMemo(() => {
@@ -228,6 +229,11 @@ export default function HomeScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
+            <Animated.View style={spinnerStyle}>
+                <View style={[styles.spinnerContainer, { backgroundColor: colors.card }]}>
+                    <ActivityIndicator size="small" color={colors.primary} />
+                </View>
+            </Animated.View>
             {/* Simple Transparent Header with Top-Left Menu Button */}
             <Stack.Screen
                 options={{
@@ -248,18 +254,12 @@ export default function HomeScreen() {
             />
 
             {/* Scrollable Container flowing underneath transparent header */}
-            <ScrollView
+            <Animated.ScrollView
                 style={{ flex: 1 }}
                 contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 52 }]}
                 showsVerticalScrollIndicator={false}
-                refreshControl={
-                    <RefreshControl
-                        refreshing={refreshing}
-                        onRefresh={handleRefresh}
-                        tintColor={colors.primary}
-                        colors={[colors.primary]}
-                    />
-                }
+                onScroll={scrollHandler}
+                scrollEventThrottle={16}
             >
                 {/* 1. Welcome Banner Card */}
                 <WelcomeBanner
@@ -298,7 +298,7 @@ export default function HomeScreen() {
 
                 {/* Spacing bottom */}
                 <View style={{ height: 40 }} />
-            </ScrollView>
+            </Animated.ScrollView>
 
             {/* Image Preview Overlay */}
             <ImageGallery
@@ -336,5 +336,23 @@ const styles = StyleSheet.create({
     scrollContent: {
         paddingHorizontal: 20,
         paddingBottom: 40,
+    },
+    spinnerContainer: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+        ...Platform.select({
+            ios: {
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.15,
+                shadowRadius: 4,
+            },
+            android: {
+                elevation: 4,
+            },
+        }),
     },
 });

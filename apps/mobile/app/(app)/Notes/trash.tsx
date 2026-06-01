@@ -9,7 +9,6 @@ import {
     sortNotes,
     TRASH_FOLDER_ID,
     useNotesStore,
-    useSyncStore,
 } from '@annota/core';
 import { useSidebar } from '@/context/sidebar-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -21,17 +20,14 @@ import {
     FlatList,
     StyleSheet,
     Text,
-    View
+    View,
+    ActivityIndicator,
+    Platform
 } from 'react-native';
 import Animated, {
-    Extrapolation,
-    interpolate,
-    runOnJS,
-    useAnimatedScrollHandler,
-    useAnimatedStyle,
-    useSharedValue,
-    withTiming
+    LinearTransition
 } from 'react-native-reanimated';
+import { usePullToSync } from '@/hooks/use-pull-to-sync';
 
 interface FolderItemProps {
     folder: Folder;
@@ -192,50 +188,7 @@ export default function TrashScreen() {
     const { toggle } = useSidebar();
     const [currentFolderId, setCurrentFolderId] = useState<string | null>(TRASH_FOLDER_ID);
 
-    // Sync progress tracking
-    const isSyncing = useSyncStore(state => state.isSyncing);
-    const scrollY = useSharedValue(0);
-
-    const triggerSync = useCallback(async () => {
-        try {
-            await useSyncStore.getState().forceSync();
-        } catch (e) {
-            console.error('[Manual Sync]', e);
-        }
-    }, []);
-
-    const scrollHandler = useAnimatedScrollHandler({
-        onScroll: (event) => {
-            scrollY.value = event.contentOffset.y;
-        },
-        onEndDrag: (event) => {
-            if (event.contentOffset.y < -80) {
-                runOnJS(triggerSync)();
-            }
-        },
-    });
-
-    const syncIndicatorStyle = useAnimatedStyle(() => {
-        const threshold = -80;
-        const pullProgress = interpolate(
-            scrollY.value,
-            [threshold, 0],
-            [1, 0],
-            Extrapolation.CLAMP
-        );
-        
-        return {
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            width: isSyncing ? '100%' : `${pullProgress * 100}%`,
-            height: 2,
-            backgroundColor: colors.primary,
-            opacity: isSyncing ? withTiming(1) : (pullProgress > 0 ? 1 : 0),
-            zIndex: 1000,
-        };
-    });
+    const { scrollHandler, spinnerStyle, syncIndicatorStyle } = usePullToSync();
 
 
     // Zustand store
@@ -421,6 +374,11 @@ export default function TrashScreen() {
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
             <Animated.View style={syncIndicatorStyle} />
+            <Animated.View style={spinnerStyle}>
+                <View style={[styles.spinnerContainer, { backgroundColor: colors.card }]}>
+                    <ActivityIndicator size="small" color={colors.primary} />
+                </View>
+            </Animated.View>
             <Stack.Screen
                 options={{
                     headerShown: true,
@@ -638,5 +596,23 @@ const styles = StyleSheet.create({
     },
     emptyHint: {
         fontSize: 14,
+    },
+    spinnerContainer: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+        ...Platform.select({
+            ios: {
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.15,
+                shadowRadius: 4,
+            },
+            android: {
+                elevation: 4,
+            },
+        }),
     },
 });

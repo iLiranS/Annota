@@ -22,7 +22,6 @@ import {
     useNotesStore,
     useSearchStore,
     useSettingsStore,
-    useSyncStore,
     type Folder
 } from '@annota/core';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -39,17 +38,11 @@ import {
     View
 } from 'react-native';
 import Animated, {
-    Extrapolation,
     FadeIn,
     FadeOut,
-    interpolate,
-    LinearTransition,
-    runOnJS,
-    useAnimatedScrollHandler,
-    useAnimatedStyle,
-    useSharedValue,
-    withTiming
+    LinearTransition
 } from 'react-native-reanimated';
+import { usePullToSync } from '@/hooks/use-pull-to-sync';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 
@@ -95,8 +88,9 @@ export default function NotesList() {
 
     const { general } = useSettingsStore();
     const { toggle } = useSidebar();
-    const isSyncing = useSyncStore(state => state.isSyncing);
     const { isGuest } = useAuthStore();
+
+    const { scrollHandler, spinnerStyle, syncIndicatorStyle } = usePullToSync();
 
     // Params & State
     const currentFolderId = params.folderId ?? null;
@@ -190,7 +184,6 @@ export default function NotesList() {
     };
 
     const searchInputRef = useRef<TextInput>(null);
-    const scrollY = useSharedValue(0);
 
     const currentTag = useMemo(() => tags.find(t => t.id === tagId), [tags, tagId]);
     const headerTitle = tagId ? (currentTag?.name ?? 'Tag') : (currentFolder ? currentFolder.name : 'Annota');
@@ -212,15 +205,6 @@ export default function NotesList() {
             return next;
         });
     }, []);
-
-    const triggerSync = useCallback(async () => {
-        if (isGuest) return;
-        try {
-            await useSyncStore.getState().forceSync();
-        } catch (e) {
-            console.error('[Manual Sync]', e);
-        }
-    }, [isGuest]);
 
     const handleCloseSearch = useCallback(() => {
         setIsSearchActive(false);
@@ -333,39 +317,7 @@ export default function NotesList() {
         return items;
     }, [browseFolders, browseNotes, isSearchActive, dbResults, collapsedSections, notes, localSearchQuery]);
 
-    // Animations & Scroll
-    const scrollHandler = useAnimatedScrollHandler({
-        onScroll: (event) => { scrollY.value = event.contentOffset.y; },
-        onEndDrag: (event) => {
-            if (!isGuest && event.contentOffset.y < -80) runOnJS(triggerSync)();
-        },
-    });
 
-    const syncIndicatorStyle = useAnimatedStyle(() => {
-        if (isGuest) return { opacity: 0 };
-        const pullProgress = interpolate(scrollY.value, [-80, 0], [1, 0], Extrapolation.CLAMP);
-        return {
-            position: 'absolute', top: 0, left: 0, height: 2, zIndex: 1000,
-            width: isSyncing ? '100%' : `${pullProgress * 100}%`,
-            backgroundColor: colors.primary,
-            opacity: isSyncing ? withTiming(1) : (pullProgress > 0 ? 1 : 0),
-        };
-    });
-
-    const spinnerStyle = useAnimatedStyle(() => {
-        if (isGuest) return { opacity: 0 };
-        return {
-            position: 'absolute',
-            top: 20,
-            left: '50%',
-            zIndex: 1001,
-            transform: [
-                { translateX: -16 },
-                { scale: isSyncing ? withTiming(1) : withTiming(0) }
-            ],
-            opacity: isSyncing ? withTiming(1) : withTiming(0),
-        };
-    });
 
     const renderItem = ({ item, index }: { item: ListItem, index: number }) => {
         if (item.type === 'section-header') {

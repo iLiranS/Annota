@@ -7,6 +7,7 @@ import * as schema from '../schema';
 import type { DbOrTx } from '../types';
 import { safeGet, safeGetAll } from '../utils';
 import * as FilesRepo from './files.repository';
+import { parsePendingTasks } from './search.repository';
 
 // Re-export types for convenience
 export type { NoteMetadata, NoteVersion } from '../schema';
@@ -105,6 +106,31 @@ async function updateNoteLinks(sourceId: string, content: string, tx: DbOrTx): P
         await tx.insert(schema.noteLinks)
             .values(newLinks)
             .onConflictDoNothing({ target: [schema.noteLinks.sourceId, schema.noteLinks.targetId] })
+            .run();
+    }
+}
+
+/**
+ * Parses note content to find pending tasks and updates the note_tasks table.
+ */
+export async function updateNoteTasks(noteId: string, content: string, tx: DbOrTx): Promise<void> {
+    // 1. Delete existing tasks where this note is the source
+    await tx.delete(schema.noteTasks).where(eq(schema.noteTasks.noteId, noteId)).run();
+
+    // 2. Extract tasks using parsePendingTasks
+    const tasks = parsePendingTasks(content);
+
+    // 3. Insert new tasks
+    if (tasks.length > 0) {
+        const newTasks = tasks.map((task) => ({
+            noteId,
+            taskIndex: task.index,
+            text: task.text,
+        }));
+
+        await tx.insert(schema.noteTasks)
+            .values(newTasks)
+            .onConflictDoNothing({ target: [schema.noteTasks.noteId, schema.noteTasks.taskIndex] })
             .run();
     }
 }
@@ -246,6 +272,7 @@ export async function upsertSyncedNote(noteFullData: any, tx: DbOrTx = getDb()):
 
     await FilesRepo.setFilesForVersion(activeVersionId, fileIds, tx);
     await updateNoteLinks(metadataDetails.id, content, tx);
+    await updateNoteTasks(metadataDetails.id, content, tx);
 
 }
 
@@ -697,6 +724,7 @@ export async function updateNoteContent(noteId: string, content: string, preview
 
         // Update links
         await updateNoteLinks(noteId, normalizedContent, tx);
+        await updateNoteTasks(noteId, normalizedContent, tx);
     });
 }
 

@@ -266,5 +266,26 @@ export const NoteService = {
             return await notesRepo.updateNoteMetadata(noteId, { tags: JSON.stringify(tagsArray), isDirty: true });
         }
         return metadata;
+    },
+
+    toggleTask: async (noteId: string, taskIndex: number): Promise<void> => {
+        const html = await NoteService.getNoteContent(noteId);
+
+        let occurrence = 0;
+        const updated = html.replace(
+            /(<li[^>]*)(data-checked="false")([^>]*>)/gi,
+            (_match, before, _attr, after) => {
+                if (occurrence === taskIndex) {
+                    occurrence++;
+                    return `${before}data-checked="true"${after}`;
+                }
+                occurrence++;
+                return `${before}data-checked="false"${after}`;
+            }
+        );
+
+        if (updated === html) return; // Nothing changed, bail
+
+        await NoteService.updateContent(noteId, updated);
     }
 };

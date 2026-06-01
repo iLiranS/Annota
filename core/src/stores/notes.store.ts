@@ -1,11 +1,12 @@
 import { create } from 'zustand';
 import { COLOR_PALETTE } from '../../constants/colors';
 import { getPlatformAdapters } from '../adapters';
-import { purgeGuestTombstones } from '../db';
+import { purgeGuestTombstones, type PendingTaskNote } from '../db';
 import type { Folder, FolderInsert, NoteMetadata, Tag } from '../db/schema';
 import { DAILY_NOTES_FOLDER_ID, FolderService, TRASH_FOLDER_ID } from '../services/folders.service';
 import { NoteService } from '../services/notes.service';
 import { TagService } from '../services/tags.service';
+import { SearchService } from '../services/search.service';
 import { SyncScheduler } from '../sync/sync-scheduler';
 import { SortType, sortFolders, sortNotes } from '../utils/sorts';
 import { createStorageAdapter } from './config';
@@ -26,6 +27,7 @@ interface NotesState {
     notes: NoteMetadata[];
     folders: Folder[];
     tags: Tag[];
+    tasks: PendingTaskNote[];
     rootSettings: RootSettings;
     isInitialized: boolean;
 
@@ -56,6 +58,7 @@ interface NotesState {
     // Content operations (lazy loaded)
     getNoteContent: (noteId: string) => Promise<string>;
     updateNoteContent: (noteId: string, content: string) => Promise<{ error: string | null }>;
+    toggleTask: (noteId: string, taskIndex: number) => Promise<void>;
     getNoteVersions: (noteId: string) => Promise<{ id: string; createdAt: Date }[]>;
     getNoteVersion: (versionId: string) => Promise<{ id: string; content: string; createdAt: Date } | undefined>;
     deleteNoteVersion: (noteId: string, versionId: string) => Promise<void>;
@@ -91,6 +94,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     notes: [],
     folders: [],
     tags: [],
+    tasks: [],
     rootSettings: { sortType: 'UPDATED_LAST' },
     isInitialized: false,
 
@@ -203,7 +207,8 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         allFetchedNotes.forEach((note) => uniqueNotesMap.set(note.id, note));
         const notes = Array.from(uniqueNotesMap.values());
 
-        set({ folders, notes, tags: allTags, isInitialized: true });
+        const tasks = await SearchService.findNotesWithPendingTasks();
+        set({ folders, notes, tags: allTags, tasks, isInitialized: true });
 
         if (!wasInitialized) {
             console.log(`[Store] Initialized with ${folders.length} folders and ${notes.length} notes.`);
@@ -436,10 +441,17 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
             // Fetch updated metadata (with new preview)
             const updatedNote = await NoteService.getNoteById(noteId);
+            
+            // Refresh tasks in store
+            const tasks = await SearchService.findNotesWithPendingTasks();
+
             if (updatedNote) {
                 set(state => ({
-                    notes: state.notes.map(n => n.id === noteId ? updatedNote : n)
+                    notes: state.notes.map(n => n.id === noteId ? updatedNote : n),
+                    tasks
                 }));
+            } else {
+                set({ tasks });
             }
             SyncScheduler.instance?.notifyContentChange();
             return { error: null };
@@ -452,6 +464,36 @@ export const useNotesStore = create<NotesState>((set, get) => ({
                 message
             });
             return { error: message };
+        }
+    },
+
+    toggleTask: async (noteId, taskIndex) => {
+        try {
+            await NoteService.toggleTask(noteId, taskIndex);
+
+            // Fetch updated metadata (with new preview)
+            const updatedNote = await NoteService.getNoteById(noteId);
+            
+            // Refresh tasks in store
+            const tasks = await SearchService.findNotesWithPendingTasks();
+
+            if (updatedNote) {
+                set(state => ({
+                    notes: state.notes.map(n => n.id === noteId ? updatedNote : n),
+                    tasks
+                }));
+            } else {
+                set({ tasks });
+            }
+            SyncScheduler.instance?.notifyContentChange();
+        } catch (error) {
+            console.error('[Store] Failed to toggle task:', error);
+            const message = error instanceof Error ? error.message : String(error);
+            getPlatformAdapters().toast.show({
+                type: 'error',
+                title: 'Task update failed',
+                message
+            });
         }
     },
 
@@ -783,6 +825,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
             notes: [],
             folders: [],
             tags: [],
+            tasks: [],
             rootSettings: { sortType: 'UPDATED_LAST' },
             isInitialized: false,
         });
