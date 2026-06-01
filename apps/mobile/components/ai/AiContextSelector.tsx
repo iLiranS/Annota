@@ -1,8 +1,9 @@
-import { useNotesStore, TRASH_FOLDER_ID } from '@annota/core';
+import { useNotesStore, TRASH_FOLDER_ID, SearchRepository } from '@annota/core';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
+    ActivityIndicator,
     FlatList,
     KeyboardAvoidingView,
     Platform,
@@ -32,43 +33,99 @@ export function AiContextSelector({
     const { colors } = useTheme();
     const { notes, folders } = useNotesStore();
     const [search, setSearch] = useState("");
+    const [dbNotes, setDbNotes] = useState<any[]>([]);
+    const [dbFolders, setDbFolders] = useState<any[]>([]);
+    const [isSearching, setIsSearching] = useState(false);
+
+    useEffect(() => {
+        if (!search.trim()) {
+            setDbNotes([]);
+            setDbFolders([]);
+            setIsSearching(false);
+            return;
+        }
+
+        setIsSearching(true);
+        let active = true;
+        const delayDebounce = setTimeout(async () => {
+            try {
+                const [notesRaw, foldersRaw] = await Promise.all([
+                    SearchRepository.searchNotes(search),
+                    SearchRepository.searchFolders(search)
+                ]);
+                if (active) {
+                    setDbNotes(notesRaw);
+                    setDbFolders(foldersRaw);
+                    setIsSearching(false);
+                }
+            } catch (err) {
+                console.error("Search failed:", err);
+                if (active) setIsSearching(false);
+            }
+        }, 200);
+
+        return () => {
+            active = false;
+            clearTimeout(delayDebounce);
+        };
+    }, [search]);
 
     const filteredNotes = useMemo(() => {
+        if (search.trim()) {
+            const matches = dbNotes
+                .map(dbN => notes.find(n => n.id === dbN.id))
+                .filter((n): n is any => !!n && !n.isDeleted && !n.isPermDeleted && n.folderId !== TRASH_FOLDER_ID);
+            
+            const sorted = [...matches].sort((a, b) => {
+                const aSelected = selectedNotes.some(sn => sn.id === a.id);
+                const bSelected = selectedNotes.some(sn => sn.id === b.id);
+                if (aSelected && !bSelected) return -1;
+                if (!aSelected && bSelected) return 1;
+                return 0;
+            });
+            return sorted;
+        }
+
         const activeNotes = notes.filter(n => 
             !n.isDeleted && 
             !n.isPermDeleted && 
             n.folderId !== TRASH_FOLDER_ID
         );
-        const searchLower = search.toLowerCase();
-        const matches = search.trim()
-            ? activeNotes.filter(n => (n.title || '').toLowerCase().includes(searchLower))
-            : activeNotes;
-
-        const sorted = [...matches].sort((a, b) => {
+        const sorted = [...activeNotes].sort((a, b) => {
             const aSelected = selectedNotes.some(sn => sn.id === a.id);
             const bSelected = selectedNotes.some(sn => sn.id === b.id);
             if (aSelected && !bSelected) return -1;
             if (!aSelected && bSelected) return 1;
-            return 0;
+            return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
         });
 
         const selectedCount = sorted.filter(n => selectedNotes.some(sn => sn.id === n.id)).length;
-        const limit = Math.max(10, Math.min(20, selectedCount));
+        const limit = Math.max(5, selectedCount);
         return sorted.slice(0, limit);
-    }, [notes, selectedNotes, search]);
+    }, [notes, selectedNotes, search, dbNotes]);
 
     const filteredFolders = useMemo(() => {
+        if (search.trim()) {
+            const matches = dbFolders
+                .map(dbF => folders.find(f => f.id === dbF.id))
+                .filter((f): f is any => !!f && !f.isDeleted && !f.isPermDeleted && f.id !== TRASH_FOLDER_ID);
+            
+            const sorted = [...matches].sort((a, b) => {
+                const aHasSelected = notes.filter(n => n.folderId === a.id).some(n => selectedNotes.some(sn => sn.id === n.id));
+                const bHasSelected = notes.filter(n => n.folderId === b.id).some(n => selectedNotes.some(sn => sn.id === n.id));
+                if (aHasSelected && !bHasSelected) return -1;
+                if (!aHasSelected && bHasSelected) return 1;
+                return 0;
+            });
+            return sorted;
+        }
+
         const activeFolders = folders.filter(f => 
             !f.isDeleted && 
             !f.isPermDeleted && 
             f.id !== TRASH_FOLDER_ID
         );
-        const searchLower = search.toLowerCase();
-        const matches = search.trim()
-            ? activeFolders.filter(f => (f.name || '').toLowerCase().includes(searchLower))
-            : activeFolders;
-
-        const sorted = [...matches].sort((a, b) => {
+        const sorted = [...activeFolders].sort((a, b) => {
             const aHasSelected = notes.filter(n => n.folderId === a.id).some(n => selectedNotes.some(sn => sn.id === n.id));
             const bHasSelected = notes.filter(n => n.folderId === b.id).some(n => selectedNotes.some(sn => sn.id === n.id));
             if (aHasSelected && !bHasSelected) return -1;
@@ -79,7 +136,7 @@ export function AiContextSelector({
         const selectedInFolders = sorted.filter(f => notes.filter(n => n.folderId === f.id).some(n => selectedNotes.some(sn => sn.id === n.id))).length;
         const limit = Math.max(5, Math.min(10, selectedInFolders));
         return sorted.slice(0, limit);
-    }, [folders, notes, selectedNotes, search]);
+    }, [folders, notes, selectedNotes, search, dbFolders]);
 
     const renderFolderItem = ({ item: folder }: { item: any }) => {
         const folderNotes = notes.filter(n => n.folderId === folder.id && !n.isDeleted && !n.isPermDeleted);
@@ -161,16 +218,11 @@ export function AiContextSelector({
                 activeOpacity={1}
                 onPress={onClose}
             />
-            <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-                style={{ flex: 1, justifyContent: 'flex-end' }}
+            <Animated.View
+                entering={SlideInDown}
+                exiting={SlideOutDown}
+                style={[styles.container, { backgroundColor: colors.card, borderColor: colors.border }]}
             >
-                <Animated.View
-                    entering={SlideInDown}
-                    exiting={SlideOutDown}
-                    style={[styles.container, { backgroundColor: colors.card, borderColor: colors.border }]}
-                >
                     <View style={[styles.header, { borderBottomColor: colors.border }]}>
                         <View style={styles.searchContainer}>
                             <Ionicons name="search" size={16} color={colors.text + '40'} style={styles.searchIcon} />
@@ -187,43 +239,55 @@ export function AiContextSelector({
                         </TouchableOpacity>
                     </View>
 
-                    <FlatList
-                        data={listData}
-                        keyExtractor={(item, index) => index.toString()}
-                        renderItem={({ item }) => {
-                            switch (item.type) {
-                                case 'header':
-                                    if (item.count === 0) return null;
-                                    return (
-                                        <View style={styles.selectedHeader}>
-                                            <Text style={[styles.sectionTitle, { color: colors.primary }]}>
-                                                {item.count} SELECTED
-                                            </Text>
-                                            <TouchableOpacity onPress={onClearAll}>
-                                                <Text style={[styles.clearText, { color: '#EF4444' }]}>Clear all</Text>
-                                            </TouchableOpacity>
-                                        </View>
-                                    );
-                                case 'section':
-                                    return (
-                                        <View style={styles.sectionHeader}>
-                                            <Ionicons name={item.icon as any} size={12} color={colors.text + '40'} />
-                                            <Text style={[styles.sectionTitle, { color: colors.text + '40' }]}>
-                                                {item.title.toUpperCase()}
-                                            </Text>
-                                        </View>
-                                    );
-                                case 'folder':
-                                    return renderFolderItem({ item: item.data });
-                                case 'note':
-                                    return renderNoteItem({ item: item.data });
-                                default:
-                                    return null;
-                            }
-                        }}
-                        contentContainerStyle={styles.listContent}
-                        keyboardShouldPersistTaps="handled"
-                    />
+                    <KeyboardAvoidingView
+                        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                        style={{ flex: 1 }}
+                    >
+
+                    {isSearching ? (
+                        <View style={styles.loaderContainer}>
+                            <ActivityIndicator size="small" color={colors.primary} />
+                            <Text style={[styles.loaderText, { color: colors.text + '60' }]}>Searching database...</Text>
+                        </View>
+                    ) : (
+                        <FlatList
+                            data={listData}
+                            keyExtractor={(item, index) => index.toString()}
+                            renderItem={({ item }) => {
+                                switch (item.type) {
+                                    case 'header':
+                                        if (item.count === 0) return null;
+                                        return (
+                                            <View style={styles.selectedHeader}>
+                                                <Text style={[styles.sectionTitle, { color: colors.primary }]}>
+                                                    {item.count} SELECTED
+                                                </Text>
+                                                <TouchableOpacity onPress={onClearAll}>
+                                                    <Text style={[styles.clearText, { color: '#EF4444' }]}>Clear all</Text>
+                                                </TouchableOpacity>
+                                            </View>
+                                        );
+                                    case 'section':
+                                        return (
+                                            <View style={styles.sectionHeader}>
+                                                <Ionicons name={item.icon as any} size={12} color={colors.text + '40'} />
+                                                <Text style={[styles.sectionTitle, { color: colors.text + '40' }]}>
+                                                    {item.title.toUpperCase()}
+                                                </Text>
+                                            </View>
+                                        );
+                                    case 'folder':
+                                        return renderFolderItem({ item: item.data });
+                                    case 'note':
+                                        return renderNoteItem({ item: item.data });
+                                    default:
+                                        return null;
+                                }
+                            }}
+                            contentContainerStyle={styles.listContent}
+                            keyboardShouldPersistTaps="handled"
+                        />
+                    )}
 
                     {selectedNotes.length > 0 && (
                         <View style={[styles.footer, { borderTopColor: colors.border }]}>
@@ -237,8 +301,8 @@ export function AiContextSelector({
                             </TouchableOpacity>
                         </View>
                     )}
+                    </KeyboardAvoidingView>
                 </Animated.View>
-            </KeyboardAvoidingView>
         </Animated.View>
     );
 }
@@ -253,7 +317,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(0,0,0,0.4)',
     },
     container: {
-        height: '70%',
+        height: '90%',
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
         borderTopWidth: 1,
@@ -347,5 +411,16 @@ const styles = StyleSheet.create({
         color: '#FFF',
         fontSize: 15,
         fontWeight: '700',
-    }
+    },
+    loaderContainer: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 12,
+        paddingVertical: 80,
+    },
+    loaderText: {
+        fontSize: 13,
+        fontWeight: '500',
+    },
 });

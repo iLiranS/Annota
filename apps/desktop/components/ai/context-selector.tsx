@@ -2,9 +2,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { CheckCircle2, FileText, Folder, Plus, Search } from "lucide-react";
-import { useMemo, useState } from "react";
+import { CheckCircle2, FileText, Folder, Loader2, Plus, Search } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { Ionicons } from "../ui/ionicons";
+import { SearchRepository } from "@annota/core";
 
 interface ContextSelectorProps {
     notes: any[];
@@ -25,36 +26,90 @@ export function ContextSelector({
 }: ContextSelectorProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [search, setSearch] = useState("");
+    const [dbNotes, setDbNotes] = useState<any[]>([]);
+    const [dbFolders, setDbFolders] = useState<any[]>([]);
+    const [isSearching, setIsSearching] = useState(false);
+
+    useEffect(() => {
+        if (!search.trim()) {
+            setDbNotes([]);
+            setDbFolders([]);
+            setIsSearching(false);
+            return;
+        }
+
+        setIsSearching(true);
+        let active = true;
+        const delayDebounce = setTimeout(async () => {
+            try {
+                const [notesRaw, foldersRaw] = await Promise.all([
+                    SearchRepository.searchNotes(search),
+                    SearchRepository.searchFolders(search)
+                ]);
+                if (active) {
+                    setDbNotes(notesRaw);
+                    setDbFolders(foldersRaw);
+                    setIsSearching(false);
+                }
+            } catch (err) {
+                console.error("Search failed:", err);
+                if (active) setIsSearching(false);
+            }
+        }, 200);
+
+        return () => {
+            active = false;
+            clearTimeout(delayDebounce);
+        };
+    }, [search]);
 
     const filteredNotes = useMemo(() => {
-        const matches = search.trim()
-            ? notes.filter(n =>
-                (n.title || "").toLowerCase().includes(search.toLowerCase()) ||
-                (n.preview || "").toLowerCase().includes(search.toLowerCase())
-            )
-            : notes;
+        if (search.trim()) {
+            const matches = dbNotes
+                .map(dbN => notes.find(n => n.id === dbN.id))
+                .filter((n): n is any => !!n && !n.isDeleted && !n.isPermDeleted);
+            
+            const sorted = [...matches].sort((a, b) => {
+                const aSelected = selectedNotes.some(sn => sn.id === a.id);
+                const bSelected = selectedNotes.some(sn => sn.id === b.id);
+                if (aSelected && !bSelected) return -1;
+                if (!aSelected && bSelected) return 1;
+                return 0;
+            });
+            return sorted;
+        }
 
-        const sorted = [...matches].sort((a, b) => {
+        const activeNotes = notes.filter(n => !n.isDeleted && !n.isPermDeleted);
+        const sorted = [...activeNotes].sort((a, b) => {
             const aSelected = selectedNotes.some(sn => sn.id === a.id);
             const bSelected = selectedNotes.some(sn => sn.id === b.id);
             if (aSelected && !bSelected) return -1;
             if (!aSelected && bSelected) return 1;
-            return 0;
+            return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
         });
 
         const selectedCount = sorted.filter(n => selectedNotes.some(sn => sn.id === n.id)).length;
-        const limit = Math.max(10, Math.min(20, selectedCount));
+        const limit = Math.max(5, selectedCount);
         return sorted.slice(0, limit);
-    }, [notes, selectedNotes, search]);
+    }, [notes, selectedNotes, search, dbNotes]);
 
     const filteredFolders = useMemo(() => {
-        const matches = search.trim()
-            ? folders.filter(f =>
-                (f.name || "").toLowerCase().includes(search.toLowerCase())
-            )
-            : folders;
+        if (search.trim()) {
+            const matches = dbFolders
+                .map(dbF => folders.find(f => f.id === dbF.id))
+                .filter((f): f is any => !!f && !f.isDeleted && !f.isPermDeleted);
+            
+            const sorted = [...matches].sort((a, b) => {
+                const aHasSelected = notes.filter(n => n.folderId === a.id).some(n => selectedNotes.some(sn => sn.id === n.id));
+                const bHasSelected = notes.filter(n => n.folderId === b.id).some(n => selectedNotes.some(sn => sn.id === n.id));
+                if (aHasSelected && !bHasSelected) return -1;
+                if (!aHasSelected && bHasSelected) return 1;
+                return 0;
+            });
+            return sorted;
+        }
 
-        const sorted = [...matches].sort((a, b) => {
+        const sorted = [...folders].sort((a, b) => {
             const aHasSelected = notes.filter(n => n.folderId === a.id).some(n => selectedNotes.some(sn => sn.id === n.id));
             const bHasSelected = notes.filter(n => n.folderId === b.id).some(n => selectedNotes.some(sn => sn.id === n.id));
             if (aHasSelected && !bHasSelected) return -1;
@@ -65,7 +120,7 @@ export function ContextSelector({
         const selectedInFolders = sorted.filter(f => notes.filter(n => n.folderId === f.id).some(n => selectedNotes.some(sn => sn.id === n.id))).length;
         const limit = Math.max(5, Math.min(10, selectedInFolders));
         return sorted.slice(0, limit);
-    }, [folders, notes, selectedNotes, search]);
+    }, [folders, notes, selectedNotes, search, dbFolders]);
 
     return (
         <Popover open={isOpen} onOpenChange={setIsOpen}>
@@ -105,8 +160,14 @@ export function ContextSelector({
                 </div>
 
                 <div className="h-[300px] overflow-y-auto premium-scrollbar">
-                    <div className="p-2 space-y-4">
-                        {selectedNotes.length > 0 && (
+                    {isSearching ? (
+                        <div className="flex flex-col items-center justify-center h-full gap-2 py-10">
+                            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                            <span className="text-[10px] text-muted-foreground/60">Searching database...</span>
+                        </div>
+                    ) : (
+                        <div className="p-2 space-y-4">
+                            {selectedNotes.length > 0 && (
                             <div className="px-2 pt-1 flex items-center justify-between">
                                 <span className="text-[10px] font-bold uppercase tracking-wider text-primary/70">
                                     {selectedNotes.length} Selected
@@ -177,6 +238,7 @@ export function ContextSelector({
                             )}
                         </div>
                     </div>
+                    )}
                 </div>
                 {selectedNotes.length > 0 && (
                     <div className="p-2 border-t border-border/30 bg-muted/20">

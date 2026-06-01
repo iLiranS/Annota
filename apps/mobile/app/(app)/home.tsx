@@ -8,6 +8,7 @@ import { HapticPressable } from '@/components/ui/haptic-pressable';
 import { NotesModal } from '@/components/notes/media-search-browser';
 import { useSidebar } from '@/context/sidebar-context';
 import { useAppTheme } from '@/hooks/use-app-theme';
+import AiChatModal from '@/components/ai/AiChatModal';
 import {
     DAILY_NOTES_FOLDER_ID,
     getPaginatedMedia,
@@ -47,6 +48,7 @@ export default function HomeScreen() {
     const [mediaLoading, setMediaLoading] = useState(true);
     const [selectedImage, setSelectedImage] = useState<{ src: string } | null>(null);
     const [selectedItemForNotes, setSelectedItemForNotes] = useState<MediaItem | null>(null);
+    const [aiModalVisible, setAiModalVisible] = useState(false);
 
     // Calculate dynamic media card size
     const mediaCardSize = useMemo(() => {
@@ -249,7 +251,15 @@ export default function HomeScreen() {
                             <Ionicons name="menu" size={24} color={colors.primary} />
                         </HapticPressable>
                     ),
-                    headerRight: () => null,
+                    headerRight: () => (
+                        <HapticPressable
+                            onPress={() => setAiModalVisible(true)}
+                            style={styles.headerButton}
+                            hitSlop={8}
+                        >
+                            <Ionicons name="sparkles" size={22} color={colors.primary} />
+                        </HapticPressable>
+                    ),
                 }}
             />
 
@@ -318,6 +328,11 @@ export default function HomeScreen() {
                     setSelectedItemForNotes(null);
                     router.push({ pathname: '/Notes/[id]', params: { id: noteId, source: 'home' } });
                 }}
+            />
+
+            <AiChatModal
+                visible={aiModalVisible}
+                onClose={() => setAiModalVisible(false)}
             />
         </View>
     );

@@ -425,7 +425,6 @@ export default function Sidebar({ onNavigate, ...props }: SidebarProps & React.C
                         <SidebarItem
                             renderIcon={() => <Ionicons name="home-outline" size={22} color={colors.primary} />}
                             label="Home"
-                            isActive={pathname.toLowerCase() === '/home'}
                             onPress={navigateToHome}
                         />
 

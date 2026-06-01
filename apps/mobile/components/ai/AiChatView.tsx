@@ -758,7 +758,7 @@ export function AiChatView({
                     </TouchableOpacity>
 
                     {isOptionsVisible && (
-                        <View style={[styles.optionsMenu, { backgroundColor: colors.card, borderColor: colors.border + '50' }]}>
+                        <View style={[styles.optionsMenu, { backgroundColor: colors.card, borderColor: colors.border }]}>
                             <TouchableOpacity
                                 style={[styles.optionItem, !supportsWebSearch && { opacity: 0.4 }]}
                                 onPress={() => {

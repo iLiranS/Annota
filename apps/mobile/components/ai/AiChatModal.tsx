@@ -215,15 +215,7 @@ export default function AiChatModal({ visible, onClose, initialContext, initialF
                 ? selectedModelAnthropic
                 : selectedModelGoogle;
 
-    const getProviderModels = () => {
-        switch (activeProvider) {
-            case 'ollama': return availableModels.map(m => ({ label: m.name, value: m.name }));
-            case 'openai': return OPENAI_MODELS;
-            case 'anthropic': return ANTHROPIC_MODELS;
-            case 'google': return GOOGLE_MODELS;
-            default: return [];
-        }
-    };
+
 
     const handleSend = async () => {
         if (!input.trim() || isStreaming) return;
