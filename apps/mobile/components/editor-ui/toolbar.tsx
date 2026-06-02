@@ -252,7 +252,7 @@ export function EditorToolbar({
                                 if (editorState.isInTable) {
                                     openPopup('table');
                                 } else {
-                                    onCommand('insertTable', { rows: 3, cols: 3, withHeaderRow: false });
+                                    openPopup('insertTable');
                                 }
                             }}
                         />
@@ -470,6 +470,17 @@ export function EditorToolbar({
                     canDeleteRow={editorState.canDeleteRow}
                     canDeleteColumn={editorState.canDeleteColumn}
                     canDeleteTable={editorState.canDeleteTable}
+                    onCommand={(command: string, params?: Record<string, unknown>) => {
+                        onCommand(command, params);
+                    }}
+                    onClose={closePopup}
+                />
+            )}
+
+            {activePopup === 'insertTable' && (
+                <ToolbarPopup
+                    visible={true}
+                    type="insertTable"
                     onCommand={(command: string, params?: Record<string, unknown>) => {
                         onCommand(command, params);
                     }}

@@ -4,7 +4,7 @@ import {
 } from "@/components/ui/context-menu";
 import { Ionicons } from "@/components/ui/ionicons";
 import { useSmartNavigate } from "@/hooks/use-smart-navigate";
-import { NoteMetadata, useNavigationStore, useNotesStore, useSettingsStore } from "@annota/core";
+import { NoteMetadata, useNavigationStore, useNotesStore } from "@annota/core";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { FolderOpen, PictureInPicture2, Pin, Star } from "lucide-react";
 import { useCallback, useState } from "react";
@@ -43,7 +43,6 @@ export function NoteContextMenuContent({
     disabledActions = [],
 }: NoteContextMenuContentProps) {
     const { updateNoteMetadata, restoreNote, permanentlyDeleteNote } = useNotesStore();
-    const { general } = useSettingsStore();
     const setSidebarTab = useNavigationStore((s) => s.setSidebarTab);
     const navigateSmart = useSmartNavigate();
     const openNoteInNewWindow = useOpenNoteInNewWindow();
@@ -142,7 +141,7 @@ export function NoteContextMenuContent({
                 </ContextMenuItem>
             )}
 
-            {general.enableNoteTabs !== false && !disabledActions.includes("openInNewTab") && (
+            {!disabledActions.includes("openInNewTab") && (
                 <ContextMenuItem
                     onSelect={handleOpenInNewTab}
                     onPointerUp={(e) => e.button === 2 && e.preventDefault()}

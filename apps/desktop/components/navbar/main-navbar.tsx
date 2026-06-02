@@ -274,11 +274,7 @@ export function MainNavbar() {
                 </div>
 
                 {/* Note Tabs */}
-                {general.enableNoteTabs !== false ? (
-                    <NoteTabs />
-                ) : (
-                    <div data-tauri-drag-region className="flex-1 h-full" />
-                )}
+                <NoteTabs />
             </div>
 
             {/* Right Section: Actions */}

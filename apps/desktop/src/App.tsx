@@ -442,8 +442,8 @@ function App() {
     // 2. Priority: Restore Last Viewed Note (only if at notes root)
     const isAtRoot = location.pathname === "/notes";
     if (isAtRoot) {
-      // Skip restoring last viewed note if note tabs are enabled but there are no tabs open.
-      if (general?.enableNoteTabs !== false && tabs.length === 0) {
+      // Skip restoring last viewed note if there are no tabs open.
+      if (tabs.length === 0) {
         hasRestoredLastViewRef.current = true;
         return;
       }

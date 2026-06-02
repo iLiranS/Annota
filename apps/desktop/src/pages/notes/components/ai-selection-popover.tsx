@@ -175,7 +175,7 @@ export function AISelectionPopover({ anchorRect, isVisible, isLoading, onAction,
                         >
                             <div className="h-3 w-3 bg-current rounded-[2px]" />
                         </Button>
-                        <span className="text-sm font-medium text-primary pr-2">AI is working…</span>
+                        <span className="text-sm font-medium text-primary pr-2 animate-pulse">AI is working…</span>
                     </div>
 
                 ) : !isExpanded ? (

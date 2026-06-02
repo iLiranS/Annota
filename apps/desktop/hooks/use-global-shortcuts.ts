@@ -13,25 +13,6 @@ export function useGlobalShortcuts(options: { isStandalone?: boolean } = {}) {
     const { toggleAlwaysOnTop } = useAlwaysOnTop();
 
     useEffect(() => {
-        const rotateSidebarTab = (direction: 'next' | 'prev') => {
-            const tabs: ('notes' | 'tags' | 'search')[] = ['notes', 'tags', 'search'];
-            const currentTab = useNavigationStore.getState().sidebarTab;
-            const currentIndex = tabs.indexOf(currentTab);
-            if (currentIndex === -1) return;
-
-            const isRtl = useSettingsStore.getState().general.appDirection === 'rtl';
-            const effectiveDirection = isRtl
-                ? (direction === 'next' ? 'prev' : 'next')
-                : direction;
-
-            let nextIndex = effectiveDirection === 'next' ? currentIndex + 1 : currentIndex - 1;
-            if (nextIndex >= tabs.length) nextIndex = 0;
-            if (nextIndex < 0) nextIndex = tabs.length - 1;
-
-            useNavigationStore.getState().setSidebarTab(tabs[nextIndex]);
-            window.dispatchEvent(new CustomEvent("open-sidebar"));
-        };
-
         const handleKeyDown = (e: KeyboardEvent) => {
             const isMod = e.metaKey || e.ctrlKey;
 
@@ -90,19 +71,6 @@ export function useGlobalShortcuts(options: { isStandalone?: boolean } = {}) {
                     return;
                 }
 
-                // Cmd+Option+Right / Cmd+Option+] / Ctrl+Alt+Right / Ctrl+Alt+] (Rotate next sidebar tab)
-                if (isMod && e.altKey && (e.key === 'ArrowRight' || e.key === ']')) {
-                    e.preventDefault();
-                    rotateSidebarTab('next');
-                    return;
-                }
-
-                // Cmd+Option+Left / Cmd+Option+[ / Ctrl+Alt+Left / Ctrl+Alt+[ (Rotate prev)
-                if (isMod && e.altKey && (e.key === 'ArrowLeft' || e.key === '[')) {
-                    e.preventDefault();
-                    rotateSidebarTab('prev');
-                    return;
-                }
             }
 
             // 3. Handle global shortcuts

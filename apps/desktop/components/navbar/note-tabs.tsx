@@ -437,7 +437,7 @@ export function NoteTabs() {
                                             "flex p-0.5 shrink-0 items-center justify-center rounded",
                                             isActive
                                                 ? "relative opacity-85 bg-transparent text-primary/75 hover:text-primary hover:bg-foreground/10"
-                                                : "absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 bg-sidebar hover:text-foreground",
+                                                : "absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 bg-background  hover:text-primary",
                                             !isActive && (general.appDirection === 'rtl' ? "left-1.5" : "right-1.5")
                                         )}
                                         onClick={(e) => handleClose(e, tab.noteId)}

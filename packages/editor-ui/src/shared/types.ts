@@ -273,7 +273,7 @@ export type EditorCommand =
 // Popup Types
 // ============================================================================
 
-export type PopupType = 'headings' | 'highlight' | 'textColor' | 'youtube' | 'link' | 'file' | 'table' | 'codeLanguage' | 'math' | 'detailsBackground' | 'blockMenu' | 'fileMenu' | 'ai' | null;
+export type PopupType = 'headings' | 'highlight' | 'textColor' | 'youtube' | 'link' | 'file' | 'table' | 'codeLanguage' | 'math' | 'detailsBackground' | 'blockMenu' | 'fileMenu' | 'ai' | 'insertTable' | null;
 
 export interface BasePopupProps {
     visible: boolean;

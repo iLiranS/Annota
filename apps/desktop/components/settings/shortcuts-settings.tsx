@@ -11,7 +11,7 @@ function ShortcutItem({ label, keys, description }: ShortcutItemProps) {
         <div className="flex items-center justify-between p-3.5 group hover:bg-accent/5 transition-colors">
             <div className="flex flex-col gap-0.5">
                 <span className="text-sm font-medium text-foreground">{label}</span>
-                {description && <span className="text-xs text-muted-foreground">{description}</span>}
+                {description && <span className="text-xs text-muted-foreground/60">{description}</span>}
             </div>
             <div className="flex gap-1">
                 {keys.map((key, i) => (
@@ -49,10 +49,9 @@ export function ShortcutsSettings() {
                     <ShortcutItem label="Toggle Secondary Sidebar" keys={[modKey, "E"]} />
                     <ShortcutItem label="Settings" keys={[modKey, ","]} />
                     <ShortcutItem label="Always on Top" keys={[modKey, "Shift", "T"]} />
-                    <ShortcutItem label="Rotate Note Tabs" keys={["Ctrl", "Tab"]} description="Rotate between opened note tabs" />
+                    <ShortcutItem label="Next Tab" keys={["Ctrl", "Tab"]} description="Switch to the next note tab" />
+                    <ShortcutItem label="Previous Tab" keys={["Ctrl", "Shift", "Tab"]} description="Switch to the previous note tab" />
                     <ShortcutItem label="Close Current Tab" keys={[modKey, "W"]} description="Close the active note tab" />
-                    <ShortcutItem label="Next Sidebar Tab" keys={isMac ? [modKey, "⌥", "→"] : [modKey, "Alt", "→"]} description={`Also works with ${isMac ? "⌘+⌥+]" : "Ctrl+Alt+]"}`} />
-                    <ShortcutItem label="Previous Sidebar Tab" keys={isMac ? [modKey, "⌥", "←"] : [modKey, "Alt", "←"]} description={`Also works with ${isMac ? "⌘+⌥+[" : "Ctrl+Alt+["}`} />
                     <ShortcutItem label="Zoom In" keys={[modKey, "+"]} />
                     <ShortcutItem label="Zoom Out" keys={[modKey, "-"]} />
                     <ShortcutItem label="Reset Zoom" keys={[modKey, "0"]} />

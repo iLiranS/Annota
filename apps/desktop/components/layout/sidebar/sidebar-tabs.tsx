@@ -15,8 +15,8 @@ interface SidebarTabsProps {
 
 const TABS: { id: SidebarTab; icon: React.ReactNode; label: string }[] = [
     { id: 'notes', icon: <NotebookTabs size={17} />, label: 'Notes' },
-    { id: 'tags', icon: <Ionicons name="pricetag-outline" size={17} />, label: 'Tags' },
     { id: 'search', icon: <Ionicons name="search-outline" size={17} />, label: 'Search' },
+    { id: 'tags', icon: <Ionicons name="pricetag-outline" size={17} />, label: 'Tags' },
 ];
 
 export function SidebarTabs({ activeTab, setActiveTab, colors }: SidebarTabsProps) {
@@ -39,7 +39,7 @@ export function SidebarTabs({ activeTab, setActiveTab, colors }: SidebarTabsProp
     return (
         <div
             className={cn(
-                "flex items-center gap-0.5 rounded-md border border-sidebar-border/40 bg-sidebar-accent/20 p-0.5",
+                "flex items-center gap-0.5 ",
                 isRtl && 'flex-row-reverse'
             )}
         >

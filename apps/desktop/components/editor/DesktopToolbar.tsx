@@ -18,6 +18,7 @@ import { ToolbarFileUpload } from './toolbar/toolbar-file-upload';
 import { HeadingSelector } from './toolbar/toolbar-heading-selector';
 import { LinkPopover } from './toolbar/toolbar-link-popover';
 import { MathPopover } from './toolbar/toolbar-math-popover';
+import { TableSelector } from './toolbar/toolbar-table-selector';
 
 const DEFAULT_ORDER = [
     'heading', 'bold', 'italic', 'underline', 'strike', 'textColor', 'highlight',
@@ -55,10 +56,6 @@ export function DesktopToolbar({
     useEffect(() => {
         setIsMac(/Mac|iPod|iPhone|iPad/.test(navigator.platform) || /Mac/.test(navigator.userAgent));
     }, []);
-
-    const MOD = isMac ? '⌘' : 'Ctrl';
-    const ALT = isMac ? '⌥' : 'Alt';
-    const SHIFT = isMac ? '⇧' : 'Shift';
 
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [toolbarOrder, setToolbarOrder] = useState<string[]>(DEFAULT_ORDER);
@@ -120,109 +117,111 @@ export function DesktopToolbar({
         {
             id: 'bold',
             label: 'Bold',
-            shortcut: `${MOD}B`,
+            shortcut: isMac ? '⌘+B' : 'Ctrl+B',
             render: <Button key="bold" variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => sendCommand('toggleBold')} style={activeStyle(editorState.isBold)}><EditorIcons.Bold className="w-5 h-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="bold-dropdown" onClick={() => sendCommand('toggleBold')} className={cn("gap-2", editorState.isBold && "text-primary")}><EditorIcons.Bold className="w-4 h-4" /> Bold <span className="ml-auto text-[10px] opacity-50">{MOD}B</span></DropdownMenuItem>
+            dropdownRender: <DropdownMenuItem key="bold-dropdown" onClick={() => sendCommand('toggleBold')} className={cn("gap-2", editorState.isBold && "text-primary")}><EditorIcons.Bold className="w-4 h-4" /> Bold <span className="ml-auto text-[10px] opacity-50">{isMac ? '⌘+B' : 'Ctrl+B'}</span></DropdownMenuItem>
         },
         {
             id: 'italic',
             label: 'Italic',
-            shortcut: `${MOD}I`,
+            shortcut: isMac ? '⌘+I' : 'Ctrl+I',
             render: <Button key="italic" variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => sendCommand('toggleItalic')} style={activeStyle(editorState.isItalic)}><EditorIcons.Italic className="w-5 h-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="italic-dropdown" onClick={() => sendCommand('toggleItalic')} className={cn("gap-2", editorState.isItalic && "text-primary")}><EditorIcons.Italic className="w-4 h-4" /> Italic <span className="ml-auto text-[10px] opacity-50">{MOD}I</span></DropdownMenuItem>
+            dropdownRender: <DropdownMenuItem key="italic-dropdown" onClick={() => sendCommand('toggleItalic')} className={cn("gap-2", editorState.isItalic && "text-primary")}><EditorIcons.Italic className="w-4 h-4" /> Italic <span className="ml-auto text-[10px] opacity-50">{isMac ? '⌘+I' : 'Ctrl+I'}</span></DropdownMenuItem>
         },
         {
             id: 'underline',
             label: 'Underline',
-            shortcut: `${MOD}U`,
+            shortcut: isMac ? '⌘+U' : 'Ctrl+U',
             render: <Button key="underline" variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => sendCommand('toggleUnderline')} style={activeStyle(editorState.isUnderline)}><EditorIcons.Underline className="w-5 h-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="underline-dropdown" onClick={() => sendCommand('toggleUnderline')} className={cn("gap-2", editorState.isUnderline && "text-primary")}><EditorIcons.Underline className="w-4 h-4" /> Underline <span className="ml-auto text-[10px] opacity-50">{MOD}U</span></DropdownMenuItem>
+            dropdownRender: <DropdownMenuItem key="underline-dropdown" onClick={() => sendCommand('toggleUnderline')} className={cn("gap-2", editorState.isUnderline && "text-primary")}><EditorIcons.Underline className="w-4 h-4" /> Underline <span className="ml-auto text-[10px] opacity-50">{isMac ? '⌘+U' : 'Ctrl+U'}</span></DropdownMenuItem>
         },
         {
             id: 'strike',
             label: 'Strikethrough',
-            shortcut: `${MOD}${SHIFT}X`,
+            shortcut: isMac ? '⌘+⇧+X' : 'Ctrl+Shift+X',
             render: <Button key="strike" variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => sendCommand('toggleStrike')} style={activeStyle(editorState.isStrike)}><EditorIcons.Strike className="w-5 h-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="strike-dropdown" onClick={() => sendCommand('toggleStrike')} className={cn("gap-2", editorState.isStrike && "text-primary")}><EditorIcons.Strike className="w-4 h-4" /> Strikethrough <span className="ml-auto text-[10px] opacity-50">{MOD}${SHIFT}X</span></DropdownMenuItem>
+            dropdownRender: <DropdownMenuItem key="strike-dropdown" onClick={() => sendCommand('toggleStrike')} className={cn("gap-2", editorState.isStrike && "text-primary")}><EditorIcons.Strike className="w-4 h-4" /> Strikethrough <span className="ml-auto text-[10px] opacity-50">{isMac ? '⌘+⇧+X' : 'Ctrl+Shift+X'}</span></DropdownMenuItem>
         },
         {
             id: 'textColor',
             label: 'Text Color',
-            shortcut: `${MOD}${ALT}[0-9]`,
+            shortcut: isMac ? '⌘+⌥+[0-9]' : 'Ctrl+Alt+[0-9]',
             render: <ColorPicker key="textColor" title="Text Color" label="Color" icon={EditorIcons.Baseline} currentColor={editorState.textColor} onSelect={(color) => sendCommand('setColor', { color })} onClear={() => sendCommand('unsetColor')} onOpenChange={handleOpenChange} activeColor={colors.primary} />,
             dropdownRender: <ColorPicker key="textColor-dropdown" title="Text Color" label="Color" icon={EditorIcons.Baseline} currentColor={editorState.textColor} onSelect={(color) => sendCommand('setColor', { color })} onClear={() => sendCommand('unsetColor')} onOpenChange={handleOpenChange} activeColor={colors.primary} isMenu />
         },
         {
             id: 'highlight',
             label: 'Highlight',
-            shortcut: `${ALT}${MOD}${SHIFT}[0-9]`,
+            shortcut: isMac ? '⌥+⌘+⇧+[0-9]' : 'Ctrl+Alt+Shift+[0-9]',
             render: <ColorPicker key="highlight" title="Highlight" label="Highlight" icon={EditorIcons.Highlighter} currentColor={editorState.highlightColor} onSelect={(color) => sendCommand('setHighlight', { color })} onClear={() => sendCommand('unsetHighlight')} onOpenChange={handleOpenChange} activeColor={colors.primary} />,
             dropdownRender: <ColorPicker key="highlight-dropdown" title="Highlight" label="Highlight" icon={EditorIcons.Highlighter} currentColor={editorState.highlightColor} onSelect={(color) => sendCommand('setHighlight', { color })} onClear={() => sendCommand('unsetHighlight')} onOpenChange={handleOpenChange} activeColor={colors.primary} isMenu />
         },
         {
             id: 'bulletList',
             label: 'Bullet List',
-            shortcut: `${MOD}7`,
+            shortcut: isMac ? '⌘+7' : 'Ctrl+7',
             render: <Button key="bulletList" variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => sendCommand('toggleBulletList')} style={activeStyle(editorState.isBulletList)}><EditorIcons.BulletList className="w-5 h-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="bulletList-dropdown" onClick={() => sendCommand('toggleBulletList')} className={cn("gap-2", editorState.isBulletList && "text-primary")}><EditorIcons.BulletList className="w-4 h-4" /> Bullet List <span className="ml-auto text-[10px] opacity-50">{MOD}7</span></DropdownMenuItem>
+            dropdownRender: <DropdownMenuItem key="bulletList-dropdown" onClick={() => sendCommand('toggleBulletList')} className={cn("gap-2", editorState.isBulletList && "text-primary")}><EditorIcons.BulletList className="w-4 h-4" /> Bullet List <span className="ml-auto text-[10px] opacity-50">{isMac ? '⌘+7' : 'Ctrl+7'}</span></DropdownMenuItem>
         },
         {
             id: 'orderedList',
             label: 'Numbered List',
-            shortcut: `${MOD}8`,
+            shortcut: isMac ? '⌘+8' : 'Ctrl+8',
             render: <Button key="orderedList" variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => sendCommand('toggleOrderedList')} style={activeStyle(editorState.isOrderedList)}><EditorIcons.OrderedList className="w-5 h-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="orderedList-dropdown" onClick={() => sendCommand('toggleOrderedList')} className={cn("gap-2", editorState.isOrderedList && "text-primary")}><EditorIcons.OrderedList className="w-4 h-4" /> Numbered List <span className="ml-auto text-[10px] opacity-50">{MOD}8</span></DropdownMenuItem>
+            dropdownRender: <DropdownMenuItem key="orderedList-dropdown" onClick={() => sendCommand('toggleOrderedList')} className={cn("gap-2", editorState.isOrderedList && "text-primary")}><EditorIcons.OrderedList className="w-4 h-4" /> Numbered List <span className="ml-auto text-[10px] opacity-50">{isMac ? '⌘+8' : 'Ctrl+8'}</span></DropdownMenuItem>
         },
         {
             id: 'taskList',
             label: 'Task List',
-            shortcut: `${MOD}9`,
+            shortcut: isMac ? '⌘+9' : 'Ctrl+9',
             render: <Button key="taskList" variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => sendCommand('toggleTaskList')} style={activeStyle(editorState.isTaskList)}><EditorIcons.TaskList className="w-5 h-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="taskList-dropdown" onClick={() => sendCommand('toggleTaskList')} className={cn("gap-2", editorState.isTaskList && "text-primary")}><EditorIcons.TaskList className="w-4 h-4" /> Task List <span className="ml-auto text-[10px] opacity-50">{MOD}9</span></DropdownMenuItem>
+            dropdownRender: <DropdownMenuItem key="taskList-dropdown" onClick={() => sendCommand('toggleTaskList')} className={cn("gap-2", editorState.isTaskList && "text-primary")}><EditorIcons.TaskList className="w-4 h-4" /> Task List <span className="ml-auto text-[10px] opacity-50">{isMac ? '⌘+9' : 'Ctrl+9'}</span></DropdownMenuItem>
         },
         {
             id: 'outdent',
             label: 'Outdent',
+            shortcut: 'Shift+Tab',
             render: <Button key="outdent" variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => sendCommand('outdent')} style={activeStyle(false)}><EditorIcons.Outdent className="w-5 h-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="outdent-dropdown" onClick={() => sendCommand('outdent')} className="gap-2"><EditorIcons.Outdent className="w-4 h-4" /> Outdent</DropdownMenuItem>
+            dropdownRender: <DropdownMenuItem key="outdent-dropdown" onClick={() => sendCommand('outdent')} className="gap-2"><EditorIcons.Outdent className="w-4 h-4" /> Outdent <span className="ml-auto text-[10px] opacity-50">Shift+Tab</span></DropdownMenuItem>
         },
         {
             id: 'indent',
             label: 'Indent',
+            shortcut: 'Tab',
             render: <Button key="indent" variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => sendCommand('indent')} style={activeStyle(false)}><EditorIcons.Indent className="w-5 h-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="indent-dropdown" onClick={() => sendCommand('indent')} className="gap-2"><EditorIcons.Indent className="w-4 h-4" /> Indent</DropdownMenuItem>
+            dropdownRender: <DropdownMenuItem key="indent-dropdown" onClick={() => sendCommand('indent')} className="gap-2"><EditorIcons.Indent className="w-4 h-4" /> Indent <span className="ml-auto text-[10px] opacity-50">Tab</span></DropdownMenuItem>
         },
         {
             id: 'code',
             label: 'Inline Code',
-            shortcut: `${MOD}${SHIFT}E`,
+            shortcut: isMac ? '⌘+⇧+E' : 'Ctrl+Shift+E',
             render: <Button key="code" variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => sendCommand('toggleCode')} style={activeStyle(editorState.isCode)}><EditorIcons.Code className="w-5 h-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="code-dropdown" onClick={() => sendCommand('toggleCode')} className={cn("gap-2", editorState.isCode && "text-primary")}><EditorIcons.Code className="w-4 h-4" /> Inline Code <span className="ml-auto text-[10px] opacity-50">{MOD}${SHIFT}E</span></DropdownMenuItem>
+            dropdownRender: <DropdownMenuItem key="code-dropdown" onClick={() => sendCommand('toggleCode')} className={cn("gap-2", editorState.isCode && "text-primary")}><EditorIcons.Code className="w-4 h-4" /> Inline Code <span className="ml-auto text-[10px] opacity-50">{isMac ? '⌘+⇧+E' : 'Ctrl+Shift+E'}</span></DropdownMenuItem>
         },
         {
             id: 'codeBlock',
             label: 'Code Block',
-            shortcut: `${MOD}${ALT}C`,
+            shortcut: isMac ? '⌘+⌥+C' : 'Ctrl+Alt+C',
             render: <Button key="codeBlock" variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => sendCommand('toggleCodeBlock')} style={activeStyle(editorState.isCodeBlock)}><EditorIcons.CodeBlock className="w-5 h-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="codeBlock-dropdown" onClick={() => sendCommand('toggleCodeBlock')} className={cn("gap-2", editorState.isCodeBlock && "text-primary")}><EditorIcons.CodeBlock className="w-4 h-4" /> Code Block <span className="ml-auto text-[10px] opacity-50">{MOD}${ALT}C</span></DropdownMenuItem>
+            dropdownRender: <DropdownMenuItem key="codeBlock-dropdown" onClick={() => sendCommand('toggleCodeBlock')} className={cn("gap-2", editorState.isCodeBlock && "text-primary")}><EditorIcons.CodeBlock className="w-4 h-4" /> Code Block <span className="ml-auto text-[10px] opacity-50">{isMac ? '⌘+⌥+C' : 'Ctrl+Alt+C'}</span></DropdownMenuItem>
         },
         {
             id: 'quote',
             label: 'Quote',
-            shortcut: `${MOD}${SHIFT}U`,
+            shortcut: isMac ? '⌘+⇧+U' : 'Ctrl+Shift+U',
             render: <Button key="quote" variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => sendCommand('toggleBlockquote')} style={activeStyle(editorState.isBlockquote)}><EditorIcons.Quote className="w-5 h-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="quote-dropdown" onClick={() => sendCommand('toggleBlockquote')} className={cn("gap-2", editorState.isBlockquote && "text-primary")}><EditorIcons.Quote className="w-4 h-4" /> Quote <span className="ml-auto text-[10px] opacity-50">{MOD}${SHIFT}U</span></DropdownMenuItem>
+            dropdownRender: <DropdownMenuItem key="quote-dropdown" onClick={() => sendCommand('toggleBlockquote')} className={cn("gap-2", editorState.isBlockquote && "text-primary")}><EditorIcons.Quote className="w-4 h-4" /> Quote <span className="ml-auto text-[10px] opacity-50">{isMac ? '⌘+⇧+U' : 'Ctrl+Shift+U'}</span></DropdownMenuItem>
         },
         {
             id: 'table',
             label: 'Table',
-            render: <Button key="table" variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => { if (!editorState.isInTable) sendCommand('insertTable', { rows: 3, cols: 3, withHeaderRow: false }); }} style={activeStyle(editorState.isInTable)}><EditorIcons.Table className="w-5 h-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="table-dropdown" onClick={() => { if (!editorState.isInTable) sendCommand('insertTable', { rows: 3, cols: 3, withHeaderRow: false }); }} className={cn("gap-2", editorState.isInTable && "text-primary")}><EditorIcons.Table className="w-4 h-4" /> Table</DropdownMenuItem>
+            render: <TableSelector key="table" editorState={editorState} sendCommand={sendCommand} onOpenChange={handleOpenChange} activeStyle={activeStyle} />,
+            dropdownRender: <TableSelector key="table-dropdown" editorState={editorState} sendCommand={sendCommand} onOpenChange={handleOpenChange} activeStyle={activeStyle} isMenu />
         },
         {
             id: 'math',
             label: 'Math Formula',
-            shortcut: `${MOD}${SHIFT}M`,
+            shortcut: isMac ? '⌘+⇧+M' : 'Ctrl+Shift+M',
             render: (
                 <Button
                     key="math"
@@ -255,12 +254,12 @@ export function DesktopToolbar({
         {
             id: 'link',
             label: 'Link',
-            shortcut: `${MOD}K`,
+            shortcut: isMac ? '⌘+K' : 'Ctrl+K',
             render: (
                 <LinkPopover
                     key="link"
                     title="Insert Link"
-                    shortcut={`${MOD}K`}
+                    shortcut={isMac ? '⌘+K' : 'Ctrl+K'}
                     icon={EditorIcons.Link}
                     placeholder="https://example.com"
                     isActive={editorState.isLink}
@@ -277,7 +276,7 @@ export function DesktopToolbar({
                 <LinkPopover
                     key="link-dropdown"
                     title="Insert Link"
-                    shortcut={`${MOD}K`}
+                    shortcut={isMac ? '⌘+K' : 'Ctrl+K'}
                     icon={EditorIcons.Link}
                     placeholder="https://example.com"
                     isActive={editorState.isLink}
@@ -295,9 +294,9 @@ export function DesktopToolbar({
         {
             id: 'details',
             label: 'Details',
-            shortcut: `${MOD}.`,
+            shortcut: isMac ? '⌘+.' : 'Ctrl+.',
             render: <Button key="details" variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => sendCommand('toggleDetails')} style={activeStyle(editorState.isDetails)}><EditorIcons.Details className="w-5 h-5" /></Button>,
-            dropdownRender: <DropdownMenuItem key="details-dropdown" onClick={() => sendCommand('toggleDetails')} className={cn("gap-2", editorState.isDetails && "text-primary")}><EditorIcons.Details className="w-4 h-4" /> Details <span className="ml-auto text-[10px] opacity-50">{MOD}.</span></DropdownMenuItem>
+            dropdownRender: <DropdownMenuItem key="details-dropdown" onClick={() => sendCommand('toggleDetails')} className={cn("gap-2", editorState.isDetails && "text-primary")}><EditorIcons.Details className="w-4 h-4" /> Details <span className="ml-auto text-[10px] opacity-50">{isMac ? '⌘+.' : 'Ctrl+.'}</span></DropdownMenuItem>
         },
         {
             id: 'mermaid',
@@ -348,7 +347,7 @@ export function DesktopToolbar({
                 />
             )
         },
-    ], [editorState, sendCommand, colors.primary, activeStyle, handleOpenChange, onInsertFile, activePopup, onActivePopupChange, MOD, ALT, SHIFT]);
+    ], [editorState, sendCommand, colors.primary, activeStyle, handleOpenChange, onInsertFile, activePopup, onActivePopupChange, isMac]);
 
     const orderedItems = React.useMemo(() => {
         const itemMap = new Map(items.map(item => [item.id, item]));
@@ -532,10 +531,16 @@ export function DesktopToolbar({
                                         {item.render}
                                     </div>
                                 </TooltipTrigger>
-                                <TooltipContent side="top" sideOffset={12}>
-                                    {item.label}
+                                <TooltipContent
+                                    side="top"
+                                    sideOffset={12}
+                                    className="bg-zinc-950 dark:bg-zinc-900 border border-zinc-800 text-zinc-100 px-2.5 py-1.5 rounded-lg shadow-xl flex items-center gap-2"
+                                >
+                                    <span className="font-medium text-[11px] tracking-wide">{item.label}</span>
                                     {item.shortcut && (
-                                        <span className="ml-2 text-[10px] opacity-60 bg-white/10 px-1 rounded-sm border border-white/10">{item.shortcut}</span>
+                                        <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-0.5 rounded border border-zinc-700 bg-zinc-800 px-2 font-mono text-[10.5px] font-semibold tracking-[0.5px] text-zinc-200 shadow-[0_1px_0_rgba(0,0,0,0.2)]">
+                                            {item.shortcut}
+                                        </kbd>
                                     )}
                                 </TooltipContent>
                             </Tooltip>
@@ -588,9 +593,15 @@ export function DesktopToolbar({
                                     </Button>
                                 </div>
                             </TooltipTrigger>
-                            <TooltipContent side="top" sideOffset={12}>
-                                Undo
-                                <span className="ml-2 text-[10px] opacity-60 bg-white/10 px-1 rounded-sm border border-white/10">{MOD}Z</span>
+                            <TooltipContent
+                                side="top"
+                                sideOffset={12}
+                                className="bg-zinc-950 dark:bg-zinc-900 border border-zinc-800 text-zinc-100 px-2.5 py-1.5 rounded-lg shadow-xl flex items-center gap-2"
+                            >
+                                <span className="font-medium text-[11px] tracking-wide">Undo</span>
+                                <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-0.5 rounded border border-zinc-700 bg-zinc-800 px-2 font-mono text-[10.5px] font-semibold tracking-[0.5px] text-zinc-200 shadow-[0_1px_0_rgba(0,0,0,0.2)]">
+                                    {isMac ? '⌘+Z' : 'Ctrl+Z'}
+                                </kbd>
                             </TooltipContent>
                         </Tooltip>
 
@@ -605,9 +616,15 @@ export function DesktopToolbar({
                                     </Button>
                                 </div>
                             </TooltipTrigger>
-                            <TooltipContent side="top" sideOffset={12}>
-                                Redo
-                                <span className="ml-2 text-[10px] opacity-60 bg-white/10 px-1 rounded-sm border border-white/10">{MOD}${SHIFT}Z</span>
+                            <TooltipContent
+                                side="top"
+                                sideOffset={12}
+                                className="bg-zinc-950 dark:bg-zinc-900 border border-zinc-800 text-zinc-100 px-2.5 py-1.5 rounded-lg shadow-xl flex items-center gap-2"
+                            >
+                                <span className="font-medium text-[11px] tracking-wide">Redo</span>
+                                <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-0.5 rounded border border-zinc-700 bg-zinc-800 px-2 font-mono text-[10.5px] font-semibold tracking-[0.5px] text-zinc-200 shadow-[0_1px_0_rgba(0,0,0,0.2)]">
+                                    {isMac ? '⌘+⇧+Z' : 'Ctrl+Shift+Z'}
+                                </kbd>
                             </TooltipContent>
                         </Tooltip>
                     </div>

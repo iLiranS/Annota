@@ -33,6 +33,7 @@ import { FileInput } from './popups/file-input';
 import { LinkInput } from './popups/link-input';
 import { MathInput } from './popups/math-input';
 import { TableActions } from './popups/table-actions';
+import { TableSelector } from './popups/table-selector';
 import { YouTubeInput } from './popups/youtube-input';
 
 // ============================================================================
@@ -274,6 +275,15 @@ export function ToolbarPopup(props: ToolbarPopupProps) {
                         canDeleteTable={(props as TablePopupProps).canDeleteTable}
                         onCommand={(props as TablePopupProps).onCommand}
                         onClose={onClose}
+                    />
+                );
+            case 'insertTable':
+                return (
+                    <TableSelector
+                        onSelect={(rows, cols) => {
+                            (props as any).onCommand?.('insertTable', { rows, cols, withHeaderRow: false });
+                            onClose();
+                        }}
                     />
                 );
             case 'codeLanguage':

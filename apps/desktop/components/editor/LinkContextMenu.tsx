@@ -5,12 +5,12 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
+import { useNotesStore } from "@annota/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { ExternalLink, Eye, Pencil, Trash2 } from "lucide-react";
-import { useNotesStore, useSettingsStore } from "@annota/core";
-import { useNoteTabsStore } from "../../hooks/use-note-tabs";
-import { useNavigate } from "react-router-dom";
 import { useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { useNoteTabsStore } from "../../hooks/use-note-tabs";
 
 export interface LinkContextMenuProps {
     open: boolean;
@@ -34,7 +34,6 @@ export function LinkContextMenu({
     onDelete,
 }: LinkContextMenuProps) {
 
-    const { general } = useSettingsStore();
     const navigate = useNavigate();
     const addTab = useNoteTabsStore(s => s.addTab);
     const notes = useNotesStore(s => s.notes);
@@ -100,12 +99,10 @@ export function LinkContextMenu({
                                 <span>Open in New Window</span>
                             </DropdownMenuItem>
                         )}
-                        {general.enableNoteTabs !== false && (
-                            <DropdownMenuItem onClick={() => handleAction('open_new_tab')}>
-                                <ExternalLink className="mr-2 h-4 w-4" />
-                                <span>Open in New Tab</span>
-                            </DropdownMenuItem>
-                        )}
+                        <DropdownMenuItem onClick={() => handleAction('open_new_tab')}>
+                            <ExternalLink className="mr-2 h-4 w-4" />
+                            <span>Open in New Tab</span>
+                        </DropdownMenuItem>
                     </>
                 ) : (
                     <DropdownMenuItem onClick={() => handleAction('external')}>
@@ -113,15 +110,15 @@ export function LinkContextMenu({
                         <span>Open Link</span>
                     </DropdownMenuItem>
                 )}
-                
+
                 <DropdownMenuSeparator />
-                
+
                 <DropdownMenuItem onClick={() => handleAction('edit')}>
                     <Pencil className="mr-2 h-4 w-4" />
                     <span>Edit Link</span>
                 </DropdownMenuItem>
-                
-                <DropdownMenuItem 
+
+                <DropdownMenuItem
                     onClick={() => handleAction('delete')}
                     className="text-destructive focus:text-destructive"
                 >

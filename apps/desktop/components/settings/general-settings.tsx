@@ -84,26 +84,13 @@ export function GeneralSettings() {
                     />
                     <div className="h-[2px] bg-border/50 mx-4" />
                     <SettingItem
-                        label="Enable Note Tabs"
-                        description="Show multiple notes as tabs at the top of the editor"
+                        label="Open Note in New Tab"
+                        description="Automatically create a new tab when opening a note"
                         icon={<PanelRight size={18} />}
-                        iconBg="bg-indigo-500"
-                        onClick={() => updateGeneralSettings({ enableNoteTabs: general.enableNoteTabs === false ? true : false })}
-                        action={<Toggle enabled={general.enableNoteTabs !== false} />}
+                        iconBg="bg-amber-500"
+                        onClick={() => updateGeneralSettings({ openNoteInNewTab: !general.openNoteInNewTab })}
+                        action={<Toggle enabled={general.openNoteInNewTab !== false} />}
                     />
-                    {general.enableNoteTabs !== false && (
-                        <>
-                            <div className="h-[2px] bg-border/50 mx-4" />
-                            <SettingItem
-                                label="Open Note in New Tab"
-                                description="Automatically create a new tab when opening a note"
-                                icon={<PanelRight size={18} />}
-                                iconBg="bg-amber-500"
-                                onClick={() => updateGeneralSettings({ openNoteInNewTab: !general.openNoteInNewTab })}
-                                action={<Toggle enabled={general.openNoteInNewTab !== false} />}
-                            />
-                        </>
-                    )}
                     <div className="h-[2px] bg-border/50 mx-4" />
                     <SettingItem
                         label="Folder Note Count"
