@@ -63,6 +63,7 @@ export function NotesViewHeader({
     const { general } = useSettingsStore();
     const { getFolderById, getSortType, setFolderSortType, tags } = useNotesStore();
     const { createAndNavigate: createNote } = useCreateNote();
+    const setSelectedFolderId = useNavigationStore(state => state.setSelectedFolderId);
 
     const currentFolder = currentFolderId ? getFolderById(currentFolderId) : null;
     const currentTag = useMemo(() => tags.find(t => t.id === tagId), [tags, tagId]);
@@ -71,84 +72,6 @@ export function NotesViewHeader({
     const isTrash = currentFolderId === TRASH_FOLDER_ID;
     const isDaily = currentFolderId === DAILY_NOTES_FOLDER_ID;
     const isRoot = (!currentFolderId || currentFolderId === 'root') && !tagId && !isTrash && !isDaily;
-
-
-
-    const headerTitle = useMemo(() => {
-        if (tagId) return currentTag?.name ?? "Tag";
-        if (isTrash) return "Trash";
-        if (isDaily) return "Daily Notes";
-        return currentFolder ? currentFolder.name : "Annota";
-    }, [tagId, currentTag, isTrash, isDaily, currentFolder]);
-
-    const headerIcon = useMemo(() => {
-        if (tagId && currentTag) return "ellipse";
-        if (isTrash) return "trash";
-        if (isDaily) return "calendar";
-        return currentFolder ? currentFolder.icon : "documents";
-    }, [tagId, currentTag, isTrash, isDaily, currentFolder]);
-
-    const headerColor = useMemo(() => {
-        if (tagId && currentTag) return currentTag.color;
-        if (isTrash) return "#EF4444";
-        if (isDaily) return "#8B5CF6";
-        return currentFolder?.color || colors.primary;
-    }, [tagId, currentTag, isTrash, isDaily, currentFolder, colors.primary]);
-
-    return (
-        <SidebarHeaderSection
-            title={headerTitle}
-            dir={general.appDirection}
-            icon={headerIcon}
-            color={headerColor}
-            isDaily={isDaily}
-            isTrash={isTrash}
-            currentSortType={(isDaily || isTrash) ? 'CREATED_LAST' : currentSortType}
-            onSortChange={(type) => setFolderSortType(currentFolderId ?? null, type)}
-            onCreateNote={() => {
-                createNote(currentFolderId ?? "", tagId || undefined);
-            }}
-            onCreateFolder={() => {
-                onCreateFolder(currentFolderId ?? null);
-            }}
-            onEditFolder={() => currentFolder && onEditFolder(currentFolder)}
-            sortOptions={SORT_OPTIONS}
-            getSortTypeLabel={getSortTypeLabel}
-            tagId={tagId || undefined}
-            isRoot={isRoot}
-            selectionMode={selectionMode}
-            setSelectionMode={setSelectionMode}
-        />
-    );
-}
-
-export function NotesViewContent({
-    currentFolderId,
-    tagId,
-    selectionMode,
-    selectedNoteIds,
-    onToggleSelection,
-    onClearSelection,
-    setSelectionMode,
-    onNavigate,
-    onEditFolder,
-    onDeleteFolder,
-    onCreateSubFolder,
-}: NotesViewContentProps) {
-    const { colors } = useAppTheme();
-    const { general } = useSettingsStore();
-    const {
-        notes,
-        deleteNote,
-        getNotesInFolder,
-        getSortType,
-        getFolderById,
-    } = useNotesStore();
-    const setSelectedFolderId = useNavigationStore(state => state.setSelectedFolderId);
-
-    const isTrash = currentFolderId === TRASH_FOLDER_ID;
-    const isDaily = currentFolderId === DAILY_NOTES_FOLDER_ID;
-    const currentSortType = getSortType(currentFolderId ?? null);
 
     const browsingFolderId = (currentFolderId === 'root' || !currentFolderId) ? null : currentFolderId;
 
@@ -198,6 +121,88 @@ export function NotesViewContent({
         return crumbs;
     }, [browsingFolderId, getFolderById, colors.primary, tagId, isTrash, isDaily]);
 
+    const headerTitle = useMemo(() => {
+        if (tagId) return currentTag?.name ?? "Tag";
+        if (isTrash) return "Trash";
+        if (isDaily) return "Daily Notes";
+        return currentFolder ? currentFolder.name : "Annota";
+    }, [tagId, currentTag, isTrash, isDaily, currentFolder]);
+
+    const headerIcon = useMemo(() => {
+        if (tagId && currentTag) return "ellipse";
+        if (isTrash) return "trash";
+        if (isDaily) return "calendar";
+        return currentFolder ? currentFolder.icon : "documents";
+    }, [tagId, currentTag, isTrash, isDaily, currentFolder]);
+
+    const headerColor = useMemo(() => {
+        if (tagId && currentTag) return currentTag.color;
+        if (isTrash) return "#EF4444";
+        if (isDaily) return "#8B5CF6";
+        return currentFolder?.color || colors.primary;
+    }, [tagId, currentTag, isTrash, isDaily, currentFolder, colors.primary]);
+
+    return (
+        <>
+            {(browsingFolderId !== null || tagId !== null) && breadcrumbs && (
+                <BreadcrumbsSection
+                    breadcrumbs={breadcrumbs}
+                    onNavigate={(id) => setSelectedFolderId(id || 'root')}
+                    className="p-0 pb-1.5 opacity-60 hover:opacity-100 "
+                />
+            )}
+            <SidebarHeaderSection
+                title={headerTitle}
+                dir={general.appDirection}
+                icon={headerIcon}
+                color={headerColor}
+                isDaily={isDaily}
+                isTrash={isTrash}
+                currentSortType={(isDaily || isTrash) ? 'CREATED_LAST' : currentSortType}
+                onSortChange={(type) => setFolderSortType(currentFolderId ?? null, type)}
+                onCreateNote={() => {
+                    createNote(currentFolderId ?? "", tagId || undefined);
+                }}
+                onCreateFolder={() => {
+                    onCreateFolder(currentFolderId ?? null);
+                }}
+                onEditFolder={() => currentFolder && onEditFolder(currentFolder)}
+                sortOptions={SORT_OPTIONS}
+                getSortTypeLabel={getSortTypeLabel}
+                tagId={tagId || undefined}
+                isRoot={isRoot}
+                selectionMode={selectionMode}
+                setSelectionMode={setSelectionMode}
+            />
+        </>
+    );
+}
+
+export function NotesViewContent({
+    currentFolderId,
+    tagId,
+    selectionMode,
+    selectedNoteIds,
+    onToggleSelection,
+    onClearSelection,
+    setSelectionMode,
+    onNavigate,
+    onEditFolder,
+    onDeleteFolder,
+    onCreateSubFolder,
+}: NotesViewContentProps) {
+    const { general } = useSettingsStore();
+    const {
+        notes,
+        deleteNote,
+        getNotesInFolder,
+        getSortType,
+    } = useNotesStore();
+
+    const isTrash = currentFolderId === TRASH_FOLDER_ID;
+    const isDaily = currentFolderId === DAILY_NOTES_FOLDER_ID;
+    const currentSortType = getSortType(currentFolderId ?? null);
+
     const browseNotes = useMemo(() => {
         if (tagId) {
             const list = notes.filter(n => {
@@ -219,12 +224,6 @@ export function NotesViewContent({
             "flex-1 overflow-hidden flex flex-col",
             general.appDirection === 'rtl' ? "animate-content-from-right" : "animate-content-from-left"
         )}>
-            {(browsingFolderId !== null || tagId !== null) && breadcrumbs && (
-                <BreadcrumbsSection
-                    breadcrumbs={breadcrumbs}
-                    onNavigate={(id) => setSelectedFolderId(id || 'root')}
-                />
-            )}
             <NotesList
                 key={currentFolderId ?? tagId ?? 'root'}
                 notes={browseNotes}

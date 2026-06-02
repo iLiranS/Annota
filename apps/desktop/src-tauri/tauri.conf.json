@@ -38,7 +38,7 @@
   "bundle": {
     "category": "public.app-category.productivity",
     "macOS": {
-      "bundleVersion": "3",
+      "bundleVersion": "4",
       "minimumSystemVersion": "12.0",
       "entitlements": "./entitlements.mas.plist"
     },

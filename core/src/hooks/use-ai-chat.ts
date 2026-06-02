@@ -10,6 +10,7 @@ import {
     purifyNoteHtml
 } from '../ai/utils';
 import {
+    AI_ACTION_PROMPTS,
     aiChats,
     AiMessage,
     aiMessages,
@@ -17,10 +18,8 @@ import {
     generateId,
     getDb,
     noteContent,
-    noteMetadata,
     SearchRepository,
-    useAiStore,
-    AI_ACTION_PROMPTS
+    useAiStore
 } from '../index';
 
 export type ContextMode = 'auto' | 'summary' | 'full' | 'rewrite';

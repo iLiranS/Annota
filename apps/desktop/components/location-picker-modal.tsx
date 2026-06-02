@@ -128,7 +128,7 @@ export function LocationPickerModal({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent aria-describedby={undefined} showCloseButton={false} className="max-w-md p-0 overflow-hidden flex flex-col h-[500px]">
+            <DialogContent aria-describedby={undefined} showCloseButton={false} className="max-w-md p-0 overflow-hidden flex flex-col h-[500px] gap-0">
                 <DialogHeader className="px-6 pt-5 pb-4 border-b">
                     <DialogTitle className="text-lg font-bold flex items-center justify-between">
                         <span>Select Location</span>
