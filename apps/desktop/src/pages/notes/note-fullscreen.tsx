@@ -118,11 +118,6 @@ export default function NoteFullscreen() {
         });
     }, [noteId, noteTags, allTags, initialContent]);
 
-    // ── Redirect navigation to the main window ──
-    const handleTagClick = useCallback((tagId: string) => {
-        emit("request-main-window-navigation", { path: `/notes?tagId=${tagId}` });
-    }, []);
-
     if (!noteId) return null;
 
     if (initialContent === null) {
@@ -142,7 +137,6 @@ export default function NoteFullscreen() {
                         noteId={noteId}
                         initialContent={initialContent}
                         onNoteSync={handleContentChange}
-                        onTagClick={handleTagClick}
                         isStandalone={true}
                     />
                 </div>

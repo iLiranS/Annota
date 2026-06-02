@@ -4,7 +4,7 @@ import { useParams } from "react-router-dom";
 import { Sidebar, SidebarContent, useSidebar } from "@/components/ui/sidebar";
 import { useCreateNote } from "@/hooks/use-create-note";
 import { useSmartNavigate } from "@/hooks/use-smart-navigate";
-import { DAILY_NOTES_FOLDER_ID, TRASH_FOLDER_ID, useChangelog, useNavigationStore, useNotesStore, useSearchStore, useSettingsStore, useSyncStore, useUserStore, type Folder, type SidebarTab } from "@annota/core";
+import { DAILY_NOTES_FOLDER_ID, TRASH_FOLDER_ID, useChangelog, useNavigationStore, useNotesStore, useSearchStore, useSettingsStore, useSyncStore, useUserStore, type Folder } from "@annota/core";
 
 
 // Modular Components
@@ -17,7 +17,7 @@ import { SearchView } from "./sidebar/search-view";
 import { SidebarFooterSection } from "./sidebar/sidebar-footer";
 import { TagsList } from "./sidebar/tags-list";
 
-// type SidebarTab = 'folders' | 'notes' | 'tags' | 'search';
+
 
 
 
@@ -66,7 +66,7 @@ export function AppSidebar() {
     useEffect(() => {
         const saved = localStorage.getItem("sidebar_active_tab");
         if (saved) {
-            setActiveTab(saved === 'folders' ? 'notes' : saved as SidebarTab);
+            setActiveTab((saved === 'notes' || saved === 'tags' || saved === 'search') ? saved : 'notes');
         }
 
     }, [setActiveTab]);

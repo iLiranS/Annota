@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { getAppleIdCredential } from "tauri-plugin-siwa-api";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -124,6 +125,7 @@ export default function LoginPage() {
 
                 if (error) {
                     console.error("Supabase Auth error:", error.message);
+                    toast.error(`Supabase Auth error: ${error.message}`);
                     setLoadingProvider(null);
                     return;
                 }
@@ -132,8 +134,9 @@ export default function LoginPage() {
             } else {
                 throw new Error("No identity token returned from Apple");
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error("Native Apple Sign-in failed, falling back to web flow:", err);
+            toast.error(`Native Apple Sign-in: ${err.message || err}`);
             await signInWithOAuth("apple");
         }
     };

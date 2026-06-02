@@ -76,10 +76,10 @@ export default function FolderCard({
             ]}
         >
             {showTopBorder && (
-                <View style={[styles.border, styles.topBorder, { backgroundColor: colors.border }]} />
+                <View style={[styles.border, styles.topBorder, { backgroundColor: colors.border + "60" }]} />
             )}
             {showBottomBorder && (
-                <View style={[styles.border, styles.bottomBorder, { backgroundColor: colors.border }]} />
+                <View style={[styles.border, styles.bottomBorder, { backgroundColor: colors.border + "60" }]} />
             )}
 
             <View style={[

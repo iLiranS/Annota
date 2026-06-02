@@ -7,6 +7,8 @@ import { makeRedirectUri } from 'expo-auth-session';
 import * as QueryParams from 'expo-auth-session/build/QueryParams';
 import { router, Stack } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Crypto from 'expo-crypto';
 import React, { useState, useEffect } from 'react';
 import { ActivityIndicator, Alert, Image, StyleSheet, Text, View } from 'react-native';
 import Animated, {
@@ -17,6 +19,18 @@ import Animated, {
 // Listen to web browser redirects
 WebBrowser.maybeCompleteAuthSession();
 
+async function generateNonceAndHash() {
+    const randomBytes = await Crypto.getRandomBytesAsync(32);
+    const nonce = Array.from(randomBytes)
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
+    const digest = await Crypto.digestStringAsync(
+        Crypto.CryptoDigestAlgorithm.SHA256,
+        nonce
+    );
+    return { nonce, digest };
+}
+
 export default function LoginScreen() {
     const [loadingProvider, setLoadingProvider] = useState<string | null>(null);
     const setGuest = useAuthStore((state) => state.setGuest);
@@ -26,6 +40,61 @@ export default function LoginScreen() {
     const redirectUrl = makeRedirectUri({
         native: 'annota://login-callback', // Explicit scheme for production builds
     });
+
+    async function signInWithAppleNative() {
+        const routeAfterSignIn = async () => {
+            const { data: { session } } = await authApi.getSession();
+            const userId = session?.user?.id;
+            if (!userId) {
+                Alert.alert("Session Error", "No user session was found after login.");
+                return;
+            }
+
+            const key = await getMasterKey(userId);
+            if (!key) {
+                router.replace('/(auth)/master-key');
+            } else {
+                router.replace('/(app)');
+            }
+        };
+
+        setLoadingProvider('apple');
+        try {
+            const { nonce, digest } = await generateNonceAndHash();
+
+            const credential = await AppleAuthentication.signInAsync({
+                requestedScopes: [
+                    AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+                    AppleAuthentication.AppleAuthenticationScope.EMAIL,
+                ],
+                nonce: digest,
+            });
+
+            if (credential.identityToken) {
+                const { error } = await authApi.signInWithIdToken(
+                    credential.identityToken,
+                    nonce
+                );
+
+                if (error) {
+                    Alert.alert('Supabase Auth Error', error.message);
+                    setLoadingProvider(null);
+                    return;
+                }
+
+                await routeAfterSignIn();
+            } else {
+                throw new Error("No identity token returned from Apple");
+            }
+        } catch (err: any) {
+            if (err.code !== 'ERR_REQUEST_CANCELED') {
+                console.error("Native Apple Sign-in failed, falling back to web flow:", err);
+                await signInWithOAuth('apple');
+            }
+        } finally {
+            setLoadingProvider(null);
+        }
+    }
 
     async function signInWithOAuth(provider: 'google' | 'apple' | 'github') {
         const routeAfterSignIn = async () => {
@@ -117,7 +186,13 @@ export default function LoginScreen() {
                         }
                     ]}
                     disabled={isDisabled}
-                    onPress={() => signInWithOAuth(provider)}
+                    onPress={async () => {
+                        if (provider === 'apple' && await AppleAuthentication.isAvailableAsync()) {
+                            signInWithAppleNative();
+                        } else {
+                            signInWithOAuth(provider);
+                        }
+                    }}
                 >
                     {isLoading ? (
                         <ActivityIndicator color={theme.colors.text} />

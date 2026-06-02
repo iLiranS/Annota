@@ -220,6 +220,9 @@ export default function AiChatModal({ visible, onClose, initialContext, initialF
     const handleSend = async () => {
         if (!input.trim() || isStreaming) return;
 
+        const { chatContext } = useAiStore.getState();
+        if (selectedContextNotes.length === 0 && !chatContext) return;
+
         let currentChatId = chatId;
         if (!currentChatId) {
             currentChatId = generateId();

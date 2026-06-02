@@ -14,6 +14,7 @@ interface ContextSelectorProps {
     onToggleNote: (note: any) => void;
     onToggleFolder: (folderId: string) => void;
     onClearAll: () => void;
+    highlightError?: boolean;
 }
 
 export function ContextSelector({
@@ -22,7 +23,8 @@ export function ContextSelector({
     selectedNotes,
     onToggleNote,
     onToggleFolder,
-    onClearAll
+    onClearAll,
+    highlightError = false
 }: ContextSelectorProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [search, setSearch] = useState("");
@@ -132,7 +134,8 @@ export function ContextSelector({
                         "h-7 flex items-center justify-center transition-all border border-transparent hover:border-border/50 bg-muted/30 hover:bg-muted/50 rounded-full",
                         selectedNotes.length > 0
                             ? "px-2 bg-primary/10 text-primary min-w-[28px] border-primary/20 hover:bg-primary/20"
-                            : "w-7 p-0"
+                            : "w-7 p-0",
+                        highlightError && "border-destructive/50 bg-destructive/10 hover:bg-destructive/20 hover:border-destructive/70"
                     )}
                     title="Select notes or folders"
                 >
@@ -141,7 +144,7 @@ export function ContextSelector({
                             {selectedNotes.length} notes
                         </span>
                     ) : (
-                        <Plus size={14} className="text-muted-foreground/60" />
+                        <Plus size={14} className={cn(highlightError ? "text-destructive animate-pulse" : "text-muted-foreground/60")} />
                     )}
                 </Button>
             </PopoverTrigger>

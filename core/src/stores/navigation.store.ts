@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { createStorageAdapter } from './config';
 
-export type SidebarTab = 'folders' | 'notes' | 'tags' | 'search';
+export type SidebarTab = 'notes' | 'tags' | 'search';
 
 export interface NavigationState {
     sidebarTab: SidebarTab;

@@ -31,9 +31,6 @@ export function WelcomeBanner({ greeting, name, onNewNote, onDailyNote }: Welcom
                         {greeting}, {name}
                     </Text>
                 </View>
-                <Text style={[styles.welcomeSubtext, { color: colors.text + '90' }]}>
-                    Keep track of your learnings, capture fleeting inspirations, and build your digital knowledge base with ease.
-                </Text>
             </View>
 
             <View style={styles.welcomeActionsRow}>

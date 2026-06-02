@@ -14,7 +14,7 @@ export function useGlobalShortcuts(options: { isStandalone?: boolean } = {}) {
 
     useEffect(() => {
         const rotateSidebarTab = (direction: 'next' | 'prev') => {
-            const tabs: ('folders' | 'notes' | 'tags' | 'search')[] = ['folders', 'notes', 'tags', 'search'];
+            const tabs: ('notes' | 'tags' | 'search')[] = ['notes', 'tags', 'search'];
             const currentTab = useNavigationStore.getState().sidebarTab;
             const currentIndex = tabs.indexOf(currentTab);
             if (currentIndex === -1) return;
@@ -38,10 +38,10 @@ export function useGlobalShortcuts(options: { isStandalone?: boolean } = {}) {
             const rotateNoteTab = (direction: 'next' | 'prev') => {
                 const tabs = useNoteTabsStore.getState().tabs;
                 if (tabs.length <= 1) return;
-                
+
                 const currentNoteId = useNavigationStore.getState().lastViewedNoteId;
                 const locationPath = window.location.pathname;
-                
+
                 // If we are currently on a note route, figure out which tab it is
                 let currentIndex = -1;
                 const match = locationPath.match(/\/notes\/[^\/]+\/([^\/]+)/);
@@ -58,7 +58,7 @@ export function useGlobalShortcuts(options: { isStandalone?: boolean } = {}) {
                 if (nextIndex < 0) nextIndex = tabs.length - 1;
 
                 const nextTab = tabs[nextIndex];
-                
+
                 // Since this is a global shortcut outside router context, we emit a custom event 
                 // for the navbar to handle navigation, OR we can navigate if we can access navigate.
                 // Wait, use-global-shortcuts.ts is in App.tsx inside React Router but outside Routes.

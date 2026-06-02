@@ -1,8 +1,8 @@
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import { useNotesStore } from '@annota/core';
-import { FileText, Search } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { SearchRepository, useNotesStore } from '@annota/core';
+import { FileText, Loader2, Search } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 
 interface DesktopNoteLinkCommandMenuProps {
     query: string;
@@ -21,22 +21,54 @@ export function DesktopNoteLinkCommandMenu({
     onClose,
     noteId
 }: DesktopNoteLinkCommandMenuProps) {
-    const { notes } = useNotesStore();
     const [selectedIndex, setSelectedIndex] = useState(0);
     const containerRef = useRef<HTMLDivElement>(null);
 
-    const normalizedQuery = query.toLowerCase().trim();
+    const [displayNotes, setDisplayNotes] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
 
-    const displayNotes = useMemo(() => {
-        const filtered = notes.filter(n => !n.isDeleted && n.id !== noteId && (n.title || 'Untitled').toLowerCase().includes(normalizedQuery));
-        return filtered
-            .sort((a, b) => {
-                const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-                const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-                return dateB - dateA;
-            })
-            .slice(0, 7);
-    }, [notes, normalizedQuery]);
+    useEffect(() => {
+        let active = true;
+        const normalizedQuery = query.toLowerCase().trim();
+
+        if (!normalizedQuery) {
+            // Fallback to recent notes from memory store
+            const notes = useNotesStore.getState().notes;
+            const filtered = notes.filter(n => !n.isDeleted && n.id !== noteId);
+            const sorted = filtered
+                .sort((a, b) => {
+                    const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+                    const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+                    return dateB - dateA;
+                })
+                .slice(0, 7);
+            setDisplayNotes(sorted);
+            setIsLoading(false);
+            return;
+        }
+
+        setIsLoading(true);
+        const timer = setTimeout(async () => {
+            try {
+                const results = await SearchRepository.searchNotes(query);
+                if (active) {
+                    const filtered = results.filter(r => r.id !== noteId);
+                    setDisplayNotes(filtered);
+                    setIsLoading(false);
+                }
+            } catch (err) {
+                console.error('Failed to search notes for linking:', err);
+                if (active) {
+                    setIsLoading(false);
+                }
+            }
+        }, 300);
+
+        return () => {
+            active = false;
+            clearTimeout(timer);
+        };
+    }, [query, noteId]);
 
     useEffect(() => {
         setSelectedIndex(0);
@@ -110,32 +142,37 @@ export function DesktopNoteLinkCommandMenu({
                     </div>
                     <div className="h-full max-h-[300px] p-1 overflow-y-auto premium-scrollbar">
                         <div className="flex flex-col gap-1">
-                            {displayNotes.length === 0 && (
+                            {isLoading ? (
+                                <div className="flex flex-col items-center justify-center py-6 gap-2">
+                                    <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                                    <span className="text-[10px] text-muted-foreground/60">Searching...</span>
+                                </div>
+                            ) : displayNotes.length === 0 ? (
                                 <div className="px-2 py-4 text-center text-sm text-muted-foreground">
                                     No notes found
                                 </div>
+                            ) : (
+                                displayNotes.map((note, index) => {
+                                    const isSelected = index === selectedIndex;
+                                    return (
+                                        <button
+                                            key={note.id}
+                                            type="button"
+                                            className={cn(
+                                                "relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors",
+                                                isSelected ? "bg-accent text-accent-foreground" : "hover:bg-accent/50"
+                                            )}
+                                            onClick={() => handleSelect(note)}
+                                            onMouseEnter={() => setSelectedIndex(index)}
+                                        >
+                                            <FileText className="w-4 h-4 mr-2 shrink-0 opacity-70" />
+                                            <span className="flex-1 text-left line-clamp-1">
+                                                {note.title || 'Untitled Note'}
+                                            </span>
+                                        </button>
+                                    );
+                                })
                             )}
-
-                            {displayNotes.map((note, index) => {
-                                const isSelected = index === selectedIndex;
-                                return (
-                                    <button
-                                        key={note.id}
-                                        type="button"
-                                        className={cn(
-                                            "relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors",
-                                            isSelected ? "bg-accent text-accent-foreground" : "hover:bg-accent/50"
-                                        )}
-                                        onClick={() => handleSelect(note)}
-                                        onMouseEnter={() => setSelectedIndex(index)}
-                                    >
-                                        <FileText className="w-4 h-4 mr-2 shrink-0 opacity-70" />
-                                        <span className="flex-1 text-left line-clamp-1">
-                                            {note.title || 'Untitled Note'}
-                                        </span>
-                                    </button>
-                                );
-                            })}
                         </div>
                     </div>
                 </div>

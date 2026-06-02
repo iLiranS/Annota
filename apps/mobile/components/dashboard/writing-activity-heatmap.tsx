@@ -1,8 +1,6 @@
 import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View, Dimensions } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { format } from 'date-fns';
-import Toast from 'react-native-toast-message';
 import { useAppTheme } from '@/hooks/use-app-theme';
 
 interface DayActivity {
@@ -18,6 +16,26 @@ interface WritingActivityHeatmapProps {
 
 export function WritingActivityHeatmap({ days }: WritingActivityHeatmapProps) {
     const { colors } = useAppTheme();
+    const scrollViewRef = React.useRef<ScrollView>(null);
+
+    React.useEffect(() => {
+        const today = new Date().getDate();
+        const todayIndex = days.findIndex((d) => d.day === today);
+        if (todayIndex !== -1 && scrollViewRef.current) {
+            const columnWidth = 8 + 6; // dot width (8) + gap (6)
+            const xOffset = 12 + todayIndex * columnWidth;
+            const screenWidth = Dimensions.get('window').width;
+            const scrollToX = Math.max(0, xOffset - screenWidth / 2 + 10);
+            
+            const timer = setTimeout(() => {
+                scrollViewRef.current?.scrollTo({
+                    x: scrollToX,
+                    animated: true,
+                });
+            }, 100);
+            return () => clearTimeout(timer);
+        }
+    }, [days]);
 
     return (
         <View style={styles.sectionContainer}>
@@ -28,6 +46,7 @@ export function WritingActivityHeatmap({ days }: WritingActivityHeatmapProps) {
 
             <View style={[styles.heatmapCard, { backgroundColor: colors.card + '25', borderColor: colors.border }]}>
                 <ScrollView
+                    ref={scrollViewRef}
                     horizontal
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={styles.heatmapScroll}
@@ -48,17 +67,8 @@ export function WritingActivityHeatmap({ days }: WritingActivityHeatmapProps) {
                         }
 
                         return (
-                            <Pressable
+                            <View
                                 key={day.day}
-                                onPress={() => {
-                                    Toast.show({
-                                        type: 'info',
-                                        text1: `${format(day.date, "MMMM d")}`,
-                                        text2: `${count} note${count === 1 ? "" : "s"} active`,
-                                        position: 'bottom',
-                                        visibilityTime: 1800,
-                                    });
-                                }}
                                 style={styles.heatmapDayColumn}
                             >
                                 <View style={styles.dotsContainer}>
@@ -81,7 +91,7 @@ export function WritingActivityHeatmap({ days }: WritingActivityHeatmapProps) {
                                 <Text style={[styles.dayNumber, { color: colors.text + '40' }]}>
                                     {day.day}
                                 </Text>
-                            </Pressable>
+                            </View>
                         );
                     })}
                 </ScrollView>
@@ -116,7 +126,7 @@ const styles = StyleSheet.create({
     heatmapScroll: {
         paddingHorizontal: 12,
         alignItems: 'flex-end',
-        gap: 12,
+        gap: 6,
     },
     heatmapDayColumn: {
         alignItems: 'center',

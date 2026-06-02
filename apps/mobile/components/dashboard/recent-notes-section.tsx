@@ -1,9 +1,11 @@
+import NoteCard from '@/components/notes/note-card';
+import { HapticPressable } from '@/components/ui/haptic-pressable';
+import { useAppTheme } from '@/hooks/use-app-theme';
+import { DAILY_NOTES_FOLDER_ID, useNotesStore, type NoteMetadata } from '@annota/core';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { useRouter } from 'expo-router';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { DAILY_NOTES_FOLDER_ID, useNotesStore, type NoteMetadata } from '@annota/core';
-import NoteCard from '@/components/notes/note-card';
-import { useAppTheme } from '@/hooks/use-app-theme';
 
 interface RecentNotesSectionProps {
     recentNotes: NoteMetadata[];
@@ -13,6 +15,7 @@ interface RecentNotesSectionProps {
 export function RecentNotesSection({ recentNotes, onNotePress }: RecentNotesSectionProps) {
     const { colors } = useAppTheme();
     const { getFolderById } = useNotesStore();
+    const router = useRouter();
 
     // Custom FolderBadge suffix component inside note item cards
     const FolderBadge = ({ folderId }: { folderId: string | null }) => {
@@ -58,8 +61,18 @@ export function RecentNotesSection({ recentNotes, onNotePress }: RecentNotesSect
     return (
         <View style={styles.sectionContainer}>
             <View style={styles.sectionHeaderContainer}>
-                <Ionicons name="time-outline" size={16} color={colors.text + '80'} />
-                <Text style={[styles.sectionTitle, { color: colors.text + '99' }]}>RECENTLY UPDATED NOTES</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Ionicons name="time-outline" size={16} color={colors.text + '80'} />
+                    <Text style={[styles.sectionTitle, { color: colors.text + '99' }]}>RECENTLY UPDATED</Text>
+                </View>
+                <HapticPressable
+                    onPress={() => router.replace('/Notes')}
+                    style={styles.allNotesButton}
+                    hitSlop={8}
+                >
+                    <Text style={[styles.allNotesText, { color: colors.primary }]}>All Notes</Text>
+                    <Ionicons name="chevron-forward" size={12} color={colors.primary} />
+                </HapticPressable>
             </View>
 
             {recentNotes.length === 0 ? (
@@ -94,7 +107,7 @@ const styles = StyleSheet.create({
     sectionHeaderContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 6,
+        justifyContent: 'space-between',
         marginBottom: 10,
         paddingLeft: 4,
     },
@@ -102,6 +115,16 @@ const styles = StyleSheet.create({
         fontSize: 10,
         fontWeight: '800',
         letterSpacing: 1.2,
+    },
+    allNotesButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 2,
+        paddingRight: 4,
+    },
+    allNotesText: {
+        fontSize: 11,
+        fontWeight: '600',
     },
     notesListWrapper: {
         borderRadius: 16,

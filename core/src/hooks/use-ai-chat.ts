@@ -277,7 +277,15 @@ export function useAiChat(chatId: string | null) {
         const effectiveChatId = overrideChatId || chatId;
         if (!effectiveChatId) return;
 
-        const { activeProvider } = useAiStore.getState();
+        const { activeProvider, chatContext } = useAiStore.getState();
+        const hasExplicitNotes = selectedFolderNotes && selectedFolderNotes.length > 0;
+        const hasInlineContext = Boolean(manualContext || chatContext);
+
+        if (!hasExplicitNotes && !hasInlineContext) {
+            setError("Please select at least one note to start chatting.");
+            return;
+        }
+
         const adapter = createAiProvider(activeProvider);
         const isEphemeral = effectiveChatId === 'inline-assistant';
 
@@ -440,43 +448,12 @@ export function useAiChat(chatId: string | null) {
                 return purifyNoteHtml(result?.content || '');
             };
 
-            const explicitSelectedNotes = selectedFolderNotes && selectedFolderNotes.length > 0
+            const noteContextTargets = selectedFolderNotes && selectedFolderNotes.length > 0
                 ? selectedFolderNotes
                 : null;
             const contextAwareQuery = referencedContextText
                 ? `${content}\n${referencedContextText.slice(0, 3000)}`
                 : content;
-
-            let noteContextTargets = explicitSelectedNotes;
-            if (!noteContextTargets && !manualContext && budgetConfig.autoDiscover) {
-                try {
-                    const relevantIds = await SearchRepository.findRelevantNoteIds(contextAwareQuery);
-
-                    if (relevantIds.length > 0) {
-                        // Fetch metadata for discovered notes
-                        const discoveredNotes = (
-                            await Promise.all(
-                                relevantIds.map(noteId =>
-                                    db.select({
-                                        id: noteMetadata.id,
-                                        title: noteMetadata.title,
-                                        tags: noteMetadata.tags,
-                                        preview: noteMetadata.preview,
-                                        updatedAt: noteMetadata.updatedAt,
-                                    })
-                                        .from(noteMetadata)
-                                        .where(eq(noteMetadata.id, noteId))
-                                        .get()
-                                )
-                            )
-                        ).filter(Boolean);
-
-                        noteContextTargets = discoveredNotes.length > 0 ? discoveredNotes : null;
-                    }
-                } catch (ftsError) {
-                    console.warn('[AI] FTS auto-discovery failed, proceeding without context:', ftsError);
-                }
-            }
 
             if (noteContextTargets && noteContextTargets.length > 0 && remainingLiveContextTokens > 0) {
                 const bulkContext = await buildBulkContext(

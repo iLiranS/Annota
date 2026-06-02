@@ -15,7 +15,7 @@ export const Colors = {
     text: '#171717',
     background: '#ffffff',   // page
     card: '#fafafa',         // raised surface
-    border: '#dcdcdcff',
+    border: '#dcdcdc',
     icon: '#737373',
     tabIconDefault: '#A3A3A3',
     error: '#dc2626',
@@ -33,20 +33,20 @@ export const Colors = {
     errorBackground: '#7f1d1d',
     tabIconSelected: tintColorDark,
     card: '#171717',
-    border: '#393939ff',
+    border: '#393939',
   },
 };
 
 export const Fonts = isWebRuntime()
   ? {
-      sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-      serif: "Georgia, 'Times New Roman', serif",
-      rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
-      mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
-    }
+    sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+    serif: "Georgia, 'Times New Roman', serif",
+    rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
+    mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+  }
   : {
-      sans: 'normal',
-      serif: 'serif',
-      rounded: 'normal',
-      mono: 'monospace',
-    };
+    sans: 'normal',
+    serif: 'serif',
+    rounded: 'normal',
+    mono: 'monospace',
+  };

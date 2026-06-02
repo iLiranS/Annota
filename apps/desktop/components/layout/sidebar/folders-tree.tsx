@@ -1,20 +1,14 @@
 import { FolderListItem, FolderListItemContent } from "@/components/notes/folder-list-item";
-import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
-import { SidebarGroup, SidebarMenu, SidebarMenuAction, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub } from "@/components/ui/sidebar";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { SidebarGroupLabel, SidebarMenu, SidebarMenuAction, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import type { Folder } from "@annota/core";
 import { DAILY_NOTES_FOLDER_ID, TRASH_FOLDER_ID } from "@annota/core";
 import { ChevronRight } from "lucide-react";
 import { useState } from "react";
-import {
-    ContextMenu,
-    ContextMenuContent,
-    ContextMenuItem,
-    ContextMenuTrigger,
-} from "@/components/ui/context-menu";
 import { Ionicons } from "@/components/ui/ionicons";
 
-const DAILY_NOTES_FOLDER: Folder = {
+export const DAILY_NOTES_FOLDER: Folder = {
     id: DAILY_NOTES_FOLDER_ID,
     name: "Daily Notes",
     icon: "calendar",
@@ -31,7 +25,7 @@ const DAILY_NOTES_FOLDER: Folder = {
     updatedAt: new Date(),
 }
 
-const TRASH_FOLDER: Folder = {
+export const TRASH_FOLDER: Folder = {
     id: TRASH_FOLDER_ID,
     name: "Trash",
     icon: "trash",
@@ -48,38 +42,22 @@ const TRASH_FOLDER: Folder = {
     updatedAt: new Date(),
 }
 
-const ALL_NOTES_FOLDER: Folder = {
-    id: "root",
-    name: "Annota",
-    icon: "documents",
-    color: "#6366F1",
-    sortType: "UPDATED_LAST",
-    deletedAt: null,
-    originalParentId: null,
-    isDirty: false,
-    parentId: null,
-    isSystem: true,
-    isDeleted: false,
-    isPermDeleted: false,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-}
-
-
 interface FoldersTreeProps {
-    isFoldersOpen: boolean;
-    setIsFoldersOpen: (open: boolean) => void;
+    childFolders: Folder[];
     onNavigate: (id: string | null) => void;
     onEdit: (folder: Folder) => void;
-    onDelete: (folder: Folder) => void;
-    onCreateSubFolder: (parent: Folder) => void;
+    onDelete?: (folder: Folder) => void;
+    onCreateSubFolder?: (parentFolder: Folder) => void;
     onCreateNote: (folderId: string) => void;
     getFoldersInFolder: (id: string | null) => Folder[];
     general: any;
     currentFolderId: string | null;
+    isFoldersOpen: boolean;
+    setIsFoldersOpen: (open: boolean) => void;
 }
 
 export function FoldersTree({
+    childFolders,
     onNavigate,
     onEdit,
     onDelete,
@@ -88,32 +66,35 @@ export function FoldersTree({
     getFoldersInFolder,
     general,
     currentFolderId,
+    isFoldersOpen,
+    setIsFoldersOpen,
 }: FoldersTreeProps) {
-    // Always get root folders for global view
-    const rootFolders = getFoldersInFolder(null);
-
-    // Add System Folders to the root
-    if (!rootFolders.find(f => f.id === TRASH_FOLDER_ID)) {
-        rootFolders.unshift(TRASH_FOLDER);
-    }
-    if (!rootFolders.find(f => f.id === DAILY_NOTES_FOLDER_ID)) {
-        rootFolders.unshift(DAILY_NOTES_FOLDER);
-    }
-    if (!rootFolders.find(f => f.id === "root")) {
-        rootFolders.unshift(ALL_NOTES_FOLDER);
-    }
-
-    const systemFolders = rootFolders.filter(f => f.isSystem);
-    const regularFolders = rootFolders.filter(f => !f.isSystem);
-
-    if (rootFolders.length === 0) return null;
+    if (childFolders.length === 0) return null;
 
     return (
-        <ContextMenu>
-            <ContextMenuTrigger asChild>
-                <SidebarGroup className={cn("py-2 px-0 flex-1 min-h-0 flex flex-col", general?.appDirection === 'rtl' ? "animate-content-from-right" : "animate-content-from-left")}>
-                    <SidebarMenu data-tauri-drag-region className="px-1 overflow-y-auto compact-scrollbar flex-1 min-h-0">
-                        {systemFolders.map((folder) => (
+        <Collapsible open={isFoldersOpen} onOpenChange={setIsFoldersOpen}>
+            <div className="px-1">
+                <SidebarGroupLabel asChild className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
+                    <CollapsibleTrigger className="flex w-full items-center gap-2 hover:bg-sidebar-accent/50 px-2 py-1 rounded transition-colors group/trigger">
+                        <Ionicons name="folder-outline" size={11} className="text-muted-foreground/60 shrink-0" />
+                        <span className="flex-1 text-start">Folders</span>
+                        <span className="text-[9px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded font-mono font-medium leading-none">
+                            {childFolders.length}
+                        </span>
+                        <ChevronRight
+                            size={11}
+                            className={cn(
+                                "transition-transform text-muted-foreground/50 group-hover/trigger:text-muted-foreground",
+                                general?.appDirection === 'rtl'
+                                    ? (isFoldersOpen ? "rotate-90" : "rotate-180")
+                                    : (isFoldersOpen && "rotate-90")
+                            )}
+                        />
+                    </CollapsibleTrigger>
+                </SidebarGroupLabel>
+                <CollapsibleContent className="mt-1">
+                    <SidebarMenu className="gap-0.5 px-0.5">
+                        {childFolders.map((folder) => (
                             <FolderTreeItem
                                 key={folder.id}
                                 folder={folder}
@@ -122,55 +103,45 @@ export function FoldersTree({
                                 onEdit={onEdit}
                                 onDelete={onDelete}
                                 onCreateSubFolder={onCreateSubFolder}
-                                onCreateNote={() => onCreateNote(folder.id === 'root' ? '' : folder.id)}
-                                getFoldersInFolder={getFoldersInFolder}
-                                currentFolderId={currentFolderId}
-                            />
-                        ))}
-
-                        {regularFolders.length > 0 && (
-                            <div className="h-px bg-border/80 mx-2 my-1 shrink-0 relative">
-                            </div>
-                        )}
-
-                        {regularFolders.map((folder) => (
-                            <FolderTreeItem
-                                key={folder.id}
-                                folder={folder}
-                                general={general}
-                                onNavigate={onNavigate}
-                                onEdit={onEdit}
-                                onDelete={onDelete}
-                                onCreateSubFolder={onCreateSubFolder}
-                                onCreateNote={() => onCreateNote(folder.id === 'root' ? '' : folder.id)}
+                                onCreateNote={onCreateNote}
                                 getFoldersInFolder={getFoldersInFolder}
                                 currentFolderId={currentFolderId}
                             />
                         ))}
                     </SidebarMenu>
-                </SidebarGroup>
-            </ContextMenuTrigger>
-            <ContextMenuContent className="w-48">
-                <ContextMenuItem onSelect={() => onCreateNote('')} className="gap-2">
-                    <Ionicons name="document-outline" size={16} />
-                    <span>New Note</span>
-                </ContextMenuItem>
-                <ContextMenuItem onSelect={() => onCreateSubFolder({ ...ALL_NOTES_FOLDER, id: '' })} className="gap-2">
-                    <Ionicons name="folder-outline" size={16} />
-                    <span>New Folder</span>
-                </ContextMenuItem>
-            </ContextMenuContent>
-        </ContextMenu>
+                </CollapsibleContent>
+            </div>
+        </Collapsible>
     );
 }
 
-function FolderTreeItem({ folder, onNavigate, onEdit, onDelete, onCreateSubFolder, onCreateNote, general, getFoldersInFolder, currentFolderId }: any) {
+function FolderTreeItem({
+    folder,
+    onNavigate,
+    onEdit,
+    onDelete,
+    onCreateSubFolder,
+    onCreateNote,
+    general,
+    getFoldersInFolder,
+    currentFolderId,
+}: {
+    folder: Folder;
+    onNavigate: (id: string | null) => void;
+    onEdit: (folder: Folder) => void;
+    onDelete?: (folder: Folder) => void;
+    onCreateSubFolder?: (parentFolder: Folder) => void;
+    onCreateNote: (folderId: string) => void;
+    general: any;
+    getFoldersInFolder: (id: string | null) => Folder[];
+    currentFolderId: string | null;
+}) {
     const isTrash = folder.id === TRASH_FOLDER_ID;
-    const isRoot = folder.id === 'root';
-    const children = (isTrash || isRoot) ? [] : getFoldersInFolder(folder.id).filter((f: any) => !f.isSystem);
+    const isDaily = folder.id === DAILY_NOTES_FOLDER_ID;
+    const children = (isTrash || isDaily) ? [] : getFoldersInFolder(folder.id).filter((f: any) => !f.isSystem && !f.isDeleted);
     const hasChildren = children.length > 0;
     const [isOpen, setIsOpen] = useState(() => localStorage.getItem(`sidebar_folder_open_${folder.id}`) === "true");
-    const isActive = folder.id === currentFolderId || (folder.id === 'root' && !currentFolderId);
+    const isActive = folder.id === currentFolderId;
 
     const toggle = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -188,7 +159,7 @@ function FolderTreeItem({ folder, onNavigate, onEdit, onDelete, onCreateSubFolde
                     onEdit={onEdit}
                     onDelete={onDelete}
                     onCreateSubFolder={onCreateSubFolder}
-                    onCreateNote={onCreateNote}
+                    onCreateNote={(f) => onCreateNote(f.id)}
                     isActive={isActive}
                 >
                     <SidebarMenuButton

@@ -15,6 +15,7 @@ import {
     useNotesStore,
     useUserStore,
     useSyncStore,
+    useSettingsStore,
     type MediaItem,
 } from '@annota/core';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -43,6 +44,7 @@ export default function HomeScreen() {
 
     const { notes, folders, tags, createNote } = useNotesStore();
     const { session, displayName, isGuest } = useUserStore();
+    const isAiEnabled = useSettingsStore((state) => state.general.isAiEnabled);
 
     const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
     const [mediaLoading, setMediaLoading] = useState(true);
@@ -251,7 +253,7 @@ export default function HomeScreen() {
                             <Ionicons name="menu" size={24} color={colors.primary} />
                         </HapticPressable>
                     ),
-                    headerRight: () => (
+                    headerRight: isAiEnabled ? () => (
                         <HapticPressable
                             onPress={() => setAiModalVisible(true)}
                             style={styles.headerButton}
@@ -259,7 +261,7 @@ export default function HomeScreen() {
                         >
                             <Ionicons name="sparkles" size={22} color={colors.primary} />
                         </HapticPressable>
-                    ),
+                    ) : undefined,
                 }}
             />
 

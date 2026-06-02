@@ -2,13 +2,11 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useNavigationStore, useNotesStore, type Tag } from '@annota/core';
 import { Tag as TagIcon, X } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 
 export function NoteTags({ noteId, className, onTagClick }: { noteId: string, className?: string, onTagClick?: (tagId: string) => void }) {
     const { tags, notes, removeTagFromNote } = useNotesStore();
     const setSidebarTab = useNavigationStore(s => s.setSidebarTab);
     const setSelectedTagId = useNavigationStore(s => s.setSelectedTagId);
-    const navigate = useNavigate();
     const note = notes.find(n => n.id === noteId);
 
     const handleTagClick = (tagId: string) => {
@@ -16,8 +14,6 @@ export function NoteTags({ noteId, className, onTagClick }: { noteId: string, cl
         setSidebarTab('notes');
         if (onTagClick) {
             onTagClick(tagId);
-        } else {
-            navigate(`/notes`);
         }
     };
 

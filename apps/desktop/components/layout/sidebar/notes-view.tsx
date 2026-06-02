@@ -153,8 +153,6 @@ export function NotesViewContent({
     const browsingFolderId = (currentFolderId === 'root' || !currentFolderId) ? null : currentFolderId;
 
     const breadcrumbs = useMemo(() => {
-        if (isTrash || isDaily) return null;
-        
         const crumbs: BreadcrumbData[] = [{
             id: null,
             name: "Annota",
@@ -162,7 +160,7 @@ export function NotesViewContent({
             color: colors.primary
         }];
 
-        if (tagId) {
+        if (tagId || isTrash || isDaily) {
             return crumbs;
         }
 

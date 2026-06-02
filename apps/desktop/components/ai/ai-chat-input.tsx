@@ -121,17 +121,21 @@ export function AiChatInput({
 
     const handleSend = useCallback(async () => {
         if (!content.trim() || disabled) return;
+        if (selectedNotes.length === 0 && !chatContext) return;
         onSend(content);
         setContent('');
-    }, [content, onSend, disabled]);
+    }, [content, onSend, disabled, selectedNotes, chatContext]);
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            handleSend();
+            if (selectedNotes.length > 0 || chatContext) {
+                handleSend();
+            }
         }
     };
 
+    const showContextError = content.trim().length > 0 && selectedNotes.length === 0 && !chatContext;
     const isNearLimit = content.length > MAX_LENGTH * 0.8;
     return (
         <div className={cn("flex flex-col gap-2 ", isFloating ? "m-1 " : " ")}>
@@ -162,7 +166,17 @@ export function AiChatInput({
                     onKeyDown={handleKeyDown}
                     rows={1}
                     dir="auto"
-                    placeholder={!currentModelName ? "Select a model to start..." : (selectedNotes.length > 0 ? `Ask about ${selectedNotes.length} notes...` : "Ask AI about current note...")}
+                    placeholder={
+                        !currentModelName 
+                            ? "Select a model to start..." 
+                            : (selectedNotes.length > 0 
+                                ? `Ask about ${selectedNotes.length} notes...` 
+                                : (chatContext 
+                                    ? "Ask about selected context..." 
+                                    : "Select at least 1 note to start chatting..."
+                                  )
+                              )
+                    }
                     disabled={disabled || !currentModelName}
                     className="w-full bg-transparent border-none outline-none resize-none px-3 pt-2 pb-1 text-[14px] leading-relaxed max-h-[160px] min-h-[44px] overflow-y-auto custom-scrollbar disabled:opacity-50"
                 />
@@ -176,6 +190,7 @@ export function AiChatInput({
                             onToggleNote={onToggleNote}
                             onToggleFolder={onToggleFolder}
                             onClearAll={onClearAll}
+                            highlightError={showContextError}
                         />
 
                         <DropdownMenu>
@@ -354,12 +369,16 @@ export function AiChatInput({
                         )}
                         <Button
                             onClick={() => disabled ? onStop?.() : handleSend()}
-                            disabled={(!disabled && !content.trim()) || (!disabled && !currentModelName)}
+                            disabled={
+                                (!disabled && !content.trim()) || 
+                                (!disabled && !currentModelName) || 
+                                (!disabled && selectedNotes.length === 0 && !chatContext)
+                            }
                             size="icon"
                             className={cn(
                                 "h-7 w-7 rounded-full transition-all shrink-0 shadow-sm",
                                 disabled ? "bg-foreground text-background hover:bg-foreground/90" :
-                                    (content.trim() && currentModelName) ? "bg-primary text-primary-foreground shadow-md hover:scale-105 active:scale-95" : "bg-muted text-muted-foreground/30"
+                                    (content.trim() && currentModelName && (selectedNotes.length > 0 || chatContext)) ? "bg-primary text-primary-foreground shadow-md hover:scale-105 active:scale-95" : "bg-muted text-muted-foreground/30"
                             )}
                         >
                             {disabled ? (

@@ -305,13 +305,13 @@ function AiProcessBlock({
             </TouchableOpacity>
 
             {isOpen && (
-                <View style={[styles.processBody, { borderTopColor: colors.border + '55' }]}>
+                <View style={[styles.processBody, { borderTopColor: colors.border }]}>
                     {hasTools && (
                         <View style={styles.toolList}>
                             {toolCalls?.map(tool => (
                                 <View
                                     key={tool}
-                                    style={[styles.toolChip, { borderColor: colors.border + '66', backgroundColor: colors.card + '80' }]}
+                                    style={[styles.toolChip, { borderColor: colors.border, backgroundColor: colors.card + '80' }]}
                                 >
                                     <Ionicons name="construct-outline" size={11} color={colors.text + '99'} />
                                     <Text style={[styles.toolText, { color: colors.text + '99' }]}>{tool}</Text>
@@ -792,7 +792,14 @@ export function AiChatView({
                     )}
                     <TextInput
                         style={[styles.input, { color: colors.text }]}
-                        placeholder={`Ask ${activeProvider ? activeProvider.charAt(0).toUpperCase() + activeProvider.slice(1) : 'Annota AI'}${displayModelName ? ` (${displayModelName})` : ''}...`}
+                        placeholder={
+                            selectedContextNotes.length > 0
+                                ? `Ask about ${selectedContextNotes.length} notes...`
+                                : (chatContext
+                                    ? "Ask about selected context..."
+                                    : "Select at least 1 note to start..."
+                                )
+                        }
                         placeholderTextColor={colors.text + '40'}
                         value={input}
                         onChangeText={setInput}
@@ -800,14 +807,25 @@ export function AiChatView({
                         editable={!isStreaming}
                     />
                     <TouchableOpacity
-                        style={[styles.sendButton, { backgroundColor: (input.trim() && !isStreaming) || isStreaming ? colors.primary : colors.text + '10' }]}
+                        style={[
+                            styles.sendButton,
+                            {
+                                backgroundColor: (input.trim() && !isStreaming && (selectedContextNotes.length > 0 || chatContext)) || isStreaming
+                                    ? colors.primary
+                                    : colors.text + '10'
+                            }
+                        ]}
                         onPress={isStreaming ? onStop : onSend}
-                        disabled={(!input.trim() && !isStreaming) || !isConfigured}
+                        disabled={
+                            (!input.trim() && !isStreaming) ||
+                            !isConfigured ||
+                            (!isStreaming && selectedContextNotes.length === 0 && !chatContext)
+                        }
                     >
                         {isStreaming ? (
                             <Ionicons name="stop" size={20} color="#FFF" />
                         ) : (
-                            <Ionicons name="arrow-up" size={20} color={input.trim() ? '#FFF' : colors.text + '30'} />
+                            <Ionicons name="arrow-up" size={20} color={input.trim() && (selectedContextNotes.length > 0 || chatContext) ? '#FFF' : colors.text + '30'} />
                         )}
                     </TouchableOpacity>
                 </View>

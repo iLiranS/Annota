@@ -35,6 +35,10 @@ export function HapticPressable({
     return (
         <Pressable
             {...props}
+            style={(state) => [
+                typeof props.style === 'function' ? props.style(state) : props.style,
+                state.pressed && { opacity: 0.7 }
+            ]}
             onPress={handlePress}
         />
     );
