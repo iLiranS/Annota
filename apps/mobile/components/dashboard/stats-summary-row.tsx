@@ -1,7 +1,7 @@
+import { useAppTheme } from '@/hooks/use-app-theme';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { useAppTheme } from '@/hooks/use-app-theme';
 
 interface StatsSummaryRowProps {
     notesCount: number;
@@ -14,7 +14,7 @@ export function StatsSummaryRow({ notesCount, foldersCount, tagsCount }: StatsSu
 
     return (
         <View style={styles.statsRow}>
-            <View style={[styles.statBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={[styles.statBox, { backgroundColor: colors.card, borderColor: colors.border + "60" }]}>
                 <View style={[styles.statIconWrapper, { backgroundColor: '#6366F115' }]}>
                     <Ionicons name="book-outline" size={18} color="#6366F1" />
                 </View>
@@ -24,7 +24,7 @@ export function StatsSummaryRow({ notesCount, foldersCount, tagsCount }: StatsSu
                 </View>
             </View>
 
-            <View style={[styles.statBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={[styles.statBox, { backgroundColor: colors.card, borderColor: colors.border + "60" }]}>
                 <View style={[styles.statIconWrapper, { backgroundColor: '#10B98115' }]}>
                     <Ionicons name="folder-open-outline" size={18} color="#10B981" />
                 </View>
@@ -34,7 +34,7 @@ export function StatsSummaryRow({ notesCount, foldersCount, tagsCount }: StatsSu
                 </View>
             </View>
 
-            <View style={[styles.statBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={[styles.statBox, { backgroundColor: colors.card, borderColor: colors.border + "60" }]}>
                 <View style={[styles.statIconWrapper, { backgroundColor: '#EC489915' }]}>
                     <Ionicons name="pricetag-outline" size={18} color="#EC4899" />
                 </View>

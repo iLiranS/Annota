@@ -1,7 +1,7 @@
-import React from 'react';
-import { ScrollView, StyleSheet, Text, View, Dimensions } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAppTheme } from '@/hooks/use-app-theme';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import React from 'react';
+import { Dimensions, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 interface DayActivity {
     day: number;
@@ -26,7 +26,7 @@ export function WritingActivityHeatmap({ days }: WritingActivityHeatmapProps) {
             const xOffset = 12 + todayIndex * columnWidth;
             const screenWidth = Dimensions.get('window').width;
             const scrollToX = Math.max(0, xOffset - screenWidth / 2 + 10);
-            
+
             const timer = setTimeout(() => {
                 scrollViewRef.current?.scrollTo({
                     x: scrollToX,
@@ -40,11 +40,16 @@ export function WritingActivityHeatmap({ days }: WritingActivityHeatmapProps) {
     return (
         <View style={styles.sectionContainer}>
             <View style={styles.sectionHeaderContainer}>
-                <Ionicons name="flame-outline" size={16} color={colors.text + '80'} />
-                <Text style={[styles.sectionTitle, { color: colors.text + '99' }]}>WRITING ACTIVITY</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Ionicons name="flame-outline" size={16} color={colors.text + '80'} />
+                    <Text style={[styles.sectionTitle, { color: colors.text + '99' }]}>WRITING ACTIVITY</Text>
+                </View>
+                <Text style={[styles.monthText, { color: colors.text + '60' }]}>
+                    {["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"][new Date().getMonth()]}
+                </Text>
             </View>
 
-            <View style={[styles.heatmapCard, { backgroundColor: colors.card + '25', borderColor: colors.border }]}>
+            <View style={[styles.heatmapCard, { backgroundColor: colors.card + '25', borderColor: colors.border + "60" }]}>
                 <ScrollView
                     ref={scrollViewRef}
                     horizontal
@@ -107,7 +112,7 @@ const styles = StyleSheet.create({
     sectionHeaderContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 6,
+        justifyContent: 'space-between',
         marginBottom: 10,
         paddingLeft: 4,
     },
@@ -115,6 +120,12 @@ const styles = StyleSheet.create({
         fontSize: 10,
         fontWeight: '800',
         letterSpacing: 1.2,
+    },
+    monthText: {
+        fontSize: 10,
+        fontWeight: '800',
+        letterSpacing: 1.2,
+        paddingRight: 4,
     },
     heatmapCard: {
         borderRadius: 16,

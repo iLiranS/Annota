@@ -1,4 +1,5 @@
-import { removeApiKey, saveApiKey, useAiStore } from '@annota/core';
+import { removeApiKey, saveApiKey, useAiStore, useSettingsStore } from '@annota/core';
+import SettingItem from '@/components/settings/setting-item';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
 import React, { useState } from 'react';
@@ -20,6 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 export default function AiSettings() {
     const { colors } = useTheme();
     const insets = useSafeAreaInsets();
+    const { general, updateGeneralSettings } = useSettingsStore();
     const {
         activeProvider,
         setActiveProvider,
@@ -97,175 +99,180 @@ export default function AiSettings() {
                 contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
                 keyboardShouldPersistTaps="handled"
             >
-                <View style={styles.infoCard}>
-                    <View style={[styles.infoIcon, { backgroundColor: colors.primary + '15' }]}>
-                        <Ionicons name="sparkles" size={20} color={colors.primary} />
-                    </View>
-                    <View style={styles.infoContent}>
-                        <Text style={[styles.infoTitle, { color: colors.text }]}>Smart Context</Text>
-                        <Text style={[styles.infoText, { color: colors.text + '90' }]}>
-                            Context is trimmed intelligently. Cloud providers charge for tokens; models with caching will reduce repeat costs.
-                        </Text>
-                    </View>
-                </View>
-
                 <View style={styles.section}>
-                    <Text style={[styles.sectionHeader, { color: colors.text + '80' }]}>ACTIVE PROVIDER</Text>
                     <View style={[styles.card, { backgroundColor: colors.card }]}>
-                        {providers.map((p, index) => (
-                            <Pressable
-                                key={p.id}
-                                style={({ pressed }) => [
-                                    styles.providerOption,
-                                    { borderBottomWidth: index < providers.length - 1 ? StyleSheet.hairlineWidth : 0, borderBottomColor: colors.border + '20' },
-                                    pressed && { backgroundColor: colors.border + '10' }
-                                ]}
-                                onPress={() => setActiveProvider(p.id as any)}
-                            >
-                                <View style={styles.providerInfo}>
-                                    <View style={[styles.providerIcon, { backgroundColor: p.color + '20' }]}>
-                                        <Ionicons name={p.icon as any} size={18} color={p.color} />
+                        <SettingItem
+                            label="Enable AI"
+                            type="toggle"
+                            value={general.isAiEnabled}
+                            onToggle={(val) => updateGeneralSettings({ isAiEnabled: val })}
+                            icon="sparkles-outline"
+                            description="AI assistant & Chat"
+                        />
+                    </View>
+                </View>
+
+                {general.isAiEnabled && (
+                    <>
+                        <View style={styles.section}>
+                            <Text style={[styles.sectionHeader, { color: colors.text + '80' }]}>ACTIVE PROVIDER</Text>
+                            <View style={[styles.card, { backgroundColor: colors.card }]}>
+                                {providers.map((p, index) => (
+                                    <Pressable
+                                        key={p.id}
+                                        style={({ pressed }) => [
+                                            styles.providerOption,
+                                            { borderBottomWidth: index < providers.length - 1 ? StyleSheet.hairlineWidth : 0, borderBottomColor: colors.border + '20' },
+                                            pressed && { backgroundColor: colors.border + '10' }
+                                        ]}
+                                        onPress={() => setActiveProvider(p.id as any)}
+                                    >
+                                        <View style={styles.providerInfo}>
+                                            <View style={[styles.providerIcon, { backgroundColor: p.color + '20' }]}>
+                                                <Ionicons name={p.icon as any} size={18} color={p.color} />
+                                            </View>
+                                            <Text style={[styles.providerLabel, { color: colors.text }]}>{p.label}</Text>
+                                        </View>
+                                        {activeProvider === p.id && (
+                                            <Ionicons name="checkmark-circle" size={22} color={colors.primary} />
+                                        )}
+                                    </Pressable>
+                                ))}
+                            </View>
+                        </View>
+
+                        <View style={styles.section}>
+                            <Text style={[styles.sectionHeader, { color: colors.text + '80' }]}>PROVIDER SETTINGS</Text>
+                            
+                            {activeProvider === 'openai' && (
+                                <View style={[styles.card, { backgroundColor: colors.card, padding: 16 }]}>
+                                    <View style={styles.settingHeader}>
+                                        <Ionicons name="shield-checkmark" size={16} color={colors.primary} />
+                                        <Text style={[styles.settingTitle, { color: colors.text }]}>OpenAI Settings</Text>
                                     </View>
-                                    <Text style={[styles.providerLabel, { color: colors.text }]}>{p.label}</Text>
+                                    <Text style={[styles.label, { color: colors.text + '70' }]}>API Key</Text>
+                                    <View style={styles.inputContainer}>
+                                        <TextInput
+                                            style={[styles.input, { color: colors.text, borderColor: colors.border + '40', backgroundColor: colors.background + '50' }]}
+                                            value={localKeys.openai}
+                                            onChangeText={(text) => setLocalKeys(prev => ({ ...prev, openai: text }))}
+                                            placeholder={hasOpenAiKey ? "sk-•••••••••••• (Configured)" : "sk-..."}
+                                            placeholderTextColor={colors.text + '40'}
+                                            secureTextEntry
+                                        />
+                                        {hasOpenAiKey && !localKeys.openai.trim() ? (
+                                            <TouchableOpacity 
+                                                style={[styles.saveButton, { backgroundColor: '#ef4444' }]}
+                                                onPress={() => handleRemoveKey('openai')}
+                                                disabled={saving.openai}
+                                            >
+                                                {saving.openai ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={styles.saveButtonText}>Remove</Text>}
+                                            </TouchableOpacity>
+                                        ) : (
+                                            <TouchableOpacity 
+                                                style={[styles.saveButton, { backgroundColor: colors.primary }]}
+                                                onPress={() => handleSaveKey('openai')}
+                                                disabled={saving.openai || (!localKeys.openai.trim() && hasOpenAiKey)}
+                                            >
+                                                {saving.openai ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={styles.saveButtonText}>Save</Text>}
+                                            </TouchableOpacity>
+                                        )}
+                                    </View>
+                                    <TouchableOpacity onPress={() => Linking.openURL('https://platform.openai.com/api-keys')}>
+                                        <Text style={[styles.link, { color: colors.primary }]}>Get API Key from OpenAI</Text>
+                                    </TouchableOpacity>
                                 </View>
-                                {activeProvider === p.id && (
-                                    <Ionicons name="checkmark-circle" size={22} color={colors.primary} />
-                                )}
-                            </Pressable>
-                        ))}
-                    </View>
-                </View>
+                            )}
 
-                <View style={styles.section}>
-                    <Text style={[styles.sectionHeader, { color: colors.text + '80' }]}>PROVIDER SETTINGS</Text>
-                    
-                    {activeProvider === 'openai' && (
-                        <View style={[styles.card, { backgroundColor: colors.card, padding: 16 }]}>
-                            <View style={styles.settingHeader}>
-                                <Ionicons name="shield-checkmark" size={16} color={colors.primary} />
-                                <Text style={[styles.settingTitle, { color: colors.text }]}>OpenAI Settings</Text>
-                            </View>
-                            <Text style={[styles.label, { color: colors.text + '70' }]}>API Key</Text>
-                            <View style={styles.inputContainer}>
-                                <TextInput
-                                    style={[styles.input, { color: colors.text, borderColor: colors.border + '40', backgroundColor: colors.background + '50' }]}
-                                    value={localKeys.openai}
-                                    onChangeText={(text) => setLocalKeys(prev => ({ ...prev, openai: text }))}
-                                    placeholder={hasOpenAiKey ? "sk-•••••••••••• (Configured)" : "sk-..."}
-                                    placeholderTextColor={colors.text + '40'}
-                                    secureTextEntry
-                                />
-                                {hasOpenAiKey && !localKeys.openai.trim() ? (
-                                    <TouchableOpacity 
-                                        style={[styles.saveButton, { backgroundColor: '#ef4444' }]}
-                                        onPress={() => handleRemoveKey('openai')}
-                                        disabled={saving.openai}
-                                    >
-                                        {saving.openai ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={styles.saveButtonText}>Remove</Text>}
+                            {activeProvider === 'anthropic' && (
+                                <View style={[styles.card, { backgroundColor: colors.card, padding: 16 }]}>
+                                    <View style={styles.settingHeader}>
+                                        <Ionicons name="shield-checkmark" size={16} color={colors.primary} />
+                                        <Text style={[styles.settingTitle, { color: colors.text }]}>Anthropic Settings</Text>
+                                    </View>
+                                    <Text style={[styles.label, { color: colors.text + '70' }]}>API Key</Text>
+                                    <View style={styles.inputContainer}>
+                                        <TextInput
+                                            style={[styles.input, { color: colors.text, borderColor: colors.border + '40', backgroundColor: colors.background + '50' }]}
+                                            value={localKeys.anthropic}
+                                            onChangeText={(text) => setLocalKeys(prev => ({ ...prev, anthropic: text }))}
+                                            placeholder={hasAnthropicKey ? "sk-ant-••••••••• (Configured)" : "sk-ant-..."}
+                                            placeholderTextColor={colors.text + '40'}
+                                            secureTextEntry
+                                        />
+                                        {hasAnthropicKey && !localKeys.anthropic.trim() ? (
+                                            <TouchableOpacity 
+                                                style={[styles.saveButton, { backgroundColor: '#ef4444' }]}
+                                                onPress={() => handleRemoveKey('anthropic')}
+                                                disabled={saving.anthropic}
+                                            >
+                                                {saving.anthropic ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={styles.saveButtonText}>Remove</Text>}
+                                            </TouchableOpacity>
+                                        ) : (
+                                            <TouchableOpacity 
+                                                style={[styles.saveButton, { backgroundColor: colors.primary }]}
+                                                onPress={() => handleSaveKey('anthropic')}
+                                                disabled={saving.anthropic || (!localKeys.anthropic.trim() && hasAnthropicKey)}
+                                            >
+                                                {saving.anthropic ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={styles.saveButtonText}>Save</Text>}
+                                            </TouchableOpacity>
+                                        )}
+                                    </View>
+                                    <TouchableOpacity onPress={() => Linking.openURL('https://console.anthropic.com/settings/keys')}>
+                                        <Text style={[styles.link, { color: colors.primary }]}>Get API Key from Anthropic</Text>
                                     </TouchableOpacity>
-                                ) : (
-                                    <TouchableOpacity 
-                                        style={[styles.saveButton, { backgroundColor: colors.primary }]}
-                                        onPress={() => handleSaveKey('openai')}
-                                        disabled={saving.openai || (!localKeys.openai.trim() && hasOpenAiKey)}
-                                    >
-                                        {saving.openai ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={styles.saveButtonText}>Save</Text>}
+                                </View>
+                            )}
+
+                            {activeProvider === 'google' && (
+                                <View style={[styles.card, { backgroundColor: colors.card, padding: 16 }]}>
+                                    <View style={styles.settingHeader}>
+                                        <Ionicons name="shield-checkmark" size={16} color={colors.primary} />
+                                        <Text style={[styles.settingTitle, { color: colors.text }]}>Google (Gemini) Settings</Text>
+                                    </View>
+                                    <Text style={[styles.label, { color: colors.text + '70' }]}>API Key</Text>
+                                    <View style={styles.inputContainer}>
+                                        <TextInput
+                                            style={[styles.input, { color: colors.text, borderColor: colors.border + '40', backgroundColor: colors.background + '50' }]}
+                                            value={localKeys.google}
+                                            onChangeText={(text) => setLocalKeys(prev => ({ ...prev, google: text }))}
+                                            placeholder={hasGoogleKey ? "•••••••••••• (Configured)" : "Paste key here..."}
+                                            placeholderTextColor={colors.text + '40'}
+                                            secureTextEntry
+                                        />
+                                        {hasGoogleKey && !localKeys.google.trim() ? (
+                                            <TouchableOpacity 
+                                                style={[styles.saveButton, { backgroundColor: '#ef4444' }]}
+                                                onPress={() => handleRemoveKey('google')}
+                                                disabled={saving.google}
+                                            >
+                                                {saving.google ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={styles.saveButtonText}>Remove</Text>}
+                                            </TouchableOpacity>
+                                        ) : (
+                                            <TouchableOpacity 
+                                                style={[styles.saveButton, { backgroundColor: colors.primary }]}
+                                                onPress={() => handleSaveKey('google')}
+                                                disabled={saving.google || (!localKeys.google.trim() && hasGoogleKey)}
+                                            >
+                                                {saving.google ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={styles.saveButtonText}>Save</Text>}
+                                            </TouchableOpacity>
+                                        )}
+                                    </View>
+                                    <TouchableOpacity onPress={() => Linking.openURL('https://aistudio.google.com/app/apikey')}>
+                                        <Text style={[styles.link, { color: colors.primary }]}>Get API Key from Google AI Studio</Text>
                                     </TouchableOpacity>
-                                )}
+                                </View>
+                            )}
+
+                            <View style={styles.securityNote}>
+                                <Ionicons name="lock-closed-outline" size={12} color={colors.text + '40'} />
+                                <Text style={[styles.securityText, { color: colors.text + '40' }]}>
+                                    Keys are stored encrypted in your device's secure vault.
+                                </Text>
                             </View>
-                            <TouchableOpacity onPress={() => Linking.openURL('https://platform.openai.com/api-keys')}>
-                                <Text style={[styles.link, { color: colors.primary }]}>Get API Key from OpenAI</Text>
-                            </TouchableOpacity>
                         </View>
-                    )}
-
-                    {activeProvider === 'anthropic' && (
-                        <View style={[styles.card, { backgroundColor: colors.card, padding: 16 }]}>
-                            <View style={styles.settingHeader}>
-                                <Ionicons name="shield-checkmark" size={16} color={colors.primary} />
-                                <Text style={[styles.settingTitle, { color: colors.text }]}>Anthropic Settings</Text>
-                            </View>
-                            <Text style={[styles.label, { color: colors.text + '70' }]}>API Key</Text>
-                            <View style={styles.inputContainer}>
-                                <TextInput
-                                    style={[styles.input, { color: colors.text, borderColor: colors.border + '40', backgroundColor: colors.background + '50' }]}
-                                    value={localKeys.anthropic}
-                                    onChangeText={(text) => setLocalKeys(prev => ({ ...prev, anthropic: text }))}
-                                    placeholder={hasAnthropicKey ? "sk-ant-••••••••• (Configured)" : "sk-ant-..."}
-                                    placeholderTextColor={colors.text + '40'}
-                                    secureTextEntry
-                                />
-                                {hasAnthropicKey && !localKeys.anthropic.trim() ? (
-                                    <TouchableOpacity 
-                                        style={[styles.saveButton, { backgroundColor: '#ef4444' }]}
-                                        onPress={() => handleRemoveKey('anthropic')}
-                                        disabled={saving.anthropic}
-                                    >
-                                        {saving.anthropic ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={styles.saveButtonText}>Remove</Text>}
-                                    </TouchableOpacity>
-                                ) : (
-                                    <TouchableOpacity 
-                                        style={[styles.saveButton, { backgroundColor: colors.primary }]}
-                                        onPress={() => handleSaveKey('anthropic')}
-                                        disabled={saving.anthropic || (!localKeys.anthropic.trim() && hasAnthropicKey)}
-                                    >
-                                        {saving.anthropic ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={styles.saveButtonText}>Save</Text>}
-                                    </TouchableOpacity>
-                                )}
-                            </View>
-                            <TouchableOpacity onPress={() => Linking.openURL('https://console.anthropic.com/settings/keys')}>
-                                <Text style={[styles.link, { color: colors.primary }]}>Get API Key from Anthropic</Text>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
-                    {activeProvider === 'google' && (
-                        <View style={[styles.card, { backgroundColor: colors.card, padding: 16 }]}>
-                            <View style={styles.settingHeader}>
-                                <Ionicons name="shield-checkmark" size={16} color={colors.primary} />
-                                <Text style={[styles.settingTitle, { color: colors.text }]}>Google (Gemini) Settings</Text>
-                            </View>
-                            <Text style={[styles.label, { color: colors.text + '70' }]}>API Key</Text>
-                            <View style={styles.inputContainer}>
-                                <TextInput
-                                    style={[styles.input, { color: colors.text, borderColor: colors.border + '40', backgroundColor: colors.background + '50' }]}
-                                    value={localKeys.google}
-                                    onChangeText={(text) => setLocalKeys(prev => ({ ...prev, google: text }))}
-                                    placeholder={hasGoogleKey ? "•••••••••••• (Configured)" : "Paste key here..."}
-                                    placeholderTextColor={colors.text + '40'}
-                                    secureTextEntry
-                                />
-                                {hasGoogleKey && !localKeys.google.trim() ? (
-                                    <TouchableOpacity 
-                                        style={[styles.saveButton, { backgroundColor: '#ef4444' }]}
-                                        onPress={() => handleRemoveKey('google')}
-                                        disabled={saving.google}
-                                    >
-                                        {saving.google ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={styles.saveButtonText}>Remove</Text>}
-                                    </TouchableOpacity>
-                                ) : (
-                                    <TouchableOpacity 
-                                        style={[styles.saveButton, { backgroundColor: colors.primary }]}
-                                        onPress={() => handleSaveKey('google')}
-                                        disabled={saving.google || (!localKeys.google.trim() && hasGoogleKey)}
-                                    >
-                                        {saving.google ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={styles.saveButtonText}>Save</Text>}
-                                    </TouchableOpacity>
-                                )}
-                            </View>
-                            <TouchableOpacity onPress={() => Linking.openURL('https://aistudio.google.com/app/apikey')}>
-                                <Text style={[styles.link, { color: colors.primary }]}>Get API Key from Google AI Studio</Text>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
-                    <View style={styles.securityNote}>
-                        <Ionicons name="lock-closed-outline" size={12} color={colors.text + '40'} />
-                        <Text style={[styles.securityText, { color: colors.text + '40' }]}>
-                            Keys are stored encrypted in your device's secure vault.
-                        </Text>
-                    </View>
-                </View>
+                    </>
+                )}
             </ScrollView>
         </KeyboardAvoidingView>
     );

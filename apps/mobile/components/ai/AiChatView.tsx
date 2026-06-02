@@ -706,14 +706,14 @@ export function AiChatView({
                         activeOpacity={0.7}
                     >
                         <Ionicons
-                            name={selectedContextNotes.length > 0 ? "layers" : "search"}
+                            name={selectedContextNotes.length > 0 ? "layers" : "alert-circle-outline"}
                             size={14}
-                            color={colors.primary}
+                            color={selectedContextNotes.length > 0 ? colors.primary : '#dc2626'}
                         />
-                        <Text style={[styles.activeContextTitle, { color: colors.text + '80' }]} numberOfLines={1}>
+                        <Text style={[styles.activeContextTitle, { color: selectedContextNotes.length > 0 ? colors.text + '80' : '#dc2626' }]} numberOfLines={1}>
                             {selectedContextNotes.length > 0
                                 ? `Using ${selectedContextNotes.length} selected ${selectedContextNotes.length === 1 ? 'note' : 'notes'} as context`
-                                : `Using global search context`
+                                : `Select at least 1 note as context`
                             }
                         </Text>
                         {selectedContextNotes.length > 0 && (

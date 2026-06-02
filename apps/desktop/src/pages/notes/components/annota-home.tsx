@@ -241,15 +241,19 @@ export function AnnotaHome() {
                             <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight bg-linear-to-r from-foreground to-foreground/80 bg-clip-text text-transparent flex items-center gap-2.5">
                                 {greeting}{session ? displayName ? `, ${displayName}` : "" : ", " + `${localStorage.getItem('guest_display_name') ?? "Guest"}`}
                             </h2>
-                            <p className="text-sm text-muted-foreground/90 max-w-lg font-medium">
-                                Keep track of your learnings, capture fleeting inspirations, and build your digital knowledge base with ease.
+                            <p className="text-sm text-muted-foreground/60 max-w-lg font-medium">
+                                Capture your next great idea, one note at a time.
                             </p>
                         </div>
 
                         <div className="relative z-10 flex flex-wrap items-center gap-3 shrink-0">
                             <Button
                                 onClick={handleNewNote}
-                                className="h-9 px-4 font-bold shadow-md shadow-primary/10 transition-all hover:shadow-lg hover:shadow-primary/15 bg-primary text-primary-foreground hover:bg-primary/95 flex items-center gap-2 group/btn"
+                                style={{
+                                    backgroundColor: colors.primary,
+                                    color: '#ffffff',
+                                }}
+                                className="h-9 px-4 font-bold shadow-md transition-all hover:opacity-90 flex items-center gap-2 group/btn border-none"
                             >
                                 <Plus className="h-4.5 w-4.5 group-hover/btn:scale-110 transition-transform" />
                                 New Note
@@ -337,9 +341,14 @@ export function AnnotaHome() {
 
                             {/* Writing Activity */}
                             <div className="flex flex-col gap-4">
-                                <div className="flex items-center gap-2 px-1">
-                                    <Ionicons name="flame-outline" size={16} className="text-muted-foreground/80" />
-                                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground/60">Writing Activity</h3>
+                                <div className="flex items-center justify-between px-1">
+                                    <div className="flex items-center gap-2">
+                                        <Ionicons name="flame-outline" size={16} className="text-muted-foreground/80" />
+                                        <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground/60">Writing Activity</h3>
+                                    </div>
+                                    <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground/40">
+                                        {["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"][new Date().getMonth()]}
+                                    </span>
                                 </div>
 
                                 <div className="bg-card/15 border border-border/20 rounded-xl p-5 flex flex-col justify-center items-center">

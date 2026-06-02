@@ -1,8 +1,8 @@
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { HapticPressable } from '@/components/ui/haptic-pressable';
 import { useAppTheme } from '@/hooks/use-app-theme';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import React from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 
 interface WelcomeBannerProps {
     greeting: string;
@@ -31,6 +31,9 @@ export function WelcomeBanner({ greeting, name, onNewNote, onDailyNote }: Welcom
                         {greeting}, {name}
                     </Text>
                 </View>
+                <Text style={[styles.welcomeSubtext, { color: colors.text + '60' }]}>
+                    Capture your next great idea, one note at a time.
+                </Text>
             </View>
 
             <View style={styles.welcomeActionsRow}>

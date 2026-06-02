@@ -19,20 +19,6 @@ export default function GeneralSettings() {
     return (
         <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
             <View style={styles.section}>
-                <Text style={[styles.sectionHeader, { color: colors.text + '80' }]}>AI FEATURES</Text>
-                <View style={[styles.card, { backgroundColor: colors.card }]}>
-                    <SettingItem
-                        label="Enable AI"
-                        type="toggle"
-                        value={general.isAiEnabled}
-                        onToggle={(val) => updateGeneralSettings({ isAiEnabled: val })}
-                        icon="sparkles-outline"
-                        description="AI assistant & Chat"
-                    />
-                </View>
-            </View>
-
-            <View style={styles.section}>
                 <Text style={[styles.sectionHeader, { color: colors.text + '80' }]}>CALENDAR & DATE</Text>
                 <View style={[styles.card, { backgroundColor: colors.card }]}>
                     <SettingItem

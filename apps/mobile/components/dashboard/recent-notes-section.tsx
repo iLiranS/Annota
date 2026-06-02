@@ -76,13 +76,13 @@ export function RecentNotesSection({ recentNotes, onNotePress }: RecentNotesSect
             </View>
 
             {recentNotes.length === 0 ? (
-                <View style={[styles.emptyContainer, { borderColor: colors.border }]}>
+                <View style={[styles.emptyContainer, { borderColor: colors.border + "60" }]}>
                     <Ionicons name="document-text-outline" size={32} color={colors.text + '20'} />
                     <Text style={[styles.emptyTitle, { color: colors.text }]}>No notes found</Text>
                     <Text style={[styles.emptySubtitle, { color: colors.text + '50' }]}>Click "New Note" above to get started!</Text>
                 </View>
             ) : (
-                <View style={[styles.notesListWrapper, { backgroundColor: colors.card + '25', borderColor: colors.border }]}>
+                <View style={[styles.notesListWrapper, { backgroundColor: colors.card + '25', borderColor: colors.border + "60" }]}>
                     {recentNotes.map((note, index) => (
                         <NoteCard
                             key={note.id}

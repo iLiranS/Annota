@@ -89,6 +89,13 @@ export default function SettingsLayout() {
                     presentation: 'card',
                 }}
             />
+            <Stack.Screen
+                name="ai"
+                options={{
+                    title: 'AI',
+                    presentation: 'card',
+                }}
+            />
         </Stack>
     );
 }

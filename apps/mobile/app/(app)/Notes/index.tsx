@@ -55,7 +55,7 @@ export default function NotesList() {
     const router = useRouter();
     const { colors } = useTheme();
     const insets = useSafeAreaInsets();
-    const params = useLocalSearchParams<{ folderId?: string, tagId?: string, source?: string }>();
+    const params = useLocalSearchParams<{ folderId?: string, tagId?: string, source?: string, search?: string }>();
 
     // Stores
     const {
@@ -101,6 +101,13 @@ export default function NotesList() {
 
     const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
     const [activeFilter, setActiveFilter] = useState<'all' | 'media'>('all');
+
+    useEffect(() => {
+        if (params.search === 'true') {
+            setIsSearchActive(true);
+            router.setParams({ search: undefined });
+        }
+    }, [params.search, setIsSearchActive, router]);
 
     useEffect(() => {
         const clearLastViewed = async () => {

@@ -163,7 +163,7 @@ function Separator() {
     return (
         <Animated.View
             layout={LinearTransition.duration(350).easing(Easing.bezier(0.4, 0, 0.2, 1))}
-            style={[styles.separator, { backgroundColor: colors.border }]}
+            style={[styles.separator, { backgroundColor: colors.border + "60" }]}
         />
     );
 }
@@ -626,7 +626,7 @@ export default function Sidebar({ onNavigate, ...props }: SidebarProps & React.C
 
 
             {/* Footer Section */}
-            <View style={[styles.footer, { paddingBottom: insets.bottom + 16, borderTopColor: colors.border }]}>
+            <View style={[styles.footer, { paddingBottom: insets.bottom + 16, borderTopColor: colors.border + "60" }]}>
                 {authRequired && !isGuest && (
                     <View style={[styles.offlineBanner, { backgroundColor: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.2)', borderWidth: 1 }]}>
                         <Ionicons name="lock-closed-outline" size={16} color="#EF4444" />

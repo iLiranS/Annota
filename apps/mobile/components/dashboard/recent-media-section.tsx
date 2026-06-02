@@ -1,10 +1,9 @@
-import React from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import Toast from 'react-native-toast-message';
 import { MediaCard } from '@/components/notes/media-search-browser';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import type { MediaItem } from '@annota/core';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import React from 'react';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 interface RecentMediaSectionProps {
     mediaItems: MediaItem[];
@@ -35,7 +34,7 @@ export function RecentMediaSection({
                     <ActivityIndicator size="small" color={colors.primary} />
                 </View>
             ) : mediaItems.length === 0 ? (
-                <View style={[styles.emptyContainer, { borderColor: colors.border }]}>
+                <View style={[styles.emptyContainer, { borderColor: colors.border + "60" }]}>
                     <Ionicons name="document-attach-outline" size={32} color={colors.text + '20'} />
                     <Text style={[styles.emptyTitle, { color: colors.text }]}>No media assets</Text>
                     <Text style={[styles.emptySubtitle, { color: colors.text + '50' }]}>

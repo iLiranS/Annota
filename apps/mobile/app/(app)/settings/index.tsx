@@ -1,10 +1,10 @@
 import SettingItem from '@/components/settings/setting-item';
 import { useAppTheme } from '@/hooks/use-app-theme';
+import { APP_RELEASE_VERSION, useChangelog } from '@annota/core';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { ScrollView, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { APP_RELEASE_VERSION, useChangelog } from '@annota/core';
 
 export default function SettingsIndex() {
     const router = useRouter();
@@ -46,10 +46,10 @@ export default function SettingsIndex() {
                         iconBackgroundColor="#8E8E93"
                     />
                     <SettingItem
-                        label="AI Models"
+                        label="AI"
                         icon="sparkles-outline"
                         onPress={() => router.push('/settings/ai')}
-                        description="Configure OpenAI, Anthropic, Gemini"
+                        description="Enable & Configure AI Assistant"
                         iconColor="#FFFFFF"
                         iconBackgroundColor="#FF3B30"
                     />

@@ -1,38 +1,37 @@
-import { ImageGallery } from '@/components/editor-ui/image-gallery';
-import { WelcomeBanner } from '@/components/dashboard/welcome-banner';
-import { StatsSummaryRow } from '@/components/dashboard/stats-summary-row';
-import { WritingActivityHeatmap } from '@/components/dashboard/writing-activity-heatmap';
-import { RecentNotesSection } from '@/components/dashboard/recent-notes-section';
+import AiChatModal from '@/components/ai/AiChatModal';
 import { RecentMediaSection } from '@/components/dashboard/recent-media-section';
-import { HapticPressable } from '@/components/ui/haptic-pressable';
+import { RecentNotesSection } from '@/components/dashboard/recent-notes-section';
+import { StatsSummaryRow } from '@/components/dashboard/stats-summary-row';
+import { WelcomeBanner } from '@/components/dashboard/welcome-banner';
+import { WritingActivityHeatmap } from '@/components/dashboard/writing-activity-heatmap';
+import { ImageGallery } from '@/components/editor-ui/image-gallery';
 import { NotesModal } from '@/components/notes/media-search-browser';
+import { HapticPressable } from '@/components/ui/haptic-pressable';
 import { useSidebar } from '@/context/sidebar-context';
 import { useAppTheme } from '@/hooks/use-app-theme';
-import AiChatModal from '@/components/ai/AiChatModal';
+import { usePullToSync } from '@/hooks/use-pull-to-sync';
 import {
     DAILY_NOTES_FOLDER_ID,
     getPaginatedMedia,
     useNotesStore,
-    useUserStore,
-    useSyncStore,
     useSettingsStore,
-    type MediaItem,
+    useUserStore,
+    type MediaItem
 } from '@annota/core';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { format } from 'date-fns';
-import { useRouter, Stack } from 'expo-router';
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import { Stack, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+    ActivityIndicator,
     Dimensions,
+    Platform,
     StyleSheet,
     View,
-    ActivityIndicator,
-    Platform,
 } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
-import Animated from 'react-native-reanimated';
-import { usePullToSync } from '@/hooks/use-pull-to-sync';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -253,15 +252,26 @@ export default function HomeScreen() {
                             <Ionicons name="menu" size={24} color={colors.primary} />
                         </HapticPressable>
                     ),
-                    headerRight: isAiEnabled ? () => (
-                        <HapticPressable
-                            onPress={() => setAiModalVisible(true)}
-                            style={styles.headerButton}
-                            hitSlop={8}
-                        >
-                            <Ionicons name="sparkles" size={22} color={colors.primary} />
-                        </HapticPressable>
-                    ) : undefined,
+                    headerRight: () => (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                            {isAiEnabled && (
+                                <HapticPressable
+                                    onPress={() => setAiModalVisible(true)}
+                                    style={styles.headerButton}
+                                    hitSlop={8}
+                                >
+                                    <Ionicons name="sparkles" size={22} color={colors.primary} />
+                                </HapticPressable>
+                            )}
+                            <HapticPressable
+                                onPress={() => router.replace({ pathname: '/Notes', params: { search: 'true' } })}
+                                style={styles.headerButton}
+                                hitSlop={8}
+                            >
+                                <Ionicons name="search" size={22} color={colors.primary} />
+                            </HapticPressable>
+                        </View>
+                    ),
                 }}
             />
 
