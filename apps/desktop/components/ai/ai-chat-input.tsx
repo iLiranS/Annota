@@ -73,8 +73,8 @@ export function AiChatInput({
     const getModelLabel = (provider: string, value: string) => {
         if (provider === 'ollama') return value;
         const models = provider === 'openai' ? OPENAI_MODELS :
-                       provider === 'anthropic' ? ANTHROPIC_MODELS :
-                       GOOGLE_MODELS;
+            provider === 'anthropic' ? ANTHROPIC_MODELS :
+                GOOGLE_MODELS;
         return models.find(m => m.value === value)?.label || value;
     };
 
@@ -139,7 +139,7 @@ export function AiChatInput({
     const isNearLimit = content.length > MAX_LENGTH * 0.8;
     return (
         <div className={cn("flex flex-col gap-2 ", isFloating ? "m-1 " : " ")}>
-            <div className="w-full bg-background border rounded-3xl  focus-within:shadow-md focus-within:border-primary/30 group p-1.5 flex flex-col gap-1 transition-all duration-300">
+            <div className="w-full bg-background border rounded-3xl   focus-within:border-primary/30 group p-1.5 flex flex-col gap-1 transition-all duration-300">
                 {chatContext && (
                     <div className="mx-1 mt-1 px-3 py-2.5 bg-primary/5 border border-primary/10 rounded-2xl relative group/context animate-in fade-in slide-in-from-top-2 duration-300">
                         <div className="text-[10px] font-bold text-primary/70 uppercase tracking-wider mb-1 flex items-center gap-1.5">
@@ -167,18 +167,18 @@ export function AiChatInput({
                     rows={1}
                     dir="auto"
                     placeholder={
-                        !currentModelName 
-                            ? "Select a model to start..." 
-                            : (selectedNotes.length > 0 
-                                ? `Ask about ${selectedNotes.length} notes...` 
-                                : (chatContext 
-                                    ? "Ask about selected context..." 
+                        !currentModelName
+                            ? "Select a model to start..."
+                            : (selectedNotes.length > 0
+                                ? `Ask about ${selectedNotes.length} notes...`
+                                : (chatContext
+                                    ? "Ask about selected context..."
                                     : "Select at least 1 note to start chatting..."
-                                  )
-                              )
+                                )
+                            )
                     }
                     disabled={disabled || !currentModelName}
-                    className="w-full bg-transparent border-none outline-none resize-none px-3 pt-2 pb-1 text-[14px] leading-relaxed max-h-[160px] min-h-[44px] overflow-y-auto custom-scrollbar disabled:opacity-50"
+                    className="w-full placeholder:text-muted-foreground/60 bg-transparent border-none outline-none resize-none px-3 pt-2 pb-1 text-[14px] leading-relaxed max-h-[160px] min-h-[44px] overflow-y-auto custom-scrollbar disabled:opacity-50"
                 />
 
                 <div className="flex items-center justify-between px-1.5 pb-0.5 gap-2">
@@ -370,8 +370,8 @@ export function AiChatInput({
                         <Button
                             onClick={() => disabled ? onStop?.() : handleSend()}
                             disabled={
-                                (!disabled && !content.trim()) || 
-                                (!disabled && !currentModelName) || 
+                                (!disabled && !content.trim()) ||
+                                (!disabled && !currentModelName) ||
                                 (!disabled && selectedNotes.length === 0 && !chatContext)
                             }
                             size="icon"

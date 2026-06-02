@@ -5,6 +5,9 @@ import mermaid from 'mermaid';
 import { createBlockMenuButton } from './block-menu-button';
 import { generateBlockId } from './id-generator';
 
+// Suppress global Jison parser errors to prevent app-level crashes or console overlays
+mermaid.parseError = () => {};
+
 declare module '@tiptap/core' {
     interface Commands<ReturnType> {
         insertMermaid: (options?: { code?: string }) => ReturnType;
@@ -389,11 +392,15 @@ export const Mermaid = Node.create({
 
                     const isDark = isDarkMode();
 
+                    // Ensure parseError is overridden to prevent Mermaid from injecting global error SVGs into the DOM
+                    mermaid.parseError = () => {};
+
                     mermaid.initialize({
                         startOnLoad: false,
                         theme: isDark ? 'dark' : 'default',
                         securityLevel: 'loose',
                         logLevel: 'fatal',
+                        suppressErrorRendering: true,
                     });
 
                     // Generate a unique ID for the mermaid div
@@ -401,7 +408,13 @@ export const Mermaid = Node.create({
 
                     // Try to parse first to avoid Mermaid's global error overlay
                     try {
-                        await mermaid.parse(codeToRender, { suppressErrors: true });
+                        const parseResult = await mermaid.parse(codeToRender, { suppressErrors: true });
+                        if (parseResult === false || !parseResult) {
+                            if (myRenderId === currentRenderId) {
+                                preview.innerHTML = '<div class="mermaid-error">Syntax Error - Click to edit</div>';
+                            }
+                            return;
+                        }
                     } catch (parseError) {
                         if (myRenderId === currentRenderId) {
                             preview.innerHTML = '<div class="mermaid-error">Syntax Error - Click to edit</div>';

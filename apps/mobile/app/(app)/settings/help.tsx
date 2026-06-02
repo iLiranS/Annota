@@ -18,6 +18,10 @@ export default function HelpSettings() {
         Linking.openURL("https://annota.online");
     };
 
+    const handleGithubOpen = () => {
+        Linking.openURL("https://github.com/iLiranS/Annota");
+    };
+
     return (
         <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
             <View style={styles.section}>
@@ -52,6 +56,14 @@ export default function HelpSettings() {
                         onPress={handleWebsiteOpen}
                         iconColor="#FFFFFF"
                         iconBackgroundColor="#34C759"
+                    />
+                    <SettingItem
+                        label="GitHub Repository"
+                        description="View source code and contribute"
+                        icon="logo-github"
+                        onPress={handleGithubOpen}
+                        iconColor="#FFFFFF"
+                        iconBackgroundColor="#24292E"
                     />
                 </View>
             </View>

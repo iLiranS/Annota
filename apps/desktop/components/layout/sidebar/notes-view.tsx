@@ -6,16 +6,16 @@ import {
     TRASH_FOLDER_ID,
     getSortTypeLabel,
     sortNotes,
+    useNavigationStore,
     useNotesStore,
     useSettingsStore,
-    useNavigationStore,
     type Folder,
     type SortType
 } from "@annota/core";
 import { useMemo } from "react";
+import { BreadcrumbsSection, type BreadcrumbData } from "./breadcrumbs";
 import { NotesList } from "./notes-list";
 import { SidebarHeaderSection } from "./sidebar-header";
-import { BreadcrumbsSection, type BreadcrumbData } from "./breadcrumbs";
 
 interface NotesViewBaseProps {
     currentFolderId: string | undefined;

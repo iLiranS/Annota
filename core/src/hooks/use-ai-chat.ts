@@ -19,7 +19,8 @@ import {
     noteContent,
     noteMetadata,
     SearchRepository,
-    useAiStore
+    useAiStore,
+    AI_ACTION_PROMPTS
 } from '../index';
 
 export type ContextMode = 'auto' | 'summary' | 'full' | 'rewrite';
@@ -96,28 +97,6 @@ function splitThinkTaggedText(value: string, state: ThinkTagState, flush = false
     return { text, reasoning };
 }
 
-export const AI_ACTION_PROMPTS = {
-    rewrite: `You are an expert editor and technical writer. Rewrite the following content to be clear, concise, and professional.
-    - Correct any factual, grammatical, or structural errors.
-    - Maintain the original meaning and tone unless instructions specify otherwise.
-    - Be succinct: Don't extend the text or add fluff unless necessary for clarity.
-    - Rich Formatting: Use Markdown tables for data, bold/italics for emphasis, and lists for readability.
-    - Diagrams: Use \`\`\`mermaid blocks for any flowcharts or diagrams.
-    - Flashcards: If the user asks for flashcards or study material, ALWAYS use this EXACT structure:
-      <div class="flashcard-block" data-fc="true">
-        <!-- ALL cards go inside this single block -->
-        <div class="flashcard-card-container">
-          <div class="flashcard-card-front">Short Question 1?</div>
-          <div class="flashcard-card-back">Concise Answer 1.</div>
-        </div>
-        <div class="flashcard-card-container">
-          <div class="flashcard-card-front">Short Question 2?</div>
-          <div class="flashcard-card-back">Concise Answer 2.</div>
-        </div>
-      </div>
-      CRITICAL: Output EXACTLY ONE <div class="flashcard-block" data-fc="true"> container, and put all card containers inside it. PURE TEXT ONLY: DO NOT use Markdown, code blocks , or LaTeX ($) inside flashcards.
-    Output ONLY the rewritten/improved content or replacement HTML. DO NOT include any conversational filler, intro, titles, or explanations. Just the final replacement text/html.`,
-};
 
 export function useAiChat(chatId: string | null) {
     const [messages, setMessages] = useState<AiMessage[]>([]);
@@ -373,7 +352,7 @@ export function useAiChat(chatId: string | null) {
         setError(null);
 
         try {
-            const systemInstructions = AI_ACTION_PROMPTS[effectiveMode as keyof typeof AI_ACTION_PROMPTS] || null;
+            const systemInstructions = AI_ACTION_PROMPTS[effectiveMode as keyof typeof AI_ACTION_PROMPTS] || AI_ACTION_PROMPTS.default;
             const budgetConfig = getContextBudgetConfig(effectiveMode, selectedFolderNotes?.length ?? 0);
             const historyBudget = Math.min(
                 budgetConfig.historyTargetTokens,

@@ -7,7 +7,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 import { useCreateNote } from "@/hooks/use-create-note";
 import { cn } from "@/lib/utils";
-import { DAILY_NOTES_FOLDER_ID, TRASH_FOLDER_ID, NoteMetadata, sortFolders, useNavigationStore, useNotesStore, useSettingsStore, type Folder } from "@annota/core";
+import { DAILY_NOTES_FOLDER_ID, NoteMetadata, sortFolders, TRASH_FOLDER_ID, useNavigationStore, useNotesStore, useSettingsStore, type Folder } from "@annota/core";
 import { ChevronRight, FileText, FolderEdit, Pin, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -188,13 +188,13 @@ export function NotesList({
                     </div>
                 )}
 
-                <div data-tauri-drag-region className="flex-1 overflow-y-auto premium-scrollbar mt-0.5">
+                <div className="flex-1 overflow-y-auto premium-scrollbar mt-0.5">
                     {notes.length === 0 && childFolders.length === 0 ? (
                         <div className="px-4 py-8 text-center">
                             <p className="text-xs text-muted-foreground italic">No notes or folders here</p>
                         </div>
                     ) : (childFolders.length > 0 || (!isTrash && pinnedNotes.length > 0)) ? (
-                        <div className="flex flex-col  min-h-full pb-4">
+                        <div data-tauri-drag-region className="flex flex-col  min-h-full pb-4">
                             {/* Folders Section */}
                             <FoldersTree
                                 childFolders={childFolders}

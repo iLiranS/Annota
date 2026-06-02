@@ -27,7 +27,7 @@ export function BreadcrumbsSection({ breadcrumbs, onNavigate, className }: Bread
     if (!breadcrumbs || breadcrumbs.length === 0) return null;
 
     return (
-        <Breadcrumb className={cn("px-3.5 py-1.5 bg-transparent shrink-0 select-none", className)}>
+        <Breadcrumb className={cn("px-2 py-1.5 bg-transparent shrink-0 select-none", className)}>
             <BreadcrumbList className="flex-nowrap gap-1 sm:gap-1">
                 {breadcrumbs.map((crumb, i) => (
                     <div key={i} className="flex items-center gap-1 min-w-0">
@@ -42,7 +42,14 @@ export function BreadcrumbsSection({ breadcrumbs, onNavigate, className }: Bread
                             ) : (
                                 <BreadcrumbLink
                                     asChild
-                                    className="cursor-pointer hover:text-primary transition-colors text-[9px] font-bold uppercase tracking-wider text-muted-foreground/60 flex items-center gap-1.5 min-w-0"
+                                    className="cursor-pointer active:scale-95 transition-all duration-200 text-[9px] font-bold uppercase tracking-wider flex items-center gap-1.5 min-w-0 px-2 py-0.5 rounded-md border bg-(--crumb-bg) hover:bg-(--crumb-bg-hover) text-(--crumb-color) hover:text-(--crumb-color) border-(--crumb-border) hover:border-(--crumb-border-hover)"
+                                    style={{
+                                        '--crumb-bg': crumb.color ? `${crumb.color}15` : "var(--muted)",
+                                        '--crumb-bg-hover': crumb.color ? `${crumb.color}28` : "var(--muted)",
+                                        '--crumb-color': crumb.color || "var(--muted-foreground)",
+                                        '--crumb-border': crumb.color ? `${crumb.color}25` : "var(--border)",
+                                        '--crumb-border-hover': crumb.color ? `${crumb.color}45` : "var(--border)",
+                                    } as React.CSSProperties}
                                 >
                                     <button onClick={() => onNavigate(crumb.id)}>
                                         {crumb.icon === "annota" ? (
@@ -59,10 +66,7 @@ export function BreadcrumbsSection({ breadcrumbs, onNavigate, className }: Bread
                                                 color={crumb.color}
                                             />
                                         )}
-                                        <span
-                                            className="truncate max-w-[160px]"
-                                            style={crumb.color ? { color: crumb.color } : undefined}
-                                        >
+                                        <span className="truncate max-w-[160px]">
                                             {crumb.name === "All Notes" ? "Annota" : crumb.name}
                                         </span>
                                     </button>

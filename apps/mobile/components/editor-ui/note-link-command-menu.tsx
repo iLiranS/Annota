@@ -32,7 +32,7 @@ export function NoteLinkCommandMenu({ query, range, sendCommand, onClose, noteId
                     const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
                     return dateB - dateA;
                 })
-                .slice(0, 7);
+                .slice(0, 10);
             setDisplayNotes(sorted);
             setIsLoading(false);
             return;
@@ -43,7 +43,7 @@ export function NoteLinkCommandMenu({ query, range, sendCommand, onClose, noteId
             try {
                 const results = await SearchRepository.searchNotes(query);
                 if (active) {
-                    const filtered = results.filter(r => r.id !== noteId);
+                    const filtered = results.filter(r => r.id !== noteId).slice(0, 10);
                     setDisplayNotes(filtered);
                     setIsLoading(false);
                 }

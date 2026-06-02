@@ -249,7 +249,8 @@ export class ExportService {
             if (hasBrowserDOM) {
                 try {
                     const mermaid = (await import('mermaid')).default;
-                    mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'loose' });
+                    mermaid.parseError = () => {};
+                    mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'loose', suppressErrorRendering: true });
 
                     for (let i = 0; i < mermaidNodes.length; i++) {
                         const node = mermaidNodes[i];

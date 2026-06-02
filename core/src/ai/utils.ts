@@ -746,9 +746,8 @@ export async function buildBulkContext(
     let directoryText = `[FOLDER DIRECTORY]\n`;
     let includedDirectoryItems = 0;
     for (const note of selectedNotes) {
-        const preview = note.preview ? truncateAtWord(note.preview, 120) : 'No preview';
-        const tags = note.tags || 'none';
-        const entry = `- "${note.title || 'Untitled'}" (Tags: ${tags}) | Preview: ${preview}\n`;
+        const preview = note.preview ? compactWhitespace(note.preview) : 'No preview';
+        const entry = `- "${note.title || 'Untitled'}" | Preview: ${preview}\n`;
         if (estimateContextTokens(directoryText + entry) > directoryBudget) {
             const remaining = selectedNotes.length - includedDirectoryItems;
             if (remaining > 0) {

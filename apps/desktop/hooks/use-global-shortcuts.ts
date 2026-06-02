@@ -1,4 +1,4 @@
-import { useNavigationStore, useSearchStore, useSettingsStore } from "@annota/core";
+import { TRASH_FOLDER_ID, useNavigationStore, useSearchStore, useSettingsStore } from "@annota/core";
 import { useEffect } from "react";
 import { useAlwaysOnTop } from "./use-always-on-top";
 import { useCreateNote } from "./use-create-note";
@@ -129,7 +129,10 @@ export function useGlobalShortcuts(options: { isStandalone?: boolean } = {}) {
                 if (!isStandalone) {
                     if (code === 'KeyN' && !e.shiftKey) {
                         e.preventDefault();
-                        createAndNavigate();
+                        const { selectedFolderId, selectedTagId } = useNavigationStore.getState();
+                        const folderId = (selectedFolderId && selectedFolderId !== 'root' && selectedFolderId !== TRASH_FOLDER_ID) ? selectedFolderId : undefined;
+                        const tagId = selectedTagId || undefined;
+                        createAndNavigate(folderId, tagId);
                     } else if (code === 'KeyP' && !e.shiftKey) {
                         e.preventDefault();
                         setIsSearchOpen(true);
