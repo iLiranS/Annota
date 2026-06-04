@@ -13,7 +13,7 @@ import {
     type SortType
 } from "@annota/core";
 import { useMemo } from "react";
-import { BreadcrumbsSection, type BreadcrumbData } from "./breadcrumbs";
+import { type BreadcrumbData } from "./breadcrumbs";
 import { NotesList } from "./notes-list";
 import { SidebarHeaderSection } from "./sidebar-header";
 
@@ -143,38 +143,31 @@ export function NotesViewHeader({
     }, [tagId, currentTag, isTrash, isDaily, currentFolder, colors.primary]);
 
     return (
-        <>
-            {(browsingFolderId !== null || tagId !== null) && breadcrumbs && (
-                <BreadcrumbsSection
-                    breadcrumbs={breadcrumbs}
-                    onNavigate={(id) => setSelectedFolderId(id || 'root')}
-                    className="p-0 pb-1.5 opacity-60 hover:opacity-100 "
-                />
-            )}
-            <SidebarHeaderSection
-                title={headerTitle}
-                dir={general.appDirection}
-                icon={headerIcon}
-                color={headerColor}
-                isDaily={isDaily}
-                isTrash={isTrash}
-                currentSortType={(isDaily || isTrash) ? 'CREATED_LAST' : currentSortType}
-                onSortChange={(type) => setFolderSortType(currentFolderId ?? null, type)}
-                onCreateNote={() => {
-                    createNote(currentFolderId ?? "", tagId || undefined);
-                }}
-                onCreateFolder={() => {
-                    onCreateFolder(currentFolderId ?? null);
-                }}
-                onEditFolder={() => currentFolder && onEditFolder(currentFolder)}
-                sortOptions={SORT_OPTIONS}
-                getSortTypeLabel={getSortTypeLabel}
-                tagId={tagId || undefined}
-                isRoot={isRoot}
-                selectionMode={selectionMode}
-                setSelectionMode={setSelectionMode}
-            />
-        </>
+        <SidebarHeaderSection
+            title={headerTitle}
+            dir={general.appDirection}
+            icon={headerIcon}
+            color={headerColor}
+            isDaily={isDaily}
+            isTrash={isTrash}
+            currentSortType={(isDaily || isTrash) ? 'CREATED_LAST' : currentSortType}
+            onSortChange={(type) => setFolderSortType(currentFolderId ?? null, type)}
+            onCreateNote={() => {
+                createNote(currentFolderId ?? "", tagId || undefined);
+            }}
+            onCreateFolder={() => {
+                onCreateFolder(currentFolderId ?? null);
+            }}
+            onEditFolder={() => currentFolder && onEditFolder(currentFolder)}
+            sortOptions={SORT_OPTIONS}
+            getSortTypeLabel={getSortTypeLabel}
+            tagId={tagId || undefined}
+            isRoot={isRoot}
+            selectionMode={selectionMode}
+            setSelectionMode={setSelectionMode}
+            breadcrumbs={breadcrumbs}
+            onNavigateBreadcrumb={(id) => setSelectedFolderId(id || 'root')}
+        />
     );
 }
 

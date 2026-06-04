@@ -62,14 +62,16 @@ export function TagsList({
                 }}
                 tag={tagToEdit}
             />
-            <SidebarGroup className={cn("py-2 px-0 flex-1 min-h-0 flex flex-col", general.appDirection === 'rtl' ? "animate-content-from-right" : "animate-content-from-left")}>
+            <SidebarGroup className={cn("py-2 px-1 flex-1 min-h-0 flex flex-col", general.appDirection === 'rtl' ? "animate-content-from-right" : "animate-content-from-left")}>
                 <SidebarMenu data-tauri-drag-region className="px-1 overflow-y-auto compact-scrollbar flex-1 min-h-0">
-                    <SidebarMenuItem className="">
+                    <SidebarMenuItem >
                         <SidebarMenuButton
                             onClick={() => setIsCreateModalOpen(true)}
-                            className="h-8 px-0 text-[11px] font-medium text-muted-foreground/60 hover:text-muted-foreground transition-colors justify-start"
+                            className="h-8 px-2 text-[11px] font-medium text-muted-foreground/60 hover:text-muted-foreground transition-colors justify-start gap-2.5"
                         >
-                            <Plus size={14} className="opacity-50" />
+                            <div className="w-3.5 h-3.5 flex items-center justify-center shrink-0">
+                                <Plus size={14} className="opacity-50" />
+                            </div>
                             <span>Create New Tag</span>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -84,11 +86,13 @@ export function TagsList({
                                         onClick={() => onTagClick(tag.id)}
                                         isActive={activeTagId === tag.id}
                                         style={{ "--tag-color": tag.color } as React.CSSProperties}
-                                        className={cn("h-8 text-xs hover:bg-(--tag-color)/5 active:bg-(--tag-color)/10 flex items-center justify-between group",
+                                        className={cn("h-8 px-2 text-xs hover:bg-(--tag-color)/5 active:bg-(--tag-color)/10 flex items-center justify-between group",
                                             activeTagId === tag.id && "bg-(--tag-color)/15!")}
                                     >
-                                        <div className="flex items-center gap-2.5 truncate">
-                                            <Ionicons name="ellipse" size={10} style={{ color: tag.color }} />
+                                        <div className="flex items-center gap-2.5  truncate">
+                                            <div className="w-3.5 h-3.5 flex items-center justify-center shrink-0">
+                                                <Ionicons name="ellipse" size={10} style={{ color: tag.color }} />
+                                            </div>
                                             <span style={{ color: tag.color }} className="truncate lowercase font-mono">{tag.name}</span>
                                         </div>
                                         {general.showNotesCountInFolder && (

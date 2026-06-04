@@ -1,3 +1,11 @@
+import {
+    Breadcrumb,
+    BreadcrumbEllipsis,
+    BreadcrumbItem,
+    BreadcrumbLink,
+    BreadcrumbList,
+    BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { SidebarHeader } from "@/components/ui/sidebar";
@@ -7,6 +15,7 @@ import { SortType } from "@annota/core";
 import { CheckSquare, FolderPen, MoreVertical, SquarePen } from "lucide-react";
 import { AnnotaIcon } from "../../custom-ui/annota-icon";
 import { Ionicons } from "../../ui/ionicons";
+import { type BreadcrumbData } from "./breadcrumbs";
 
 interface SidebarHeaderSectionProps {
     title: string;
@@ -25,7 +34,9 @@ interface SidebarHeaderSectionProps {
     isRoot?: boolean;
     selectionMode?: boolean;
     setSelectionMode?: (mode: boolean) => void;
-    dir: "ltr" | "rtl"
+    dir: "ltr" | "rtl";
+    breadcrumbs?: BreadcrumbData[] | null;
+    onNavigateBreadcrumb?: (id: string | null) => void;
 }
 
 function getSortTypeIcon(sortType: SortType): string {
@@ -65,6 +76,8 @@ export function SidebarHeaderSection({
     selectionMode,
     setSelectionMode,
     dir,
+    breadcrumbs,
+    onNavigateBreadcrumb,
 }: SidebarHeaderSectionProps) {
 
 
@@ -74,130 +87,183 @@ export function SidebarHeaderSection({
                 "--note-color": color,
             } as React.CSSProperties}
             className={cn(
-                "py-1 px-1 justify-center rounded-xl border transition-all duration-300",
+                "py-1 px-1  gap-0.5 justify-center rounded-2xl rounded-b-none border transition-all duration-300",
                 "sidebar-header-tinted",
                 dir === "rtl" && "animate-content-from-right",
                 dir === "ltr" && "animate-content-from-left"
             )}
         >
-            <div className="flex items-center justify-between gap-1.5 w-full">
-                <div data-tauri-drag-region
-                    className="flex items-center gap-0.5 overflow-hidden flex-1 transition-opacity"
-                >
-                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition-colors">
-                        {isRoot ? (
-                            <AnnotaIcon color={color} size={20} />
-                        ) : isDaily ? (
-                            <Ionicons name="calendar" color={color} size={15} />
-                        ) : (
-                            <Ionicons name={icon} color={color} size={15} />
-                        )}
+            <div className="flex flex-col gap-0 w-full">
+                {/* Main Row: Icon, Title & Action Buttons */}
+                <div className="flex items-center justify-between gap-1.5 w-full">
+                    <div data-tauri-drag-region
+                        className="flex items-center gap-1.5 overflow-hidden flex-1 transition-opacity min-w-0"
+                    >
+                        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition-colors">
+                            {isRoot ? (
+                                <AnnotaIcon color={color} size={20} />
+                            ) : isDaily ? (
+                                <Ionicons name="calendar" color={color} size={15} />
+                            ) : (
+                                <Ionicons name={icon} color={color} size={15} />
+                            )}
+                        </div>
+                        <h2 style={{ color: color }} className="text-sm font-semibold tracking-tight truncate">
+                            {title}
+                        </h2>
                     </div>
-                    <h2 style={{ color: color }} className="text-sm font-semibold tracking-tight truncate">
-                        {title}
-                    </h2>
-                </div>
-                <div className="flex items-center gap-0.5">
-                    <TooltipProvider>
-
-                        {!isTrash && (
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-7 w-7 rounded-md hover:bg-(--hover-bg) active:scale-95 transition-all duration-200"
-                                        onClick={onCreateNote}
-                                        style={{
-                                            color: color,
-                                            '--hover-bg': `${color}18`
-                                        } as React.CSSProperties}
-                                    >
-                                        <SquarePen className="h-4 w-4" />
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent side="bottom" className="text-[10px] font-bold">New Note</TooltipContent>
-                            </Tooltip>
-                        )}
-                        {!isTrash && !isDaily && !tagId && (
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-7 w-7 rounded-md text-muted-foreground/60 hover:bg-(--hover-bg) active:scale-95 transition-all duration-200"
-                                        style={{
-                                            color: color,
-                                            '--hover-bg': `${color}18`
-                                        } as React.CSSProperties}
-                                    >
-                                        <MoreVertical className="h-4 w-4" />
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-52">
-                                    <DropdownMenuItem onClick={onCreateFolder} className="gap-2 cursor-pointer">
-                                        <Ionicons name="folder-outline" size={16} />
-                                        <span>New Folder</span>
-                                    </DropdownMenuItem>
-
-                                    {!isRoot && onEditFolder && (
-                                        <DropdownMenuItem onClick={onEditFolder} className="gap-2 cursor-pointer">
-                                            <FolderPen size={16} />
-                                            <span>Edit Folder</span>
+                    <div className="flex items-center gap-0.5">
+                        <TooltipProvider>
+                            {!isTrash && (
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-7 w-7 rounded-md hover:bg-(--hover-bg) active:scale-95 transition-all duration-200"
+                                            onClick={onCreateNote}
+                                            style={{
+                                                color: color,
+                                                '--hover-bg': `${color}18`
+                                            } as React.CSSProperties}
+                                        >
+                                            <SquarePen className="h-4 w-4" />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom" className="text-[10px] font-bold">New Note</TooltipContent>
+                                </Tooltip>
+                            )}
+                            {!isTrash && !isDaily && !tagId && (
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-7 w-7 rounded-md text-muted-foreground/60 hover:bg-(--hover-bg) active:scale-95 transition-all duration-200"
+                                            style={{
+                                                color: color,
+                                                '--hover-bg': `${color}18`
+                                            } as React.CSSProperties}
+                                        >
+                                            <MoreVertical className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="w-52">
+                                        <DropdownMenuItem onClick={onCreateFolder} className="gap-2 cursor-pointer">
+                                            <Ionicons name="folder-outline" size={16} />
+                                            <span>New Folder</span>
                                         </DropdownMenuItem>
-                                    )}
 
-                                    {setSelectionMode && (
-                                        <DropdownMenuItem onClick={() => setSelectionMode(!selectionMode)} className="gap-2 cursor-pointer">
-                                            <CheckSquare size={16} />
-                                            <span>{selectionMode ? "Cancel Selection" : "Select Notes"}</span>
-                                        </DropdownMenuItem>
-                                    )}
+                                        {!isRoot && onEditFolder && (
+                                            <DropdownMenuItem onClick={onEditFolder} className="gap-2 cursor-pointer">
+                                                <FolderPen size={16} />
+                                                <span>Edit Folder</span>
+                                            </DropdownMenuItem>
+                                        )}
 
-                                    <DropdownMenuSeparator />
+                                        {setSelectionMode && (
+                                            <DropdownMenuItem onClick={() => setSelectionMode(!selectionMode)} className="gap-2 cursor-pointer">
+                                                <CheckSquare size={16} />
+                                                <span>{selectionMode ? "Cancel Selection" : "Select Notes"}</span>
+                                            </DropdownMenuItem>
+                                        )}
 
-                                    <DropdownMenuSub>
-                                        <DropdownMenuSubTrigger className="gap-2 cursor-pointer">
-                                            <Ionicons name="funnel-outline" size={16} />
-                                            <span>Sort by</span>
-                                        </DropdownMenuSubTrigger>
-                                        <DropdownMenuSubContent className="w-52">
-                                            {sortOptions.map((option) => {
-                                                const active = currentSortType === option;
-                                                return (
-                                                    <DropdownMenuItem
-                                                        key={option}
-                                                        className={cn(
-                                                            "flex items-center justify-between cursor-pointer",
-                                                            active && "bg-primary/10 text-primary font-medium"
-                                                        )}
-                                                        onClick={() => onSortChange(option)}
-                                                    >
-                                                        <div className="flex items-center gap-2">
-                                                            <Ionicons
-                                                                name={getSortTypeIcon(option)}
-                                                                size={14}
-                                                                className={cn(
-                                                                    active
-                                                                        ? "text-primary"
-                                                                        : "text-muted-foreground/60"
-                                                                )}
-                                                            />
-                                                            <span>{getSortTypeLabel(option)}</span>
-                                                        </div>
-                                                        {active && (
-                                                            <Ionicons name="checkmark" size={14} className="text-primary" />
-                                                        )}
-                                                    </DropdownMenuItem>
-                                                );
-                                            })}
-                                        </DropdownMenuSubContent>
-                                    </DropdownMenuSub>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        )}
-                    </TooltipProvider>
+                                        <DropdownMenuSeparator />
+
+                                        <DropdownMenuSub>
+                                            <DropdownMenuSubTrigger className="gap-2 cursor-pointer">
+                                                <Ionicons name="funnel-outline" size={16} />
+                                                <span>Sort by</span>
+                                            </DropdownMenuSubTrigger>
+                                            <DropdownMenuSubContent className="w-52">
+                                                {sortOptions.map((option) => {
+                                                    const active = currentSortType === option;
+                                                    return (
+                                                        <DropdownMenuItem
+                                                            key={option}
+                                                            className={cn(
+                                                                "flex items-center justify-between cursor-pointer",
+                                                                active && "bg-primary/10 text-primary font-medium"
+                                                            )}
+                                                            onClick={() => onSortChange(option)}
+                                                        >
+                                                            <div className="flex items-center gap-2">
+                                                                <Ionicons
+                                                                    name={getSortTypeIcon(option)}
+                                                                    size={14}
+                                                                    className={cn(
+                                                                        active
+                                                                            ? "text-primary"
+                                                                            : "text-muted-foreground/60"
+                                                                    )}
+                                                                />
+                                                                <span>{getSortTypeLabel(option)}</span>
+                                                            </div>
+                                                            {active && (
+                                                                <Ionicons name="checkmark" size={14} className="text-primary" />
+                                                            )}
+                                                        </DropdownMenuItem>
+                                                    );
+                                                })}
+                                            </DropdownMenuSubContent>
+                                        </DropdownMenuSub>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            )}
+                        </TooltipProvider>
+                    </div>
                 </div>
+
+                {/* Breadcrumbs Row */}
+                {!isRoot && breadcrumbs && breadcrumbs.length > 0 && (
+                    <Breadcrumb className=" pb-0 pt-0 bg-transparent shrink-0 select-none max-w-full ">
+                        <BreadcrumbList className="flex-nowrap gap-0.5 sm:gap-0.5">
+                            {breadcrumbs.map((crumb, i) => (
+                                <div key={i} className="flex items-center gap-0.5 min-w-0">
+                                    {i > 0 && (
+                                        <BreadcrumbSeparator className="opacity-30 shrink-0 mx-0.5 flex items-center justify-center">
+                                            <Ionicons name="chevron-forward" size={7} />
+                                        </BreadcrumbSeparator>
+                                    )}
+                                    <BreadcrumbItem className="min-w-0">
+                                        {crumb.name === "..." ? (
+                                            <BreadcrumbEllipsis className="h-3 w-3 p-0 flex items-center justify-center text-muted-foreground/40" />
+                                        ) : (
+                                            <BreadcrumbLink
+                                                asChild
+                                                className="cursor-pointer active:scale-95 transition-all duration-150 text-[9px] font-semibold flex items-center gap-0.5 min-w-0 bg-transparent border-none p-0 outline-none text-(--crumb-color) hover:text-(--crumb-color-hover)"
+                                                style={{
+                                                    '--crumb-color': crumb.color ? `${crumb.color}bb` : "var(--muted-foreground)",
+                                                    '--crumb-color-hover': crumb.color || "var(--foreground)",
+                                                } as React.CSSProperties}
+                                            >
+                                                <button type="button" onClick={() => onNavigateBreadcrumb?.(crumb.id)}>
+                                                    {crumb.icon === "annota" ? (
+                                                        <AnnotaIcon
+                                                            size={10}
+                                                            className={cn("shrink-0")}
+                                                            color={crumb.color}
+                                                        />
+                                                    ) : crumb.icon && (
+                                                        <Ionicons
+                                                            name={crumb.icon}
+                                                            size={8}
+                                                            className={cn("shrink-0", !crumb.color && "text-muted-foreground/40")}
+                                                            color={crumb.color}
+                                                        />
+                                                    )}
+                                                    <span className="truncate max-w-[120px] leading-none">
+                                                        {crumb.name === "All Notes" ? "Annota" : crumb.name}
+                                                    </span>
+                                                </button>
+                                            </BreadcrumbLink>
+                                        )}
+                                    </BreadcrumbItem>
+                                </div>
+                            ))}
+                        </BreadcrumbList>
+                    </Breadcrumb>
+                )}
             </div>
         </SidebarHeader>
     );

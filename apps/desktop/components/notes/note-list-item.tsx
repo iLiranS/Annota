@@ -32,6 +32,7 @@ interface NoteListItemProps extends React.ButtonHTMLAttributes<HTMLButtonElement
     isSelected?: boolean;
     onToggleSelection?: (noteId: string) => void;
     hidePinIcon?: boolean;
+    isLast?: boolean;
 }
 
 
@@ -56,6 +57,7 @@ export function NoteListItem({
     isSelected = false,
     onToggleSelection,
     hidePinIcon = false,
+    isLast,
     ...props
 }: NoteListItemProps) {
     const { tags } = useNotesStore();
@@ -193,7 +195,7 @@ export function NoteListItem({
                                     } catch { return null; }
                                 })()}
                                 {/* Subtle inset separator for list items, positioned in the middle of the gap */}
-                                {isInList && (
+                                {isInList && !isLast && (
                                     <div className="absolute -bottom-0.5 left-4 right-4 h-px bg-border/30" />
                                 )}
                             </>

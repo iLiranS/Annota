@@ -2,9 +2,10 @@ import { imageInputSchema, type ImageInputData } from '@annota/core';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTheme } from '@react-navigation/native';
-import React from 'react';
+import { PlatformPressable } from '@react-navigation/elements';
+import React, { useCallback } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, TextInput, View, ScrollView } from 'react-native';
 
 interface FileInputProps {
     onSubmit: (url: string) => void;
@@ -31,122 +32,154 @@ export function FileInput({ onSubmit, onPickFromLibrary, onPickDocument, onTakeP
         mode: 'onChange'
     });
 
-    const onValidSubmit = (data: ImageInputData) => {
+    const onValidSubmit = useCallback((data: ImageInputData) => {
         onSubmit(data.url);
         reset();
-    };
+    }, [onSubmit, reset]);
 
     return (
         <View style={styles.container}>
-            {/* Source buttons */}
-            <View style={styles.sourceRow}>
-                {isLoading ? (
-                    <View style={[styles.loadingContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                        <ActivityIndicator size="small" color={colors.primary} />
-                        <Text style={[styles.sourceLabel, { color: colors.text, marginLeft: 8 }]}>Processing file...</Text>
-                    </View>
-                ) : (
-                    <>
-                        {onPickFromLibrary && (
-                            <Pressable
-                                style={[styles.sourceButton, { backgroundColor: colors.card, borderColor: colors.border }]}
-                                onPress={onPickFromLibrary}
-                            >
-                                <Ionicons name="images-outline" size={22} color={colors.primary} />
-                                <Text style={[styles.sourceLabel, { color: colors.text }]}>Library</Text>
-                            </Pressable>
-                        )}
-                        {onPickDocument && (
-                            <Pressable
-                                style={[styles.sourceButton, { backgroundColor: colors.card, borderColor: colors.border }]}
-                                onPress={onPickDocument}
-                            >
-                                <Ionicons name="document-outline" size={22} color={colors.primary} />
-                                <Text style={[styles.sourceLabel, { color: colors.text }]}>Files</Text>
-                            </Pressable>
-                        )}
-                        {onTakePhoto && (
-                            <Pressable
-                                style={[styles.sourceButton, { backgroundColor: colors.card, borderColor: colors.border }]}
-                                onPress={onTakePhoto}
-                            >
-                                <Ionicons name="camera-outline" size={22} color={colors.primary} />
-                                <Text style={[styles.sourceLabel, { color: colors.text }]}>Camera</Text>
-                            </Pressable>
-                        )}
-                    </>
-                )}
-            </View>
-
-            {/* Divider */}
-            <View style={styles.dividerRow}>
-                <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-                <Text style={[styles.dividerText, { color: colors.border }]}>or paste Image URL</Text>
-                <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-            </View>
-
-            {/* URL input */}
-            <View>
-                <Controller
-                    control={control}
-                    name="url"
-                    render={({ field: { onChange, value, onBlur } }) => (
-                        <TextInput
-                            style={[styles.input, {
-                                color: colors.text,
-                                backgroundColor: dark ? '#1C1C1E' : '#F2F2F7',
-                                borderColor: errors.url ? '#FF453A' : (dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)'),
-                                opacity: isLoading ? 0.5 : 1,
-                            }]}
-                            value={value}
-                            onChangeText={onChange}
-                            onBlur={onBlur}
-                            placeholder="https://example.com/image.png"
-                            placeholderTextColor={dark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)'}
-                            autoCapitalize="none"
-                            autoCorrect={false}
-                            keyboardType="url"
-                            returnKeyType="done"
-                            editable={!isLoading}
-                            onSubmitEditing={handleSubmit(onValidSubmit)}
-                        />
-                    )}
-                />
-                {errors.url && (
-                    <Text style={styles.errorText}>{errors.url.message}</Text>
-                )}
-            </View>
-
-            {/* Action buttons */}
-            <View style={styles.buttonRow}>
-                <Pressable
-                    style={[styles.button, { backgroundColor: dark ? '#3A3A3C' : '#E5E5EA', opacity: isLoading ? 0.5 : 1 }]}
+            {/* Header */}
+            <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.card }]}>
+                <PlatformPressable
                     onPress={onClose}
+                    style={styles.headerButton}
                     disabled={isLoading}
                 >
-                    <Text style={[styles.buttonText, { color: colors.text }]}>Cancel</Text>
-                </Pressable>
-                <Pressable
-                    style={[styles.button, {
-                        backgroundColor: (isValid && !isLoading) ? colors.primary : (dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'),
-                    }]}
+                    <Text style={[styles.headerCancelText, { color: colors.primary, opacity: isLoading ? 0.5 : 1 }]}>Cancel</Text>
+                </PlatformPressable>
+                <Text style={[styles.headerTitle, { color: colors.text }]}>
+                    Insert File
+                </Text>
+                <PlatformPressable
                     onPress={handleSubmit(onValidSubmit)}
                     disabled={!isValid || isLoading}
+                    style={styles.headerButton}
                 >
                     {isLoading ? (
-                        <ActivityIndicator size="small" color="#FFFFFF" />
+                        <ActivityIndicator size="small" color={colors.primary} />
                     ) : (
-                        <Text style={[styles.buttonText, { color: isValid ? '#FFFFFF' : (dark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)') }]}>Insert</Text>
+                        <Ionicons
+                            name="checkmark"
+                            size={24}
+                            color={isValid ? colors.primary : colors.text + '30'}
+                        />
                     )}
-                </Pressable>
+                </PlatformPressable>
             </View>
+
+            <ScrollView contentContainerStyle={styles.formContent} keyboardShouldPersistTaps="handled">
+                {/* Source buttons */}
+                <View style={styles.sourceRow}>
+                    {isLoading ? (
+                        <View style={[styles.loadingContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                            <ActivityIndicator size="small" color={colors.primary} />
+                            <Text style={[styles.sourceLabel, { color: colors.text, marginLeft: 8 }]}>Processing file...</Text>
+                        </View>
+                    ) : (
+                        <>
+                            {onPickFromLibrary && (
+                                <Pressable
+                                    style={[styles.sourceButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+                                    onPress={onPickFromLibrary}
+                                >
+                                    <Ionicons name="images-outline" size={22} color={colors.primary} />
+                                    <Text style={[styles.sourceLabel, { color: colors.text }]}>Library</Text>
+                                </Pressable>
+                            )}
+                            {onPickDocument && (
+                                <Pressable
+                                    style={[styles.sourceButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+                                    onPress={onPickDocument}
+                                >
+                                    <Ionicons name="document-outline" size={22} color={colors.primary} />
+                                    <Text style={[styles.sourceLabel, { color: colors.text }]}>Files</Text>
+                                </Pressable>
+                            )}
+                            {onTakePhoto && (
+                                <Pressable
+                                    style={[styles.sourceButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+                                    onPress={onTakePhoto}
+                                >
+                                    <Ionicons name="camera-outline" size={22} color={colors.primary} />
+                                    <Text style={[styles.sourceLabel, { color: colors.text }]}>Camera</Text>
+                                </Pressable>
+                            )}
+                        </>
+                    )}
+                </View>
+
+                {/* Divider */}
+                <View style={styles.dividerRow}>
+                    <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+                    <Text style={[styles.dividerText, { color: colors.border }]}>or paste Image URL</Text>
+                    <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+                </View>
+
+                {/* URL input */}
+                <View>
+                    <Controller
+                        control={control}
+                        name="url"
+                        render={({ field: { onChange, value, onBlur } }) => (
+                            <TextInput
+                                style={[styles.input, {
+                                    color: colors.text,
+                                    backgroundColor: dark ? '#1C1C1E' : '#F2F2F7',
+                                    borderColor: errors.url ? '#FF453A' : (dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)'),
+                                    opacity: isLoading ? 0.5 : 1,
+                                }]}
+                                value={value}
+                                onChangeText={onChange}
+                                onBlur={onBlur}
+                                placeholder="https://example.com/image.png"
+                                placeholderTextColor={dark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)'}
+                                autoCapitalize="none"
+                                autoCorrect={false}
+                                keyboardType="url"
+                                returnKeyType="done"
+                                editable={!isLoading}
+                                onSubmitEditing={handleSubmit(onValidSubmit)}
+                            />
+                        )}
+                    />
+                    {errors.url && (
+                        <Text style={styles.errorText}>{errors.url.message}</Text>
+                    )}
+                </View>
+            </ScrollView>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
-        gap: 12,
+        flex: 1,
+    },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        borderBottomWidth: 1,
+    },
+    headerButton: {
+        minWidth: 60,
+        paddingVertical: 8,
+        justifyContent: 'center',
+    },
+    headerCancelText: {
+        fontSize: Platform.OS === 'ios' ? 17 : 14,
+        fontWeight: '400',
+    },
+    headerTitle: {
+        fontSize: Platform.OS === 'ios' ? 17 : 20,
+        fontWeight: Platform.OS === 'ios' ? '600' : '500',
+    },
+    formContent: {
+        padding: 16,
+        gap: 16,
     },
     sourceRow: {
         flexDirection: 'row',
@@ -200,20 +233,4 @@ const styles = StyleSheet.create({
         marginTop: 4,
         marginLeft: 4,
     },
-    buttonRow: {
-        flexDirection: 'row',
-        gap: 10,
-        marginTop: 4,
-    },
-    button: {
-        flex: 1,
-        padding: 12,
-        borderRadius: 10,
-        alignItems: 'center',
-    },
-    buttonText: {
-        fontSize: 16,
-        fontWeight: '500',
-    },
 });
-

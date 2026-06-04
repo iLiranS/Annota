@@ -20,7 +20,7 @@ interface SearchViewProps {
 }
 
 const FILTERS = [
-    { id: 'all' as const, label: 'All', icon: 'search-outline' as const },
+    { id: 'all' as const, label: 'Notes', icon: 'document' as const },
     { id: 'media' as const, label: 'Media', icon: 'images-outline' as const },
 ];
 
@@ -98,7 +98,7 @@ export function SearchView({
             "flex flex-col flex-1 min-h-0",
             general.appDirection === 'rtl' ? "animate-content-from-right" : "animate-content-from-left"
         )}>
-            <div className="px-3 py-2 sticky top-0 z-10 bg-sidebar/80 backdrop-blur-md space-y-2 border-b border-border/10 shrink-0">
+            <div className="p-2 sticky top-0 z-10  space-y-2  shrink-0">
                 <div className="relative group">
                     <Ionicons
                         name={isSearching ? "sync" : "search-outline"}
@@ -109,7 +109,7 @@ export function SearchView({
                         )}
                     />
                     <Input
-                        autoFocus
+                        autoFocus autoCapitalize="off" autoCorrect="off" autoComplete="off"
                         placeholder={activeFilter === 'media' ? "Search Your Media..." : "Search Your Notes..."}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value, null)}
@@ -194,7 +194,7 @@ export function SearchView({
                                         <span>{searchQuery ? "Notes" : "Recent Notes"}</span>
                                     </div>
                                     <div className="space-y-0.5">
-                                        {noteResults.map((result) => (
+                                        {noteResults.map((result, index) => (
                                             <SidebarMenuItem key={result.id}>
                                                 <NoteListItem
                                                     note={result.data}
@@ -204,6 +204,7 @@ export function SearchView({
                                                     isInList={true}
                                                     suffix={<FolderBadge folderId={result.data.folderId} />}
                                                     className="hover:bg-primary/5 border-none"
+                                                    isLast={index === noteResults.length - 1}
                                                 />
                                             </SidebarMenuItem>
                                         ))}

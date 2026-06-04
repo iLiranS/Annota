@@ -1,8 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTheme } from '@react-navigation/native';
-import React, { useEffect, useRef } from 'react';
+import { PlatformPressable } from '@react-navigation/elements';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, TextInput, View, ScrollView } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { z } from 'zod';
 
 // Allow any valid HTTP/HTTPS URL, including annota.app with deep link paths
@@ -37,6 +39,7 @@ export function LinkInput({ currentUrl, selectedText, onSubmit, onRemove, onClos
         handleSubmit,
         formState: { errors, isValid }
     } = useForm<LinkFormValues>({
+        // @ts-expect-error - Zod version mismatch with hookform resolver
         resolver: zodResolver(linkSchema),
         defaultValues: {
             url: currentUrl || '',
@@ -45,12 +48,7 @@ export function LinkInput({ currentUrl, selectedText, onSubmit, onRemove, onClos
         mode: 'onChange'
     });
 
-    useEffect(() => {
-        // Focus input when opened
-        setTimeout(() => inputRef.current?.focus(), 100);
-    }, []);
-
-    const onSubmitForm = (data: LinkFormValues) => {
+    const onSubmitForm = useCallback((data: LinkFormValues) => {
         const trimmedUrl = data.url.trim();
         const finalUrl = trimmedUrl.match(/^https?:\/\//) ? trimmedUrl : 'https://' + trimmedUrl;
 
@@ -59,106 +57,131 @@ export function LinkInput({ currentUrl, selectedText, onSubmit, onRemove, onClos
         } else {
             onSubmit(finalUrl, data.title?.trim() || finalUrl); // Creates a new link text node
         }
-    };
+    }, [hasSelection, onSubmit]);
+
+    useEffect(() => {
+        // Focus input when opened
+        setTimeout(() => inputRef.current?.focus(), 100);
+    }, []);
 
     return (
-        <View style={styles.popupContent}>
-            <Text style={[styles.popupTitle, { color: colors.text }]}>Add Link</Text>
+        <View style={styles.container}>
+            {/* Header */}
+            <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.card }]}>
+                <PlatformPressable onPress={onClose} style={styles.headerButton}>
+                    <Text style={[styles.headerCancelText, { color: colors.primary }]}>Cancel</Text>
+                </PlatformPressable>
+                <Text style={[styles.headerTitle, { color: colors.text }]}>
+                    {currentUrl ? 'Edit Link' : 'Add Link'}
+                </Text>
+                <PlatformPressable
+                    onPress={handleSubmit(onSubmitForm)}
+                    style={styles.headerButton}
+                    disabled={!isValid}
+                >
+                    <Ionicons
+                        name="checkmark"
+                        size={24}
+                        color={isValid ? colors.primary : colors.text + '30'}
+                    />
+                </PlatformPressable>
+            </View>
 
-            {!hasSelection && (
+            <ScrollView contentContainerStyle={styles.formContent} keyboardShouldPersistTaps="handled">
+                {!hasSelection && (
+                    <Controller
+                        control={control}
+                        name="title"
+                        render={({ field: { onChange, onBlur, value } }) => (
+                            <TextInput
+                                style={[
+                                    styles.input,
+                                    {
+                                        backgroundColor: dark ? '#1C1C1E' : '#F2F2F7',
+                                        color: colors.text,
+                                        borderColor: dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)',
+                                    },
+                                ]}
+                                placeholder="Link Title (optional)"
+                                placeholderTextColor={dark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)'}
+                                value={value}
+                                onChangeText={onChange}
+                                onBlur={onBlur}
+                                autoCapitalize="sentences"
+                            />
+                        )}
+                    />
+                )}
+
                 <Controller
                     control={control}
-                    name="title"
+                    name="url"
                     render={({ field: { onChange, onBlur, value } }) => (
                         <TextInput
+                            ref={inputRef}
                             style={[
                                 styles.input,
                                 {
                                     backgroundColor: dark ? '#1C1C1E' : '#F2F2F7',
                                     color: colors.text,
-                                    borderColor: dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)',
+                                    borderColor: errors.url ? '#FF3B30' : (dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)'),
                                 },
                             ]}
-                            placeholder="Link Title (optional)"
+                            placeholder="Enter URL..."
                             placeholderTextColor={dark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)'}
                             value={value}
                             onChangeText={onChange}
                             onBlur={onBlur}
-                            autoCapitalize="sentences"
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                            keyboardType="url"
+                            onSubmitEditing={handleSubmit(onSubmitForm)}
                         />
                     )}
                 />
-            )}
+                {errors.url && <Text style={styles.errorText}>{errors.url.message as string}</Text>}
 
-            <Controller
-                control={control}
-                name="url"
-                render={({ field: { onChange, onBlur, value } }) => (
-                    <TextInput
-                        ref={inputRef}
-                        style={[
-                            styles.input,
-                            {
-                                backgroundColor: dark ? '#1C1C1E' : '#F2F2F7',
-                                color: colors.text,
-                                borderColor: errors.url ? '#FF3B30' : (dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)'),
-                            },
-                        ]}
-                        placeholder="Enter URL..."
-                        placeholderTextColor={dark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)'}
-                        value={value}
-                        onChangeText={onChange}
-                        onBlur={onBlur}
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                        keyboardType="url"
-                        onSubmitEditing={handleSubmit(onSubmitForm)}
-                    />
-                )}
-            />
-            {errors.url && <Text style={styles.errorText}>{errors.url.message as string}</Text>}
-            <View style={styles.buttonRow}>
-                <Pressable
-                    style={[styles.button, { backgroundColor: dark ? '#3A3A3C' : '#E5E5EA' }]}
-                    onPress={onClose}
-                >
-                    <Text style={[styles.buttonText, { color: colors.text }]}>Cancel</Text>
-                </Pressable>
                 {currentUrl && (
                     <Pressable
-                        style={[styles.button, { backgroundColor: '#FF3B30' }]}
+                        style={styles.removeButton}
                         onPress={onRemove}
                     >
-                        <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>Remove</Text>
+                        <Text style={styles.removeButtonText}>Remove Link</Text>
                     </Pressable>
                 )}
-                <Pressable
-                    style={[styles.button, {
-                        backgroundColor: isValid ? colors.primary : (dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)')
-                    }]}
-                    onPress={handleSubmit(onSubmitForm)}
-                    disabled={!isValid}
-                >
-                    <Text style={[styles.buttonText, {
-                        color: isValid ? '#FFFFFF' : (dark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)')
-                    }]}>
-                        {currentUrl ? 'Update' : 'Add'}
-                    </Text>
-                </Pressable>
-            </View>
+            </ScrollView>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    popupContent: {
-        gap: 12,
+    container: {
+        flex: 1,
     },
-    popupTitle: {
-        fontSize: 17,
-        fontWeight: '600',
-        textAlign: 'center',
-        marginBottom: 4,
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        borderBottomWidth: 1,
+    },
+    headerButton: {
+        minWidth: 60,
+        paddingVertical: 8,
+        justifyContent: 'center',
+    },
+    headerCancelText: {
+        fontSize: Platform.OS === 'ios' ? 17 : 14,
+        fontWeight: '400',
+    },
+    headerTitle: {
+        fontSize: Platform.OS === 'ios' ? 17 : 20,
+        fontWeight: Platform.OS === 'ios' ? '600' : '500',
+    },
+    formContent: {
+        padding: 16,
+        gap: 16,
     },
     input: {
         padding: 12,
@@ -172,19 +195,17 @@ const styles = StyleSheet.create({
         marginTop: -8,
         marginLeft: 4,
     },
-    buttonRow: {
-        flexDirection: 'row',
-        gap: 10,
-        marginTop: 4,
-    },
-    button: {
-        flex: 1,
-        padding: 12,
+    removeButton: {
+        backgroundColor: '#FF3B30',
+        padding: 14,
         borderRadius: 10,
         alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: 8,
     },
-    buttonText: {
+    removeButtonText: {
+        color: '#FFFFFF',
         fontSize: 16,
-        fontWeight: '500',
+        fontWeight: '600',
     },
 });

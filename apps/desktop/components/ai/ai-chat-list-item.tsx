@@ -53,13 +53,13 @@ export function AiChatListItem({
                 </span>
             </div>
 
-            <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all bg-muted/80 backdrop-blur-sm pl-2 rounded-l-lg">
+            <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all bg-muted/80 backdrop-blur-sm  rounded-lg">
                 <Button
                     variant="ghost"
                     size="icon"
                     className={cn(
                         "h-6 w-6 shrink-0 rounded-lg transition-colors",
-                        chat.isPinned ? "text-primary hover:bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                        chat.isPinned ? "text-primary hover:bg-primary/10" : "text-muted-foreground/60 hover:text-foreground hover:bg-muted"
                     )}
                     onClick={onTogglePin}
                     title={chat.isPinned ? "Unpin chat" : "Pin chat"}

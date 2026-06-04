@@ -328,50 +328,24 @@ export function ToolbarPopup(props: ToolbarPopupProps) {
 
 
 
-    return (
-        <Modal visible={visible} transparent animationType='fade' onRequestClose={onClose} supportedOrientations={['portrait', 'landscape', 'landscape-left', 'landscape-right']}>
-            <TouchableWithoutFeedback onPress={onClose}>
-                <View style={styles.overlay}>
-                    <TouchableWithoutFeedback>
-                        <View
-                            style={[
-                                styles.popup,
-                                { backgroundColor: colors.background, borderColor: colors.border },
-                            ]}
-                        >
-                            {renderContent()}
-                        </View>
-                    </TouchableWithoutFeedback>
+
+    const isModal = type === 'link' || type === 'youtube' || type === 'math' || type === 'file';
+
+    if (isModal) {
+        return (
+            <Modal
+                visible={visible}
+                animationType="slide"
+                presentationStyle="pageSheet"
+                onRequestClose={onClose}
+                supportedOrientations={['portrait', 'landscape', 'landscape-left', 'landscape-right']}
+            >
+                <View style={{ flex: 1, backgroundColor: colors.background }}>
+                    {renderContent()}
                 </View>
-            </TouchableWithoutFeedback>
-        </Modal>
-    );
+            </Modal>
+        );
+    }
+
+    return renderContent();
 }
-
-// ============================================================================
-// Styles
-// ============================================================================
-
-const styles = StyleSheet.create({
-    overlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.4)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 24,
-    },
-    popup: {
-        borderRadius: 16,
-        borderWidth: 1,
-        padding: 16,
-        width: '100%',
-
-        maxWidth: 400,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 12,
-        elevation: 8,
-    },
-
-});

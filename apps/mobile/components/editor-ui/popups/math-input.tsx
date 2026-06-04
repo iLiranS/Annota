@@ -1,6 +1,8 @@
 import { useTheme } from '@react-navigation/native';
-import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Keyboard, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { PlatformPressable } from '@react-navigation/elements';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { ActivityIndicator, Keyboard, Platform, Pressable, StyleSheet, Text, TextInput, View, ScrollView } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { WebView } from 'react-native-webview';
 
 interface MathInputProps {
@@ -43,12 +45,12 @@ export function MathInput({ currentLatex, isBlock = false, onSubmit, onClose }: 
         }
     }, [debouncedLatex, isBlockInput, previewLoading]);
 
-    const handleSubmit = () => {
+    const handleSubmit = useCallback(() => {
         const trimmedLatex = latex.trim();
         if (trimmedLatex) {
             onSubmit(trimmedLatex, isBlockInput);
         }
-    };
+    }, [latex, onSubmit, isBlockInput]);
 
     const isValid = latex.trim().length > 0;
 
@@ -118,7 +120,7 @@ export function MathInput({ currentLatex, isBlock = false, onSubmit, onClose }: 
                             fleqn: true
                         });
                     } catch (err) {
-                        const msg = err.message.replace(/^KaTeX parse error:\\s*/i, '');
+                        const msg = err.message.replace(/^KaTeX parse error:\\\\s*/i, '');
                         el.innerHTML = '<span class="error">⚠ ' + msg + '</span>';
                     }
                 }
@@ -137,137 +139,157 @@ export function MathInput({ currentLatex, isBlock = false, onSubmit, onClose }: 
     `;
 
     return (
-        // Outer pressable catches taps anywhere outside the input and dismisses keyboard
-        <Pressable style={styles.container} onPress={Keyboard.dismiss}>
-            <Text style={[styles.title, { color: colors.text }]}>
-                {currentLatex ? 'Edit Formula' : 'Insert Formula'}
-            </Text>
-
-            <View style={styles.section}>
-                <Text style={[styles.label, { color: colors.text, opacity: 0.6 }]}>LATEX INPUT</Text>
-                {/* Stop propagation so tapping inside the input doesn't dismiss the keyboard */}
-                <Pressable onPress={(e) => e.stopPropagation()}>
-                    <TextInput
-                        ref={inputRef}
-                        style={[
-                            styles.latexInput,
-                            {
-                                backgroundColor: dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
-                                color: colors.text,
-                                borderColor: colors.border,
-                            },
-                        ]}
-                        placeholder="e = mc^2"
-                        placeholderTextColor={dark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)'}
-                        value={latex}
-                        onChangeText={setLatex}
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                        multiline={true}
-                        numberOfLines={4}
-                        blurOnSubmit={false}
-                    />
-                </Pressable>
-            </View>
-
-            <View style={styles.toggleRow}>
-                <Text style={[styles.toggleLabel, { color: colors.text, opacity: 0.6 }]}>DISPLAY MODE</Text>
-                <View style={[styles.toggleContainer, { backgroundColor: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)', borderColor: colors.border }]}>
-                    <Pressable
-                        style={[
-                            styles.toggleButton,
-                            !isBlockInput && [styles.toggleActiveButton, { backgroundColor: colors.card }],
-                        ]}
-                        onPress={() => setIsBlockInput(false)}
-                    >
-                        <Text style={[styles.toggleButtonText, { color: colors.text, fontWeight: !isBlockInput ? '600' : '400' }]}>Inline</Text>
-                    </Pressable>
-                    <Pressable
-                        style={[
-                            styles.toggleButton,
-                            isBlockInput && [styles.toggleActiveButton, { backgroundColor: colors.card }],
-                        ]}
-                        onPress={() => setIsBlockInput(true)}
-                    >
-                        <Text style={[styles.toggleButtonText, { color: colors.text, fontWeight: isBlockInput ? '600' : '400' }]}>Block</Text>
-                    </Pressable>
-                </View>
-            </View>
-
-            <View style={styles.section}>
-                <Text style={[styles.label, { color: colors.text, opacity: 0.6 }]}>PREVIEW</Text>
-                <Pressable
-                    onPress={Keyboard.dismiss}
-                    style={[styles.previewContainer, {
-                        backgroundColor: dark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
-                        borderColor: colors.border,
-                    }]}
-                >
-                    {latex ? (
-                        <WebView
-                            ref={webViewRef}
-                            originWhitelist={['*']}
-                            source={{ html: previewHtml }}
-                            style={{ backgroundColor: 'transparent' }}
-                            scrollEnabled={true}
-                            showsHorizontalScrollIndicator={true}
-                            onLoadEnd={() => setPreviewLoading(false)}
-                            onMessage={() => { }}
-                        />
-                    ) : (
-                        <View style={styles.placeholderContainer}>
-                            <Text style={[styles.placeholderText, { color: colors.text }]}>
-                                Preview will appear here
-                            </Text>
-                        </View>
-                    )}
-                    {latex && previewLoading && (
-                        <View style={StyleSheet.absoluteFill}>
-                            <ActivityIndicator size="small" color={colors.primary} style={{ flex: 1 }} />
-                        </View>
-                    )}
-                </Pressable>
-            </View>
-
-            <View style={styles.footer}>
-                <Pressable
-                    style={({ pressed }) => [
-                        styles.button,
-                        styles.cancelButton,
-                        pressed && styles.buttonPressed
-                    ]}
-                    onPress={onClose}
-                >
-                    <Text style={[styles.buttonText, { color: colors.text, opacity: 0.7 }]}>Cancel</Text>
-                </Pressable>
-                <Pressable
-                    style={({ pressed }) => [
-                        styles.button,
-                        styles.submitButton,
-                        { backgroundColor: isValid ? colors.primary : colors.border },
-                        isValid && pressed && styles.buttonPressed
-                    ]}
+        <View style={styles.container}>
+            {/* Header */}
+            <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.card }]}>
+                <PlatformPressable onPress={onClose} style={styles.headerButton}>
+                    <Text style={[styles.headerCancelText, { color: colors.primary }]}>Cancel</Text>
+                </PlatformPressable>
+                <Text style={[styles.headerTitle, { color: colors.text }]}>
+                    {currentLatex ? 'Edit Formula' : 'Insert Formula'}
+                </Text>
+                <PlatformPressable
                     onPress={handleSubmit}
+                    style={styles.headerButton}
                     disabled={!isValid}
                 >
-                    <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>
-                        {currentLatex ? 'Update' : 'Insert'}
-                    </Text>
-                </Pressable>
+                    <Ionicons
+                        name="checkmark"
+                        size={24}
+                        color={isValid ? colors.primary : colors.text + '30'}
+                    />
+                </PlatformPressable>
             </View>
-        </Pressable>
+
+            <ScrollView contentContainerStyle={styles.formContent} keyboardShouldPersistTaps="handled">
+                <View style={styles.section}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                        <Text style={[styles.label, { color: colors.text, opacity: 0.6 }]}>LATEX INPUT</Text>
+                        <View style={[styles.toggleContainer, { backgroundColor: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)', borderColor: colors.border }]}>
+                            <Pressable
+                                style={[
+                                    styles.toggleButton,
+                                    !isBlockInput && [styles.toggleActiveButton, { backgroundColor: colors.card }],
+                                ]}
+                                onPress={() => setIsBlockInput(false)}
+                            >
+                                <Text style={[
+                                    styles.toggleButtonText,
+                                    {
+                                        color: !isBlockInput ? colors.text : colors.text + '60',
+                                        fontWeight: !isBlockInput ? '600' : '400',
+                                    }
+                                ]}>Inline</Text>
+                            </Pressable>
+                            <Pressable
+                                style={[
+                                    styles.toggleButton,
+                                    isBlockInput && [styles.toggleActiveButton, { backgroundColor: colors.card }],
+                                ]}
+                                onPress={() => setIsBlockInput(true)}
+                            >
+                                <Text style={[
+                                    styles.toggleButtonText,
+                                    {
+                                        color: isBlockInput ? colors.text : colors.text + '60',
+                                        fontWeight: isBlockInput ? '600' : '400',
+                                    }
+                                ]}>Block</Text>
+                            </Pressable>
+                        </View>
+                    </View>
+                    <Pressable onPress={(e) => e.stopPropagation()}>
+                        <TextInput
+                            ref={inputRef}
+                            style={[
+                                styles.latexInput,
+                                {
+                                    backgroundColor: dark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+                                    color: colors.text,
+                                    borderColor: colors.border,
+                                },
+                            ]}
+                            placeholder="e = mc^2"
+                            placeholderTextColor={dark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)'}
+                            value={latex}
+                            onChangeText={setLatex}
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                            multiline={true}
+                            numberOfLines={4}
+                            blurOnSubmit={false}
+                        />
+                    </Pressable>
+                </View>
+
+                <View style={styles.section}>
+                    <Text style={[styles.label, { color: colors.text, opacity: 0.6 }]}>PREVIEW</Text>
+                    <Pressable
+                        onPress={Keyboard.dismiss}
+                        style={[styles.previewContainer, {
+                            backgroundColor: dark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+                            borderColor: colors.border,
+                            height: 120,
+                        }]}
+                    >
+                        {latex ? (
+                            <WebView
+                                ref={webViewRef}
+                                originWhitelist={['*']}
+                                source={{ html: previewHtml }}
+                                style={{ backgroundColor: 'transparent' }}
+                                scrollEnabled={true}
+                                showsHorizontalScrollIndicator={true}
+                                onLoadEnd={() => setPreviewLoading(false)}
+                                onMessage={() => { }}
+                            />
+                        ) : (
+                            <View style={styles.placeholderContainer}>
+                                <Text style={[styles.placeholderText, { color: colors.text }]}>
+                                    Preview will appear here
+                                </Text>
+                            </View>
+                        )}
+                        {latex && previewLoading && (
+                            <View style={StyleSheet.absoluteFill}>
+                                <ActivityIndicator size="small" color={colors.primary} style={{ flex: 1 }} />
+                            </View>
+                        )}
+                    </Pressable>
+                </View>
+            </ScrollView>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
-        width: '100%',
-        gap: 16,
+        flex: 1,
     },
-    title: {
-        fontSize: 18,
-        fontWeight: '700',
-        textAlign: 'center',
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        borderBottomWidth: 1,
+    },
+    headerButton: {
+        minWidth: 60,
+        paddingVertical: 8,
+        justifyContent: 'center',
+    },
+    headerCancelText: {
+        fontSize: Platform.OS === 'ios' ? 17 : 14,
+        fontWeight: '400',
+    },
+    headerTitle: {
+        fontSize: Platform.OS === 'ios' ? 17 : 20,
+        fontWeight: Platform.OS === 'ios' ? '600' : '500',
+    },
+    formContent: {
+        padding: 16,
+        gap: 16,
     },
     section: {
         gap: 6,
@@ -287,7 +309,6 @@ const styles = StyleSheet.create({
         textAlignVertical: 'top',
     },
     previewContainer: {
-        height: 120,
         borderRadius: 12,
         borderWidth: 1,
         borderStyle: 'dashed',
@@ -303,47 +324,6 @@ const styles = StyleSheet.create({
         fontStyle: 'italic',
         opacity: 0.4,
     },
-    footer: {
-        flexDirection: 'row',
-        gap: 12,
-        marginTop: 4,
-    },
-    button: {
-        flex: 1,
-        height: 48,
-        borderRadius: 24,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    cancelButton: {
-        backgroundColor: 'transparent',
-    },
-    submitButton: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 2,
-    },
-    buttonText: {
-        fontSize: 16,
-        fontWeight: '600',
-    },
-    buttonPressed: {
-        opacity: 0.8,
-        transform: [{ scale: 0.98 }],
-    },
-    toggleRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingVertical: 4,
-    },
-    toggleLabel: {
-        fontSize: 10,
-        fontWeight: 'bold',
-        letterSpacing: 1,
-    },
     toggleContainer: {
         flexDirection: 'row',
         borderRadius: 8,
@@ -352,10 +332,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     toggleButton: {
-        paddingHorizontal: 12,
-        paddingVertical: 6,
+        paddingHorizontal: 10,
+        paddingVertical: 4,
         borderRadius: 6,
-        minWidth: 70,
+        minWidth: 50,
         alignItems: 'center',
         justifyContent: 'center',
     },

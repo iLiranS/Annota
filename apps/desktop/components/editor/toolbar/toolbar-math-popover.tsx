@@ -123,7 +123,35 @@ export function MathPopover({ sendCommand, onOpenChange, visible, currentLatex, 
 
             <div className="flex-1 overflow-y-auto pr-2 -mr-2">
                 <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-70">LaTeX Input</label>
+                    <div className="flex items-center justify-between">
+                        <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-70">LaTeX Input</label>
+                        <div className="flex bg-muted/60 p-0.5 rounded-lg border border-border/40 select-none">
+                            <button
+                                type="button"
+                                onClick={() => setIsBlockInput(false)}
+                                className={cn(
+                                    "px-2 py-0.5 text-[10px] font-semibold rounded-md transition-all duration-200",
+                                    !isBlockInput
+                                        ? "bg-background text-foreground shadow-sm scale-100"
+                                        : "text-muted-foreground/60 hover:text-foreground opacity-80 hover:opacity-100"
+                                )}
+                            >
+                                Inline
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setIsBlockInput(true)}
+                                className={cn(
+                                    "px-2 py-0.5 text-[10px] font-semibold rounded-md transition-all duration-200",
+                                    isBlockInput
+                                        ? "bg-background text-foreground shadow-sm scale-100"
+                                        : "text-muted-foreground/60 hover:text-foreground opacity-80 hover:opacity-100"
+                                )}
+                            >
+                                Block
+                            </button>
+                        </div>
+                    </div>
                     <Textarea
                         className="text-sm font-mono bg-muted/30 border-input focus-visible:ring-0 focus:ring-0 outline-none resize-none scroll-area"
                         placeholder="e = mc^2"
@@ -135,37 +163,7 @@ export function MathPopover({ sendCommand, onOpenChange, visible, currentLatex, 
                     />
                 </div>
 
-                <div className="flex items-center justify-between py-2 my-2 border-b border-border/40 animate-in fade-in duration-200">
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-70">Display Mode</span>
-                    <div className="flex bg-muted/60 p-0.5 rounded-lg border border-border/40 select-none">
-                        <button
-                            type="button"
-                            onClick={() => setIsBlockInput(false)}
-                            className={cn(
-                                "px-3 py-1 text-xs font-semibold rounded-md transition-all duration-200",
-                                !isBlockInput 
-                                    ? "bg-background text-foreground shadow-sm scale-100" 
-                                    : "text-muted-foreground hover:text-foreground opacity-80 hover:opacity-100"
-                            )}
-                        >
-                            Inline
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setIsBlockInput(true)}
-                            className={cn(
-                                "px-3 py-1 text-xs font-semibold rounded-md transition-all duration-200",
-                                isBlockInput 
-                                    ? "bg-background text-foreground shadow-sm scale-100" 
-                                    : "text-muted-foreground hover:text-foreground opacity-80 hover:opacity-100"
-                            )}
-                        >
-                            Block
-                        </button>
-                    </div>
-                </div>
-
-                <div className="space-y-2">
+                <div className="space-y-2 ">
                     <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-70">Preview</label>
                     <div
                         className="h-[140px] overflow-y-auto custom-scrollbar rounded-xl border bg-muted/10 px-2 transition-all shadow-inner"

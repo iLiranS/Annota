@@ -1,8 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTheme } from '@react-navigation/native';
-import React, { useEffect, useRef } from 'react';
+import { PlatformPressable } from '@react-navigation/elements';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Platform, StyleSheet, Text, TextInput, View, ScrollView } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { z } from 'zod';
 
 const youtubeSchema = z.object({
@@ -40,80 +42,102 @@ export function YouTubeInput({ onSubmit, onClose }: YouTubeInputProps) {
         mode: 'onChange'
     });
 
+    const onSubmitForm = useCallback((data: YouTubeFormValues) => {
+        const trimmedUrl = data.url.trim();
+        const finalUrl = trimmedUrl.match(/^https?:\/\//) ? trimmedUrl : 'https://' + trimmedUrl;
+        onSubmit(finalUrl);
+        reset();
+    }, [onSubmit, reset]);
+
     useEffect(() => {
         // Focus input when opened
         setTimeout(() => inputRef.current?.focus(), 100);
     }, []);
 
-    const onSubmitForm = (data: YouTubeFormValues) => {
-        const trimmedUrl = data.url.trim();
-        const finalUrl = trimmedUrl.match(/^https?:\/\//) ? trimmedUrl : 'https://' + trimmedUrl;
-        onSubmit(finalUrl);
-        reset();
-    };
-
     return (
-        <View style={styles.popupContent}>
-            <Text style={[styles.popupTitle, { color: colors.text }]}>Embed YouTube Video</Text>
-            <Controller
-                control={control}
-                name="url"
-                render={({ field: { onChange, onBlur, value } }) => (
-                    <TextInput
-                        ref={inputRef}
-                        style={[
-                            styles.urlInput,
-                            {
-                                backgroundColor: dark ? '#1C1C1E' : '#F2F2F7',
-                                color: colors.text,
-                                borderColor: errors.url ? '#FF3B30' : (dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)'),
-                            },
-                        ]}
-                        placeholder="Paste YouTube URL..."
-                        placeholderTextColor={dark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)'}
-                        value={value}
-                        onChangeText={onChange}
-                        onBlur={onBlur}
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                        keyboardType="url"
-                        onSubmitEditing={handleSubmit(onSubmitForm)}
-                    />
-                )}
-            />
-            {errors.url && <Text style={styles.errorText}>{errors.url.message as string}</Text>}
-            <View style={styles.buttonRow}>
-                <Pressable
-                    style={[styles.button, { backgroundColor: dark ? '#3A3A3C' : '#E5E5EA' }]}
-                    onPress={onClose}
-                >
-                    <Text style={[styles.buttonText, { color: colors.text }]}>Cancel</Text>
-                </Pressable>
-                <Pressable
-                    style={[styles.button, {
-                        backgroundColor: isValid ? colors.primary : (dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)')
-                    }]}
+        <View style={styles.container}>
+            {/* Header */}
+            <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.card }]}>
+                <PlatformPressable onPress={onClose} style={styles.headerButton}>
+                    <Text style={[styles.headerCancelText, { color: colors.primary }]}>Cancel</Text>
+                </PlatformPressable>
+                <Text style={[styles.headerTitle, { color: colors.text }]}>
+                    YouTube Video
+                </Text>
+                <PlatformPressable
                     onPress={handleSubmit(onSubmitForm)}
+                    style={styles.headerButton}
                     disabled={!isValid}
                 >
-                    <Text style={[styles.buttonText, {
-                        color: isValid ? '#FFFFFF' : (dark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)')
-                    }]}>Embed</Text>
-                </Pressable>
+                    <Ionicons
+                        name="checkmark"
+                        size={24}
+                        color={isValid ? colors.primary : colors.text + '30'}
+                    />
+                </PlatformPressable>
             </View>
+
+            <ScrollView contentContainerStyle={styles.formContent} keyboardShouldPersistTaps="handled">
+                <Controller
+                    control={control}
+                    name="url"
+                    render={({ field: { onChange, onBlur, value } }) => (
+                        <TextInput
+                            ref={inputRef}
+                            style={[
+                                styles.urlInput,
+                                {
+                                    backgroundColor: dark ? '#1C1C1E' : '#F2F2F7',
+                                    color: colors.text,
+                                    borderColor: errors.url ? '#FF3B30' : (dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)'),
+                                },
+                            ]}
+                            placeholder="Paste YouTube URL..."
+                            placeholderTextColor={dark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)'}
+                            value={value}
+                            onChangeText={onChange}
+                            onBlur={onBlur}
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                            keyboardType="url"
+                            onSubmitEditing={handleSubmit(onSubmitForm)}
+                        />
+                    )}
+                />
+                {errors.url && <Text style={styles.errorText}>{errors.url.message as string}</Text>}
+            </ScrollView>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    popupContent: {
-        gap: 12,
+    container: {
+        flex: 1,
     },
-    popupTitle: {
-        fontSize: 17,
-        fontWeight: '600',
-        textAlign: 'center',
-        marginBottom: 4,
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        borderBottomWidth: 1,
+    },
+    headerButton: {
+        minWidth: 60,
+        paddingVertical: 8,
+        justifyContent: 'center',
+    },
+    headerCancelText: {
+        fontSize: Platform.OS === 'ios' ? 17 : 14,
+        fontWeight: '400',
+    },
+    headerTitle: {
+        fontSize: Platform.OS === 'ios' ? 17 : 20,
+        fontWeight: Platform.OS === 'ios' ? '600' : '500',
+    },
+    formContent: {
+        padding: 16,
+        gap: 16,
     },
     urlInput: {
         padding: 12,
@@ -126,20 +150,5 @@ const styles = StyleSheet.create({
         fontSize: 12,
         marginTop: -8,
         marginLeft: 4,
-    },
-    buttonRow: {
-        flexDirection: 'row',
-        gap: 10,
-        marginTop: 4,
-    },
-    button: {
-        flex: 1,
-        padding: 12,
-        borderRadius: 10,
-        alignItems: 'center',
-    },
-    buttonText: {
-        fontSize: 16,
-        fontWeight: '500',
     },
 });

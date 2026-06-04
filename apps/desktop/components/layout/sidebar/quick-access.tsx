@@ -27,9 +27,9 @@ export function QuickAccessSection({ notes, onNoteClick, onDeleteNote, general }
 
     return (
         <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-            <SidebarGroup className="py-1 border-t border-border/60">
+            <SidebarGroup className=" border-t border-border/60 p-1">
                 <SidebarGroupLabel asChild className="text-[10px]  font-bold uppercase tracking-wider text-muted-foreground/70">
-                    <CollapsibleTrigger className="flex w-full items-center gap-2 hover:bg-sidebar-accent/50 px-2 py-1 rounded">
+                    <CollapsibleTrigger className="flex w-full items-center gap-2 hover:bg-sidebar-accent px-2 py-1 rounded">
                         <Star size={12} strokeWidth={2.5} className="shrink-0" />
                         <span className="flex-1 text-start">Quick Access</span>
                         <ChevronRight size={12} className={cn("transition-transform", general?.appDirection === 'rtl' ? (isOpen ? "rotate-90" : "rotate-180") : (isOpen && "rotate-90"))} />
@@ -37,7 +37,7 @@ export function QuickAccessSection({ notes, onNoteClick, onDeleteNote, general }
                 </SidebarGroupLabel>
                 <CollapsibleContent>
                     <SidebarMenu className="px-1 mt-0.5 gap-0.5">
-                        {notes.map((note) => (
+                        {notes.map((note, index) => (
                             <SidebarMenuItem key={note.id}>
                                 <NoteListItem
                                     note={note}
@@ -46,6 +46,7 @@ export function QuickAccessSection({ notes, onNoteClick, onDeleteNote, general }
                                     isInList={true}
                                     isInQuickAccess={true}
                                     forceCompact={true}
+                                    isLast={index === notes.length - 1}
                                 />
                             </SidebarMenuItem>
                         ))}

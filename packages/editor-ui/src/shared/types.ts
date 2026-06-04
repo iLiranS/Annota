@@ -382,7 +382,12 @@ export interface AIPopupProps extends BasePopupProps {
     onStop?: () => void;
 }
 
+export interface InsertTablePopupProps extends BasePopupProps {
+    type: 'insertTable';
+    onCommand?: (command: string, params?: Record<string, unknown>) => void;
+}
 
-export type ToolbarPopupProps = HeadingPopupProps | ColorPopupProps | YouTubePopupProps | LinkPopupProps | FilePopupProps | TablePopupProps | CodeLanguagePopupProps | MathPopupProps | DetailsBackgroundPopupProps | BlockMenuPopupProps | FileMenuPopupProps | AIPopupProps;
+
+export type ToolbarPopupProps = HeadingPopupProps | ColorPopupProps | YouTubePopupProps | LinkPopupProps | FilePopupProps | TablePopupProps | CodeLanguagePopupProps | MathPopupProps | DetailsBackgroundPopupProps | BlockMenuPopupProps | FileMenuPopupProps | AIPopupProps | InsertTablePopupProps;
 
 

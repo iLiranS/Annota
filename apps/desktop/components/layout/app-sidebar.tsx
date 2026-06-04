@@ -220,7 +220,8 @@ export function AppSidebar() {
     return (
         <div
             className={cn(
-                "relative flex overflow-visible shrink-0 flex-col bg-transparent transition-all duration-300 ease-in-out  ",
+                "relative flex overflow-visible shrink-0 flex-col  transition-all duration-300 ease-in-out  ",
+                "rounded-2xl border border-sidebar-border/60 bg-note-bg",
                 !open && "w-0! opacity-0 pointer-events-none border-none",
                 isResizing && "transition-none",
                 open && 'ms-2 mb-2'
@@ -240,7 +241,7 @@ export function AppSidebar() {
                     onMouseDown={startResizing}
                     className={cn(
                         "absolute top-0 bottom-0 w-1 cursor-col-resize z-50 hover:bg-border transition-colors",
-                        general.appDirection === "rtl" ? "left-0 -translate-x-2" : "right-0 translate-x-2"
+                        general.appDirection === "rtl" ? "left-0 " : "right-0"
                     )}
                 />
 
@@ -259,7 +260,7 @@ export function AppSidebar() {
                     />
                 )}
 
-                <SidebarContent data-tauri-drag-region className={cn("min-w-0 flex flex-col overflow-hidden ")}>
+                <SidebarContent data-tauri-drag-region className={cn("min-w-0  flex flex-col overflow-hidden gap-0")}>
                     {activeTab === 'notes' && (
                         <NotesViewContent
                             currentFolderId={currentFolderId}

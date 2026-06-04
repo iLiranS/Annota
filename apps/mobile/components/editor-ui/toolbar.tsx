@@ -1,6 +1,6 @@
 import { useTheme } from '@react-navigation/native';
 import React, { useState } from 'react';
-import { Keyboard, ScrollView, StyleSheet, View } from 'react-native';
+import { Keyboard, ScrollView, StyleSheet, View, TouchableWithoutFeedback } from 'react-native';
 
 import { copyFileToClipboardMobile } from '@/utils/clipboard';
 import { HeadingLevel } from '@annota/core';
@@ -52,10 +52,33 @@ export function EditorToolbar({
         onPopupStateChange?.(true);
     };
 
+    const togglePopup = (type: PopupType) => {
+        if (activePopup === type) {
+            closePopup();
+        } else {
+            openPopup(type);
+        }
+    };
+
     const closePopup = () => {
         if (isLoading) return; // Prevent closing while picking/uploading
         onActivePopupChange(null);
         onPopupStateChange?.(false);
+    };
+
+    const isFloatingSelector = (type: PopupType): boolean => {
+        return [
+            'headings',
+            'highlight',
+            'textColor',
+            'codeLanguage',
+            'detailsBackground',
+            'table',
+            'insertTable',
+            'blockMenu',
+            'fileMenu',
+            'ai'
+        ].includes(type as string);
     };
 
     const [wasStreaming, setWasStreaming] = useState(false);
@@ -78,7 +101,263 @@ export function EditorToolbar({
         editorState.isHeading6;
 
     return (
-        <>
+        <View style={{ zIndex: 100 }}>
+            {activePopup && isFloatingSelector(activePopup) && (
+                <>
+                    <TouchableWithoutFeedback onPress={closePopup}>
+                        <View style={styles.backdrop} />
+                    </TouchableWithoutFeedback>
+                    <View
+                        style={[
+                            styles.floatingMenu,
+                            { backgroundColor: colors.background, borderColor: colors.border },
+                        ]}
+                    >
+                        {activePopup === 'ai' && (
+                            <ToolbarPopup
+                                visible={true}
+                                type="ai"
+                                isLoading={isAIStreaming}
+                                onAction={(action, instructions) => {
+                                    onAIAction?.(action as ContextMode | 'send-to-chat', instructions);
+                                    if (action === 'send-to-chat') {
+                                        closePopup();
+                                    }
+                                }}
+                                onStop={onStopAI}
+                                onClose={closePopup}
+                            />
+                        )}
+
+                        {activePopup === 'headings' && (
+                            <ToolbarPopup
+                                visible={true}
+                                type="headings"
+                                currentLevel={editorState.currentHeadingLevel}
+                                onSelect={(level: HeadingLevel) => {
+                                    onCommand('toggleHeading', { level });
+                                    closePopup();
+                                }}
+                                onCopyLink={editorState.currentHeadingId ? () => {
+                                    onCommand('copyBlockLink', { id: editorState.currentHeadingId });
+                                    closePopup();
+                                } : undefined}
+                                onClose={closePopup}
+                            />
+                        )}
+
+                        {activePopup === 'highlight' && (
+                            <ToolbarPopup
+                                visible={true}
+                                type="highlight"
+                                currentColor={editorState.highlightColor}
+                                onSelect={(color: string) => {
+                                    onCommand('setHighlight', { color });
+                                    closePopup();
+                                }}
+                                onClear={() => {
+                                    onCommand('unsetHighlight');
+                                    closePopup();
+                                }}
+                                onClose={closePopup}
+                            />
+                        )}
+
+                        {activePopup === 'textColor' && (
+                            <ToolbarPopup
+                                visible={true}
+                                type="textColor"
+                                currentColor={editorState.textColor}
+                                onSelect={(color: string) => {
+                                    onCommand('setColor', { color });
+                                    closePopup();
+                                }}
+                                onClear={() => {
+                                    onCommand('unsetColor');
+                                    closePopup();
+                                }}
+                                onClose={closePopup}
+                            />
+                        )}
+
+                        {activePopup === 'codeLanguage' && (
+                            <ToolbarPopup
+                                visible={true}
+                                type="codeLanguage"
+                                currentLanguage={editorState.currentCodeLanguage}
+                                onSelect={(language: string) => {
+                                    if (blockData?.pos !== undefined) {
+                                        onCommand('setNodeSelection', { pos: blockData.pos });
+                                    }
+                                    onCommand('setCodeBlockLanguage', { language, pos: blockData?.pos });
+                                    closePopup();
+                                }}
+                                onClose={closePopup}
+                            />
+                        )}
+
+                        {activePopup === 'table' && (
+                            <ToolbarPopup
+                                visible={true}
+                                type="table"
+                                canAddRowBefore={editorState.canAddRowBefore}
+                                canAddRowAfter={editorState.canAddRowAfter}
+                                canAddColumnBefore={editorState.canAddColumnBefore}
+                                canAddColumnAfter={editorState.canAddColumnAfter}
+                                canDeleteRow={editorState.canDeleteRow}
+                                canDeleteColumn={editorState.canDeleteColumn}
+                                canDeleteTable={editorState.canDeleteTable}
+                                onCommand={(command: string, params?: Record<string, unknown>) => {
+                                    onCommand(command, params);
+                                }}
+                                onClose={closePopup}
+                            />
+                        )}
+
+                        {activePopup === 'insertTable' && (
+                            <ToolbarPopup
+                                visible={true}
+                                type="insertTable"
+                                onCommand={(command: string, params?: Record<string, unknown>) => {
+                                    onCommand(command, params);
+                                }}
+                                onClose={closePopup}
+                            />
+                        )}
+
+                        {activePopup === 'detailsBackground' && (
+                            <ToolbarPopup
+                                visible={true}
+                                type="detailsBackground"
+                                currentColor={editorState.detailsBackgroundColor}
+                                onSelect={(color: string) => {
+                                    if (blockData?.pos !== undefined) {
+                                        onCommand('setNodeSelection', { pos: blockData.pos });
+                                    }
+                                    if (blockData?.blockType === 'quote') {
+                                        onCommand('setQuoteBackground', { color, pos: blockData?.pos });
+                                    } else {
+                                        onCommand('setDetailsBackground', { color, pos: blockData?.pos });
+                                    }
+                                    closePopup();
+                                }}
+                                onClear={() => {
+                                    if (blockData?.pos !== undefined) {
+                                        onCommand('setNodeSelection', { pos: blockData.pos });
+                                    }
+                                    if (blockData?.blockType === 'quote') {
+                                        onCommand('unsetQuoteBackground', { pos: blockData?.pos });
+                                    } else {
+                                        onCommand('unsetDetailsBackground', { pos: blockData?.pos });
+                                    }
+                                    closePopup();
+                                }}
+                                onClose={closePopup}
+                            />
+                        )}
+
+                        {activePopup === 'blockMenu' && blockData && (
+                            <ToolbarPopup
+                                visible={true}
+                                type="blockMenu"
+                                blockType={blockData.blockType}
+                                data={blockData}
+                                onAction={(action: string, data: any) => {
+                                    switch (action) {
+                                        case 'copy':
+                                            onCommand('copyToClipboard', { pos: data.pos });
+                                            closePopup();
+                                            break;
+                                        case 'cut':
+                                            onCommand('copyToClipboard', { pos: data.pos });
+                                            onCommand('deleteSelection', { pos: data.pos });
+                                            closePopup();
+                                            break;
+                                        case 'delete':
+                                            onCommand('deleteSelection', { pos: data.pos });
+                                            closePopup();
+                                            break;
+                                        case 'background':
+                                            openPopup('detailsBackground');
+                                            break;
+                                        case 'language':
+                                            openPopup('codeLanguage');
+                                            break;
+                                        case 'copyLink':
+                                            onCommand('copyBlockLink', { id: data.id });
+                                            closePopup();
+                                            break;
+                                    }
+                                }}
+                                onClose={closePopup}
+                            />
+                        )}
+
+                        {activePopup === 'fileMenu' && blockData && (
+                            <ToolbarPopup
+                                visible={true}
+                                type="fileMenu"
+                                src={blockData.src}
+                                width={blockData.width}
+                                position={blockData.position}
+                                mimeType={blockData.mimeType}
+
+                                onAction={(action: string, data?: any) => {
+                                    switch (action) {
+                                        case 'download':
+                                            (async () => {
+                                                if (blockData.imageId || blockData.src) {
+                                                    await FileService.saveFile(blockData.imageId, blockData.src);
+                                                } else {
+                                                    console.error('No source found for the file.');
+                                                }
+                                                closePopup();
+                                            })();
+                                            break;
+                                        case 'copy':
+                                            const isImage = !blockData.mimeType || blockData.mimeType.startsWith('image/');
+                                            if (isImage) {
+                                                copyFileToClipboardMobile(blockData.src, blockData.imageId);
+                                                onCommand('copyImage', { pos: blockData.position });
+                                            } else {
+                                                (async () => {
+                                                    try {
+                                                        const resolved = await FileService.resolveLocalUri(blockData.localPath);
+                                                        const Clipboard = require('expo-clipboard');
+                                                        await Clipboard.setStringAsync(resolved);
+                                                    } catch (err) {
+                                                        console.error('Failed to copy PDF file path:', err);
+                                                    }
+                                                })();
+                                            }
+                                            closePopup();
+                                            break;
+                                        case 'cut':
+                                            copyFileToClipboardMobile(blockData.src, blockData.imageId);
+                                            if (blockData.imageId) {
+                                                onCommand('deleteImage', { pos: blockData.position });
+                                            } else {
+                                                onCommand('cutImage', { pos: blockData.position });
+                                            }
+                                            closePopup();
+                                            break;
+                                        case 'delete':
+                                            onCommand('deleteImage', { pos: blockData.position });
+                                            closePopup();
+                                            break;
+                                        case 'resize':
+                                            onCommand('updateImage', { width: data?.width });
+                                            closePopup();
+                                            break;
+                                    }
+                                }}
+                                onClose={closePopup}
+                            />
+                        )}
+                    </View>
+                </>
+            )}
+
             <View
                 style={[
                     styles.toolbar,
@@ -101,7 +380,7 @@ export function EditorToolbar({
                                 if (isAIStreaming) {
                                     onStopAI?.();
                                 } else {
-                                    openPopup('ai');
+                                    togglePopup('ai');
                                 }
                             }} 
                         />
@@ -110,7 +389,7 @@ export function EditorToolbar({
                         <ToolbarButton
                             label="H"
                             isActive={isAnyHeadingActive}
-                            onPress={() => openPopup('headings')}
+                            onPress={() => togglePopup('headings')}
                         />
 
                         <View style={styles.separator} />
@@ -146,7 +425,7 @@ export function EditorToolbar({
                         <ToolbarButton
                             icon="format-color-text"
                             isActive={false}
-                            onPress={() => openPopup('textColor')}
+                            onPress={() => togglePopup('textColor')}
                             colorIndicator={editorState.textColor || undefined}
                         />
 
@@ -154,7 +433,7 @@ export function EditorToolbar({
                         <ToolbarButton
                             icon="border-color"
                             isActive={false}
-                            onPress={() => openPopup('highlight')}
+                            onPress={() => togglePopup('highlight')}
                             colorIndicator={editorState.highlightColor || undefined}
                         />
 
@@ -220,7 +499,13 @@ export function EditorToolbar({
                         {/* Math Equation */}
                         <ToolbarButton
                             icon="functions"
-                            onPress={() => onInsertMath?.()}
+                            onPress={() => {
+                                if (activePopup === 'math') {
+                                    closePopup();
+                                } else {
+                                    onInsertMath?.();
+                                }
+                            }}
                         />
 
                         <View style={styles.separator} />
@@ -229,19 +514,19 @@ export function EditorToolbar({
                         <ToolbarButton
                             icon="link"
                             isActive={editorState.isLink}
-                            onPress={() => openPopup('link')}
+                            onPress={() => togglePopup('link')}
                         />
 
                         {/* File */}
                         <ToolbarButton
                             icon="attach-file"
-                            onPress={() => openPopup('file')}
+                            onPress={() => togglePopup('file')}
                         />
 
                         {/* YouTube */}
                         <ToolbarButton
                             icon="smart-display"
-                            onPress={() => openPopup('youtube')}
+                            onPress={() => togglePopup('youtube')}
                         />
 
                         {/* Table - opens popup when in table, inserts new one when not */}
@@ -250,9 +535,9 @@ export function EditorToolbar({
                             isActive={editorState.isInTable}
                             onPress={() => {
                                 if (editorState.isInTable) {
-                                    openPopup('table');
+                                    togglePopup('table');
                                 } else {
-                                    openPopup('insertTable');
+                                    togglePopup('insertTable');
                                 }
                             }}
                         />
@@ -291,73 +576,6 @@ export function EditorToolbar({
             </View>
 
             {/* Popup Modals - rendered outside the toolbar layout */}
-            {activePopup === 'ai' && (
-                <ToolbarPopup
-                    visible={true}
-                    type="ai"
-                    isLoading={isAIStreaming}
-                    onAction={(action, instructions) => {
-                        onAIAction?.(action as ContextMode | 'send-to-chat', instructions);
-                        if (action === 'send-to-chat') {
-                            closePopup();
-                        }
-                    }}
-                    onStop={onStopAI}
-                    onClose={closePopup}
-                />
-            )}
-
-            {activePopup === 'headings' && (
-                <ToolbarPopup
-                    visible={true}
-                    type="headings"
-                    currentLevel={editorState.currentHeadingLevel}
-                    onSelect={(level: HeadingLevel) => {
-                        onCommand('toggleHeading', { level });
-                        closePopup();
-                    }}
-                    onCopyLink={editorState.currentHeadingId ? () => {
-                        onCommand('copyBlockLink', { id: editorState.currentHeadingId });
-                        closePopup();
-                    } : undefined}
-                    onClose={closePopup}
-                />
-            )}
-
-            {activePopup === 'highlight' && (
-                <ToolbarPopup
-                    visible={true}
-                    type="highlight"
-                    currentColor={editorState.highlightColor}
-                    onSelect={(color: string) => {
-                        onCommand('setHighlight', { color });
-                        closePopup();
-                    }}
-                    onClear={() => {
-                        onCommand('unsetHighlight');
-                        closePopup();
-                    }}
-                    onClose={closePopup}
-                />
-            )}
-
-            {activePopup === 'textColor' && (
-                <ToolbarPopup
-                    visible={true}
-                    type="textColor"
-                    currentColor={editorState.textColor}
-                    onSelect={(color: string) => {
-                        onCommand('setColor', { color });
-                        closePopup();
-                    }}
-                    onClear={() => {
-                        onCommand('unsetColor');
-                        closePopup();
-                    }}
-                    onClose={closePopup}
-                />
-            )}
-
             {activePopup === 'youtube' && (
                 <ToolbarPopup
                     visible={true}
@@ -441,53 +659,6 @@ export function EditorToolbar({
                 />
             )}
 
-
-
-            {activePopup === 'codeLanguage' && (
-                <ToolbarPopup
-                    visible={true}
-                    type="codeLanguage"
-                    currentLanguage={editorState.currentCodeLanguage}
-                    onSelect={(language: string) => {
-                        if (blockData?.pos !== undefined) {
-                            onCommand('setNodeSelection', { pos: blockData.pos });
-                        }
-                        onCommand('setCodeBlockLanguage', { language, pos: blockData?.pos });
-                        closePopup();
-                    }}
-                    onClose={closePopup}
-                />
-            )}
-
-            {activePopup === 'table' && (
-                <ToolbarPopup
-                    visible={true}
-                    type="table"
-                    canAddRowBefore={editorState.canAddRowBefore}
-                    canAddRowAfter={editorState.canAddRowAfter}
-                    canAddColumnBefore={editorState.canAddColumnBefore}
-                    canAddColumnAfter={editorState.canAddColumnAfter}
-                    canDeleteRow={editorState.canDeleteRow}
-                    canDeleteColumn={editorState.canDeleteColumn}
-                    canDeleteTable={editorState.canDeleteTable}
-                    onCommand={(command: string, params?: Record<string, unknown>) => {
-                        onCommand(command, params);
-                    }}
-                    onClose={closePopup}
-                />
-            )}
-
-            {activePopup === 'insertTable' && (
-                <ToolbarPopup
-                    visible={true}
-                    type="insertTable"
-                    onCommand={(command: string, params?: Record<string, unknown>) => {
-                        onCommand(command, params);
-                    }}
-                    onClose={closePopup}
-                />
-            )}
-
             {activePopup === 'math' && (
                 <ToolbarPopup
                     visible={true}
@@ -501,137 +672,7 @@ export function EditorToolbar({
                     onClose={closePopup}
                 />
             )}
-
-            {activePopup === 'detailsBackground' && (
-                <ToolbarPopup
-                    visible={true}
-                    type="detailsBackground"
-                    currentColor={editorState.detailsBackgroundColor}
-                    onSelect={(color: string) => {
-                        if (blockData?.pos !== undefined) {
-                            onCommand('setNodeSelection', { pos: blockData.pos });
-                        }
-                        if (blockData?.blockType === 'quote') {
-                            onCommand('setQuoteBackground', { color, pos: blockData?.pos });
-                        } else {
-                            onCommand('setDetailsBackground', { color, pos: blockData?.pos });
-                        }
-                        closePopup();
-                    }}
-                    onClear={() => {
-                        if (blockData?.pos !== undefined) {
-                            onCommand('setNodeSelection', { pos: blockData.pos });
-                        }
-                        if (blockData?.blockType === 'quote') {
-                            onCommand('unsetQuoteBackground', { pos: blockData?.pos });
-                        } else {
-                            onCommand('unsetDetailsBackground', { pos: blockData?.pos });
-                        }
-                        closePopup();
-                    }}
-                    onClose={closePopup}
-                />
-            )}
-
-            {activePopup === 'blockMenu' && blockData && (
-                <ToolbarPopup
-                    visible={true}
-                    type="blockMenu"
-                    blockType={blockData.blockType}
-                    data={blockData}
-                    onAction={(action: string, data: any) => {
-                        switch (action) {
-                            case 'copy':
-                                onCommand('copyToClipboard', { pos: data.pos });
-                                closePopup();
-                                break;
-                            case 'cut':
-                                onCommand('copyToClipboard', { pos: data.pos });
-                                onCommand('deleteSelection', { pos: data.pos });
-                                closePopup();
-                                break;
-                            case 'delete':
-                                onCommand('deleteSelection', { pos: data.pos });
-                                closePopup();
-                                break;
-                            case 'background':
-                                openPopup('detailsBackground');
-                                break;
-                            case 'language':
-                                openPopup('codeLanguage');
-                                break;
-                            case 'copyLink':
-                                onCommand('copyBlockLink', { id: data.id });
-                                closePopup();
-                                break;
-                        }
-                    }}
-                    onClose={closePopup}
-                />
-            )}
-
-            {activePopup === 'fileMenu' && blockData && (
-                <ToolbarPopup
-                    visible={true}
-                    type="fileMenu"
-                    src={blockData.src}
-                    width={blockData.width}
-                    position={blockData.position}
-                    mimeType={blockData.mimeType}
-
-                    onAction={(action: string, data?: any) => {
-                        switch (action) {
-                            case 'download':
-                                (async () => {
-                                    if (blockData.imageId || blockData.src) {
-                                        await FileService.saveFile(blockData.imageId, blockData.src);
-                                    } else {
-                                        console.error('No source found for the file.');
-                                    }
-                                    closePopup();
-                                })();
-                                break;
-                            case 'copy':
-                                const isImage = !blockData.mimeType || blockData.mimeType.startsWith('image/');
-                                if (isImage) {
-                                    copyFileToClipboardMobile(blockData.src, blockData.imageId);
-                                    onCommand('copyImage', { pos: blockData.position });
-                                } else {
-                                    (async () => {
-                                        try {
-                                            const resolved = await FileService.resolveLocalUri(blockData.localPath);
-                                            const Clipboard = require('expo-clipboard');
-                                            await Clipboard.setStringAsync(resolved);
-                                        } catch (err) {
-                                            console.error('Failed to copy PDF file path:', err);
-                                        }
-                                    })();
-                                }
-                                closePopup();
-                                break;
-                            case 'cut':
-                                copyFileToClipboardMobile(blockData.src, blockData.imageId);
-                                if (blockData.imageId) {
-                                    onCommand('deleteImage', { pos: blockData.position });
-                                } else {
-                                    onCommand('cutImage', { pos: blockData.position });
-                                }
-                                closePopup();
-                                break;
-                            case 'delete':
-                                onCommand('deleteImage', { pos: blockData.position });
-                                closePopup();
-                                break;
-                            case 'resize':
-                                onCommand('updateImage', { width: data?.width });
-                                closePopup();
-                                break;
-                        }
-                    }}
-                    onClose={closePopup}
-                />
-            )}
-        </>
+        </View>
     );
 }
 
@@ -659,5 +700,30 @@ const styles = StyleSheet.create({
         height: 24,
         backgroundColor: 'rgba(128,128,128,0.3)',
         marginHorizontal: 6,
+    },
+    backdrop: {
+        position: 'absolute',
+        top: -1000,
+        bottom: -1000,
+        left: -1000,
+        right: -1000,
+        backgroundColor: 'transparent',
+    },
+    floatingMenu: {
+        position: 'absolute',
+        bottom: '100%',
+        left: 8,
+        right: 8,
+        borderRadius: 16,
+        borderWidth: 1,
+        padding: 16,
+        marginBottom: 8,
+        zIndex: 100,
+        // shadow
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+        elevation: 8,
     },
 });

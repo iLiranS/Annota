@@ -325,7 +325,7 @@ export function AnnotaHome() {
                                     </div>
                                 ) : (
                                     <div className="flex flex-col gap-2 bg-card/15 border border-border/20 rounded-xl p-4">
-                                        {recentNotes.map((note) => (
+                                        {recentNotes.map((note, index) => (
                                             <NoteListItem
                                                 key={note.id}
                                                 note={note}
@@ -333,6 +333,7 @@ export function AnnotaHome() {
                                                 isInList={true}
                                                 suffix={<FolderBadge folderId={note.folderId} noteId={note.id} />}
                                                 className="border border-border/50 bg-card/35 hover:bg-primary/5"
+                                                isLast={index === recentNotes.length - 1}
                                             />
                                         ))}
                                     </div>

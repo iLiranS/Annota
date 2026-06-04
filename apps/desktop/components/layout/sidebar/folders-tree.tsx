@@ -1,12 +1,11 @@
 import { FolderListItem, FolderListItemContent } from "@/components/notes/folder-list-item";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { SidebarGroupLabel, SidebarMenu, SidebarMenuAction, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub } from "@/components/ui/sidebar";
+import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
+import { SidebarMenu, SidebarMenuAction, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import type { Folder } from "@annota/core";
 import { DAILY_NOTES_FOLDER_ID, TRASH_FOLDER_ID } from "@annota/core";
 import { ChevronRight } from "lucide-react";
 import { useState } from "react";
-import { Ionicons } from "@/components/ui/ionicons";
 
 export const DAILY_NOTES_FOLDER: Folder = {
     id: DAILY_NOTES_FOLDER_ID,
@@ -52,8 +51,6 @@ interface FoldersTreeProps {
     getFoldersInFolder: (id: string | null) => Folder[];
     general: any;
     currentFolderId: string | null;
-    isFoldersOpen: boolean;
-    setIsFoldersOpen: (open: boolean) => void;
 }
 
 export function FoldersTree({
@@ -66,52 +63,26 @@ export function FoldersTree({
     getFoldersInFolder,
     general,
     currentFolderId,
-    isFoldersOpen,
-    setIsFoldersOpen,
 }: FoldersTreeProps) {
     if (childFolders.length === 0) return null;
 
     return (
-        <Collapsible open={isFoldersOpen} onOpenChange={setIsFoldersOpen}>
-            <div className="px-1">
-                <SidebarGroupLabel asChild className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
-                    <CollapsibleTrigger className="flex w-full items-center gap-2 hover:bg-sidebar-accent/50 px-2 py-1 rounded transition-colors group/trigger">
-                        <Ionicons name="folder-outline" size={11} className="text-muted-foreground/60 shrink-0" />
-                        <span className="flex-1 text-start">Folders</span>
-                        <span className="text-[9px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded font-mono font-medium leading-none">
-                            {childFolders.length}
-                        </span>
-                        <ChevronRight
-                            size={11}
-                            className={cn(
-                                "transition-transform text-muted-foreground/50 group-hover/trigger:text-muted-foreground",
-                                general?.appDirection === 'rtl'
-                                    ? (isFoldersOpen ? "rotate-90" : "rotate-180")
-                                    : (isFoldersOpen && "rotate-90")
-                            )}
-                        />
-                    </CollapsibleTrigger>
-                </SidebarGroupLabel>
-                <CollapsibleContent className="mt-1">
-                    <SidebarMenu className="gap-0.5 px-0.5">
-                        {childFolders.map((folder) => (
-                            <FolderTreeItem
-                                key={folder.id}
-                                folder={folder}
-                                general={general}
-                                onNavigate={onNavigate}
-                                onEdit={onEdit}
-                                onDelete={onDelete}
-                                onCreateSubFolder={onCreateSubFolder}
-                                onCreateNote={onCreateNote}
-                                getFoldersInFolder={getFoldersInFolder}
-                                currentFolderId={currentFolderId}
-                            />
-                        ))}
-                    </SidebarMenu>
-                </CollapsibleContent>
-            </div>
-        </Collapsible>
+        <SidebarMenu className="gap-0.5 p-1">
+            {childFolders.map((folder) => (
+                <FolderTreeItem
+                    key={folder.id}
+                    folder={folder}
+                    general={general}
+                    onNavigate={onNavigate}
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                    onCreateSubFolder={onCreateSubFolder}
+                    onCreateNote={onCreateNote}
+                    getFoldersInFolder={getFoldersInFolder}
+                    currentFolderId={currentFolderId}
+                />
+            ))}
+        </SidebarMenu>
     );
 }
 
