@@ -182,7 +182,7 @@ export function AppSidebar() {
 
     const [width, setWidth] = useState(() => {
         const saved = localStorage.getItem("sidebar_width");
-        return saved ? parseInt(saved, 10) : 260;
+        return saved ? parseInt(saved, 10) : 230;
     });
     const [isResizing, setIsResizing] = useState(false);
 

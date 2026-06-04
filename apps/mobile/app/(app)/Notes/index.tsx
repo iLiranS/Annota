@@ -436,18 +436,19 @@ export default function NotesList() {
                             </View>
                         )
                     ),
-                    headerLeft: ({ canGoBack }: { canGoBack?: boolean }) => {
-                        if (isSearchActive) return null;
-                        return (
-                            <HapticPressable
-                                onPress={() => canGoBack ? router.back() : toggle()}
-                                style={[styles.headerButton]}
-                                hitSlop={8}
-                            >
-                                <Ionicons name={canGoBack ? "chevron-back" : "menu"} size={24} color={colors.primary} />
-                            </HapticPressable>
-                        );
-                    },
+                    headerLeft: ({ canGoBack }: { canGoBack?: boolean }) => (
+                        <HapticPressable
+                            onPress={() => isSearchActive ? handleCloseSearch() : (canGoBack ? router.back() : toggle())}
+                            style={[styles.headerButton]}
+                            hitSlop={8}
+                        >
+                            <Ionicons
+                                name={isSearchActive ? "chevron-back" : (canGoBack ? "chevron-back" : "menu")}
+                                size={24}
+                                color={colors.primary}
+                            />
+                        </HapticPressable>
+                    ),
                     headerRight: () => (
                         <View style={styles.headerRightContainer}>
                             {isSearchActive ? (
@@ -629,7 +630,7 @@ const styles = StyleSheet.create({
     footer: { position: 'absolute', bottom: 0, left: 0, right: 0, borderTopWidth: 1 },
     footerContent: { flexDirection: 'row', justifyContent: 'space-between' },
     footerSide: { flex: 1, alignItems: 'flex-end', paddingTop: 10, minHeight: 48, marginRight: 15 },
-    searchInputContainer: { flex: 1, height: 40, justifyContent: 'center' },
+    searchInputContainer: { flex: 1, height: 40, justifyContent: 'center', marginLeft: -12 },
     searchInput: { fontSize: 16, fontWeight: '500', paddingHorizontal: 12 },
     searchLoading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, gap: 8 },
     searchLoadingText: { fontSize: 13, opacity: 0.6 },

@@ -138,16 +138,16 @@ export function NoteInfo({ noteId }: { noteId: string }) {
 
     return (
         <div className="flex flex-col h-full overflow-hidden">
-            <div data-tauri-drag-region className="flex-1 overflow-y-auto pr-2 premium-scrollbar space-y-6 pb-4">
+            <div data-tauri-drag-region className="flex-1 overflow-y-auto pr-2 premium-scrollbar space-y-2 pb-4">
                 {/* Section 1: Stats & Metadata */}
                 <div className="space-y-2">
                     <button
                         onClick={() => setStatsExpanded(!statsExpanded)}
-                        className="w-full flex items-center justify-between py-1.5 px-1 hover:bg-muted/10 rounded-lg transition-colors group text-left"
+                        className="w-full flex items-center justify-between py-1.5 px-1 hover:bg-primary/5 rounded-lg transition-colors group text-left"
                     >
                         <div className="flex items-center gap-1.5">
-                            <BarChart3 size={12} className="opacity-70 text-accent-full" />
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
+                            <BarChart3 size={15} className="text-accent-full" />
+                            <span className="text-xs font-bold uppercase tracking-wider ">
                                 Stats & Metadata
                             </span>
                         </div>
@@ -227,11 +227,11 @@ export function NoteInfo({ noteId }: { noteId: string }) {
                     <div className="space-y-2">
                         <button
                             onClick={() => setConnectionsExpanded(!connectionsExpanded)}
-                            className="w-full flex items-center justify-between py-1.5 px-1 hover:bg-muted/10 rounded-lg transition-colors group text-left"
+                            className="w-full flex items-center justify-between py-1.5 px-1 hover:bg-primary/5 rounded-lg transition-colors group text-left"
                         >
                             <div className="flex items-center gap-1.5">
-                                <Network size={12} className="opacity-70 text-accent-full" />
-                                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
+                                <Network size={15} className=" text-accent-full" />
+                                <span className="text-xs font-bold uppercase tracking-wider ">
                                     Connections Map
                                 </span>
                             </div>
@@ -258,11 +258,11 @@ export function NoteInfo({ noteId }: { noteId: string }) {
                 <div className="space-y-2">
                     <button
                         onClick={() => setTocExpanded(!tocExpanded)}
-                        className="w-full flex items-center justify-between py-1.5 px-1 hover:bg-muted/10 rounded-lg transition-colors group text-left"
+                        className="w-full flex items-center justify-between py-1.5 px-1 hover:bg-primary/5 rounded-lg transition-colors group text-left"
                     >
                         <div className="flex items-center gap-1.5">
-                            <ListTree size={12} className="opacity-70 text-accent-full" />
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
+                            <ListTree size={15} className="text-accent-full" />
+                            <span className="text-xs font-bold uppercase tracking-wider">
                                 Table of Contents
                             </span>
                         </div>
@@ -281,7 +281,7 @@ export function NoteInfo({ noteId }: { noteId: string }) {
                                 </p>
                             </div>
                         ) : (
-                            <div className="space-y-0.5 pr-2">
+                            <div className="space-y-0.5 ">
                                 {toc.map((item, idx) => {
                                     if (!isVisible(idx)) return null;
                                     const itemHasChildren = hasChildren(idx);

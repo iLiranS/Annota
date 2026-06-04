@@ -61,13 +61,13 @@ export function NotesViewHeader({
 }: NotesViewHeaderProps) {
     const { colors } = useAppTheme();
     const { general } = useSettingsStore();
-    const { getFolderById, getSortType, setFolderSortType, tags } = useNotesStore();
+    const { folders, getSortType, setFolderSortType, tags } = useNotesStore();
     const { createAndNavigate: createNote } = useCreateNote();
     const setSelectedFolderId = useNavigationStore(state => state.setSelectedFolderId);
 
-    const currentFolder = currentFolderId ? getFolderById(currentFolderId) : null;
+    const currentFolder = useMemo(() => currentFolderId ? folders.find(f => f.id === currentFolderId) : null, [folders, currentFolderId]);
     const currentTag = useMemo(() => tags.find(t => t.id === tagId), [tags, tagId]);
-    const currentSortType = getSortType(currentFolderId ?? null);
+    const currentSortType = useMemo(() => getSortType(currentFolderId ?? null), [folders, currentFolderId, getSortType]);
 
     const isTrash = currentFolderId === TRASH_FOLDER_ID;
     const isDaily = currentFolderId === DAILY_NOTES_FOLDER_ID;
@@ -89,11 +89,11 @@ export function NotesViewHeader({
 
         if (browsingFolderId) {
             const path: BreadcrumbData[] = [];
-            let currentFolder = getFolderById(browsingFolderId);
+            let currentFolder = folders.find(f => f.id === browsingFolderId);
             let parentId = currentFolder?.parentId ?? null;
 
             while (parentId) {
-                const parentFolder = getFolderById(parentId);
+                const parentFolder = folders.find(f => f.id === parentId);
                 if (parentFolder) {
                     path.unshift({
                         id: parentFolder.id,
@@ -119,7 +119,7 @@ export function NotesViewHeader({
         }
 
         return crumbs;
-    }, [browsingFolderId, getFolderById, colors.primary, tagId, isTrash, isDaily]);
+    }, [browsingFolderId, folders, colors.primary, tagId, isTrash, isDaily]);
 
     const headerTitle = useMemo(() => {
         if (tagId) return currentTag?.name ?? "Tag";
@@ -186,6 +186,7 @@ export function NotesViewContent({
 }: NotesViewContentProps) {
     const { general } = useSettingsStore();
     const {
+        folders,
         notes,
         deleteNote,
         getNotesInFolder,
@@ -194,7 +195,7 @@ export function NotesViewContent({
 
     const isTrash = currentFolderId === TRASH_FOLDER_ID;
     const isDaily = currentFolderId === DAILY_NOTES_FOLDER_ID;
-    const currentSortType = getSortType(currentFolderId ?? null);
+    const currentSortType = useMemo(() => getSortType(currentFolderId ?? null), [folders, currentFolderId, getSortType]);
 
     const browseNotes = useMemo(() => {
         if (tagId) {
@@ -210,7 +211,7 @@ export function NotesViewContent({
         const list = getNotesInFolder(currentFolderId ?? null);
         const sortType = (isDaily || isTrash) ? 'CREATED_LAST' : currentSortType;
         return sortNotes(list, sortType);
-    }, [notes, currentFolderId, currentSortType, tagId, isDaily, isTrash, getNotesInFolder]);
+    }, [notes, folders, currentFolderId, currentSortType, tagId, isDaily, isTrash, getNotesInFolder]);
 
     return (
         <div className={cn(

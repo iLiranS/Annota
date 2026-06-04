@@ -136,7 +136,7 @@ export function MainNavbar() {
 
     const [primaryWidth, setPrimaryWidth] = useState(() => {
         const saved = localStorage.getItem("sidebar_width");
-        return saved ? parseInt(saved, 10) : 260;
+        return saved ? parseInt(saved, 10) : 230;
     });
 
     const [secondaryWidth, setSecondaryWidth] = useState(() => {

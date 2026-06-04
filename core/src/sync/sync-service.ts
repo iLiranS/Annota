@@ -13,6 +13,7 @@ import { createStorageAdapter } from '../stores/config';
 import { getDb } from '../stores/db.store';
 import { useSyncStore } from '../stores/sync.store';
 import { decodeSaltHex, decryptPayload, deriveKeysFromMnemonic, encryptPayload } from '../utils/crypto';
+import { cleanFolderExpandedState } from '../utils/folders';
 
 const getSyncTimeKey = (userId: string) => `${userId}_last_sync_time`;
 
@@ -83,6 +84,7 @@ export async function performSyncPush(masterKey: string, saltHex: string) {
                 if (tombstones.length > 0) {
                     for (const f of tombstones) {
                         await db.delete(schema.folders).where(eq(schema.folders.id, f.id)).execute();
+                        cleanFolderExpandedState(f.id);
                     }
                     didDeleteTombstones = true;
                 }
@@ -285,6 +287,8 @@ export async function performSyncPull(masterKey: string, saltHex: string) {
                                     eq(schema.folders.id, hyphenlessId)
                                 ))
                                 .execute();
+                            cleanFolderExpandedState(id);
+                            cleanFolderExpandedState(hyphenlessId);
                         }
                     } catch (e) {
                         console.error("Failed to delete folders", deletedIds, e);

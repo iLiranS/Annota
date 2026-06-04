@@ -46,6 +46,7 @@ export function NotesList({
     onCreateSubFolder,
 }: NotesListProps) {
     const navigate = useNavigate();
+    const folders = useNotesStore(state => state.folders);
     const bulkDeleteNotes = useNotesStore(state => state.bulkDeleteNotes);
     const bulkMoveNotes = useNotesStore(state => state.bulkMoveNotes);
     const getFoldersInFolder = useNotesStore(state => state.getFoldersInFolder);
@@ -72,7 +73,7 @@ export function NotesList({
             return [DAILY_NOTES_FOLDER, TRASH_FOLDER, ...filtered];
         }
         return filtered;
-    }, [currentFolderId, getFoldersInFolder, parentId, isTrash, isDaily, tagId, currentSortType]);
+    }, [folders, currentFolderId, getFoldersInFolder, parentId, isTrash, isDaily, tagId, currentSortType]);
 
     // Separate pinned and regular notes
     const pinnedNotes = notes.filter(n => n.isPinned);

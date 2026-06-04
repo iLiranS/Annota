@@ -124,7 +124,7 @@ export default function NoteInfoModal({ visible, onClose, noteId, onScrollToElem
         >
             <View style={[styles.container, { backgroundColor: colors.background }]}>
                 <View style={[styles.header, { borderBottomColor: colors.border }]}>
-                    <Text style={[styles.headerTitle, { color: colors.text }]}>Note Info</Text>
+                    <Text style={[styles.headerTitle, { color: colors.text }]}>{note.title}</Text>
                     <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                         <Ionicons name="close" size={24} color={colors.text + '60'} />
                     </TouchableOpacity>
@@ -136,14 +136,14 @@ export default function NoteInfoModal({ visible, onClose, noteId, onScrollToElem
                         contentContainerStyle={{ paddingBottom: insets.bottom + 20, paddingTop: 10 }}
                     >
                         {/* Section 1: Stats & Metadata */}
-                        <View style={{ marginBottom: 12 }}>
+                        <View style={{ marginBottom: 4 }}>
                             <TouchableOpacity
                                 onPress={() => setStatsExpanded(!statsExpanded)}
                                 style={styles.accordionHeader}
                             >
                                 <View style={styles.accordionHeaderLeft}>
                                     <Ionicons name="stats-chart-outline" size={14} color={colors.primary} />
-                                    <Text style={[styles.accordionTitle, { color: colors.text + '60' }]}>STATS & METADATA</Text>
+                                    <Text style={[styles.accordionTitle, { color: colors.text }]}>STATS & METADATA</Text>
                                 </View>
                                 <Ionicons
                                     name={statsExpanded ? "chevron-down" : "chevron-forward"}
@@ -226,14 +226,14 @@ export default function NoteInfoModal({ visible, onClose, noteId, onScrollToElem
 
                         {/* Section 2: Connections Map */}
                         {(hasForward || hasBack) && (
-                            <View style={{ marginBottom: 12 }}>
+                            <View style={{ marginBottom: 4 }}>
                                 <TouchableOpacity
                                     onPress={() => setConnectionsExpanded(!connectionsExpanded)}
                                     style={styles.accordionHeader}
                                 >
                                     <View style={styles.accordionHeaderLeft}>
                                         <Ionicons name="git-network-outline" size={14} color={colors.primary} />
-                                        <Text style={[styles.accordionTitle, { color: colors.text + '60' }]}>CONNECTIONS MAP</Text>
+                                        <Text style={[styles.accordionTitle, { color: colors.text }]}>CONNECTIONS MAP</Text>
                                     </View>
                                     <Ionicons
                                         name={connectionsExpanded ? "chevron-down" : "chevron-forward"}
@@ -256,14 +256,14 @@ export default function NoteInfoModal({ visible, onClose, noteId, onScrollToElem
                         )}
 
                         {/* Section 3: Table of Contents */}
-                        <View style={{ marginBottom: 12 }}>
+                        <View style={{ marginBottom: 4 }}>
                             <TouchableOpacity
                                 onPress={() => setTocExpanded(!tocExpanded)}
                                 style={styles.accordionHeader}
                             >
                                 <View style={styles.accordionHeaderLeft}>
                                     <Ionicons name="list-outline" size={14} color={colors.primary} />
-                                    <Text style={[styles.accordionTitle, { color: colors.text + '60' }]}>TABLE OF CONTENTS</Text>
+                                    <Text style={[styles.accordionTitle, { color: colors.text }]}>TABLE OF CONTENTS</Text>
                                 </View>
                                 <Ionicons
                                     name={tocExpanded ? "chevron-down" : "chevron-forward"}
@@ -625,7 +625,7 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     accordionTitle: {
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '700',
         letterSpacing: 1,
     },

@@ -61,7 +61,7 @@ export function NoteConnectionsGraph({ noteId, backlinks, forwardLinks }: NoteCo
                     })
                 ) : (
                     <div className="flex items-center justify-end min-w-0 opacity-40 relative pr-[10px] group">
-                        <span className="text-[9px] text-muted-foreground/30 italic border border-dashed border-border/30 rounded-full px-2 py-0.5">
+                        <span className="text-[9px] text-muted-foreground italic border border-dashed border-border/30 rounded-full px-2 py-0.5">
                             No backlinks
                         </span>
                         <div
@@ -124,7 +124,7 @@ export function NoteConnectionsGraph({ noteId, backlinks, forwardLinks }: NoteCo
                             className="absolute left-0 top-1/2 -translate-y-1/2 h-px"
                             style={{ width: "10px", backgroundColor: "var(--border)" }}
                         />
-                        <span className="text-[9px] text-muted-foreground/30 italic border border-dashed border-border/30 rounded-full px-2 py-0.5">
+                        <span className="text-[9px] text-muted-foreground italic border border-dashed border-border/30 rounded-full px-2 py-0.5">
                             No links
                         </span>
                     </div>

@@ -6,7 +6,7 @@ import * as notesRepo from '../db/repositories/notes.repository';
 import type { Folder, FolderInsert } from '../db/schema';
 import * as schema from '../db/schema';
 import type { UserRole } from '../stores/user.store';
-import { generateFolder } from '../utils/folders';
+import { cleanFolderExpandedState, generateFolder } from '../utils/folders';
 import { isPremiumUser } from '../utils/subscription';
 import * as NoteFileService from './files/note-file.service';
 
@@ -89,6 +89,8 @@ export const FolderService = {
             await notesRepo.softDeleteNotesInFolders(allIdsToProcess, now, tx);
         });
 
+        cleanFolderExpandedState(allIdsToProcess);
+
         return allIdsToProcess;
     },
 
@@ -158,6 +160,8 @@ export const FolderService = {
             await notesRepo.permanentlyDeleteNotesInFolders(allFolderIds, tx);
             await foldersRepo.deleteFolders(allFolderIds, tx);
         });
+
+        cleanFolderExpandedState(allFolderIds);
     },
 
     // 6. Empty Trash
@@ -169,11 +173,16 @@ export const FolderService = {
                 await NoteFileService.cleanupFilesForNote(noteId);
             }
 
+            const deletedFolders = await foldersRepo.getDeletedFolders();
+            const deletedFolderIds = deletedFolders.map(f => f.id);
+
             // 2. Delete notes and folders
             await getDb().transaction(async (tx: any) => {
                 await notesRepo.permanentlyDeleteDeletedNotes(tx);
                 await foldersRepo.deleteDeletedFolders(tx);
             });
+
+            cleanFolderExpandedState(deletedFolderIds);
 
             // For guest users, physically delete the tombstones right away
             await purgeGuestTombstones();

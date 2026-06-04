@@ -82,18 +82,18 @@ export function SidebarHeaderSection({
 
 
     return (
-        <SidebarHeader
-            style={{
-                "--note-color": color,
-            } as React.CSSProperties}
-            className={cn(
-                "py-1 px-1  gap-0.5 justify-center rounded-2xl rounded-b-none border transition-all duration-300",
-                "sidebar-header-tinted",
-                dir === "rtl" && "animate-content-from-right",
-                dir === "ltr" && "animate-content-from-left"
-            )}
-        >
-            <div className="flex flex-col gap-0 w-full">
+        <>
+            <SidebarHeader
+                style={{
+                    "--note-color": color,
+                } as React.CSSProperties}
+                className={cn(
+                    "py-1 px-1  gap-0.5 justify-center rounded-2xl rounded-b-none border transition-all duration-300",
+                    "sidebar-header-tinted",
+                    dir === "rtl" && "animate-content-from-right",
+                    dir === "ltr" && "animate-content-from-left"
+                )}
+            >
                 {/* Main Row: Icon, Title & Action Buttons */}
                 <div className="flex items-center justify-between gap-1.5 w-full">
                     <div data-tauri-drag-region
@@ -213,9 +213,15 @@ export function SidebarHeaderSection({
                         </TooltipProvider>
                     </div>
                 </div>
+            </SidebarHeader>
 
-                {/* Breadcrumbs Row */}
-                {!isRoot && breadcrumbs && breadcrumbs.length > 0 && (
+            {/* Breadcrumbs Row */}
+            {!isRoot && breadcrumbs && breadcrumbs.length > 0 && (
+                <div className={cn(
+                    "px-3 py-1.5 border-b border-sidebar-border/60 shrink-0 select-none max-w-full bg-transparent",
+                    dir === "rtl" && "animate-content-from-right",
+                    dir === "ltr" && "animate-content-from-left"
+                )}>
                     <Breadcrumb className=" pb-0 pt-0 bg-transparent shrink-0 select-none max-w-full ">
                         <BreadcrumbList className="flex-nowrap gap-0.5 sm:gap-0.5">
                             {breadcrumbs.map((crumb, i) => (
@@ -263,8 +269,8 @@ export function SidebarHeaderSection({
                             ))}
                         </BreadcrumbList>
                     </Breadcrumb>
-                )}
-            </div>
-        </SidebarHeader>
+                </div>
+            )}
+        </>
     );
 }

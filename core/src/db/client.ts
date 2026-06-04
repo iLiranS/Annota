@@ -10,6 +10,7 @@ import * as schema from './schema';
 import { seedSystemData } from './seed';
 import type { DbType } from './types';
 import { parsePendingTasks } from './repositories/search.repository';
+import { cleanFolderExpandedState } from '../utils/folders';
 
 // SQL for creating tables (CREATE TABLE IF NOT EXISTS)
 export const CREATE_TABLES_SQL = `
@@ -585,9 +586,18 @@ export async function purgeGuestTombstones(): Promise<void> {
       }
 
       // 2. Folders cleanup
+      const purgedFolders = await tx.select({ id: schema.folders.id })
+        .from(schema.folders)
+        .where(eq(schema.folders.isPermDeleted, true))
+        .all();
+
+      const folderIds = purgedFolders.map((f: any) => f.id);
+
       await tx.delete(schema.folders)
         .where(eq(schema.folders.isPermDeleted, true))
         .run();
+
+      cleanFolderExpandedState(folderIds);
     });
 
     console.log('[Maintenance] Guest tombstones purged');
