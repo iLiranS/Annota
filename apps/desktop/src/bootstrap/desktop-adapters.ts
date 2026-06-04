@@ -68,6 +68,10 @@ export function createDesktopAdapters(): PlatformAdapters {
         const offline = () => onChange(false);
         window.addEventListener('online', online);
         window.addEventListener('offline', offline);
+        
+        // Fire initial state
+        onChange(navigator.onLine);
+
         return () => {
           window.removeEventListener('online', online);
           window.removeEventListener('offline', offline);

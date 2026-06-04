@@ -1,6 +1,7 @@
 import { areAdaptersInitialized, getPlatformAdapters } from '../adapters';
 import { syncApi } from '../api/sync.api';
 import { SyncScheduler } from './sync-scheduler';
+import { useSyncStore } from '../stores/sync.store';
 
 const APP_CONFIG_CACHE_KEY = 'annota_app_config_cache';
 
@@ -23,20 +24,22 @@ export const appConfigService = {
             }
         }
 
-        // 2. Fetch fresh from Supabase
-        try {
-            const config = await syncApi.getAppConfig();
-            if (config) {
-                SyncScheduler.setSyncDisabled(!!config.sync_disabled);
+        // 2. Fetch fresh from Supabase if online
+        if (useSyncStore.getState().isOnline) {
+            try {
+                const config = await syncApi.getAppConfig();
+                if (config) {
+                    SyncScheduler.setSyncDisabled(!!config.sync_disabled);
 
-                // Cache it for next startup
-                if (areAdaptersInitialized()) {
-                    const adapters = getPlatformAdapters();
-                    await adapters.secureStore.setItem(APP_CONFIG_CACHE_KEY, JSON.stringify(config));
+                    // Cache it for next startup
+                    if (areAdaptersInitialized()) {
+                        const adapters = getPlatformAdapters();
+                        await adapters.secureStore.setItem(APP_CONFIG_CACHE_KEY, JSON.stringify(config));
+                    }
                 }
+            } catch (err) {
+                console.error('[AppConfigService] Failed to fetch fresh config:', err);
             }
-        } catch (err) {
-            console.error('[AppConfigService] Failed to fetch fresh config:', err);
         }
     }
 };

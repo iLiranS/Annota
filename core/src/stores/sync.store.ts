@@ -1,6 +1,7 @@
 import { Buffer } from 'buffer';
 import { create } from 'zustand';
 import { createStorageAdapter } from './config';
+import { getPlatformAdapters } from '../adapters';
 
 export interface SyncCursor {
     time: string;
@@ -44,6 +45,8 @@ interface SyncState {
     authRequired: boolean;
     /** ISO timestamp of the last successful sync completion */
     lastSyncTime: string | null;
+    /** Optional callback to trigger sync (registered by SyncScheduler to avoid circular import bundles) */
+    onForceSync?: () => Promise<void>;
 
     setSyncing: (v: boolean) => void;
     setOnline: (v: boolean) => void;
@@ -75,6 +78,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
     syncUserId: null,
     authRequired: false,
     lastSyncTime: null,
+    onForceSync: undefined,
 
     setSyncing: (isSyncing) => set({ isSyncing }),
     setOnline: (isOnline) => set({ isOnline }),
@@ -114,18 +118,20 @@ export const useSyncStore = create<SyncState>((set, get) => ({
         filesKey: null,
     }),
     forceSync: async () => {
-        // Lazy require breaks the cycle!
-        const { SyncScheduler } = await import('../sync/sync-scheduler');
-
-        if (SyncScheduler.instance) {
-            const state = get();
-            if (!state.isOnline) {
-                throw new Error("Cannot sync while offline");
-            }
+        const state = get();
+        if (!state.isOnline) {
+            getPlatformAdapters().toast.show({
+                type: 'info',
+                title: "You're offline",
+                message: "Changes are saved locally and will sync when you reconnect."
+            });
+            return;
+        }
+        if (state.onForceSync) {
             set({ syncError: null });
-            await SyncScheduler.instance.forceSync();
+            await state.onForceSync();
         } else {
-            console.warn('[SyncStore] SyncScheduler instance not available for forceSync');
+            console.warn('[SyncStore] SyncScheduler onForceSync callback not registered');
             throw new Error("Sync service is not initialized");
         }
     },
@@ -155,6 +161,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
             syncUserId: null,
             authRequired: false,
             lastSyncTime: null,
+            onForceSync: undefined,
         });
     },
 
@@ -173,6 +180,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
             syncUserId: null,
             authRequired: false,
             lastSyncTime: null,
+            onForceSync: undefined,
         });
         console.log(`[SyncStore] Cleared sync pointer for user ${userId}`);
     },

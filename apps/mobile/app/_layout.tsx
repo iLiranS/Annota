@@ -43,6 +43,13 @@ const BACKGROUND_SYNC_TASK = 'BACKGROUND_SYNC_TASK';
 
 TaskManager.defineTask(BACKGROUND_SYNC_TASK, async () => {
   try {
+    const NetInfo = require('@react-native-community/netinfo').default;
+    const netState = await NetInfo.fetch();
+    if (!netState.isConnected) {
+      console.log("[BackgroundSync] Skipped: device is offline");
+      return BackgroundTask.BackgroundTaskResult.Success;
+    }
+
     const { authApi } = require('@annota/core');
     const { syncPull, syncPush } = require('@annota/core');
     const { getMasterKey } = require('@annota/core/platform');
@@ -187,6 +194,12 @@ function AppLogicHub() {
         const { useAiStore } = require('@annota/core');
         await useAiStore.persist.rehydrate();
 
+        // Initialize online status early on mobile
+        const NetInfo = require('@react-native-community/netinfo').default;
+        const netState = await NetInfo.fetch();
+        const initialOnline = !!netState.isConnected && !!netState.isInternetReachable;
+        useSyncStore.getState().setOnline(initialOnline);
+
         if (!isCloudEnabled) {
           useAuthStore.getState().setGuest(true);
           if (isMounted && !useAuthStore.getState().initialized) {
@@ -228,17 +241,19 @@ function AppLogicHub() {
           });
 
           try {
-            const { data: { session: currentSession } } = await withStartupTimeout(
-              authApi.getSession(),
-              'Session restore',
-            );
-            if (isMounted) {
-              if (currentSession) {
-                setSession(currentSession);
-              } else if (useAuthStore.getState().session) {
-                // If we had a session rehydrated but Supabase says no session,
-                // it means the token is expired/invalid. Set authRequired.
-                useSyncStore.getState().setAuthRequired(true);
+            if (useSyncStore.getState().isOnline) {
+              const { data: { session: currentSession } } = await withStartupTimeout(
+                authApi.getSession(),
+                'Session restore',
+              );
+              if (isMounted) {
+                if (currentSession) {
+                  setSession(currentSession);
+                } else if (useAuthStore.getState().session) {
+                  // If we had a session rehydrated but Supabase says no session,
+                  // it means the token is expired/invalid. Set authRequired.
+                  useSyncStore.getState().setAuthRequired(true);
+                }
               }
             }
           } catch (err) {

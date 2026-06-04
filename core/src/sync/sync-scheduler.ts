@@ -46,6 +46,7 @@ export class SyncScheduler {
     private hardMaxTimer: ReturnType<typeof setTimeout> | null = null;
     private appStateUnsubscribe: Unsubscribe | null = null;
     private netInfoUnsubscribe: Unsubscribe | null = null;
+    private wasOnline: boolean | null = null;
     // private lastOfflineToastAt = 0;
     private disposed = false;
     private initialized = false;
@@ -91,6 +92,13 @@ export class SyncScheduler {
             this.handleNetInfoChange,
         );
 
+        // Register force sync callback on the store to avoid circular imports and dynamic runtime imports when offline
+        useSyncStore.setState({
+            onForceSync: async () => {
+                await this.forceSync();
+            }
+        });
+
         // Hydrate the sync pointer from storage, then do the initial pull
         useSyncStore.getState().loadSyncCursors(userId).then(() => {
             if (!this.disposed) this.executeSyncPull();
@@ -100,6 +108,12 @@ export class SyncScheduler {
     /** Called on every note content change — resets the debounce timer */
     notifyContentChange(): void {
         if (this.disposed || !this.initialized) return;
+
+        if (!useSyncStore.getState().isOnline) {
+            // Offline: skip scheduling sync timers to conserve battery/CPU.
+            // Changes will be synced automatically on reconnect (handleNetInfoChange).
+            return;
+        }
 
         // Reset the 10 s debounce
         this.clearDebounce();
@@ -158,7 +172,11 @@ export class SyncScheduler {
         this.initialized = false;
         this.saltHex = '';
         this.userId = null;
+        this.wasOnline = null;
         this.clearAllTimers();
+
+        // Clear callback to avoid referencing disposed instance
+        useSyncStore.setState({ onForceSync: undefined });
 
         this.appStateUnsubscribe?.();
         this.appStateUnsubscribe = null;
@@ -187,7 +205,8 @@ export class SyncScheduler {
         if (this.disposed || !this.deps) return;
 
         const syncState = this.deps.getSyncState();
-        const wasOnline = syncState.isOnline;
+        const wasOnline = this.wasOnline !== null ? this.wasOnline : syncState.isOnline;
+        this.wasOnline = isOnline;
 
         syncState.setOnline(isOnline);
 

@@ -142,6 +142,8 @@ function App() {
         await useAiStore.persist.rehydrate();
         await useNavigationStore.persist.rehydrate();
 
+        // Initialize online status early
+        useSyncStore.getState().setOnline(navigator.onLine);
 
         // 2. Fetch/Apply remote app config (blocking sync if needed)
         if (isMain) {
@@ -171,7 +173,7 @@ function App() {
 
           // 3. Background session revalidation (Stale-While-Revalidate)
           // We don't await this because we want the app to boot instantly with rehydrated state.
-          if (isMain) {
+          if (isMain && useSyncStore.getState().isOnline) {
             void (async () => {
               try {
                 const { data } = await authApi.getSession();
