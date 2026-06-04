@@ -115,7 +115,11 @@ export default function LoginScreen() {
 
         setLoadingProvider(provider);
         try {
-            const { data, error } = await authApi.signInWithOAuth(provider, redirectUrl);
+            const { data, error } = await authApi.signInWithOAuth(provider, redirectUrl, {
+                queryParams: {
+                    prompt: 'consent',
+                },
+            });
 
             if (error) {
                 Alert.alert('Error', error.message);
@@ -130,6 +134,14 @@ export default function LoginScreen() {
                     const { url } = result;
                     const { params, errorCode } = QueryParams.getQueryParams(url);
                     if (errorCode) throw new Error(errorCode);
+
+                    // Surfacing explicit Supabase OAuth errors
+                    if (params.error || params.error_description) {
+                        const errorMsg = (params.error_description || params.error || '').replace(/\+/g, ' ');
+                        Alert.alert("Authentication Error", errorMsg);
+                        setLoadingProvider(null);
+                        return;
+                    }
 
                     const { access_token, refresh_token, code } = params;
 

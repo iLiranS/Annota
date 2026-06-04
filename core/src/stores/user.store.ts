@@ -227,6 +227,8 @@ export const useUserStore = create<UserState>()(
                 const { user } = get();
                 if (!user) return;
 
+                let errorToThrow: any = null;
+
                 try {
                     // 1. Delete all associated files from filesystem
                     // Using dynamic imports to avoid circular dependencies with db client
@@ -251,7 +253,7 @@ export const useUserStore = create<UserState>()(
                     await userService.deleteAccount();
                 } catch (e) {
                     console.error('[user.store] Error during account deletion cleanup:', e);
-                    // We continue to reset the store anyway to ensure the user is logged out locally
+                    errorToThrow = e;
                 }
 
                 set({
@@ -268,6 +270,10 @@ export const useUserStore = create<UserState>()(
                     updated_at: null,
                     hasMasterKey: null
                 });
+
+                if (errorToThrow) {
+                    throw errorToThrow;
+                }
             },
 
         }),

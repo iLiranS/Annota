@@ -19,14 +19,6 @@ export const storageApi = {
         return await supabase.storage.from(bucket).download(path);
     },
 
-    /** Execute the RPC to replace note files */
-    replaceNoteFiles: async (noteId: string, newUrlFragments: string[], deviceId: string) => {
-        return await supabase.rpc('replace_note_files', {
-            p_note_id: noteId,
-            p_new_url_fragments: newUrlFragments,
-            p_device_id: deviceId
-        });
-    },
 
     /** Execute the RPC to replace e2e note files */
     replaceE2ENoteFiles: async (noteId: string, userId: string, fileIds: string[]) => {

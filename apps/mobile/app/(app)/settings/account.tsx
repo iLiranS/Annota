@@ -7,7 +7,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as LocalAuthentication from 'expo-local-authentication';
 import React from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
 import Purchases from 'react-native-purchases';
 import RevenueCatUI, { PAYWALL_RESULT } from "react-native-purchases-ui";
 import { ENABLE_REVENUECAT } from '../../../services/RevenueCat';
@@ -29,6 +29,7 @@ export default function AccountSettingsScreen() {
 
     const [userRole, setUserRole] = React.useState<string | null>(null);
     const [storeDisplayName, setStoreDisplayName] = React.useState<string | null>(null);
+    const [isDeleting, setIsDeleting] = React.useState(false);
 
     React.useEffect(() => {
         if (session) {
@@ -151,23 +152,40 @@ export default function AccountSettingsScreen() {
                     text: 'Continue',
                     style: 'destructive',
                     onPress: async () => {
-                        const hasHardware = await LocalAuthentication.hasHardwareAsync();
-                        const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+                        let authenticated = true;
+                        try {
+                            const hasHardware = await LocalAuthentication.hasHardwareAsync();
+                            const isEnrolled = await LocalAuthentication.isEnrolledAsync();
 
-                        if (hasHardware && isEnrolled) {
-                            const authResult = await LocalAuthentication.authenticateAsync({
-                                promptMessage: 'Authenticate to delete your account',
-                                cancelLabel: 'Cancel',
-                            });
+                            if (hasHardware && isEnrolled) {
+                                const authResult = await LocalAuthentication.authenticateAsync({
+                                    promptMessage: 'Authenticate to delete your account',
+                                    cancelLabel: 'Cancel',
+                                });
 
-                            if (!authResult.success) return;
+                                authenticated = authResult.success;
+                            }
+                        } catch (authError) {
+                            console.warn('[AccountSettings] Biometric auth failed/unsupported:', authError);
                         }
 
+                        if (!authenticated) {
+                            Alert.alert('Authentication Failed', 'Could not verify your identity. Account deletion cancelled.');
+                            return;
+                        }
+
+                        setIsDeleting(true);
                         try {
                             await useAuthStore.getState().deleteAccount();
-                        } catch (error) {
+                            Alert.alert('Account Deleted', 'Your account and synced cloud data have been successfully deleted.');
+                        } catch (error: any) {
                             console.error('Failed to delete account:', error);
-                            Alert.alert('Error', 'Failed to delete account. Please try again.');
+                            Alert.alert(
+                                'Account Deletion Error',
+                                `Failed to delete remote cloud account data: ${error.message || error}.\n\nYour local session has been cleared, but you may need to contact support to ensure remote data is wiped.`
+                            );
+                        } finally {
+                            setIsDeleting(false);
                         }
                     }
                 }
@@ -184,10 +202,11 @@ export default function AccountSettingsScreen() {
     };
 
     return (
-        <ScrollView
-            style={[styles.container, { backgroundColor: colors.background }]}
-            contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
-        >
+        <View style={{ flex: 1, backgroundColor: colors.background }}>
+            <ScrollView
+                style={[styles.container, { backgroundColor: colors.background }]}
+                contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
+            >
             <View style={styles.section}>
                 <Text style={[styles.sectionHeader, { color: colors.text + '80' }]}>{session ? 'PROFILE' : 'ACCOUNT'}</Text>
                 <View style={[styles.card, { backgroundColor: colors.card }]}>
@@ -365,6 +384,19 @@ export default function AccountSettingsScreen() {
                 onSaved={setGuestDisplayName}
             />
         </ScrollView>
+
+        {isDeleting && (
+            <View style={[StyleSheet.absoluteFill, {
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                justifyContent: 'center',
+                alignItems: 'center',
+                zIndex: 999,
+            }]}>
+                <ActivityIndicator size="large" color="#FFFFFF" />
+                <Text style={{ color: '#FFFFFF', marginTop: 12, fontWeight: '600' }}>Deleting account...</Text>
+            </View>
+        )}
+    </View>
     );
 }
 

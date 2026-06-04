@@ -8,12 +8,13 @@ export const authApi = {
     },
 
     /** Sign in with an OAuth provider */
-    signInWithOAuth: async (provider: Provider, redirectTo: string) => {
+    signInWithOAuth: async (provider: Provider, redirectTo: string, options?: { queryParams?: Record<string, string> }) => {
         return await supabase.auth.signInWithOAuth({
             provider,
             options: {
                 redirectTo,
                 skipBrowserRedirect: true,
+                queryParams: options?.queryParams,
             },
         });
     },
