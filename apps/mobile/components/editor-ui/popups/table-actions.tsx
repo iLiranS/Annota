@@ -1,7 +1,8 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useTheme } from '@react-navigation/native';
+import { PlatformPressable } from '@react-navigation/elements';
 import React, { ComponentProps, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View, Platform } from 'react-native';
 
 import { COLOR_PALETTE } from '@annota/core/constants/colors';
 
@@ -80,128 +81,155 @@ export function TableActions({
     };
 
     return (
-        <View style={styles.popupContent}>
-            <Text style={[styles.popupTitle, { color: colors.text }]}>Table Options</Text>
+        <View style={styles.container}>
+            {/* Header */}
+            <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.card }]}>
+                <PlatformPressable onPress={onClose} style={styles.headerButton}>
+                    <Text style={[styles.headerCancelText, { color: colors.primary }]}>Cancel</Text>
+                </PlatformPressable>
+                <Text style={[styles.headerTitle, { color: colors.text }]}>Table Options</Text>
+                <View style={styles.headerButton} />
+            </View>
 
-            {/* Cell Background Section */}
-            <View style={styles.tableSection}>
-                <Text style={[styles.tableSectionTitle, { color: dark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)' }]}>
-                    Cell Background
-                </Text>
-                <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.colorGrid}
-                >
-                    {COLOR_PALETTE.map((colorOption) => {
-                        const colorValue = colorOption.value;
-                        const isSelected = selectedBgColor === colorValue;
-                        return (
-                            <Pressable
-                                key={colorValue}
-                                style={[
-                                    styles.colorItem,
-                                    { backgroundColor: colorValue },
-                                    isSelected && styles.colorItemSelected,
-                                ]}
-                                onPress={() => handleCellBackground(colorValue)}
-                            >
-                                {isSelected && (
-                                    <MaterialIcons name="check" size={18} color="#FFFFFF" />
-                                )}
-                            </Pressable>
-                        );
-                    })}
-                    <Pressable
-                        style={[styles.colorItem, styles.colorItemClear]}
-                        onPress={handleClearCellBackground}
-                        hitSlop={8}
+            <ScrollView contentContainerStyle={styles.formContent} keyboardShouldPersistTaps="handled">
+                {/* Cell Background Section */}
+                <View style={styles.tableSection}>
+                    <Text style={[styles.tableSectionTitle, { color: dark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)' }]}>
+                        Cell Background
+                    </Text>
+                    <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.colorGrid}
                     >
-                        <MaterialIcons name="format-color-reset" size={18} color={dark ? '#fff' : '#000'} />
-                    </Pressable>
-                </ScrollView>
-            </View>
-
-            {/* Row Section */}
-            <View style={styles.tableSection}>
-                <Text style={[styles.tableSectionTitle, { color: dark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)' }]}>
-                    Rows
-                </Text>
-                <View style={styles.tableActionsRow}>
-                    <TableActionButton
-                        icon="add"
-                        label="Add Above"
-                        onPress={() => handleCommand('addRowBefore')}
-                        disabled={!canAddRowBefore}
-                    />
-                    <TableActionButton
-                        icon="add"
-                        label="Add Below"
-                        onPress={() => handleCommand('addRowAfter')}
-                        disabled={!canAddRowAfter}
-                    />
-                    <TableActionButton
-                        icon="remove"
-                        label="Delete"
-                        onPress={() => handleCommand('deleteRow')}
-                        disabled={!canDeleteRow}
-                        destructive
-                    />
+                        {COLOR_PALETTE.map((colorOption) => {
+                            const colorValue = colorOption.value;
+                            const isSelected = selectedBgColor === colorValue;
+                            return (
+                                <Pressable
+                                    key={colorValue}
+                                    style={[
+                                        styles.colorItem,
+                                        { backgroundColor: colorValue },
+                                        isSelected && styles.colorItemSelected,
+                                    ]}
+                                    onPress={() => handleCellBackground(colorValue)}
+                                >
+                                    {isSelected && (
+                                        <MaterialIcons name="check" size={18} color="#FFFFFF" />
+                                    )}
+                                </Pressable>
+                            );
+                        })}
+                        <Pressable
+                            style={[styles.colorItem, styles.colorItemClear]}
+                            onPress={handleClearCellBackground}
+                            hitSlop={8}
+                        >
+                            <MaterialIcons name="format-color-reset" size={18} color={dark ? '#fff' : '#000'} />
+                        </Pressable>
+                    </ScrollView>
                 </View>
-            </View>
 
-            {/* Column Section */}
-            <View style={styles.tableSection}>
-                <Text style={[styles.tableSectionTitle, { color: dark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)' }]}>
-                    Columns
-                </Text>
-                <View style={styles.tableActionsRow}>
-                    <TableActionButton
-                        icon="add"
-                        label="Add Left"
-                        onPress={() => handleCommand('addColumnBefore')}
-                        disabled={!canAddColumnBefore}
-                    />
-                    <TableActionButton
-                        icon="add"
-                        label="Add Right"
-                        onPress={() => handleCommand('addColumnAfter')}
-                        disabled={!canAddColumnAfter}
-                    />
-                    <TableActionButton
-                        icon="remove"
-                        label="Delete"
-                        onPress={() => handleCommand('deleteColumn')}
-                        disabled={!canDeleteColumn}
-                        destructive
-                    />
+                {/* Row Section */}
+                <View style={styles.tableSection}>
+                    <Text style={[styles.tableSectionTitle, { color: dark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)' }]}>
+                        Rows
+                    </Text>
+                    <View style={styles.tableActionsRow}>
+                        <TableActionButton
+                            icon="add"
+                            label="Add Above"
+                            onPress={() => handleCommand('addRowBefore')}
+                            disabled={!canAddRowBefore}
+                        />
+                        <TableActionButton
+                            icon="add"
+                            label="Add Below"
+                            onPress={() => handleCommand('addRowAfter')}
+                            disabled={!canAddRowAfter}
+                        />
+                        <TableActionButton
+                            icon="remove"
+                            label="Delete"
+                            onPress={() => handleCommand('deleteRow')}
+                            disabled={!canDeleteRow}
+                            destructive
+                        />
+                    </View>
                 </View>
-            </View>
 
-            {/* Delete Table */}
-            <Pressable
-                style={[styles.deleteTableButton, !canDeleteTable && styles.tableActionButtonDisabled]}
-                onPress={() => handleCommand('deleteTable')}
-                disabled={!canDeleteTable}
-            >
-                <MaterialIcons name="delete-outline" size={20} color={canDeleteTable ? '#FF453A' : 'rgba(128,128,128,0.5)'} />
-                <Text style={[styles.deleteTableText, !canDeleteTable && { color: 'rgba(128,128,128,0.5)' }]}>Delete Table</Text>
-            </Pressable>
+                {/* Column Section */}
+                <View style={styles.tableSection}>
+                    <Text style={[styles.tableSectionTitle, { color: dark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)' }]}>
+                        Columns
+                    </Text>
+                    <View style={styles.tableActionsRow}>
+                        <TableActionButton
+                            icon="add"
+                            label="Add Left"
+                            onPress={() => handleCommand('addColumnBefore')}
+                            disabled={!canAddColumnBefore}
+                        />
+                        <TableActionButton
+                            icon="add"
+                            label="Add Right"
+                            onPress={() => handleCommand('addColumnAfter')}
+                            disabled={!canAddColumnAfter}
+                        />
+                        <TableActionButton
+                            icon="remove"
+                            label="Delete"
+                            onPress={() => handleCommand('deleteColumn')}
+                            disabled={!canDeleteColumn}
+                            destructive
+                        />
+                    </View>
+                </View>
+
+                {/* Delete Table */}
+                <Pressable
+                    style={[styles.deleteTableButton, !canDeleteTable && styles.tableActionButtonDisabled]}
+                    onPress={() => handleCommand('deleteTable')}
+                    disabled={!canDeleteTable}
+                >
+                    <MaterialIcons name="delete-outline" size={20} color={canDeleteTable ? '#FF453A' : 'rgba(128,128,128,0.5)'} />
+                    <Text style={[styles.deleteTableText, !canDeleteTable && { color: 'rgba(128,128,128,0.5)' }]}>Delete Table</Text>
+                </Pressable>
+            </ScrollView>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    popupContent: {
-        gap: 12,
+    container: {
+        flex: 1,
     },
-    popupTitle: {
-        fontSize: 17,
-        fontWeight: '600',
-        textAlign: 'center',
-        marginBottom: 4,
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        borderBottomWidth: 1,
     },
-    // Table popup styles
+    headerButton: {
+        minWidth: 60,
+        paddingVertical: 8,
+        justifyContent: 'center',
+    },
+    headerCancelText: {
+        fontSize: Platform.OS === 'ios' ? 17 : 14,
+        fontWeight: '400',
+    },
+    headerTitle: {
+        fontSize: Platform.OS === 'ios' ? 17 : 20,
+        fontWeight: Platform.OS === 'ios' ? '600' : '500',
+    },
+    formContent: {
+        padding: 16,
+        gap: 16,
+    },
     tableSection: {
         gap: 8,
     },

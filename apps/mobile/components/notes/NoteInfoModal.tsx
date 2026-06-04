@@ -4,7 +4,6 @@ import { useTheme } from '@react-navigation/native';
 import { format } from 'date-fns';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
-import { NoteConnectionsGraph } from './NoteConnectionsGraph';
 import {
     Modal,
     Pressable,
@@ -15,6 +14,7 @@ import {
     View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { NoteConnectionsGraph } from './NoteConnectionsGraph';
 
 interface TocItem {
     id: string;
@@ -40,6 +40,9 @@ export default function NoteInfoModal({ visible, onClose, noteId, onScrollToElem
     const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
     const [forwardLinks, setForwardLinks] = useState<any[]>([]);
     const [backlinks, setBacklinks] = useState<any[]>([]);
+    const [tocExpanded, setTocExpanded] = useState<boolean>(true);
+    const [connectionsExpanded, setConnectionsExpanded] = useState<boolean>(true);
+    const [statsExpanded, setStatsExpanded] = useState<boolean>(true);
 
     const hasForward = forwardLinks.length > 0;
     const hasBack = backlinks.length > 0;
@@ -128,142 +131,212 @@ export default function NoteInfoModal({ visible, onClose, noteId, onScrollToElem
                 </View>
 
                 <View style={styles.mainContent}>
-                    {/* Top: Scrollable TOC */}
-                    <ScrollView style={styles.scrollArea}>
-                        <View style={styles.section}>
-                            <Text style={[styles.sectionTitle, { color: colors.text + '60' }]}>TABLE OF CONTENTS</Text>
-                            {toc.length === 0 ? (
-                                <View style={[styles.emptyContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                                    <Text style={[styles.emptyText, { color: colors.text + '40' }]}>No headers found</Text>
+                    <ScrollView
+                        style={styles.scrollArea}
+                        contentContainerStyle={{ paddingBottom: insets.bottom + 20, paddingTop: 10 }}
+                    >
+                        {/* Section 1: Stats & Metadata */}
+                        <View style={{ marginBottom: 12 }}>
+                            <TouchableOpacity
+                                onPress={() => setStatsExpanded(!statsExpanded)}
+                                style={styles.accordionHeader}
+                            >
+                                <View style={styles.accordionHeaderLeft}>
+                                    <Ionicons name="stats-chart-outline" size={14} color={colors.primary} />
+                                    <Text style={[styles.accordionTitle, { color: colors.text + '60' }]}>STATS & METADATA</Text>
                                 </View>
-                            ) : (
-                                <View style={styles.tocContainer}>
-                                    {toc.map((item, idx) => {
-                                        if (!isVisible(idx)) return null;
-                                        const itemHasChildren = hasChildren(idx);
-                                        const isCollapsed = collapsedIds.has(item.id);
+                                <Ionicons
+                                    name={statsExpanded ? "chevron-down" : "chevron-forward"}
+                                    size={16}
+                                    color={colors.text + '40'}
+                                />
+                            </TouchableOpacity>
 
-                                        return (
-                                            <View
-                                                key={`${item.id}-${idx}`}
-                                                style={[
-                                                    styles.tocItem,
-                                                    { marginLeft: (item.level - 1) * 16 }
-                                                ]}
-                                            >
-                                                <TouchableOpacity
-                                                    onPress={() => toggleCollapse(item.id)}
-                                                    style={[styles.collapseButton, !itemHasChildren && { opacity: 0 }]}
-                                                    disabled={!itemHasChildren}
-                                                >
-                                                    <Ionicons
-                                                        name={isCollapsed ? "chevron-forward" : "chevron-down"}
-                                                        size={14}
-                                                        color={colors.primary + '40'}
-                                                    />
-                                                </TouchableOpacity>
-                                                <Pressable
-                                                    onPress={() => {
-                                                        onScrollToElement(item.id);
-                                                        onClose();
-                                                    }}
-                                                    style={({ pressed }) => [
-                                                        styles.tocTextButton,
-                                                        pressed && { backgroundColor: colors.primary + '25' }
-                                                    ]}
-                                                >
-                                                    {({ pressed }) => (
-                                                        <Text
-                                                            numberOfLines={1}
-                                                            style={[
-                                                                styles.tocText,
-                                                                { color: pressed ? colors.primary : colors.text + '80' },
-                                                                item.level === 1 && styles.tocTextH1,
-                                                                item.level === 2 && styles.tocTextH2,
-                                                            ]}
-                                                        >
-                                                            {item.text}
-                                                        </Text>
-                                                    )}
-                                                </Pressable>
+                            {statsExpanded && (
+                                <View style={styles.accordionContent}>
+                                    <View style={styles.metadataContainer}>
+                                        {/* Words */}
+                                        <View style={styles.metaRow}>
+                                            <View style={styles.metaLabelContainer}>
+                                                <Ionicons name="language-outline" size={16} color={colors.primary + '80'} />
+                                                <Text style={[styles.metaLabel, { color: colors.text + '60' }]}>WORDS</Text>
                                             </View>
-                                        );
-                                    })}
+                                            <View style={styles.metaValueContainer}>
+                                                <Text style={[styles.metaDate, { color: colors.text + '80' }]}>{stats.words}</Text>
+                                            </View>
+                                        </View>
+
+                                        {/* Chars */}
+                                        <View style={styles.metaRow}>
+                                            <View style={styles.metaLabelContainer}>
+                                                <Ionicons name="text-outline" size={16} color={colors.primary + '80'} />
+                                                <Text style={[styles.metaLabel, { color: colors.text + '60' }]}>CHARACTERS</Text>
+                                            </View>
+                                            <View style={styles.metaValueContainer}>
+                                                <Text style={[styles.metaDate, { color: colors.text + '80' }]}>{stats.chars}</Text>
+                                            </View>
+                                        </View>
+
+                                        {/* Size */}
+                                        <View style={styles.metaRow}>
+                                            <View style={styles.metaLabelContainer}>
+                                                <Ionicons name="save-outline" size={16} color={colors.primary + '80'} />
+                                                <Text style={[styles.metaLabel, { color: colors.text + '60' }]}>SIZE</Text>
+                                            </View>
+                                            <View style={styles.metaValueContainer}>
+                                                <Text style={[styles.metaDate, { color: colors.text + '80' }]}>{formatSize(stats.size)}</Text>
+                                            </View>
+                                        </View>
+
+                                        {/* Created */}
+                                        <View style={styles.metaRow}>
+                                            <View style={styles.metaLabelContainer}>
+                                                <Ionicons name="calendar-outline" size={16} color={colors.primary + '80'} />
+                                                <Text style={[styles.metaLabel, { color: colors.text + '60' }]}>CREATED</Text>
+                                            </View>
+                                            <View style={styles.metaValueContainer}>
+                                                <Text style={[styles.metaTime, { color: colors.text + '40' }]}>
+                                                    {format(new Date(note.createdAt), "HH:mm")}
+                                                </Text>
+                                                <Text style={[styles.metaDate, { color: colors.text + '80' }]}>
+                                                    {format(new Date(note.createdAt), "MMM d, yyyy")}
+                                                </Text>
+                                            </View>
+                                        </View>
+
+                                        {/* Updated */}
+                                        <View style={styles.metaRow}>
+                                            <View style={styles.metaLabelContainer}>
+                                                <Ionicons name="time-outline" size={16} color={colors.primary + '80'} />
+                                                <Text style={[styles.metaLabel, { color: colors.text + '60' }]}>UPDATED</Text>
+                                            </View>
+                                            <View style={styles.metaValueContainer}>
+                                                <Text style={[styles.metaTime, { color: colors.text + '40' }]}>
+                                                    {format(new Date(note.updatedAt), "HH:mm")}
+                                                </Text>
+                                                <Text style={[styles.metaDate, { color: colors.text + '80' }]}>
+                                                    {format(new Date(note.updatedAt), "MMM d, yyyy")}
+                                                </Text>
+                                            </View>
+                                        </View>
+                                    </View>
                                 </View>
                             )}
                         </View>
 
+                        {/* Section 2: Connections Map */}
+                        {(hasForward || hasBack) && (
+                            <View style={{ marginBottom: 12 }}>
+                                <TouchableOpacity
+                                    onPress={() => setConnectionsExpanded(!connectionsExpanded)}
+                                    style={styles.accordionHeader}
+                                >
+                                    <View style={styles.accordionHeaderLeft}>
+                                        <Ionicons name="git-network-outline" size={14} color={colors.primary} />
+                                        <Text style={[styles.accordionTitle, { color: colors.text + '60' }]}>CONNECTIONS MAP</Text>
+                                    </View>
+                                    <Ionicons
+                                        name={connectionsExpanded ? "chevron-down" : "chevron-forward"}
+                                        size={16}
+                                        color={colors.text + '40'}
+                                    />
+                                </TouchableOpacity>
+
+                                {connectionsExpanded && (
+                                    <View style={{ paddingHorizontal: 20, paddingBottom: 16 }}>
+                                        <NoteConnectionsGraph
+                                            noteId={noteId}
+                                            backlinks={backlinks}
+                                            forwardLinks={forwardLinks}
+                                            onClose={onClose}
+                                        />
+                                    </View>
+                                )}
+                            </View>
+                        )}
+
+                        {/* Section 3: Table of Contents */}
+                        <View style={{ marginBottom: 12 }}>
+                            <TouchableOpacity
+                                onPress={() => setTocExpanded(!tocExpanded)}
+                                style={styles.accordionHeader}
+                            >
+                                <View style={styles.accordionHeaderLeft}>
+                                    <Ionicons name="list-outline" size={14} color={colors.primary} />
+                                    <Text style={[styles.accordionTitle, { color: colors.text + '60' }]}>TABLE OF CONTENTS</Text>
+                                </View>
+                                <Ionicons
+                                    name={tocExpanded ? "chevron-down" : "chevron-forward"}
+                                    size={16}
+                                    color={colors.text + '40'}
+                                />
+                            </TouchableOpacity>
+
+                            {tocExpanded && (
+                                <View style={styles.accordionContent}>
+                                    {toc.length === 0 ? (
+                                        <View style={[styles.emptyContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                                            <Text style={[styles.emptyText, { color: colors.text + '40' }]}>No headers found</Text>
+                                        </View>
+                                    ) : (
+                                        <View style={styles.tocContainer}>
+                                            {toc.map((item, idx) => {
+                                                if (!isVisible(idx)) return null;
+                                                const itemHasChildren = hasChildren(idx);
+                                                const isCollapsed = collapsedIds.has(item.id);
+
+                                                return (
+                                                    <View
+                                                        key={`${item.id}-${idx}`}
+                                                        style={[
+                                                            styles.tocItem,
+                                                            { marginLeft: (item.level - 1) * 16 }
+                                                        ]}
+                                                    >
+                                                        <TouchableOpacity
+                                                            onPress={() => toggleCollapse(item.id)}
+                                                            style={[styles.collapseButton, !itemHasChildren && { opacity: 0 }]}
+                                                            disabled={!itemHasChildren}
+                                                        >
+                                                            <Ionicons
+                                                                name={isCollapsed ? "chevron-forward" : "chevron-down"}
+                                                                size={14}
+                                                                color={colors.primary + '40'}
+                                                            />
+                                                        </TouchableOpacity>
+                                                        <Pressable
+                                                            onPress={() => {
+                                                                onScrollToElement(item.id);
+                                                                onClose();
+                                                            }}
+                                                            style={({ pressed }) => [
+                                                                styles.tocTextButton,
+                                                                pressed && { backgroundColor: colors.primary + '25' }
+                                                            ]}
+                                                        >
+                                                            {({ pressed }) => (
+                                                                <Text
+                                                                    numberOfLines={1}
+                                                                    style={[
+                                                                        styles.tocText,
+                                                                        { color: pressed ? colors.primary : colors.text + '80' },
+                                                                        item.level === 1 && styles.tocTextH1,
+                                                                        item.level === 2 && styles.tocTextH2,
+                                                                    ]}
+                                                                >
+                                                                    {item.text}
+                                                                </Text>
+                                                            )}
+                                                        </Pressable>
+                                                    </View>
+                                                );
+                                            })}
+                                        </View>
+                                    )}
+                                </View>
+                            )}
+                        </View>
                     </ScrollView>
-
-                    {/* Connections Map (Connections Graph) */}
-                    {hasForward || hasBack ? (
-                        <NoteConnectionsGraph 
-                            noteId={noteId} 
-                            backlinks={backlinks} 
-                            forwardLinks={forwardLinks} 
-                            onClose={onClose}
-                        />
-                    ) : null}
-
-                    {/* Bottom: Anchored Stats & Metadata */}
-                    <View style={[styles.footer, { paddingBottom: insets.bottom }]}>
-                        {/* Stats */}
-                        <View style={styles.statsGrid}>
-                            <View style={[styles.statBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                                <View style={styles.statHeader}>
-                                    <Ionicons name="document-text-outline" size={14} color={colors.primary} />
-                                    <Text style={[styles.statLabel, { color: colors.text + '60' }]}>WORDS</Text>
-                                </View>
-                                <Text style={[styles.statValue, { color: colors.text + "80" }]}>{stats.words}</Text>
-                            </View>
-                            <View style={[styles.statBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                                <View style={styles.statHeader}>
-                                    <Ionicons name="reader-outline" size={14} color={colors.primary} />
-                                    <Text style={[styles.statLabel, { color: colors.text + '60' }]}>CHARS</Text>
-                                </View>
-                                <Text style={[styles.statValue, { color: colors.text + "80" }]}>{stats.chars}</Text>
-                            </View>
-                            <View style={[styles.statBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                                <View style={styles.statHeader}>
-                                    <Ionicons name="save-outline" size={14} color={colors.primary} />
-                                    <Text style={[styles.statLabel, { color: colors.text + '60' }]}>SIZE</Text>
-                                </View>
-                                <Text style={[styles.statValue, { color: colors.text + "80" }]}>{formatSize(stats.size)}</Text>
-                            </View>
-                        </View>
-
-                        {/* Metadata */}
-                        <View style={styles.metadataContainer}>
-                            <View style={styles.metaRow}>
-                                <View style={styles.metaLabelContainer}>
-                                    <Ionicons name="calendar-outline" size={16} color={colors.primary + '80'} />
-                                    <Text style={[styles.metaLabel, { color: colors.text + '60' }]}>CREATED</Text>
-                                </View>
-                                <View style={styles.metaValueContainer}>
-                                    <Text style={[styles.metaDate, { color: colors.text + '80' }]}>
-                                        {format(new Date(note.createdAt), "MMM d, yyyy")}
-                                    </Text>
-                                    <Text style={[styles.metaTime, { color: colors.text + '40' }]}>
-                                        {format(new Date(note.createdAt), "HH:mm")}
-                                    </Text>
-                                </View>
-                            </View>
-                            <View style={styles.metaRow}>
-                                <View style={styles.metaLabelContainer}>
-                                    <Ionicons name="time-outline" size={16} color={colors.primary + '80'} />
-                                    <Text style={[styles.metaLabel, { color: colors.text + '60' }]}>UPDATED</Text>
-                                </View>
-                                <View style={styles.metaValueContainer}>
-                                    <Text style={[styles.metaDate, { color: colors.text + '80' }]}>
-                                        {format(new Date(note.updatedAt), "MMM d, yyyy")}
-                                    </Text>
-                                    <Text style={[styles.metaTime, { color: colors.text + '40' }]}>
-                                        {format(new Date(note.updatedAt), "HH:mm")}
-                                    </Text>
-                                </View>
-                            </View>
-                        </View>
-                    </View>
                 </View>
             </View>
         </Modal>
@@ -538,5 +611,26 @@ const styles = StyleSheet.create({
     mapCurrentText: {
         fontSize: 11,
         fontWeight: '700',
+    },
+    accordionHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+    },
+    accordionHeaderLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    accordionTitle: {
+        fontSize: 10,
+        fontWeight: '700',
+        letterSpacing: 1,
+    },
+    accordionContent: {
+        paddingHorizontal: 20,
+        paddingBottom: 16,
     },
 });

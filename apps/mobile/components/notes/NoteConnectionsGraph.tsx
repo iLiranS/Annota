@@ -31,117 +31,110 @@ export function NoteConnectionsGraph({ noteId, backlinks, forwardLinks, onClose 
     if (!note) return null;
 
     return (
-        <View style={[styles.linksCard, { backgroundColor: colors.card + '30', borderColor: colors.border }]}>
-            <View style={styles.mapHeader}>
-                <Ionicons name="git-network-outline" size={12} color={colors.primary} />
-                <Text style={[styles.mapTitle, { color: colors.text + '60' }]}>CONNECTIONS MAP</Text>
+        <View style={styles.mapContainer}>
+            {/* Vertical Center Spine Line (Axis boundary) */}
+            <View style={[styles.verticalSpine, { backgroundColor: colors.border }]} pointerEvents="none" />
+
+            {/* Left Column: Backlinks */}
+            <View style={styles.columnLeft}>
+                {displayBacklinks.length > 0 ? (
+                    displayBacklinks.map((link) => {
+                        const folderColor = getNoteFolderColor(link.id);
+                        return (
+                            <View key={link.id} style={styles.rowRight}>
+                                <Pressable
+                                    onPress={() => {
+                                        onClose();
+                                        router.push({
+                                            pathname: '/Notes/[id]',
+                                            params: {
+                                                id: link.id,
+                                                source: 'link',
+                                                ...(link.blockId ? { blockId: link.blockId } : {})
+                                            }
+                                        });
+                                    }}
+                                    style={({ pressed }) => [
+                                        styles.pill,
+                                        styles.pillLeft,
+                                        {
+                                            borderColor: folderColor + '40',
+                                            backgroundColor: folderColor + '10',
+                                        },
+                                        pressed && { backgroundColor: folderColor + '25' }
+                                    ]}
+                                >
+                                    <Text numberOfLines={1} style={[styles.pillText, { color: folderColor }]}>
+                                        {link.title || 'Untitled Note'}
+                                    </Text>
+                                </Pressable>
+                                {/* Connector Line - absolute on right boundary */}
+                                <View style={[styles.lineLeft, { backgroundColor: folderColor + '30' }]} />
+                                {/* Dot - centered exactly on the spine */}
+                                <View style={[styles.dotLeft, { backgroundColor: folderColor, borderColor: colors.card }]} />
+                            </View>
+                        );
+                    })
+                ) : (
+                    <View style={styles.rowRight}>
+                        <Text style={[styles.emptyLabel, styles.pillLeft, { color: colors.text + '30', borderColor: colors.border + '60' }]}>
+                            No backlinks
+                        </Text>
+                        <View style={[styles.lineLeft, { backgroundColor: colors.border + '20' }]} />
+                        <View style={[styles.dotLeft, { backgroundColor: colors.border + '20', borderColor: colors.card }]} />
+                    </View>
+                )}
             </View>
 
-            <View style={styles.mapContainer}>
-                {/* Vertical Center Spine Line (Axis boundary) */}
-                <View style={[styles.verticalSpine, { backgroundColor: colors.border }]} pointerEvents="none" />
-
-                {/* Left Column: Backlinks */}
-                <View style={styles.columnLeft}>
-                    {displayBacklinks.length > 0 ? (
-                        displayBacklinks.map((link) => {
-                            const folderColor = getNoteFolderColor(link.id);
-                            return (
-                                <View key={link.id} style={styles.rowRight}>
-                                    <Pressable
-                                        onPress={() => {
-                                            onClose();
-                                            router.push({
-                                                pathname: '/Notes/[id]',
-                                                params: {
-                                                    id: link.id,
-                                                    source: 'link',
-                                                    ...(link.blockId ? { blockId: link.blockId } : {})
-                                                }
-                                            });
-                                        }}
-                                        style={({ pressed }) => [
-                                            styles.pill,
-                                            styles.pillLeft,
-                                            {
-                                                borderColor: folderColor + '40',
-                                                backgroundColor: folderColor + '10',
-                                            },
-                                            pressed && { backgroundColor: folderColor + '25' }
-                                        ]}
-                                    >
-                                        <Text numberOfLines={1} style={[styles.pillText, { color: folderColor }]}>
-                                            {link.title || 'Untitled Note'}
-                                        </Text>
-                                    </Pressable>
-                                    {/* Connector Line - absolute on right boundary */}
-                                    <View style={[styles.lineLeft, { backgroundColor: folderColor + '30' }]} />
-                                    {/* Dot - centered exactly on the spine */}
-                                    <View style={[styles.dotLeft, { backgroundColor: folderColor, borderColor: colors.card }]} />
-                                </View>
-                            );
-                        })
-                    ) : (
-                        <View style={styles.rowRight}>
-                            <Text style={[styles.emptyLabel, styles.pillLeft, { color: colors.text + '30', borderColor: colors.border + '60' }]}>
-                                No backlinks
-                            </Text>
-                            <View style={[styles.lineLeft, { backgroundColor: colors.border + '20' }]} />
-                            <View style={[styles.dotLeft, { backgroundColor: colors.border + '20', borderColor: colors.card }]} />
-                        </View>
-                    )}
-                </View>
-
-                {/* Right Column: Forward Links */}
-                <View style={styles.columnRight}>
-                    {displayForwardLinks.length > 0 ? (
-                        displayForwardLinks.map((link) => {
-                            const folderColor = getNoteFolderColor(link.id);
-                            return (
-                                <View key={link.id} style={styles.rowLeft}>
-                                    {/* Dot - centered exactly on the spine */}
-                                    <View style={[styles.dotRight, { backgroundColor: folderColor, borderColor: colors.card }]} />
-                                    {/* Connector Line - absolute on left boundary */}
-                                    <View style={[styles.lineRight, { backgroundColor: folderColor + '30' }]} />
-                                    <Pressable
-                                        onPress={() => {
-                                            onClose();
-                                            router.push({
-                                                pathname: '/Notes/[id]',
-                                                params: {
-                                                    id: link.id,
-                                                    source: 'link',
-                                                    ...(link.blockId ? { blockId: link.blockId } : {})
-                                                }
-                                            });
-                                        }}
-                                        style={({ pressed }) => [
-                                            styles.pill,
-                                            styles.pillRight,
-                                            {
-                                                borderColor: folderColor + '40',
-                                                backgroundColor: folderColor + '10',
-                                            },
-                                            pressed && { backgroundColor: folderColor + '25' }
-                                        ]}
-                                    >
-                                        <Text numberOfLines={1} style={[styles.pillText, { color: folderColor }]}>
-                                            {link.title || 'Untitled Note'}
-                                        </Text>
-                                    </Pressable>
-                                </View>
-                            );
-                        })
-                    ) : (
-                        <View style={styles.rowLeft}>
-                            <View style={[styles.dotRight, { backgroundColor: colors.border + '20', borderColor: colors.card }]} />
-                            <View style={[styles.lineRight, { backgroundColor: colors.border + '20' }]} />
-                            <Text style={[styles.emptyLabel, styles.pillRight, { color: colors.text + '30', borderColor: colors.border + '60' }]}>
-                                No links
-                            </Text>
-                        </View>
-                    )}
-                </View>
+            {/* Right Column: Forward Links */}
+            <View style={styles.columnRight}>
+                {displayForwardLinks.length > 0 ? (
+                    displayForwardLinks.map((link) => {
+                        const folderColor = getNoteFolderColor(link.id);
+                        return (
+                            <View key={link.id} style={styles.rowLeft}>
+                                {/* Dot - centered exactly on the spine */}
+                                <View style={[styles.dotRight, { backgroundColor: folderColor, borderColor: colors.card }]} />
+                                {/* Connector Line - absolute on left boundary */}
+                                <View style={[styles.lineRight, { backgroundColor: folderColor + '30' }]} />
+                                <Pressable
+                                    onPress={() => {
+                                        onClose();
+                                        router.push({
+                                            pathname: '/Notes/[id]',
+                                            params: {
+                                                id: link.id,
+                                                source: 'link',
+                                                ...(link.blockId ? { blockId: link.blockId } : {})
+                                            }
+                                        });
+                                    }}
+                                    style={({ pressed }) => [
+                                        styles.pill,
+                                        styles.pillRight,
+                                        {
+                                            borderColor: folderColor + '40',
+                                            backgroundColor: folderColor + '10',
+                                        },
+                                        pressed && { backgroundColor: folderColor + '25' }
+                                    ]}
+                                >
+                                    <Text numberOfLines={1} style={[styles.pillText, { color: folderColor }]}>
+                                        {link.title || 'Untitled Note'}
+                                    </Text>
+                                </Pressable>
+                            </View>
+                        );
+                    })
+                ) : (
+                    <View style={styles.rowLeft}>
+                        <View style={[styles.dotRight, { backgroundColor: colors.border + '20', borderColor: colors.card }]} />
+                        <View style={[styles.lineRight, { backgroundColor: colors.border + '20' }]} />
+                        <Text style={[styles.emptyLabel, styles.pillRight, { color: colors.text + '30', borderColor: colors.border + '60' }]}>
+                            No links
+                        </Text>
+                    </View>
+                )}
             </View>
         </View>
     );

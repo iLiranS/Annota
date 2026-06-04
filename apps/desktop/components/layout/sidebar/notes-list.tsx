@@ -109,7 +109,7 @@ export function NotesList({
 
 
     return (
-        <div className="flex-1 pt-1 flex flex-col min-h-0">
+        <div className="flex-1 flex flex-col min-h-0">
             <SidebarGroup className=" flex flex-col flex-1 min-h-0">
 
                 {selectionMode && (
@@ -187,7 +187,7 @@ export function NotesList({
 
                             {/* Pinned Section */}
                             {!isTrash && pinnedNotes.length > 0 && (
-                                <div className="mt-1">
+                                <div >
                                     {regularNotes.length > 0 && (
                                         <div className="flex items-center gap-1 border-t border-b border-sidebar-border/60  px-2 bg-sidebar  text-[10px] font-semibold text-muted-foreground/60">
                                             <Pin size={10} className="shrink-0 text-muted-foreground/50" />
@@ -216,7 +216,7 @@ export function NotesList({
 
                             {/* Regular Notes Section */}
                             {regularNotes.length > 0 && (
-                                <div className="mt-1">
+                                <div >
                                     {!isTrash && pinnedNotes.length > 0 && (
                                         <div className="flex items-center gap-1 bg-sidebar border-t border-b border-sidebar-border/60 px-2  text-[10px] font-semibold text-muted-foreground/60">
                                             <FileText size={10} className="shrink-0 text-muted-foreground/50" />

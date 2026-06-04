@@ -1,12 +1,14 @@
 import { useTheme } from '@react-navigation/native';
+import { PlatformPressable } from '@react-navigation/elements';
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, ScrollView, Platform } from 'react-native';
 
 interface TableSelectorProps {
     onSelect: (rows: number, cols: number) => void;
+    onClose: () => void;
 }
 
-export function TableSelector({ onSelect }: TableSelectorProps) {
+export function TableSelector({ onSelect, onClose }: TableSelectorProps) {
     const { colors, dark } = useTheme();
 
     const options = [
@@ -21,38 +23,67 @@ export function TableSelector({ onSelect }: TableSelectorProps) {
     ];
 
     return (
-        <View style={styles.popupContent}>
-            <Text style={[styles.popupTitle, { color: colors.text }]}>Insert Table Size</Text>
-            <View style={styles.grid}>
-                {options.map((opt) => (
-                    <Pressable
-                        key={opt.label}
-                        style={({ pressed }) => [
-                            styles.gridItem,
-                            { backgroundColor: dark ? '#2C2C2E' : '#F2F2F7' },
-                            pressed && { opacity: 0.7 }
-                        ]}
-                        onPress={() => onSelect(opt.rows, opt.cols)}
-                    >
-                        <Text style={[styles.gridText, { color: colors.text }]}>
-                            {opt.label}
-                        </Text>
-                    </Pressable>
-                ))}
+        <View style={styles.container}>
+            {/* Header */}
+            <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.card }]}>
+                <PlatformPressable onPress={onClose} style={styles.headerButton}>
+                    <Text style={[styles.headerCancelText, { color: colors.primary }]}>Cancel</Text>
+                </PlatformPressable>
+                <Text style={[styles.headerTitle, { color: colors.text }]}>Insert Table</Text>
+                <View style={styles.headerButton} />
             </View>
+
+            <ScrollView contentContainerStyle={styles.formContent} keyboardShouldPersistTaps="handled">
+                <View style={styles.grid}>
+                    {options.map((opt) => (
+                        <Pressable
+                            key={opt.label}
+                            style={({ pressed }) => [
+                                styles.gridItem,
+                                { backgroundColor: dark ? '#2C2C2E' : '#F2F2F7' },
+                                pressed && { opacity: 0.7 }
+                            ]}
+                            onPress={() => onSelect(opt.rows, opt.cols)}
+                        >
+                            <Text style={[styles.gridText, { color: colors.text }]}>
+                                {opt.label}
+                            </Text>
+                        </Pressable>
+                    ))}
+                </View>
+            </ScrollView>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    popupContent: {
-        gap: 12,
+    container: {
+        flex: 1,
     },
-    popupTitle: {
-        fontSize: 17,
-        fontWeight: '600',
-        textAlign: 'center',
-        marginBottom: 8,
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        borderBottomWidth: 1,
+    },
+    headerButton: {
+        minWidth: 60,
+        paddingVertical: 8,
+        justifyContent: 'center',
+    },
+    headerCancelText: {
+        fontSize: Platform.OS === 'ios' ? 17 : 14,
+        fontWeight: '400',
+    },
+    headerTitle: {
+        fontSize: Platform.OS === 'ios' ? 17 : 20,
+        fontWeight: Platform.OS === 'ios' ? '600' : '500',
+    },
+    formContent: {
+        padding: 16,
+        gap: 16,
     },
     grid: {
         flexDirection: 'row',

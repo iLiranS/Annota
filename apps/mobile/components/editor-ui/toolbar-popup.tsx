@@ -284,6 +284,7 @@ export function ToolbarPopup(props: ToolbarPopupProps) {
                             (props as any).onCommand?.('insertTable', { rows, cols, withHeaderRow: false });
                             onClose();
                         }}
+                        onClose={onClose}
                     />
                 );
             case 'codeLanguage':
@@ -329,7 +330,7 @@ export function ToolbarPopup(props: ToolbarPopupProps) {
 
 
 
-    const isModal = type === 'link' || type === 'youtube' || type === 'math' || type === 'file';
+    const isModal = type === 'link' || type === 'youtube' || type === 'math' || type === 'file' || type === 'table' || type === 'insertTable';
 
     if (isModal) {
         return (

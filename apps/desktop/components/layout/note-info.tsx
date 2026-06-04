@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import { calculateNoteStats, useNotesStore } from "@annota/core";
 import { format } from "date-fns";
-import { Calendar, ChevronDown, ChevronRight, Clock, FileText, HardDrive, Hash, ListTree } from "lucide-react";
+import { BarChart3, Calendar, ChevronDown, ChevronRight, Clock, FileText, HardDrive, Hash, ListTree, Network } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { NoteConnectionsGraph } from "../notes/note-connections-graph";
 
@@ -21,6 +21,9 @@ export function NoteInfo({ noteId }: { noteId: string }) {
     const [forwardLinks, setForwardLinks] = useState<any[]>([]);
     const [backlinks, setBacklinks] = useState<any[]>([]);
     const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
+    const [tocExpanded, setTocExpanded] = useState<boolean>(true);
+    const [connectionsExpanded, setConnectionsExpanded] = useState<boolean>(true);
+    const [statsExpanded, setStatsExpanded] = useState<boolean>(true);
     const updateTimeoutRef = useRef<any>(null);
     const lastFetchedContentRef = useRef<string>("");
 
@@ -135,16 +138,143 @@ export function NoteInfo({ noteId }: { noteId: string }) {
 
     return (
         <div className="flex flex-col h-full overflow-hidden">
-            {/* Top: TOC Section (Scrollable) */}
-            <div className="flex-1 min-h-0 flex flex-col">
-                <div data-tauri-drag-region className="flex-1 overflow-y-auto pr-2 premium-scrollbar space-y-6 pb-2">
-                    {/* TOC */}
-                    <div>
-                        <h3 className="text-[10px] font-bold uppercase tracking-wider mb-1 text-muted-foreground/60 px-1 shrink-0 flex items-center gap-1.5">
+            <div data-tauri-drag-region className="flex-1 overflow-y-auto pr-2 premium-scrollbar space-y-6 pb-4">
+                {/* Section 1: Stats & Metadata */}
+                <div className="space-y-2">
+                    <button
+                        onClick={() => setStatsExpanded(!statsExpanded)}
+                        className="w-full flex items-center justify-between py-1.5 px-1 hover:bg-muted/10 rounded-lg transition-colors group text-left"
+                    >
+                        <div className="flex items-center gap-1.5">
+                            <BarChart3 size={12} className="opacity-70 text-accent-full" />
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
+                                Stats & Metadata
+                            </span>
+                        </div>
+                        {statsExpanded ? (
+                            <ChevronDown size={12} className="text-muted-foreground/40 group-hover:text-muted-foreground/75" />
+                        ) : (
+                            <ChevronRight size={12} className="text-muted-foreground/40 group-hover:text-muted-foreground/75" />
+                        )}
+                    </button>
+
+                    {statsExpanded && (
+                        <div className="space-y-3 px-1">
+                            {/* Words */}
+                            <div className="flex items-center justify-between text-xs text-muted-foreground/80 px-1">
+                                <div className="flex items-center gap-2.5">
+                                    <FileText size={14} className="text-accent-full/60" />
+                                    <span className="font-medium text-muted-foreground/60 uppercase text-[9px] tracking-wider">Words</span>
+                                </div>
+                                <span className="font-semibold text-muted-foreground/70 tabular-nums">{stats.words}</span>
+                            </div>
+
+                            {/* Characters */}
+                            <div className="flex items-center justify-between text-xs text-muted-foreground/80 px-1">
+                                <div className="flex items-center gap-2.5">
+                                    <Hash size={14} className="text-accent-full/60" />
+                                    <span className="font-medium text-muted-foreground/60 uppercase text-[9px] tracking-wider">Characters</span>
+                                </div>
+                                <span className="font-semibold text-muted-foreground/70 tabular-nums">{stats.chars}</span>
+                            </div>
+
+                            {/* Size */}
+                            <div className="flex items-center justify-between text-xs text-muted-foreground/80 px-1">
+                                <div className="flex items-center gap-2.5">
+                                    <HardDrive size={14} className="text-accent-full/60" />
+                                    <span className="font-medium text-muted-foreground/60 uppercase text-[9px] tracking-wider">Size</span>
+                                </div>
+                                <span className="font-semibold text-muted-foreground/70 tabular-nums whitespace-nowrap">{formatSize(stats.size)}</span>
+                            </div>
+
+                            {/* Created */}
+                            <div className="flex items-center justify-between text-xs text-muted-foreground/80 px-1">
+                                <div className="flex items-center gap-2.5">
+                                    <Calendar size={14} className="text-accent-full/60" />
+                                    <span className="font-medium text-muted-foreground/60 uppercase text-[9px] tracking-wider">Created</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-muted-foreground/40 tabular-nums font-medium text-[10px]">
+                                        {format(new Date(note.createdAt), "HH:mm")}
+                                    </span>
+                                    <span className="font-semibold text-muted-foreground/70">
+                                        {format(new Date(note.createdAt), "MMM d, yyyy")}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Updated */}
+                            <div className="flex items-center justify-between text-xs text-muted-foreground/80 px-1">
+                                <div className="flex items-center gap-2.5">
+                                    <Clock size={14} className="text-accent-full/60" />
+                                    <span className="font-medium text-muted-foreground/60 uppercase text-[9px] tracking-wider">Updated</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-muted-foreground/40 tabular-nums font-medium text-[10px]">
+                                        {format(new Date(note.updatedAt), "HH:mm")}
+                                    </span>
+                                    <span className="font-semibold text-muted-foreground/70">
+                                        {format(new Date(note.updatedAt), "MMM d, yyyy")}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Section 2: Connections Map */}
+                {(hasForward || hasBack) && (
+                    <div className="space-y-2">
+                        <button
+                            onClick={() => setConnectionsExpanded(!connectionsExpanded)}
+                            className="w-full flex items-center justify-between py-1.5 px-1 hover:bg-muted/10 rounded-lg transition-colors group text-left"
+                        >
+                            <div className="flex items-center gap-1.5">
+                                <Network size={12} className="opacity-70 text-accent-full" />
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
+                                    Connections Map
+                                </span>
+                            </div>
+                            {connectionsExpanded ? (
+                                <ChevronDown size={12} className="text-muted-foreground/40 group-hover:text-muted-foreground/75" />
+                            ) : (
+                                <ChevronRight size={12} className="text-muted-foreground/40 group-hover:text-muted-foreground/75" />
+                            )}
+                        </button>
+
+                        {connectionsExpanded && (
+                            <div className="px-1">
+                                <NoteConnectionsGraph
+                                    noteId={noteId}
+                                    backlinks={backlinks}
+                                    forwardLinks={forwardLinks}
+                                />
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Section 3: Table of Contents */}
+                <div className="space-y-2">
+                    <button
+                        onClick={() => setTocExpanded(!tocExpanded)}
+                        className="w-full flex items-center justify-between py-1.5 px-1 hover:bg-muted/10 rounded-lg transition-colors group text-left"
+                    >
+                        <div className="flex items-center gap-1.5">
                             <ListTree size={12} className="opacity-70 text-accent-full" />
-                            Table of Contents
-                        </h3>
-                        {toc.length === 0 ? (
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
+                                Table of Contents
+                            </span>
+                        </div>
+                        {tocExpanded ? (
+                            <ChevronDown size={12} className="text-muted-foreground/40 group-hover:text-muted-foreground/75" />
+                        ) : (
+                            <ChevronRight size={12} className="text-muted-foreground/40 group-hover:text-muted-foreground/75" />
+                        )}
+                    </button>
+
+                    {tocExpanded && (
+                        toc.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-8 text-center bg-muted/20 rounded-xl border border-dashed border-border/40">
                                 <p className="text-[11px] text-muted-foreground/40 italic">
                                     No headers found in this note
@@ -195,78 +325,8 @@ export function NoteInfo({ noteId }: { noteId: string }) {
                                     );
                                 })}
                             </div>
-                        )}
-                    </div>
-
-                </div>
-            </div>
-
-            {/* Forward and Back Links Map (Connections Graph) */}
-            {hasForward || hasBack ? (
-                <NoteConnectionsGraph
-                    noteId={noteId}
-                    backlinks={backlinks}
-                    forwardLinks={forwardLinks}
-                />
-            ) : null}
-
-            {/* Bottom: Stats and Metadata */}
-            <div className=" space-y-3 shrink-0 p-2 border border-border/60 bg-accent/5  rounded-xl">
-                {/* Statistics */}
-                <div className="grid grid-cols-3 gap-2">
-                    <div className="flex flex-col gap-0.5 p-1.5 rounded-lg bg-muted/15 border border-border/20">
-                        <div className="flex items-center gap-1 text-muted-foreground/70">
-                            <FileText size={10} className="text-accent-full" />
-                            <span className="text-[9px] font-medium uppercase tracking-tight">Words</span>
-                        </div>
-                        <span className="text-xs text-center font-bold tabular-nums text-muted-foreground">{stats.words}</span>
-                    </div>
-                    <div className="flex flex-col gap-0.5 p-1.5 rounded-lg bg-muted/15 border border-border/20">
-                        <div className="flex items-center gap-1 text-muted-foreground/70">
-                            <Hash size={10} className="text-accent-full" />
-                            <span className="text-[9px] font-medium uppercase tracking-tight">Chars</span>
-                        </div>
-                        <span className="text-xs text-center font-bold tabular-nums text-muted-foreground">{stats.chars}</span>
-                    </div>
-                    <div className="flex flex-col gap-0.5 p-1.5 rounded-lg bg-muted/15 border border-border/20">
-                        <div className="flex items-center gap-1 text-muted-foreground/70">
-                            <HardDrive size={10} className="text-accent-full" />
-                            <span className="text-[9px] font-medium uppercase tracking-tight">Size</span>
-                        </div>
-                        <span className="text-xs text-center font-bold tabular-nums whitespace-nowrap text-muted-foreground">{formatSize(stats.size)}</span>
-                    </div>
-                </div>
-
-                {/* Metadata */}
-                <div className="space-y-4">
-                    <div className="flex items-center justify-between text-xs text-muted-foreground/80 px-1">
-                        <div className="flex items-center gap-2.5">
-                            <Calendar size={14} className="text-accent-full/60" />
-                            <span className="font-medium text-muted-foreground/60 uppercase text-[9px] tracking-wider">Created</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className="font-semibold text-muted-foreground/70">
-                                {format(new Date(note.createdAt), "MMM d, yyyy")}
-                            </span>
-                            <span className="text-muted-foreground/40 tabular-nums font-medium text-[10px]">
-                                {format(new Date(note.createdAt), "HH:mm")}
-                            </span>
-                        </div>
-                    </div>
-                    <div className="flex items-center justify-between text-xs text-muted-foreground/80 px-1">
-                        <div className="flex items-center gap-2.5">
-                            <Clock size={14} className="text-accent-full/60" />
-                            <span className="font-medium text-muted-foreground/60 uppercase text-[9px] tracking-wider">Updated</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className="font-semibold text-muted-foreground/70">
-                                {format(new Date(note.updatedAt), "MMM d, yyyy")}
-                            </span>
-                            <span className="text-muted-foreground/40 tabular-nums font-medium text-[10px]">
-                                {format(new Date(note.updatedAt), "HH:mm")}
-                            </span>
-                        </div>
-                    </div>
+                        )
+                    )}
                 </div>
             </div>
         </div>

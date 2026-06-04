@@ -73,8 +73,6 @@ export function EditorToolbar({
             'textColor',
             'codeLanguage',
             'detailsBackground',
-            'table',
-            'insertTable',
             'blockMenu',
             'fileMenu',
             'ai'
@@ -196,34 +194,7 @@ export function EditorToolbar({
                             />
                         )}
 
-                        {activePopup === 'table' && (
-                            <ToolbarPopup
-                                visible={true}
-                                type="table"
-                                canAddRowBefore={editorState.canAddRowBefore}
-                                canAddRowAfter={editorState.canAddRowAfter}
-                                canAddColumnBefore={editorState.canAddColumnBefore}
-                                canAddColumnAfter={editorState.canAddColumnAfter}
-                                canDeleteRow={editorState.canDeleteRow}
-                                canDeleteColumn={editorState.canDeleteColumn}
-                                canDeleteTable={editorState.canDeleteTable}
-                                onCommand={(command: string, params?: Record<string, unknown>) => {
-                                    onCommand(command, params);
-                                }}
-                                onClose={closePopup}
-                            />
-                        )}
 
-                        {activePopup === 'insertTable' && (
-                            <ToolbarPopup
-                                visible={true}
-                                type="insertTable"
-                                onCommand={(command: string, params?: Record<string, unknown>) => {
-                                    onCommand(command, params);
-                                }}
-                                onClose={closePopup}
-                            />
-                        )}
 
                         {activePopup === 'detailsBackground' && (
                             <ToolbarPopup
@@ -668,6 +639,35 @@ export function EditorToolbar({
                     onSubmit={(latex: string, isBlock?: boolean) => {
                         onCommand('setMath', { latex, isBlock: isBlock ?? isBlockMath });
                         closePopup();
+                    }}
+                    onClose={closePopup}
+                />
+            )}
+
+            {activePopup === 'table' && (
+                <ToolbarPopup
+                    visible={true}
+                    type="table"
+                    canAddRowBefore={editorState.canAddRowBefore}
+                    canAddRowAfter={editorState.canAddRowAfter}
+                    canAddColumnBefore={editorState.canAddColumnBefore}
+                    canAddColumnAfter={editorState.canAddColumnAfter}
+                    canDeleteRow={editorState.canDeleteRow}
+                    canDeleteColumn={editorState.canDeleteColumn}
+                    canDeleteTable={editorState.canDeleteTable}
+                    onCommand={(command: string, params?: Record<string, unknown>) => {
+                        onCommand(command, params);
+                    }}
+                    onClose={closePopup}
+                />
+            )}
+
+            {activePopup === 'insertTable' && (
+                <ToolbarPopup
+                    visible={true}
+                    type="insertTable"
+                    onCommand={(command: string, params?: Record<string, unknown>) => {
+                        onCommand(command, params);
                     }}
                     onClose={closePopup}
                 />

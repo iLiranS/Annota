@@ -6,6 +6,7 @@ import {
 } from '@/components/ui/tooltip';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { cn } from '@/lib/utils';
+import { useSettingsStore } from '@annota/core';
 import type { ToolbarRenderProps } from '@annota/editor-ui';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '../ui/button';
@@ -47,6 +48,8 @@ export function DesktopToolbar({
     onActivePopupChange,
 }: ToolbarRenderProps) {
     const { colors } = useAppTheme();
+    const { general } = useSettingsStore();
+    const isRtl = general?.appDirection === 'rtl';
     const containerRef = useRef<HTMLDivElement>(null);
     const rowRef = useRef<HTMLDivElement>(null);
     const [visibleCount, setVisibleCount] = useState(15);
@@ -518,8 +521,8 @@ export function DesktopToolbar({
                             
                             "
             >
-                <div ref={rowRef} className="flex items-center gap-1 w-full px-1">
-                    <div className="flex items-center gap-1">
+                <div ref={rowRef} className={cn("flex items-center gap-1 w-full px-1", isRtl && "flex-row-reverse")}>
+                    <div className={cn("flex items-center gap-1", isRtl && "flex-row-reverse")}>
                         {visibleItems.map((item) => (
                             <Tooltip
                                 key={item.id}
@@ -549,14 +552,14 @@ export function DesktopToolbar({
 
                     <div className="flex-1" />
 
-                    <div className="flex items-center gap-1 ml-auto">
+                    <div className={cn("flex items-center gap-1", isRtl ? "mr-auto flex-row-reverse" : "ml-auto")}>
                         <DropdownMenu onOpenChange={handleOpenChange} modal={false}>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 outline-none" style={activeStyle(false)}>
                                     <EditorIcons.More className="w-5 h-5" />
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-56">
+                            <DropdownMenuContent align={isRtl ? "start" : "end"} className="w-56">
                                 {overflowItems.map((item) => (
                                     <React.Fragment key={item.id + '-overflow'}>
                                         {item.dropdownRender}
