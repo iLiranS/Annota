@@ -12,6 +12,7 @@ import { removeApiKey, saveApiKey, useAiStore, useSettingsStore } from "@annota/
 import { Bot, Check, ExternalLink, ShieldCheck, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { SettingItem } from "./setting-item";
+import { ConfirmDialog } from "@/components/custom-ui/confirm-dialog";
 import { cn } from "@/lib/utils";
 
 const Toggle = ({ enabled }: { enabled: boolean }) => (
@@ -44,6 +45,7 @@ export function AiSettings() {
     } = useAiStore();
 
     const [isCheckingOllama, setIsCheckingOllama] = useState(false);
+    const [showConfirm, setShowConfirm] = useState(false);
 
     // Local state for keys
     const [localOpenAiKey, setLocalOpenAiKey] = useState('');
@@ -163,7 +165,13 @@ export function AiSettings() {
                     description="Access AI writing assistant, summaries, and flashcards"
                     icon={<Sparkles size={18} />}
                     iconBg="bg-indigo-600"
-                    onClick={() => updateGeneralSettings({ isAiEnabled: !general.isAiEnabled })}
+                    onClick={() => {
+                        if (general.isAiEnabled) {
+                            updateGeneralSettings({ isAiEnabled: false });
+                        } else {
+                            setShowConfirm(true);
+                        }
+                    }}
                     action={<Toggle enabled={general.isAiEnabled} />}
                 />
             </div>
@@ -386,6 +394,18 @@ export function AiSettings() {
                     </div>
                 </>
             )}
+            <ConfirmDialog
+                open={showConfirm}
+                onOpenChange={setShowConfirm}
+                title="Enable AI Features"
+                description="By enabling AI, you agree that AI providers such as Anthropic, Gemini, OpenAI, and other 3rd parties may be exposed to the notes you select as context when using the AI integrated features."
+                confirmText="Enable"
+                cancelText="Cancel"
+                variant="default"
+                onConfirm={() => {
+                    updateGeneralSettings({ isAiEnabled: true });
+                }}
+            />
         </div>
     );
 }

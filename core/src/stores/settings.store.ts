@@ -84,7 +84,7 @@ const DEFAULT_GENERAL_SETTINGS: GeneralSettings = {
     secondarySidebarMode: 'pinned',
     isSecondarySidebarSticky: true,
     showNotesCountInFolder: true,
-    isAiEnabled: true,
+    isAiEnabled: false,
     secondarySidebarTab: 'ai',
     openNoteInNewTab: true,
 };

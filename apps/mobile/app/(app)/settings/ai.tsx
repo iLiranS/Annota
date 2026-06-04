@@ -14,7 +14,8 @@ import {
     TouchableOpacity,
     View,
     KeyboardAvoidingView,
-    Platform
+    Platform,
+    Alert
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -105,7 +106,26 @@ export default function AiSettings() {
                             label="Enable AI"
                             type="toggle"
                             value={general.isAiEnabled}
-                            onToggle={(val) => updateGeneralSettings({ isAiEnabled: val })}
+                            onToggle={(val) => {
+                                if (val) {
+                                    Alert.alert(
+                                        "Enable AI Features",
+                                        "By enabling AI, you agree that AI providers such as Anthropic, Gemini, OpenAI, and other 3rd parties may be exposed to the notes you select as context when using the AI integrated features.",
+                                        [
+                                            {
+                                                text: "Cancel",
+                                                style: "cancel"
+                                            },
+                                            {
+                                                text: "Enable",
+                                                onPress: () => updateGeneralSettings({ isAiEnabled: true })
+                                            }
+                                        ]
+                                    );
+                                } else {
+                                    updateGeneralSettings({ isAiEnabled: false });
+                                }
+                            }}
                             icon="sparkles-outline"
                             description="AI assistant & Chat"
                         />
