@@ -56,6 +56,7 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
         isStandalone,
         direction: propDirection,
         onScroll,
+        onCopyBlockLink,
     }, ref) => {
         const colors = useMemo(() => propColors || { primary: '#007AFF', background: '#FFFFFF', text: '#000000' }, [propColors]);
         const dark = propIsDark ?? false;
@@ -101,6 +102,8 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
         useEffect(() => { openGalleryRef.current = openGallery; }, [openGallery]);
         const noteIdRef = useRef(noteId);
         useEffect(() => { noteIdRef.current = noteId; }, [noteId]);
+        const onCopyBlockLinkRef = useRef(onCopyBlockLink);
+        useEffect(() => { onCopyBlockLinkRef.current = onCopyBlockLink; }, [onCopyBlockLink]);
 
         const [extensions, setExtensions] = useState<any[]>(() => getBaseExtensions({ placeholder }));
 
@@ -142,6 +145,54 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                             onOpenLinkMenuRef.current?.(event as any, capturedHref);
                         }, 50);
                         return true;
+                    }
+
+                    const headingElement = event.composedPath().find((el: any) => el?.tagName && /^H[1-6]$/.test(el.tagName)) as HTMLHeadingElement | undefined;
+
+                    if (headingElement && onOpenBlockMenuRef.current) {
+                        event.preventDefault();
+                        const { state } = view;
+                        const coords = { left: event.clientX, top: event.clientY };
+                        const posResult = view.posAtCoords(coords);
+                        const pos = posResult ? posResult.pos : view.posAtDOM(headingElement, 0);
+
+                        if (pos !== null) {
+                            let targetPos = -1;
+                            let headingNode = null;
+                            const $pos = state.doc.resolve(pos);
+                            for (let d = $pos.depth; d >= 0; d--) {
+                                const node = $pos.node(d);
+                                if (node && node.type.name === 'heading') {
+                                    headingNode = node;
+                                    targetPos = $pos.before(d);
+                                    break;
+                                }
+                            }
+                            if (!headingNode) {
+                                const node = state.doc.nodeAt(pos);
+                                if (node && node.type.name === 'heading') {
+                                    headingNode = node;
+                                    targetPos = pos;
+                                }
+                            }
+
+                            if (headingNode) {
+                                const id = headingNode.attrs.id || headingElement.getAttribute('data-id');
+                                if (id) {
+                                    setTimeout(() => {
+                                        onOpenBlockMenuRef.current?.(event as any, () => ({
+                                            pos: targetPos,
+                                            message: {
+                                                blockType: 'heading',
+                                                id,
+                                                level: headingNode.attrs.level || parseInt(headingElement.tagName.substring(1)),
+                                            }
+                                        }));
+                                    }, 50);
+                                    return true;
+                                }
+                            }
+                        }
                     }
 
                     if (!onOpenTableMenuRef.current) return false;
@@ -517,6 +568,13 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                     const absoluteUri = await FileService.resolveLocalUri(params.localPath);
                     await getPlatformAdapters().fileSystem.openFile(absoluteUri, params.mimeType);
                 })();
+                return;
+            }
+
+            if (cmd === 'copyBlockLink') {
+                if (params?.id && onCopyBlockLinkRef.current) {
+                    onCopyBlockLinkRef.current(params.id);
+                }
                 return;
             }
 

@@ -20,8 +20,10 @@ export function useNoteEditorAI({ editorRef }: UseNoteEditorAIProps) {
         cursorPosition: null
     });
     const isMouseDownRef = useRef(false);
+    const isRightClickRef = useRef(false);
     const pendingSelectionRef = useRef<DOMRect | null>(null);
     const aiTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const rightClickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const hideAISelection = useCallback(() => {
         setAiSelection(prev => (prev.isVisible ? { ...prev, isVisible: false } : prev));
@@ -29,6 +31,18 @@ export function useNoteEditorAI({ editorRef }: UseNoteEditorAIProps) {
 
     useEffect(() => {
         const onMouseDown = (e: MouseEvent) => {
+            if (e.button !== 0) {
+                isRightClickRef.current = true;
+                
+                // Hide popover on any mousedown outside the popover itself
+                // Radix handles its own internal clicks, but we want to sync our state
+                const target = e.target as HTMLElement;
+                if (!target.closest('[data-radix-popper-content-wrapper]')) {
+                    hideAISelection();
+                }
+                return;
+            }
+            isRightClickRef.current = false;
             isMouseDownRef.current = true;
             
             // Hide popover on any mousedown outside the popover itself
@@ -40,6 +54,13 @@ export function useNoteEditorAI({ editorRef }: UseNoteEditorAIProps) {
         };
 
         const onMouseUp = (e: MouseEvent) => {
+            if (e.button !== 0) {
+                if (rightClickTimeoutRef.current) clearTimeout(rightClickTimeoutRef.current);
+                rightClickTimeoutRef.current = setTimeout(() => {
+                    isRightClickRef.current = false;
+                }, 100);
+                return;
+            }
             isMouseDownRef.current = false;
             if (pendingSelectionRef.current) {
                 const rect = pendingSelectionRef.current;
@@ -65,6 +86,7 @@ export function useNoteEditorAI({ editorRef }: UseNoteEditorAIProps) {
         return () => {
             window.removeEventListener('mousedown', onMouseDown, true);
             window.removeEventListener('mouseup', onMouseUp, true);
+            if (rightClickTimeoutRef.current) clearTimeout(rightClickTimeoutRef.current);
         };
     }, [hideAISelection]);
 
@@ -108,6 +130,10 @@ export function useNoteEditorAI({ editorRef }: UseNoteEditorAIProps) {
     const handleSelectionChange = useCallback(({ empty, clientRect, nodeName }: { empty: boolean; clientRect: DOMRect | null; nodeName?: string }) => {
         if (aiTimeoutRef.current) clearTimeout(aiTimeoutRef.current);
         pendingSelectionRef.current = null;
+
+        if (isRightClickRef.current) {
+            return;
+        }
 
         if (empty || !clientRect || nodeName) {
             hideAISelection();

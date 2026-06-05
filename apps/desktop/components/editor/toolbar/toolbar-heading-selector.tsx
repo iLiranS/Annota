@@ -5,12 +5,14 @@ import {
     DropdownMenuItem,
     DropdownMenuLabel,
     DropdownMenuPortal,
+    DropdownMenuSeparator,
     DropdownMenuSub,
     DropdownMenuSubContent,
     DropdownMenuSubTrigger,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import type { EditorState, ToolbarRenderProps } from '@annota/editor-ui';
+import { Link } from 'lucide-react';
 
 interface HeadingSelectorProps {
     editorState: EditorState;
@@ -42,6 +44,18 @@ export function HeadingSelector({ editorState, sendCommand, onOpenChange, isMenu
                     <span className="ml-auto text-[10px] opacity-50">{MOD}{level}</span>
                 </DropdownMenuItem>
             ))}
+            {editorState.currentHeadingId && (
+                <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                        onClick={() => sendCommand('copyBlockLink', { id: editorState.currentHeadingId })}
+                        className="gap-2"
+                    >
+                        <Link className="h-4 w-4" />
+                        <span>Copy Heading Link</span>
+                    </DropdownMenuItem>
+                </>
+            )}
         </>
     );
 

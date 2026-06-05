@@ -30,7 +30,7 @@ export interface BlockMenuProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     anchorRect: DOMRect | null;
-    type: "image" | "file" | "details" | "codeBlock" | "table" | "mermaid" | "quote" | "flashcard";
+    type: "image" | "file" | "details" | "codeBlock" | "table" | "mermaid" | "quote" | "flashcard" | "heading";
     data: any;
     onAction: (action: string, params?: any) => void;
 }
@@ -380,6 +380,14 @@ export function BlockMenu({
                         >
                             <Trash2 className="mr-2 h-4 w-4" />
                             <span>Delete Flashcards</span>
+                        </DropdownMenuItem>
+                    </>
+                )}
+                {type === "heading" && (
+                    <>
+                        <DropdownMenuItem onClick={() => handleAction("copyLink")}>
+                            <Link className="mr-2 h-4 w-4" />
+                            <span>Copy Link</span>
                         </DropdownMenuItem>
                     </>
                 )}

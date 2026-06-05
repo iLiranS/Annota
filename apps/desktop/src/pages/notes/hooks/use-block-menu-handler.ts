@@ -1,6 +1,7 @@
 import { copyImageToClipboard, writeText } from "@/lib/clipboard";
 import { TipTapEditorRef } from "@annota/editor-ui";
 import { useCallback, useState } from "react";
+import { toast } from "sonner";
 
 interface UseBlockMenuHandlerProps {
     editorRef: React.RefObject<TipTapEditorRef | null>;
@@ -9,7 +10,7 @@ interface UseBlockMenuHandlerProps {
 
 export function useBlockMenuHandler({ editorRef, noteId }: UseBlockMenuHandlerProps) {
     const [activeBlockMenu, setActiveBlockMenu] = useState<{
-        type: "image" | "file" | "details" | "codeBlock" | "table" | "mermaid" | "quote";
+        type: "image" | "file" | "details" | "codeBlock" | "table" | "mermaid" | "quote" | "heading";
         data: any;
         anchorRect: DOMRect;
         onResolve: () => any;
@@ -160,6 +161,9 @@ export function useBlockMenuHandler({ editorRef, noteId }: UseBlockMenuHandlerPr
                 if (id) {
                     const link = `annota://note/${noteId}?blockId=${id}`;
                     await writeText(link);
+                    toast.success("Link copied to clipboard", {
+                        description: "You can now paste it anywhere to link to this heading."
+                    });
                 }
                 break;
             case "language":

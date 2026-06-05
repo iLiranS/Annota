@@ -32,7 +32,7 @@ root.render(
     <BrowserRouter>
       <TooltipProvider>
         <App />
-        <Toaster position="bottom-right" />
+        <Toaster closeButton duration={1750} position="bottom-right" />
       </TooltipProvider>
     </BrowserRouter>
   </React.StrictMode>,

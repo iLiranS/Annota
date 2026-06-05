@@ -15,6 +15,8 @@ import TipTapEditor, { TipTapEditorRef } from "@annota/editor-ui";
 import { FileText, Loader2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+import { toast } from "sonner";
 import { AISelectionPopover } from "./components/ai-selection-popover";
 import { NoteFloatingActions } from "./components/note-floating-actions";
 import { NoteRestoreButton } from "./components/note-restore-button";
@@ -152,6 +154,20 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
     }, [notes]);
 
     const handleOpenInNewWindow = useOpenNoteInNewWindow();
+
+    const handleCopyBlockLink = useCallback(async (blockId: string) => {
+        if (!noteId) return;
+        const link = `annota://note/${noteId}?blockId=${blockId}`;
+        try {
+            await writeText(link);
+            toast.success("Link copied to clipboard", {
+                description: "You can now paste it anywhere to link to this heading.",
+            });
+        } catch (err) {
+            console.error("Failed to copy heading link:", err);
+            toast.error("Failed to copy link to clipboard");
+        }
+    }, [noteId]);
 
     const isEmptyContent = (html: string) => {
         const normalized = html
@@ -304,6 +320,7 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
                             onTagCommand={setTagCommandState}
                             onNoteLinkCommand={setNoteLinkCommandState}
                             onOpenLinkMenu={handleOpenLinkMenu}
+                            onCopyBlockLink={handleCopyBlockLink}
                             onSelectionChange={handleSelectionChange}
                             onScroll={handleScroll}
                             isDark={isDark}
