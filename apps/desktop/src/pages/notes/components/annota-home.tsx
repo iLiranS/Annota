@@ -56,7 +56,7 @@ export function AnnotaHome() {
                         navigate(`/notes/${noteId}`);
                     }
                 }}
-                className="flex items-center gap-1.5 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-tight border shrink-0 cursor-pointer hover:brightness-110 active:scale-95 transition-all"
+                className="flex items-center gap-1.5 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-tight border shrink-0 cursor-pointer hover:brightness-110 active:scale-95 "
                 style={{
                     backgroundColor: folder?.color ? `${folder.color}20` : `${colors.primary}15`,
                     color: folder?.color || colors.primary,
@@ -314,7 +314,7 @@ export function AnnotaHome() {
                             <div className="flex flex-col gap-4">
                                 <div className="flex items-center gap-2 px-1">
                                     <History className="h-4 w-4 text-muted-foreground/80" />
-                                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground/60">Recently Updated Notes</h3>
+                                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground/60">Recently Updated</h3>
                                 </div>
 
                                 {recentNotes.length === 0 ? (

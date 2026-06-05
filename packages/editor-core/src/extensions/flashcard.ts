@@ -166,12 +166,12 @@ export const FlashcardBlock = Node.create({
         const cards = parseCards(node.attrs.cards);
         const title = node.attrs.title ?? DEFAULT_TITLE;
         
-        // Render a simplified version for HTML export / AI context
-        const cardsHtml = cards.map(c => [
-            'div', 
-            { class: 'flashcard-card-item' }, 
-            ['p', { class: 'flashcard-front-text' }, `Q: ${c.front}`],
-            ['p', { class: 'flashcard-back-text' }, `A: ${c.back}`]
+        // Render as a table for static HTML/PDF export
+        const rowsHtml = cards.map(c => [
+            'tr',
+            {},
+            ['td', { class: 'flashcard-cell-question' }, c.front],
+            ['td', { class: 'flashcard-cell-answer' }, c.back]
         ]);
 
         return [
@@ -183,7 +183,21 @@ export const FlashcardBlock = Node.create({
                 'data-c': serializeCards(cards)
             }),
             ['h3', { class: 'flashcard-export-title' }, title],
-            ...cardsHtml
+            [
+                'table',
+                { class: 'flashcard-export-table' },
+                [
+                    'thead',
+                    {},
+                    [
+                        'tr',
+                        {},
+                        ['th', {}, 'Questions'],
+                        ['th', {}, 'Answers']
+                    ]
+                ],
+                ['tbody', {}, ...rowsHtml]
+            ]
         ];
     },
 

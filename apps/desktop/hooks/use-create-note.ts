@@ -1,4 +1,4 @@
-import { useNotesStore } from "@annota/core";
+import { useNotesStore, useNavigationStore, TRASH_FOLDER_ID } from "@annota/core";
 import { useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import { useSmartNavigate } from "./use-smart-navigate";
@@ -9,11 +9,27 @@ export function useCreateNote() {
     const location = useLocation();
     const createNote = useNotesStore((s) => s.createNote);
 
-    const createAndNavigate = useCallback(async (folderId: string = "", tagId?: string) => {
+    const createAndNavigate = useCallback(async (folderId?: string | null, tagId?: string | null) => {
         try {
+            let targetFolderId = folderId;
+            if (targetFolderId === undefined) {
+                const { selectedFolderId } = useNavigationStore.getState();
+                targetFolderId = (selectedFolderId && selectedFolderId !== 'root' && selectedFolderId !== TRASH_FOLDER_ID) ? selectedFolderId : undefined;
+            } else if (targetFolderId === null || targetFolderId === 'root' || targetFolderId === TRASH_FOLDER_ID) {
+                targetFolderId = undefined;
+            }
+
+            let targetTagId = tagId;
+            if (targetTagId === undefined) {
+                const { selectedTagId } = useNavigationStore.getState();
+                targetTagId = selectedTagId || undefined;
+            } else if (targetTagId === null) {
+                targetTagId = undefined;
+            }
+
             const { data: note, error } = await createNote({ 
-                folderId: folderId || undefined as any,
-                tags: tagId ? JSON.stringify([tagId]) : undefined
+                folderId: targetFolderId || undefined as any,
+                tags: targetTagId ? JSON.stringify([targetTagId]) : undefined
             });
 
             if (error) {

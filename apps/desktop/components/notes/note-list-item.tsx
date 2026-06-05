@@ -9,7 +9,7 @@ import { useSmartNavigate } from "@/hooks/use-smart-navigate";
 import { cn } from "@/lib/utils";
 import { NoteMetadata, useNavigationStore, useNotesStore, useSettingsStore } from "@annota/core";
 import { Slot } from "@radix-ui/react-slot";
-import { Pin, Star } from "lucide-react";
+import { Star } from "lucide-react";
 import { NoteContextMenuContent, useNoteModals } from "./note-context-menu";
 
 interface NoteListItemProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -145,11 +145,7 @@ export function NoteListItem({
                                     </div>
 
                                     <div className="flex items-center gap-2  shrink-0 my-auto">
-                                        {note.isPinned && !isInQuickAccess && !hidePinIcon && (
-                                            <div className="bg-accent/40 rounded shadow p-1">
-                                                <Pin size={12} className="text-accent-full fill-current" />
-                                            </div>
-                                        )}
+
                                         {suffix}
                                     </div>
                                 </div>

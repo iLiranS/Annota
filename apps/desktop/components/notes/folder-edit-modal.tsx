@@ -169,14 +169,14 @@ export function FolderEditModal({
                         </div>
 
                         {/* Location */}
-                        <div className="space-y-1.5">
+                        <div className="space-y-1.5 ">
                             <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
                                 Location
                             </Label>
                             <Button
-                                variant="ghost"
+                                variant="outline"
                                 onClick={() => setShowLocationPicker(true)}
-                                className="w-full h-10 justify-between px-3  border-border/50 hover:bg-accent/50 transition-colors"
+                                className="w-full h-10 justify-between px-3 bg-transparent dark:bg-transparent hover:bg-accent/50 transition-colors"
                             >
                                 <div className="flex items-center gap-2.5">
                                     <div
@@ -201,11 +201,11 @@ export function FolderEditModal({
                                 Icon
                             </Label>
                             <div className="space-y-2">
-                                <Input
-                                    placeholder="Search icons..."
+                                <Input autoCapitalize="off" autoCorrect="off" autoComplete="off"
+                                    placeholder={`Search ${ALL_IONICON_KEYS.length} icons...`}
                                     value={iconSearch}
                                     onChange={(e) => setIconSearch(e.target.value)}
-                                    className="h-8 text-xs   border-border/30  focus-visible:ring-0 focus-visible:ring-offset-0"
+                                    className="h-8 placeholder:text-muted-foreground/60 text-xs bg-transparent dark:bg-transparent  border-border/30  focus-visible:ring-0 focus-visible:ring-offset-0"
                                 />
                                 <div className="grid grid-cols-8 gap-1 p-2 rounded-xl border border-border/50  max-h-[140px] overflow-y-auto">
                                     {filteredIcons.map((iconName) => {

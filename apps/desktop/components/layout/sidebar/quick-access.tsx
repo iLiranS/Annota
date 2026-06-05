@@ -31,7 +31,7 @@ export function QuickAccessSection({ notes, onNoteClick, onDeleteNote, general }
                 <SidebarGroupLabel asChild className="text-[10px]  font-bold uppercase tracking-wider text-muted-foreground/70">
                     <CollapsibleTrigger className="flex w-full items-center gap-2 hover:bg-sidebar-accent px-2 py-1 rounded">
                         <Star size={12} strokeWidth={2.5} className="shrink-0" />
-                        <span className="flex-1 text-start">Quick Access</span>
+                        <span className="flex-1 text-start min-w-[100px]">Quick Access</span>
                         <ChevronRight size={12} className={cn("transition-transform", general?.appDirection === 'rtl' ? (isOpen ? "rotate-90" : "rotate-180") : (isOpen && "rotate-90"))} />
                     </CollapsibleTrigger>
                 </SidebarGroupLabel>

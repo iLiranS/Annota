@@ -3,11 +3,12 @@ import { useSidebar } from "@/components/ui/sidebar"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import { useNavigationStore, useSettingsStore, useSyncStore, useUserStore, type SidebarTab } from "@annota/core"
-import { Layers2, PanelLeft, PanelRight } from "lucide-react"
+import { Layers2, PanelLeft, PanelRight, Plus } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { useAlwaysOnTop } from "../../hooks/use-always-on-top"
 import { useAppTheme } from "../../hooks/use-app-theme"
+import { useCreateNote } from "../../hooks/use-create-note"
 import { SidebarTabs } from "../layout/sidebar/sidebar-tabs"
 import { Ionicons } from "../ui/ionicons"
 import { NoteTabs } from "./note-tabs"
@@ -42,6 +43,7 @@ export function MainNavbar() {
     const activeTab = useNavigationStore(s => s.sidebarTab);
     const setActiveTab = useNavigationStore(s => s.setSidebarTab);
     const { colors } = useAppTheme();
+    const { createAndNavigate } = useCreateNote();
 
     const handleGoHome = () => {
         setSelectedFolderId('root');
@@ -286,7 +288,14 @@ export function MainNavbar() {
                     minWidth: general.isSecondarySidebarOpen && general.secondarySidebarMode === 'pinned' ? Math.max(0, secondaryWidth - rightSectionPadding) : 'auto'
                 }}
             >
-
+                <Button
+                    onClick={() => createAndNavigate()}
+                    variant="ghost"
+                    className="h-6 px-2.5 text-[11px] font-semibold text-accent-full hover:text-accent-full bg-accent-full/10 hover:bg-accent-full/20 border border-accent-full/25 hover:border-accent-full/45 rounded transition-all active:scale-95 flex items-center gap-1 cursor-pointer shrink-0"
+                >
+                    <Plus size={11} strokeWidth={2.5} />
+                    <span>New Note</span>
+                </Button>
 
                 {session?.user?.id && <div className={cn(
                     "flex items-center gap-1 transition-opacity duration-300",

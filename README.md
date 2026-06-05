@@ -48,6 +48,9 @@ To enable sync and backup features, follow these setup guides in order:
 7. [Storage Buckets](./docs/Supabase_setup/7__storage_buckets.md)
 8. [Scheduled Tasks & Cron Jobs](./docs/Supabase_setup/8__scheduled_tasks__cron_jobs_.md)
 
+> [!WARNING]
+> Some database functions and triggers outlined in these guides have newer, more secure versions that have not yet been integrated into this documentation. These will be updated soon to reflect the most secure implementation patterns.
+
 *Note: Full local support without any Supabase setup is coming soon.*
 
 

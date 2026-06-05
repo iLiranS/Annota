@@ -1,12 +1,59 @@
 import { useDbStore, vacuumDatabase } from '@annota/core';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { File as ExpoFile, Directory as ExpoDirectory, Paths } from 'expo-file-system';
 import { useEffect } from 'react';
 
+async function cleanupExportCache() {
+    try {
+        const cacheDir = Paths.cache;
+        if (cacheDir.exists) {
+            const entries = cacheDir.list();
+            for (const entry of entries) {
+                // 1. Clean up Markdown exports (.md files)
+                if (entry instanceof ExpoFile && entry.name.endsWith('.md')) {
+                    try {
+                        entry.delete();
+                        console.log(`[DAILY_CLEANUP] Deleted markdown cache file: ${entry.name}`);
+                    } catch (err) {
+                        console.error(`[DAILY_CLEANUP] Failed to delete file ${entry.name}:`, err);
+                    }
+                }
+
+                // 2. Clean up PDF print folders (created by expo-print)
+                if (entry instanceof ExpoDirectory && entry.name === 'Print') {
+                    try {
+                        entry.delete();
+                        console.log("[DAILY_CLEANUP] Deleted PDF Print cache directory");
+                    } catch (err) {
+                        console.error(`[DAILY_CLEANUP] Failed to delete Print dir:`, err);
+                    }
+                }
+
+                // 3. Clean up orphaned downloads folder
+                if (entry instanceof ExpoDirectory && entry.name === 'downloads') {
+                    try {
+                        entry.delete();
+                        console.log("[DAILY_CLEANUP] Deleted downloads cache directory");
+                    } catch (err) {
+                        console.error(`[DAILY_CLEANUP] Failed to delete downloads dir:`, err);
+                    }
+                }
+            }
+            console.log("[DAILY_CLEANUP] Mobile export cache cleared successfully");
+        }
+    } catch (error) {
+        console.error("[DAILY_CLEANUP] Failed to clear mobile export cache:", error);
+    }
+}
+
 export function useDailyCleanup() {
+    const isReady = useDbStore(state => state.isReady);
+
     useEffect(() => {
+        if (!isReady) return;
+
         const checkAndRunCleanup = async () => {
-            const { currentUserId, isGuest, isReady } = useDbStore.getState();
-            if (!isReady) return;
+            const { currentUserId, isGuest } = useDbStore.getState();
 
             try {
                 const prefix = isGuest ? 'guest' : `user_${currentUserId}`;
@@ -31,7 +78,10 @@ export function useDailyCleanup() {
                     // 1. Vacuum the database to reclaim space
                     await vacuumDatabase();
 
-                    // 2. Update the last run time
+                    // 2. Clean up temporary export/download files
+                    await cleanupExportCache();
+
+                    // 3. Update the last run time
                     await AsyncStorage.setItem(storageKey, now.toISOString());
                     console.log("[DAILY_CLEANUP] Daily cleanup completed successfully");
                 }
@@ -40,9 +90,10 @@ export function useDailyCleanup() {
             }
         };
 
-        // Run on initial app load
+        // Run when isReady becomes true
         checkAndRunCleanup();
 
-
-    }, []);
+    }, [isReady]);
 }
+
+

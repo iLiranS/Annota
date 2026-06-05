@@ -1,4 +1,4 @@
-import { supabase, isCloudEnabled } from '../supabase';
+import { isCloudEnabled, supabase } from '../supabase';
 
 // Helper type based on what the sync uses
 export type SyncPayload = {
@@ -48,12 +48,6 @@ export const syncApi = {
             .gt('deleted_at', lastSync);
     },
 
-    /** Fetch server time to sync clocks */
-    getServerTime: async () => {
-        const { data, error } = await supabase.rpc('get_server_time');
-        if (error) throw error;
-        return new Date(data || new Date().toISOString());
-    },
 
     /** Fetch remote app configuration */
     getAppConfig: async () => {

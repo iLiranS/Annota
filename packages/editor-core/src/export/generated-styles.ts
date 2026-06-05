@@ -627,6 +627,11 @@ code.hljs {
 .code-block-wrapper pre {
     margin: 0;
     min-width: 0;
+    padding-top: 0;
+}
+
+.code-block-wrapper .code-gutter {
+    padding-top: 0;
 }
 
 /* Header bar for code block */
@@ -1157,7 +1162,7 @@ code.hljs {
 
 .flashcard-block {
     margin: var(--editor-paragraph-spacing) 0;
-    border: 1.5px solid var(--border-color);
+    border: 1px solid color-mix(in srgb, var(--border-color), transparent 50%);
     border-radius: 8px;
     background: var(--bg-color);
     overflow: hidden;
@@ -1663,6 +1668,39 @@ code.hljs {
     }
 }
 
+/* --- Export / Print Table Styles --- */
+.flashcard-export-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 12px;
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: var(--text-color);
+}
+
+.flashcard-export-table th,
+.flashcard-export-table td {
+    border: 1px solid var(--border-color);
+    padding: 10px 14px;
+    text-align: left;
+    vertical-align: top;
+    line-height: 1.5;
+}
+
+.flashcard-export-table th {
+    background-color: color-mix(in srgb, var(--border-color), transparent 93%);
+    font-weight: 600;
+}
+
+.flashcard-export-table td.flashcard-cell-question {
+    width: 50%;
+    font-weight: 500;
+}
+
+.flashcard-export-table td.flashcard-cell-answer {
+    width: 50%;
+}
+
 /* Source: src/extensions/heading.css */
 .ProseMirror h1 {
     font-size: calc(var(--editor-font-size) * 2);
@@ -2064,13 +2102,12 @@ body.is-resizing-image {
 }
 
 /* Source: src/extensions/mermaid.css */
-/* Mermaid Diagrams */
 .mermaid-block {
     position: relative;
     margin: 0;
     margin-bottom: var(--editor-paragraph-spacing);
     padding: 1.5rem;
-    border: 1px solid var(--border-color);
+    border: 1px solid color-mix(in srgb, var(--border-color), transparent 50%);
     border-radius: 12px;
     background-color: var(--bg-color);
     transition: all 0.2s ease;

@@ -29,26 +29,7 @@ export const storageApi = {
         });
     },
 
-    /** Get the list of orphaned files for deletion (usually run as CRON, but available here) */
-    getOrphanedFiles: async () => {
-        return await supabase.rpc('get_orphaned_files_for_deletion');
-    },
 
-    /** Retrieve signed URLs or public URLs for multiple files in a batch. */
-    getPublicUrl: (path: string, bucket = 'e2e_attachments') => {
-        const { data } = supabase.storage.from(bucket).getPublicUrl(path);
-        return data.publicUrl;
-    },
-
-    /** List files in a path */
-    listFiles: async (path: string, bucket = 'e2e_attachments') => {
-        return await supabase.storage.from(bucket).list(path);
-    },
-
-    /** Remove files */
-    removeFiles: async (paths: string[], bucket = 'e2e_attachments') => {
-        return await supabase.storage.from(bucket).remove(paths);
-    },
 
     /** Retrieve user's file links used for checking missing downloads - only for updated notes */
     getUserFileLinks: async (userId: string, noteIds: string[]) => {

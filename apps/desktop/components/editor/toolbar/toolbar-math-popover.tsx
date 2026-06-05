@@ -111,6 +111,7 @@ export function MathPopover({ sendCommand, onOpenChange, visible, currentLatex, 
         const isMacOrCtrl = e.metaKey || e.ctrlKey;
         if (isMacOrCtrl && (e.key === 'Enter' || e.key === 's')) {
             e.preventDefault();
+            e.stopPropagation();
             handleInsert(latex);
         }
     };
@@ -223,7 +224,7 @@ export function MathPopover({ sendCommand, onOpenChange, visible, currentLatex, 
 
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>
-            <DialogContent aria-describedby={undefined} className="sm:max-w-[700px] p-4 gap-0 shadow-2xl border-primary/10 rounded-2xl flex flex-col overflow-hidden outline-none">
+            <DialogContent disableBlur aria-describedby={undefined} className="sm:max-w-[700px] p-4 gap-0 shadow-2xl border-primary/10 rounded-2xl flex flex-col overflow-hidden outline-none">
                 {content}
             </DialogContent>
         </Dialog>

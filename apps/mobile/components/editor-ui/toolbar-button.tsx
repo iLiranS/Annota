@@ -69,7 +69,7 @@ export function ToolbarButton({
                     {label}
                 </Text>
             ) : icon ? (
-                <View style={styles.iconContainer}>
+                <View style={[styles.iconContainer, icon === 'strikethrough-s' && { transform: [{ translateY: 2 }] }]}>
                     <MaterialIcons name={icon} size={22} color={buttonColor} />
                 </View>
             ) : null}

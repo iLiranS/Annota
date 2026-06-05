@@ -30,7 +30,7 @@ export function ToolbarEditModal({
 }: ToolbarEditModalProps) {
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-md">
+            <DialogContent disableBlur className="max-w-md">
                 <DialogHeader>
                     <DialogTitle>Edit Toolbar</DialogTitle>
                     <DialogDescription>

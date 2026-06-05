@@ -21,7 +21,7 @@ interface SearchViewProps {
 
 const FILTERS = [
     { id: 'all' as const, label: 'Notes', icon: 'document' as const },
-    { id: 'media' as const, label: 'Media', icon: 'images-outline' as const },
+    { id: 'files' as const, label: 'Files', icon: 'attach-outline' as const },
 ];
 
 export function SearchView({
@@ -43,7 +43,7 @@ export function SearchView({
         setSearchQuery,
     } = useSearchStore();
 
-    const [activeFilter, setActiveFilter] = useState<'all' | 'media'>('all');
+    const [activeFilter, setActiveFilter] = useState<'all' | 'files'>('all');
 
     const folderResults = useMemo(() => {
         if (!searchQuery) return [];
@@ -110,7 +110,7 @@ export function SearchView({
                     />
                     <Input
                         autoFocus autoCapitalize="off" autoCorrect="off" autoComplete="off"
-                        placeholder={activeFilter === 'media' ? "Search Your Media..." : "Search Your Notes..."}
+                        placeholder={activeFilter === 'files' ? "Search Your Files..." : "Search Your Notes..."}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value, null)}
                         className="flex h-9 w-full rounded-md border border-input/40 bg-transparent pl-7 pr-7 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground/60 placeholder:text-[12px] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50" />
@@ -132,22 +132,22 @@ export function SearchView({
                                 key={filter.id}
                                 onClick={() => setActiveFilter(filter.id)}
                                 className={cn(
-                                    "flex items-center gap-1 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-[0.06em] transition-all select-none border cursor-pointer active:scale-95",
+                                    "flex items-center font-semibold text-primary gap-1 px-3 py-1 rounded-full text-[9px]  uppercase  transition-all select-none border cursor-pointer active:scale-95",
                                     isActive
-                                        ? "border-transparent text-white shadow-sm"
+                                        ? "border-transparent  shadow-sm bg-accent"
                                         : "bg-muted/30 text-muted-foreground/60 border-border/20 hover:text-muted-foreground hover:bg-muted/60"
                                 )}
-                                style={isActive ? { backgroundColor: colors.primary } : undefined}
+                            // style={isActive ? { backgroundColor: colors.primary + "50" } : undefined}
                             >
-                                <Ionicons name={filter.icon} size={10} />
-                                <span>{filter.label}</span>
+                                <Ionicons name={filter.icon} size={15} />
+                                <span >{filter.label}</span>
                             </button>
                         );
                     })}
                 </div>
             </div>
 
-            {activeFilter === 'media' ? (
+            {activeFilter === 'files' ? (
                 <div className="flex-1 min-h-0 overflow-hidden">
                     <MediaSidebar />
                 </div>

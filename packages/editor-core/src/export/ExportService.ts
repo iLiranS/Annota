@@ -173,6 +173,26 @@ export class ExportService {
         md = md.replace(/<li[^>]*data-checked="false"[^>]*>(.*?)<\/li>/gis, '- [ ] $1\n');
         md = md.replace(/<mark[^>]*>(.*?)<\/mark>/gis, '==$1==');
 
+        // 1b. Flashcard block conversion
+        md = md.replace(/<div[^>]*data-type="flashcardBlock"[^>]*data-title="([^"]*)"[^>]*data-c="([^"]*)"[^>]*>.*?<\/div>/gis, (_, title, cardsJsonEscaped) => {
+            const titleDecoded = title.replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+            let cardsJson = cardsJsonEscaped;
+            // Unescape JSON HTML attribute characters
+            cardsJson = cardsJson.replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+            try {
+                const cards = JSON.parse(cardsJson);
+                let tableMd = `\n\n### ${titleDecoded}\n\n| Questions | Answers |\n| --- | --- |\n`;
+                cards.forEach(([front, back]: [any, any]) => {
+                    const q = String(front).replace(/\|/g, '\\|').replace(/\r?\n/g, ' ');
+                    const a = String(back).replace(/\|/g, '\\|').replace(/\r?\n/g, ' ');
+                    tableMd += `| ${q} | ${a} |\n`;
+                });
+                return tableMd + '\n';
+            } catch (e) {
+                return `\n\n### ${titleDecoded}\n\n`;
+            }
+        });
+
         // 2. Standard HTML Tags
         md = md.replace(/<h1[^>]*>(.*?)<\/h1>/gis, '# $1\n\n');
         md = md.replace(/<h2[^>]*>(.*?)<\/h2>/gis, '## $1\n\n');
@@ -217,6 +237,27 @@ export class ExportService {
             typeof DOMParser !== 'undefined' ? DOMParser : (g['DOMParser'] as any);
 
         const doc: any = new DOMParserCtor().parseFromString(html, 'text/html');
+
+        // 0a. Formatter / Migrator for Flashcard Blocks inside PDF/Print ───
+        doc.querySelectorAll('div[data-type="flashcardBlock"]').forEach((node: any) => {
+            const title = node.getAttribute('data-title') || 'Flashcards';
+            try {
+                const cards = JSON.parse(node.getAttribute('data-c') || '[]');
+                const rows = cards.map(([q, a]: [string, string]) => 
+                    `<tr><td class="flashcard-cell-question">${q}</td><td class="flashcard-cell-answer">${a}</td></tr>`
+                ).join('');
+                
+                node.innerHTML = `
+                    <h3 class="flashcard-export-title">${title}</h3>
+                    <table class="flashcard-export-table">
+                        <thead><tr><th>Questions</th><th>Answers</th></tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                `;
+            } catch (e) {
+                console.warn('ExportService: Failed to format flashcard block for print', e);
+            }
+        });
 
         // 0. Promote highlight and text color classes to inline styles for print compatibility ───
         doc.querySelectorAll('[class*="tc-"], [class*="hl-"]').forEach((node: any) => {
@@ -624,6 +665,27 @@ export class ExportService {
                     (node as HTMLElement).querySelector('.mermaid-textarea')?.textContent ??
                     '';
                 return `\n\n\`\`\`mermaid\n${code}\n\`\`\`\n\n`;
+            },
+        });
+
+        td.addRule('flashcardBlock', {
+            filter: (node) =>
+                node.nodeName === 'DIV' && node.getAttribute('data-type') === 'flashcardBlock',
+            replacement: (_, node) => {
+                const title = node.getAttribute('data-title') || 'Flashcards';
+                const cardsData = node.getAttribute('data-c');
+                try {
+                    const cards = JSON.parse(cardsData || '[]');
+                    let tableMd = `\n\n### ${title}\n\n| Questions | Answers |\n| --- | --- |\n`;
+                    cards.forEach(([front, back]: [any, any]) => {
+                        const q = String(front).replace(/\|/g, '\\|').replace(/\r?\n/g, ' ');
+                        const a = String(back).replace(/\|/g, '\\|').replace(/\r?\n/g, ' ');
+                        tableMd += `| ${q} | ${a} |\n`;
+                    });
+                    return tableMd + '\n';
+                } catch {
+                    return `\n\n### ${title}\n\n`;
+                }
             },
         });
 

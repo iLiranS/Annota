@@ -153,7 +153,7 @@ export function LinkPopover({
     if (isControlled) {
         return (
             <Dialog open={isVisible} onOpenChange={handleOpenChange}>
-                <DialogContent aria-describedby={undefined} className="sm:max-w-[380px] p-0 overflow-hidden border-none bg-background shadow-2xl">
+                <DialogContent disableBlur aria-describedby={undefined} className="sm:max-w-[380px] p-0 overflow-hidden border-none bg-background shadow-2xl">
                     <DialogHeader className="p-4 pb-2 border-b border-border/50">
                         <DialogTitle className="text-lg font-semibold flex items-center gap-2">
                             <Icon className="w-5 h-5 text-primary" />

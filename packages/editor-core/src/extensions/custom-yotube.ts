@@ -88,6 +88,8 @@ export const CustomYoutube = Youtube.extend({
             const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
             const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
 
+            const isMobileNative = typeof window !== 'undefined' && !!(window as any).ReactNativeWebView;
+
             const renderThumbnail = () => {
                 wrapper.innerHTML = `
                     <a href="${watchUrl}" target="_blank" rel="noopener noreferrer" class="yt-embed-link">
@@ -100,18 +102,17 @@ export const CustomYoutube = Youtube.extend({
 
                 const link = wrapper.querySelector('.yt-embed-link') as HTMLAnchorElement;
                 link.onclick = (e) => {
-                    const isMobileNative = typeof window !== 'undefined' && !!(window as any).ReactNativeWebView;
                     if (isMobileNative) {
                         e.preventDefault();
                         // On mobile native, swap to inline iframe
-                        renderIframe();
+                        renderIframe(true);
                     }
                     // On desktop, we let the default <a> behavior handle it, 
                     // which we will intercept in App.tsx to ensure it opens externally.
                 };
             };
 
-            const renderIframe = () => {
+            const renderIframe = (autoplay = true) => {
                 // Determine origin if available to satisfy YouTube's iframe API 
                 // and potentially bypass strict Tauri restrictions.
                 let origin = '';
@@ -119,8 +120,15 @@ export const CustomYoutube = Youtube.extend({
                     origin = typeof window !== 'undefined' && window.location.origin ? window.location.origin : '';
                 } catch (e) { }
 
-                const originParam = origin && origin !== 'null' ? `&origin=${encodeURIComponent(origin)}` : '';
-                const iframeUrl = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1${originParam}`;
+                const params = new URLSearchParams();
+                if (autoplay) {
+                    params.append('autoplay', '1');
+                }
+                if (origin && origin !== 'null') {
+                    params.append('origin', origin);
+                }
+                const queryString = params.toString();
+                const iframeUrl = `https://www.youtube-nocookie.com/embed/${videoId}${queryString ? `?${queryString}` : ''}`;
 
                 wrapper.innerHTML = `
                     <div class="yt-embed-link">
@@ -136,7 +144,11 @@ export const CustomYoutube = Youtube.extend({
                 `;
             };
 
-            renderThumbnail();
+            if (isMobileNative) {
+                renderIframe(false);
+            } else {
+                renderThumbnail();
+            }
 
             return {
                 dom: wrapper,

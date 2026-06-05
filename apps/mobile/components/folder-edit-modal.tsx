@@ -15,8 +15,8 @@ import {
     TextInput,
     View,
 } from 'react-native';
-import Toast from 'react-native-toast-message';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 import LocationPickerModal from './location-picker-modal';
 
 const ALL_IONICON_KEYS = Object.keys(Ionicons.glyphMap);
@@ -281,7 +281,8 @@ export default function FolderEditModal({
                                     style={[styles.searchInput, { color: colors.text }]}
                                     value={iconSearch}
                                     onChangeText={setIconSearch}
-                                    placeholder="Search icons (min 2 chars)..."
+                                    placeholder={`Search ${ALL_IONICON_KEYS.length} icons...`}
+
                                     placeholderTextColor={colors.text + '40'}
                                     autoCapitalize="none"
                                 />

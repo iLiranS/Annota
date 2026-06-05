@@ -201,7 +201,7 @@ export function ToolbarFileUpload({ onInsertFile, onOpenChange, isMenu, visible,
     return (
         <Dialog open={isVisible} onOpenChange={handleOpenChange}>
             {!isControlled && trigger}
-            <DialogContent aria-describedby={undefined}
+            <DialogContent disableBlur aria-describedby={undefined}
                 className="sm:max-w-[400px] p-0 overflow-hidden border-none bg-background shadow-2xl"
                 onPointerDownOutside={(e) => {
                     if (isControlled) e.preventDefault();

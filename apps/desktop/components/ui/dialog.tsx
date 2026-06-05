@@ -33,13 +33,17 @@ function DialogClose({
 
 function DialogOverlay({
   className,
+  disableBlur,
   ...props
-}: React.ComponentProps<typeof DialogPrimitive.Overlay>) {
+}: React.ComponentProps<typeof DialogPrimitive.Overlay> & {
+  disableBlur?: boolean
+}) {
   return (
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
       className={cn(
-        "fixed inset-0 z-50 bg-black/20 backdrop-blur-sm data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0",
+        "fixed inset-0 z-50 bg-black/20 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0",
+        !disableBlur && "backdrop-blur-sm",
         className
       )}
       {...props}
@@ -51,13 +55,15 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  disableBlur,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
+  disableBlur?: boolean
 }) {
   return (
     <DialogPortal data-slot="dialog-portal">
-      <DialogOverlay />
+      <DialogOverlay disableBlur={disableBlur} />
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(

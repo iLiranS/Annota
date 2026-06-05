@@ -158,7 +158,7 @@ export default function NoteInfoModal({ visible, onClose, noteId, onScrollToElem
                                         {/* Words */}
                                         <View style={styles.metaRow}>
                                             <View style={styles.metaLabelContainer}>
-                                                <Ionicons name="language-outline" size={16} color={colors.primary + '80'} />
+                                                <Ionicons name="language-outline" size={16} color={colors.text + '50'} />
                                                 <Text style={[styles.metaLabel, { color: colors.text + '60' }]}>WORDS</Text>
                                             </View>
                                             <View style={styles.metaValueContainer}>
@@ -169,7 +169,7 @@ export default function NoteInfoModal({ visible, onClose, noteId, onScrollToElem
                                         {/* Chars */}
                                         <View style={styles.metaRow}>
                                             <View style={styles.metaLabelContainer}>
-                                                <Ionicons name="text-outline" size={16} color={colors.primary + '80'} />
+                                                <Ionicons name="text-outline" size={16} color={colors.text + '50'} />
                                                 <Text style={[styles.metaLabel, { color: colors.text + '60' }]}>CHARACTERS</Text>
                                             </View>
                                             <View style={styles.metaValueContainer}>
@@ -180,7 +180,7 @@ export default function NoteInfoModal({ visible, onClose, noteId, onScrollToElem
                                         {/* Size */}
                                         <View style={styles.metaRow}>
                                             <View style={styles.metaLabelContainer}>
-                                                <Ionicons name="save-outline" size={16} color={colors.primary + '80'} />
+                                                <Ionicons name="save-outline" size={16} color={colors.text + '50'} />
                                                 <Text style={[styles.metaLabel, { color: colors.text + '60' }]}>SIZE</Text>
                                             </View>
                                             <View style={styles.metaValueContainer}>
@@ -191,7 +191,7 @@ export default function NoteInfoModal({ visible, onClose, noteId, onScrollToElem
                                         {/* Created */}
                                         <View style={styles.metaRow}>
                                             <View style={styles.metaLabelContainer}>
-                                                <Ionicons name="calendar-outline" size={16} color={colors.primary + '80'} />
+                                                <Ionicons name="calendar-outline" size={16} color={colors.text + '50'} />
                                                 <Text style={[styles.metaLabel, { color: colors.text + '60' }]}>CREATED</Text>
                                             </View>
                                             <View style={styles.metaValueContainer}>
@@ -207,7 +207,7 @@ export default function NoteInfoModal({ visible, onClose, noteId, onScrollToElem
                                         {/* Updated */}
                                         <View style={styles.metaRow}>
                                             <View style={styles.metaLabelContainer}>
-                                                <Ionicons name="time-outline" size={16} color={colors.primary + '80'} />
+                                                <Ionicons name="time-outline" size={16} color={colors.text + '50'} />
                                                 <Text style={[styles.metaLabel, { color: colors.text + '60' }]}>UPDATED</Text>
                                             </View>
                                             <View style={styles.metaValueContainer}>

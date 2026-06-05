@@ -54,6 +54,11 @@
 .code-block-wrapper pre {
     margin: 0;
     min-width: 0;
+    padding-top: 0;
+}
+
+.code-block-wrapper .code-gutter {
+    padding-top: 0;
 }
 
 /* Header bar for code block */

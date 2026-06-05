@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button";
 import {
     ContextMenu,
     ContextMenuContent,
@@ -9,11 +8,10 @@ import {
 import { Ionicons } from "@/components/ui/ionicons";
 import { cn } from "@/lib/utils";
 import { DAILY_NOTES_FOLDER_ID, Folder, NoteMetadata, TRASH_FOLDER_ID, useNavigationStore, useNotesStore, useSettingsStore } from "@annota/core";
-import { Pin, Plus, X, XCircle } from "lucide-react";
+import { Pin, X, XCircle } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { useCreateNote } from "../../hooks/use-create-note";
 import { useNoteTabsStore } from "../../hooks/use-note-tabs";
 import { NoteContextMenuContent, useNoteModals } from "../notes/note-context-menu";
 
@@ -24,7 +22,6 @@ export function NoteTabs() {
     const location = useLocation();
     const navigate = useNavigate();
     const { general } = useSettingsStore();
-    const { createAndNavigate } = useCreateNote();
 
 
     const tabs = useNoteTabsStore(s => s.tabs);
@@ -391,7 +388,7 @@ export function NoteTabs() {
                                         navigate(`/notes/${tab.noteId}`);
                                     }}
                                     className={cn(
-                                        "group relative flex h-9/12 cursor-pointer items-center justify-start gap-1.5 rounded border text-xs select-none flex-row px-1.5",
+                                        "group relative flex h-9/12 cursor-pointer items-center justify-start gap-1.5 rounded border text-xs select-none flex-row px-1",
                                         isActive
                                             ? "bg-note-bg dark:bg-primary/10 border-border text-primary  z-10 shrink min-w-[120px] max-w-[220px] w-auto font-medium"
                                             : "bg-transparent border-transparent text-muted-foreground/60 hover:bg-primary/5 hover:text-muted-foreground/80 hover:border-border/30 z-0 shrink min-w-[120px] max-w-[220px] w-auto",
@@ -434,11 +431,10 @@ export function NoteTabs() {
 
                                     <div
                                         className={cn(
-                                            "flex p-0.5 shrink-0 items-center justify-center rounded",
+                                            "flex p-0.5 shrink-0 items-center justify-center rounded ",
                                             isActive
-                                                ? "relative opacity-85 bg-transparent text-primary/75 hover:text-primary hover:bg-foreground/10"
-                                                : "absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 bg-background  hover:text-primary",
-                                            !isActive && (general.appDirection === 'rtl' ? "left-1.5" : "right-1.5")
+                                                ? "opacity-85 text-primary/75 hover:text-primary hover:bg-foreground/10"
+                                                : "opacity-0 group-hover:opacity-100 text-muted-foreground/60 hover:text-primary hover:bg-foreground/10"
                                         )}
                                         onClick={(e) => handleClose(e, tab.noteId)}
                                     >
@@ -490,16 +486,6 @@ export function NoteTabs() {
                         </ContextMenu>
                     );
                 })}
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-xs"
-                    onClick={() => createAndNavigate()}
-                    className="text-muted-foreground/40 hover:bg-primary/10 hover:text-primary active:scale-90 transition-all cursor-pointer shrink-0"
-                    title="New Note (Cmd+N)"
-                >
-                    <Plus size={14} strokeWidth={2.5} />
-                </Button>
             </div>
             {renderModals()}
         </div>

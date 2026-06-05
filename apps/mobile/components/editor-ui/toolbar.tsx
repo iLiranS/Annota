@@ -43,6 +43,9 @@ export function EditorToolbar({
     const [isLoading, setIsLoading] = useState(false);
 
     const handleDismiss = () => {
+        if (activePopup && isFloatingSelector(activePopup)) {
+            closePopup();
+        }
         onDismissKeyboard();
         Keyboard.dismiss();
     };

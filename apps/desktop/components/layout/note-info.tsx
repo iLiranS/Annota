@@ -163,7 +163,7 @@ export function NoteInfo({ noteId }: { noteId: string }) {
                             {/* Words */}
                             <div className="flex items-center justify-between text-xs text-muted-foreground/80 px-1">
                                 <div className="flex items-center gap-2.5">
-                                    <FileText size={14} className="text-accent-full/60" />
+                                    <FileText size={14} className="text-muted-foreground/50" />
                                     <span className="font-medium text-muted-foreground/60 uppercase text-[9px] tracking-wider">Words</span>
                                 </div>
                                 <span className="font-semibold text-muted-foreground/70 tabular-nums">{stats.words}</span>
@@ -172,7 +172,7 @@ export function NoteInfo({ noteId }: { noteId: string }) {
                             {/* Characters */}
                             <div className="flex items-center justify-between text-xs text-muted-foreground/80 px-1">
                                 <div className="flex items-center gap-2.5">
-                                    <Hash size={14} className="text-accent-full/60" />
+                                    <Hash size={14} className="text-muted-foreground/50" />
                                     <span className="font-medium text-muted-foreground/60 uppercase text-[9px] tracking-wider">Characters</span>
                                 </div>
                                 <span className="font-semibold text-muted-foreground/70 tabular-nums">{stats.chars}</span>
@@ -181,7 +181,7 @@ export function NoteInfo({ noteId }: { noteId: string }) {
                             {/* Size */}
                             <div className="flex items-center justify-between text-xs text-muted-foreground/80 px-1">
                                 <div className="flex items-center gap-2.5">
-                                    <HardDrive size={14} className="text-accent-full/60" />
+                                    <HardDrive size={14} className="text-muted-foreground/50" />
                                     <span className="font-medium text-muted-foreground/60 uppercase text-[9px] tracking-wider">Size</span>
                                 </div>
                                 <span className="font-semibold text-muted-foreground/70 tabular-nums whitespace-nowrap">{formatSize(stats.size)}</span>
@@ -190,7 +190,7 @@ export function NoteInfo({ noteId }: { noteId: string }) {
                             {/* Created */}
                             <div className="flex items-center justify-between text-xs text-muted-foreground/80 px-1">
                                 <div className="flex items-center gap-2.5">
-                                    <Calendar size={14} className="text-accent-full/60" />
+                                    <Calendar size={14} className="text-muted-foreground/50" />
                                     <span className="font-medium text-muted-foreground/60 uppercase text-[9px] tracking-wider">Created</span>
                                 </div>
                                 <div className="flex items-center gap-2">
@@ -206,7 +206,7 @@ export function NoteInfo({ noteId }: { noteId: string }) {
                             {/* Updated */}
                             <div className="flex items-center justify-between text-xs text-muted-foreground/80 px-1">
                                 <div className="flex items-center gap-2.5">
-                                    <Clock size={14} className="text-accent-full/60" />
+                                    <Clock size={14} className="text-muted-foreground/50" />
                                     <span className="font-medium text-muted-foreground/60 uppercase text-[9px] tracking-wider">Updated</span>
                                 </div>
                                 <div className="flex items-center gap-2">
