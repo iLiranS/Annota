@@ -6,6 +6,7 @@ import { ThemeProvider } from '@react-navigation/native';
 import { drizzle } from 'drizzle-orm/expo-sqlite';
 import * as BackgroundTask from 'expo-background-task';
 import { Stack, useRouter, useSegments } from 'expo-router';
+import { useShareIntent } from 'expo-share-intent';
 import { openDatabaseSync } from 'expo-sqlite';
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
@@ -180,6 +181,33 @@ function AppLogicHub() {
   const schedulerRef = useRef<SyncScheduler | null>(null);
   const segments = useSegments();
   const router = useRouter();
+
+  // ── Share Intent ─────────────────────────────────────────────────────────
+  // expo-share-intent delivers the URL shared from Safari/Chrome here.
+  // We gate navigation on dbReady + initialized so the share screen can
+  // safely call createNote without the DB being cold.
+  const { hasShareIntent, shareIntent, resetShareIntent } = useShareIntent();
+
+  useEffect(() => {
+    if (!hasShareIntent) return;
+    if (!dbReady || !initialized) return;
+
+    const webUrl = shareIntent?.webUrl;
+    if (!webUrl) {
+      // Intent arrived but has no URL — clear it and do nothing
+      resetShareIntent();
+      return;
+    }
+
+    router.push({
+      pathname: '/share',
+      params: {
+        url: webUrl,
+        title: shareIntent.text ?? '',
+      },
+    });
+    resetShareIntent();
+  }, [hasShareIntent, dbReady, initialized, shareIntent, resetShareIntent, router]);
 
   // 1. Auth Listener & Hydration (Runs only once at startup)
   useEffect(() => {

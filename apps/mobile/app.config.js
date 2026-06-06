@@ -51,6 +51,19 @@ export default {
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-share-intent",
+        {
+          iosActivationRules: {
+            NSExtensionActivationSupportsWebURLWithMaxCount: 1,
+            NSExtensionActivationSupportsWebPageWithMaxCount: 1,
+          },
+          androidIntentFilters: ["text/*", "text/plain"],
+          androidMainActivityAttributes: {
+            "android:launchMode": "singleTask",
+          },
+        },
+      ],
       "expo-document-picker",
       "expo-apple-authentication",
       [

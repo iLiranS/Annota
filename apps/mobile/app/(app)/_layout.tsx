@@ -104,6 +104,7 @@ export default function AppLayout() {
             <Stack.Screen name="tasks" options={{ headerShown: false, animation: 'none' }} />
             <Stack.Screen name="note/[id]" options={{ headerShown: false, animation: 'none' }} />
             <Stack.Screen name="paywall" options={{ headerShown: false, presentation: 'modal' }} />
+            <Stack.Screen name="share" options={{ headerShown: false, presentation: 'modal' }} />
           </Stack>
 
           {/* ── Overlay (dims stack content when sidebar open) ── */}

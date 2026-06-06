@@ -378,13 +378,41 @@ export const getEditorProps = (callbacks: {
             }
 
             try {
-                const slice = selection.content();
+                let slice = selection.content();
+
+                // If it's a partial selection inside details or codeBlock, strip the wrappers
+                if (slice.content.childCount === 1) {
+                    const firstChild = slice.content.firstChild;
+                    if (firstChild && (firstChild.type.name === 'codeBlock' || firstChild.type.name === 'details')) {
+                        if (slice.openStart > 0 || slice.openEnd > 0) {
+                            if (firstChild.type.name === 'codeBlock') {
+                                slice = new Slice(firstChild.content, Math.max(0, slice.openStart - 1), Math.max(0, slice.openEnd - 1));
+                            } else if (firstChild.type.name === 'details') {
+                                const newNodes: any[] = [];
+                                firstChild.content.forEach((node: any) => {
+                                    if (node.type.name === 'detailsContent' || node.type.name === 'detailsSummary') {
+                                        node.content.forEach((innerNode: any) => {
+                                            newNodes.push(innerNode);
+                                        });
+                                    } else {
+                                        newNodes.push(node);
+                                    }
+                                });
+                                // @ts-ignore
+                                const newFragment = slice.content.constructor.from(newNodes);
+                                slice = new Slice(newFragment, Math.max(0, slice.openStart - 2), Math.max(0, slice.openEnd - 2));
+                            }
+                        }
+                    }
+                }
+
                 const serializer = DOMSerializer.fromSchema(view.state.schema);
                 const div = document.createElement('div');
                 div.appendChild(serializer.serializeFragment(slice.content));
 
                 event.clipboardData.setData('text/plain', slice.content.textBetween(0, slice.content.size, ' '));
                 event.clipboardData.setData('text/html', prepareMarksHTMLForClipboard(div.innerHTML));
+                event.clipboardData.setData('application/x-prosemirror-flat-slice', JSON.stringify(slice.toJSON()));
                 event.preventDefault();
                 return true;
             } catch {
@@ -429,13 +457,19 @@ export const getEditorProps = (callbacks: {
                         return new Slice(firstChild.content, Math.max(0, slice.openStart - 1), Math.max(0, slice.openEnd - 1));
                     }
                     if (firstChild.type.name === 'details') {
-                        let innerContent = firstChild.content;
-                        firstChild.content.forEach(node => {
-                            if (node.type.name === 'detailsContent') {
-                                innerContent = node.content;
+                        const newNodes: any[] = [];
+                        firstChild.content.forEach((node: any) => {
+                            if (node.type.name === 'detailsContent' || node.type.name === 'detailsSummary') {
+                                node.content.forEach((innerNode: any) => {
+                                    newNodes.push(innerNode);
+                                });
+                            } else {
+                                newNodes.push(node);
                             }
                         });
-                        return new Slice(innerContent, Math.max(0, slice.openStart - 2), Math.max(0, slice.openEnd - 2));
+                        // @ts-ignore
+                        const newFragment = slice.content.constructor.from(newNodes);
+                        return new Slice(newFragment, Math.max(0, slice.openStart - 2), Math.max(0, slice.openEnd - 2));
                     }
                 }
             }
