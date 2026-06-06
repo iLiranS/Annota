@@ -11,6 +11,8 @@ import {
     resizeAndCompress,
     saveToLocalStorage
 } from './file.service';
+import { useUserStore } from '../../stores/user.store';
+import { isPremiumUser } from '../../utils/subscription';
 
 // ============ CONSTANTS ============
 const MAX_PDF_SIZE = 5 * 1024 * 1024; // 5MB limit for PDFs
@@ -115,8 +117,17 @@ export async function processAndInsertFile(
     const fileType = getFileTypeFromMime(mimeType);
 
     // 2. Validation
-    if (fileType === 'pdf' && size > MAX_PDF_SIZE) {
-        throw new Error(`PDF size exceeds ${MAX_PDF_SIZE / (1024 * 1024)}MB limit`);
+    if (fileType === 'pdf') {
+        const { isGuest, role, sub_exp_date } = useUserStore.getState();
+        const isPremium = isPremiumUser(role, sub_exp_date);
+        const canUploadPdf = isGuest || isPremium;
+        if (!canUploadPdf) {
+            throw new Error("PDF upload is a premium feature");
+        }
+
+        if (size > MAX_PDF_SIZE) {
+            throw new Error(`PDF size exceeds ${MAX_PDF_SIZE / (1024 * 1024)}MB limit`);
+        }
     }
 
     // 3. Compute hash of the INCOMING file

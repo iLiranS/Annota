@@ -3,7 +3,7 @@ export default {
   "expo": {
     name: IS_DEV ? 'Annota (Dev)' : 'Annota',
     "slug": "annota",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "annota",

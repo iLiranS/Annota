@@ -12,6 +12,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { getPlatformAdapters } from '@annota/core/platform';
+import { useIsPremium, useUserStore } from '@annota/core';
 import { join } from '@tauri-apps/api/path';
 import {
     Link as LinkIcon,
@@ -31,6 +32,10 @@ interface ToolbarFileUploadProps {
 }
 
 export function ToolbarFileUpload({ onInsertFile, onOpenChange, isMenu, visible, onClose }: ToolbarFileUploadProps) {
+    const isGuest = useUserStore((state) => state.isGuest);
+    const isPremium = useIsPremium();
+    const canUploadPdf = isGuest || isPremium;
+
     const [open, setOpen] = useState(false);
 
     // Sync with visible prop if provided
@@ -88,13 +93,18 @@ export function ToolbarFileUpload({ onInsertFile, onOpenChange, isMenu, visible,
     }, [url, onInsertFile, handleOpenChange]);
 
     const processFile = useCallback(async (file: File) => {
+        const ext = file.name.split('.').pop()?.toLowerCase() || '';
+        const isPdf = ext === 'pdf' || file.type === 'application/pdf';
+        if (isPdf && !canUploadPdf) {
+            toast.error("Premium feature", { description: "PDF upload is only available for premium users." });
+            return;
+        }
         setIsLoading(true);
         try {
             const adapters = getPlatformAdapters();
             const bytes = new Uint8Array(await file.arrayBuffer());
             const cacheDir = await adapters.fileSystem.ensureDir('cache');
 
-            const ext = file.name.split('.').pop() || 'png';
             const tempFilename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
             const tempPath = await join(cacheDir, tempFilename);
 
@@ -114,7 +124,7 @@ export function ToolbarFileUpload({ onInsertFile, onOpenChange, isMenu, visible,
             setIsLoading(false);
             if (fileInputRef.current) fileInputRef.current.value = '';
         }
-    }, [onInsertFile, handleOpenChange]);
+    }, [onInsertFile, handleOpenChange, canUploadPdf]);
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -255,7 +265,7 @@ export function ToolbarFileUpload({ onInsertFile, onOpenChange, isMenu, visible,
                                 type="file"
                                 ref={fileInputRef}
                                 className="hidden"
-                                accept="image/*,application/pdf"
+                                accept={canUploadPdf ? "image/*,application/pdf" : "image/*"}
                                 onChange={handleFileChange}
                                 disabled={isLoading}
                             />
@@ -271,8 +281,12 @@ export function ToolbarFileUpload({ onInsertFile, onOpenChange, isMenu, visible,
                                         <Upload className="h-6 w-6 text-primary" />
                                     </div>
                                     <p className="text-sm font-medium">Click or drag file here</p>
-                                    <p className="text-xs text-muted-foreground mt-1 text-center">Up to: 5MB Image / 5MB PDF</p>
-                                    <p className="text-xs text-muted-foreground mt-1 text-center">Images are compressed; PDFs are kept original</p>
+                                    <p className="text-xs text-muted-foreground mt-1 text-center">
+                                        {canUploadPdf ? "Up to: 5MB Image / 5MB PDF" : "Up to: 5MB Image (PDF is Premium only)"}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground mt-1 text-center">
+                                        {canUploadPdf ? "Images are compressed; PDFs are kept original" : "Images are compressed"}
+                                    </p>
                                 </>
                             )}
                         </div>
@@ -316,7 +330,9 @@ export function ToolbarFileUpload({ onInsertFile, onOpenChange, isMenu, visible,
                             <Upload className="h-8 w-8 text-primary" />
                         </div>
                         <p className="text-lg font-bold text-primary">Drop to Upload</p>
-                        <p className="text-sm text-primary/70">Images or PDFs</p>
+                        <p className="text-sm text-primary/70">
+                            {canUploadPdf ? "Images or PDFs" : "Images only (PDF is Premium)"}
+                        </p>
                     </div>
                 )}
             </DialogContent>

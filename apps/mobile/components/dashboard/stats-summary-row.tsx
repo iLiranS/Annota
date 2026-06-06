@@ -117,15 +117,18 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: 8,
         marginBottom: 24,
+        alignSelf: 'stretch',
     },
     statsGrid: {
         flexDirection: 'column',
         gap: 8,
         marginBottom: 24,
+        alignSelf: 'stretch',
     },
     gridRow: {
         flexDirection: 'row',
         gap: 8,
+        alignSelf: 'stretch',
     },
     statBox: {
         flex: 1,

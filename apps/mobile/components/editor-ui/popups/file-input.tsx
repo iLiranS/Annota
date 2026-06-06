@@ -1,4 +1,4 @@
-import { imageInputSchema, type ImageInputData } from '@annota/core';
+import { imageInputSchema, type ImageInputData, useIsPremium, useUserStore } from '@annota/core';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTheme } from '@react-navigation/native';
@@ -18,6 +18,9 @@ interface FileInputProps {
 
 export function FileInput({ onSubmit, onPickFromLibrary, onPickDocument, onTakePhoto, onClose, isLoading }: FileInputProps) {
     const { colors, dark } = useTheme();
+    const isGuest = useUserStore((state) => state.isGuest);
+    const isPremium = useIsPremium();
+    const canUploadPdf = isGuest || isPremium;
 
     const {
         control,
@@ -89,11 +92,18 @@ export function FileInput({ onSubmit, onPickFromLibrary, onPickDocument, onTakeP
                             )}
                             {onPickDocument && (
                                 <Pressable
-                                    style={[styles.sourceButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+                                    style={[
+                                        styles.sourceButton,
+                                        { backgroundColor: colors.card, borderColor: colors.border },
+                                        !canUploadPdf && { opacity: 0.5 }
+                                    ]}
                                     onPress={onPickDocument}
+                                    disabled={!canUploadPdf}
                                 >
-                                    <Ionicons name="document-outline" size={22} color={colors.primary} />
-                                    <Text style={[styles.sourceLabel, { color: colors.text }]}>Files</Text>
+                                    <Ionicons name="document-outline" size={22} color={canUploadPdf ? colors.primary : colors.text + '30'} />
+                                    <Text style={[styles.sourceLabel, { color: canUploadPdf ? colors.text : colors.text + '30' }]}>
+                                        Files
+                                    </Text>
                                 </Pressable>
                             )}
                             {onTakePhoto && (
