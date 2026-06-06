@@ -40,14 +40,16 @@ export const NoteService = {
 
     // 1. Create
     create: async (data: Partial<NoteMetadata>, userRole: UserRole, subExpDate: string | null): Promise<NoteMetadata> => {
-        const isPremium = isPremiumUser(userRole, subExpDate);
-        const limit = isPremium ? premiumNotesLimit : freeNotesLimit;
+        if (userRole !== null) {
+            const isPremium = isPremiumUser(userRole, subExpDate);
+            const limit = isPremium ? premiumNotesLimit : freeNotesLimit;
 
-        // Ask repository for current count to ensure absolute accuracy
-        const currentCount = await notesRepo.getNotesCount();
+            // Ask repository for current count to ensure absolute accuracy
+            const currentCount = await notesRepo.getNotesCount();
 
-        if (currentCount >= limit) {
-            throw new Error(`Limit of ${limit} notes reached.`);
+            if (currentCount >= limit) {
+                throw new Error(`Limit of ${limit} notes reached.`);
+            }
         }
 
         if (data.folderId === 'system-daily-notes') {
@@ -62,13 +64,15 @@ export const NoteService = {
     },
 
     createBulk: async (notes: { title: string, content: string }[], userRole: UserRole, subExpDate: string | null): Promise<{ notes: NoteMetadata[], folder: any }> => {
-        const isPremium = isPremiumUser(userRole, subExpDate);
-        const limit = isPremium ? premiumNotesLimit : freeNotesLimit;
+        if (userRole !== null) {
+            const isPremium = isPremiumUser(userRole, subExpDate);
+            const limit = isPremium ? premiumNotesLimit : freeNotesLimit;
 
-        const currentCount = await notesRepo.getNotesCount();
+            const currentCount = await notesRepo.getNotesCount();
 
-        if (currentCount + notes.length > limit) {
-            throw new Error(`Adding these notes would exceed your limit of ${limit} notes.`);
+            if (currentCount + notes.length > limit) {
+                throw new Error(`Adding these notes would exceed your limit of ${limit} notes.`);
+            }
         }
 
         const dateStr = new Date().toLocaleDateString('en-US', {

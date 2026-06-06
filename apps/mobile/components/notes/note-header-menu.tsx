@@ -4,7 +4,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { MenuAction, MenuView } from '@react-native-menu/menu';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Alert, StyleSheet, View } from 'react-native';
+import { useIsPremium } from '@annota/core';
 
 interface NoteHeaderMenuProps {
     noteId: string;
@@ -14,6 +15,10 @@ interface NoteHeaderMenuProps {
     isPinned?: boolean;
     /** Whether the note is deleted */
     isDeleted?: boolean;
+    /** Whether the note is published */
+    isPublished?: boolean;
+    /** Whether the note has unpublished local changes */
+    hasUnpublishedChanges?: boolean;
     /** Callback when search is triggered */
     onSearch?: () => void;
     /** Callback when quick access toggle is pressed */
@@ -32,6 +37,10 @@ interface NoteHeaderMenuProps {
     onRestore?: () => void;
     /** Callback when note info is pressed */
     onNoteInfo?: () => void;
+    /** Callback when publish toggle is pressed */
+    onPublish?: () => void;
+    /** Callback when unpublish is pressed */
+    onUnpublish?: () => void;
 }
 
 export default function NoteHeaderMenu({
@@ -39,6 +48,8 @@ export default function NoteHeaderMenu({
     isQuickAccess = false,
     isPinned = false,
     isDeleted = false,
+    isPublished = false,
+    hasUnpublishedChanges = false,
     onSearch,
     onToggleQuickAccess,
     onTogglePin,
@@ -48,9 +59,13 @@ export default function NoteHeaderMenu({
     onDelete,
     onRestore,
     onNoteInfo,
+    onPublish,
+    onUnpublish,
 }: NoteHeaderMenuProps) {
     const { colors } = useAppTheme();
     const router = useRouter();
+
+    const isPremium = useIsPremium();
 
     const handleAction = (id: string) => {
         if (id === 'search') onSearch?.();
@@ -66,6 +81,19 @@ export default function NoteHeaderMenu({
         else if (id === 'settings') router.push('/settings');
         else if (id === 'delete') onDelete?.();
         else if (id === 'restore') onRestore?.();
+        else if (id === 'publish') {
+            Alert.alert(
+                isPublished ? "Update publish?" : "Publish note?",
+                "Are you sure you want to publish this note? Anyone with the link will be able to view all its data!",
+                [
+                    { text: "Cancel", style: "cancel" },
+                    { text: isPublished ? "Update" : "Publish", onPress: () => onPublish?.() }
+                ]
+            );
+        }
+        else if (id === 'unpublish') {
+            onUnpublish?.();
+        }
     };
 
     const actions: MenuAction[] = isDeleted
@@ -120,14 +148,14 @@ export default function NoteHeaderMenu({
                 title: 'Quick Access',
                 image: isQuickAccess ? 'star.fill' : 'star',
                 imageColor: '#FBBF24',
-                state: isQuickAccess ? 'on' : 'off',
+                state: isQuickAccess ? 'on' as const : 'off' as const,
             },
             {
                 id: 'pin',
                 title: 'Pin Note',
                 image: isPinned ? 'pin.fill' : 'pin',
                 imageColor: colors.primary,
-                state: isPinned ? 'on' : 'off',
+                state: isPinned ? 'on' as const : 'off' as const,
             },
             {
                 id: 'version-history',
@@ -153,6 +181,26 @@ export default function NoteHeaderMenu({
                 image: 'square.and.arrow.up',
                 imageColor: colors.primary,
             },
+            ...(isPremium ? [
+                {
+                    id: 'publish',
+                    title: !isPublished 
+                        ? 'Publish Note' 
+                        : hasUnpublishedChanges 
+                            ? 'Update Publish' 
+                            : 'Published',
+                    image: 'globe',
+                    imageColor: colors.primary,
+                    state: isPublished ? 'on' as const : 'off' as const,
+                },
+                ...(isPublished ? [{
+                    id: 'unpublish',
+                    title: 'Unpublish Note',
+                    image: 'eye.slash',
+                    imageColor: '#FF3B30',
+                    attributes: { destructive: true },
+                }] : []),
+            ] as MenuAction[] : []),
             {
                 id: 'settings',
                 title: 'Settings',

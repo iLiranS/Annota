@@ -21,12 +21,14 @@ export const TagService = {
     },
 
     create: async (data: TagCreateInput, userRole: UserRole, subExpDate: string | null): Promise<Tag> => {
-        const isPremium = isPremiumUser(userRole, subExpDate);
-        const limit = isPremium ? premiumTagsLimit : freeTagsLimit;
-        const currentCount = await tagsRepo.getTagsCount();
+        if (userRole !== null) {
+            const isPremium = isPremiumUser(userRole, subExpDate);
+            const limit = isPremium ? premiumTagsLimit : freeTagsLimit;
+            const currentCount = await tagsRepo.getTagsCount();
 
-        if (currentCount >= limit) {
-            throw new Error(`Limit of ${limit} tags reached.`);
+            if (currentCount >= limit) {
+                throw new Error(`Limit of ${limit} tags reached.`);
+            }
         }
 
         return await tagsRepo.createTag(data);

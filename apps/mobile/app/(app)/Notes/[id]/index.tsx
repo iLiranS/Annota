@@ -335,6 +335,43 @@ export default function NoteEditor() {
         updateNoteMetadata(id, { isPinned: value });
     }, [id, updateNoteMetadata]);
 
+    const hasUnpublishedChanges = !!currentNote?.isPublished && (
+        !currentNote.publishUpdatedAt || new Date(currentNote.updatedAt).getTime() > new Date(currentNote.publishUpdatedAt).getTime()
+    );
+
+    const handlePublish = useCallback(async () => {
+        if (!id) return;
+        try {
+            await updateNoteMetadata(id, {
+                isPublished: true,
+                publishUpdatedAt: new Date(),
+            });
+            Toast.show({
+                type: 'success',
+                text1: currentNote?.isPublished ? 'Publish updated successfully' : 'Note published successfully',
+            });
+        } catch (err) {
+            console.error('Failed to publish note', err);
+            Alert.alert('Error', 'Failed to publish note');
+        }
+    }, [id, currentNote, updateNoteMetadata]);
+
+    const handleUnpublish = useCallback(async () => {
+        if (!id) return;
+        try {
+            await updateNoteMetadata(id, {
+                isPublished: false,
+            });
+            Toast.show({
+                type: 'success',
+                text1: 'Note unpublished successfully',
+            });
+        } catch (err) {
+            console.error('Failed to unpublish note', err);
+            Alert.alert('Error', 'Failed to unpublish note');
+        }
+    }, [id, updateNoteMetadata]);
+
     const handleCopyLink = useCallback(async () => {
         if (!id) return;
         const link = `annota://note/${id}`;
@@ -467,8 +504,9 @@ export default function NoteEditor() {
                     headerLeft: () => (
                         <HapticPressable
                             onPress={handleBack}
-                            style={[
+                            style={({ pressed }) => [
                                 styles.headerButton,
+                                pressed && { backgroundColor: colors.text + '15' },
                                 {
                                     padding: 4,
                                     marginLeft: Platform.OS === 'ios' ? -4 : 0,
@@ -486,10 +524,34 @@ export default function NoteEditor() {
                     headerBackVisible: false,
                     headerRight: () => (
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            {currentNote?.isPublished && (
+                                <HapticPressable
+                                    onPress={async () => {
+                                        const url = `https://annota.online/notes/${id}`;
+                                        const Linking = require('react-native').Linking;
+                                        const supported = await Linking.canOpenURL(url);
+                                        if (supported) {
+                                            await Linking.openURL(url);
+                                        } else {
+                                            Alert.alert("Error", `Cannot open URL: ${url}`);
+                                        }
+                                    }}
+                                    style={({ pressed }) => [
+                                        styles.headerButton,
+                                        pressed && { backgroundColor: colors.text + '15' },
+                                    ]}
+                                    hitSlop={8}
+                                >
+                                    <Ionicons name="globe-outline" size={22} color={colors.primary} />
+                                </HapticPressable>
+                            )}
                             {general.isAiEnabled && !currentNote?.isDeleted && (
                                 <HapticPressable
                                     onPress={() => setIsAiChatVisible(true)}
-                                    style={[styles.headerButton, { marginLeft: 8 }]}
+                                    style={({ pressed }) => [
+                                        styles.headerButton,
+                                        pressed && { backgroundColor: colors.text + '15' },
+                                    ]}
                                     hitSlop={8}
                                 >
                                     <Ionicons name="sparkles" size={22} color={colors.primary} />
@@ -500,6 +562,8 @@ export default function NoteEditor() {
                                 isPinned={currentNote?.isPinned}
                                 isQuickAccess={currentNote?.isQuickAccess}
                                 isDeleted={currentNote?.isDeleted}
+                                isPublished={currentNote?.isPublished}
+                                hasUnpublishedChanges={hasUnpublishedChanges}
                                 onSearch={handleOpenSearch}
                                 onDelete={handleDelete}
                                 onRestore={handleRestore}
@@ -508,6 +572,8 @@ export default function NoteEditor() {
                                 onVersionHistory={handleVersionHistory}
                                 onNoteInfo={handleNoteInfo}
                                 onCopyLink={handleCopyLink}
+                                onPublish={handlePublish}
+                                onUnpublish={handleUnpublish}
                             />
                         </View>
                     ),
@@ -639,6 +705,9 @@ const styles = StyleSheet.create({
         maxWidth: 200,
     },
     headerButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
         justifyContent: 'center',
         alignItems: 'center',
     },

@@ -1,4 +1,5 @@
 import { eq, or } from 'drizzle-orm';
+import { areAdaptersInitialized, getPlatformAdapters } from '../adapters';
 import { authApi } from '../api/auth.api';
 import { storageApi } from '../api/storage.api';
 import { syncApi } from '../api/sync.api';
@@ -10,7 +11,7 @@ import * as schema from '../db/schema';
 import { fileSyncService } from '../services/files/file-sync.service';
 import { StorageService } from '../services/storage.service';
 import { createStorageAdapter } from '../stores/config';
-import { getDb } from '../stores/db.store';
+import { getDb, getExpoDb } from '../stores/db.store';
 import { useSyncStore } from '../stores/sync.store';
 import { decodeSaltHex, decryptPayload, deriveKeysFromMnemonic, encryptPayload } from '../utils/crypto';
 import { cleanFolderExpandedState } from '../utils/folders';
@@ -164,6 +165,101 @@ export async function performSyncPush(masterKey: string, saltHex: string) {
                 const { error } = await syncApi.upsertNotes(payloadNotes);
                 if (error) throw error;
 
+                const failedPublishNoteIds = new Set<string>();
+
+                // Process publishing state for notes in this chunk
+                for (const metadata of chunk) {
+                    try {
+                        const isTombstone = metadata.isPermDeleted;
+                        const isDeleted = metadata.isDeleted;
+                        const isPublished = metadata.isPublished;
+                        const wasPublished = metadata.publishUpdatedAt !== null;
+
+                        if (isTombstone || isDeleted || !isPublished) {
+                            // Note is deleted or user toggled isPublished off → remove from server
+                            if (wasPublished) {
+                                const { error: pubError } = await syncApi.deletePublishedNote(metadata.id);
+                                if (pubError) {
+                                    console.error(`[Sync] Failed to delete published note ${metadata.id}:`, pubError);
+                                } else {
+                                    await db.update(schema.noteMetadata)
+                                        .set({ publishUpdatedAt: null })
+                                        .where(eq(schema.noteMetadata.id, metadata.id))
+                                        .execute();
+                                }
+                            }
+                        } else if (isPublished && metadata.publishUpdatedAt) {
+                            // Publish/update: only when the user explicitly triggered a publish
+                            // (publishUpdatedAt >= updatedAt means the last metadata change was a publish action,
+                            //  not a content edit which would bump updatedAt past publishUpdatedAt)
+                            const publishTime = new Date(metadata.publishUpdatedAt).getTime();
+                            const updateTime = new Date(metadata.updatedAt).getTime();
+
+                            if (publishTime >= updateTime) {
+                                const content = await getNoteContent(metadata.id);
+                                const title = metadata.title || 'Untitled Note';
+
+                                let mdData = content;
+                                try {
+                                    const converter = await getMarkdownConverter();
+                                    if (converter) {
+                                        console.log('[Sync] Global markdown converter found. Converting note content...');
+                                        mdData = await converter(content);
+                                    } else {
+                                        console.warn('[Sync] Global markdown converter NOT found on globalThis! Uploading raw HTML.');
+                                    }
+                                } catch (convErr) {
+                                    console.error('[Sync] Failed to convert note content to markdown:', convErr);
+                                }
+
+                                const { error: pubError } = await syncApi.upsertPublishedNote(
+                                    metadata.id,
+                                    userId,
+                                    mdData,
+                                    title,
+                                    metadata.publishUpdatedAt
+                                );
+                                if (pubError) {
+                                    console.error(`[Sync] Failed to upsert published note ${metadata.id}:`, pubError);
+
+                                    const isLimitReached = pubError.code === 'P0001' || pubError.hint === 'LimitReached';
+                                    const isUnauthorizedTier = pubError.code === 'P0002' || pubError.hint === 'UnauthorizedTier';
+
+                                    if (isLimitReached || isUnauthorizedTier) {
+                                        // Revert the publish state locally to avoid infinite sync retries for this note
+                                        await db.update(schema.noteMetadata)
+                                            .set({
+                                                isPublished: false,
+                                                isDirty: false,
+                                                publishUpdatedAt: null
+                                            })
+                                            .where(eq(schema.noteMetadata.id, metadata.id))
+                                            .execute();
+
+                                        if (areAdaptersInitialized()) {
+                                            const toastTitle = isLimitReached ? 'Limit Reached' : 'Subscription Expired';
+                                            const toastMessage = isLimitReached
+                                                ? (pubError.message || 'You have reached the maximum cap of published notes.')
+                                                : (pubError.message || 'Please renew your subscription to publish notes.');
+
+                                            getPlatformAdapters().toast.show({
+                                                type: 'error',
+                                                title: toastTitle,
+                                                message: toastMessage
+                                            });
+                                        }
+                                    } else {
+                                        // Transient errors: keep note dirty to retry later
+                                        failedPublishNoteIds.add(metadata.id);
+                                    }
+                                }
+                            }
+                        }
+                    } catch (pubErr) {
+                        console.error(`[Sync] Error processing publishing for note ${metadata.id}:`, pubErr);
+                    }
+                }
+
                 const tombstones = chunk.filter((n: any) => n.isPermDeleted);
                 if (tombstones.length > 0) {
                     await db.transaction(async (tx: any) => {
@@ -176,7 +272,7 @@ export async function performSyncPush(masterKey: string, saltHex: string) {
                     didDeleteTombstones = true;
                 }
 
-                const aliveNotes = chunk.filter((n: any) => !n.isPermDeleted);
+                const aliveNotes = chunk.filter((n: any) => !n.isPermDeleted && !failedPublishNoteIds.has(n.id));
                 if (aliveNotes.length > 0) {
                     await clearDirtyNotes(aliveNotes.map((n: any) => n.id));
                 }
@@ -210,6 +306,8 @@ export async function performSyncPush(masterKey: string, saltHex: string) {
  * @internal Use syncPull instead.
  */
 export async function performSyncPull(masterKey: string, saltHex: string) {
+    const nativeDb = getExpoDb();
+    await nativeDb.execAsync('PRAGMA foreign_keys = OFF;');
     try {
         const { data: { session } } = await authApi.getSession();
         if (!session?.user) throw new Error("User not authenticated");
@@ -219,7 +317,7 @@ export async function performSyncPull(masterKey: string, saltHex: string) {
         const { syncCursors } = useSyncStore.getState();
 
         const defaultCursor = { time: '1970-01-01T00:00:00.000Z', id: '00000000-0000-0000-0000-000000000000' };
-        
+
         const currentCursors = {
             notes: syncCursors?.notes || defaultCursor,
             folders: syncCursors?.folders || defaultCursor,
@@ -245,256 +343,258 @@ export async function performSyncPull(masterKey: string, saltHex: string) {
             const cloudTags = data.tags || [];
             const cloudNotes = data.notes || [];
 
-        // Pull Folders
-        if (cloudFolders.length > 0) {
-            for (let i = 0; i < cloudFolders.length; i += 15) {
-                const chunk = cloudFolders.slice(i, i + 15);
-                const deletedIds: string[] = [];
-                const parsedFolders: any[] = [];
+            // Pull Folders
+            if (cloudFolders.length > 0) {
+                for (let i = 0; i < cloudFolders.length; i += 15) {
+                    const chunk = cloudFolders.slice(i, i + 15);
+                    const deletedIds: string[] = [];
+                    const parsedFolders: any[] = [];
 
-                for (const row of chunk) {
-                    try {
-                        if (row.is_deleted) {
-                            deletedIds.push(row.id);
-                            continue;
-                        }
-                        const decryptedJson = await decryptPayload(row.encrypted_data, row.nonce, notesKey);
-                        const folderData = JSON.parse(decryptedJson);
-                        
-                        if (!folderData || !folderData.id) {
-                            console.warn("[Sync] Skipping corrupted/empty folder payload from cloud", row.id);
-                            continue;
-                        }
+                    for (const row of chunk) {
+                        try {
+                            if (row.is_deleted) {
+                                deletedIds.push(row.id);
+                                continue;
+                            }
+                            const decryptedJson = await decryptPayload(row.encrypted_data, row.nonce, notesKey);
+                            const folderData = JSON.parse(decryptedJson);
 
-                        folderData.createdAt = new Date(folderData.createdAt);
-                        folderData.updatedAt = new Date(folderData.updatedAt);
-                        folderData.deletedAt = folderData.deletedAt ? new Date(folderData.deletedAt) : null;
-                        folderData.isDirty = false;
-                        parsedFolders.push(folderData);
-                    } catch (e) {
-                        console.error("Failed to decrypt folder", row.id, e);
+                            if (!folderData || !folderData.id) {
+                                console.warn("[Sync] Skipping corrupted/empty folder payload from cloud", row.id);
+                                continue;
+                            }
+
+                            folderData.createdAt = new Date(folderData.createdAt);
+                            folderData.updatedAt = new Date(folderData.updatedAt);
+                            folderData.deletedAt = folderData.deletedAt ? new Date(folderData.deletedAt) : null;
+                            folderData.isDirty = false;
+                            parsedFolders.push(folderData);
+                        } catch (e) {
+                            console.error("Failed to decrypt folder", row.id, e);
+                        }
                     }
-                }
 
-                if (deletedIds.length > 0) {
-                    try {
-                        for (const rawId of deletedIds) {
-                            const id = String(rawId).trim();
-                            const hyphenlessId = id.replace(/-/g, '');
-                            await db.delete(schema.folders)
-                                .where(or(
-                                    eq(schema.folders.id, id),
-                                    eq(schema.folders.id, hyphenlessId)
-                                ))
-                                .execute();
-                            cleanFolderExpandedState(id);
-                            cleanFolderExpandedState(hyphenlessId);
-                        }
-                    } catch (e) {
-                        console.error("Failed to delete folders", deletedIds, e);
-                    }
-                    didDeleteTombstones = true;
-                }
-
-                if (parsedFolders.length > 0) {
-                    await db.transaction(async (tx: any) => {
-                        for (const f of parsedFolders) await upsertSyncedFolder(f, tx);
-                    });
-                }
-                if (deletedIds.length > 0) didDeleteTombstones = true;
-                await new Promise(resolve => setTimeout(resolve, 0));
-            }
-            const lastFolder = cloudFolders[cloudFolders.length - 1];
-            currentCursors.folders = { time: lastFolder.updated_at, id: lastFolder.id };
-        }
-        if (cloudFolders.length < 100) hasMoreFolders = false;
-
-
-        // Pull Tags
-        if (cloudTags.length > 0) {
-            for (let i = 0; i < cloudTags.length; i += 15) {
-                const chunk = cloudTags.slice(i, i + 15);
-                const deletedIds: string[] = [];
-                const parsedTags: any[] = [];
-
-                for (const row of chunk) {
-                    try {
-                        if (row.is_deleted) {
-                            deletedIds.push(row.id);
-                            continue;
-                        }
-                        const decryptedJson = await decryptPayload(row.encrypted_data, row.nonce, notesKey);
-                        const tagData = JSON.parse(decryptedJson);
-
-                        if (!tagData || !tagData.id) {
-                            console.warn("[Sync] Skipping corrupted/empty tag payload from cloud", row.id);
-                            continue;
-                        }
-
-                        tagData.createdAt = new Date(tagData.createdAt);
-                        tagData.updatedAt = new Date(tagData.updatedAt);
-                        tagData.deletedAt = tagData.deletedAt ? new Date(tagData.deletedAt) : null;
-                        tagData.isDirty = false;
-                        parsedTags.push(tagData);
-                    } catch (e) {
-                        console.error("Failed to decrypt tag", row.id, e);
-                    }
-                }
-
-                if (deletedIds.length > 0) {
-                    try {
-                        for (const rawId of deletedIds) {
-                            const id = String(rawId).trim();
-                            const hyphenlessId = id.replace(/-/g, '');
-                            await db.delete(schema.tags)
-                                .where(or(
-                                    eq(schema.tags.id, id),
-                                    eq(schema.tags.id, hyphenlessId)
-                                ))
-                                .execute();
-                        }
-                    } catch (e) {
-                        console.error("Failed to delete tags", deletedIds, e);
-                    }
-                    didDeleteTombstones = true;
-                }
-
-                if (parsedTags.length > 0) {
-                    await db.transaction(async (tx: any) => {
-                        for (const t of parsedTags) await upsertSyncedTag(t, tx);
-                    });
-                }
-                if (deletedIds.length > 0) didDeleteTombstones = true;
-                await new Promise(resolve => setTimeout(resolve, 0));
-            }
-            const lastTag = cloudTags[cloudTags.length - 1];
-            currentCursors.tags = { time: lastTag.updated_at, id: lastTag.id };
-        }
-        if (cloudTags.length < 100) hasMoreTags = false;
-
-        // Pull Notes
-        let fetchedNoteIds: string[] = [];
-        if (cloudNotes.length > 0) {
-            for (let i = 0; i < cloudNotes.length; i += 15) {
-                const chunk = cloudNotes.slice(i, i + 15);
-                const deletedIds: string[] = [];
-                const parsedNotes: any[] = [];
-
-                for (const row of chunk) {
-                    try {
-                        if (row.is_deleted) {
-                            deletedIds.push(row.id);
-                            continue;
-                        }
-                        const decryptedJson = await decryptPayload(row.encrypted_data, row.nonce, notesKey);
-                        const noteFullData = JSON.parse(decryptedJson);
-
-                        if (!noteFullData || !noteFullData.id) {
-                            console.warn("[Sync] Skipping corrupted/empty note payload from cloud", row.id);
-                            continue;
-                        }
-
-                        noteFullData.createdAt = new Date(noteFullData.createdAt);
-                        noteFullData.updatedAt = new Date(noteFullData.updatedAt);
-                        noteFullData.deletedAt = noteFullData.deletedAt ? new Date(noteFullData.deletedAt) : null;
-                        noteFullData.isDirty = false;
-                        fetchedNoteIds.push(noteFullData.id);
-                        parsedNotes.push(noteFullData);
-                    } catch (e) {
-                        console.error("Failed to decrypt note", row.id, e);
-                    }
-                }
-
-                if (deletedIds.length > 0) {
-                    try {
-                        await db.transaction(async (tx: any) => {
+                    if (deletedIds.length > 0) {
+                        try {
                             for (const rawId of deletedIds) {
                                 const id = String(rawId).trim();
                                 const hyphenlessId = id.replace(/-/g, '');
-
-                                // Delete children before parent to respect Foreign Keys
-                                await tx.delete(schema.noteContent)
+                                await db.delete(schema.folders)
                                     .where(or(
-                                        eq(schema.noteContent.id, id),
-                                        eq(schema.noteContent.id, hyphenlessId)
+                                        eq(schema.folders.id, id),
+                                        eq(schema.folders.id, hyphenlessId)
                                     ))
                                     .execute();
+                                cleanFolderExpandedState(id);
+                                cleanFolderExpandedState(hyphenlessId);
+                            }
+                        } catch (e) {
+                            console.error("Failed to delete folders", deletedIds, e);
+                        }
+                        didDeleteTombstones = true;
+                    }
 
-                                await tx.delete(schema.noteVersions)
-                                    .where(or(
-                                        eq(schema.noteVersions.noteId, id),
-                                        eq(schema.noteVersions.noteId, hyphenlessId)
-                                    ))
-                                    .execute();
+                    if (parsedFolders.length > 0) {
+                        await db.transaction(async (tx: any) => {
+                            for (const f of parsedFolders) await upsertSyncedFolder(f, tx);
+                        });
+                    }
+                    if (deletedIds.length > 0) didDeleteTombstones = true;
+                    await new Promise(resolve => setTimeout(resolve, 0));
+                }
+                const lastFolder = cloudFolders[cloudFolders.length - 1];
+                currentCursors.folders = { time: lastFolder.updated_at, id: lastFolder.id };
+            }
+            if (cloudFolders.length < 100) hasMoreFolders = false;
 
-                                await tx.delete(schema.noteMetadata)
+
+            // Pull Tags
+            if (cloudTags.length > 0) {
+                for (let i = 0; i < cloudTags.length; i += 15) {
+                    const chunk = cloudTags.slice(i, i + 15);
+                    const deletedIds: string[] = [];
+                    const parsedTags: any[] = [];
+
+                    for (const row of chunk) {
+                        try {
+                            if (row.is_deleted) {
+                                deletedIds.push(row.id);
+                                continue;
+                            }
+                            const decryptedJson = await decryptPayload(row.encrypted_data, row.nonce, notesKey);
+                            const tagData = JSON.parse(decryptedJson);
+
+                            if (!tagData || !tagData.id) {
+                                console.warn("[Sync] Skipping corrupted/empty tag payload from cloud", row.id);
+                                continue;
+                            }
+
+                            tagData.createdAt = new Date(tagData.createdAt);
+                            tagData.updatedAt = new Date(tagData.updatedAt);
+                            tagData.deletedAt = tagData.deletedAt ? new Date(tagData.deletedAt) : null;
+                            tagData.isDirty = false;
+                            parsedTags.push(tagData);
+                        } catch (e) {
+                            console.error("Failed to decrypt tag", row.id, e);
+                        }
+                    }
+
+                    if (deletedIds.length > 0) {
+                        try {
+                            for (const rawId of deletedIds) {
+                                const id = String(rawId).trim();
+                                const hyphenlessId = id.replace(/-/g, '');
+                                await db.delete(schema.tags)
                                     .where(or(
-                                        eq(schema.noteMetadata.id, id),
-                                        eq(schema.noteMetadata.id, hyphenlessId)
+                                        eq(schema.tags.id, id),
+                                        eq(schema.tags.id, hyphenlessId)
                                     ))
                                     .execute();
                             }
+                        } catch (e) {
+                            console.error("Failed to delete tags", deletedIds, e);
+                        }
+                        didDeleteTombstones = true;
+                    }
+
+                    if (parsedTags.length > 0) {
+                        await db.transaction(async (tx: any) => {
+                            for (const t of parsedTags) await upsertSyncedTag(t, tx);
                         });
-                    } catch (e) {
-                        console.error("Failed to delete notes", deletedIds, e);
                     }
-                    didDeleteTombstones = true;
+                    if (deletedIds.length > 0) didDeleteTombstones = true;
+                    await new Promise(resolve => setTimeout(resolve, 0));
+                }
+                const lastTag = cloudTags[cloudTags.length - 1];
+                currentCursors.tags = { time: lastTag.updated_at, id: lastTag.id };
+            }
+            if (cloudTags.length < 100) hasMoreTags = false;
+
+            // Pull Notes
+            let fetchedNoteIds: string[] = [];
+            if (cloudNotes.length > 0) {
+                for (let i = 0; i < cloudNotes.length; i += 15) {
+                    const chunk = cloudNotes.slice(i, i + 15);
+                    const deletedIds: string[] = [];
+                    const parsedNotes: any[] = [];
+
+                    for (const row of chunk) {
+                        try {
+                            if (row.is_deleted) {
+                                deletedIds.push(row.id);
+                                continue;
+                            }
+                            const decryptedJson = await decryptPayload(row.encrypted_data, row.nonce, notesKey);
+                            const noteFullData = JSON.parse(decryptedJson);
+
+                            if (!noteFullData || !noteFullData.id) {
+                                console.warn("[Sync] Skipping corrupted/empty note payload from cloud", row.id);
+                                continue;
+                            }
+
+                            noteFullData.createdAt = new Date(noteFullData.createdAt);
+                            noteFullData.updatedAt = new Date(noteFullData.updatedAt);
+                            noteFullData.deletedAt = noteFullData.deletedAt ? new Date(noteFullData.deletedAt) : null;
+                            noteFullData.publishUpdatedAt = noteFullData.publishUpdatedAt ? new Date(noteFullData.publishUpdatedAt) : null;
+                            noteFullData.isPublished = noteFullData.isPublished ? true : false;
+                            noteFullData.isDirty = false;
+                            fetchedNoteIds.push(noteFullData.id);
+                            parsedNotes.push(noteFullData);
+                        } catch (e) {
+                            console.error("Failed to decrypt note", row.id, e);
+                        }
+                    }
+
+                    if (deletedIds.length > 0) {
+                        try {
+                            await db.transaction(async (tx: any) => {
+                                for (const rawId of deletedIds) {
+                                    const id = String(rawId).trim();
+                                    const hyphenlessId = id.replace(/-/g, '');
+
+                                    // Delete children before parent to respect Foreign Keys
+                                    await tx.delete(schema.noteContent)
+                                        .where(or(
+                                            eq(schema.noteContent.id, id),
+                                            eq(schema.noteContent.id, hyphenlessId)
+                                        ))
+                                        .execute();
+
+                                    await tx.delete(schema.noteVersions)
+                                        .where(or(
+                                            eq(schema.noteVersions.noteId, id),
+                                            eq(schema.noteVersions.noteId, hyphenlessId)
+                                        ))
+                                        .execute();
+
+                                    await tx.delete(schema.noteMetadata)
+                                        .where(or(
+                                            eq(schema.noteMetadata.id, id),
+                                            eq(schema.noteMetadata.id, hyphenlessId)
+                                        ))
+                                        .execute();
+                                }
+                            });
+                        } catch (e) {
+                            console.error("Failed to delete notes", deletedIds, e);
+                        }
+                        didDeleteTombstones = true;
+                    }
+
+                    if (parsedNotes.length > 0) {
+                        await db.transaction(async (tx: any) => {
+                            for (const n of parsedNotes) await upsertSyncedNote(n, tx);
+                        });
+                    }
+                    if (deletedIds.length > 0) didDeleteTombstones = true;
+                    await new Promise(resolve => setTimeout(resolve, 0));
+                }
+                const lastNote = cloudNotes[cloudNotes.length - 1];
+                currentCursors.notes = { time: lastNote.updated_at, id: lastNote.id };
+            }
+            if (cloudNotes.length < 100) hasMoreNotes = false;
+
+            useSyncStore.getState().updateSyncCursors(currentCursors);
+
+            // Background Files Pull
+            if (fetchedNoteIds.length > 0) {
+                console.log(`[Sync] Requesting file links for ${fetchedNoteIds.length} notes`);
+                const { data: cloudLinks, error: linkError } = await storageApi.getUserFileLinks(userId, fetchedNoteIds);
+
+                if (linkError) {
+                    console.error(`[Sync] Error fetching user file links:`, linkError);
+                    throw linkError;
                 }
 
-                if (parsedNotes.length > 0) {
-                    await db.transaction(async (tx: any) => {
-                        for (const n of parsedNotes) await upsertSyncedNote(n, tx);
-                    });
-                }
-                if (deletedIds.length > 0) didDeleteTombstones = true;
-                await new Promise(resolve => setTimeout(resolve, 0));
-            }
-            const lastNote = cloudNotes[cloudNotes.length - 1];
-            currentCursors.notes = { time: lastNote.updated_at, id: lastNote.id };
-        }
-        if (cloudNotes.length < 100) hasMoreNotes = false;
+                if (cloudLinks && cloudLinks.length > 0) {
+                    const uniqueFileIds = Array.from(new Set(cloudLinks.map(l => l.file_id as string)));
+                    const localFiles = await getFilesByIds(uniqueFileIds);
+                    const localFileIds = new Set(localFiles.map((i: any) => i.id));
+                    const missingIds = uniqueFileIds.filter(id => !localFileIds.has(id));
 
-        useSyncStore.getState().updateSyncCursors(currentCursors);
+                    if (missingIds.length > 0) {
+                        const { data: cloudMeta, error: metaError } = await storageApi.getEncryptedFilesMetadata(userId, missingIds);
 
-        // Background Files Pull
-        if (fetchedNoteIds.length > 0) {
-            console.log(`[Sync] Requesting file links for ${fetchedNoteIds.length} notes`);
-            const { data: cloudLinks, error: linkError } = await storageApi.getUserFileLinks(userId, fetchedNoteIds);
-            
-            if (linkError) {
-                console.error(`[Sync] Error fetching user file links:`, linkError);
-                throw linkError;
-            }
+                        if (metaError) {
+                            console.error(`[Sync] Error fetching encrypted files metadata:`, metaError);
+                            throw metaError;
+                        }
 
-            if (cloudLinks && cloudLinks.length > 0) {
-                const uniqueFileIds = Array.from(new Set(cloudLinks.map(l => l.file_id as string)));
-                const localFiles = await getFilesByIds(uniqueFileIds);
-                const localFileIds = new Set(localFiles.map((i: any) => i.id));
-                const missingIds = uniqueFileIds.filter(id => !localFileIds.has(id));
-
-                if (missingIds.length > 0) {
-                    const { data: cloudMeta, error: metaError } = await storageApi.getEncryptedFilesMetadata(userId, missingIds);
-                    
-                    if (metaError) {
-                        console.error(`[Sync] Error fetching encrypted files metadata:`, metaError);
-                        throw metaError;
-                    }
-
-                    if (cloudMeta) {
-                        const downloadQueue = cloudMeta.map(meta => ({
-                            fileId: meta.id,
-                            noteId: '',
-                            nonce: meta.nonce,
-                            masterKey,
-                            saltHex,
-                            userId
-                        }));
-                        fileSyncService.queueFilesForDownload(downloadQueue);
+                        if (cloudMeta) {
+                            const downloadQueue = cloudMeta.map(meta => ({
+                                fileId: meta.id,
+                                noteId: '',
+                                nonce: meta.nonce,
+                                masterKey,
+                                saltHex,
+                                userId
+                            }));
+                            fileSyncService.queueFilesForDownload(downloadQueue);
+                        }
                     }
                 }
             }
-        }
-        
+
         } // End of while loop
 
         if (didDeleteTombstones) {
@@ -508,6 +608,12 @@ export async function performSyncPull(masterKey: string, saltHex: string) {
             useSyncStore.getState().setAuthRequired(true);
         }
         throw e;
+    } finally {
+        try {
+            await nativeDb.execAsync('PRAGMA foreign_keys = ON;');
+        } catch (fkErr) {
+            console.error('Failed to re-enable foreign keys:', fkErr);
+        }
     }
 }
 
@@ -563,4 +669,8 @@ export async function syncPull(masterKey: string, saltHex: string): Promise<bool
     } finally {
         store.setSyncing(false);
     }
+}
+
+async function getMarkdownConverter() {
+    return (globalThis as any).__annota_markdown_converter;
 }

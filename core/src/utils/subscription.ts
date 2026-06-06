@@ -1,9 +1,9 @@
-import { UserRole } from '../stores/user.store';
+import { UserRole, useUserStore } from '../stores/user.store';
 
 export function isPremiumUser(role: UserRole, subExpDate: string | null): boolean {
-    // Guest (unauthenticated) - Always granted high limits
+    // Guest (unauthenticated) - Not premium
     if (role === null) {
-        return true;
+        return false;
     }
 
     // Explicitly Free
@@ -21,3 +21,10 @@ export function isPremiumUser(role: UserRole, subExpDate: string | null): boolea
 
     return expiry > now;
 }
+
+export function useIsPremium(): boolean {
+    const role = useUserStore((state) => state.role);
+    const subExpDate = useUserStore((state) => state.sub_exp_date);
+    return isPremiumUser(role, subExpDate);
+}
+

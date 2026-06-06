@@ -477,6 +477,17 @@ function App() {
       const key = await getMasterKey(session.user.id);
       if (!key || cancelled) return;
 
+      // Register global converter for sync engine to avoid compile-time Vite resolution issues
+      const { ExportService } = await import('@annota/editor-core');
+      const { DesktopExportAdapter } = await import('@/lib/export/DesktopExportAdapter');
+      const service = new ExportService(new DesktopExportAdapter());
+      (globalThis as any).__annota_markdown_converter = async (content: string) => {
+        console.log('[GlobalConverter] Converting HTML to Markdown. HTML length:', content?.length);
+        const md = await service.convertToMarkdown(content);
+        console.log('[GlobalConverter] Resulting Markdown length:', md?.length);
+        return md;
+      };
+
       SyncScheduler.getInstance().init(key, saltHex, {
         reinitStores: async () => {
           await Promise.all([

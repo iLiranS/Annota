@@ -6,6 +6,7 @@ import { WelcomeBanner } from '@/components/dashboard/welcome-banner';
 import { WritingActivityHeatmap } from '@/components/dashboard/writing-activity-heatmap';
 import { ImageGallery } from '@/components/editor-ui/image-gallery';
 import { NotesModal } from '@/components/notes/media-search-browser';
+import { PublishedNotesModal } from '@/components/notes/published-notes-modal';
 import { HapticPressable } from '@/components/ui/haptic-pressable';
 import { useSidebar } from '@/context/sidebar-context';
 import { useAppTheme } from '@/hooks/use-app-theme';
@@ -16,6 +17,7 @@ import {
     useNotesStore,
     useSettingsStore,
     useUserStore,
+    useIsPremium,
     type MediaItem
 } from '@annota/core';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -28,6 +30,9 @@ import {
     Platform,
     StyleSheet,
     View,
+    Modal,
+    ScrollView,
+    Text,
 } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -44,6 +49,8 @@ export default function HomeScreen() {
     const { notes, folders, tags, createNote } = useNotesStore();
     const { session, displayName, isGuest } = useUserStore();
     const isAiEnabled = useSettingsStore((state) => state.general.isAiEnabled);
+    const isPremium = useIsPremium();
+    const [publishedModalVisible, setPublishedModalVisible] = useState(false);
 
     const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
     const [mediaLoading, setMediaLoading] = useState(true);
@@ -98,12 +105,18 @@ export default function HomeScreen() {
     const stats = useMemo(() => {
         const activeNotes = notes.filter((n) => !n.isDeleted);
         const activeFolders = folders.filter((f) => !f.isDeleted && !f.isSystem);
+        const publishedNotes = notes.filter((n) => n.isPublished && !n.isDeleted);
         return {
             notesCount: activeNotes.length,
             foldersCount: activeFolders.length,
             tagsCount: tags.length,
+            publishedCount: publishedNotes.length,
         };
     }, [notes, folders, tags]);
+
+    const publishedNotesList = useMemo(() => {
+        return notes.filter((n) => n.isPublished && !n.isDeleted);
+    }, [notes]);
 
     // Top 4 recently updated active notes
     const recentNotes = useMemo(() => {
@@ -296,6 +309,9 @@ export default function HomeScreen() {
                     notesCount={stats.notesCount}
                     foldersCount={stats.foldersCount}
                     tagsCount={stats.tagsCount}
+                    publishedCount={stats.publishedCount}
+                    isPremium={isPremium}
+                    onPressPublished={() => setPublishedModalVisible(true)}
                 />
 
                 {/* 3. Recently Updated Notes Section */}
@@ -345,6 +361,17 @@ export default function HomeScreen() {
             <AiChatModal
                 visible={aiModalVisible}
                 onClose={() => setAiModalVisible(false)}
+            />
+
+            <PublishedNotesModal
+                visible={publishedModalVisible}
+                notes={publishedNotesList}
+                colors={colors}
+                onClose={() => setPublishedModalVisible(false)}
+                onPressNote={(noteId) => {
+                    setPublishedModalVisible(false);
+                    handleNotePress(noteId);
+                }}
             />
         </View>
     );

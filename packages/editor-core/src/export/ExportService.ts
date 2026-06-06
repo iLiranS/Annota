@@ -137,25 +137,20 @@ export class ExportService {
 
     // ─── Public API ───────────────────────────────────────────────────────────
 
-    async triggerMarkdownExport(title: string, rawHtml: string): Promise<void> {
-        // Detect if we are running in React Native
+    async convertToMarkdown(rawHtml: string): Promise<string> {
         const isReactNative = typeof navigator !== 'undefined' && navigator.product === 'ReactNative';
-
-        let markdown = '';
-
         if (isReactNative) {
-            // Bypass Turndown and DOM polyfills entirely on mobile
-            markdown = this.regexHtmlToMarkdown(rawHtml);
-        } else {
-            // Desktop: Use the robust Turndown engine
-            await this.ensureTurndown();
-            if (!this.turndownService) {
-                markdown = this.regexHtmlToMarkdown(rawHtml); // Fallback just in case
-            } else {
-                markdown = this.turndownService.turndown(rawHtml);
-            }
+            return this.regexHtmlToMarkdown(rawHtml);
         }
+        await this.ensureTurndown();
+        if (!this.turndownService) {
+            return this.regexHtmlToMarkdown(rawHtml);
+        }
+        return this.turndownService.turndown(rawHtml);
+    }
 
+    async triggerMarkdownExport(title: string, rawHtml: string): Promise<void> {
+        const markdown = await this.convertToMarkdown(rawHtml);
         const safeTitle = this.sanitizeFilename(title);
         await this.adapter.exportMarkdown(`${safeTitle}.md`, markdown);
     }
@@ -193,6 +188,44 @@ export class ExportService {
             }
         });
 
+        // 1c. Table conversion (editor tables have no <thead>/<th>, just <tbody> with <td>)
+        md = md.replace(/<table[^>]*>\s*<tbody>(.*?)<\/tbody>\s*<\/table>/gis, (_, tbodyContent) => {
+            const rowMatches = [...tbodyContent.matchAll(/<tr[^>]*>(.*?)<\/tr>/gis)];
+            if (rowMatches.length === 0) return '';
+
+            const parseRow = (rowHtml: string): string[] => {
+                const cells = [...rowHtml.matchAll(/<t[dh][^>]*>(.*?)<\/t[dh]>/gis)];
+                return cells.map(m => {
+                    // Strip inner tags (like <p>) and clean up whitespace
+                    let text = m[1].replace(/<[^>]+>/g, '').trim();
+                    text = text.replace(/\|/g, '\\|').replace(/\r?\n/g, ' ');
+                    return text;
+                });
+            };
+
+            const rows = rowMatches.map(m => parseRow(m[1]));
+            const colCount = Math.max(...rows.map(r => r.length));
+
+            // Pad rows to have equal columns
+            const padded = rows.map(r => {
+                while (r.length < colCount) r.push('');
+                return r;
+            });
+
+            // First row as header
+            const header = padded[0];
+            const separator = header.map(() => '---');
+            const dataRows = padded.slice(1);
+
+            let table = '\n\n';
+            table += '| ' + header.join(' | ') + ' |\n';
+            table += '| ' + separator.join(' | ') + ' |\n';
+            for (const row of dataRows) {
+                table += '| ' + row.join(' | ') + ' |\n';
+            }
+            return table + '\n';
+        });
+
         // 2. Standard HTML Tags
         md = md.replace(/<h1[^>]*>(.*?)<\/h1>/gis, '# $1\n\n');
         md = md.replace(/<h2[^>]*>(.*?)<\/h2>/gis, '## $1\n\n');
@@ -222,6 +255,16 @@ export class ExportService {
         const printReadyHtml = this.generatePrintableHtml(title, processedHtml, options);
         const safeTitle = this.sanitizeFilename(title);
         await this.adapter.exportPdf(safeTitle, printReadyHtml);
+    }
+
+    async getPrintableHtml(
+        title: string,
+        rawHtml: string,
+        options?: ExportOptions
+    ): Promise<string> {
+        await this.ensureTurndown();
+        const processedHtml = await this.preprocessHtmlForPrint(rawHtml, options);
+        return this.generatePrintableHtml(title, processedHtml, options);
     }
 
     // ─── Pre-processing ───────────────────────────────────────────────────────
@@ -794,22 +837,51 @@ export class ExportService {
             },
         });
 
-        td.addRule('tableCell', {
-            filter: ['th', 'td'],
-            replacement: (content, node) => {
-                const cleanContent = content
-                    .trim()
-                    .replace(/\r?\n/g, ' ')
-                    .replace(/\s+/g, ' ');
-                
-                const parent = node.parentNode;
-                if (!parent) return cleanContent;
-                
-                const siblings = Array.from(parent.childNodes);
-                const index = siblings.indexOf(node);
-                
-                const prefix = index === 0 ? '| ' : ' ';
-                return prefix + cleanContent + ' |';
+        // Convert editor tables (no <thead>/<th>) to proper markdown tables.
+        // The first row is treated as the header row.
+        td.addRule('editorTable', {
+            filter: (node) => {
+                // Match <table> elements that are NOT flashcard export tables
+                // (flashcards are handled by their own rule above)
+                if (node.nodeName !== 'TABLE') return false;
+                const cls = node.getAttribute('class') || '';
+                return !cls.includes('flashcard-export-table');
+            },
+            replacement: (_content, node) => {
+                const el = node as HTMLElement;
+                const trs = Array.from(el.querySelectorAll('tr'));
+                if (trs.length === 0) return '';
+
+                const parseRow = (tr: HTMLElement): string[] => {
+                    const cells = Array.from(tr.querySelectorAll('td, th'));
+                    return cells.map(cell => {
+                        let text = (cell.textContent || '').trim();
+                        text = text.replace(/\|/g, '\\|').replace(/\r?\n/g, ' ').replace(/\s+/g, ' ');
+                        return text;
+                    });
+                };
+
+                const rows = trs.map(tr => parseRow(tr as HTMLElement));
+                const colCount = Math.max(...rows.map(r => r.length));
+
+                // Pad rows to have equal columns
+                const padded = rows.map(r => {
+                    while (r.length < colCount) r.push('');
+                    return r;
+                });
+
+                // First row as header
+                const header = padded[0];
+                const separator = header.map(() => '---');
+                const dataRows = padded.slice(1);
+
+                let table = '\n\n';
+                table += '| ' + header.join(' | ') + ' |\n';
+                table += '| ' + separator.join(' | ') + ' |\n';
+                for (const row of dataRows) {
+                    table += '| ' + row.join(' | ') + ' |\n';
+                }
+                return table + '\n';
             }
         });
     }

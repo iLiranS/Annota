@@ -18,6 +18,10 @@ export const noteMetadata = sqliteTable('note_metadata', {
     originalFolderId: text('original_folder_id'),
     isDirty: integer('is_dirty', { mode: 'boolean' }).notNull().default(false),
     isPermDeleted: integer('is_perm_deleted', { mode: 'boolean' }).notNull().default(false),
+    // Represents the user's DESIRED state (true = should be public, false = should be private)
+    isPublished: integer('is_published', { mode: 'boolean' }).notNull().default(false),
+    // Tracks when the user last explicitly triggered a publish/update-publish action
+    publishUpdatedAt: integer('publish_updated_at', { mode: 'timestamp' }),
 });
 
 // ============ NOTE CONTENT (heavy, lazy loaded) ============

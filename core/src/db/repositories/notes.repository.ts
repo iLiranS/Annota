@@ -412,9 +412,17 @@ export async function createNotesBulk(notes: { metadata: NoteMetadataInsert, con
 }
 
 export async function updateNoteMetadata(noteId: string, updates: Partial<Omit<NoteMetadata, 'id' | 'createdAt'>>): Promise<NoteMetadata> {
+    const now = new Date();
+    // When publishUpdatedAt is being set, ensure it shares the exact same timestamp
+    // as updatedAt so the sync engine can detect explicit publish actions.
+    const finalUpdates = {
+        ...updates,
+        updatedAt: now,
+        ...(updates.publishUpdatedAt !== undefined && updates.publishUpdatedAt !== null ? { publishUpdatedAt: now } : {}),
+    };
     const noteMetadata = await getDb()
         .update(schema.noteMetadata)
-        .set({ ...updates, updatedAt: new Date() })
+        .set(finalUpdates)
         .where(eq(schema.noteMetadata.id, noteId))
         .returning()
         .get();

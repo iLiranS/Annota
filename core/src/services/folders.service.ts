@@ -29,12 +29,14 @@ export const FolderService = {
     // 1. Create
 
     create: async (folderData: Partial<FolderInsert>, userRole: UserRole, subExpDate: string | null): Promise<Folder> => {
-        const isPremium = isPremiumUser(userRole, subExpDate);
-        const limit = isPremium ? premiumFoldersLimit : freeFoldersLimit;
-        const currentCount = await foldersRepo.getFoldersCount();
+        if (userRole !== null) {
+            const isPremium = isPremiumUser(userRole, subExpDate);
+            const limit = isPremium ? premiumFoldersLimit : freeFoldersLimit;
+            const currentCount = await foldersRepo.getFoldersCount();
 
-        if (currentCount >= limit) {
-            throw new Error(`Limit of ${limit} folders reached.`);
+            if (currentCount >= limit) {
+                throw new Error(`Limit of ${limit} folders reached.`);
+            }
         }
 
         const folder = generateFolder(folderData);

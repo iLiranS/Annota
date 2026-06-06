@@ -29,7 +29,9 @@ export const CREATE_TABLES_SQL = `
     original_folder_id TEXT,
     is_dirty INTEGER NOT NULL DEFAULT 0,
     last_synced_at INTEGER,
-    is_perm_deleted INTEGER NOT NULL DEFAULT 0
+    is_perm_deleted INTEGER NOT NULL DEFAULT 0,
+    is_published INTEGER NOT NULL DEFAULT 0,
+    publish_updated_at INTEGER
   );
 
   CREATE TABLE IF NOT EXISTS note_content (
@@ -252,6 +254,13 @@ export async function initDatabase(
             PRIMARY KEY (note_id, task_index),
             FOREIGN KEY(note_id) REFERENCES note_metadata(id) ON DELETE CASCADE
           );`
+        ]
+      },
+      {
+        name: '008_add_publish_fields',
+        sql: [
+          'ALTER TABLE note_metadata ADD COLUMN is_published INTEGER NOT NULL DEFAULT 0;',
+          'ALTER TABLE note_metadata ADD COLUMN publish_updated_at INTEGER;'
         ]
       }
     ];

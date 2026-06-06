@@ -1,18 +1,18 @@
 import SettingItem from '@/components/settings/setting-item';
 import UpdateDisplayNameForm from '@/components/user/updateDisplayNameForm';
 import { useAppTheme } from '@/hooks/use-app-theme';
-import { isPremiumUser, useUserStore as useAuthStore, isCloudEnabled } from '@annota/core';
+import { isCloudEnabled, isPremiumUser, useUserStore as useAuthStore } from '@annota/core';
 import { getMasterKey } from '@annota/core/platform';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as LocalAuthentication from 'expo-local-authentication';
 import React from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Purchases from 'react-native-purchases';
 import RevenueCatUI, { PAYWALL_RESULT } from "react-native-purchases-ui";
-import { ENABLE_REVENUECAT } from '../../../services/RevenueCat';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
+import { ENABLE_REVENUECAT } from '../../../services/RevenueCat';
 
 export const GUEST_DISPLAY_NAME_KEY = 'guest_display_name';
 
@@ -21,7 +21,7 @@ export default function AccountSettingsScreen() {
     const insets = useSafeAreaInsets();
     const { session, signOut, user, setGuest, role, sub_exp_date } = useAuthStore();
 
-    const isAlpha = process.env.EXPO_PUBLIC_IS_ALPHA === 'true';
+
     const isAdmin = role?.toLowerCase() === 'admin';
     const isPremium = isPremiumUser(role, sub_exp_date);
     const [isDisplayNameModalVisible, setIsDisplayNameModalVisible] = React.useState(false);
@@ -207,196 +207,196 @@ export default function AccountSettingsScreen() {
                 style={[styles.container, { backgroundColor: colors.background }]}
                 contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
             >
-            <View style={styles.section}>
-                <Text style={[styles.sectionHeader, { color: colors.text + '80' }]}>{session ? 'PROFILE' : 'ACCOUNT'}</Text>
-                <View style={[styles.card, { backgroundColor: colors.card }]}>
-                    {session ? (
-                        <>
-                            <SettingItem
-                                label="Connected Email"
-                                icon="mail-outline"
-                                type="value"
-                                onPress={() => { }}
-                                description={session.user?.email || 'Authenticated User'}
-                                iconColor="#FFFFFF"
-                                iconBackgroundColor="#34C759"
-                            />
-                            <SettingItem
-                                label="Display Name"
-                                icon="person-outline"
-                                onPress={() => setIsDisplayNameModalVisible(true)}
-                                description={displayName}
-                                iconColor="#FFFFFF"
-                                iconBackgroundColor={colors.primary}
-                            />
-                            <SettingItem
-                                label="Account Role"
-                                icon={
-                                    userRole?.toLowerCase() === 'pro' ? 'star' :
-                                        userRole?.toLowerCase() === 'beta' ? 'flask' :
-                                            userRole?.toLowerCase() === 'admin' ? 'hammer' :
-                                                'shield-checkmark-outline'
-                                }
-                                type="value"
-                                onPress={() => { }}
-                                value={<RoleBadge role={userRole || ''} colors={colors} />}
-                                iconColor="#FFFFFF"
-                                iconBackgroundColor={
-                                    userRole?.toLowerCase() === 'pro' ? '#DAA520' :
-                                        userRole?.toLowerCase() === 'beta' ? '#5856D6' :
-                                            userRole?.toLowerCase() === 'admin' ? '#FF3B30' :
-                                                '#FF9500'
-                                }
-                            />
-                            <SettingItem
-                                label="Sign Out"
-                                icon="log-out-outline"
-                                onPress={handleSignOut}
-                                iconColor="#FFFFFF"
-                                iconBackgroundColor="#FF3B30"
-                            />
-                        </>
-                    ) : (
-                        <>
-                            {isCloudEnabled && (
+                <View style={styles.section}>
+                    <Text style={[styles.sectionHeader, { color: colors.text + '80' }]}>{session ? 'PROFILE' : 'ACCOUNT'}</Text>
+                    <View style={[styles.card, { backgroundColor: colors.card }]}>
+                        {session ? (
+                            <>
                                 <SettingItem
-                                    label="Sign In"
-                                    icon="log-in-outline"
-                                    onPress={handleSignIn}
-                                    description="Enable cloud sync"
+                                    label="Connected Email"
+                                    icon="mail-outline"
+                                    type="value"
+                                    onPress={() => { }}
+                                    description={session.user?.email || 'Authenticated User'}
                                     iconColor="#FFFFFF"
-                                    iconBackgroundColor="#007AFF"
+                                    iconBackgroundColor="#34C759"
+                                />
+                                <SettingItem
+                                    label="Display Name"
+                                    icon="person-outline"
+                                    onPress={() => setIsDisplayNameModalVisible(true)}
+                                    description={displayName}
+                                    iconColor="#FFFFFF"
+                                    iconBackgroundColor={colors.primary}
+                                />
+                                <SettingItem
+                                    label="Account Role"
+                                    icon={
+                                        userRole?.toLowerCase() === 'pro' ? 'star' :
+                                            userRole?.toLowerCase() === 'beta' ? 'flask' :
+                                                userRole?.toLowerCase() === 'admin' ? 'hammer' :
+                                                    'shield-checkmark-outline'
+                                    }
+                                    type="value"
+                                    onPress={() => { }}
+                                    value={<RoleBadge role={userRole || ''} colors={colors} />}
+                                    iconColor="#FFFFFF"
+                                    iconBackgroundColor={
+                                        userRole?.toLowerCase() === 'pro' ? '#DAA520' :
+                                            userRole?.toLowerCase() === 'beta' ? '#5856D6' :
+                                                userRole?.toLowerCase() === 'admin' ? '#FF3B30' :
+                                                    '#FF9500'
+                                    }
+                                />
+                                <SettingItem
+                                    label="Sign Out"
+                                    icon="log-out-outline"
+                                    onPress={handleSignOut}
+                                    iconColor="#FFFFFF"
+                                    iconBackgroundColor="#FF3B30"
+                                />
+                            </>
+                        ) : (
+                            <>
+                                {isCloudEnabled && (
+                                    <SettingItem
+                                        label="Sign In"
+                                        icon="log-in-outline"
+                                        onPress={handleSignIn}
+                                        description="Enable cloud sync"
+                                        iconColor="#FFFFFF"
+                                        iconBackgroundColor="#007AFF"
+                                    />
+                                )}
+                                <SettingItem
+                                    label="Update Display Name"
+                                    icon="person-outline"
+                                    onPress={() => setIsDisplayNameModalVisible(true)}
+                                    description={displayName}
+                                    iconColor="#FFFFFF"
+                                    iconBackgroundColor={colors.primary}
+                                />
+                            </>
+                        )}
+                    </View>
+                </View>
+
+                {session && !isAdmin && ENABLE_REVENUECAT && (
+                    <View style={styles.section}>
+                        <Text style={[styles.sectionHeader, { color: colors.text + '80' }]}>SUBSCRIPTION</Text>
+                        <View style={[styles.card, { backgroundColor: colors.card }]}>
+                            {!isPremium ? (
+                                <SettingItem
+                                    label="Upgrade to Pro"
+                                    icon="star"
+                                    onPress={async () => {
+                                        try {
+                                            // This opens the drop-in RevenueCat paywall!
+                                            const result = await RevenueCatUI.presentPaywallIfNeeded({
+                                                requiredEntitlementIdentifier: "Annota Pro"
+                                            });
+
+                                            if (result === PAYWALL_RESULT.PURCHASED || result === PAYWALL_RESULT.RESTORED) {
+                                                Toast.show({
+                                                    type: 'success',
+                                                    text1: 'Purchase Successful',
+                                                    text2: 'Please wait a few minutes and restart the app for changes to take effect.',
+                                                    visibilityTime: 6000,
+                                                });
+                                            }
+                                        } catch (e) {
+                                            console.error("Paywall error:", e);
+                                        }
+                                    }}
+                                    description="Get higher limits and premium features"
+                                    iconColor="#FFFFFF"
+                                    iconBackgroundColor="#DAA520"
+                                />
+                            ) : (
+                                <SettingItem
+                                    label="Manage Subscription"
+                                    icon="card-outline"
+                                    onPress={handleManageSubscription}
+                                    description={sub_exp_date ? `Renews/Expires on: ${new Date(sub_exp_date).toLocaleDateString()}` : "Manage your subscription"}
+                                    iconColor="#FFFFFF"
+                                    iconBackgroundColor="#5856D6"
                                 />
                             )}
-                            <SettingItem
-                                label="Update Display Name"
-                                icon="person-outline"
-                                onPress={() => setIsDisplayNameModalVisible(true)}
-                                description={displayName}
-                                iconColor="#FFFFFF"
-                                iconBackgroundColor={colors.primary}
-                            />
-                        </>
-                    )}
-                </View>
-            </View>
-
-            {session && !isAlpha && !isAdmin && ENABLE_REVENUECAT && (
-                <View style={styles.section}>
-                    <Text style={[styles.sectionHeader, { color: colors.text + '80' }]}>SUBSCRIPTION</Text>
-                    <View style={[styles.card, { backgroundColor: colors.card }]}>
-                        {!isPremium ? (
-                            <SettingItem
-                                label="Upgrade to Pro"
-                                icon="star"
-                                onPress={async () => {
-                                    try {
-                                        // This opens the drop-in RevenueCat paywall!
-                                        const result = await RevenueCatUI.presentPaywallIfNeeded({
-                                            requiredEntitlementIdentifier: "Annota Pro"
-                                        });
-
-                                        if (result === PAYWALL_RESULT.PURCHASED || result === PAYWALL_RESULT.RESTORED) {
-                                            Toast.show({
-                                                type: 'success',
-                                                text1: 'Purchase Successful',
-                                                text2: 'Please wait a few minutes and restart the app for changes to take effect.',
-                                                visibilityTime: 6000,
-                                            });
+                            {!isPremium && (
+                                <SettingItem
+                                    label="Restore Purchases"
+                                    icon="refresh-outline"
+                                    onPress={async () => {
+                                        try {
+                                            const restore = await Purchases.restorePurchases();
+                                            if (typeof restore.entitlements.active['Annota Pro'] !== 'undefined') {
+                                                Toast.show({
+                                                    type: 'success',
+                                                    text1: 'Success',
+                                                    text2: 'Purchases restored successfully. Please wait a few minutes and restart the app.',
+                                                    visibilityTime: 6000,
+                                                });
+                                            } else {
+                                                Alert.alert('No Purchases', 'No active subscriptions found to restore.');
+                                            }
+                                        } catch (e) {
+                                            Alert.alert('Error', 'Failed to restore purchases.');
                                         }
-                                    } catch (e) {
-                                        console.error("Paywall error:", e);
-                                    }
-                                }}
-                                description="Get higher limits and premium features"
-                                iconColor="#FFFFFF"
-                                iconBackgroundColor="#DAA520"
-                            />
-                        ) : (
+                                    }}
+                                    iconColor="#FFFFFF"
+                                    iconBackgroundColor="#8E8E93"
+                                />
+                            )}
+                        </View>
+                    </View>
+                )}
+
+                {session && (
+                    <View style={styles.section}>
+                        <Text style={[styles.sectionHeader, { color: colors.text + '80' }]}>SECURITY</Text>
+                        <View style={[styles.card, { backgroundColor: colors.card }]}>
                             <SettingItem
-                                label="Manage Subscription"
-                                icon="card-outline"
-                                onPress={handleManageSubscription}
-                                description={sub_exp_date ? `Renews/Expires on: ${new Date(sub_exp_date).toLocaleDateString()}` : "Manage your subscription"}
+                                label="Reveal Master Key"
+                                icon="key-outline"
+                                onPress={handleRevealKey}
+                                description="Authenticate to view your 12-word phrase"
                                 iconColor="#FFFFFF"
                                 iconBackgroundColor="#5856D6"
                             />
-                        )}
-                        {!isPremium && (
                             <SettingItem
-                                label="Restore Purchases"
-                                icon="refresh-outline"
-                                onPress={async () => {
-                                    try {
-                                        const restore = await Purchases.restorePurchases();
-                                        if (typeof restore.entitlements.active['Annota Pro'] !== 'undefined') {
-                                            Toast.show({
-                                                type: 'success',
-                                                text1: 'Success',
-                                                text2: 'Purchases restored successfully. Please wait a few minutes and restart the app.',
-                                                visibilityTime: 6000,
-                                            });
-                                        } else {
-                                            Alert.alert('No Purchases', 'No active subscriptions found to restore.');
-                                        }
-                                    } catch (e) {
-                                        Alert.alert('Error', 'Failed to restore purchases.');
-                                    }
-                                }}
+                                label="Delete Account"
+                                icon="trash-outline"
+                                onPress={handleDeleteAccount}
+                                description="Permanently delete account and cloud data"
                                 iconColor="#FFFFFF"
-                                iconBackgroundColor="#8E8E93"
+                                iconBackgroundColor="#FF3B30"
                             />
-                        )}
+                        </View>
                     </View>
+                )}
+
+
+
+                <UpdateDisplayNameForm
+                    visible={isDisplayNameModalVisible}
+                    onClose={() => setIsDisplayNameModalVisible(false)}
+                    initialValue={session ? (user?.user_metadata?.display_name || '') : guestDisplayName}
+                    onSaved={setGuestDisplayName}
+                />
+            </ScrollView>
+
+            {isDeleting && (
+                <View style={[StyleSheet.absoluteFill, {
+                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    zIndex: 999,
+                }]}>
+                    <ActivityIndicator size="large" color="#FFFFFF" />
+                    <Text style={{ color: '#FFFFFF', marginTop: 12, fontWeight: '600' }}>Deleting account...</Text>
                 </View>
             )}
-
-            {session && (
-                <View style={styles.section}>
-                    <Text style={[styles.sectionHeader, { color: colors.text + '80' }]}>SECURITY</Text>
-                    <View style={[styles.card, { backgroundColor: colors.card }]}>
-                        <SettingItem
-                            label="Reveal Master Key"
-                            icon="key-outline"
-                            onPress={handleRevealKey}
-                            description="Authenticate to view your 12-word phrase"
-                            iconColor="#FFFFFF"
-                            iconBackgroundColor="#5856D6"
-                        />
-                        <SettingItem
-                            label="Delete Account"
-                            icon="trash-outline"
-                            onPress={handleDeleteAccount}
-                            description="Permanently delete account and cloud data"
-                            iconColor="#FFFFFF"
-                            iconBackgroundColor="#FF3B30"
-                        />
-                    </View>
-                </View>
-            )}
-
-
-
-            <UpdateDisplayNameForm
-                visible={isDisplayNameModalVisible}
-                onClose={() => setIsDisplayNameModalVisible(false)}
-                initialValue={session ? (user?.user_metadata?.display_name || '') : guestDisplayName}
-                onSaved={setGuestDisplayName}
-            />
-        </ScrollView>
-
-        {isDeleting && (
-            <View style={[StyleSheet.absoluteFill, {
-                backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                justifyContent: 'center',
-                alignItems: 'center',
-                zIndex: 999,
-            }]}>
-                <ActivityIndicator size="large" color="#FFFFFF" />
-                <Text style={{ color: '#FFFFFF', marginTop: 12, fontWeight: '600' }}>Deleting account...</Text>
-            </View>
-        )}
-    </View>
+        </View>
     );
 }
 

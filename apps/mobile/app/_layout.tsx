@@ -369,6 +369,14 @@ function AppLogicHub() {
       const key = await getMasterKey(session.user.id);
       if (!key || cancelled) return;
 
+      // Register global converter for sync engine to avoid compile-time resolution issues
+      const { ExportService } = await import('@annota/editor-core');
+      const { MobileExportAdapter } = await import('../utils/export/MobileExportAdapter');
+      const service = new ExportService(new MobileExportAdapter());
+      (globalThis as any).__annota_markdown_converter = async (content: string) => {
+        return await service.convertToMarkdown(content);
+      };
+
       const scheduler = SyncScheduler.getInstance();
       schedulerRef.current = scheduler;
       scheduler.init(key, saltHex, {

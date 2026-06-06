@@ -7,7 +7,7 @@ import { Platform, Pressable, StyleSheet, Text, TextInput, View, ScrollView } fr
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { z } from 'zod';
 
-// Allow any valid HTTP/HTTPS URL, including annota.app with deep link paths
+// Allow any valid HTTP/HTTPS URL, including annota.online with deep link paths
 const urlRegex = /^(https?:\/\/)?[-a-zA-Z0-9@:%._\+~#=]{1,256}(\.[a-zA-Z0-9()]{2,6})?\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/;
 
 const linkSchema = z.object({

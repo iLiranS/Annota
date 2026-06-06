@@ -12,12 +12,14 @@ import {
     useNavigationStore,
     useNotesStore,
     useUserStore,
+    useIsPremium,
     type MediaItem
 } from "@annota/core";
 import { format } from "date-fns";
-import { Calendar, FileText, Folder, History, Loader2, Notebook, Plus, Tag } from "lucide-react";
+import { Calendar, FileText, Folder, History, Loader2, Notebook, Plus, Tag, Globe } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { PublishedNotesDialog } from "@/components/notes/published-notes-dialog";
 
 
 export function AnnotaHome() {
@@ -32,6 +34,8 @@ export function AnnotaHome() {
     const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
     const [mediaLoading, setMediaLoading] = useState(true);
     const [selectedImage, setSelectedImage] = useState<{ src: string; title: string } | null>(null);
+    const isPremium = useIsPremium();
+    const [isPublishedModalOpen, setIsPublishedModalOpen] = useState(false);
 
     const FolderBadge = ({ folderId, noteId }: { folderId: string | null; noteId: string }) => {
         let folder = folderId ? getFolderById(folderId) : null;
@@ -100,12 +104,18 @@ export function AnnotaHome() {
     const stats = useMemo(() => {
         const activeNotes = notes.filter((n) => !n.isDeleted);
         const activeFolders = folders.filter((f) => !f.isDeleted);
+        const publishedNotes = notes.filter((n) => n.isPublished && !n.isDeleted);
         return {
             notesCount: activeNotes.length,
             foldersCount: activeFolders.length,
             tagsCount: tags.length,
+            publishedCount: publishedNotes.length,
         };
     }, [notes, folders, tags]);
+
+    const publishedNotesList = useMemo(() => {
+        return notes.filter((n) => n.isPublished && !n.isDeleted);
+    }, [notes]);
 
     // Recent Notes (up to 4 most recently updated active notes)
     const recentNotes = useMemo(() => {
@@ -274,7 +284,7 @@ export function AnnotaHome() {
                     </div>
 
                     {/* Stats Summary Panel */}
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className={`grid gap-4 ${isPremium ? "grid-cols-4" : "grid-cols-3"}`}>
                         <div className="group/stat bg-card/40 hover:bg-card/75 border border-border/30 rounded-xl p-4 transition-all duration-300 hover:shadow-xs flex items-center gap-4">
                             <div className="p-2.5 rounded-lg bg-[#6366F1]/10 text-[#6366F1] group-hover/stat:scale-105 transition-transform">
                                 <Notebook className="h-5 w-5" />
@@ -304,6 +314,21 @@ export function AnnotaHome() {
                                 <p className="text-2xl font-bold tracking-tight mt-0.5 tabular-nums text-foreground">{stats.tagsCount}</p>
                             </div>
                         </div>
+
+                        {isPremium && (
+                            <div
+                                onClick={() => setIsPublishedModalOpen(true)}
+                                className="group/stat bg-card/40 hover:bg-card/75 border border-border/30 rounded-xl p-4 transition-all duration-300 hover:shadow-xs flex items-center gap-4 cursor-pointer hover:border-blue-500/30"
+                            >
+                                <div className="p-2.5 rounded-lg bg-blue-500/10 text-blue-500 group-hover/stat:scale-105 transition-transform">
+                                    <Globe className="h-5 w-5" />
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50">Published</p>
+                                    <p className="text-2xl font-bold tracking-tight mt-0.5 tabular-nums text-foreground">{stats.publishedCount}</p>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Content Section Split: Left (Notes + Activity) and Right (Media) */}
@@ -461,6 +486,13 @@ export function AnnotaHome() {
                 visible={!!selectedImage}
                 onClose={() => setSelectedImage(null)}
                 onNavigate={() => { }}
+            />
+
+            {/* Published Notes Modal */}
+            <PublishedNotesDialog
+                open={isPublishedModalOpen}
+                onOpenChange={setIsPublishedModalOpen}
+                notes={publishedNotesList}
             />
         </div>
     );

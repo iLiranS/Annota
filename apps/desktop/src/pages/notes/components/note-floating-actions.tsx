@@ -1,3 +1,4 @@
+import { ConfirmDialog } from "@/components/custom-ui/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -9,9 +10,10 @@ import {
 import { Ionicons } from "@/components/ui/ionicons";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { NoteMetadata, useNotesStore, useSettingsStore } from "@annota/core";
+import { useIsPremium, NoteMetadata, useNotesStore, useSettingsStore } from "@annota/core";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
-import { Check, MoreVertical, Pin, Search, Star } from "lucide-react";
+import { openUrl } from "@tauri-apps/plugin-opener";
+import { Check, MoreVertical, Pin, Search, Star, Globe } from "lucide-react";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { VersionHistoryDialog } from "./version-history-dialog";
@@ -34,6 +36,49 @@ export function NoteFloatingActions({
     const { updateNoteMetadata } = useNotesStore();
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isTooltipOpen, setIsTooltipOpen] = useState(false);
+
+    const handleMenuOpenChange = useCallback((open: boolean) => {
+        setIsMenuOpen(open);
+        setIsTooltipOpen(false);
+    }, []);
+
+    const isPremium = useIsPremium();
+
+    const hasUnpublishedChanges = !!note.isPublished && (
+        !note.publishUpdatedAt || new Date(note.updatedAt).getTime() > new Date(note.publishUpdatedAt).getTime()
+    );
+
+    const handlePublish = useCallback(async (e?: React.MouseEvent) => {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        try {
+            await updateNoteMetadata(note.id, {
+                isPublished: true,
+                publishUpdatedAt: new Date(),
+            });
+            toast.success(note.isPublished ? "Publish updated successfully" : "Note published successfully");
+        } catch (err) {
+            console.error("Failed to publish note:", err);
+            toast.error("Failed to publish note");
+        }
+    }, [note.id, note.isPublished, updateNoteMetadata]);
+
+    const handleUnpublish = useCallback(async (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        try {
+            await updateNoteMetadata(note.id, {
+                isPublished: false,
+            });
+            toast.success("Note unpublished successfully");
+        } catch (err) {
+            console.error("Failed to unpublish note:", err);
+            toast.error("Failed to unpublish note");
+        }
+    }, [note.id, updateNoteMetadata]);
 
     const handleTogglePin = useCallback(async (e: React.MouseEvent) => {
         e.preventDefault();
@@ -62,10 +107,10 @@ export function NoteFloatingActions({
     const MOD = isMac ? '⌘' : 'Ctrl';
 
     return (
-        <>
+        <div className={cn("flex flex-col items-center gap-2", className)}>
             <TooltipProvider delayDuration={400}>
-                <Tooltip open={isMenuOpen ? false : undefined}>
-                    <DropdownMenu modal={false} onOpenChange={setIsMenuOpen}>
+                <Tooltip open={isMenuOpen ? false : isTooltipOpen} onOpenChange={setIsTooltipOpen}>
+                    <DropdownMenu modal={false} onOpenChange={handleMenuOpenChange}>
                         <TooltipTrigger asChild>
                             <DropdownMenuTrigger asChild>
                                 <Button
@@ -73,9 +118,8 @@ export function NoteFloatingActions({
                                     size="icon"
                                     className={cn(
                                         "h-9 w-9 rounded-xl bg-sidebar/95 backdrop-blur-md border border-border/80 shadow-md text-muted-foreground/90 transition-all duration-300 ease-out z-30",
-                                        "hover:scale-105  hover:text-accent-full hover:bg-accent-full/10 hover:border-accent-full/40 hover:shadow-lg hover:shadow-accent-full/5",
+                                        "hover:scale-105 hover:text-accent-full hover:bg-accent-full/10 hover:border-accent-full/40 hover:shadow-lg hover:shadow-accent-full/5",
                                         isMenuOpen && "bg-accent-full/15 border-accent-full/40 text-accent-full shadow-lg scale-105",
-                                        className
                                     )}
                                 >
                                     <MoreVertical className="h-4 w-4" />
@@ -197,6 +241,72 @@ export function NoteFloatingActions({
                                 <Ionicons name="document-text-outline" size={18} className="text-muted-foreground" />
                                 <span className="text-sm font-medium">Export as PDF</span>
                             </DropdownMenuItem>
+
+                            {isPremium && (
+                                <>
+                                    <DropdownMenuSeparator className="my-1 opacity-50" />
+                                    <ConfirmDialog
+                                        title={note.isPublished ? "⚠️ Update publish?" : "⚠️ Publish note?"}
+                                        description="Are you sure you want to publish this note? Anyone with the link will be able to view all its data !"
+                                        confirmText={note.isPublished ? "Update" : "Publish"}
+                                        cancelText="Cancel"
+                                        variant="default"
+                                        onConfirm={handlePublish}
+                                        trigger={
+                                            <DropdownMenuItem
+                                                className={cn(
+                                                    "rounded-lg gap-3 py-2 cursor-pointer",
+                                                    note.isPublished && "bg-blue-500/10 text-blue-500 focus:bg-blue-500/15 focus:text-blue-600"
+                                                )}
+                                                onSelect={(e) => e.preventDefault()}
+                                            >
+                                                <Ionicons
+                                                    name="globe-outline"
+                                                    size={18}
+                                                    className={cn(
+                                                        "text-muted-foreground",
+                                                        note.isPublished && "animate-[spin_8s_linear_infinite] text-blue-500"
+                                                    )}
+                                                />
+                                                <span className="flex-1 text-sm font-medium">
+                                                    {!note.isPublished
+                                                        ? "Publish note"
+                                                        : hasUnpublishedChanges
+                                                            ? "Update publish"
+                                                            : "Published"}
+                                                </span>
+                                                {note.isPublished && (
+                                                    <a
+                                                        href={`https://annota.online/notes/${note.id}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            e.stopPropagation();
+                                                            openUrl(`https://annota.online/notes/${note.id}`).catch(err => {
+                                                                console.error("Failed to open external URL:", err);
+                                                            });
+                                                        }}
+                                                        className="text-xs text-accent-full hover:underline ml-2 flex items-center gap-1"
+                                                    >
+                                                        View
+                                                        <Ionicons name="open-outline" size={14} />
+                                                    </a>
+                                                )}
+                                            </DropdownMenuItem>
+                                        }
+                                    />
+                                    {note.isPublished && (
+                                        <DropdownMenuItem
+                                            className="rounded-lg gap-3 py-2 cursor-pointer text-destructive focus:text-destructive"
+                                            onClick={handleUnpublish}
+                                        >
+                                            <Ionicons name="eye-off-outline" size={18} />
+                                            <span className="flex-1 text-sm font-medium">Unpublish note</span>
+                                        </DropdownMenuItem>
+                                    )}
+                                </>
+                            )}
                         </DropdownMenuContent>
                     </DropdownMenu>
                     <TooltipContent side="bottom" sideOffset={6} className="text-[10px] font-medium">
@@ -211,7 +321,27 @@ export function NoteFloatingActions({
                 onOpenChange={setIsHistoryOpen}
                 onRevert={onRevert}
             />
-        </>
+
+            {note.isPublished && (
+                <TooltipProvider delayDuration={400}>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <a
+                                href={`https://annota.online/notes/${note.id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="h-7 w-7 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 hover:border-blue-500/40 text-blue-500 hover:text-blue-600 flex items-center justify-center shadow-sm transition-all duration-300 hover:scale-105"
+                            >
+                                <Globe className="h-3.5 w-3.5" />
+                            </a>
+                        </TooltipTrigger>
+                        <TooltipContent side="left" className="text-[10px] font-medium">
+                            Note is published. Click to view online.
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+            )}
+        </div>
     );
 }
 

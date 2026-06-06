@@ -40,6 +40,28 @@ export const syncApi = {
         return await supabase.from('encrypted_notes').upsert(notes);
     },
 
+    /** Publish a note by upserting its public Markdown representation */
+    upsertPublishedNote: async (noteId: string, userId: string, mdData: string, title: string, publishUpdatedAt: Date | string) => {
+        return await supabase
+            .from('published_notes')
+            .upsert({
+                note_id: noteId,
+                user_id: userId,
+                md_data: mdData,
+                title: title,
+                published_at: typeof publishUpdatedAt === 'string' ? publishUpdatedAt : publishUpdatedAt.toISOString(),
+                updated_at: new Date().toISOString()
+            });
+    },
+
+    /** Unpublish a note by deleting its public representation */
+    deletePublishedNote: async (noteId: string) => {
+        return await supabase
+            .from('published_notes')
+            .delete()
+            .eq('note_id', noteId);
+    },
+
     /** Fetch deleted IDs after a given timestamp */
     getDeletedIds: async (lastSync: string) => {
         return await supabase
