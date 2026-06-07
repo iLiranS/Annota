@@ -36,8 +36,8 @@ export const CODE_LANGUAGES = [
     { value: 'dockerfile', label: 'Docker' },
 ];
 
-export const backtickInputRegex = /^```([a-zA-Z0-9_+\-#]+)?[\s\n]$/;
-export const tildeInputRegex = /^~~~([a-zA-Z0-9_+\-#]+)?[\s\n]$/;
+export const backtickInputRegex = /^```(?!mermaid[\s\n])([a-zA-Z0-9_+\-#]+)?[\s\n]$/;
+export const tildeInputRegex = /^~~~(?!mermaid[\s\n])([a-zA-Z0-9_+\-#]+)?[\s\n]$/;
 
 function mapLanguageAlias(alias: string | undefined): string | null {
     if (!alias) return null;

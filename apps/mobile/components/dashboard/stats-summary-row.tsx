@@ -70,6 +70,9 @@ export function StatsSummaryRow({
                             <Text style={[styles.statLabel, { color: colors.text + '50' }]}>PUBLISHED</Text>
                             <Text style={[styles.statValue, { color: colors.text }]}>{publishedCount}</Text>
                         </View>
+                        {publishedCount > 0 && (
+                            <Ionicons name="chevron-forward" size={14} color={colors.text + '40'} style={{ marginRight: 2 }} />
+                        )}
                     </HapticPressable>
                 </View>
             </View>

@@ -1,6 +1,7 @@
 import { FileCard } from "@/components/notes/file-card";
 import { ImageGallery } from "@/components/notes/image-gallery";
 import { NoteListItem } from "@/components/notes/note-list-item";
+import { PublishedNotesDialog } from "@/components/notes/published-notes-dialog";
 import { Button } from "@/components/ui/button";
 import { Ionicons } from "@/components/ui/ionicons";
 import { useAppTheme } from "@/hooks/use-app-theme";
@@ -9,17 +10,16 @@ import { useSmartNavigate } from "@/hooks/use-smart-navigate";
 import {
     DAILY_NOTES_FOLDER_ID,
     getPaginatedMedia,
+    useIsPremium,
     useNavigationStore,
     useNotesStore,
     useUserStore,
-    useIsPremium,
     type MediaItem
 } from "@annota/core";
 import { format } from "date-fns";
-import { Calendar, FileText, Folder, History, Loader2, Notebook, Plus, Tag, Globe } from "lucide-react";
+import { Calendar, ChevronRight, FileText, Folder, Globe, History, Loader2, Notebook, Plus, Tag } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { PublishedNotesDialog } from "@/components/notes/published-notes-dialog";
 
 
 export function AnnotaHome() {
@@ -323,10 +323,13 @@ export function AnnotaHome() {
                                 <div className="p-2.5 rounded-lg bg-blue-500/10 text-blue-500 group-hover/stat:scale-105 transition-transform">
                                     <Globe className="h-5 w-5" />
                                 </div>
-                                <div>
+                                <div className="flex-1 min-w-0">
                                     <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50">Published</p>
                                     <p className="text-2xl font-bold tracking-tight mt-0.5 tabular-nums text-foreground">{stats.publishedCount}</p>
                                 </div>
+                                {stats.publishedCount > 0 && (
+                                    <ChevronRight className="h-4 w-4 text-muted-foreground/60 shrink-0 transition-colors" />
+                                )}
                             </div>
                         )}
                     </div>

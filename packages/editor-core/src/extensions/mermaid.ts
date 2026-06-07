@@ -1,5 +1,5 @@
 import './mermaid.css';
-import { mergeAttributes, Node } from '@tiptap/core';
+import { mergeAttributes, Node, nodeInputRule } from '@tiptap/core';
 import { Plugin } from '@tiptap/pm/state';
 import mermaid from 'mermaid';
 import { createBlockMenuButton } from './block-menu-button';
@@ -24,6 +24,19 @@ export const Mermaid = Node.create({
         return {
             onOpenBlockMenu: undefined as ((e: MouseEvent, resolve: () => { pos: number; message: Record<string, unknown> } | null) => void) | undefined,
         };
+    },
+
+    addInputRules() {
+        return [
+            nodeInputRule({
+                find: /^```mermaid[\s\n]$/,
+                type: this.type,
+            }),
+            nodeInputRule({
+                find: /^~~~mermaid[\s\n]$/,
+                type: this.type,
+            }),
+        ];
     },
 
     addAttributes() {

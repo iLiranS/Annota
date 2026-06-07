@@ -33,6 +33,13 @@ export default defineConfig(({ mode }): UserConfig => {
         "@": path.resolve(__dirname, "."),
       },
     },
+    optimizeDeps: {
+      exclude: [
+        '@annota/core',
+        '@annota/editor-core',
+        '@annota/editor-ui'
+      ]
+    },
     clearScreen: false,
     server: {
       port: 1420,

@@ -64,11 +64,7 @@ export function AppSidebar() {
 
 
     useEffect(() => {
-        const saved = localStorage.getItem("sidebar_active_tab");
-        if (saved) {
-            setActiveTab((saved === 'notes' || saved === 'tags' || saved === 'search') ? saved : 'notes');
-        }
-
+        setActiveTab('notes');
     }, [setActiveTab]);
 
 
@@ -133,9 +129,7 @@ export function AppSidebar() {
         };
     }, [setOpen, toggleSidebar]);
 
-    useEffect(() => {
-        localStorage.setItem("sidebar_active_tab", activeTab);
-    }, [activeTab]);
+
 
     const handleEditFolder = useCallback((folder: Folder) => {
         setEditingFolder(folder);

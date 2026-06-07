@@ -22,3 +22,12 @@ export interface ExportAdapter {
      */
     resolveImage?(id: string): Promise<string | null>;
 }
+
+export interface ExportOptions {
+    fontSize?: number;
+    lineHeight?: number;
+    paragraphSpacing?: number;
+    accentColor?: string;
+    numberedLines?: boolean;
+}
+
