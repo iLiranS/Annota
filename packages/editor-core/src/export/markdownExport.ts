@@ -1,3 +1,4 @@
+/// <reference path="./turndown-plugin-gfm.d.ts" />
 import type TurndownService from 'turndown';
 import { SHORT_TO_HEX } from '../extensions/marks';
 import { ensureDOMPolyfill } from './domPolyfill';
