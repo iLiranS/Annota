@@ -418,6 +418,12 @@ export function useAiChat(chatId: string | null) {
             }
 
             const fetchContent = async (noteId: string) => {
+                const isSelected = selectedFolderNotes?.some(n => n.id === noteId);
+                if (!isSelected) {
+                    console.warn(`[AI Chat] Prevented access to note ${noteId} not in selection context.`);
+                    return '';
+                }
+
                 const result = await db.select({ content: noteContent.content })
                     .from(noteContent)
                     .where(eq(noteContent.id, noteId))

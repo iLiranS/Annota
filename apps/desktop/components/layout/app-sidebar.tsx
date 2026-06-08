@@ -289,7 +289,12 @@ export function AppSidebar() {
                     {activeTab === 'search' && (
                         <SearchView
                             onNoteClick={(note) => {
-                                navigateWithHistory(`/notes/${note.id}`);
+                                const query = useSearchStore.getState().searchQuery;
+                                if (query) {
+                                    navigateWithHistory(`/notes/${note.id}?search=${encodeURIComponent(query)}`);
+                                } else {
+                                    navigateWithHistory(`/notes/${note.id}`);
+                                }
                             }}
                             onFolderClick={(folder) => handleFolderSelect(folder.id)}
                             onDeleteNote={deleteNote}

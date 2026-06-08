@@ -291,10 +291,10 @@ export function NoteInfo({ noteId }: { noteId: string }) {
                                         <div
                                             key={`${item.id}-${idx}`}
                                             className={cn(
-                                                "group flex items-center gap-2 rounded-lg transition-all hover:bg-primary/5 pr-1 min-w-0",
-                                                item.level === 2 && "pl-3",
-                                                item.level === 3 && "pl-6",
-                                                item.level >= 4 && "pl-8"
+                                                "group flex items-center gap-2 rounded-lg transition-all hover:bg-primary/5 px-3 min-w-0",
+                                                item.level === 2 && "pl-6",
+                                                item.level === 3 && "pl-9",
+                                                item.level >= 4 && "pl-12"
                                             )}
                                         >
                                             <button
@@ -303,10 +303,10 @@ export function NoteInfo({ noteId }: { noteId: string }) {
                                                 className={cn(
                                                     "flex-1 py-1.5 text-left truncate transition-colors min-w-0",
                                                     "text-muted-foreground hover:text-primary",
-                                                    item.level === 1 && "text-[13px] font-bold text-foreground/90",
-                                                    item.level === 2 && "text-xs font-semibold text-foreground/80",
-                                                    item.level === 3 && "text-[11px] font-medium text-foreground/70",
-                                                    item.level >= 4 && "text-[11px] text-muted-foreground/80",
+                                                    item.level === 1 && "text-[13px]  text-muted-foreground",
+                                                    item.level === 2 && "text-xs  text-muted-foreground/90",
+                                                    item.level === 3 && "text-[11px]  text-muted-foreground/80",
+                                                    item.level >= 4 && "text-[11px] text-muted-foreground/70",
                                                 )}
                                             >
                                                 {item.text}

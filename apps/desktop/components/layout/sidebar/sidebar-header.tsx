@@ -12,10 +12,13 @@ import { SidebarHeader } from "@/components/ui/sidebar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { SortType } from "@annota/core";
-import { CheckSquare, FolderPen, MoreVertical, SquarePen } from "lucide-react";
+import { CheckSquare, FolderDown, FolderPen, MoreVertical, SquarePen } from "lucide-react";
 import { AnnotaIcon } from "../../custom-ui/annota-icon";
 import { Ionicons } from "../../ui/ionicons";
 import { type BreadcrumbData } from "./breadcrumbs";
+import { useState } from "react";
+import { ConfirmDialog } from "@/components/custom-ui/confirm-dialog";
+import { useExportFolder } from "@/hooks/use-export-folder";
 
 interface SidebarHeaderSectionProps {
     title: string;
@@ -32,6 +35,7 @@ interface SidebarHeaderSectionProps {
     onEditFolder?: () => void;
     tagId?: string;
     isRoot?: boolean;
+    currentFolderId?: string | null;
     selectionMode?: boolean;
     setSelectionMode?: (mode: boolean) => void;
     dir: "ltr" | "rtl";
@@ -73,6 +77,7 @@ export function SidebarHeaderSection({
     getSortTypeLabel,
     tagId,
     isRoot,
+    currentFolderId,
     selectionMode,
     setSelectionMode,
     dir,
@@ -80,10 +85,13 @@ export function SidebarHeaderSection({
     onNavigateBreadcrumb,
 }: SidebarHeaderSectionProps) {
 
+    const [showExportConfirm, setShowExportConfirm] = useState(false);
+    const { handleExport, isExporting } = useExportFolder();
 
     return (
         <>
             <SidebarHeader
+                dir={dir}
                 style={{
                     "--note-color": color,
                 } as React.CSSProperties}
@@ -167,6 +175,11 @@ export function SidebarHeaderSection({
                                                 <span>{selectionMode ? "Cancel Selection" : "Select Notes"}</span>
                                             </DropdownMenuItem>
                                         )}
+
+                                        <DropdownMenuItem onClick={() => setShowExportConfirm(true)} className="gap-2 cursor-pointer">
+                                            <FolderDown size={16} />
+                                            <span>Export to MD</span>
+                                        </DropdownMenuItem>
 
                                         <DropdownMenuSeparator />
 
@@ -271,6 +284,20 @@ export function SidebarHeaderSection({
                     </Breadcrumb>
                 </div>
             )}
+            {/* Confirm export dialog */}
+            <ConfirmDialog
+                open={showExportConfirm}
+                onOpenChange={setShowExportConfirm}
+                title="Export Folder to Markdown"
+                description={`Are you sure you want to export all notes and subfolders in "${title}" to Markdown?`}
+                confirmText={isExporting ? "Exporting..." : "Export"}
+                cancelText="Cancel"
+                onConfirm={async () => {
+                    setShowExportConfirm(false);
+                    await handleExport(currentFolderId ?? null, title);
+                }}
+                variant="default"
+            />
         </>
     );
 }

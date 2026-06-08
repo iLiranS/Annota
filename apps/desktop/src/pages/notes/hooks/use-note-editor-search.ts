@@ -1,16 +1,24 @@
 import { useCallback, useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { TipTapEditorRef } from "@annota/editor-ui";
 
 interface UseNoteEditorSearchProps {
     editorRef: React.RefObject<TipTapEditorRef | null>;
     toggleFullScreen: () => void;
+    noteId?: string;
+    initialContent?: string | null;
 }
 
-export function useNoteEditorSearch({ editorRef, toggleFullScreen }: UseNoteEditorSearchProps) {
+export function useNoteEditorSearch({ editorRef, toggleFullScreen, noteId, initialContent }: UseNoteEditorSearchProps) {
     const [isSearching, setIsSearching] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [searchResultCount, setSearchResultCount] = useState(0);
     const [currentSearchIndex, setCurrentSearchIndex] = useState(-1);
+
+    const location = useLocation();
+    const navigate = useNavigate();
+    const queryParams = new URLSearchParams(location.search);
+    const searchQueryParam = queryParams.get('search') || undefined;
 
     const handleOpenSearch = useCallback(() => {
         setIsSearching(true);
@@ -22,7 +30,13 @@ export function useNoteEditorSearch({ editorRef, toggleFullScreen }: UseNoteEdit
         setSearchResultCount(0);
         setCurrentSearchIndex(-1);
         editorRef.current?.clearSearch();
-    }, [editorRef]);
+
+        const params = new URLSearchParams(location.search);
+        if (params.has('search')) {
+            params.delete('search');
+            navigate({ search: params.toString() }, { replace: true });
+        }
+    }, [editorRef, location.search, navigate]);
 
     const handleSearchTermChange = useCallback((term: string) => {
         setSearchTerm(term);
@@ -47,6 +61,32 @@ export function useNoteEditorSearch({ editorRef, toggleFullScreen }: UseNoteEdit
     const handleSearchPrev = useCallback(() => {
         editorRef.current?.searchPrev();
     }, [editorRef]);
+
+    // Synchronize search query parameter from URL
+    useEffect(() => {
+        if (searchQueryParam) {
+            setIsSearching(true);
+            setSearchTerm(searchQueryParam);
+        } else {
+            setIsSearching(false);
+            setSearchTerm('');
+            setSearchResultCount(0);
+            setCurrentSearchIndex(-1);
+            editorRef.current?.clearSearch();
+        }
+    }, [noteId, searchQueryParam]);
+
+    // Perform search when editor is ready/content is loaded
+    useEffect(() => {
+        if (initialContent !== null && isSearching && searchTerm && editorRef.current) {
+            const timer = setTimeout(() => {
+                if (editorRef.current) {
+                    editorRef.current.search(searchTerm);
+                }
+            }, 100);
+            return () => clearTimeout(timer);
+        }
+    }, [initialContent, isSearching, searchTerm, editorRef]);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {

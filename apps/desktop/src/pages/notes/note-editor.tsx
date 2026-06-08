@@ -96,7 +96,7 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
         handleSearchResults,
         handleSearchNext,
         handleSearchPrev,
-    } = useNoteEditorSearch({ editorRef, toggleFullScreen });
+    } = useNoteEditorSearch({ editorRef, toggleFullScreen, noteId, initialContent });
 
     const {
         activeBlockMenu,

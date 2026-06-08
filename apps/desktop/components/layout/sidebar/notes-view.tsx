@@ -163,6 +163,7 @@ export function NotesViewHeader({
             getSortTypeLabel={getSortTypeLabel}
             tagId={tagId || undefined}
             isRoot={isRoot}
+            currentFolderId={currentFolderId ?? null}
             selectionMode={selectionMode}
             setSelectionMode={setSelectionMode}
             breadcrumbs={breadcrumbs}

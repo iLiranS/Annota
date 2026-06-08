@@ -301,18 +301,24 @@ html[data-theme="dark"] .sidebar::-webkit-scrollbar-thumb:hover {
 
 /* Sidebar header tinted card background and border styling */
 .sidebar-header-tinted {
+  --bg-gradient-angle: 135deg;
   --bg-mix-1: 15%;
   --bg-mix-2: 7%;
   --border-mix: 15%;
   --shadow-mix-1: 8%;
   --shadow-mix-2: 5%;
 
-  background: linear-gradient(135deg,
+  background: linear-gradient(var(--bg-gradient-angle),
       color-mix(in srgb, var(--note-color) var(--bg-mix-1), transparent),
       color-mix(in srgb, var(--note-color) var(--bg-mix-2), transparent));
   border-color: color-mix(in srgb, var(--note-color) var(--border-mix), transparent);
   box-shadow: 0 4px 16px -2px color-mix(in srgb, var(--note-color) var(--shadow-mix-1), transparent),
     0 1px 2px color-mix(in srgb, var(--note-color) var(--shadow-mix-2), transparent);
+}
+
+/* Reverse gradient direction for RTL (right is strongest, left is weakest) */
+[dir="rtl"] .sidebar-header-tinted {
+  --bg-gradient-angle: 225deg;
 }
 
 /* Subtle values in dark mode for less strength in colors and border */

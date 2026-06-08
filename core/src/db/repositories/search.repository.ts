@@ -178,6 +178,9 @@ export const SearchRepository = {
      * Lightweight FTS query for AI context retrieval.
      */
     async findRelevantNoteIds(query: string, folderNoteIds?: string[], limit = 3): Promise<string[]> {
+        if (!folderNoteIds || folderNoteIds.length === 0) return [];
+        const uniqueNoteIds = Array.from(new Set(folderNoteIds));
+
         const ftsQuery = this._buildFtsQuery(query, 'OR', true);
 
         if (ftsQuery === '""') return [];
@@ -188,14 +191,15 @@ export const SearchRepository = {
 
         if (isDesktop) {
             // Desktop bypass for raw FTS group query
+            const placeholders = uniqueNoteIds.map(() => '?').join(',');
             const rawRows = await (dbStore.nativeDb as any).selectAsync(
                 `SELECT id
                 FROM notes_fts
-                WHERE notes_fts MATCH ?
+                WHERE notes_fts MATCH ? AND id IN (${placeholders})
                 GROUP BY id
                 ORDER BY rank
-                LIMIT ${limit * 3}`,
-                [ftsQuery]
+                LIMIT ${limit * 2}`,
+                [ftsQuery, ...uniqueNoteIds]
             ) as any[][];
 
             ids = rawRows.map(row => row[0] as string).filter(Boolean);
@@ -204,18 +208,12 @@ export const SearchRepository = {
             const ftsRows = await getDb().all<{ id: string }>(sql`
                 SELECT id
                 FROM notes_fts
-                WHERE notes_fts MATCH ${ftsQuery}
+                WHERE notes_fts MATCH ${ftsQuery} AND ${inArray(schema.notesFts.id, uniqueNoteIds)}
                 GROUP BY id
                 ORDER BY rank
-                LIMIT ${limit * 3}
+                LIMIT ${limit * 2}
             `);
             ids = ftsRows.map((r: any) => r.id).filter(Boolean);
-        }
-
-        // Filter to folder scope if provided
-        if (folderNoteIds && folderNoteIds.length > 0) {
-            const folderSet = new Set(folderNoteIds);
-            ids = ids.filter((id: string) => folderSet.has(id));
         }
 
         // Validate against note_metadata (isDeleted check) — only if we have candidates
