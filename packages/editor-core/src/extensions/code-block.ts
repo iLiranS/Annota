@@ -1,5 +1,6 @@
 import { textblockTypeInputRule } from '@tiptap/core';
 import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight';
+import { TextSelection } from '@tiptap/pm/state';
 import { common, createLowlight } from 'lowlight';
 import { sendMessage } from '../bridge';
 import './code-block.css';
@@ -77,6 +78,59 @@ export const CustomCodeBlock = CodeBlockLowlight.extend<any>({
             ...this.parent?.(),
             onOpenBlockMenu: null,
             onCodeBlockSelected: null,
+        };
+    },
+    addCommands() {
+        return {
+            ...this.parent?.(),
+            toggleCodeBlock:
+                (attributes?: { language?: string }) =>
+                ({ state, dispatch, commands }) => {
+                    if (this.editor.isActive('codeBlock')) {
+                        return commands.toggleNode(this.name, 'paragraph', attributes);
+                    }
+
+                    const { selection } = state;
+                    const { from, to } = selection;
+
+                    // Collect all textblock nodes in the selection
+                    const textBlocks: { node: any; pos: number }[] = [];
+                    state.doc.nodesBetween(from, to, (node, pos) => {
+                        if (node.isTextblock) {
+                            textBlocks.push({ node, pos });
+                            return false; // do not descend into textblocks
+                        }
+                        return true;
+                    });
+
+                    if (textBlocks.length <= 1) {
+                        return commands.toggleNode(this.name, 'paragraph', attributes);
+                    }
+
+                    // Extract text content and join with newlines
+                    const text = textBlocks.map(tb => tb.node.textContent).join('\n');
+                    const start = textBlocks[0].pos;
+                    const lastBlock = textBlocks[textBlocks.length - 1];
+                    const end = lastBlock.pos + lastBlock.node.nodeSize;
+
+                    if (dispatch) {
+                        const codeBlockNode = state.schema.nodes.codeBlock.create(
+                            { language: attributes?.language ?? null },
+                            text ? state.schema.text(text) : undefined
+                        );
+
+                        const tr = state.tr.replaceWith(start, end, codeBlockNode);
+
+                        // Set selection inside the code block
+                        const selectionPos = Math.min(start + 1, tr.doc.content.size);
+                        const $pos = tr.doc.resolve(selectionPos);
+                        const newSelection = TextSelection.near($pos);
+                        tr.setSelection(newSelection);
+
+                        dispatch(tr);
+                    }
+                    return true;
+                },
         };
     },
     addInputRules() {

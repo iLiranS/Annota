@@ -176,10 +176,12 @@ export function SidebarHeaderSection({
                                             </DropdownMenuItem>
                                         )}
 
-                                        <DropdownMenuItem onClick={() => setShowExportConfirm(true)} className="gap-2 cursor-pointer">
-                                            <FolderDown size={16} />
-                                            <span>Export to MD</span>
-                                        </DropdownMenuItem>
+                                        {!isRoot && (
+                                            <DropdownMenuItem onClick={() => setShowExportConfirm(true)} className="gap-2 cursor-pointer">
+                                                <FolderDown size={16} />
+                                                <span>Export to MD</span>
+                                            </DropdownMenuItem>
+                                        )}
 
                                         <DropdownMenuSeparator />
 

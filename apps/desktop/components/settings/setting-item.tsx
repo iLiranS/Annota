@@ -33,8 +33,8 @@ export function SettingItem({
                 "group flex items-center justify-between p-3 rounded-xl transition-all duration-200",
                 // Apply the "round border" cancellation of first and last only if the setting item is not the only child
                 "not-last:rounded-b-none rounded-t-none",
-                onClick && !loading ? "cursor-pointer hover:bg-accent/50" : "",
-                active ? "bg-accent/30" : "",
+                onClick && !active && !loading ? "cursor-pointer hover:bg-primary/5" : "",
+                active ? "bg-primary/10" : "",
                 loading ? "opacity-60" : ""
             )}
         >

@@ -2396,18 +2396,16 @@ body.is-resizing-image {
    ======================================== */
 
 .search-match {
-    background-color: var(--accent-color);
-    opacity: 0.4;
-    border-radius: 2px;
+    background-color: color-mix(in srgb, var(--accent-color) 35%, transparent);
+    border-radius: 3px;
 }
 
 .search-match-active {
-    background-color: var(--accent-color);
-    opacity: 0.7;
-    border-radius: 2px;
-    box-shadow: 0 0 0 2px var(--accent-color);
+    background-color: color-mix(in srgb, var(--accent-color) 55%, transparent);
+    border-radius: 3px;
+    font-size: larger;
+    box-shadow: 0 0 0 2px var(--accent-color), 0 2px 8px color-mix(in srgb, var(--accent-color) 50%, transparent);
 }
-
 
 /* Source: src/extensions/table.css */
 /* Table Styles */

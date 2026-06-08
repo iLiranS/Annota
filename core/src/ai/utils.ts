@@ -674,7 +674,37 @@ export function purifyNoteHtml(html: string): string {
                 details.parentNode?.replaceChild(textNode, details);
             });
 
-            return doc.body.textContent || '';
+            // 8.5. Orphan list items (not inside ul/ol)
+            doc.querySelectorAll('li').forEach(li => {
+                if (!li.parentNode) return;
+                const textNode = doc.createTextNode(`\n- ${li.textContent?.trim() || ''}\n`);
+                li.parentNode.replaceChild(textNode, li);
+            });
+
+            // 8.6. Paragraphs and blockquotes
+            doc.querySelectorAll('p, blockquote').forEach(el => {
+                if (!el.parentNode) return;
+                const prefix = el.tagName.toLowerCase() === 'blockquote' ? '> ' : '';
+                const textNode = doc.createTextNode(`\n${prefix}${el.textContent?.trim() || ''}\n`);
+                el.parentNode.replaceChild(textNode, el);
+            });
+
+            // 8.7. Line breaks
+            doc.querySelectorAll('br').forEach(br => {
+                if (!br.parentNode) return;
+                const textNode = doc.createTextNode('\n');
+                br.parentNode.replaceChild(textNode, br);
+            });
+
+            // 8.8. Remaining structural div containers (bottom-up)
+            Array.from(doc.querySelectorAll('div')).reverse().forEach(div => {
+                if (!div.parentNode) return;
+                const textNode = doc.createTextNode(`\n${div.textContent?.trim() || ''}\n`);
+                div.parentNode.replaceChild(textNode, div);
+            });
+
+            const rawText = doc.body.textContent || '';
+            return rawText.replace(/\n{3,}/g, '\n\n').trim();
         } catch (e) {
             console.error('[purifyNoteHtml] DOMParser Error:', e);
             // Fallback to regex-based stripping

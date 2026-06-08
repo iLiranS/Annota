@@ -7,10 +7,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useNotesStore } from "@annota/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { ExternalLink, Eye, Pencil, Trash2 } from "lucide-react";
+import { Copy, ExternalLink, Eye, Pencil, Trash2 } from "lucide-react";
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useNoteTabsStore } from "../../hooks/use-note-tabs";
+import { writeText } from "@/lib/clipboard";
+import { toast } from "sonner";
 
 export interface LinkContextMenuProps {
     open: boolean;
@@ -46,7 +48,7 @@ export function LinkContextMenu({
 
     if (!anchorRect) return null;
 
-    const handleAction = async (action: 'preview' | 'open' | 'edit' | 'delete' | 'external' | 'open_new_tab') => {
+    const handleAction = async (action: 'preview' | 'open' | 'edit' | 'delete' | 'external' | 'open_new_tab' | 'copy') => {
         if (action === 'preview' && noteId) {
             onPreview(noteId);
         } else if (action === 'open' && noteId) {
@@ -62,6 +64,14 @@ export function LinkContextMenu({
             } catch (err) {
                 console.error("Failed to open URL:", err);
                 window.open(url, '_blank'); // Fallback
+            }
+        } else if (action === 'copy') {
+            try {
+                await writeText(url);
+                toast.success("Link copied to clipboard");
+            } catch (err) {
+                console.error("Failed to copy link:", err);
+                toast.error("Failed to copy link to clipboard");
             }
         } else if (action === 'edit') {
             onEdit();
@@ -110,6 +120,11 @@ export function LinkContextMenu({
                         <span>Open Link</span>
                     </DropdownMenuItem>
                 )}
+
+                <DropdownMenuItem onClick={() => handleAction('copy')}>
+                    <Copy className="mr-2 h-4 w-4" />
+                    <span>Copy Link</span>
+                </DropdownMenuItem>
 
                 <DropdownMenuSeparator />
 

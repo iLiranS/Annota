@@ -265,7 +265,7 @@ export function useAiChat(chatId: string | null) {
         }
 
         const adapter = createAiProvider(activeProvider);
-        const isEphemeral = effectiveChatId === 'inline-assistant';
+        const isEphemeral = effectiveChatId === 'inline-assistant' || effectiveMode === 'rewrite';
 
         // Abort any existing request
         if (abortControllerRef.current) {
@@ -276,13 +276,23 @@ export function useAiChat(chatId: string | null) {
         const db = getDb();
         const timestamp = new Date();
 
-        // 1. Get current history and chat state to check for first message
+                // 1. Get current history and chat state to check for first message
         const currentChat = isEphemeral ? null : await db.select().from(aiChats).where(eq(aiChats.id, effectiveChatId)).get();
-        const fullHistory = isEphemeral ? messagesRef.current : await db.select()
+        let fullHistory = isEphemeral ? messagesRef.current : await db.select()
             .from(aiMessages)
             .where(eq(aiMessages.chatId, effectiveChatId))
             .orderBy(asc(aiMessages.createdAt))
             .all();
+
+        if (effectiveMode === 'rewrite') {
+            if (isRetry) {
+                // For retry in rewrite mode, only keep the single last user message
+                const lastUser = [...fullHistory].reverse().find(m => m.role === 'user');
+                fullHistory = lastUser ? [lastUser] : [];
+            } else {
+                fullHistory = [];
+            }
+        }
 
         const isFirstMessage = !currentChat || fullHistory.length === 0;
 
@@ -303,7 +313,11 @@ export function useAiChat(chatId: string | null) {
                 createdAt: timestamp,
             };
 
-            setMessages(prev => [...prev, userMsg]);
+            if (effectiveMode === 'rewrite') {
+                setMessages([userMsg]);
+            } else {
+                setMessages(prev => [...prev, userMsg]);
+            }
             if (!isEphemeral) await db.insert(aiMessages).values(userMsg).run();
             updatedHistory.push(userMsg);
         } else {

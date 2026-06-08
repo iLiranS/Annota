@@ -57,7 +57,7 @@ export function PublishedNotesDialog({ open, onOpenChange, notes }: PublishedNot
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent disableBlur className="max-w-xl max-h-[80vh] flex flex-col p-6 overflow-hidden bg-background">
+            <DialogContent disableBlur className="max-w-xl max-h-[80vh] flex flex-col p-6 overflow-hidden">
                 <DialogHeader className="flex flex-row items-center justify-between pb-4 border-b">
                     <DialogTitle className="text-lg font-bold flex items-center gap-2">
                         <Globe className="h-5 w-5 text-blue-500" />
