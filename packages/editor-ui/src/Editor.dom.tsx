@@ -1,10 +1,9 @@
 import { useSettingsStore } from '@annota/core';
 import { NoteFileService } from '@annota/core/platform';
-import { dispatchEditorCommand, getBaseExtensions, getEditorProps, getEditorState, getExtensions, prepareMarksHTMLForClipboard } from '@annota/editor-core';
+import { dispatchEditorCommand, getBaseExtensions, getEditorState, getExtensions, getPlainTextFromFragment, prepareMarksHTMLForClipboard } from '@annota/editor-core';
 import '@annota/editor-core/highlight-theme.css';
 import '@annota/editor-core/styles.css';
 import { DOMSerializer } from '@tiptap/pm/model';
-import { TextSelection } from '@tiptap/pm/state';
 import { EditorContent, useEditor } from '@tiptap/react';
 import 'katex/dist/katex.min.css';
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
@@ -12,20 +11,12 @@ import { useEditorThemeVariables } from './hooks/useEditorThemeVariables';
 import { useSharedEditorUI } from './hooks/useSharedEditorUI';
 import { DESKTOP_SELECTION_STYLES } from './shared/desktopSelectionStyles';
 import { EditorState, initialEditorState, PopupType, TipTapEditorProps, TipTapEditorRef } from './shared/types';
-
-function extractImageIds(html: string): string[] {
-    const regex = /data-image-id\s*=\s*(["'])(.*?)\1/gi;
-    const ids: string[] = [];
-    let match;
-    while ((match = regex.exec(html)) !== null) {
-        const id = match[2];
-        // SAFETY CHECK: Never extract temporary upload placeholders
-        if (!id.startsWith('temp-')) {
-            ids.push(id);
-        }
-    }
-    return ids;
-}
+import { extractImageIds } from './shared/image-utils';
+import { useEditorKeyboardShortcuts } from './hooks/useEditorKeyboardShortcuts';
+import { useContextMenuLinkInterceptor } from './hooks/useContextMenuLinkInterceptor';
+import { useGlobalPasteHandler } from './hooks/useGlobalPasteHandler';
+import { useDesktopEditorProps } from './hooks/useDesktopEditorProps';
+import { insertProcessedFile, insertRemoteFile } from './shared/file-insert-utils';
 
 export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
     ({
@@ -108,195 +99,14 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
         const [extensions, setExtensions] = useState<any[]>(() => getBaseExtensions({ placeholder }));
 
 
-        const editorProps = useMemo(() => {
-            const baseProps = getEditorProps({
-                direction: direction,
-                spellcheck: editorSettings.spellcheck,
-                autocorrect: editorSettings.autocorrect,
-                autocapitalize: editorSettings.autocapitalize,
-                autocomplete: editorSettings.autocomplete,
-                onContextMenu: (view, event) => {
-                    const linkElement = event.composedPath().find((el: any) => el.nodeName === 'A') as HTMLAnchorElement | undefined;
-
-                    if (linkElement && linkElement.href && onOpenLinkMenuRef.current) {
-                        const { state, dispatch } = view;
-
-                        const coords = { left: event.clientX, top: event.clientY };
-                        const posResult = view.posAtCoords(coords);
-                        const pos = posResult ? posResult.pos : view.posAtDOM(event.target as Node, 0);
-
-                        if (pos !== null) {
-                            const { doc, schema } = state;
-                            const markType = schema.marks.link;
-                            if (markType) {
-                                const $pos = doc.resolve(pos);
-                                const range = $pos.markAround(markType);
-                                if (range) {
-                                    dispatch(state.tr.setSelection(TextSelection.create(doc, range.from, range.to)));
-                                } else {
-                                    dispatch(state.tr.setSelection(TextSelection.create(doc, pos)));
-                                }
-                            }
-                        }
-
-                        event.preventDefault();
-                        const capturedHref = linkElement.href;
-                        setTimeout(() => {
-                            onOpenLinkMenuRef.current?.(event as any, capturedHref);
-                        }, 50);
-                        return true;
-                    }
-
-                    const headingElement = event.composedPath().find((el: any) => el?.tagName && /^H[1-6]$/.test(el.tagName)) as HTMLHeadingElement | undefined;
-
-                    if (headingElement && onOpenBlockMenuRef.current) {
-                        event.preventDefault();
-                        const { state } = view;
-                        const coords = { left: event.clientX, top: event.clientY };
-                        const posResult = view.posAtCoords(coords);
-                        const pos = posResult ? posResult.pos : view.posAtDOM(headingElement, 0);
-
-                        if (pos !== null) {
-                            let targetPos = -1;
-                            let headingNode = null;
-                            const $pos = state.doc.resolve(pos);
-                            for (let d = $pos.depth; d >= 0; d--) {
-                                const node = $pos.node(d);
-                                if (node && node.type.name === 'heading') {
-                                    headingNode = node;
-                                    targetPos = $pos.before(d);
-                                    break;
-                                }
-                            }
-                            if (!headingNode) {
-                                const node = state.doc.nodeAt(pos);
-                                if (node && node.type.name === 'heading') {
-                                    headingNode = node;
-                                    targetPos = pos;
-                                }
-                            }
-
-                            if (headingNode) {
-                                const id = headingNode.attrs.id || headingElement.getAttribute('data-id');
-                                if (id) {
-                                    setTimeout(() => {
-                                        onOpenBlockMenuRef.current?.(event as any, () => ({
-                                            pos: targetPos,
-                                            message: {
-                                                blockType: 'heading',
-                                                id,
-                                                level: headingNode.attrs.level || parseInt(headingElement.tagName.substring(1)),
-                                            }
-                                        }));
-                                    }, 50);
-                                    return true;
-                                }
-                            }
-                        }
-                    }
-
-                    if (!onOpenTableMenuRef.current) return false;
-
-                    const { state, dispatch } = view;
-                    const pos = view.posAtDOM(event.target as Node, 0);
-                    if (pos === null) return false;
-
-                    const $pos = state.doc.resolve(pos);
-                    let isInTable = false;
-                    let tableNodePos = -1;
-                    let cellNodePos = -1;
-
-                    for (let d = $pos.depth; d > 0; d--) {
-                        const node = $pos.node(d);
-                        if (node.type.name === 'table') {
-                            isInTable = true;
-                            tableNodePos = $pos.before(d);
-                        }
-                        if (node.type.name === 'tableCell' || node.type.name === 'tableHeader') {
-                            cellNodePos = $pos.before(d);
-                        }
-                    }
-
-                    if (isInTable) {
-                        event.preventDefault();
-
-                        const { selection } = state;
-                        let shouldSetSelection = true;
-
-                        // Bulletproof check for CellSelection
-                        const isCellSelection = (selection as any).constructor.name === 'CellSelection' || selection.toJSON().type === 'cell';
-
-                        if (isCellSelection) {
-                            // Check if the clicked DOM position falls inside the current multi-cell ranges
-                            const ranges = (selection as any).ranges;
-                            for (let i = 0; i < ranges.length; i++) {
-                                if (pos >= ranges[i].$from.pos && pos <= ranges[i].$to.pos) {
-                                    shouldSetSelection = false; // User clicked inside their selection, preserve it!
-                                    break;
-                                }
-                            }
-                        } else {
-                            // Single cursor check
-                            const isSelectionInClickedCell = selection.$from.depth >= $pos.depth &&
-                                selection.$from.before($pos.depth) === cellNodePos;
-                            if (isSelectionInClickedCell) shouldSetSelection = false;
-                        }
-
-                        if (shouldSetSelection) {
-                            dispatch(state.tr.setSelection(TextSelection.create(state.doc, pos)));
-                        }
-
-                        const cellNode = state.doc.nodeAt(cellNodePos);
-
-                        // Calculate merge capability with a manual fallback for ProseMirror quirks
-                        let canMerge = editorRef.current?.can().mergeCells() || false;
-                        if (!canMerge && isCellSelection) {
-                            const cellSel = selection as any;
-                            // If anchor and head are in different positions, multiple cells are selected
-                            if (cellSel.$anchorCell && cellSel.$headCell && cellSel.$anchorCell.pos !== cellSel.$headCell.pos) {
-                                canMerge = true;
-                            }
-                        }
-                        // Calculate split capability with a manual fallback
-                        let canSplit = editorRef.current?.can().splitCell() || false;
-                        if (!canSplit && cellNode) {
-                            // If the cell spans multiple columns or rows, it can be split!
-                            if ((cellNode.attrs.colspan && cellNode.attrs.colspan > 1) ||
-                                (cellNode.attrs.rowspan && cellNode.attrs.rowspan > 1)) {
-                                canSplit = true;
-                            }
-                        }
-                        onOpenTableMenuRef.current?.(event, () => ({
-                            pos: tableNodePos,
-                            message: {
-                                type: 'openBlockMenu',
-                                blockType: 'table',
-                                pos: tableNodePos,
-                                cellPos: cellNodePos,
-                                backgroundColor: cellNode?.attrs.backgroundColor,
-                                canMergeCells: canMerge,
-                                canSplitCell: canSplit, // Use our calculated fallback
-                            }
-                        }));
-                        return true;
-                    }
-
-                    return false;
-                }
-            });
-
-            return {
-                ...baseProps,
-                handleScrollToSelection: () => {
-                    // If we are in RTL, completely kill ProseMirror's auto-scroll.
-                    // This stops the desktop micro-jumps entirely.
-                    if (direction === 'rtl') {
-                        return true;
-                    }
-                    return false;
-                }
-            };
-        }, [direction, editorSettings]); // callbacks are accessed via refs, no need to re-create
+        const editorProps = useDesktopEditorProps({
+            direction,
+            editorSettings,
+            editorRef,
+            onOpenLinkMenuRef,
+            onOpenBlockMenuRef,
+            onOpenTableMenuRef,
+        });
 
 
         const editor = useEditor({
@@ -357,7 +167,7 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                     latex = (selection as any).node.attrs.latex;
                     isBlock = true;
                 } else if (!selection.empty) {
-                    latex = editor.state.doc.textBetween(selection.from, selection.to, ' ');
+                    latex = getPlainTextFromFragment(selection.content());
                 }
 
                 setCurrentLatex(latex || null);
@@ -382,7 +192,7 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                         empty: selection.empty,
                         range: { from: selection.from, to: selection.to },
                         clientRect: rect,
-                        text: editor.state.doc.textBetween(selection.from, selection.to, ' '),
+                        text: getPlainTextFromFragment(selection.content()),
                         nodeName: (selection as any).node?.type.name
                     });
                 }
@@ -443,112 +253,18 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
 
         useEditorThemeVariables({ colors, dark, editorSettings, rootRef: containerRef });
 
-        // Capture-phase contextmenu handler for links.
-        // Attaches on `document` in capture phase to guarantee it fires before
-        // Tauri/WebView shows its native context menu for <a> elements.
-        useEffect(() => {
-            const handler = (event: MouseEvent) => {
-                // Only handle right-clicks inside our editor container
-                const container = containerRef.current;
-                if (!container || !container.contains(event.target as Node)) return;
+        useContextMenuLinkInterceptor({
+            containerRef,
+            editorRef,
+            onOpenLinkMenuRef,
+        });
 
-                // Find an <a> element in the event path (safe for text nodes)
-                const link = event.composedPath().find((el: any) => el?.tagName === 'A') as HTMLAnchorElement | undefined;
-                if (!link || !link.href) return;
-
-                // Only intercept if our callback is ready
-                if (!onOpenLinkMenuRef.current) return;
-
-                event.preventDefault();
-                event.stopPropagation();
-
-                // Try to select the full link range in the editor
-                try {
-                    const editor = editorRef.current;
-                    if (editor?.isDestroyed === false && editor?.view) {
-                        const view = editor.view;
-                        const { state, dispatch } = view;
-                        const coords = { left: event.clientX, top: event.clientY };
-                        const posResult = view.posAtCoords(coords);
-                        if (posResult) {
-                            const { doc, schema } = state;
-                            const markType = schema.marks.link;
-                            if (markType) {
-                                const $pos = doc.resolve(posResult.pos);
-                                const range = $pos.markAround(markType);
-                                if (range) {
-                                    dispatch(state.tr.setSelection(TextSelection.create(doc, range.from, range.to)));
-                                }
-                            }
-                        }
-                    }
-                } catch {
-                    // Editor not ready — skip selection update, still open the menu
-                }
-
-                const capturedHref = link.href;
-                setTimeout(() => {
-                    onOpenLinkMenuRef.current?.(event as any, capturedHref);
-                }, 50);
-            };
-
-            document.addEventListener('contextmenu', handler, true);
-            return () => document.removeEventListener('contextmenu', handler, true);
-        }, []); // empty deps — callbacks via refs, editorRef is stable
-
-
-        // Keyboard Shortcuts
-        useEffect(() => {
-            const handleKeyDown = (e: KeyboardEvent) => {
-                const isMod = e.metaKey || e.ctrlKey;
-                const isShift = e.shiftKey;
-                const key = e.key.toLowerCase();
-
-                if (key === 'tab') {
-                    if (editor && editor.isFocused) {
-                        // Always prevent browser focus jumping when in the editor.
-                        // TipTap's internal keyboard shortcuts (Indentation and Table) 
-                        // will handle the actual logic.
-                        e.preventDefault();
-                        return;
-                    }
-                }
-
-                if (isMod && isShift && key === 'm') {
-                    if (!editor) return;
-                    e.preventDefault();
-
-                    const { selection } = editor.state;
-                    let latex = '';
-                    let isBlock = false;
-
-                    if ((selection as any).node?.type.name === 'inlineMath') {
-                        latex = (selection as any).node.attrs.latex;
-                        isBlock = false;
-                    } else if ((selection as any).node?.type.name === 'blockMath') {
-                        latex = (selection as any).node.attrs.latex;
-                        isBlock = true;
-                    } else {
-                        latex = editor.state.doc.textBetween(selection.from, selection.to, ' ');
-                    }
-
-                    setCurrentLatex(latex || null);
-                    setIsBlockMath(isBlock);
-                    requestAnimationFrame(() => {
-                        setActivePopup('math');
-                    });
-                } else if (isMod && key === 'k') {
-                    if (!editor) return;
-                    e.preventDefault();
-                    requestAnimationFrame(() => {
-                        setActivePopup('link');
-                    });
-                }
-            };
-
-            window.addEventListener('keydown', handleKeyDown);
-            return () => window.removeEventListener('keydown', handleKeyDown);
-        }, [editor]);
+        useEditorKeyboardShortcuts({
+            editor,
+            setCurrentLatex,
+            setIsBlockMath,
+            setActivePopup,
+        });
 
         // Inside Editor.dom.tsx
         const handleCommand = useCallback(async (cmd: string, params?: any) => {
@@ -675,7 +391,7 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                 // Get HTML of selection
                 let html = '';
                 if (from !== to) {
-                    const slice = editor.state.doc.slice(from, to);
+                    const slice = selection.content();
                     const fragment = DOMSerializer.fromSchema(editor.schema).serializeFragment(slice.content);
                     const div = document.createElement('div');
                     div.appendChild(fragment);
@@ -683,7 +399,7 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                 }
 
                 return {
-                    text: editor.state.doc.textBetween(from, to, ' '),
+                    text: getPlainTextFromFragment(selection.content()),
                     html,
                     range: { from, to }
                 };
@@ -772,110 +488,11 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
             }
         }, [editor, initialContent]);
 
-        // THE GLOBAL PASTE INTERCEPTOR
-        useEffect(() => {
-            const handleGlobalPaste = async (e: ClipboardEvent) => {
-                if (!noteId || !editorRef.current) return;
-
-                // 0. SKIP IF FOCUS IS IN AN INPUT OR TEXTAREA (like Mermaid editor)
-                const target = e.target as HTMLElement;
-                if (['INPUT', 'TEXTAREA'].includes(target.tagName)) return;
-
-                // 1. CHECK FOR INTERNAL HTML FIRST
-                const htmlContent = e.clipboardData?.getData('text/html');
-
-                // Check if the HTML contains your custom local URI scheme (e.g., asset:// or a custom data attribute)
-                if (htmlContent && (htmlContent.includes('asset://') || htmlContent.includes('data-image-id'))) {
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(htmlContent, 'text/html');
-                    const imgElement = doc.querySelector('img');
-
-                    if (imgElement && imgElement.src) {
-                        console.log("Internal DOM copy detected! Bypassing binary upload.");
-                        e.preventDefault();
-                        e.stopPropagation();
-
-                        // Extract the ID from either your custom data attribute or parse it from the src URL
-                        const imageId = imgElement.getAttribute('data-image-id') ||
-                            imgElement.src.split(/[\/\\]/).pop()?.split('.')[0] ||
-                            'unknown-id';
-
-                        handleCommand('insertLocalImage', {
-                            imageId: imageId,
-                            src: imgElement.src
-                        });
-                        return; // STOP execution. Do not upload the mangled binary!
-                    }
-                }
-
-                // 2. FALLBACK TO BINARY UPLOAD (For external files from the web or OS)
-                const items = e.clipboardData?.items;
-                if (!items) return;
-
-                // CHECK FOR PDF ATTACHMENT IN CLIPBOARD
-                const pdfFile = Array.from(items).find(item => item.type === 'application/pdf');
-                if (pdfFile) {
-                    const file = pdfFile.getAsFile();
-                    if (file) {
-                        e.preventDefault();
-                        const processed = await NoteFileService.processAndInsertFile(noteId, URL.createObjectURL(file), 'application/pdf');
-                        handleCommand('insertFileAttachment', {
-                            fileId: processed.fileId,
-                            fileName: processed.fileName,
-                            fileSize: processed.fileSize,
-                            localPath: processed.localPath,
-                            mimeType: processed.mimeType
-                        });
-                        return;
-                    }
-                }
-
-                let fileToUpload: File | null = null;
-                for (let i = 0; i < items.length; i++) {
-                    const item = items[i];
-                    if (item.type.startsWith('image/') || item.type === 'application/pdf') {
-                        fileToUpload = item.getAsFile();
-                        if (fileToUpload) break;
-                    }
-                }
-
-                if (fileToUpload) {
-                    console.log("External binary paste detected. Uploading...", fileToUpload.type);
-                    e.preventDefault();
-                    e.stopPropagation();
-
-                    const reader = new FileReader();
-                    reader.onload = async (event) => {
-                        const base64 = event.target?.result as string;
-                        if (base64) {
-                            try {
-                                const processed = await NoteFileService.saveNoteFile(noteId, base64);
-                                if (processed.mimeType === 'application/pdf') {
-                                    handleCommand('insertFileAttachment', {
-                                        fileId: processed.id,
-                                        fileName: processed.fileName,
-                                        fileSize: processed.fileSize,
-                                        localPath: processed.localPath,
-                                        mimeType: processed.mimeType
-                                    });
-                                } else {
-                                    handleCommand('insertLocalImage', { imageId: processed.id, src: processed.url });
-                                }
-                            } catch (err) {
-                                console.error('[EditorDom] Global paste upload failed:', err);
-                            }
-                        }
-                    };
-                    reader.readAsDataURL(fileToUpload);
-                }
-            };
-
-            document.addEventListener('paste', handleGlobalPaste, { capture: true });
-
-            return () => {
-                document.removeEventListener('paste', handleGlobalPaste, { capture: true });
-            };
-        }, [noteId, handleCommand]);
+        useGlobalPasteHandler({
+            noteId,
+            editorRef,
+            handleCommand,
+        });
 
         return (
             <div dir={direction} ref={containerRef} className="editor-dom-container" style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
@@ -925,34 +542,18 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                     onInsertFile: async (source: 'url' | 'library' | 'camera' | 'document', value?: string) => {
                         if (!noteId) return false;
                         try {
+                            const insertImage = ({ imageId, src }: { imageId: string; src: string }) => {
+                                handleCommand('insertLocalImage', { imageId, src });
+                            };
+                            const insertAttachment = (params: any) => {
+                                handleCommand('insertFileAttachment', params);
+                            };
+
                             if (source === 'url' && value) {
-                                const processed = await NoteFileService.processRemoteFile(noteId, value);
-                                const fileMap = await NoteFileService.resolveFileSources([processed.fileId]);
-                                if (editor) {
-                                    handleCommand('insertLocalImage', {
-                                        imageId: processed.fileId,
-                                        src: fileMap[processed.fileId]
-                                    });
-                                }
+                                await insertRemoteFile(noteId, value, { insertImage });
                                 return true;
                             } else if (source === 'library' && value) {
-                                const processed = await NoteFileService.processAndInsertFile(noteId, value);
-                                const fileMap = await NoteFileService.resolveFileSources([processed.fileId]);
-
-                                if (processed.mimeType === 'application/pdf') {
-                                    handleCommand('insertFileAttachment', {
-                                        fileId: processed.fileId,
-                                        fileName: processed.fileName,
-                                        fileSize: processed.fileSize,
-                                        localPath: processed.localPath,
-                                        mimeType: processed.mimeType
-                                    });
-                                } else {
-                                    handleCommand('insertLocalImage', {
-                                        imageId: processed.fileId,
-                                        src: fileMap[processed.fileId]
-                                    });
-                                }
+                                await insertProcessedFile(noteId, value, { insertImage, insertAttachment });
                                 return true;
                             }
                             return false;

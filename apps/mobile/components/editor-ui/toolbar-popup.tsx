@@ -2,10 +2,8 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '@react-navigation/native';
 import {
     Modal,
-    StyleSheet,
     Text,
     TouchableOpacity,
-    TouchableWithoutFeedback,
     View
 } from 'react-native';
 
@@ -14,14 +12,13 @@ import { ColorSelector } from './popups/color-selector';
 import { HeadingSelector } from './popups/heading-selector';
 
 import {
-    AIPopupProps,
     BlockMenuPopupProps,
     CodeLanguagePopupProps,
     ColorPopupProps,
     DetailsBackgroundPopupProps,
-    HeadingPopupProps,
     FileMenuPopupProps,
     FilePopupProps,
+    HeadingPopupProps,
     LinkPopupProps,
     MathPopupProps,
     TablePopupProps,
@@ -88,7 +85,7 @@ function BlockActionMenu({ blockType, onAction, onClose }: { blockType: string, 
                 marginBottom: 16,
                 textAlign: 'center'
             }}>
-                {blockType === 'codeBlock' ? 'Code Block' : blockType === 'details' ? 'Section' : blockType === 'mermaid' ? 'Diagram' : blockType === 'quote' ? 'Quote' : blockType === 'flashcard' ? 'Flashcard' : 'Block Options'}
+                {blockType === 'codeBlock' ? 'Code Block' : blockType === 'details' ? 'Details' : blockType === 'mermaid' ? 'Diagram' : blockType === 'quote' ? 'Quote' : blockType === 'flashcard' ? 'Flashcard' : 'Block Options'}
             </Text>
 
             <View style={{ gap: 8 }}>
@@ -194,7 +191,7 @@ export function ToolbarPopup(props: ToolbarPopupProps) {
         switch (type) {
             case 'ai':
                 return (
-                    <AIMenu 
+                    <AIMenu
                         onAction={(props as any).onAction}
                         onClose={onClose}
                         isLoading={isLoading}

@@ -13,19 +13,8 @@ import { useEditorBridgeHandlers } from './hooks/useEditorBridgeHandlers';
 import { useSharedEditorUI } from './hooks/useSharedEditorUI';
 import { useWebViewBridge } from './hooks/useWebViewBridge';
 import { PopupType, TipTapEditorProps, TipTapEditorRef } from './shared/types';
-
-function extractImageIds(html: string): string[] {
-    const regex = /data-image-id\s*=\s*(["'])(.*?)\1/gi;
-    const ids: string[] = [];
-    let match;
-    while ((match = regex.exec(html)) !== null) {
-        const id = match[2];
-        if (!id.startsWith('temp-')) {
-            ids.push(id);
-        }
-    }
-    return ids;
-}
+import { extractImageIds } from './shared/image-utils';
+import { insertProcessedFile, insertRemoteFile } from './shared/file-insert-utils';
 
 export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
     (props, ref) => {
@@ -358,37 +347,24 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                         fileUri = result.assets[0].uri;
                     }
                 } else if (source === 'url' && value) {
-
-                    const processed = await NoteFileService.processRemoteFile(noteId, value);
-                    const fileMap = await NoteFileService.resolveFileSources([processed.fileId]);
-                    if (processed.mimeType === 'application/pdf') {
-                        dispatchCommand('insertFileAttachment', {
-                            fileId: processed.fileId,
-                            fileName: processed.fileName,
-                            fileSize: processed.fileSize,
-                            localPath: processed.localPath,
-                            mimeType: processed.mimeType
-                        });
-                    } else {
-                        dispatchCommand('insertLocalImage', { imageId: processed.fileId, src: fileMap[processed.fileId] });
-                    }
+                    const insertImage = ({ imageId, src }: { imageId: string; src: string }) => {
+                        dispatchCommand('insertLocalImage', { imageId, src });
+                    };
+                    const insertAttachment = (params: any) => {
+                        dispatchCommand('insertFileAttachment', params);
+                    };
+                    await insertRemoteFile(noteId, value, { insertImage, insertAttachment });
                     return true;
                 }
 
                 if (fileUri) {
-                    const processed = await NoteFileService.processAndInsertFile(noteId, fileUri);
-                    const fileMap = await NoteFileService.resolveFileSources([processed.fileId]);
-                    if (processed.mimeType === 'application/pdf') {
-                        dispatchCommand('insertFileAttachment', {
-                            fileId: processed.fileId,
-                            fileName: processed.fileName,
-                            fileSize: processed.fileSize,
-                            localPath: processed.localPath,
-                            mimeType: processed.mimeType
-                        });
-                    } else {
-                        dispatchCommand('insertLocalImage', { imageId: processed.fileId, src: fileMap[processed.fileId] });
-                    }
+                    const insertImage = ({ imageId, src }: { imageId: string; src: string }) => {
+                        dispatchCommand('insertLocalImage', { imageId, src });
+                    };
+                    const insertAttachment = (params: any) => {
+                        dispatchCommand('insertFileAttachment', params);
+                    };
+                    await insertProcessedFile(noteId, fileUri, { insertImage, insertAttachment });
                     return true;
                 }
                 return false;

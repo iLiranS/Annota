@@ -3,6 +3,7 @@ import { DOMSerializer } from "@tiptap/pm/model";
 import { NodeSelection } from "@tiptap/pm/state";
 import { prepareMarksHTMLForClipboard } from "./extensions/marks";
 import { convertMarkdownToAnnotaHTML } from "./markdown-parser";
+import { getPlainTextFromFragment } from "./config";
 
 
 function getDefaultCodeLanguage(editor: any): string {
@@ -359,7 +360,7 @@ export async function dispatchEditorCommand(editor: Editor, command: string, par
                 }
             }
 
-            let text = fragment.textBetween(0, fragment.size, ' ');
+            let text = getPlainTextFromFragment(fragment);
 
             // Fallback for atom nodes with code (like mermaid) or cards (flashcards)
             if (isNodeSelection && !text.trim()) {

@@ -969,7 +969,7 @@ code.hljs {
     color: var(--text-color);
     cursor: pointer;
     opacity: 0.25;
-    margin-inline-end: 8px;
+    margin-inline-start: 4px;
 }
 
 .details-menu-btn:hover {
@@ -2385,6 +2385,10 @@ body.is-resizing-image {
     .quote-menu-btn {
         top: 6px;
         inset-inline-end: 6px;
+        width: 32px;
+        height: 32px;
+    }
+    .quote-menu-btn svg {
         width: 24px;
         height: 24px;
     }

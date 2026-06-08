@@ -16,6 +16,7 @@ import { Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Toast, { type ToastConfig, type ToastConfigParams } from 'react-native-toast-message';
 import 'react-native-url-polyfill/auto';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { useDailyCleanup } from '@/hooks/use-daily-cleanup';
@@ -105,18 +106,29 @@ const getOrCreateMobileDb = async (userId: string | null): Promise<MobileDbBundl
   return bundle;
 };
 
-function CustomToast({ text1, text2, type }: ToastConfigParams<any> & { type?: 'success' | 'error' | 'info' }) {
-  const isError = type === 'error';
-  const isSuccess = type === 'success';
+function CustomToast({ text1, text2, type }: ToastConfigParams<any> & { type?: 'success' | 'error' | 'info' | 'offline' | 'online' }) {
+  let iconName: keyof typeof Ionicons.glyphMap = 'information-circle';
+  let iconColor = '#3B82F6';
+
+  if (type === 'success') {
+    iconName = 'checkmark-circle';
+    iconColor = '#10B981';
+  } else if (type === 'error') {
+    iconName = 'alert-circle';
+    iconColor = '#EF4444';
+  } else if (type === 'offline') {
+    iconName = 'cloud-offline';
+    iconColor = '#F59E0B';
+  } else if (type === 'online') {
+    iconName = 'cloud';
+    iconColor = '#10B981';
+  }
 
   return (
-    <View style={[
-      toastStyles.container,
-      isError && { borderLeftWidth: 4, borderLeftColor: '#ff4b4b' },
-      isSuccess && { borderLeftWidth: 4, borderLeftColor: '#10b981' }
-    ]}>
+    <View style={toastStyles.container}>
+      <Ionicons name={iconName} size={22} color={iconColor} style={toastStyles.icon} />
       <View style={toastStyles.textWrap}>
-        <Text style={[toastStyles.title, isError && { color: '#ff4b4b' }]}>{text1}</Text>
+        <Text style={toastStyles.title}>{text1}</Text>
         {text2 ? <Text style={toastStyles.subtitle}>{text2}</Text> : null}
       </View>
     </View>
@@ -124,11 +136,11 @@ function CustomToast({ text1, text2, type }: ToastConfigParams<any> & { type?: '
 }
 
 const toastConfig: ToastConfig = {
-  offlineToast: (props: any) => <CustomToast {...props} />,
-  onlineToast: (props: any) => <CustomToast {...props} />,
+  offlineToast: (props: any) => <CustomToast {...props} type="offline" />,
+  onlineToast: (props: any) => <CustomToast {...props} type="online" />,
   error: (props: any) => <CustomToast {...props} type="error" />,
   success: (props: any) => <CustomToast {...props} type="success" />,
-  info: (props: any) => <CustomToast {...props} />,
+  info: (props: any) => <CustomToast {...props} type="info" />,
 };
 
 const STARTUP_NETWORK_TIMEOUT_MS = 5000;
@@ -479,29 +491,36 @@ const toastStyles = {
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(30, 30, 30, 0.95)',
+    backgroundColor: '#1E1E1E',
     paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderRadius: 12,
-    marginHorizontal: 16,
-    gap: 12,
+    paddingVertical: 12,
+    borderRadius: 24,
+    marginHorizontal: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  icon: {
+    marginRight: 2,
   },
   textWrap: {
     flex: 1,
-    gap: 2,
+    gap: 1,
+    marginLeft: 4,
   },
   title: {
-    color: '#fff',
-    fontSize: 15,
+    color: '#FFFFFF',
+    fontSize: 14,
     fontWeight: '600',
+    letterSpacing: -0.1,
   },
   subtitle: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.65)',
+    fontSize: 12,
+    marginTop: 1,
   },
 } as const;

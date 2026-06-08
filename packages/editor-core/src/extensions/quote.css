@@ -60,6 +60,10 @@
     .quote-menu-btn {
         top: 6px;
         inset-inline-end: 6px;
+        width: 32px;
+        height: 32px;
+    }
+    .quote-menu-btn svg {
         width: 24px;
         height: 24px;
     }

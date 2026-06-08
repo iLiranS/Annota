@@ -19,7 +19,6 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
-    Alert,
     BackHandler,
     Platform,
     StyleSheet,
@@ -352,7 +351,11 @@ export default function NoteEditor() {
             });
         } catch (err) {
             console.error('Failed to publish note', err);
-            Alert.alert('Error', 'Failed to publish note');
+            Toast.show({
+                type: 'error',
+                text1: 'Error',
+                text2: 'Failed to publish note',
+            });
         }
     }, [id, currentNote, updateNoteMetadata]);
 
@@ -368,7 +371,11 @@ export default function NoteEditor() {
             });
         } catch (err) {
             console.error('Failed to unpublish note', err);
-            Alert.alert('Error', 'Failed to unpublish note');
+            Toast.show({
+                type: 'error',
+                text1: 'Error',
+                text2: 'Failed to unpublish note',
+            });
         }
     }, [id, updateNoteMetadata]);
 
@@ -376,18 +383,22 @@ export default function NoteEditor() {
         if (!id) return;
         const link = `annota://note/${id}`;
         await ExpoClipboard.setStringAsync(link);
-        setTimeout(() => {
-            Alert.alert('Link Copied!', 'The link to this note has been copied to your clipboard.');
-        }, 500);
+        Toast.show({
+            type: 'success',
+            text1: 'Link Copied!',
+            text2: 'The link to this note has been copied to your clipboard.',
+        });
     }, [id]);
 
     const handleCopyBlockLink = useCallback(async (blockId: string) => {
         if (!id) return;
         const link = `annota://note/${id}?blockId=${blockId}`;
         await ExpoClipboard.setStringAsync(link);
-        setTimeout(() => {
-            Alert.alert('Block Link Copied!', 'The link to this specific block has been copied to your clipboard.');
-        }, 500);
+        Toast.show({
+            type: 'success',
+            text1: 'Block Link Copied!',
+            text2: 'The link to this specific block has been copied to your clipboard.',
+        });
     }, [id]);
 
     const activeNoteContext = useMemo(() => {
@@ -410,7 +421,11 @@ export default function NoteEditor() {
         const selectedHtml = selection.html;
 
         if (!selectedText && !selectedHtml) {
-            Alert.alert('No selection', 'Please select some text first to use AI actions.');
+            Toast.show({
+                type: 'info',
+                text1: 'No selection',
+                text2: 'Please select some text first to use AI actions.',
+            });
             return;
         }
 
@@ -533,7 +548,11 @@ export default function NoteEditor() {
                                         if (supported) {
                                             await Linking.openURL(url);
                                         } else {
-                                            Alert.alert("Error", `Cannot open URL: ${url}`);
+                                            Toast.show({
+                                                type: 'error',
+                                                text1: 'Error',
+                                                text2: `Cannot open URL: ${url}`,
+                                            });
                                         }
                                     }}
                                     style={({ pressed }) => [

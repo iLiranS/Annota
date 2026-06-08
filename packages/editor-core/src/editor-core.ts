@@ -184,6 +184,7 @@ export async function setupEditor(options: any) {
     const container = document.getElementById('editor-container') || document.documentElement;
     const listItemSpacing = Math.max(2, Math.round(paragraphSpacing / 3));
     container.setAttribute('data-theme', isDark ? 'dark' : 'light');
+    container.classList.add('native-editor-container');
     container.style.setProperty('--bg-color', colors.background);
     container.style.setProperty('--text-color', colors.text);
     container.style.setProperty('--accent-color', colors.primary);
