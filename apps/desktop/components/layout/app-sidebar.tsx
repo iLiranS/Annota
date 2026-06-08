@@ -214,11 +214,11 @@ export function AppSidebar() {
     return (
         <div
             className={cn(
-                "relative flex overflow-visible shrink-0 flex-col  transition-all duration-300 ease-in-out  ",
-                "rounded-2xl border border-sidebar-border/60 bg-note-bg",
+                "relative flex overflow-hidden shrink-0 flex-col  transition-all duration-300 ease-in-out  ",
+
                 !open && "w-0! opacity-0 pointer-events-none border-none",
                 isResizing && "transition-none",
-                open && 'ms-2 mb-2'
+
             )}
             style={{
                 width: open ? `${width}px` : 0,

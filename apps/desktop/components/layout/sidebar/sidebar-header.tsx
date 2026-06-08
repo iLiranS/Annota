@@ -1,3 +1,4 @@
+import { ConfirmDialog } from "@/components/custom-ui/confirm-dialog";
 import {
     Breadcrumb,
     BreadcrumbEllipsis,
@@ -10,15 +11,14 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { SidebarHeader } from "@/components/ui/sidebar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useExportFolder } from "@/hooks/use-export-folder";
 import { cn } from "@/lib/utils";
 import { SortType } from "@annota/core";
 import { CheckSquare, FolderDown, FolderPen, MoreVertical, SquarePen } from "lucide-react";
+import { useState } from "react";
 import { AnnotaIcon } from "../../custom-ui/annota-icon";
 import { Ionicons } from "../../ui/ionicons";
 import { type BreadcrumbData } from "./breadcrumbs";
-import { useState } from "react";
-import { ConfirmDialog } from "@/components/custom-ui/confirm-dialog";
-import { useExportFolder } from "@/hooks/use-export-folder";
 
 interface SidebarHeaderSectionProps {
     title: string;
@@ -96,7 +96,7 @@ export function SidebarHeaderSection({
                     "--note-color": color,
                 } as React.CSSProperties}
                 className={cn(
-                    "py-1 px-1  gap-0.5 justify-center rounded-2xl rounded-b-none border transition-all duration-300",
+                    "py-1 px-1 mx-1 gap-0.5 justify-center rounded-md border transition-all duration-300",
                     "sidebar-header-tinted",
                     dir === "rtl" && "animate-content-from-right",
                     dir === "ltr" && "animate-content-from-left"

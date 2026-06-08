@@ -117,9 +117,14 @@ export default function AppShell() {
 
                     {/* Primary Note Card (Rounded, Bordered) */}
                     <div className={cn(
-                        "flex-1 overflow-hidden flex min-w-0 transition-all duration-300",
-                        "m-2 mt-0 rounded-2xl border border-sidebar-border/60 bg-note-bg"
-                    )}>
+                        "flex-1 overflow-hidden flex min-w-0 transition-all duration-300 relative z-10",
+                        "me-2 mb-2 rounded-2xl border border-sidebar-border/60 bg-note-bg",
+                        "ltr:shadow-[3px_1px_2px_0_rgb(0_0_0/0.02),4px_2px_8px_-1px_rgb(0_0_0/0.05),8px_6px_20px_-4px_rgb(0_0_0/0.07)]",
+                        "rtl:shadow-[-3px_1px_2px_0_rgb(0_0_0/0.02),-4px_2px_8px_-1px_rgb(0_0_0/0.05),-8px_6px_20px_-4px_rgb(0_0_0/0.07)]",
+                        "dark:ltr:shadow-[3px_1px_2px_0_rgb(0_0_0/0.1),4px_2px_8px_-1px_rgb(0_0_0/0.16),8px_6px_20px_-4px_rgb(0_0_0/0.2)]",
+                        "dark:rtl:shadow-[-3px_1px_2px_0_rgb(0_0_0/0.1),-4px_2px_8px_-1px_rgb(0_0_0/0.16),-8px_6px_20px_-4px_rgb(0_0_0/0.2)]"
+                    )}
+                    >
 
                         <div
                             className={cn(
