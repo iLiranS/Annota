@@ -156,7 +156,7 @@ export function SidebarHeaderSection({
                                             <MoreVertical className="h-4 w-4" />
                                         </Button>
                                     </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" className="w-52">
+                                    <DropdownMenuContent align="center" className="w-52">
                                         <DropdownMenuItem onClick={onCreateFolder} className="gap-2 cursor-pointer">
                                             <Ionicons name="folder-outline" size={16} />
                                             <span>New Folder</span>
@@ -233,17 +233,17 @@ export function SidebarHeaderSection({
             {/* Breadcrumbs Row */}
             {!isRoot && breadcrumbs && breadcrumbs.length > 0 && (
                 <div className={cn(
-                    "px-3 py-1.5 border-b border-sidebar-border/60 shrink-0 select-none max-w-full bg-transparent",
+                    "px-2 py-1.5 border-b border-sidebar-border/60 shrink-0 select-none max-w-full bg-transparent",
                     dir === "rtl" && "animate-content-from-right",
                     dir === "ltr" && "animate-content-from-left"
                 )}>
                     <Breadcrumb className=" pb-0 pt-0 bg-transparent shrink-0 select-none max-w-full ">
-                        <BreadcrumbList className="flex-nowrap gap-0.5 sm:gap-0.5">
+                        <BreadcrumbList className="flex-nowrap gap-0!">
                             {breadcrumbs.map((crumb, i) => (
-                                <div key={i} className="flex items-center gap-0.5 min-w-0">
+                                <div key={i} className="flex items-center min-w-0">
                                     {i > 0 && (
                                         <BreadcrumbSeparator className="opacity-30 shrink-0 mx-0.5 flex items-center justify-center">
-                                            <Ionicons name="chevron-forward" size={7} />
+                                            <Ionicons className="rtl:rotate-180" name="chevron-forward" size={7} />
                                         </BreadcrumbSeparator>
                                     )}
                                     <BreadcrumbItem className="min-w-0">
@@ -252,7 +252,7 @@ export function SidebarHeaderSection({
                                         ) : (
                                             <BreadcrumbLink
                                                 asChild
-                                                className="cursor-pointer active:scale-95 transition-all duration-150 text-[9px] font-semibold flex items-center gap-0.5 min-w-0 bg-transparent border-none p-0 outline-none text-(--crumb-color) hover:text-(--crumb-color-hover)"
+                                                className="cursor-pointer active:scale-95 transition-all duration-150 text-[11px] font-semibold flex items-center gap-0.5 min-w-0 bg-transparent border-none p-0 outline-none text-(--crumb-color) hover:text-(--crumb-color-hover)"
                                                 style={{
                                                     '--crumb-color': crumb.color ? `${crumb.color}bb` : "var(--muted-foreground)",
                                                     '--crumb-color-hover': crumb.color || "var(--foreground)",
@@ -261,14 +261,14 @@ export function SidebarHeaderSection({
                                                 <button type="button" onClick={() => onNavigateBreadcrumb?.(crumb.id)}>
                                                     {crumb.icon === "annota" ? (
                                                         <AnnotaIcon
-                                                            size={10}
+                                                            size={14}
                                                             className={cn("shrink-0")}
                                                             color={crumb.color}
                                                         />
                                                     ) : crumb.icon && (
                                                         <Ionicons
                                                             name={crumb.icon}
-                                                            size={8}
+                                                            size={12}
                                                             className={cn("shrink-0", !crumb.color && "text-muted-foreground/40")}
                                                             color={crumb.color}
                                                         />

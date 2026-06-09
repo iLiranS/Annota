@@ -4,6 +4,7 @@ import { syncPull, syncPush } from './sync-service';
 
 const DEBOUNCE_MS = 10_000;       // 10 seconds of idle → push
 const HARD_MAX_MS = 2 * 60_000;   // 2 minutes absolute cap
+const FOCUS_ACTIVATION_SYNC_THRESHOLD_MS = 5 * 60_000; // 5 minutes activation threshold
 // const OFFLINE_TOAST_COOLDOWN_MS = 30_000; // Don't spam offline toast
 
 export interface SyncDependencies {
@@ -51,6 +52,7 @@ export class SyncScheduler {
     private disposed = false;
     private initialized = false;
     private userId: string | null = null;
+    private isFirstAppStateChange = true;
 
     // ─── Public API ────────────────────────────────────────────
 
@@ -75,6 +77,7 @@ export class SyncScheduler {
         this.deps = deps;
         this.disposed = false;
         this.initialized = true;
+        this.isFirstAppStateChange = true;
 
         // Cleanup existing listeners if re-initializing
         this.appStateUnsubscribe?.();
@@ -107,6 +110,7 @@ export class SyncScheduler {
 
     /** Called on every note content change — resets the debounce timer */
     notifyContentChange(): void {
+        console.log("[SYNC-SCHEDULER] Notify content change")
         if (this.disposed || !this.initialized) return;
 
         if (!useSyncStore.getState().isOnline) {
@@ -123,10 +127,11 @@ export class SyncScheduler {
 
         // Start the hard-max timer if not already running
         if (!this.hardMaxTimer) {
+            console.log("[SYNC-SCHEDULER] Starting hard max timer")
             this.hardMaxTimer = setTimeout(() => {
                 this.hardMaxTimer = null;
                 this.clearDebounce();
-                
+
                 // If auth is required, don't even try to pull/push
                 if (useSyncStore.getState().authRequired) {
                     console.log('[SyncScheduler] Sync paused: re-authentication required');
@@ -190,6 +195,9 @@ export class SyncScheduler {
     private handleAppStateChange = (isActive: boolean): void => {
         if (this.disposed) return;
 
+        const isInitial = this.isFirstAppStateChange;
+        this.isFirstAppStateChange = false;
+
         // Flush immediately ONLY when going to background/inactive
         // and if there's a pending change (debounce timer is active)
         if (!isActive) {
@@ -197,6 +205,19 @@ export class SyncScheduler {
                 console.log('[SyncScheduler] App going to background with pending changes — flushing');
                 this.clearAllTimers();
                 this.executeSyncPush();
+            }
+        } else {
+            // App became active/focused: pull changes if it's been more than 5 minutes since last sync
+            if (!isInitial) {
+                const { lastSyncTime, isOnline, authRequired } = useSyncStore.getState();
+                if (isOnline && !authRequired) {
+                    const lastSync = lastSyncTime ? new Date(lastSyncTime).getTime() : 0;
+                    const now = Date.now();
+                    if (now - lastSync > FOCUS_ACTIVATION_SYNC_THRESHOLD_MS) {
+                        console.log('[SyncScheduler] App became active and last sync was more than 5 minutes ago — executing sync');
+                        this.executeSyncPull().then(() => this.executeSyncPush());
+                    }
+                }
             }
         }
     };

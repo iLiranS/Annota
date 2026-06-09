@@ -1,10 +1,64 @@
 import { useNotesStore } from "@annota/core";
 import { useMemo } from "react";
+import {
+    ContextMenu,
+    ContextMenuContent,
+    ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import { NoteContextMenuContent, useNoteModals } from "./note-context-menu";
 
 interface NoteConnectionsGraphProps {
     noteId: string;
     backlinks: any[];
     forwardLinks: any[];
+}
+
+function NoteConnectionItem({
+    link,
+    folderColor,
+}: {
+    link: any;
+    folderColor: string;
+}) {
+    const targetNote = useNotesStore(s => s.notes.find(n => n.id === link.id));
+    const { openPreview, renderModals } = useNoteModals(targetNote || null);
+
+    const linkContent = (
+        <a
+            href={link.blockId ? `annota://note/${link.id}?blockId=${link.blockId}` : `annota://note/${link.id}`}
+            className="inline-flex items-center text-[10px] font-semibold border rounded-full px-2.5 py-0.5 truncate transition-all duration-200 hover:brightness-110 active:scale-95 shrink-0 max-w-[120px]"
+            style={{
+                borderColor: `${folderColor}40`,
+                backgroundColor: `${folderColor}10`,
+                color: folderColor
+            }}
+            title={link.title || 'Untitled Note'}
+        >
+            <span className="truncate">{link.title || 'Untitled Note'}</span>
+        </a>
+    );
+
+    if (!targetNote) {
+        return linkContent;
+    }
+
+    return (
+        <>
+            <ContextMenu>
+                <ContextMenuTrigger asChild>
+                    {linkContent}
+                </ContextMenuTrigger>
+                <ContextMenuContent className="w-52">
+                    <NoteContextMenuContent
+                        note={targetNote}
+                        onPreview={openPreview}
+                        disabledActions={["quickAccess", "pinNote", "moveNote", "deleteNote", "showFolder"]}
+                    />
+                </ContextMenuContent>
+            </ContextMenu>
+            {renderModals()}
+        </>
+    );
 }
 
 export function NoteConnectionsGraph({ noteId, backlinks, forwardLinks }: NoteConnectionsGraphProps) {
@@ -34,18 +88,10 @@ export function NoteConnectionsGraph({ noteId, backlinks, forwardLinks }: NoteCo
                         const folderColor = getNoteFolderColor(link.id);
                         return (
                             <div key={link.id} className="flex items-center justify-end min-w-0 group relative pr-[10px]">
-                                <a
-                                    href={link.blockId ? `annota://note/${link.id}?blockId=${link.blockId}` : `annota://note/${link.id}`}
-                                    className="inline-flex items-center text-[10px] font-semibold border rounded-full px-2.5 py-0.5 truncate transition-all duration-200 hover:brightness-110 active:scale-95 shrink-0 max-w-[120px]"
-                                    style={{
-                                        borderColor: `${folderColor}40`,
-                                        backgroundColor: `${folderColor}10`,
-                                        color: folderColor
-                                    }}
-                                    title={link.title || 'Untitled Note'}
-                                >
-                                    <span className="truncate">{link.title || 'Untitled Note'}</span>
-                                </a>
+                                <NoteConnectionItem
+                                    link={link}
+                                    folderColor={folderColor}
+                                />
                                 {/* Horizontal Connection Line - extending exactly to column right boundary */}
                                 <div
                                     className="absolute right-0 top-1/2 -translate-y-1/2 h-px transition-colors duration-200 group-hover:bg-primary/40"
@@ -99,18 +145,10 @@ export function NoteConnectionsGraph({ noteId, backlinks, forwardLinks }: NoteCo
                                     className="absolute left-0 top-1/2 -translate-y-1/2 h-px transition-colors duration-200 group-hover:bg-primary/40"
                                     style={{ width: "10px", backgroundColor: `${folderColor}30` }}
                                 />
-                                <a
-                                    href={link.blockId ? `annota://note/${link.id}?blockId=${link.blockId}` : `annota://note/${link.id}`}
-                                    className="inline-flex items-center text-[10px] font-semibold border rounded-full px-2.5 py-0.5 truncate transition-all duration-200 hover:brightness-110 active:scale-95 shrink-0 max-w-[120px]"
-                                    style={{
-                                        borderColor: `${folderColor}40`,
-                                        backgroundColor: `${folderColor}10`,
-                                        color: folderColor
-                                    }}
-                                    title={link.title || 'Untitled Note'}
-                                >
-                                    <span className="truncate">{link.title || 'Untitled Note'}</span>
-                                </a>
+                                <NoteConnectionItem
+                                    link={link}
+                                    folderColor={folderColor}
+                                />
                             </div>
                         );
                     })
@@ -133,3 +171,4 @@ export function NoteConnectionsGraph({ noteId, backlinks, forwardLinks }: NoteCo
         </div>
     );
 }
+

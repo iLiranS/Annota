@@ -356,7 +356,7 @@ export const GENERATED_CORE_STYLES = `
  * Add left padding only on pointer/hover-capable devices (desktop).
  * This ensures mobile WebView editors are never affected.
  */
-@media (hover: hover) and (pointer: fine) {
+/* @media (hover: hover) and (pointer: fine) {
     .ProseMirror {
         padding-left: 36px;
     }
@@ -365,7 +365,7 @@ export const GENERATED_CORE_STYLES = `
         padding-left: 16px;
         padding-right: 36px;
     }
-}
+} */
 
 /* The floating handle element rendered by DragHandle.configure({ render }) */
 .annota-drag-handle {

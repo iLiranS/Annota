@@ -214,7 +214,7 @@ export function AppSidebar() {
     return (
         <div
             className={cn(
-                "relative flex overflow-hidden shrink-0 flex-col  transition-all duration-300 ease-in-out  ",
+                "relative flex overflow-hidden mb-2 shrink-0 flex-col  transition-all duration-300 ease-in-out  ",
 
                 !open && "w-0! opacity-0 pointer-events-none border-none",
                 isResizing && "transition-none",

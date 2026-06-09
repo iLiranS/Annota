@@ -27,27 +27,38 @@ interface FolderListItemProps extends React.ButtonHTMLAttributes<HTMLButtonEleme
 }
 
 
-export function FolderIcon({ folder, className, isActive, }: { folder: Folder, className?: string, isActive?: boolean }) {
+interface FolderIconProps extends React.HTMLAttributes<HTMLDivElement> {
+    folder: Folder;
+    isActive?: boolean;
+    size?: "sm" | "md";
+}
+
+export function FolderIcon({ folder, className, isActive, size = "md", ...props }: FolderIconProps) {
     const isRoot = folder.id === 'root';
+    const isSm = size === "sm";
     return (
         <div
             className={cn(
-                "flex h-6 w-6 shrink-0 items-center justify-center rounded transition-colors shadow-sm",
+                isSm ? "flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[4px] transition-colors shadow-sm" : "flex h-6 w-6 shrink-0 items-center justify-center rounded transition-colors shadow-sm",
                 className,
-                isActive && "bg-background/50",
                 isRoot && "bg-accent-full/20!",
+                !isActive && isSm && 'opacity-50 hover:opacity-100'
             )}
             style={{
-                backgroundColor: folder.color && !isRoot ? `${folder.color}20` : '',
+                backgroundColor: folder.color ? `${folder.color}20` : '',
+                ...props.style
             }}
+            {...props}
         >
-            {isRoot ? <AnnotaIcon size={20} color={'var(--accent-full'} className="transition-transform duration-300 group-hover/item:animate-folder-jump" /> :
+            {isRoot ?
+                <AnnotaIcon size={isSm ? 16 : 20} color={'var(--accent-full)'}
+                    className={cn("transition-transform duration-300 group-hover/item:animate-folder-jump", isActive && "animate-folder-jump")} /> :
                 <Ionicons
                     name={(folder.icon as any) || "folder"}
-                    size={16}
+                    size={isSm ? 12 : 16}
                     style={{ color: folder.color || undefined }}
                     className={cn(
-                        "transition-transform duration-300 group-hover/item:animate-folder-jump",
+                        "transition-transform duration-300 group-hover/item:animate-folder-jump ",
                         isActive && "animate-folder-jump"
                     )}
                 />

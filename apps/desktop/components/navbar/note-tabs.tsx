@@ -5,7 +5,6 @@ import {
     ContextMenuSeparator,
     ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import { Ionicons } from "@/components/ui/ionicons";
 import { cn } from "@/lib/utils";
 import { DAILY_NOTES_FOLDER_ID, Folder, NoteMetadata, TRASH_FOLDER_ID, useNavigationStore, useNotesStore, useSettingsStore } from "@annota/core";
 import { Pin, X, XCircle } from "lucide-react";
@@ -13,6 +12,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { useNoteTabsStore } from "../../hooks/use-note-tabs";
+import { FolderIcon } from "../notes/folder-list-item";
 import { NoteContextMenuContent, useNoteModals } from "../notes/note-context-menu";
 
 
@@ -299,21 +299,7 @@ export function NoteTabs() {
                 }
             }}
         >
-            <style>{`
-                .note-tabs-scrollbar-hide::-webkit-scrollbar,
-                .note-tabs-container::-webkit-scrollbar {
-                    display: none;
-                }
-                .inactive-folder-icon {
-                    opacity: 0.6;
-                }
-                .group:hover .inactive-folder-icon {
-                    opacity: 1;
-                }
-                .folder-tab-icon:hover {
-                    background-color: var(--folder-color-hover) !important;
-                }
-            `}</style>
+
             <div
                 data-tauri-drag-region
                 className="note-tabs-container flex flex-row min-w-full w-max h-full items-center gap-1.5 "
@@ -388,46 +374,40 @@ export function NoteTabs() {
                                         navigate(`/notes/${tab.noteId}`);
                                     }}
                                     className={cn(
-                                        "group relative flex h-9/12 cursor-pointer items-center justify-start gap-1.5 rounded border text-xs select-none flex-row px-1",
+                                        "group relative flex h-9/12 cursor-pointer items-center justify-start gap-1 rounded border  text-xs select-none flex-row px-1",
                                         isActive
-                                            ? "bg-note-bg dark:bg-primary/10 border-border text-primary  z-10 shrink min-w-[120px] max-w-[220px] w-auto font-medium"
+                                            ? "bg-note-bg dark:bg-primary/10 border-border/60 text-primary  z-10 shrink min-w-[120px] max-w-[220px] w-auto "
                                             : "bg-transparent border-transparent text-muted-foreground/60 hover:bg-primary/5 hover:text-muted-foreground/80 hover:border-border/30 z-0 shrink min-w-[120px] max-w-[220px] w-auto",
                                         draggedIndex === index && "opacity-50",
                                         dragOverIndex === index && "bg-sidebar-accent"
                                     )}
                                 >
-                                    {tab.isPinned ? (
-                                        <Pin size={12} className={cn(
-                                            "shrink-0  rotate-45 fill-current",
-                                            isActive ? "text-accent-full" : "text-muted-foreground/40 group-hover:text-muted-foreground/70"
-                                        )} />
-                                    ) : (
-                                        <div
-                                            onClick={(e) => handleShowFolder(e, note)}
-                                            className={cn(
-                                                "flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[4px] shadow-sm border border-black/5 dark:border-white/5 cursor-pointer folder-tab-icon hover:scale-105",
-                                                isActive ? "bg-background/80" : "bg-primary/5 hover:bg-primary/10 inactive-folder-icon"
-                                            )}
-                                            style={{
-                                                backgroundColor: getFolderForNote(note).color ? `${getFolderForNote(note).color}20` : undefined,
-                                                "--folder-color-hover": getFolderForNote(note).color ? `${getFolderForNote(note).color}40` : undefined,
-                                            } as React.CSSProperties}
-                                            title={`Show in Sidebar (Folder: ${getFolderForNote(note).name})`}
-                                        >
-                                            <Ionicons
-                                                name={(getFolderForNote(note).icon as any) || "folder"}
-                                                size={10}
-                                                style={{ color: getFolderForNote(note).color || 'var(--accent-full)' }}
-                                            />
-                                        </div>
-                                    )}
+
+
+                                    <FolderIcon
+                                        folder={getFolderForNote(note)}
+                                        isActive={isActive}
+                                        size="sm"
+                                        onClick={(e) => handleShowFolder(e, note)}
+                                        className={cn(
+                                            "border border-black/5 dark:border-white/5 cursor-pointer folder-tab-icon hover:scale-105",
+                                        )}
+
+                                    />
+
+
 
                                     <span style={{ direction: general.appDirection === 'rtl' ? 'rtl' : 'ltr' }} className={cn(
                                         "truncate flex-1 text-[11px] select-none",
-                                        isActive ? "font-semibold" : "font-medium"
+                                        // isActive ? "font-semibold" : "font-medium"
                                     )}>
                                         {note.title || "Untitled"}
                                     </span>
+                                    {tab.isPinned &&
+                                        <Pin size={13} className={cn(
+                                            "shrink-0  fill-current",
+                                            isActive ? "text-accent-full" : "text-muted-foreground/40 group-hover:text-muted-foreground/70"
+                                        )} />}
 
                                     <div
                                         className={cn(
@@ -440,6 +420,7 @@ export function NoteTabs() {
                                     >
                                         <X size={14} strokeWidth={2.5} />
                                     </div>
+
                                 </div>
                             </ContextMenuTrigger>
                             <ContextMenuContent className="w-52">
@@ -478,7 +459,7 @@ export function NoteTabs() {
                                         await deleteNote(tabId);
                                         toast.success("Note moved to Trash");
                                     }}
-                                    disabledActions={["openInNewTab", "preview"]}
+                                    disabledActions={["openInNewTab", "preview", "pinNote"]}
                                 />
 
 

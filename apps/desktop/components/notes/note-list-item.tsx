@@ -112,8 +112,8 @@ export function NoteListItem({
                             !isNoteActive && !isSelected && 'hover:bg-primary/5',
                             !asChild && (isCompact && !isInList ? "py-1.5" : "py-2"),
                             !asChild && (isInList ? "rounded-lg px-2 py-2" : "px-3 py-2 rounded-lg"),
-                            isNoteActive && !asChild && "bg-primary/10",
-                            isSelected && !asChild && "bg-primary/10",
+                            isNoteActive && !asChild && "bg-accent-full/10",
+                            isSelected && !asChild && "bg-accent-full/10",
                             "relative",
                             className
                         )}
@@ -138,7 +138,7 @@ export function NoteListItem({
                                         )}
                                         <p className={cn(
                                             "truncate text-sm font-medium transition-colors",
-                                            isNoteActive ? "text-primary" : "text-foreground/90 group-hover/note:text-primary"
+
                                         )}>
                                             <Highlight text={note.title || "Untitled Note"} query={searchQuery} />
                                         </p>
@@ -170,7 +170,7 @@ export function NoteListItem({
                                                     <span
                                                         key={t.id}
                                                         title={t.name}
-                                                        className="px-1.5 py-0.5 rounded text-[9px] font-medium border truncate min-w-[40px] max-w-fit flex-1 cursor-pointer hover:brightness-110 active:scale-95 transition-all"
+                                                        className="px-1.5 py-0.5 rounded text-[9px] font-medium border truncate min-w-[40px] max-w-fit flex-1 cursor-pointer hover:brightness-110 hover:font-stretch-110% active:scale-95 transition-all"
                                                         style={{
                                                             backgroundColor: `${t.color}1A`,
                                                             color: t.color,
@@ -191,8 +191,8 @@ export function NoteListItem({
                                     } catch { return null; }
                                 })()}
                                 {/* Subtle inset separator for list items, positioned in the middle of the gap */}
-                                {isInList && !isLast && (
-                                    <div className="absolute -bottom-0.5 left-4 right-4 h-px bg-border/30" />
+                                {isInList && !isLast && !isNoteActive && (
+                                    <div className="absolute bottom-0 left-3 right-3 h-px bg-sidebar-border/60" />
                                 )}
                             </>
                         )}

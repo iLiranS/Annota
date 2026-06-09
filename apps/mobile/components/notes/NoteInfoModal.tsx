@@ -37,7 +37,6 @@ export default function NoteInfoModal({ visible, onClose, noteId, onScrollToElem
     const note = getNoteById(noteId);
 
     const [content, setContent] = useState<string | null>(null);
-    const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
     const [forwardLinks, setForwardLinks] = useState<any[]>([]);
     const [backlinks, setBacklinks] = useState<any[]>([]);
     const [tocExpanded, setTocExpanded] = useState<boolean>(true);
@@ -80,33 +79,44 @@ export default function NoteInfoModal({ visible, onClose, noteId, onScrollToElem
         return items;
     }, [content]);
 
-    const toggleCollapse = (id: string) => {
-        setCollapsedIds(prev => {
-            const next = new Set(prev);
-            if (next.has(id)) next.delete(id);
-            else next.add(id);
-            return next;
-        });
-    };
+    // For each item, compute the tree prefix string (e.g. "│   ├── ")
+    // by walking ancestors and checking if each is the last of its siblings.
+    const tocPrefixes = useMemo(() => {
+        return toc.map((item, idx) => {
+            if (item.level === 1) return "";
 
-    const isVisible = (index: number) => {
-        let currentLevel = toc[index].level;
-        for (let i = index - 1; i >= 0; i--) {
-            const prevItem = toc[i];
-            if (prevItem.level < currentLevel) {
-                if (collapsedIds.has(prevItem.id)) {
-                    return false;
+            // For each ancestor level, is that ancestor the last of its siblings?
+            const isLastAtLevel: Record<number, boolean> = {};
+            for (let lvl = 1; lvl < item.level; lvl++) {
+                let ancestorIdx = -1;
+                for (let i = idx - 1; i >= 0; i--) {
+                    if (toc[i].level === lvl) { ancestorIdx = i; break; }
                 }
-                currentLevel = prevItem.level;
+                if (ancestorIdx === -1) continue;
+                let isLast = true;
+                for (let i = ancestorIdx + 1; i < toc.length; i++) {
+                    if (toc[i].level < lvl) break;
+                    if (toc[i].level === lvl) { isLast = false; break; }
+                }
+                isLastAtLevel[lvl] = isLast;
             }
-        }
-        return true;
-    };
 
-    const hasChildren = (index: number) => {
-        const currentLevel = toc[index].level;
-        return index + 1 < toc.length && toc[index + 1].level > currentLevel;
-    };
+            // Is this item the last among its siblings?
+            let selfIsLast = true;
+            for (let i = idx + 1; i < toc.length; i++) {
+                if (toc[i].level < item.level) break;
+                if (toc[i].level === item.level) { selfIsLast = false; break; }
+            }
+
+            // Build prefix: ancestor columns, then the connector for this item
+            let prefix = "";
+            for (let lvl = 1; lvl <= item.level - 2; lvl++) {
+                prefix += isLastAtLevel[lvl] ? "    " : "│   ";
+            }
+            prefix += selfIsLast ? "└── " : "├── ";
+            return prefix;
+        });
+    }, [toc]);
 
     const formatSize = (bytes: number) => {
         if (bytes < 1024) return `${bytes} B`;
@@ -135,7 +145,109 @@ export default function NoteInfoModal({ visible, onClose, noteId, onScrollToElem
                         style={styles.scrollArea}
                         contentContainerStyle={{ paddingBottom: insets.bottom + 20, paddingTop: 10 }}
                     >
-                        {/* Section 1: Stats & Metadata */}
+                        {/* Section 1: Table of Contents */}
+                        <View style={{ marginBottom: 4 }}>
+                            <TouchableOpacity
+                                onPress={() => setTocExpanded(!tocExpanded)}
+                                style={styles.accordionHeader}
+                            >
+                                <View style={styles.accordionHeaderLeft}>
+                                    <Ionicons name="list-outline" size={14} color={colors.primary} />
+                                    <Text style={[styles.accordionTitle, { color: colors.text }]}>TABLE OF CONTENTS</Text>
+                                </View>
+                                <Ionicons
+                                    name={tocExpanded ? "chevron-down" : "chevron-forward"}
+                                    size={16}
+                                    color={colors.text + '40'}
+                                />
+                            </TouchableOpacity>
+
+                            {tocExpanded && (
+                                <View style={styles.accordionContent}>
+                                    {toc.length === 0 ? (
+                                        <View style={[styles.emptyContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                                            <Text style={[styles.emptyText, { color: colors.text + '40' }]}>No headers found</Text>
+                                        </View>
+                                    ) : (
+                                        <View style={styles.tocContainer}>
+                                            {toc.map((item, idx) => {
+                                                const prefix = tocPrefixes[idx];
+
+                                                return (
+                                                    <Pressable
+                                                        key={`${item.id}-${idx}`}
+                                                        onPress={() => {
+                                                            onScrollToElement(item.id);
+                                                            onClose();
+                                                        }}
+                                                        style={({ pressed }) => [
+                                                            styles.tocTextButton,
+                                                            pressed && { backgroundColor: colors.primary + '25' }
+                                                        ]}
+                                                    >
+                                                        {({ pressed }) => (
+                                                            <View style={styles.tocItem}>
+                                                                {!!prefix && (
+                                                                    <Text style={[styles.tocPrefix, { color: colors.text + '25' }]}>
+                                                                        {prefix}
+                                                                    </Text>
+                                                                )}
+                                                                <Text
+                                                                    numberOfLines={1}
+                                                                    style={[
+                                                                        styles.tocText,
+                                                                        { color: pressed ? colors.primary : colors.text + '80' },
+                                                                        item.level === 1 && styles.tocTextH1,
+                                                                        item.level === 2 && styles.tocTextH2,
+                                                                        item.level === 3 && styles.tocTextH3,
+                                                                        item.level >= 4 && styles.tocTextH4,
+                                                                    ]}
+                                                                >
+                                                                    {item.text}
+                                                                </Text>
+                                                            </View>
+                                                        )}
+                                                    </Pressable>
+                                                );
+                                            })}
+                                        </View>
+                                    )}
+                                </View>
+                            )}
+                        </View>
+
+                        {/* Section 2: Connections Map */}
+                        {(hasForward || hasBack) && (
+                            <View style={{ marginBottom: 4 }}>
+                                <TouchableOpacity
+                                    onPress={() => setConnectionsExpanded(!connectionsExpanded)}
+                                    style={styles.accordionHeader}
+                                >
+                                    <View style={styles.accordionHeaderLeft}>
+                                        <Ionicons name="git-network-outline" size={14} color={colors.primary} />
+                                        <Text style={[styles.accordionTitle, { color: colors.text }]}>CONNECTIONS MAP</Text>
+                                    </View>
+                                    <Ionicons
+                                        name={connectionsExpanded ? "chevron-down" : "chevron-forward"}
+                                        size={16}
+                                        color={colors.text + '40'}
+                                    />
+                                </TouchableOpacity>
+
+                                {connectionsExpanded && (
+                                    <View style={{ paddingHorizontal: 20, paddingBottom: 16 }}>
+                                        <NoteConnectionsGraph
+                                            noteId={noteId}
+                                            backlinks={backlinks}
+                                            forwardLinks={forwardLinks}
+                                            onClose={onClose}
+                                        />
+                                    </View>
+                                )}
+                            </View>
+                        )}
+
+                        {/* Section 3: Stats & Metadata */}
                         <View style={{ marginBottom: 4 }}>
                             <TouchableOpacity
                                 onPress={() => setStatsExpanded(!statsExpanded)}
@@ -223,119 +335,6 @@ export default function NoteInfoModal({ visible, onClose, noteId, onScrollToElem
                                 </View>
                             )}
                         </View>
-
-                        {/* Section 2: Connections Map */}
-                        {(hasForward || hasBack) && (
-                            <View style={{ marginBottom: 4 }}>
-                                <TouchableOpacity
-                                    onPress={() => setConnectionsExpanded(!connectionsExpanded)}
-                                    style={styles.accordionHeader}
-                                >
-                                    <View style={styles.accordionHeaderLeft}>
-                                        <Ionicons name="git-network-outline" size={14} color={colors.primary} />
-                                        <Text style={[styles.accordionTitle, { color: colors.text }]}>CONNECTIONS MAP</Text>
-                                    </View>
-                                    <Ionicons
-                                        name={connectionsExpanded ? "chevron-down" : "chevron-forward"}
-                                        size={16}
-                                        color={colors.text + '40'}
-                                    />
-                                </TouchableOpacity>
-
-                                {connectionsExpanded && (
-                                    <View style={{ paddingHorizontal: 20, paddingBottom: 16 }}>
-                                        <NoteConnectionsGraph
-                                            noteId={noteId}
-                                            backlinks={backlinks}
-                                            forwardLinks={forwardLinks}
-                                            onClose={onClose}
-                                        />
-                                    </View>
-                                )}
-                            </View>
-                        )}
-
-                        {/* Section 3: Table of Contents */}
-                        <View style={{ marginBottom: 4 }}>
-                            <TouchableOpacity
-                                onPress={() => setTocExpanded(!tocExpanded)}
-                                style={styles.accordionHeader}
-                            >
-                                <View style={styles.accordionHeaderLeft}>
-                                    <Ionicons name="list-outline" size={14} color={colors.primary} />
-                                    <Text style={[styles.accordionTitle, { color: colors.text }]}>TABLE OF CONTENTS</Text>
-                                </View>
-                                <Ionicons
-                                    name={tocExpanded ? "chevron-down" : "chevron-forward"}
-                                    size={16}
-                                    color={colors.text + '40'}
-                                />
-                            </TouchableOpacity>
-
-                            {tocExpanded && (
-                                <View style={styles.accordionContent}>
-                                    {toc.length === 0 ? (
-                                        <View style={[styles.emptyContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                                            <Text style={[styles.emptyText, { color: colors.text + '40' }]}>No headers found</Text>
-                                        </View>
-                                    ) : (
-                                        <View style={styles.tocContainer}>
-                                            {toc.map((item, idx) => {
-                                                if (!isVisible(idx)) return null;
-                                                const itemHasChildren = hasChildren(idx);
-                                                const isCollapsed = collapsedIds.has(item.id);
-
-                                                return (
-                                                    <View
-                                                        key={`${item.id}-${idx}`}
-                                                        style={[
-                                                            styles.tocItem,
-                                                            { marginLeft: (item.level - 1) * 16 }
-                                                        ]}
-                                                    >
-                                                        <TouchableOpacity
-                                                            onPress={() => toggleCollapse(item.id)}
-                                                            style={[styles.collapseButton, !itemHasChildren && { opacity: 0 }]}
-                                                            disabled={!itemHasChildren}
-                                                        >
-                                                            <Ionicons
-                                                                name={isCollapsed ? "chevron-forward" : "chevron-down"}
-                                                                size={14}
-                                                                color={colors.primary + '40'}
-                                                            />
-                                                        </TouchableOpacity>
-                                                        <Pressable
-                                                            onPress={() => {
-                                                                onScrollToElement(item.id);
-                                                                onClose();
-                                                            }}
-                                                            style={({ pressed }) => [
-                                                                styles.tocTextButton,
-                                                                pressed && { backgroundColor: colors.primary + '25' }
-                                                            ]}
-                                                        >
-                                                            {({ pressed }) => (
-                                                                <Text
-                                                                    numberOfLines={1}
-                                                                    style={[
-                                                                        styles.tocText,
-                                                                        { color: pressed ? colors.primary : colors.text + '80' },
-                                                                        item.level === 1 && styles.tocTextH1,
-                                                                        item.level === 2 && styles.tocTextH2,
-                                                                    ]}
-                                                                >
-                                                                    {item.text}
-                                                                </Text>
-                                                            )}
-                                                        </Pressable>
-                                                    </View>
-                                                );
-                                            })}
-                                        </View>
-                                    )}
-                                </View>
-                            )}
-                        </View>
                     </ScrollView>
                 </View>
             </View>
@@ -394,27 +393,37 @@ const styles = StyleSheet.create({
     },
     tocItem: {
         flexDirection: 'row',
-        alignItems: 'center',
+        alignItems: 'baseline',
     },
-    collapseButton: {
-        padding: 8,
+    tocPrefix: {
+        fontFamily: 'monospace',
+        fontSize: 11,
     },
     tocTextButton: {
         flex: 1,
-        paddingVertical: 8,
+        paddingVertical: 4,
         paddingHorizontal: 6,
         borderRadius: 6,
     },
     tocText: {
-        fontSize: 13,
+        fontSize: 12,
+        flex: 1,
     },
     tocTextH1: {
-        fontSize: 15,
+        fontSize: 13,
         fontWeight: '700',
     },
     tocTextH2: {
-        fontSize: 14,
+        fontSize: 12,
         fontWeight: '600',
+    },
+    tocTextH3: {
+        fontSize: 11,
+        fontWeight: '500',
+    },
+    tocTextH4: {
+        fontSize: 11,
+        fontWeight: '400',
     },
     footer: {
 

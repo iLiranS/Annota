@@ -12,10 +12,10 @@ import { useOpenNoteInNewWindow } from "@/hooks/use-open-note-in-new-window";
 import { cn, isRtl } from "@/lib/utils";
 import { NoteMetadata, TRASH_FOLDER_ID, useNavigationStore, useNotesStore, useSettingsStore } from "@annota/core";
 import TipTapEditor, { TipTapEditorRef } from "@annota/editor-ui";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { FileText, Loader2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { toast } from "sonner";
 import { AISelectionPopover } from "./components/ai-selection-popover";
 import { NoteFloatingActions } from "./components/note-floating-actions";
@@ -33,11 +33,10 @@ export interface NoteEditorProps {
     folderId?: string;
     onNoteSync?: (noteId: string, content: string, title: string) => void;
     onTagClick?: (tagId: string) => void;
-    isStandalone?: boolean;
     initialContent?: string;
 }
 
-export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId, onNoteSync, onTagClick, isStandalone, initialContent: propInitialContent }: NoteEditorProps) {
+export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId, onNoteSync, onTagClick, initialContent: propInitialContent }: NoteEditorProps) {
     const navigate = useNavigate();
     const params = useParams<{ noteId: string }>();
     const location = useLocation()
@@ -279,7 +278,6 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
                             autofocus={shouldAutofocus}
                             editable={!note.isDeleted}
                             noteId={noteId}
-                            isStandalone={isStandalone}
                             direction={direction}
                             contentPaddingTop={0}
                             placeholder="Start typing..."

@@ -7,16 +7,16 @@ import { DOMSerializer } from '@tiptap/pm/model';
 import { EditorContent, useEditor } from '@tiptap/react';
 import 'katex/dist/katex.min.css';
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { useContextMenuLinkInterceptor } from './hooks/useContextMenuLinkInterceptor';
+import { useDesktopEditorProps } from './hooks/useDesktopEditorProps';
+import { useEditorKeyboardShortcuts } from './hooks/useEditorKeyboardShortcuts';
 import { useEditorThemeVariables } from './hooks/useEditorThemeVariables';
+import { useGlobalPasteHandler } from './hooks/useGlobalPasteHandler';
 import { useSharedEditorUI } from './hooks/useSharedEditorUI';
 import { DESKTOP_SELECTION_STYLES } from './shared/desktopSelectionStyles';
-import { EditorState, initialEditorState, PopupType, TipTapEditorProps, TipTapEditorRef } from './shared/types';
-import { extractImageIds } from './shared/image-utils';
-import { useEditorKeyboardShortcuts } from './hooks/useEditorKeyboardShortcuts';
-import { useContextMenuLinkInterceptor } from './hooks/useContextMenuLinkInterceptor';
-import { useGlobalPasteHandler } from './hooks/useGlobalPasteHandler';
-import { useDesktopEditorProps } from './hooks/useDesktopEditorProps';
 import { insertProcessedFile, insertRemoteFile } from './shared/file-insert-utils';
+import { extractImageIds } from './shared/image-utils';
+import { EditorState, initialEditorState, PopupType, TipTapEditorProps, TipTapEditorRef } from './shared/types';
 
 export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
     ({
@@ -44,7 +44,6 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
         renderImageGallery,
         isDark: propIsDark,
         colors: propColors,
-        isStandalone,
         direction: propDirection,
         onScroll,
         onCopyBlockLink,
@@ -572,13 +571,12 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                     }
                 })}
                 <div
-                    className="editor-scroller"
+                    className="premium-scrollbar"
                     ref={scrollerRef}
                     onScroll={onScroll}
                     dir={direction} style={{
                         flex: 1,
                         overflowY: 'auto',
-                        padding: isStandalone ? '0 12px' : '0 24px',
                         scrollPaddingBottom: 100
                     }}>
                     <div style={{

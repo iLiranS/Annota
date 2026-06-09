@@ -189,8 +189,8 @@ export function MainNavbar() {
                 data-tauri-drag-region
                 className={cn("flex items-center shrink-0 transition-all duration-300", isRtl && "flex-row-reverse")}
                 style={{
-                    width: open ? Math.max(132, primaryWidth + 16 - leftSectionPadding) : 'auto',
-                    minWidth: open ? Math.max(132, primaryWidth + 16 - leftSectionPadding) : 'auto'
+                    width: open ? Math.max(132, primaryWidth - leftSectionPadding) : 'auto',
+                    minWidth: open ? Math.max(132, primaryWidth - leftSectionPadding) : 'auto'
                 }}
             >
                 <div className="flex items-center shrink-0">
@@ -208,13 +208,13 @@ export function MainNavbar() {
                 className={cn(
                     "flex-1 flex items-center min-w-0 h-full gap-2 px-2",
                     isRtl ? "flex-row-reverse" : "flex-row",
-
+                    general.appDirection === "rtl" ? "ps-6" : "pe-6"
                 )}
             >
                 {/* Navigation & Home Wrapper */}
                 <div className={cn("flex items-center shrink-0")}>
                     <div className={cn(
-                        "flex items-center gap-0.5 rounded-md border border-sidebar-border/40 bg-sidebar-accent/20 p-0.5",
+                        "flex items-center gap-0.5 rounded-md  border border-border/60 bg-sidebar-accent/20 p-0.5",
                         isRtl ? "flex-row-reverse" : "flex-row"
                     )}>
                         <Tooltip>
@@ -338,7 +338,7 @@ export function MainNavbar() {
                             size="icon"
                             className={cn(
                                 "h-7 w-7 rounded-full transition-all active:scale-95",
-                                isAlwaysOnTop ? "text-accent-full hover:text-accent-full bg-sidebar-accent/50 hover:bg-sidebar-accent" : "text-muted-foreground/60 hover:bg-sidebar-accent hover:text-foreground"
+                                isAlwaysOnTop ? "text-accent-full hover:text-accent-full" : "text-muted-foreground/60 hover:text-foreground"
                             )}
                             onClick={toggleAlwaysOnTop}
                         >

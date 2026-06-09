@@ -48,11 +48,11 @@ export default function NoteFullscreen() {
                 'note-window-init',
                 (event) => {
                     if (!isMounted) return;
-                    
+
                     const { content, tags, notes } = event.payload;
                     useNotesStore.setState({ tags, notes, isInitialized: true });
                     setInitialContent(content);
-                    
+
                     // Since we only want this once, unlisten after receiving
                     if (unlisten) {
                         unlisten();
@@ -137,7 +137,6 @@ export default function NoteFullscreen() {
                         noteId={noteId}
                         initialContent={initialContent}
                         onNoteSync={handleContentChange}
-                        isStandalone={true}
                     />
                 </div>
             </div>

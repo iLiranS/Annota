@@ -92,7 +92,7 @@ export function AISelectionPopover({ anchorRect, isVisible, isLoading, onAction,
                 align={isRtl ? "start" : "end"}
                 sideOffset={10}
                 className={cn(
-                    "p-0 bg-background/75 backdrop-blur-2xl border border-primary/15",
+                    "p-0 bg-note-bg/70 backdrop-blur-md border border-primary/15",
                     "shadow-[0_8px_32px_rgba(0,0,0,0.15),0_1px_4px_rgba(0,0,0,0.1)]",
                     "flex flex-col overflow-hidden",
                     "transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] animate-bloom",

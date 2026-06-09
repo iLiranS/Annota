@@ -80,7 +80,7 @@ export function SearchView({
                     e.stopPropagation();
                     if (folder) onFolderClick(folder);
                 }}
-                className="flex items-center gap-1.5 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-tight border shrink-0 cursor-pointer hover:brightness-110 active:scale-95 transition-all"
+                className="flex items-center gap-1.5 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-tight border shrink-0 cursor-pointer transition-transform hover:brightness-110 hover:scale-105 active:scale-95 "
                 style={{
                     backgroundColor: folder?.color ? `${folder.color}20` : `${colors.primary}15`,
                     color: folder?.color || colors.primary,

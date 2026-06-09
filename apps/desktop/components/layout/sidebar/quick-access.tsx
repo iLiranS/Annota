@@ -27,7 +27,7 @@ export function QuickAccessSection({ notes, onNoteClick, onDeleteNote, general }
 
     return (
         <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-            <SidebarGroup className=" border-t border-sidebar-border/60 p-1">
+            <SidebarGroup className=" border-t border-sidebar-border/60 p-1 pb-0">
                 <SidebarGroupLabel asChild className="text-[10px]  font-bold uppercase tracking-wider text-muted-foreground/70">
                     <CollapsibleTrigger className="flex w-full items-center gap-2 hover:bg-sidebar-accent px-2 py-1 rounded">
                         <Star size={12} strokeWidth={2.5} className="shrink-0" />

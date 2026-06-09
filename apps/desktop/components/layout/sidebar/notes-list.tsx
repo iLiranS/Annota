@@ -190,7 +190,7 @@ export function NotesList({
                             {!isTrash && pinnedNotes.length > 0 && (
                                 <div >
                                     {regularNotes.length > 0 && (
-                                        <div className="flex items-center gap-1 border-t border-b border-sidebar-border/60  px-2 bg-sidebar  text-[10px] font-semibold text-muted-foreground/60">
+                                        <div className="flex items-center bg-note-bg/50 gap-1 border-t border-b border-sidebar-border/60  px-2   text-[10px] font-semibold text-muted-foreground/60">
                                             <Pin size={10} className="shrink-0 text-muted-foreground/50" />
                                             <span>Pinned</span>
                                         </div>
@@ -219,7 +219,7 @@ export function NotesList({
                             {regularNotes.length > 0 && (
                                 <div >
                                     {!isTrash && pinnedNotes.length > 0 && (
-                                        <div className="flex items-center gap-1 bg-sidebar border-t border-b border-sidebar-border/60 px-2  text-[10px] font-semibold text-muted-foreground/60">
+                                        <div className="flex items-center gap-1 bg-note-bg/50 border-t border-b border-sidebar-border/60 px-2  text-[10px] font-semibold text-muted-foreground/60">
                                             <FileText size={10} className="shrink-0 text-muted-foreground/50" />
                                             <span>Notes</span>
                                         </div>

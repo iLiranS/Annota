@@ -93,7 +93,6 @@ export interface TipTapEditorProps {
         background: string;
         text: string;
     };
-    isStandalone?: boolean;
     /** Editor direction override */
     direction?: 'ltr' | 'rtl' | 'auto';
     /** Callback for when the editor scroller scrolls */
