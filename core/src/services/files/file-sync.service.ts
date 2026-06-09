@@ -140,6 +140,19 @@ class FileSyncService {
                         .map(f => f.id)
                     : [];
 
+                // Only call replaceE2ENoteFiles if the files list has actually changed
+                const lastSyncedFileIds = await FilesRepo.getLastSyncedFileIds(noteId);
+                const isIdentical = syncedFileIds.length === lastSyncedFileIds.length &&
+                    [...syncedFileIds].sort().every((val, idx) => val === [...lastSyncedFileIds].sort()[idx]);
+
+                if (isIdentical) {
+                    // No need to print console.log unless files > 0, to avoid spamming for empty notes
+                    if (syncedFileIds.length > 0) {
+                        console.log(`[FileSync] File associations for note ${noteId} are unchanged (${syncedFileIds.length} files). Skipping replace_note_files RPC.`);
+                    }
+                    continue;
+                }
+
                 const { error } = await storageApi.replaceE2ENoteFiles(noteId, userId, syncedFileIds);
 
                 if (error) {
@@ -153,6 +166,8 @@ class FileSyncService {
                     }
                     throw error;
                 }
+
+                await FilesRepo.updateLastSyncedFileIds(noteId, syncedFileIds);
             } catch (err) {
                 console.error(`[FileSync] Failed to replace note_files for note ${noteId}`, err);
             }

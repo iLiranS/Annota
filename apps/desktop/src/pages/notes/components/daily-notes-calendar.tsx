@@ -6,7 +6,13 @@ import {
     useNotesStore,
     useSettingsStore,
 } from "@annota/core";
-import { eachDayOfInterval, endOfMonth, endOfWeek, format, isToday, startOfMonth, startOfWeek, } from "date-fns";
+import { eachDayOfInterval } from "date-fns/eachDayOfInterval";
+import { endOfMonth } from "date-fns/endOfMonth";
+import { endOfWeek } from "date-fns/endOfWeek";
+import { format } from "date-fns/format";
+import { isToday } from "date-fns/isToday";
+import { startOfMonth } from "date-fns/startOfMonth";
+import { startOfWeek } from "date-fns/startOfWeek";
 import { BookOpen, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";

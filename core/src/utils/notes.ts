@@ -3,7 +3,7 @@ import { generateId } from './id';
 
 // Constants
 export const MAX_TITLE_LENGTH = 50;
-export const MAX_PREVIEW_LENGTH = 100;
+export const MAX_PREVIEW_LENGTH = 75;
 
 function formatDateCustom(date: Date) {
     // Get the full month name (e.g., "March")
@@ -49,19 +49,46 @@ export function generateTitle(html: string): string {
  * Generates a preview from HTML content.
  * logic taken from original repository implementation.
  */
-export function generatePreview(htmlContent: string, maxLength = MAX_PREVIEW_LENGTH): string {
+export function generatePreview(htmlContent: string, maxLength = 60): string {
+    if (!htmlContent) return '';
+
+    // 1. Split by block elements or newlines to find distinct lines
     const lines = htmlContent
         .split(/<br\s*\/?>|<\/p>|<\/div>|<\/h[1-6]>|\n/i)
-        .map(line => line.replace(/<[^>]*>/g, '').trim())
+        .map(line => {
+            // Strip HTML tags
+            let clean = line.replace(/<[^>]*>/g, '');
+
+            // Decode common HTML entities (fixes the "&amp;" issue)
+            clean = clean
+                .replace(/&amp;/g, '&')
+                .replace(/&lt;/g, '<')
+                .replace(/&gt;/g, '>')
+                .replace(/&quot;/g, '"')
+                .replace(/&#39;/g, "'")
+                .replace(/&nbsp;/g, ' ');
+
+            // Collapse multiple spaces/tabs into a single space
+            return clean.replace(/\s+/g, ' ').trim();
+        })
         .filter(line => line.length > 0);
 
-    const secondLine = lines[1] || '';
+    // Grab the second line (or fallback to the first if there is no second)
+    const previewTarget = lines[1] || lines[0] || '';
 
-    if (secondLine.length <= maxLength) {
-        return secondLine;
+    if (previewTarget.length <= maxLength) {
+        return previewTarget;
     }
 
-    return secondLine.substring(0, maxLength).trim() + '...';
+    // Optional: Try to cut off at a word boundary instead of mid-word
+    const truncated = previewTarget.substring(0, maxLength);
+    const lastSpace = truncated.lastIndexOf(' ');
+
+    if (lastSpace > maxLength * 0.8) { // Only snap to word if it doesn't cut off too much
+        return truncated.substring(0, lastSpace).trim() + '...';
+    }
+
+    return truncated.trim() + '...';
 }
 
 /**

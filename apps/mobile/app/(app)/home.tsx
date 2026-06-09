@@ -21,7 +21,7 @@ import {
     type MediaItem
 } from '@annota/core';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { format } from 'date-fns';
+import { format } from 'date-fns/format';
 import { Stack, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {

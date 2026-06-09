@@ -560,18 +560,19 @@ export async function performSyncPull(masterKey: string, saltHex: string) {
             if (fetchedNoteIds.length > 0) {
                 console.log(`[Sync] Requesting file links for ${fetchedNoteIds.length} notes`);
                 const { data: cloudLinks, error: linkError } = await storageApi.getUserFileLinks(userId, fetchedNoteIds);
-
+                // cloudLinks contains all the file ids for the fetched notes, we need to filter for what missing locally
                 if (linkError) {
                     console.error(`[Sync] Error fetching user file links:`, linkError);
                     throw linkError;
                 }
-
+                // for each note-file link we need to check if file is missing - we can do that in parallel
                 if (cloudLinks && cloudLinks.length > 0) {
                     const uniqueFileIds = Array.from(new Set(cloudLinks.map(l => l.file_id as string)));
                     const localFiles = await getFilesByIds(uniqueFileIds);
                     const localFileIds = new Set(localFiles.map((i: any) => i.id));
                     const missingIds = uniqueFileIds.filter(id => !localFileIds.has(id));
 
+                    // if there are missing files locally - fetch them
                     if (missingIds.length > 0) {
                         const { data: cloudMeta, error: metaError } = await storageApi.getEncryptedFilesMetadata(userId, missingIds);
 

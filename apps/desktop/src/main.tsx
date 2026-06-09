@@ -2,7 +2,6 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { setStorageEngine } from "@annota/core";
 import { initPlatformAdapters } from "@annota/core/platform";
-import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App";
@@ -28,12 +27,12 @@ const container = document.getElementById("root") as HTMLElement;
 const root = ReactDOM.createRoot(container);
 
 root.render(
-  <React.StrictMode>
-    <BrowserRouter>
-      <TooltipProvider>
-        <App />
-        <Toaster closeButton duration={1750} position="bottom-right" />
-      </TooltipProvider>
-    </BrowserRouter>
-  </React.StrictMode>,
+  // <React.StrictMode>
+  <BrowserRouter>
+    <TooltipProvider>
+      <App />
+      <Toaster closeButton duration={1750} position="bottom-right" />
+    </TooltipProvider>
+  </BrowserRouter>
+  // </React.StrictMode>,
 );

@@ -31,7 +31,8 @@ export const CREATE_TABLES_SQL = `
     last_synced_at INTEGER,
     is_perm_deleted INTEGER NOT NULL DEFAULT 0,
     is_published INTEGER NOT NULL DEFAULT 0,
-    publish_updated_at INTEGER
+    publish_updated_at INTEGER,
+    last_synced_file_ids TEXT NOT NULL DEFAULT '[]'
   );
 
   CREATE TABLE IF NOT EXISTS note_content (
@@ -262,6 +263,10 @@ export async function initDatabase(
           'ALTER TABLE note_metadata ADD COLUMN is_published INTEGER NOT NULL DEFAULT 0;',
           'ALTER TABLE note_metadata ADD COLUMN publish_updated_at INTEGER;'
         ]
+      },
+      {
+        name: '009_add_last_synced_file_ids',
+        sql: "ALTER TABLE note_metadata ADD COLUMN last_synced_file_ids TEXT NOT NULL DEFAULT '[]';"
       }
     ];
 

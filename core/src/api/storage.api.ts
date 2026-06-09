@@ -31,7 +31,8 @@ export const storageApi = {
 
 
 
-    /** Retrieve user's file links used for checking missing downloads - only for updated notes */
+    /** Retrieve user's file links used for checking missing downloads - only for notes that we just fetched ! */
+    /* I was thinking on adding to supabase note_files updated_At but we hard replace them, so it's an headache to maintain */
     getUserFileLinks: async (userId: string, noteIds: string[]) => {
         if (!noteIds || noteIds.length === 0) {
             return { data: [], error: null };

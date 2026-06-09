@@ -5,7 +5,6 @@ import { useEffect } from "react";
 
 export function useNoteWindowSync() {
     const updateNoteContent = useNotesStore((s) => s.updateNoteContent);
-    const updateNoteMetadata = useNotesStore((s) => s.updateNoteMetadata);
 
     useEffect(() => {
         // Only listen for child-window edits on the main window
@@ -18,11 +17,8 @@ export function useNoteWindowSync() {
             const unContent = await listen<{ noteId: string; content: string; title: string }>(
                 "note-edited-in-child",
                 (event) => {
-                    const { noteId, content, title } = event.payload;
+                    const { noteId, content } = event.payload;
                     updateNoteContent(noteId, content);
-                    if (title) {
-                        updateNoteMetadata(noteId, { title });
-                    }
                 }
             );
             unlisteners.push(unContent);
@@ -51,7 +47,7 @@ export function useNoteWindowSync() {
         return () => {
             unlisteners.forEach(fn => fn());
         };
-    }, [updateNoteContent, updateNoteMetadata]);
+    }, [updateNoteContent]);
 }
 
 /** Merge child tag list into main, adding new tags without duplicating existing ones. */

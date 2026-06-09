@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
-import { calculateNoteStats, useNotesStore } from "@annota/core";
-import { format } from "date-fns";
+import { calculateNoteStats, useNotesStore, useSettingsStore } from "@annota/core";
+import { format } from "date-fns/format";
 import { BarChart3, Calendar, ChevronDown, ChevronRight, Clock, FileText, HardDrive, Hash, ListTree, Network } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { NoteConnectionsGraph } from "../notes/note-connections-graph";
@@ -16,6 +16,7 @@ export function NoteInfo({ noteId }: { noteId: string }) {
     const getNoteContent = useNotesStore(s => s.getNoteContent);
     const getForwardLinks = useNotesStore(s => s.getForwardLinks);
     const getBacklinks = useNotesStore(s => s.getBacklinks);
+    const isSidebarOpen = useSettingsStore(s => s.general.isSecondarySidebarOpen);
 
     const [content, setContent] = useState<string>("");
     const [forwardLinks, setForwardLinks] = useState<any[]>([]);
@@ -25,13 +26,16 @@ export function NoteInfo({ noteId }: { noteId: string }) {
     const [statsExpanded, setStatsExpanded] = useState<boolean>(true);
     const updateTimeoutRef = useRef<any>(null);
     const lastFetchedContentRef = useRef<string>("");
+    const lastSeenUpdatedAtRef = useRef<number | null>(null);
 
     useEffect(() => {
         let cancelled = false;
-        if (noteId) {
+        if (noteId && isSidebarOpen) {
             setContent("");
             setForwardLinks([]);
             setBacklinks([]);
+            lastSeenUpdatedAtRef.current = note?.updatedAt ? new Date(note.updatedAt).getTime() : null;
+
             getNoteContent(noteId).then(c => {
                 if (!cancelled) {
                     const newContent = c || "";
@@ -43,14 +47,21 @@ export function NoteInfo({ noteId }: { noteId: string }) {
             getBacklinks(noteId).then(links => { if (!cancelled) setBacklinks(links); });
         }
         return () => { cancelled = true; };
-    }, [noteId, getNoteContent, getForwardLinks, getBacklinks]);
+    }, [noteId, isSidebarOpen, getNoteContent, getForwardLinks, getBacklinks]);
 
 
 
     // Re-fetch content/links when note is updated (e.g. after debounced content save)
     const noteUpdatedAt = note?.updatedAt;
     useEffect(() => {
-        if (!noteId || !noteUpdatedAt) return;
+        if (!noteId || !noteUpdatedAt || !isSidebarOpen) return;
+
+        const updatedAtMs = new Date(noteUpdatedAt).getTime();
+        // Skip if this is the initial load or if we already processed this update
+        if (lastSeenUpdatedAtRef.current !== null && updatedAtMs <= lastSeenUpdatedAtRef.current) {
+            return;
+        }
+
         // Debounce re-fetch to avoid thrashing during rapid saves
         if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
         updateTimeoutRef.current = setTimeout(() => {
@@ -59,6 +70,7 @@ export function NoteInfo({ noteId }: { noteId: string }) {
                 if (newContent !== lastFetchedContentRef.current) {
                     setContent(newContent);
                     lastFetchedContentRef.current = newContent;
+                    lastSeenUpdatedAtRef.current = updatedAtMs;
                     getForwardLinks(noteId).then(setForwardLinks);
                     getBacklinks(noteId).then(setBacklinks);
                 }
@@ -67,7 +79,7 @@ export function NoteInfo({ noteId }: { noteId: string }) {
         return () => {
             if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
         };
-    }, [noteId, noteUpdatedAt, getNoteContent, getForwardLinks, getBacklinks]);
+    }, [noteId, noteUpdatedAt, isSidebarOpen, getNoteContent, getForwardLinks, getBacklinks]);
 
     const stats = useMemo(() => {
         return calculateNoteStats(content);

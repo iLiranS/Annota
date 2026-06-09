@@ -187,7 +187,11 @@ export async function upsertSyncedNote(noteFullData: any, tx: DbOrTx = getDb()):
     }
 
     const content = normalizeStoredContent(noteFullData.content || '');
-    const metadataDetails = { ...noteFullData };
+    const fileIds = extractFileIdsFromContent(content);
+    const metadataDetails = {
+        ...noteFullData,
+        lastSyncedFileIds: JSON.stringify(fileIds),
+    };
     delete metadataDetails.content; // The rest is metadata
 
     // 3. Perform standard upsert on Metadata
@@ -203,7 +207,6 @@ export async function upsertSyncedNote(noteFullData: any, tx: DbOrTx = getDb()):
         .run();
 
     const noteUpdatedAt = metadataDetails.updatedAt instanceof Date ? metadataDetails.updatedAt : new Date();
-    const fileIds = extractFileIdsFromContent(content);
 
     const MAX_VERSIONS = 50;
 
@@ -639,8 +642,15 @@ export async function getNoteContent(noteId: string): Promise<string> {
     return normalized;
 }
 
-export async function updateNoteContent(noteId: string, content: string, preview: string): Promise<void> {
-    const now = new Date();
+export async function updateNoteContent(
+    noteId: string,
+    content: string,
+    preview: string,
+    title?: string,
+    skipTasksUpdate = false,
+    updatedAt?: Date
+): Promise<void> {
+    const now = updatedAt ?? new Date();
     const VERSION_THRESHOLD_MS = 10000; // 10 seconds
     const MAX_VERSIONS = 50;
     const normalizedContent = normalizeStoredContent(content);
@@ -661,15 +671,22 @@ export async function updateNoteContent(noteId: string, content: string, preview
             .where(eq(schema.noteContent.id, noteId))
             .run();
 
-        // 2. Update preview in metadata
+        // 2. Update preview and title in metadata
+        const metadataUpdates: any = { preview, isDirty: true, updatedAt: now };
+        if (title !== undefined) {
+            metadataUpdates.title = title;
+        }
         await tx.update(schema.noteMetadata)
-            .set({ preview, isDirty: true, updatedAt: now })
+            .set(metadataUpdates)
             .where(eq(schema.noteMetadata.id, noteId))
             .run();
 
         // 3. Handle Versioning
-        // Get latest version
-        const latestVersion = await tx.select()
+        // Get latest version (Select only id and createdAt, avoiding heavy content fetch)
+        const latestVersion = await tx.select({
+            id: schema.noteVersions.id,
+            createdAt: schema.noteVersions.createdAt,
+        })
             .from(schema.noteVersions)
             .where(eq(schema.noteVersions.noteId, noteId))
             .orderBy(desc(schema.noteVersions.createdAt))
@@ -679,16 +696,19 @@ export async function updateNoteContent(noteId: string, content: string, preview
         const safeLatestVersion = safeGet<{ id: string; createdAt: Date }>(latestVersion);
 
         let activeVersionId: string;
+        let didDeleteVersions = false;
+        const isNewVersion = !safeLatestVersion || !safeLatestVersion.id || (now.getTime() - safeLatestVersion.createdAt.getTime() > VERSION_THRESHOLD_MS);
 
-        if (!safeLatestVersion || !safeLatestVersion.id || (now.getTime() - safeLatestVersion.createdAt.getTime() > VERSION_THRESHOLD_MS)) {
+        if (isNewVersion) {
             // Case A: Create NEW version
-            const inserted = await tx.insert(schema.noteVersions).values({
-                id: generateId(),
+            const newVersionId = generateId();
+            await tx.insert(schema.noteVersions).values({
+                id: newVersionId,
                 noteId,
                 content: normalizedContent,
                 createdAt: now,
-            }).returning().get();
-            activeVersionId = safeGet<any>(inserted)!.id;
+            }).run();
+            activeVersionId = newVersionId;
 
             // Enforce Limit (cleanup old versions)
             const versions = await tx.select({ id: schema.noteVersions.id }).from(schema.noteVersions)
@@ -707,32 +727,38 @@ export async function updateNoteContent(noteId: string, content: string, preview
                     await tx.delete(schema.noteVersions)
                         .where(inArray(schema.noteVersions.id, versionsToDelete))
                         .run();
+                    didDeleteVersions = true;
                 }
             }
         } else {
             // Case B: Update EXISTING latest version (debounce)
-            const updated = await tx.update(schema.noteVersions)
+            await tx.update(schema.noteVersions)
                 .set({ content: normalizedContent, createdAt: now })
                 .where(eq(schema.noteVersions.id, safeLatestVersion.id))
-                .returning().get();
-            activeVersionId = safeGet<any>(updated)!.id;
+                .run();
+            activeVersionId = safeLatestVersion.id;
         }
 
-        // 4. Sync files to active version
-        await FilesRepo.setFilesForVersion(activeVersionId, fileIds, tx);
+        // 4. Sync files to active version (Only sync if new version has files or if we're overwriting latest version)
+        if (fileIds.length > 0 || !isNewVersion) {
+            await FilesRepo.setFilesForVersion(activeVersionId, fileIds, tx);
+        }
 
 
-        // 5. Garbage Collection: Delete images not referenced by ANY version
-        const deletedFilePaths = await FilesRepo.deleteUnreferencedFiles(tx);
-
-        // Clean up files (best effort)
-        for (const path of deletedFilePaths) {
-            await deleteFile(path);
+        // 5. Garbage Collection: Only delete images if we actually deleted some version records
+        if (didDeleteVersions) {
+            const deletedFilePaths = await FilesRepo.deleteUnreferencedFiles(tx);
+            // Clean up files (best effort)
+            for (const path of deletedFilePaths) {
+                await deleteFile(path);
+            }
         }
 
         // Update links
         await updateNoteLinks(noteId, normalizedContent, tx);
-        await updateNoteTasks(noteId, normalizedContent, tx);
+        if (!skipTasksUpdate) {
+            await updateNoteTasks(noteId, normalizedContent, tx);
+        }
     });
 }
 

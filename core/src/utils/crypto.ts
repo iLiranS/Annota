@@ -1,9 +1,17 @@
-import { generateMnemonic, mnemonicToSeedSync, validateMnemonic } from 'bip39';
 import { Buffer } from 'buffer';
 import { hkdf } from '@noble/hashes/hkdf';
 import { sha256 } from '@noble/hashes/sha256';
 import { getPlatformAdapters } from '../adapters';
 import './polyfill';
+
+let bip39Module: any = null;
+
+async function getBip39() {
+    if (!bip39Module) {
+        bip39Module = await import('bip39');
+    }
+    return bip39Module;
+}
 
 const MASTER_KEY_PREFIX = 'annota_master_key_';
 
@@ -22,6 +30,7 @@ const customRng = (size: number) => {
  * Generate a new 12-word mnemonic phrase.
  */
 export async function generateMasterKey(): Promise<string> {
+    const { generateMnemonic } = await getBip39();
     const mnemonic = generateMnemonic(128, customRng);
     return mnemonic;
 }
@@ -29,7 +38,8 @@ export async function generateMasterKey(): Promise<string> {
 /**
  * Validate an existing 12-word mnemonic phrase.
  */
-export function validateMasterKey(mnemonic: string): boolean {
+export async function validateMasterKey(mnemonic: string): Promise<boolean> {
+    const { validateMnemonic } = await getBip39();
     return validateMnemonic(mnemonic);
 }
 
@@ -68,7 +78,7 @@ export async function getMasterKey(userId: string): Promise<string | null> {
         return decrypted;
     } catch (e) {
         // Fallback for legacy plain-text keys
-        if (validateMasterKey(value)) {
+        if (await validateMasterKey(value)) {
             // Migrate to encrypted at rest
             const encrypted = await encryptAtRest(value);
             await getPlatformAdapters().secureStore.setItem(getMasterKeyAlias(userId), encrypted);
@@ -160,6 +170,7 @@ export function decodeSaltHex(saltHex: string): Uint8Array {
  * Derive a 256-bit master key from the 12-word mnemonic + salt (Argon2id).
  */
 export async function deriveKeyFromMnemonic(mnemonic: string, salt: Uint8Array): Promise<Uint8Array> {
+    const { mnemonicToSeedSync } = await getBip39();
     const seed = mnemonicToSeedSync(mnemonic);
     return await getPlatformAdapters().crypto.argon2id({
         message: seed,

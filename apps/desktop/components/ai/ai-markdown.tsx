@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
-import { hljs } from "@annota/editor-core";
 import { Copy } from "lucide-react";
+import { useEffect, useState } from "react";
 import ReactMarkdown from 'react-markdown';
 import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
@@ -15,7 +15,40 @@ interface AiMarkdownProps {
     content: string;
 }
 
+let hljsInstance: any = null;
+let isLoadingHljs = false;
+const hljsCallbacks: ((instance: any) => void)[] = [];
+
+async function loadHljs() {
+    if (hljsInstance) return hljsInstance;
+    if (isLoadingHljs) {
+        return new Promise<any>((resolve) => {
+            hljsCallbacks.push(resolve);
+        });
+    }
+    isLoadingHljs = true;
+    try {
+        const m = await import('highlight.js');
+        hljsInstance = m.default || m;
+        hljsCallbacks.forEach(cb => cb(hljsInstance));
+        hljsCallbacks.length = 0;
+    } catch (e) {
+        console.error("Failed to load hljs:", e);
+    } finally {
+        isLoadingHljs = false;
+    }
+    return hljsInstance;
+}
+
 export function AiMarkdown({ content }: AiMarkdownProps) {
+    const [hljs, setHljs] = useState<any>(hljsInstance);
+
+    useEffect(() => {
+        if (!hljs) {
+            loadHljs().then(setHljs);
+        }
+    }, [hljs]);
+
     return (
         <div className="prose prose-sm dark:prose-invert max-w-none
             prose-p:leading-relaxed prose-p:my-1.5
@@ -38,12 +71,14 @@ export function AiMarkdown({ content }: AiMarkdownProps) {
 
                         if (!inline && lang) {
                             let highlighted = code;
-                            try {
-                                highlighted = hljs.getLanguage(lang)
-                                    ? hljs.highlight(code, { language: lang }).value
-                                    : hljs.highlightAuto(code).value;
-                            } catch (e) {
-                                console.warn("AI Highlighting failed:", e);
+                            if (hljs) {
+                                try {
+                                    highlighted = hljs.getLanguage(lang)
+                                        ? hljs.highlight(code, { language: lang }).value
+                                        : hljs.highlightAuto(code).value;
+                                } catch (e) {
+                                    console.warn("AI Highlighting failed:", e);
+                                }
                             }
 
                             return (

@@ -136,18 +136,28 @@ export const NoteService = {
     },
 
     // 3. Update Content
-    updateContent: async (noteId: string, content: string) => {
+    updateContent: async (
+        noteId: string,
+        content: string,
+        skipTasksUpdate = false,
+        isDailyNote?: boolean,
+        updatedAt?: Date
+    ) => {
         const normalized = normalizeStoredContent(content);
         const byteSize = new TextEncoder().encode(normalized).length;
         if (byteSize > MAX_NOTE_SIZE) {
             throw new Error(`Note content exceeds the limit of ${MAX_NOTE_SIZE.toLocaleString()} bytes (currently ${byteSize.toLocaleString()} bytes).`);
         }
 
-        const metadata = await notesRepo.getNoteMetadataById(noteId);
-        const isDailyNote = metadata?.folderId === 'system-daily-notes';
+        let resolvedIsDaily = isDailyNote;
+        if (resolvedIsDaily === undefined) {
+            const metadata = await notesRepo.getNoteMetadataById(noteId);
+            resolvedIsDaily = metadata?.folderId === 'system-daily-notes';
+        }
 
-        const preview = isDailyNote ? generateTitle(normalized) : generatePreview(normalized);
-        await notesRepo.updateNoteContent(noteId, content, preview);
+        const preview = resolvedIsDaily ? generateTitle(normalized) : generatePreview(normalized);
+        const title = resolvedIsDaily ? undefined : generateTitle(normalized);
+        await notesRepo.updateNoteContent(noteId, content, preview, title, skipTasksUpdate, updatedAt);
     },
 
     // 4. Soft Delete

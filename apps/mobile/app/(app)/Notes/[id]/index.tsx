@@ -237,14 +237,9 @@ export default function NoteEditor() {
         const title = generateTitle(html);
         setDisplayTitle(title);
 
-        // Update the note content in the database (this also updates preview)
-        const { error } = await updateNoteContent(id, html);
-
-        // Only update the title in metadata if the content update succeeded
-        if (!error) {
-            updateNoteMetadata(id, { title });
-        }
-    }, [id, updateNoteMetadata, updateNoteContent]);
+        // Update the note content in the database (this also updates preview and title)
+        await updateNoteContent(id, html);
+    }, [id, updateNoteContent]);
 
     const handleBack = useCallback(() => {
         editorRef.current?.blur();

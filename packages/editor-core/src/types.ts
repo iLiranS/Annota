@@ -1,5 +1,5 @@
 import { Editor } from '@tiptap/core';
-import hljs from 'highlight.js';
+import type hljs from 'highlight.js';
 
 declare global {
     interface Window {

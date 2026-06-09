@@ -14,7 +14,7 @@ interface UseNoteEditorContentProps {
 
 export function useNoteEditorContent({ noteId, editorRef, onNoteSync, blockId, initialContent: propInitialContent }: UseNoteEditorContentProps) {
     const getNoteContent = useNotesStore((s) => s.getNoteContent);
-    const { updateNoteContent, updateNoteMetadata } = useNotesStore();
+    const { updateNoteContent } = useNotesStore();
     const notes = useNotesStore((s) => s.notes);
     const note = notes.find((n) => n.id === noteId);
 
@@ -230,11 +230,8 @@ export function useNoteEditorContent({ noteId, editorRef, onNoteSync, blockId, i
             return;
         }
 
-        const { error } = await updateNoteContent(noteId, html);
-        if (!error) {
-            updateNoteMetadata(noteId, { title });
-        }
-    }, [noteId, updateNoteContent, updateNoteMetadata, onNoteSync]);
+        await updateNoteContent(noteId, html);
+    }, [noteId, updateNoteContent, onNoteSync]);
 
     // Reset refs on note change
     const hasRestoredScrollRef = useRef<string | null>(null);

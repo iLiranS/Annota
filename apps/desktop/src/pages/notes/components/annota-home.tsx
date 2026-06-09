@@ -16,7 +16,7 @@ import {
     useUserStore,
     type MediaItem
 } from "@annota/core";
-import { format } from "date-fns";
+import { format } from "date-fns/format";
 import { Calendar, ChevronRight, FileText, Folder, Globe, History, Loader2, Notebook, Plus, Tag } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";

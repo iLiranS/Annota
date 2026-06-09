@@ -9,6 +9,12 @@ import { TagService } from '../services/tags.service';
 import { SearchService } from '../services/search.service';
 import { SyncScheduler } from '../sync/sync-scheduler';
 import { SortType, sortFolders, sortNotes } from '../utils/sorts';
+import { generatePreview, generateTitle } from '../utils/notes';
+import { normalizeStoredContent } from '../db/repositories/notes.repository';
+import { parsePendingTasks } from '../db/repositories/search.repository';
+
+// In-memory note content cache to bypass SQLCipher/SQLite overhead for reads
+const noteContentCache = new Map<string, string>();
 import { createStorageAdapter } from './config';
 import { useUserStore } from './user.store';
 
@@ -126,6 +132,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
     // Initialize App - Load ALL data on startup
     initApp: async () => {
+        noteContentCache.clear();
         const wasInitialized = get().isInitialized;
 
         // 1. Run Maintenance FIRST, only on cold starts
@@ -290,7 +297,10 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         // 1. Service Call
         await NoteService.softDelete(noteId);
 
-        // 2. Manual State Mutation
+        // 2. Invalidate cache
+        noteContentCache.delete(noteId);
+
+        // 3. Manual State Mutation
         set(state => ({
             notes: state.notes.map(n =>
                 n.id === noteId
@@ -303,6 +313,9 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
     permanentlyDeleteNote: async (noteId) => {
         await NoteService.permanentlyDelete(noteId);
+
+        // Invalidate cache
+        noteContentCache.delete(noteId);
 
         set(state => ({
             notes: state.notes.filter(n => n.id !== noteId)
@@ -430,29 +443,51 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
     // ============ CONTENT OPERATIONS ============
 
-    getNoteContent: (noteId) => {
+    getNoteContent: async (noteId) => {
+        const cached = noteContentCache.get(noteId);
+        if (cached !== undefined) {
+            return cached;
+        }
         // Content is heavy, still lazy loaded from DB
-        return NoteService.getNoteContent(noteId);
+        const content = await NoteService.getNoteContent(noteId);
+        noteContentCache.set(noteId, content);
+        return content;
     },
 
     updateNoteContent: async (noteId, content) => {
         try {
-            await NoteService.updateContent(noteId, content);
+            const note = get().notes.find(n => n.id === noteId);
+            if (!note) return { error: 'Note not found' };
 
-            // Fetch updated metadata (with new preview)
-            const updatedNote = await NoteService.getNoteById(noteId);
-            
-            // Refresh tasks in store
-            const tasks = await SearchService.findNotesWithPendingTasks();
+            const isDailyNote = note.folderId === 'system-daily-notes';
+            const hadTasks = get().tasks.some(t => t.noteId === noteId);
+            const hasTasks = parsePendingTasks(content).length > 0;
+            const skipTasksUpdate = !hadTasks && !hasTasks;
 
-            if (updatedNote) {
-                set(state => ({
-                    notes: state.notes.map(n => n.id === noteId ? updatedNote : n),
-                    tasks
-                }));
-            } else {
-                set({ tasks });
+            const normalized = normalizeStoredContent(content);
+            const preview = isDailyNote ? generateTitle(normalized) : generatePreview(normalized);
+            const title = isDailyNote ? note.title : generateTitle(normalized);
+            const now = new Date();
+
+            await NoteService.updateContent(noteId, content, skipTasksUpdate, isDailyNote, now);
+
+            // Cache the newly saved normalized content
+            noteContentCache.set(noteId, normalized);
+
+            let tasks = get().tasks;
+            if (!skipTasksUpdate) {
+                tasks = await SearchService.findNotesWithPendingTasks();
             }
+
+            set(state => ({
+                notes: state.notes.map(n =>
+                    n.id === noteId
+                        ? { ...n, preview, title, isDirty: true, updatedAt: now }
+                        : n
+                ),
+                tasks
+            }));
+
             SyncScheduler.instance?.notifyContentChange();
             return { error: null };
         } catch (error) {
@@ -470,6 +505,9 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     toggleTask: async (noteId, taskIndex) => {
         try {
             await NoteService.toggleTask(noteId, taskIndex);
+
+            // Invalidate cache since database content has changed
+            noteContentCache.delete(noteId);
 
             // Fetch updated metadata (with new preview)
             const updatedNote = await NoteService.getNoteById(noteId);
@@ -822,6 +860,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     },
 
     reset: () => {
+        noteContentCache.clear();
         set({
             notes: [],
             folders: [],

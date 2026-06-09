@@ -1,7 +1,7 @@
 import { calculateNoteStats, useNotesStore } from '@annota/core';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
-import { format } from 'date-fns';
+import { format } from 'date-fns/format';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import {

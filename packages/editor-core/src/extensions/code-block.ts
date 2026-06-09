@@ -1,12 +1,8 @@
 import { textblockTypeInputRule } from '@tiptap/core';
 import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight';
 import { TextSelection } from '@tiptap/pm/state';
-import { common, createLowlight } from 'lowlight';
 import { sendMessage } from '../bridge';
 import './code-block.css';
-
-// Initialize lowlight
-export const lowlight = createLowlight(common);
 
 // Supported languages for the inline selector
 export const CODE_LANGUAGES = [
@@ -36,6 +32,79 @@ export const CODE_LANGUAGES = [
     { value: 'bash', label: 'Bash' },
     { value: 'dockerfile', label: 'Docker' },
 ];
+
+let loadedLowlight: any = null;
+let isLoadingLowlight = false;
+const pendingCallbacks: (() => void)[] = [];
+
+export async function loadLowlight() {
+    if (loadedLowlight) return loadedLowlight;
+    if (isLoadingLowlight) {
+        return new Promise<any>((resolve) => {
+            pendingCallbacks.push(() => resolve(loadedLowlight));
+        });
+    }
+
+    isLoadingLowlight = true;
+    try {
+        const { common, createLowlight } = await import('lowlight');
+        loadedLowlight = createLowlight(common);
+        
+        // Trigger a re-render of all editors to apply syntax highlighting
+        if (typeof window !== 'undefined' && window.editor) {
+            const editor = window.editor;
+            const { state } = editor;
+            if (state) {
+                editor.view.dispatch(state.tr.replace(0, state.doc.content.size, state.doc.slice(0)));
+            }
+        }
+        
+        while (pendingCallbacks.length > 0) {
+            const cb = pendingCallbacks.shift();
+            if (cb) cb();
+        }
+    } catch (error) {
+        console.error("Failed to load lowlight dynamically:", error);
+    } finally {
+        isLoadingLowlight = false;
+    }
+    return loadedLowlight;
+}
+
+// Proxy lowlight implementation that satisfies Tiptap requirements
+export const lowlight: any = {
+    highlight(language: string, value: string, options?: any) {
+        if (!loadedLowlight) {
+            loadLowlight();
+            return { value: [], children: [] };
+        }
+        return loadedLowlight.highlight(language, value, options);
+    },
+    highlightAuto(value: string, options?: any) {
+        if (!loadedLowlight) {
+            loadLowlight();
+            return { value: [], children: [] };
+        }
+        return loadedLowlight.highlightAuto(value, options);
+    },
+    listLanguages() {
+        if (!loadedLowlight) {
+            loadLowlight();
+            // Return common programming languages we support as a fallback
+            return CODE_LANGUAGES.map(l => l.value).filter((v): v is string => v !== null);
+        }
+        return loadedLowlight.listLanguages();
+    },
+    registered(aliasOrName: string) {
+        if (!loadedLowlight) {
+            return false;
+        }
+        if (typeof loadedLowlight.registered === 'function') {
+            return loadedLowlight.registered(aliasOrName);
+        }
+        return false;
+    }
+};
 
 export const backtickInputRegex = /^```(?!mermaid[\s\n])([a-zA-Z0-9_+\-#]+)?[\s\n]$/;
 export const tildeInputRegex = /^~~~(?!mermaid[\s\n])([a-zA-Z0-9_+\-#]+)?[\s\n]$/;

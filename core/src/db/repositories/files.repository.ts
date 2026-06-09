@@ -221,6 +221,27 @@ export async function deleteOrphanLinks(tx: DbOrTx = getDb()): Promise<void> {
 
 // ============ SYNC OPERATIONS ============
 
+export async function getLastSyncedFileIds(noteId: string, tx: DbOrTx = getDb()): Promise<string[]> {
+    const result = await tx.select({ lastSyncedFileIds: noteMetadata.lastSyncedFileIds })
+        .from(noteMetadata)
+        .where(eq(noteMetadata.id, noteId))
+        .get();
+    const safeResult = safeGet<{ lastSyncedFileIds: string }>(result);
+    if (!safeResult) return [];
+    try {
+        return JSON.parse(safeResult.lastSyncedFileIds || '[]');
+    } catch {
+        return [];
+    }
+}
+
+export async function updateLastSyncedFileIds(noteId: string, fileIds: string[], tx: DbOrTx = getDb()): Promise<void> {
+    await tx.update(noteMetadata)
+        .set({ lastSyncedFileIds: JSON.stringify(fileIds) })
+        .where(eq(noteMetadata.id, noteId))
+        .run();
+}
+
 /**
  * Returns a list of file records that are pending sync AND are linked to the 
  * latest version of any note. We skip files that are only in older history.

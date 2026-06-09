@@ -10,7 +10,7 @@ import { useAppTheme } from "@/hooks/use-app-theme";
 import { cn } from "@/lib/utils";
 import { NoteMetadata, useNotesStore } from "@annota/core";
 import TipTapEditor from "@annota/editor-ui";
-import { format } from "date-fns";
+import { format } from "date-fns/format";
 import { AlertCircle, Clock, History, RotateCcw, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 

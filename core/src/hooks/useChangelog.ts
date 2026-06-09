@@ -6,6 +6,29 @@ import { appSettings } from '../db/schema';
 import { useChangelogStore } from '../stores/changelog.store';
 import { isNewerVersion } from '../utils/compareVersions';
 
+let latestChangelogPromise: Promise<any> | null = null;
+let hasCheckedChangelog = false;
+
+const fetchLatestChangelog = (): Promise<any> => {
+    if (!latestChangelogPromise) {
+        latestChangelogPromise = (async () => {
+            try {
+                const response = await fetch('https://annota.online/api/changelog/latest');
+                if (!response.ok) {
+                    latestChangelogPromise = null; // Reset on failure so it can be retried
+                    return null;
+                }
+                return await response.json();
+            } catch (e) {
+                latestChangelogPromise = null; // Reset on failure
+                console.error("[Changelog] Fetch failed", e);
+                return null;
+            }
+        })();
+    }
+    return latestChangelogPromise;
+};
+
 export const useChangelog = (platform: 'mobile' | 'desktop') => {
     const isOpen = useChangelogStore(s => s.isOpen);
     const isLoading = useChangelogStore(s => s.isLoading);
@@ -21,10 +44,7 @@ export const useChangelog = (platform: 'mobile' | 'desktop') => {
     const fetchChangelog = useCallback(async (version: string) => {
         setIsLoading(true);
         try {
-            const response = await fetch('https://annota.online/api/changelog/latest');
-            if (!response.ok) return null;
-
-            const entry = await response.json();
+            const entry = await fetchLatestChangelog();
 
             if (entry) {
                 const targetEntry = entry[version] || entry;
@@ -55,24 +75,24 @@ export const useChangelog = (platform: 'mobile' | 'desktop') => {
 
     // Automatic check on mount
     useEffect(() => {
+        if (hasCheckedChangelog) return;
+        hasCheckedChangelog = true;
+
         const checkChangelog = async () => {
             try {
                 // 1. Fetch latest version info for the update indicator
-                const response = await fetch('https://annota.online/api/changelog/latest');
-                if (response.ok) {
-                    const entry = await response.json();
-                    if (entry) {
-                        // The API returns either the latest entry directly or a map of entries.
-                        // If it has a 'version' field, use it. Otherwise, if it's a map, find the latest key.
-                        let latest = entry.version;
-                        if (!latest) {
-                            const versions = Object.keys(entry).filter(v => /^\d+\.\d+\.\d+/.test(v));
-                            if (versions.length > 0) {
-                                latest = versions.sort((a, b) => isNewerVersion(b, a) ? 1 : -1)[0];
-                            }
+                const entry = await fetchLatestChangelog();
+                if (entry) {
+                    // The API returns either the latest entry directly or a map of entries.
+                    // If it has a 'version' field, use it. Otherwise, if it's a map, find the latest key.
+                    let latest = entry.version;
+                    if (!latest) {
+                        const versions = Object.keys(entry).filter(v => /^\d+\.\d+\.\d+/.test(v));
+                        if (versions.length > 0) {
+                            latest = versions.sort((a, b) => isNewerVersion(b, a) ? 1 : -1)[0];
                         }
-                        if (latest) setLatestVersion(latest);
                     }
+                    if (latest) setLatestVersion(latest);
                 }
 
                 // 2. Check if we should show the "What's New" dialog

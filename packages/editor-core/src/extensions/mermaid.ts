@@ -5,6 +5,7 @@ import { createBlockMenuButton } from './block-menu-button';
 import { generateBlockId } from './id-generator';
 
 let mermaidInstance: any = null;
+let lastRenderPromise: Promise<any> = Promise.resolve();
 
 async function loadMermaid() {
     if (!mermaidInstance) {
@@ -424,52 +425,73 @@ export const Mermaid = Node.create({
                     // Let browser paint the loading state first before executing heavy rendering
                     await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 0)));
 
-                    const mermaid = await loadMermaid();
-                    if (!mermaid) {
-                        throw new Error('Mermaid library not loaded');
-                    }
+                    // Queue the CPU-heavy rendering so multiple diagrams render sequentially, preventing UI freeze
+                    const ourTurnPromise = lastRenderPromise.then(async () => {
+                        if (myRenderId !== currentRenderId) return;
 
-                    const isDark = isDarkMode();
+                        // Yield another frame right before this specific render so previous frames are painted
+                        // and the event loop can process user interactions.
+                        await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 0)));
 
-                    // Ensure parseError is overridden to prevent Mermaid from injecting global error SVGs into the DOM
-                    mermaid.parseError = () => {};
+                        if (myRenderId !== currentRenderId) return;
 
-                    mermaid.initialize({
-                        startOnLoad: false,
-                        theme: isDark ? 'dark' : 'default',
-                        securityLevel: 'loose',
-                        logLevel: 'fatal',
-                        suppressErrorRendering: true,
-                    });
+                        const mermaid = await loadMermaid();
+                        if (!mermaid) {
+                            throw new Error('Mermaid library not loaded');
+                        }
 
-                    // Generate a unique ID for the mermaid div
-                    const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
+                        const isDark = isDarkMode();
 
-                    // Try to parse first to avoid Mermaid's global error overlay
-                    try {
-                        const parseResult = await mermaid.parse(codeToRender, { suppressErrors: true });
-                        if (parseResult === false || !parseResult) {
+                        // Ensure parseError is overridden to prevent Mermaid from injecting global error SVGs into the DOM
+                        mermaid.parseError = () => {};
+
+                        mermaid.initialize({
+                            startOnLoad: false,
+                            theme: isDark ? 'dark' : 'default',
+                            securityLevel: 'loose',
+                            logLevel: 'fatal',
+                            suppressErrorRendering: true,
+                        });
+
+                        // Generate a unique ID for the mermaid div
+                        const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
+
+                        // Try to parse first to avoid Mermaid's global error overlay
+                        try {
+                            const parseResult = await mermaid.parse(codeToRender, { suppressErrors: true });
+                            if (parseResult === false || !parseResult) {
+                                if (myRenderId === currentRenderId) {
+                                    preview.innerHTML = '<div class="mermaid-error">Syntax Error - Click to edit</div>';
+                                }
+                                return;
+                            }
+                        } catch (parseError) {
                             if (myRenderId === currentRenderId) {
                                 preview.innerHTML = '<div class="mermaid-error">Syntax Error - Click to edit</div>';
                             }
                             return;
                         }
-                    } catch (parseError) {
+
+                        // Render (id, text, container)
+                        const { svg } = await mermaid.render(id, codeToRender);
+
+                        // Only update if no other render started after this one
                         if (myRenderId === currentRenderId) {
-                            preview.innerHTML = '<div class="mermaid-error">Syntax Error - Click to edit</div>';
+                            preview.innerHTML = applyInlineFallbackStyles(svg, isDark);
+                            // Ensure zoom is applied to the new SVG
+                            applyZoom();
                         }
-                        return;
-                    }
+                    });
 
-                    // Render (id, text, container)
-                    const { svg } = await mermaid.render(id, codeToRender);
+                    // Keep the queue moving even if this render fails
+                    lastRenderPromise = ourTurnPromise.catch(error => {
+                        console.warn("Mermaid queued render error:", error);
+                        if (myRenderId === currentRenderId) {
+                            preview.innerHTML = '<div class="mermaid-error">Render Error - Click to edit</div>';
+                        }
+                    });
 
-                    // Only update if no other render started after this one
-                    if (myRenderId === currentRenderId) {
-                        preview.innerHTML = applyInlineFallbackStyles(svg, isDark);
-                        // Ensure zoom is applied to the new SVG
-                        applyZoom();
-                    }
+                    await ourTurnPromise;
                 } catch (error) {
                     console.warn("Mermaid render error:", error);
                     if (myRenderId === currentRenderId) {

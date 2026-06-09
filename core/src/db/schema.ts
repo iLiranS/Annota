@@ -22,6 +22,7 @@ export const noteMetadata = sqliteTable('note_metadata', {
     isPublished: integer('is_published', { mode: 'boolean' }).notNull().default(false),
     // Tracks when the user last explicitly triggered a publish/update-publish action
     publishUpdatedAt: integer('publish_updated_at', { mode: 'timestamp' }),
+    lastSyncedFileIds: text('last_synced_file_ids').notNull().default('[]'),
 });
 
 // ============ NOTE CONTENT (heavy, lazy loaded) ============

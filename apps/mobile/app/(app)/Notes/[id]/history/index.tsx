@@ -2,7 +2,7 @@ import { HapticPressable } from '@/components/ui/haptic-pressable';
 import { useNotesStore } from '@annota/core';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect, useTheme } from '@react-navigation/native';
-import { format } from 'date-fns';
+import { format } from 'date-fns/format';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { ActivityIndicator, FlatList, Platform, StyleSheet, Text, View } from 'react-native';

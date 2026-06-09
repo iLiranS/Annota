@@ -4,7 +4,7 @@ import { useNotesStore } from '@annota/core';
 import TipTapEditor from '@annota/editor-ui';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
-import { format } from 'date-fns';
+import { format } from 'date-fns/format';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Platform, StyleSheet, Text, View } from 'react-native';

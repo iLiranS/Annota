@@ -68,7 +68,7 @@ export const userService = {
      * Throws an error if the key is structurally invalid or the decrypt fails.
      */
     importMasterKey: async (userId: string, targetMnemonic: string): Promise<void> => {
-        const isValid = validateMasterKey(targetMnemonic);
+        const isValid = await validateMasterKey(targetMnemonic);
         if (!isValid) {
             throw new Error('INVALID_FORMAT');
         }
