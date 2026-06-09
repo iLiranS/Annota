@@ -192,7 +192,7 @@ export async function setupEditor(options: any) {
     container.style.setProperty('--accent-full', colors.primary);
     container.style.setProperty('--placeholder-color', isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)');
     container.style.setProperty('--code-bg', isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)');
-    container.style.setProperty('--code-block-bg', isDark ? '#1E1E1E' : '#F5F5F5');
+    container.style.setProperty('--code-block-bg', isDark ? '#212020' : '#F5F5F5');
     container.style.setProperty('--border-color', isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)');
     container.style.setProperty('--quote-bg', hexToRgba(colors.primary, 0.2));
     container.style.setProperty('--editor-font-size', `${fontSize}px`);

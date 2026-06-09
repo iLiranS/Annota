@@ -34,7 +34,7 @@ export const GENERATED_CORE_STYLES = `
         --placeholder-color: rgba(255, 255, 255, 0.4);
         --code-bg: rgba(255, 255, 255, 0.1);
         --quote-bg: rgba(255, 255, 255, 0.1);
-        --code-block-bg: #232323;
+        --code-block-bg: #212020;
         --border-color: rgba(255, 255, 255, 0.2);
         --table-header-bg: rgba(255, 255, 255, 0.1);
     }
@@ -162,6 +162,14 @@ export const GENERATED_CORE_STYLES = `
     caret-color: var(--accent-color);
     /* Safe bottom margin inside editor */
 }
+
+@media screen and (min-width: 1024px) and (pointer: fine) {
+    .ProseMirror {
+        padding-left: 24px;
+        padding-right: 24px;
+    }
+}
+
 
 /* Remove top margin from the very first element to allow precise positioning via header/tags */
 .ProseMirror>*:first-child {

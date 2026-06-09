@@ -20,7 +20,7 @@
 /* Fallback for system dark mode */
 @media (prefers-color-scheme: dark) {
     :root {
-        --hljs-bg: #282c34;
+        --hljs-bg: #212020;
         --hljs-color: #abb2bf;
         --hljs-comment: #5c6370;
         --hljs-keyword: #c678dd;
@@ -35,7 +35,7 @@
 
 /* Explicit dark mode class (used by Tailwind and our theme hook) */
 .dark {
-    --hljs-bg: #282c34;
+    --hljs-bg: #212020;
     --hljs-color: #abb2bf;
     --hljs-comment: #5c6370;
     --hljs-keyword: #c678dd;

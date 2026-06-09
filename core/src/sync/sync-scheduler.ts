@@ -110,7 +110,6 @@ export class SyncScheduler {
 
     /** Called on every note content change — resets the debounce timer */
     notifyContentChange(): void {
-        console.log("[SYNC-SCHEDULER] Notify content change")
         if (this.disposed || !this.initialized) return;
 
         if (!useSyncStore.getState().isOnline) {
@@ -122,6 +121,7 @@ export class SyncScheduler {
         // Reset the 10 s debounce
         this.clearDebounce();
         this.debounceTimer = setTimeout(() => {
+            console.log("[SYNC-SCHEDULER] Debounce timer expired, executing sync push")
             this.executeSyncPush();
         }, DEBOUNCE_MS);
 

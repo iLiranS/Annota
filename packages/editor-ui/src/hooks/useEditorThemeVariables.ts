@@ -46,7 +46,7 @@ export function useEditorThemeVariables({ colors, dark, editorSettings, rootRef 
         root.style.setProperty('--editor-max-width', editorSettings.noteWidth > 0 ? `${editorSettings.noteWidth}px` : '100%');
         root.style.setProperty('--placeholder-color', dark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)');
         root.style.setProperty('--code-bg', dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)');
-        root.style.setProperty('--code-block-bg', dark ? '#282c34' : '#fafafa');
+        root.style.setProperty('--code-block-bg', dark ? '#212020' : '#fafafa');
         root.style.setProperty('--border-color', dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)');
         root.style.setProperty('--selection-bg', colorWithAlpha(colors.primary, 0.25));
         root.style.setProperty('--block-selection-bg', colorWithAlpha(colors.primary, 0.16));

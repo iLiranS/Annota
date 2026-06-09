@@ -1,5 +1,4 @@
 import { useEffect } from 'react';
-import { getPlainTextFromFragment } from '@annota/editor-core';
 import { PopupType } from '../shared/types';
 
 interface UseEditorKeyboardShortcutsArgs {

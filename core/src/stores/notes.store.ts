@@ -132,8 +132,14 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
     // Initialize App - Load ALL data on startup
     initApp: async () => {
-        noteContentCache.clear();
         const wasInitialized = get().isInitialized;
+
+        // Only purge the content cache on a cold start.
+        // On a sync-triggered reinit the cache reflects the last *saved* content;
+        // clearing it would force DB re-reads and could race with an active editor debounce.
+        if (!wasInitialized) {
+            noteContentCache.clear();
+        }
 
         // 1. Run Maintenance FIRST, only on cold starts
         if (!wasInitialized) {
@@ -215,11 +221,29 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         const notes = Array.from(uniqueNotesMap.values());
 
         const tasks = await SearchService.findNotesWithPendingTasks();
-        set({ folders, notes, tags: allTags, tasks, isInitialized: true });
 
         if (!wasInitialized) {
+            // Cold start: replace everything directly.
+            set({ folders, notes, tags: allTags, tasks, isInitialized: true });
             console.log(`[Store] Initialized with ${folders.length} folders and ${notes.length} notes.`);
         } else {
+            // Sync-triggered reinit: merge notes so that any in-memory note whose
+            // updatedAt is newer than the DB version is kept as-is.  This prevents
+            // a hard-max sync flush from clobbering optimistic state (title, preview,
+            // isDirty) that the editor debounce has written to the store but not yet
+            // persisted to SQLite.
+            set(state => {
+                const inMemoryByIdMap = new Map(state.notes.map(n => [n.id, n]));
+                const mergedNotes = notes.map(dbNote => {
+                    const inMemory = inMemoryByIdMap.get(dbNote.id);
+                    if (!inMemory) return dbNote;
+                    const dbTs = dbNote.updatedAt ? new Date(dbNote.updatedAt).getTime() : 0;
+                    const memTs = inMemory.updatedAt ? new Date(inMemory.updatedAt).getTime() : 0;
+                    // Keep in-memory version if it's strictly ahead of what's in the DB
+                    return memTs > dbTs ? inMemory : dbNote;
+                });
+                return { folders, notes: mergedNotes, tags: allTags, tasks, isInitialized: true };
+            });
             console.log(`[Store] Reinitialized with ${folders.length} folders and ${notes.length} notes from local database.`);
         }
     },
