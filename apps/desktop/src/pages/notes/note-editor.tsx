@@ -27,6 +27,7 @@ import { useNoteEditorAI } from "./hooks/use-note-editor-ai";
 import { useNoteEditorCommands } from "./hooks/use-note-editor-commands";
 import { useNoteEditorContent } from "./hooks/use-note-editor-content";
 import { useNoteEditorSearch } from "./hooks/use-note-editor-search";
+import { useNoteTabsStore } from "@/hooks/use-note-tabs";
 
 export interface NoteEditorProps {
     noteId?: string;
@@ -112,10 +113,17 @@ export default function NoteEditor({ noteId: propNoteId, folderId: propFolderId,
         isAiStreaming,
         handleAIAction,
         handleSelectionChange,
-        handleScroll,
+        handleScroll: handleAIScroll,
         stopAiChat,
         hideAISelection,
     } = useNoteEditorAI({ editorRef });
+
+    const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+        handleAIScroll();
+        if (noteId) {
+            useNoteTabsStore.getState().updateScrollPosition(noteId, e.currentTarget.scrollTop);
+        }
+    }, [noteId, handleAIScroll]);
 
     const {
         slashCommandState,

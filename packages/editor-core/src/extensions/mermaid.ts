@@ -1,12 +1,25 @@
 import './mermaid.css';
 import { mergeAttributes, Node, nodeInputRule } from '@tiptap/core';
 import { Plugin } from '@tiptap/pm/state';
-import mermaid from 'mermaid';
 import { createBlockMenuButton } from './block-menu-button';
 import { generateBlockId } from './id-generator';
 
-// Suppress global Jison parser errors to prevent app-level crashes or console overlays
-mermaid.parseError = () => {};
+let mermaidInstance: any = null;
+
+async function loadMermaid() {
+    if (!mermaidInstance) {
+        try {
+            const m = await import('mermaid');
+            mermaidInstance = m.default || m;
+            if (mermaidInstance) {
+                mermaidInstance.parseError = () => {};
+            }
+        } catch (error) {
+            console.error("Failed to load mermaid dynamically:", error);
+        }
+    }
+    return mermaidInstance;
+}
 
 declare module '@tiptap/core' {
     interface Commands<ReturnType> {
@@ -401,7 +414,20 @@ export const Mermaid = Node.create({
                 const codeToRender = node.attrs.code;
 
                 try {
-                    preview.innerHTML = '<div class="mermaid-loading">Rendering Diagram...</div>';
+                    preview.innerHTML = `
+                        <div class="mermaid-loading">
+                            <div class="mermaid-loading-spinner"></div>
+                            <span>Loading diagram...</span>
+                        </div>
+                    `;
+
+                    // Let browser paint the loading state first before executing heavy rendering
+                    await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 0)));
+
+                    const mermaid = await loadMermaid();
+                    if (!mermaid) {
+                        throw new Error('Mermaid library not loaded');
+                    }
 
                     const isDark = isDarkMode();
 

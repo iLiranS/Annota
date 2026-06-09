@@ -29,6 +29,7 @@ export interface TipTapEditorRef {
     searchPrev: () => void;
     clearSearch: () => void;
     scrollToElement: (id: string) => void;
+    scrollToPosition: (position: number) => void;
     getSelection: () => { text: string; html: string; range: { from: number; to: number } };
 }
 

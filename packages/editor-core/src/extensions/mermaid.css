@@ -215,4 +215,21 @@
     font-size: 14px;
     font-style: italic;
     padding: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.mermaid-loading-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--border-color);
+    border-top-color: var(--accent-color);
+    border-radius: 50%;
+    animation: mermaid-spin 1s linear infinite;
+}
+
+@keyframes mermaid-spin {
+    to { transform: rotate(360deg); }
 }

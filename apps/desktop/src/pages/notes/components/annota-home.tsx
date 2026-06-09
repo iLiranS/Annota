@@ -306,7 +306,7 @@ export function AnnotaHome() {
                         </div>
 
                         <div className="group/stat bg-card/40 hover:bg-card/75 border border-border/30 rounded-xl p-4 transition-all duration-300 hover:shadow-xs flex items-center gap-4">
-                            <div className="p-2.5 rounded-lg bg-[#EC4899]/10 text-[#EC4899] group-hover/stat:scale-105 transition-transform">
+                            <div className="p-2.5 rounded-lg bg-[#ec9d48]/10 text-[#ec9d48] group-hover/stat:scale-105 transition-transform">
                                 <Tag className="h-5 w-5" />
                             </div>
                             <div>

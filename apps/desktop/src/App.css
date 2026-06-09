@@ -184,27 +184,27 @@ body {
 
     /* tiny anticipation up before squish */
     10% {
-      transform: translateY(-2px) scale(1.02, 0.98);
+      transform: translateY(-0.5px) scale(1.01, 0.99);
     }
 
-    /* stronger squish down */
+    /* gentle squish down */
     25% {
-      transform: translateY(6px) scale(0.7, 0.8);
+      transform: translateY(2px) scale(0.95, 0.97);
     }
 
-    /* big explosive stretch, mostly sideways */
+    /* soft, slight lift and minor stretch */
     50% {
-      transform: translateY(-4px) scale(1.22, 0.9);
+      transform: translateY(-1.5px) scale(1.05, 0.98);
     }
 
-    /* recoil back toward normal */
+    /* smooth recoil toward normal */
     65% {
-      transform: translateY(-2px) scale(1.08, 0.97);
+      transform: translateY(-0.5px) scale(1.02, 0.99);
     }
 
-    /* subtle overshoot past resting state */
+    /* barely noticeable overshoot */
     80% {
-      transform: translateY(1px) scale(0.98, 1.02);
+      transform: translateY(0.2px) scale(0.99, 1.01);
     }
 
     /* final settle */

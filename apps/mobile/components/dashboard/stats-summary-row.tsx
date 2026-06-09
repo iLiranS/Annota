@@ -13,9 +13,9 @@ interface StatsSummaryRowProps {
     onPressPublished?: () => void;
 }
 
-export function StatsSummaryRow({ 
-    notesCount, 
-    foldersCount, 
+export function StatsSummaryRow({
+    notesCount,
+    foldersCount,
     tagsCount,
     publishedCount = 0,
     isPremium = false,
@@ -50,8 +50,8 @@ export function StatsSummaryRow({
 
                 <View style={styles.gridRow}>
                     <View style={[styles.statBox, { backgroundColor: colors.card, borderColor: colors.border + "60" }]}>
-                        <View style={[styles.statIconWrapper, { backgroundColor: '#EC489915' }]}>
-                            <Ionicons name="pricetag-outline" size={18} color="#EC4899" />
+                        <View style={[styles.statIconWrapper, { backgroundColor: '#ec9d4815' }]}>
+                            <Ionicons name="pricetag-outline" size={18} color="#ec9d48" />
                         </View>
                         <View style={styles.statInfo}>
                             <Text style={[styles.statLabel, { color: colors.text + '50' }]}>TAGS</Text>
@@ -59,7 +59,7 @@ export function StatsSummaryRow({
                         </View>
                     </View>
 
-                    <HapticPressable 
+                    <HapticPressable
                         onPress={onPressPublished}
                         style={[styles.statBox, { backgroundColor: colors.card, borderColor: colors.border + "60" }]}
                     >

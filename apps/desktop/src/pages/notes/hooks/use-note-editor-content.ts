@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useNoteTabsStore } from "@/hooks/use-note-tabs";
 import { generateTitle, normalizeStoredContent, useNotesStore } from "@annota/core";
 import { NoteFileService } from "@annota/core/platform";
 import { TipTapEditorRef } from "@annota/editor-ui";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface UseNoteEditorContentProps {
     noteId: string | undefined;
@@ -199,7 +200,7 @@ export function useNoteEditorContent({ noteId, editorRef, onNoteSync, blockId, i
     // Content change handler
     const handleContentChange = useCallback(async (html: string) => {
         if (!noteId) return;
-        
+
         const isEmptyContent = (html: string) => {
             const normalized = html
                 .replace(/&nbsp;/gi, '')
@@ -221,6 +222,7 @@ export function useNoteEditorContent({ noteId, editorRef, onNoteSync, blockId, i
             }
             return;
         }
+
         const title = generateTitle(html);
 
         if (onNoteSync) {
@@ -235,12 +237,34 @@ export function useNoteEditorContent({ noteId, editorRef, onNoteSync, blockId, i
     }, [noteId, updateNoteContent, updateNoteMetadata, onNoteSync]);
 
     // Reset refs on note change
+    const hasRestoredScrollRef = useRef<string | null>(null);
     useEffect(() => {
         lastSeenUpdatedAtRef.current = null;
         pendingRemoteContentRef.current = null;
         isApplyingRemoteRef.current = false;
         hasScrolledRef.current = false;
+        hasRestoredScrollRef.current = null;
     }, [noteId]);
+
+    // Scroll restoration
+    useEffect(() => {
+        if (!noteId || !editorRef.current || initialContent === null) return;
+        if (blockId) return; // Prioritize deep linking
+        if (hasRestoredScrollRef.current === noteId) return;
+
+        const tab = useNoteTabsStore.getState().tabs.find(t => t.noteId === noteId);
+        if (tab && tab.scrollPosition && tab.scrollPosition > 0) {
+            const timer = setTimeout(() => {
+                if (editorRef.current) {
+                    editorRef.current.scrollToPosition(tab.scrollPosition!);
+                    hasRestoredScrollRef.current = noteId;
+                }
+            }, 100);
+            return () => clearTimeout(timer);
+        } else {
+            hasRestoredScrollRef.current = noteId;
+        }
+    }, [noteId, initialContent, editorRef, blockId]);
 
     // Deep linking
     useEffect(() => {

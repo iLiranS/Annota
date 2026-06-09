@@ -277,6 +277,7 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
             searchPrev: () => dispatchCommand('searchPrev'),
             clearSearch: () => dispatchCommand('clearSearch'),
             scrollToElement: (id) => dispatchCommand('scrollToElement', { id }),
+            scrollToPosition: (position) => {},
             getSelection: () => ({
                 text: editorState.selectedText,
                 html: editorState.selectedHtml,

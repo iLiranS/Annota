@@ -5,6 +5,7 @@ export interface NoteTab {
     noteId: string;
     folderId: string;
     isPinned?: boolean;
+    scrollPosition?: number;
 }
 
 interface NoteTabsState {
@@ -14,6 +15,7 @@ interface NoteTabsState {
     setTabs: (tabs: NoteTab[]) => void;
     reorderTabs: (startIndex: number, endIndex: number) => void;
     togglePinTab: (noteId: string) => void;
+    updateScrollPosition: (noteId: string, scrollPosition: number) => void;
     reset: () => void;
 }
 
@@ -48,6 +50,11 @@ export const useNoteTabsStore = create<NoteTabsState>()(
                 const unpinned = newTabs.filter(t => !t.isPinned);
                 return { tabs: [...pinned, ...unpinned] };
             }),
+            updateScrollPosition: (noteId, scrollPosition) => set((state) => ({
+                tabs: state.tabs.map(t =>
+                    t.noteId === noteId ? { ...t, scrollPosition } : t
+                )
+            })),
             reset: () => set({ tabs: [] }),
         }),
         {

@@ -470,6 +470,11 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                     }
                 }, 50);
             },
+            scrollToPosition: (position: number) => {
+                if (scrollerRef.current) {
+                    scrollerRef.current.scrollTop = position;
+                }
+            },
         }), [editor]);
 
         useEffect(() => {

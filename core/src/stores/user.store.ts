@@ -9,6 +9,8 @@ import { createStorageAdapter } from './config';
 
 export type UserRole = string | null;
 
+let activeProfilePromise: Promise<any> | null = null;
+
 type UserState = {
     session: Session | null;
     user: User | null;
@@ -32,7 +34,9 @@ type UserState = {
     created_at: string | null;
     /** Profile last update timestamp. */
     updated_at: string | null;
-    getUserProfile: () => Promise<any>;
+    /** Whether the user profile has already been successfully fetched in this session. */
+    profileFetched: boolean;
+    getUserProfile: (force?: boolean) => Promise<any>;
     setSession: (session: Session | null, skipEmit?: boolean) => void;
     setGuest: (guest: boolean) => void;
     signOut: () => Promise<void>;
@@ -64,31 +68,56 @@ export const useUserStore = create<UserState>()(
             created_at: null,
             updated_at: null,
             hasMasterKey: null,
+            profileFetched: false,
 
-            getUserProfile: async () => {
+            getUserProfile: async (force?: boolean) => {
                 const state = get();
                 if (!state.user) return null;
 
-                try {
-                    const profile = await userService.getUserProfile(state.user.id);
-                    if (profile) {
-                        set({
-                            displayName: profile.display_name,
-                            displayNameFetched: true,
-                            role: profile.role,
-                            roleFetched: true,
-                            saltHex: profile.salt ?? null,
-                            sub_exp_date: profile.sub_exp_date,
-                            storage_used_bytes: profile.storage_used_bytes || 0,
-                            created_at: profile.created_at,
-                            updated_at: profile.updated_at,
-                        });
-                    }
-                    return profile;
-                } catch (e) {
-                    console.warn('[user.store] getUserProfile failed (offline likely):', e);
-                    return null;
+                if (state.profileFetched && !force) {
+                    return {
+                        id: state.user.id,
+                        display_name: state.displayName,
+                        role: state.role,
+                        salt: state.saltHex,
+                        sub_exp_date: state.sub_exp_date,
+                        storage_used_bytes: state.storage_used_bytes,
+                        created_at: state.created_at,
+                        updated_at: state.updated_at,
+                    };
                 }
+
+                if (activeProfilePromise && !force) {
+                    return activeProfilePromise;
+                }
+
+                activeProfilePromise = (async () => {
+                    try {
+                        const profile = await userService.getUserProfile(state.user?.id || '');
+                        if (profile) {
+                            set({
+                                displayName: profile.display_name,
+                                displayNameFetched: true,
+                                role: profile.role,
+                                roleFetched: true,
+                                saltHex: profile.salt ?? null,
+                                sub_exp_date: profile.sub_exp_date,
+                                storage_used_bytes: profile.storage_used_bytes || 0,
+                                created_at: profile.created_at,
+                                updated_at: profile.updated_at,
+                                profileFetched: true,
+                            });
+                        }
+                        return profile;
+                    } catch (e) {
+                        console.warn('[user.store] getUserProfile failed (offline likely):', e);
+                        return null;
+                    } finally {
+                        activeProfilePromise = null;
+                    }
+                })();
+
+                return activeProfilePromise;
             },
 
             setHasMasterKey: (hasKey: boolean) => set({ hasMasterKey: hasKey }),
@@ -133,6 +162,7 @@ export const useUserStore = create<UserState>()(
                         created_at: isSameUser ? state.created_at : null,
                         updated_at: isSameUser ? state.updated_at : null,
                         hasMasterKey: session ? state.hasMasterKey : null,
+                        profileFetched: isSameUser ? state.profileFetched : false,
                     };
                 });
 
@@ -150,11 +180,12 @@ export const useUserStore = create<UserState>()(
                     displayName: null,
                     displayNameFetched: false,
                     saltHex: null,
+                    profileFetched: false,
                 }),
 
             signOut: async () => {
                 await authApi.signOut();
-                set({ session: null, user: null, isGuest: false, saltHex: null, role: null, roleFetched: false, displayName: null, displayNameFetched: false, hasMasterKey: null });
+                set({ session: null, user: null, isGuest: false, saltHex: null, role: null, roleFetched: false, displayName: null, displayNameFetched: false, hasMasterKey: null, profileFetched: false });
             },
 
             updateDisplayName: async (displayName: string) => {
@@ -268,7 +299,8 @@ export const useUserStore = create<UserState>()(
                     storage_used_bytes: 0,
                     created_at: null,
                     updated_at: null,
-                    hasMasterKey: null
+                    hasMasterKey: null,
+                    profileFetched: false
                 });
 
                 if (errorToThrow) {
