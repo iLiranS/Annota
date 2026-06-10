@@ -298,7 +298,8 @@ export const GENERATED_CORE_STYLES = `
     cursor: pointer;
 }
 
-.ProseMirror a[href^="annota://"] {
+.ProseMirror a[href^="annota://"],
+.ProseMirror a[href^="annota-dev://"] {
     color: var(--accent-color);
     background-color: color-mix(in srgb, var(--accent-color) 12%, transparent);
     padding: 2px 6px;
@@ -309,12 +310,14 @@ export const GENERATED_CORE_STYLES = `
     display: inline;
 }
 
-.ProseMirror a[href^="annota://"]:hover {
+.ProseMirror a[href^="annota://"]:hover,
+.ProseMirror a[href^="annota-dev://"]:hover {
     background-color: color-mix(in srgb, var(--accent-color) 20%, transparent);
     text-decoration: none;
 }
 
-.ProseMirror a[href^="annota://"]::after {
+.ProseMirror a[href^="annota://"]::after,
+.ProseMirror a[href^="annota-dev://"]::after {
     content: "";
     display: inline-block;
     width: 13px;

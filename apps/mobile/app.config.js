@@ -1,4 +1,4 @@
-const IS_DEV = process.env.APP_VARIANT === 'development';
+const IS_DEV = process.env.APP_ENV === 'development' || process.env.APP_VARIANT === 'development';
 export default {
   "expo": {
     name: IS_DEV ? 'Annota (Dev)' : 'Annota',
@@ -6,7 +6,7 @@ export default {
     "version": "1.0.1",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
-    "scheme": "annota",
+    "scheme": IS_DEV ? "annota-dev" : "annota",
     "userInterfaceStyle": "automatic",
     updates: {
       url: "https://u.expo.dev/69ecbf03-90c0-4bad-b07e-8aa2fac8b8b0"
@@ -54,6 +54,7 @@ export default {
       [
         "expo-share-intent",
         {
+          scheme: IS_DEV ? "annota-dev" : "annota",
           iosActivationRules: {
             NSExtensionActivationSupportsWebURLWithMaxCount: 1,
             NSExtensionActivationSupportsWebPageWithMaxCount: 1,

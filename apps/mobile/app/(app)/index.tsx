@@ -1,18 +1,25 @@
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { useNotesStore } from '@annota/core';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter } from 'expo-router';
+import { useRouter, usePathname } from 'expo-router';
 import { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 
 export default function Index() {
     const router = useRouter();
+    const pathname = usePathname();
     const theme = useAppTheme();
     const isInitialized = useNotesStore(state => state.isInitialized);
     const getNoteById = useNotesStore(state => state.getNoteById);
 
     useEffect(() => {
         if (!isInitialized) return;
+
+        // If the current route is not the root index, do not redirect
+        // (this prevents overriding deep links/share sheet routes on cold boot)
+        if (pathname !== '/' && pathname !== '') {
+            return;
+        }
 
         const checkLastViewedNote = async () => {
             try {
@@ -38,7 +45,7 @@ export default function Index() {
         };
 
         checkLastViewedNote();
-    }, [isInitialized]);
+    }, [isInitialized, pathname]);
 
     return (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.background }}>

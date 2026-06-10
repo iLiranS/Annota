@@ -102,6 +102,18 @@ function isIgnoredBackgroundColor(color: string | null | undefined): boolean {
     return /^(transparent|inherit|none)$/i.test(color.trim()) || /rgba?\(\s*0\s*,\s*0\s*,\s*0\s*,\s*0\s*\)/i.test(color);
 }
 
+function isBlockElement(element: HTMLElement): boolean {
+    const tagName = element.tagName.toUpperCase();
+    const blockTags = new Set([
+        'ADDRESS', 'ARTICLE', 'ASIDE', 'BLOCKQUOTE', 'CANVAS', 'DD', 'DIV', 'DL', 'DT',
+        'FIELDSET', 'FIGCAPTION', 'FIGURE', 'FOOTER', 'FORM', 'H1', 'H2', 'H3', 'H4',
+        'H5', 'H6', 'HEADER', 'HR', 'LI', 'MAIN', 'NAV', 'NOSCRIPT', 'OL', 'P',
+        'PRE', 'SECTION', 'TABLE', 'TFOOT', 'UL', 'VIDEO', 'TR', 'TD', 'TH', 'TBODY', 'THEAD',
+        'DETAILS', 'SUMMARY', 'CAPTION', 'COL', 'COLGROUP'
+    ]);
+    return blockTags.has(tagName);
+}
+
 function getPaletteShort(color: string | null | undefined): string | null {
     const hex = normalizePaletteColor(color);
     return hex ? COLOR_MAP[hex] : null;
@@ -220,27 +232,29 @@ export const CustomHighlight = Highlight.extend({
                 },
             },
             {
-                style: 'background-color',
-                getAttrs: value => {
+                tag: '[style*="background-color"]',
+                getAttrs: node => {
+                    const element = node as HTMLElement;
+                    if (isBlockElement(element)) return false;
+
+                    const value = element.style.backgroundColor;
                     if (!value || value === 'transparent' || value === 'inherit' || value === 'none') return false;
 
-                    if (typeof value === 'string') {
-                        const color = normalizePaletteColor(value);
-                        return color ? { color } : false;
-                    }
-                    return false;
+                    const color = normalizePaletteColor(value);
+                    return color ? { color } : false;
                 },
             },
             {
-                style: 'background',
-                getAttrs: value => {
+                tag: '[style*="background"]',
+                getAttrs: node => {
+                    const element = node as HTMLElement;
+                    if (isBlockElement(element)) return false;
+
+                    const value = element.style.background;
                     if (!value || value === 'transparent' || value === 'inherit' || value === 'none') return false;
 
-                    if (typeof value === 'string') {
-                        const color = normalizePaletteColor(value);
-                        return color ? { color } : false;
-                    }
-                    return false;
+                    const color = normalizePaletteColor(value);
+                    return color ? { color } : false;
                 },
             },
         ];

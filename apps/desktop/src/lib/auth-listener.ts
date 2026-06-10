@@ -40,7 +40,7 @@ export async function initDeepLinkListener(
                     }
                 }
                 // Handle App Direct Links
-                else if (url.startsWith("annota://")) {
+                else if (url.startsWith("annota://") || url.startsWith("annota-dev://")) {
                     onNavigate?.(url);
                 }
             }
@@ -48,7 +48,7 @@ export async function initDeepLinkListener(
 
         // Fallback for Windows where deep-link plugin may not automatically forward the URL
         const unlistenWindows = await listen<string[]>("deep-link-windows", (event) => {
-            const urls = event.payload.filter(arg => arg.startsWith("annota://"));
+            const urls = event.payload.filter(arg => arg.startsWith("annota://") || arg.startsWith("annota-dev://"));
             if (urls.length > 0) {
                 // Manually trigger the same logic as onOpenUrl
                 for (const url of urls) {
@@ -88,7 +88,7 @@ export async function initDeepLinkListener(
                         }
                     }
                     // Handle App Direct Links
-                    else if (url.startsWith("annota://")) {
+                    else if (url.startsWith("annota://") || url.startsWith("annota-dev://")) {
                         onNavigate?.(url);
                     }
                 }

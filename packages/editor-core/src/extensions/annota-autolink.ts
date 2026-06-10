@@ -6,7 +6,7 @@ export const AnnotaAutolink = Mark.create({
     addPasteRules() {
         return [
             markPasteRule({
-                find: /(?:^|\s)(annota:\/\/note\/[a-zA-Z0-9-?&=._%]+)/gi,
+                find: /(?:^|\s)((?:annota|annota-dev):\/\/note\/[a-zA-Z0-9-?&=._%]+)/gi,
                 type: this.editor.schema.marks.link,
                 getAttributes: (match) => ({
                     href: match[1],

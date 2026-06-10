@@ -3,12 +3,12 @@ import { useAppTheme } from '@/hooks/use-app-theme';
 import { authApi, useUserStore as useAuthStore, isCloudEnabled } from '@annota/core';
 import { getMasterKey } from '@annota/core/platform';
 import { Ionicons } from '@expo/vector-icons';
-import { makeRedirectUri } from 'expo-auth-session';
 import * as QueryParams from 'expo-auth-session/build/QueryParams';
 import { router, Stack } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
+import * as Linking from 'expo-linking';
 import React, { useState, useEffect } from 'react';
 import { ActivityIndicator, Alert, Image, StyleSheet, Text, View } from 'react-native';
 import Animated, {
@@ -36,10 +36,8 @@ export default function LoginScreen() {
     const setGuest = useAuthStore((state) => state.setGuest);
     const theme = useAppTheme();
 
-    // Use expo-auth-session to create a redirect URI back to the app
-    const redirectUrl = makeRedirectUri({
-        native: 'annota://login-callback', // Explicit scheme for production builds
-    });
+    // Use expo-linking to create a redirect URI back to the app
+    const redirectUrl = Linking.createURL('login-callback');
 
     async function signInWithAppleNative() {
         const routeAfterSignIn = async () => {

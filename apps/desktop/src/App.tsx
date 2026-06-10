@@ -335,7 +335,7 @@ function App() {
       if (!href) return;
 
       // If it's an internal app link, stop the webview from navigating natively
-      if (href.startsWith("annota://")) {
+      if (href.startsWith("annota://") || href.startsWith("annota-dev://")) {
         e.preventDefault();
         handleDeepLink(href);
       } else if (href.startsWith("http://") || href.startsWith("https://")) {

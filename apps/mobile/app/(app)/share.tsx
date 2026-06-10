@@ -90,6 +90,11 @@ export default function ShareScreen() {
                     const reason =
                         err instanceof Error ? err.message : 'Unknown error';
                     setParseState({ status: 'failed', reason });
+                    Toast.show({
+                        type: 'error',
+                        text1: 'Failed to parse page content',
+                        text2: reason,
+                    });
                 }
             }
         };

@@ -15,6 +15,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '@react-navigation/native';
 import * as ExpoClipboard from 'expo-clipboard';
+import * as Linking from 'expo-linking';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -398,7 +399,7 @@ export default function NoteEditor() {
 
     const handleCopyLink = useCallback(async () => {
         if (!id) return;
-        const link = `annota://note/${id}`;
+        const link = Linking.createURL(`note/${id}`);
         await ExpoClipboard.setStringAsync(link);
         Toast.show({
             type: 'success',
@@ -409,7 +410,7 @@ export default function NoteEditor() {
 
     const handleCopyBlockLink = useCallback(async (blockId: string) => {
         if (!id) return;
-        const link = `annota://note/${id}?blockId=${blockId}`;
+        const link = Linking.createURL(`note/${id}`, { queryParams: { blockId } });
         await ExpoClipboard.setStringAsync(link);
         Toast.show({
             type: 'success',
@@ -417,6 +418,19 @@ export default function NoteEditor() {
             text2: 'The link to this specific block has been copied to your clipboard.',
         });
     }, [id]);
+
+    const handleOpenLink = useCallback(async (href: string) => {
+        if (href.startsWith('annota://') || href.startsWith('annota-dev://')) {
+            const pathWithQuery = href.replace(/^(annota|annota-dev):\/\//, '');
+            router.push(('/' + pathWithQuery) as any);
+        } else {
+            const ReactNativeLinking = require('react-native').Linking;
+            const supported = await ReactNativeLinking.canOpenURL(href);
+            if (supported) {
+                await ReactNativeLinking.openURL(href);
+            }
+        }
+    }, [router]);
 
     const activeNoteContext = useMemo(() => {
         if (!id || !currentNote || content === null) return undefined;
@@ -659,6 +673,7 @@ export default function NoteEditor() {
                         onGalleryVisibilityChange={setIsGalleryOpen}
                         onCopyBlockLink={handleCopyBlockLink}
                         onScrollNative={handleScrollNative}
+                        onOpenLink={handleOpenLink}
                         renderHeader={() => {
                             const hasTags = appliedTagIds.length > 0;
                             return (

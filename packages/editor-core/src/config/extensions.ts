@@ -93,9 +93,9 @@ export const getBaseExtensions = (options: {
         Link.configure({
             openOnClick: false,
             autolink: true,
-            protocols: ['http', 'https', 'mailto', 'tel', 'annota'],
+            protocols: ['http', 'https', 'mailto', 'tel', 'annota', 'annota-dev'],
             HTMLAttributes: { rel: 'noopener noreferrer' },
-            validate: (href) => /^(https?:\/\/|annota:\/\/|mailto:|tel:)/i.test(href),
+            validate: (href) => /^(https?:\/\/|(?:annota|annota-dev):\/\/|mailto:|tel:)/i.test(href),
         }),
         CustomHighlight.configure({ multicolor: true }),
         CustomTextStyle,
