@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils"
 import { useNavigationStore, useSettingsStore, useSyncStore, useUserStore, type SidebarTab } from "@annota/core"
 import { Layers2, PanelLeft, PanelRight, Plus } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
-import { useLocation, useNavigate } from "react-router-dom"
+import { useLocation, useNavigate, useParams } from "react-router-dom"
 import { useAlwaysOnTop } from "../../hooks/use-always-on-top"
 import { useAppTheme } from "../../hooks/use-app-theme"
 import { useCreateNote } from "../../hooks/use-create-note"
@@ -33,6 +33,7 @@ const RTL_LANGS = new Set([
 export function MainNavbar() {
     const navigate = useNavigate();
     const location = useLocation();
+    const { noteId } = useParams<{ noteId: string }>();
     const { isSyncing, lastSyncTime } = useSyncStore()
     const { session } = useUserStore();
     const { general, updateGeneralSettings } = useSettingsStore();
@@ -40,14 +41,19 @@ export function MainNavbar() {
     const setSettingsOpen = useNavigationStore(s => s.setSettingsOpen);
     const setSelectedFolderId = useNavigationStore(s => s.setSelectedFolderId);
     const setSidebarTab = useNavigationStore(s => s.setSidebarTab);
+    const setLastViewed = useNavigationStore(s => s.setLastViewed);
     const activeTab = useNavigationStore(s => s.sidebarTab);
     const setActiveTab = useNavigationStore(s => s.setSidebarTab);
     const { colors } = useAppTheme();
     const { createAndNavigate } = useCreateNote();
 
+    const selectedFolderId = useNavigationStore(s => s.selectedFolderId);
+    const isHome = !noteId && (selectedFolderId === 'root' || !selectedFolderId);
+
     const handleGoHome = () => {
         setSelectedFolderId('root');
         setSidebarTab('notes');
+        setLastViewed(null, 'root');
         navigate('/notes');
     };
 
@@ -222,10 +228,13 @@ export function MainNavbar() {
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-6 w-6 rounded-[4px] text-muted-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-foreground"
+                                    className={cn(
+                                        "h-6 w-6 rounded-[4px] transition-colors hover:bg-sidebar-accent",
+                                        isHome ? "text-accent-full hover:text-accent-full" : "text-muted-foreground/60 hover:text-foreground"
+                                    )}
                                     onClick={handleGoHome}
                                 >
-                                    <Ionicons name="home-outline" size={15} />
+                                    <Ionicons name={isHome ? "home" : "home-outline"} size={15} />
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent side="bottom" className="text-[10px]">

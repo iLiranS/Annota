@@ -46,6 +46,7 @@ export function AiChatMessage({ message, isStreaming, onInsertToNote }: AiChatMe
                             reasoningContent={message.reasoningContent}
                             toolCalls={message.toolCalls}
                             isStreaming={isStreaming}
+                            hasContent={Boolean(message.content)}
                         />
 
                         {hasFlashcards ? (
@@ -87,18 +88,34 @@ function AiProcessBlock({
     reasoningContent,
     toolCalls,
     isStreaming,
+    hasContent,
 }: {
     reasoningContent?: string | null;
     toolCalls?: string[] | null;
     isStreaming?: boolean;
+    hasContent?: boolean;
 }) {
     const hasReasoning = Boolean(reasoningContent?.trim());
     const hasTools = Boolean(toolCalls?.length);
-    const [isOpen, setIsOpen] = React.useState(Boolean(isStreaming));
+    const [isOpen, setIsOpen] = React.useState(Boolean(isStreaming && !hasContent));
+    const autoClosedRef = React.useRef(false);
 
     React.useEffect(() => {
-        if (isStreaming) setIsOpen(true);
+        if (!isStreaming) {
+            autoClosedRef.current = false;
+        }
     }, [isStreaming]);
+
+    React.useEffect(() => {
+        if (isStreaming) {
+            if (!hasContent) {
+                setIsOpen(true);
+            } else if (!autoClosedRef.current) {
+                setIsOpen(false);
+                autoClosedRef.current = true;
+            }
+        }
+    }, [isStreaming, hasContent]);
 
     if (!hasReasoning && !hasTools) return null;
 

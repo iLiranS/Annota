@@ -23,6 +23,15 @@ export const SlashCommandExtension = Extension.create<SlashCommandOptions>({
             Suggestion({
                 editor: this.editor,
                 char: '/',
+                allow: ({ state, range }) => {
+                    const $pos = state.doc.resolve(range.from);
+                    for (let depth = $pos.depth; depth > 0; depth--) {
+                        if ($pos.node(depth).type.name === 'codeBlock') {
+                            return false;
+                        }
+                    }
+                    return true;
+                },
                 command: () => {
                     // Executed natively, no web-side logic needed
                 },

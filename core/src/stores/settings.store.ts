@@ -13,7 +13,6 @@ export interface EditorSettings {
     lineSpacing: number; // multiplier (e.g. 1.0, 1.5)
     paragraphSpacing: number; // pixels (e.g. 10, 20)
     fontFamily: EditorFontId | string;
-    floatingNoteHeader: boolean;
     noteWidth: number; // pixels, 0 for full width
     defaultCodeLanguage: string | null;
     spellcheck: boolean;
@@ -64,7 +63,6 @@ const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
     lineSpacing: 1.5,
     paragraphSpacing: 8,
     fontFamily: 'system',
-    floatingNoteHeader: true,
     noteWidth: 1000,
 
     defaultCodeLanguage: null,

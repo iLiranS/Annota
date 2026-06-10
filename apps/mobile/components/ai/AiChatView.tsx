@@ -267,20 +267,36 @@ function AiProcessBlock({
     reasoningContent,
     toolCalls,
     isStreaming,
+    hasContent,
     colors,
 }: {
     reasoningContent?: string | null;
     toolCalls?: string[] | null;
     isStreaming: boolean;
+    hasContent: boolean;
     colors: { text: string; border: string; primary: string; card: string };
 }) {
-    const [isOpen, setIsOpen] = useState(isStreaming);
+    const [isOpen, setIsOpen] = useState(isStreaming && !hasContent);
     const hasReasoning = Boolean(reasoningContent?.trim());
     const hasTools = Boolean(toolCalls?.length);
+    const autoClosedRef = useRef(false);
 
     useEffect(() => {
-        if (isStreaming) setIsOpen(true);
+        if (!isStreaming) {
+            autoClosedRef.current = false;
+        }
     }, [isStreaming]);
+
+    useEffect(() => {
+        if (isStreaming) {
+            if (!hasContent) {
+                setIsOpen(true);
+            } else if (!autoClosedRef.current) {
+                setIsOpen(false);
+                autoClosedRef.current = true;
+            }
+        }
+    }, [isStreaming, hasContent]);
 
     if (!hasReasoning && !hasTools) return null;
 
@@ -405,6 +421,7 @@ function AssistantMessageContent({
                 reasoningContent={reasoningContent}
                 toolCalls={toolCalls}
                 isStreaming={isStreaming}
+                hasContent={Boolean(content)}
                 colors={colors}
             />
 

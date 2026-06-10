@@ -7,7 +7,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { Alert, Keyboard, Linking, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Alert, Animated, Keyboard, Linking, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useEditorBridgeHandlers } from './hooks/useEditorBridgeHandlers';
 import { useSharedEditorUI } from './hooks/useSharedEditorUI';
@@ -29,7 +29,8 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
             renderToolbar,
             isDark: propIsDark,
             colors: propColors,
-            editable = true,
+            editable: editable = true,
+            scrollY,
         } = props;
         const theme = useTheme();
         const colors = propColors || theme.colors;
@@ -392,12 +393,21 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
 
         return (
             <View style={styles.container}>
-                <ScrollView
+                <Animated.ScrollView
                     ref={scrollViewRef}
                     style={{ flex: 1 }}
                     contentContainerStyle={{ flexGrow: 1, paddingBottom: 350 }}
                     scrollEventThrottle={16}
-                    onScroll={(e) => { scrollOffsetY.current = e.nativeEvent.contentOffset.y; }}
+                    onScroll={Animated.event(
+                        [{ nativeEvent: { contentOffset: { y: scrollY || new Animated.Value(0) } } }],
+                        {
+                            useNativeDriver: true,
+                            listener: (e: any) => {
+                                scrollOffsetY.current = e.nativeEvent.contentOffset.y;
+                                props.onScrollNative?.(e);
+                            }
+                        }
+                    )}
                     onLayout={(e) => { scrollHeight.current = e.nativeEvent.layout.height; }}
                 >
                     {renderHeader?.()}
@@ -429,7 +439,7 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                             onPress={() => dispatchCommand('focus')}
                         />
                     )}
-                </ScrollView>
+                </Animated.ScrollView>
                 {renderToolbar && editable && (
                     <View
                         style={[

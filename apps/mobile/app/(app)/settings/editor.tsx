@@ -114,7 +114,7 @@ export default function EditorSettings() {
                 </View>
             </View>
 
-            <View style={styles.section}>
+            <View style={[styles.section, { paddingBottom: 80 }]}>
                 <Text style={[styles.sectionHeader, { color: colors.text + '80' }]}>BEHAVIOR</Text>
                 <Text style={[styles.helperText, { color: colors.text + '60', marginTop: 0, marginBottom: 8 }]}>
                     Below settings availability may vary depending on the platform and device settings.
@@ -147,20 +147,6 @@ export default function EditorSettings() {
                         value={editor.autocomplete}
                         onToggle={(val) => updateEditorSettings({ autocomplete: val })}
                         icon="flash-outline"
-                    />
-                </View>
-
-            </View>
-
-            <View style={[styles.section, { paddingBottom: 80 }]}>
-                <Text style={[styles.sectionHeader, { color: colors.text + '80' }]}>LAYOUT</Text>
-                <View style={[styles.card, { backgroundColor: colors.card }]}>
-                    <SettingItem
-                        label="Floating Note Header"
-                        type="toggle"
-                        value={editor.floatingNoteHeader}
-                        onToggle={(val) => updateEditorSettings({ floatingNoteHeader: val })}
-                        icon="text-outline"
                     />
                 </View>
             </View>

@@ -2,8 +2,8 @@ import { Input } from "@/components/ui/input";
 import { SidebarMenu, SidebarMenuItem } from "@/components/ui/sidebar";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { cn } from "@/lib/utils";
-import { useNotesStore, useSearchStore, useSettingsStore } from "@annota/core";
-import { useMemo, useState } from "react";
+import { useNavigationStore, useNotesStore, useSearchStore, useSettingsStore } from "@annota/core";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FolderListItem } from "../../notes/folder-list-item";
 import { NoteListItem } from "../../notes/note-list-item";
 import { Ionicons } from "../../ui/ionicons";
@@ -36,6 +36,7 @@ export function SearchView({
     const { colors } = useAppTheme();
     const { getFolderById, notes } = useNotesStore();
     const { general } = useSettingsStore();
+    const setSidebarTab = useNavigationStore((s) => s.setSidebarTab);
     const {
         searchQuery,
         isSearching,
@@ -44,6 +45,16 @@ export function SearchView({
     } = useSearchStore();
 
     const [activeFilter, setActiveFilter] = useState<'all' | 'files'>('all');
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        const handleFocus = () => {
+            inputRef.current?.focus();
+            inputRef.current?.select();
+        };
+        window.addEventListener("focus-global-search", handleFocus);
+        return () => window.removeEventListener("focus-global-search", handleFocus);
+    }, []);
 
     const folderResults = useMemo(() => {
         if (!searchQuery) return [];
@@ -109,10 +120,17 @@ export function SearchView({
                         )}
                     />
                     <Input
+                        ref={inputRef}
                         autoFocus autoCapitalize="off" autoCorrect="off" autoComplete="off"
                         placeholder={activeFilter === 'files' ? "Search Your Files..." : "Search Your Notes..."}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value, null)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Escape') {
+                                e.preventDefault();
+                                setSidebarTab('notes');
+                            }
+                        }}
                         className="flex h-9 w-full rounded-md border border-input/40 bg-transparent pl-7 pr-7 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground/60 placeholder:text-[12px] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50" />
                     {searchQuery && (
                         <button

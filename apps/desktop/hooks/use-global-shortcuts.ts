@@ -104,6 +104,7 @@ export function useGlobalShortcuts(options: { isStandalone?: boolean } = {}) {
                     } else if (code === 'KeyP' && !e.shiftKey) {
                         e.preventDefault();
                         setIsSearchOpen(true);
+                        window.dispatchEvent(new CustomEvent("focus-global-search"));
                     } else if (code === 'KeyS' && !e.shiftKey) {
                         e.preventDefault();
                         window.dispatchEvent(new CustomEvent('toggle-sidebar'));

@@ -298,6 +298,38 @@ export const GENERATED_CORE_STYLES = `
     cursor: pointer;
 }
 
+.ProseMirror a[href^="annota://"] {
+    color: var(--accent-color);
+    background-color: color-mix(in srgb, var(--accent-color) 12%, transparent);
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-weight: 500;
+    word-break: break-word;
+    display: inline;
+}
+
+.ProseMirror a[href^="annota://"]:hover {
+    background-color: color-mix(in srgb, var(--accent-color) 20%, transparent);
+    text-decoration: none;
+}
+
+.ProseMirror a[href^="annota://"]::after {
+    content: "";
+    display: inline-block;
+    width: 13px;
+    height: 13px;
+    margin-inline-start: 4px;
+    background-color: var(--accent-color);
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z'/%3E%3Cpath d='M14 2v4a2 2 0 0 0 2 2h4'/%3E%3Cpath d='M10 9H8'/%3E%3Cpath d='M16 13H8'/%3E%3C/svg%3E") no-repeat center;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z'/%3E%3Cpath d='M14 2v4a2 2 0 0 0 2 2h4'/%3E%3Cpath d='M10 9H8'/%3E%3Cpath d='M16 13H8'/%3E%3C/svg%3E") no-repeat center;
+    mask-size: contain;
+    -webkit-mask-size: contain;
+    vertical-align: middle;
+    position: relative;
+    top: -1px;
+}
+
 .ProseMirror mark {
     border-radius: 2px;
     padding: 0 2px;
@@ -2276,6 +2308,7 @@ body.is-resizing-image {
 }
 
 .mermaid-textarea {
+    direction: ltr !important;
     width: 100%;
     min-height: 180px;
     padding: 12px;
@@ -2343,9 +2376,10 @@ body.is-resizing-image {
 }
 
 @keyframes mermaid-spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
-
 
 /* Source: src/extensions/quote.css */
 .ProseMirror blockquote {

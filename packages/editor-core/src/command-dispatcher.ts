@@ -301,7 +301,34 @@ export async function dispatchEditorCommand(editor: Editor, command: string, par
                     }
                 ]).focus().run();
             } else {
-                chain.setLink({ href: params.href }).focus().run();
+                const { state } = editor;
+                const { selection } = state;
+                if (!selection.empty) {
+                    const text = state.doc.textBetween(selection.from, selection.to);
+                    chain.insertContent([
+                        {
+                            type: 'text',
+                            text: text,
+                            marks: [{ type: 'link', attrs: { href: params.href } }]
+                        },
+                        {
+                            type: 'text',
+                            text: ' ',
+                        }
+                    ]).focus().run();
+                } else {
+                    chain.insertContent([
+                        {
+                            type: 'text',
+                            text: params.href,
+                            marks: [{ type: 'link', attrs: { href: params.href } }]
+                        },
+                        {
+                            type: 'text',
+                            text: ' ',
+                        }
+                    ]).focus().run();
+                }
             }
             return true;
         case 'setNodeSelection':

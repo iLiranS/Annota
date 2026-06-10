@@ -164,6 +164,7 @@
 }
 
 .mermaid-textarea {
+    direction: ltr !important;
     width: 100%;
     min-height: 180px;
     padding: 12px;
@@ -231,5 +232,7 @@
 }
 
 @keyframes mermaid-spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }

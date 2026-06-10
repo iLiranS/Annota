@@ -36,6 +36,7 @@ export interface TipTapEditorRef {
 export interface TipTapEditorProps {
     /** Note ID — required for local image storage association */
     noteId?: string;
+    scrollY?: any;
     onOpenLink?: (url: string) => void;
     initialContent?: string;
     onContentChange?: (html: string) => void;
@@ -98,6 +99,7 @@ export interface TipTapEditorProps {
     direction?: 'ltr' | 'rtl' | 'auto';
     /** Callback for when the editor scroller scrolls */
     onScroll?: (event: React.UIEvent<HTMLDivElement>) => void;
+    onScrollNative?: (event: any) => void;
 }
 
 export interface EditorState {

@@ -246,8 +246,19 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                         defaultLanguage: editorSettings.defaultCodeLanguage
                     });
                 }
+
+                // Dynamically update the dragHandle placement configuration
+                const dragHandle = editor.extensionManager.extensions.find((e: any) => e.name === 'dragHandle');
+                if (dragHandle) {
+                    (editor as any).setOptions('dragHandle', {
+                        computePositionConfig: {
+                            placement: direction === 'rtl' ? 'right-start' : 'left-start',
+                            strategy: 'absolute',
+                        }
+                    });
+                }
             }
-        }, [editor, editorProps, editorSettings]);
+        }, [editor, editorProps, editorSettings, direction]);
 
 
         useEditorThemeVariables({ colors, dark, editorSettings, rootRef: containerRef });
@@ -302,7 +313,6 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
             let isMounted = true;
             getExtensions({
                 placeholder,
-                direction,
                 onMathSelected: (latex, isBlock) => {
                     setCurrentLatex(latex);
                     setIsBlockMath(isBlock);
@@ -361,7 +371,6 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
             return () => { isMounted = false; };
         }, [
             placeholder,
-            direction,
         ]);
 
         useImperativeHandle(ref, () => ({
@@ -516,6 +525,12 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                     }
                     .ProseMirror[dir="rtl"] p {
                         unicode-bidi: isolate;
+                    }
+                    .editor-dom-container[dir="rtl"] .annota-drag-handle {
+                        transform: translate(4px, 2px) !important;
+                    }
+                    .editor-dom-container[dir="ltr"] .annota-drag-handle {
+                        transform: translate(-4px, 2px) !important;
                     }
                 `}</style>
                 {renderToolbar?.({

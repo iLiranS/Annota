@@ -16,9 +16,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '@react-navigation/native';
 import * as ExpoClipboard from 'expo-clipboard';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { BlurView } from 'expo-blur';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
+    Animated,
     BackHandler,
     Platform,
     StyleSheet,
@@ -41,6 +43,26 @@ export default function NoteEditor() {
     const insets = useSafeAreaInsets();
     const editorRef = useRef<TipTapEditorRef>(null);
     const { general, editor } = useSettingsStore();
+
+    // Native header visibility tracking
+    const [headerShown, setHeaderShown] = useState(true);
+    const lastScrollY = useRef(0);
+    const HEADER_HEIGHT = insets.top + 44;
+
+    const handleScrollNative = useCallback((event: any) => {
+        const currentY = event.nativeEvent.contentOffset.y;
+        const diff = currentY - lastScrollY.current;
+
+        // Keep header shown when rubber-banding/at the top, hide on scroll down, show on scroll up
+        if (currentY <= 0) {
+            setHeaderShown(true);
+        } else if (diff > 15 && headerShown) {
+            setHeaderShown(false);
+        } else if (diff < -15 && !headerShown) {
+            setHeaderShown(true);
+        }
+        lastScrollY.current = currentY;
+    }, [headerShown]);
 
 
 
@@ -497,20 +519,13 @@ export default function NoteEditor() {
         <View style={[styles.container, { backgroundColor: colors.background }]}>
             <Stack.Screen
                 options={{
-                    headerShown: !isGalleryOpen,
+                    headerShown: headerShown && !isGalleryOpen,
                     gestureEnabled: true, // Re-enable gesture for better UX, back() will handle it correct now
-                    headerTransparent: editor.floatingNoteHeader,
-                    headerBackground: editor.floatingNoteHeader ? () => <View style={{ flex: 1, backgroundColor: 'transparent' }} /> : undefined,
+                    headerTransparent: true,
+                    headerBackground: () => <View style={{ flex: 1, backgroundColor: 'transparent' }} />,
                     headerBlurEffect: undefined,
                     headerShadowVisible: false,
-                    headerTitle: editor.floatingNoteHeader ? '' : () => (
-                        <Text
-                            style={[styles.headerTitle, { color: colors.text }]}
-                            numberOfLines={1}
-                        >
-                            {displayTitle}
-                        </Text>
-                    ),
+                    headerTitle: '',
                     headerLeft: () => (
                         <HapticPressable
                             onPress={handleBack}
@@ -624,7 +639,7 @@ export default function NoteEditor() {
                         currentResultIndex={currentSearchIndex}
                         onNext={handleSearchNext}
                         onPrev={handleSearchPrev}
-                        topOffset={editor.floatingNoteHeader ? insets.top + 50 : 0}
+                        topOffset={HEADER_HEIGHT}
                         showTabs={false}
                     />
 
@@ -643,11 +658,11 @@ export default function NoteEditor() {
                         autofocus={shouldAutofocus}
                         onGalleryVisibilityChange={setIsGalleryOpen}
                         onCopyBlockLink={handleCopyBlockLink}
+                        onScrollNative={handleScrollNative}
                         renderHeader={() => {
                             const hasTags = appliedTagIds.length > 0;
-                            const headerOffset = editor.floatingNoteHeader ? insets.top + 44 : 0;
                             return (
-                                <View style={{ marginTop: headerOffset, zIndex: 10, marginBottom: -44 }}>
+                                <View style={{ marginTop: insets.top + 44, zIndex: 10, marginBottom: -44 }}>
                                     {hasTags && (
                                         <NoteTags
                                             noteId={id}
