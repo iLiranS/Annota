@@ -9,11 +9,11 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   Easing,
   interpolate,
-  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withTiming
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 
 export default function AppLayout() {
   const theme = useAppTheme();
@@ -54,14 +54,14 @@ export default function AppLayout() {
       if (isOpen) {
         if (event.translationX < -threshold || (event.velocityX < -500)) {
           translateX.value = withTiming(0, { duration: 300 });
-          runOnJS(close)();
+          scheduleOnRN(close);
         } else {
           translateX.value = withTiming(drawerWidth, { duration: 300 });
         }
       } else {
         if (event.translationX > threshold || (event.velocityX > 500)) {
           translateX.value = withTiming(drawerWidth, { duration: 300 });
-          runOnJS(open)();
+          scheduleOnRN(open);
         } else {
           translateX.value = withTiming(0, { duration: 300 });
         }

@@ -3,7 +3,6 @@ export const WEB_FONT_FAMILIES: Record<string, string> = {
     serif: "Georgia, 'Times New Roman', serif",
     mono: "'FiraCode', SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
     monospace: "'FiraCode', SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
-    poppins: 'Poppins',
     firacode: 'FiraCode',
     'fira code': 'FiraCode',
     'system (default)': "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",

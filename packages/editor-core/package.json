@@ -23,7 +23,6 @@
   "dependencies": {
     "@floating-ui/dom": "^1.7.6",
     "@tiptap/core": "^3.23.4",
-    "@tiptap/extension-bubble-menu": "^3.23.4",
     "@tiptap/extension-code-block-lowlight": "^3.23.4",
     "@tiptap/extension-color": "^3.23.4",
     "@tiptap/extension-details": "^3.23.4",

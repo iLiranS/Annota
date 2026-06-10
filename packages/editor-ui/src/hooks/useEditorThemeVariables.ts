@@ -35,7 +35,7 @@ export function useEditorThemeVariables({ colors, dark, editorSettings, rootRef 
         window.dispatchEvent(new CustomEvent('annota-settings-change', { detail: (window as any).editorSettings }));
 
         root.style.setProperty('--bg-color', dark ? 'transparent' : colors.background);
-        root.style.setProperty('--text-color', dark ? 'rgba(255, 255, 255, 0.85)' : colors.text);
+        root.style.setProperty('--text-color', dark ? '#D9D9D9' : '#1A1A1A');
         root.style.setProperty('--accent-color', colors.primary);
         root.style.setProperty('--accent', colors.primary + "65");
         root.style.setProperty('--accent-full', colors.primary);

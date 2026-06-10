@@ -40,13 +40,6 @@ export const GENERATED_CORE_STYLES = `
     }
 }
 
-@font-face {
-    font-family: 'Poppins';
-    src: url('../assets/fonts/Poppins/Poppins-Regular.ttf') format('truetype');
-    font-weight: 400;
-    font-style: normal;
-    font-display: swap;
-}
 
 @font-face {
     font-family: 'FiraCode';
@@ -2087,6 +2080,8 @@ body.is-resizing-image {
     /* Force LTR rendering */
     direction: ltr !important;
     unicode-bidi: isolate !important;
+    /* Isolates layout, style, and paint for the heavy math block */
+    contain: content;
 }
 
 .katex {
@@ -2156,6 +2151,8 @@ body.is-resizing-image {
     transition: all 0.2s ease;
     display: flex;
     flex-direction: column;
+    /* Prevents heavy SVG recalculations from bleeding out */
+    contain: content;
 }
 
 .mermaid-menu-btn {

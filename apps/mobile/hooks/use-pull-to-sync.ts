@@ -4,12 +4,12 @@ import { useCallback, useState } from 'react';
 import {
     Extrapolation,
     interpolate,
-    runOnJS,
     useAnimatedScrollHandler,
     useAnimatedStyle,
     useSharedValue,
     withTiming
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 
 interface UsePullToSyncOptions {
     onRefresh?: () => Promise<void>;
@@ -42,7 +42,7 @@ export function usePullToSync({ onRefresh, top }: UsePullToSyncOptions = {}) {
     const scrollHandler = useAnimatedScrollHandler({
         onScroll: (event) => { scrollY.value = event.contentOffset.y; },
         onEndDrag: (event) => {
-            if (event.contentOffset.y < -80) runOnJS(triggerSync)();
+            if (event.contentOffset.y < -80) scheduleOnRN(triggerSync);
         },
     });
 

@@ -7,7 +7,7 @@ import * as QueryParams from 'expo-auth-session/build/QueryParams';
 import { router, Stack } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import * as AppleAuthentication from 'expo-apple-authentication';
-import * as Crypto from 'expo-crypto';
+import crypto from 'react-native-quick-crypto';
 import * as Linking from 'expo-linking';
 import React, { useState, useEffect } from 'react';
 import { ActivityIndicator, Alert, Image, StyleSheet, Text, View } from 'react-native';
@@ -20,14 +20,8 @@ import Animated, {
 WebBrowser.maybeCompleteAuthSession();
 
 async function generateNonceAndHash() {
-    const randomBytes = await Crypto.getRandomBytesAsync(32);
-    const nonce = Array.from(randomBytes)
-        .map((b) => b.toString(16).padStart(2, "0"))
-        .join("");
-    const digest = await Crypto.digestStringAsync(
-        Crypto.CryptoDigestAlgorithm.SHA256,
-        nonce
-    );
+    const nonce = crypto.randomBytes(32).toString("hex");
+    const digest = crypto.createHash("sha256").update(nonce).digest("hex");
     return { nonce, digest };
 }
 
