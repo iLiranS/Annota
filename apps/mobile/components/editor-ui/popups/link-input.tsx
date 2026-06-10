@@ -1,24 +1,11 @@
-import { zodResolver } from '@hookform/resolvers/zod';
 import { useTheme } from '@react-navigation/native';
 import { PlatformPressable } from '@react-navigation/elements';
-import React, { useEffect, useRef, useCallback } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, TextInput, View, ScrollView } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { z } from 'zod';
 
 // Allow any valid HTTP/HTTPS URL, including annota.online with deep link paths
 const urlRegex = /^(https?:\/\/)?[-a-zA-Z0-9@:%._\+~#=]{1,256}(\.[a-zA-Z0-9()]{2,6})?\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/;
-
-const linkSchema = z.object({
-    url: z.string().min(1, 'URL is required').refine(val => {
-        const trimmed = val.trim();
-        return urlRegex.test(trimmed);
-    }, { message: 'Please enter a valid URL' }),
-    title: z.string().optional()
-});
-
-type LinkFormValues = z.infer<typeof linkSchema>;
 
 interface LinkInputProps {
     currentUrl: string | null;
@@ -34,30 +21,43 @@ export function LinkInput({ currentUrl, selectedText, onSubmit, onRemove, onClos
 
     const hasSelection = Boolean(selectedText && selectedText.trim().length > 0);
 
-    const {
-        control,
-        handleSubmit,
-        formState: { errors, isValid }
-    } = useForm<LinkFormValues>({
-        // @ts-expect-error - Zod version mismatch with hookform resolver
-        resolver: zodResolver(linkSchema),
-        defaultValues: {
-            url: currentUrl || '',
-            title: '',
-        },
-        mode: 'onChange'
-    });
+    const [url, setUrl] = useState(currentUrl || '');
+    const [title, setTitle] = useState('');
+    const [error, setError] = useState<string | null>(null);
 
-    const onSubmitForm = useCallback((data: LinkFormValues) => {
-        const trimmedUrl = data.url.trim();
+    const validate = useCallback((val: string) => {
+        const trimmed = val.trim();
+        if (trimmed.length === 0) {
+            setError(null);
+            return false;
+        }
+        if (!urlRegex.test(trimmed)) {
+            setError('Please enter a valid URL');
+            return false;
+        }
+        setError(null);
+        return true;
+    }, []);
+
+    const handleChangeUrl = useCallback((val: string) => {
+        setUrl(val);
+        validate(val);
+    }, [validate]);
+
+    const isValid = url.trim().length > 0 && !error;
+
+    const onSubmitForm = useCallback(() => {
+        const trimmedUrl = url.trim();
+        if (!validate(trimmedUrl)) return;
         const finalUrl = trimmedUrl.match(/^https?:\/\//) ? trimmedUrl : 'https://' + trimmedUrl;
 
         if (hasSelection) {
             onSubmit(finalUrl); // Modifies the existing selection
         } else {
-            onSubmit(finalUrl, data.title?.trim() || finalUrl); // Creates a new link text node
+            onSubmit(finalUrl, title.trim() || finalUrl); // Creates a new link text node
         }
-    }, [hasSelection, onSubmit]);
+    }, [url, title, hasSelection, onSubmit, validate]);
+
 
     useEffect(() => {
         // Focus input when opened
@@ -75,7 +75,7 @@ export function LinkInput({ currentUrl, selectedText, onSubmit, onRemove, onClos
                     {currentUrl ? 'Edit Link' : 'Add Link'}
                 </Text>
                 <PlatformPressable
-                    onPress={handleSubmit(onSubmitForm)}
+                    onPress={onSubmitForm}
                     style={styles.headerButton}
                     disabled={!isValid}
                 >
@@ -89,57 +89,43 @@ export function LinkInput({ currentUrl, selectedText, onSubmit, onRemove, onClos
 
             <ScrollView contentContainerStyle={styles.formContent} keyboardShouldPersistTaps="handled">
                 {!hasSelection && (
-                    <Controller
-                        control={control}
-                        name="title"
-                        render={({ field: { onChange, onBlur, value } }) => (
-                            <TextInput
-                                style={[
-                                    styles.input,
-                                    {
-                                        backgroundColor: dark ? '#1C1C1E' : '#F2F2F7',
-                                        color: colors.text,
-                                        borderColor: dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)',
-                                    },
-                                ]}
-                                placeholder="Link Title (optional)"
-                                placeholderTextColor={dark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)'}
-                                value={value}
-                                onChangeText={onChange}
-                                onBlur={onBlur}
-                                autoCapitalize="sentences"
-                            />
-                        )}
+                    <TextInput
+                        style={[
+                            styles.input,
+                            {
+                                backgroundColor: dark ? '#1C1C1E' : '#F2F2F7',
+                                color: colors.text,
+                                borderColor: dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)',
+                            },
+                        ]}
+                        placeholder="Link Title (optional)"
+                        placeholderTextColor={dark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)'}
+                        value={title}
+                        onChangeText={setTitle}
+                        autoCapitalize="sentences"
                     />
                 )}
 
-                <Controller
-                    control={control}
-                    name="url"
-                    render={({ field: { onChange, onBlur, value } }) => (
-                        <TextInput
-                            ref={inputRef}
-                            style={[
-                                styles.input,
-                                {
-                                    backgroundColor: dark ? '#1C1C1E' : '#F2F2F7',
-                                    color: colors.text,
-                                    borderColor: errors.url ? '#FF3B30' : (dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)'),
-                                },
-                            ]}
-                            placeholder="Enter URL..."
-                            placeholderTextColor={dark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)'}
-                            value={value}
-                            onChangeText={onChange}
-                            onBlur={onBlur}
-                            autoCapitalize="none"
-                            autoCorrect={false}
-                            keyboardType="url"
-                            onSubmitEditing={handleSubmit(onSubmitForm)}
-                        />
-                    )}
+                <TextInput
+                    ref={inputRef}
+                    style={[
+                        styles.input,
+                        {
+                            backgroundColor: dark ? '#1C1C1E' : '#F2F2F7',
+                            color: colors.text,
+                            borderColor: error ? '#FF3B30' : (dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)'),
+                        },
+                    ]}
+                    placeholder="Enter URL..."
+                    placeholderTextColor={dark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)'}
+                    value={url}
+                    onChangeText={handleChangeUrl}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    keyboardType="url"
+                    onSubmitEditing={onSubmitForm}
                 />
-                {errors.url && <Text style={styles.errorText}>{errors.url.message as string}</Text>}
+                {error && <Text style={styles.errorText}>{error}</Text>}
 
                 {currentUrl && (
                     <Pressable

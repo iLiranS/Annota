@@ -1,23 +1,8 @@
-import { zodResolver } from '@hookform/resolvers/zod';
 import { useTheme } from '@react-navigation/native';
 import { PlatformPressable } from '@react-navigation/elements';
-import React, { useEffect, useRef, useCallback } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { Platform, StyleSheet, Text, TextInput, View, ScrollView } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { z } from 'zod';
-
-const youtubeSchema = z.object({
-    url: z.string().min(1, 'Video URL is required').refine(val => {
-        const trimmed = val.trim();
-        const withProtocol = trimmed.match(/^https?:\/\//) ? trimmed : 'https://' + trimmed;
-        const isUrl = z.string().url().safeParse(withProtocol).success;
-        if (!isUrl) return false;
-        return withProtocol.includes('youtube.com') || withProtocol.includes('youtu.be');
-    }, { message: 'Please enter a valid YouTube URL' })
-});
-
-type YouTubeFormValues = z.infer<typeof youtubeSchema>;
 
 interface YouTubeInputProps {
     onSubmit: (url: string) => void;
@@ -28,26 +13,46 @@ export function YouTubeInput({ onSubmit, onClose }: YouTubeInputProps) {
     const { colors, dark } = useTheme();
     const inputRef = useRef<TextInput>(null);
 
-    const {
-        control,
-        handleSubmit,
-        formState: { errors, isValid },
-        reset
-    } = useForm<YouTubeFormValues>({
-        //@ts-expect-error
-        resolver: zodResolver(youtubeSchema),
-        defaultValues: {
-            url: '',
-        },
-        mode: 'onChange'
-    });
+    const [url, setUrl] = useState('');
+    const [error, setError] = useState<string | null>(null);
 
-    const onSubmitForm = useCallback((data: YouTubeFormValues) => {
-        const trimmedUrl = data.url.trim();
+    const validate = useCallback((val: string) => {
+        const trimmed = val.trim();
+        if (trimmed.length === 0) {
+            setError(null);
+            return false;
+        }
+        const withProtocol = trimmed.match(/^https?:\/\//) ? trimmed : 'https://' + trimmed;
+        try {
+            new URL(withProtocol);
+        } catch (_) {
+            setError('Please enter a valid YouTube URL');
+            return false;
+        }
+        if (!withProtocol.includes('youtube.com') && !withProtocol.includes('youtu.be')) {
+            setError('Please enter a valid YouTube URL');
+            return false;
+        }
+        setError(null);
+        return true;
+    }, []);
+
+    const handleChangeUrl = useCallback((val: string) => {
+        setUrl(val);
+        validate(val);
+    }, [validate]);
+
+    const isValid = url.trim().length > 0 && !error;
+
+    const onSubmitForm = useCallback(() => {
+        const trimmedUrl = url.trim();
+        if (!validate(trimmedUrl)) return;
         const finalUrl = trimmedUrl.match(/^https?:\/\//) ? trimmedUrl : 'https://' + trimmedUrl;
         onSubmit(finalUrl);
-        reset();
-    }, [onSubmit, reset]);
+        setUrl('');
+        setError(null);
+    }, [url, onSubmit, validate]);
+
 
     useEffect(() => {
         // Focus input when opened
@@ -65,7 +70,7 @@ export function YouTubeInput({ onSubmit, onClose }: YouTubeInputProps) {
                     YouTube Video
                 </Text>
                 <PlatformPressable
-                    onPress={handleSubmit(onSubmitForm)}
+                    onPress={onSubmitForm}
                     style={styles.headerButton}
                     disabled={!isValid}
                 >
@@ -78,33 +83,26 @@ export function YouTubeInput({ onSubmit, onClose }: YouTubeInputProps) {
             </View>
 
             <ScrollView contentContainerStyle={styles.formContent} keyboardShouldPersistTaps="handled">
-                <Controller
-                    control={control}
-                    name="url"
-                    render={({ field: { onChange, onBlur, value } }) => (
-                        <TextInput
-                            ref={inputRef}
-                            style={[
-                                styles.urlInput,
-                                {
-                                    backgroundColor: dark ? '#1C1C1E' : '#F2F2F7',
-                                    color: colors.text,
-                                    borderColor: errors.url ? '#FF3B30' : (dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)'),
-                                },
-                            ]}
-                            placeholder="Paste YouTube URL..."
-                            placeholderTextColor={dark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)'}
-                            value={value}
-                            onChangeText={onChange}
-                            onBlur={onBlur}
-                            autoCapitalize="none"
-                            autoCorrect={false}
-                            keyboardType="url"
-                            onSubmitEditing={handleSubmit(onSubmitForm)}
-                        />
-                    )}
+                <TextInput
+                    ref={inputRef}
+                    style={[
+                        styles.urlInput,
+                        {
+                            backgroundColor: dark ? '#1C1C1E' : '#F2F2F7',
+                            color: colors.text,
+                            borderColor: error ? '#FF3B30' : (dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)'),
+                        },
+                    ]}
+                    placeholder="Paste YouTube URL..."
+                    placeholderTextColor={dark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)'}
+                    value={url}
+                    onChangeText={handleChangeUrl}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    keyboardType="url"
+                    onSubmitEditing={onSubmitForm}
                 />
-                {errors.url && <Text style={styles.errorText}>{errors.url.message as string}</Text>}
+                {error && <Text style={styles.errorText}>{error}</Text>}
             </ScrollView>
         </View>
     );

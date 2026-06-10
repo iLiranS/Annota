@@ -11,9 +11,10 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { getPlatformAdapters } from '@annota/core/platform';
 import { useIsPremium, useUserStore } from '@annota/core';
+import { getPlatformAdapters } from '@annota/core/platform';
 import { join } from '@tauri-apps/api/path';
+import { open as openFileDialog } from '@tauri-apps/plugin-dialog';
 import {
     Link as LinkIcon,
     Loader2,
@@ -95,6 +96,11 @@ export function ToolbarFileUpload({ onInsertFile, onOpenChange, isMenu, visible,
     const processFile = useCallback(async (file: File) => {
         const ext = file.name.split('.').pop()?.toLowerCase() || '';
         const isPdf = ext === 'pdf' || file.type === 'application/pdf';
+        const isImage = file.type.startsWith('image/');
+        if (!isImage && !isPdf) {
+            toast.error("Unsupported file type", { description: "Please upload an image or PDF file." });
+            return;
+        }
         if (isPdf && !canUploadPdf) {
             toast.error("Premium feature", { description: "PDF upload is only available for premium users." });
             return;
@@ -126,10 +132,7 @@ export function ToolbarFileUpload({ onInsertFile, onOpenChange, isMenu, visible,
         }
     }, [onInsertFile, handleOpenChange, canUploadPdf]);
 
-    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) await processFile(file);
-    };
+
 
     const handleDragEnter = useCallback((e: React.DragEvent) => {
         e.preventDefault();
@@ -177,6 +180,12 @@ export function ToolbarFileUpload({ onInsertFile, onOpenChange, isMenu, visible,
             await processFile(file);
             return;
         }
+        else if (file) {
+            toast.error("Unsupported file type", {
+                description: "Please upload an image or PDF file."
+            });
+            return;
+        }
 
         // 2. Try URL (dragging from browser)
         const droppedUrl = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain');
@@ -207,6 +216,34 @@ export function ToolbarFileUpload({ onInsertFile, onOpenChange, isMenu, visible,
             </Button>
         </DialogTrigger>
     );
+
+    const handleNativeFilePicker = useCallback(async () => {
+        const filters = canUploadPdf
+            ? [{ name: 'Images & PDFs', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'pdf'] }]
+            : [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif'] }];
+
+        const selected = await openFileDialog({ multiple: false, filters });
+        if (!selected) return;
+
+        const filePath = selected
+        const ext = filePath.split('.').pop()?.toLowerCase() || '';
+        const isPdf = ext === 'pdf';
+
+        if (isPdf && !canUploadPdf) {
+            toast.error("Premium feature", { description: "PDF upload is only available for premium users." });
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            const success = await onInsertFile('library', filePath);
+            if (success) handleOpenChange(false);
+        } catch (error) {
+            toast.error('Failed to process file', { description: error as any });
+        } finally {
+            setIsLoading(false);
+        }
+    }, [canUploadPdf, onInsertFile, handleOpenChange]);
 
     return (
         <Dialog open={isVisible} onOpenChange={handleOpenChange}>
@@ -255,20 +292,13 @@ export function ToolbarFileUpload({ onInsertFile, onOpenChange, isMenu, visible,
                                 isDragging ? "border-primary bg-primary/10" : "border-muted/50 hover:border-primary/50 hover:bg-primary/5",
                                 isLoading && "pointer-events-none opacity-80"
                             )}
-                            onClick={() => fileInputRef.current?.click()}
+                            onClick={() => handleNativeFilePicker()}
                             onDragEnter={handleDragEnter}
                             onDragOver={handleDragOver}
                             onDragLeave={handleDragLeave}
                             onDrop={handleDrop}
                         >
-                            <input
-                                type="file"
-                                ref={fileInputRef}
-                                className="hidden"
-                                accept={canUploadPdf ? "image/*,application/pdf" : "image/*"}
-                                onChange={handleFileChange}
-                                disabled={isLoading}
-                            />
+
 
                             {isLoading ? (
                                 <div className="flex flex-col items-center gap-2">

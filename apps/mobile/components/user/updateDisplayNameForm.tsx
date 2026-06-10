@@ -1,10 +1,8 @@
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { useUserStore } from '@annota/core';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { zodResolver } from '@hookform/resolvers/zod';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import React, { useState, useEffect } from 'react';
 import {
     ActivityIndicator,
     KeyboardAvoidingView,
@@ -16,17 +14,7 @@ import {
     TextInput,
     View,
 } from 'react-native';
-import { z } from 'zod';
 
-const schema = z.object({
-    displayName: z
-        .string()
-        .min(3, 'Name must be at least 3 characters')
-        .max(20, 'Name must be at most 20 characters')
-        .trim(),
-});
-
-type FormData = z.infer<typeof schema>;
 const GUEST_DISPLAY_NAME_KEY = 'guest_display_name';
 
 interface UpdateDisplayNameFormProps {
@@ -45,39 +33,60 @@ export default function UpdateDisplayNameForm({
     const { colors, dark } = useAppTheme();
     const { session, updateDisplayName } = useUserStore();
 
-    const {
-        control,
-        handleSubmit,
-        reset,
-        formState: { errors, isSubmitting },
-    } = useForm<FormData>({
-        resolver: zodResolver(schema),
-        defaultValues: {
-            displayName: initialValue,
-        },
-    });
+    const [displayName, setDisplayName] = useState(initialValue);
+    const [error, setError] = useState<string | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Reset form when initialValue changes or modal closes
-    React.useEffect(() => {
+    useEffect(() => {
         if (visible) {
-            reset({ displayName: initialValue });
+            setDisplayName(initialValue);
+            setError(null);
         }
-    }, [visible, initialValue, reset]);
+    }, [visible, initialValue]);
 
-    const onSubmit = async (data: FormData) => {
+    const validate = (val: string) => {
+        const trimmed = val.trim();
+        if (trimmed.length < 3) {
+            setError('Name must be at least 3 characters');
+            return false;
+        }
+        if (trimmed.length > 20) {
+            setError('Name must be at most 20 characters');
+            return false;
+        }
+        setError(null);
+        return true;
+    };
+
+    const handleChangeText = (text: string) => {
+        setDisplayName(text);
+        if (error) {
+            validate(text);
+        }
+    };
+
+    const onSubmit = async () => {
+        const trimmed = displayName.trim();
+        if (!validate(displayName)) return;
+
+        setIsSubmitting(true);
         try {
             if (session) {
-                await updateDisplayName(data.displayName);
+                await updateDisplayName(trimmed);
             } else {
-                await AsyncStorage.setItem(GUEST_DISPLAY_NAME_KEY, data.displayName);
+                await AsyncStorage.setItem(GUEST_DISPLAY_NAME_KEY, trimmed);
             }
 
-            onSaved?.(data.displayName);
+            onSaved?.(trimmed);
             onClose();
         } catch (error) {
             console.error('Error updating display name:', error);
+        } finally {
+            setIsSubmitting(false);
         }
     };
+
 
     return (
         <Modal
@@ -113,41 +122,34 @@ export default function UpdateDisplayNameForm({
                     </Text>
 
                     {/* Input */}
-                    <Controller
-                        control={control}
-                        name="displayName"
-                        render={({ field: { onChange, onBlur, value } }) => (
-                            <View>
-                                <View
-                                    style={[
-                                        styles.inputContainer,
-                                        {
-                                            backgroundColor: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)',
-                                            borderColor: errors.displayName ? colors.error : (dark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)'),
-                                        },
-                                    ]}
-                                >
-                                    <TextInput
-                                        style={[styles.input, { color: colors.text }]}
-                                        placeholder="Display name"
-                                        placeholderTextColor={colors.text + '50'}
-                                        onBlur={onBlur}
-                                        onChangeText={onChange}
-                                        value={value}
-                                        autoFocus
-                                        returnKeyType="done"
-                                        onSubmitEditing={handleSubmit(onSubmit)}
-                                        maxLength={20}
-                                    />
-                                </View>
-                                {errors.displayName && (
-                                    <Text style={[styles.errorText, { color: colors.error }]}>
-                                        {errors.displayName.message}
-                                    </Text>
-                                )}
-                            </View>
+                    <View>
+                        <View
+                            style={[
+                                styles.inputContainer,
+                                {
+                                    backgroundColor: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)',
+                                    borderColor: error ? colors.error : (dark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)'),
+                                },
+                            ]}
+                        >
+                            <TextInput
+                                style={[styles.input, { color: colors.text }]}
+                                placeholder="Display name"
+                                placeholderTextColor={colors.text + '50'}
+                                onChangeText={handleChangeText}
+                                value={displayName}
+                                autoFocus
+                                returnKeyType="done"
+                                onSubmitEditing={onSubmit}
+                                maxLength={20}
+                            />
+                        </View>
+                        {error && (
+                            <Text style={[styles.errorText, { color: colors.error }]}>
+                                {error}
+                            </Text>
                         )}
-                    />
+                    </View>
 
                     {/* Buttons */}
                     <View style={styles.buttonRow}>
@@ -175,7 +177,7 @@ export default function UpdateDisplayNameForm({
                                 },
                                 (pressed || isSubmitting) && styles.buttonPressed,
                             ]}
-                            onPress={handleSubmit(onSubmit)}
+                            onPress={onSubmit}
                             disabled={isSubmitting}
                         >
                             {isSubmitting ? (

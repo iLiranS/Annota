@@ -1,10 +1,8 @@
-import { imageInputSchema, type ImageInputData, useIsPremium, useUserStore } from '@annota/core';
+import { useIsPremium, useUserStore } from '@annota/core';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { useTheme } from '@react-navigation/native';
 import { PlatformPressable } from '@react-navigation/elements';
-import React, { useCallback } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, TextInput, View, ScrollView } from 'react-native';
 
 interface FileInputProps {
@@ -22,23 +20,45 @@ export function FileInput({ onSubmit, onPickFromLibrary, onPickDocument, onTakeP
     const isPremium = useIsPremium();
     const canUploadPdf = isGuest || isPremium;
 
-    const {
-        control,
-        handleSubmit,
-        formState: { errors, isValid },
-        reset
-    } = useForm<ImageInputData>({
-        resolver: zodResolver(imageInputSchema as any),
-        defaultValues: {
-            url: ''
-        },
-        mode: 'onChange'
-    });
+    const [url, setUrl] = useState('');
+    const [error, setError] = useState<string | null>(null);
 
-    const onValidSubmit = useCallback((data: ImageInputData) => {
-        onSubmit(data.url);
-        reset();
-    }, [onSubmit, reset]);
+    const validate = useCallback((value: string) => {
+        const trimmed = value.trim();
+        if (trimmed.length === 0) {
+            setError(null);
+            return false;
+        }
+        const imageExtensions = /\.(webp|png|jpe?g|gif|svg|bmp|tiff)$/i;
+        try {
+            new URL(trimmed);
+        } catch (_) {
+            setError('Invalid URL format');
+            return false;
+        }
+        if (!imageExtensions.test(trimmed)) {
+            setError('URL must point to a valid image (webp, png, jpeg, gif, svg, etc.)');
+            return false;
+        }
+        setError(null);
+        return true;
+    }, []);
+
+    const handleChangeText = useCallback((text: string) => {
+        setUrl(text);
+        validate(text);
+    }, [validate]);
+
+    const isValid = url.trim().length > 0 && !error;
+
+    const handleFormSubmit = useCallback(() => {
+        const trimmed = url.trim();
+        if (!validate(trimmed)) return;
+        onSubmit(trimmed);
+        setUrl('');
+        setError(null);
+    }, [url, validate, onSubmit]);
+
 
     return (
         <View style={styles.container}>
@@ -55,7 +75,7 @@ export function FileInput({ onSubmit, onPickFromLibrary, onPickDocument, onTakeP
                     Insert File
                 </Text>
                 <PlatformPressable
-                    onPress={handleSubmit(onValidSubmit)}
+                    onPress={handleFormSubmit}
                     disabled={!isValid || isLoading}
                     style={styles.headerButton}
                 >
@@ -128,33 +148,26 @@ export function FileInput({ onSubmit, onPickFromLibrary, onPickDocument, onTakeP
 
                 {/* URL input */}
                 <View>
-                    <Controller
-                        control={control}
-                        name="url"
-                        render={({ field: { onChange, value, onBlur } }) => (
-                            <TextInput
-                                style={[styles.input, {
-                                    color: colors.text,
-                                    backgroundColor: dark ? '#1C1C1E' : '#F2F2F7',
-                                    borderColor: errors.url ? '#FF453A' : (dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)'),
-                                    opacity: isLoading ? 0.5 : 1,
-                                }]}
-                                value={value}
-                                onChangeText={onChange}
-                                onBlur={onBlur}
-                                placeholder="https://example.com/image.png"
-                                placeholderTextColor={dark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)'}
-                                autoCapitalize="none"
-                                autoCorrect={false}
-                                keyboardType="url"
-                                returnKeyType="done"
-                                editable={!isLoading}
-                                onSubmitEditing={handleSubmit(onValidSubmit)}
-                            />
-                        )}
+                    <TextInput
+                        style={[styles.input, {
+                            color: colors.text,
+                            backgroundColor: dark ? '#1C1C1E' : '#F2F2F7',
+                            borderColor: error ? '#FF453A' : (dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)'),
+                            opacity: isLoading ? 0.5 : 1,
+                        }]}
+                        value={url}
+                        onChangeText={handleChangeText}
+                        placeholder="https://example.com/image.png"
+                        placeholderTextColor={dark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)'}
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        keyboardType="url"
+                        returnKeyType="done"
+                        editable={!isLoading}
+                        onSubmitEditing={handleFormSubmit}
                     />
-                    {errors.url && (
-                        <Text style={styles.errorText}>{errors.url.message}</Text>
+                    {error && (
+                        <Text style={styles.errorText}>{error}</Text>
                     )}
                 </View>
             </ScrollView>

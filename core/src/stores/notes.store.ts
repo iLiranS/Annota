@@ -239,8 +239,14 @@ export const useNotesStore = create<NotesState>((set, get) => ({
                     if (!inMemory) return dbNote;
                     const dbTs = dbNote.updatedAt ? new Date(dbNote.updatedAt).getTime() : 0;
                     const memTs = inMemory.updatedAt ? new Date(inMemory.updatedAt).getTime() : 0;
-                    // Keep in-memory version if it's strictly ahead of what's in the DB
-                    return memTs > dbTs ? inMemory : dbNote;
+                    if (memTs > dbTs) {
+                        // Local edit in-flight: keep in-memory metadata and its cached content
+                        return inMemory;
+                    }
+                    // DB is newer (remote sync update): evict the stale content cache entry
+                    // so the next editor open re-reads the updated content from the DB.
+                    noteContentCache.delete(dbNote.id);
+                    return dbNote;
                 });
                 return { folders, notes: mergedNotes, tags: allTags, tasks, isInitialized: true };
             });
