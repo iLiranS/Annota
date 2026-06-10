@@ -3,35 +3,23 @@ import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight';
 import { TextSelection } from '@tiptap/pm/state';
 import { sendMessage } from '../bridge';
 import './code-block.css';
-
-// Supported languages for the inline selector
-export const CODE_LANGUAGES = [
-    { value: null, label: 'Auto' },
+const CODE_LANGUAGES = [
     { value: 'plaintext', label: 'Text' },
     { value: 'javascript', label: 'JS' },
     { value: 'typescript', label: 'TS' },
     { value: 'python', label: 'Python' },
-    { value: 'java', label: 'Java' },
     { value: 'c', label: 'C' },
-    { value: 'cpp', label: 'C++' },
-    { value: 'csharp', label: 'C#' },
-    { value: 'go', label: 'Go' },
-    { value: 'rust', label: 'Rust' },
-    { value: 'swift', label: 'Swift' },
-    { value: 'kotlin', label: 'Kotlin' },
-    { value: 'ruby', label: 'Ruby' },
-    { value: 'php', label: 'PHP' },
+    { value: 'java', label: 'Java' },
     { value: 'html', label: 'HTML' },
     { value: 'css', label: 'CSS' },
-    { value: 'scss', label: 'SCSS' },
     { value: 'json', label: 'JSON' },
     { value: 'yaml', label: 'YAML' },
-    { value: 'xml', label: 'XML' },
     { value: 'markdown', label: 'MD' },
     { value: 'sql', label: 'SQL' },
     { value: 'bash', label: 'Bash' },
-    { value: 'dockerfile', label: 'Docker' },
 ];
+
+
 
 let loadedLowlight: any = null;
 let isLoadingLowlight = false;
@@ -47,18 +35,75 @@ export async function loadLowlight() {
 
     isLoadingLowlight = true;
     try {
-        const { common, createLowlight } = await import('lowlight');
-        loadedLowlight = createLowlight(common);
-        
+
+        const { createLowlight } = await import('lowlight');
+
+
+        const [
+            { default: plaintext },
+            { default: js },
+            { default: ts },
+            { default: py },
+            { default: c },
+            { default: java },
+            { default: xml }, // handles HTML
+            { default: css },
+            { default: json },
+            { default: yaml },
+            { default: md },
+            { default: sql },
+            { default: bash }
+        ] = await Promise.all([
+            import('highlight.js/lib/languages/plaintext'),
+            import('highlight.js/lib/languages/javascript'),
+            import('highlight.js/lib/languages/typescript'),
+            import('highlight.js/lib/languages/python'),
+            import('highlight.js/lib/languages/c'),
+            import('highlight.js/lib/languages/java'),
+            import('highlight.js/lib/languages/xml'),
+            import('highlight.js/lib/languages/css'),
+            import('highlight.js/lib/languages/json'),
+            import('highlight.js/lib/languages/yaml'),
+            import('highlight.js/lib/languages/markdown'),
+            import('highlight.js/lib/languages/sql'),
+            import('highlight.js/lib/languages/bash'),
+        ]);
+
+        loadedLowlight = createLowlight();
+
+        loadedLowlight.register('plaintext', plaintext);
+
+        // Register the rest of your added languages
+        loadedLowlight.register('javascript', js);
+        loadedLowlight.register('typescript', ts);
+        loadedLowlight.register('python', py);
+        loadedLowlight.register('c', c);
+        loadedLowlight.register('java', java);
+        loadedLowlight.register('xml', xml);
+        loadedLowlight.register('css', css);
+        loadedLowlight.register('json', json);
+        loadedLowlight.register('yaml', yaml);
+        loadedLowlight.register('markdown', md);
+        loadedLowlight.register('sql', sql);
+        loadedLowlight.register('bash', bash);
+
+        // Aliases
+        loadedLowlight.registerAlias('html', 'xml');
+        loadedLowlight.registerAlias('js', 'javascript');
+        loadedLowlight.registerAlias('ts', 'typescript');
+        loadedLowlight.registerAlias('py', 'python');
+        loadedLowlight.registerAlias('md', 'markdown');
+        loadedLowlight.registerAlias('sh', 'bash');
+
         // Trigger a re-render of all editors to apply syntax highlighting
-        if (typeof window !== 'undefined' && window.editor) {
-            const editor = window.editor;
+        if (typeof window !== 'undefined' && (window as any).editor) {
+            const editor = (window as any).editor;
             const { state } = editor;
             if (state) {
                 editor.view.dispatch(state.tr.replace(0, state.doc.content.size, state.doc.slice(0)));
             }
         }
-        
+
         while (pendingCallbacks.length > 0) {
             const cb = pendingCallbacks.shift();
             if (cb) cb();
@@ -78,19 +123,23 @@ export const lowlight: any = {
             loadLowlight();
             return { value: [], children: [] };
         }
+        // Fallback safely if a user forces an unregistered language configuration
+        if (!loadedLowlight.registered(language)) {
+            return loadedLowlight.highlight('plaintext', value, options);
+        }
         return loadedLowlight.highlight(language, value, options);
     },
     highlightAuto(value: string, options?: any) {
+        // Since we dropped 'auto' matching to save space/cycles, route to plain text if lowlight isn't loaded yet
         if (!loadedLowlight) {
             loadLowlight();
             return { value: [], children: [] };
         }
-        return loadedLowlight.highlightAuto(value, options);
+        return loadedLowlight.highlight('plaintext', value, options);
     },
     listLanguages() {
         if (!loadedLowlight) {
             loadLowlight();
-            // Return common programming languages we support as a fallback
             return CODE_LANGUAGES.map(l => l.value).filter((v): v is string => v !== null);
         }
         return loadedLowlight.listLanguages();
@@ -112,31 +161,25 @@ export const tildeInputRegex = /^~~~(?!mermaid[\s\n])([a-zA-Z0-9_+\-#]+)?[\s\n]$
 function mapLanguageAlias(alias: string | undefined): string | null {
     if (!alias) return null;
     const lower = alias.toLowerCase().trim();
-    
-    // Direct match against CODE_LANGUAGES value
+
     const match = CODE_LANGUAGES.find(l => l.value === lower);
     if (match) return match.value;
-    
-    // Explicit alias mappings
+
     const aliases: Record<string, string> = {
         'js': 'javascript',
         'ts': 'typescript',
         'py': 'python',
         'md': 'markdown',
         'yml': 'yaml',
-        'docker': 'dockerfile',
-        'c++': 'cpp',
-        'c#': 'csharp',
-        'cs': 'csharp',
         'sh': 'bash',
         'shell': 'bash',
-        'rs': 'rust',
-        'rb': 'ruby',
         'text': 'plaintext',
         'txt': 'plaintext',
-        'htm': 'html',
+        'html': 'xml',
+        'htm': 'xml',
+
     };
-    
+
     return aliases[lower] || lower;
 }
 
@@ -154,52 +197,49 @@ export const CustomCodeBlock = CodeBlockLowlight.extend<any>({
             ...this.parent?.(),
             toggleCodeBlock:
                 (attributes?: { language?: string }) =>
-                ({ state, dispatch, commands }) => {
-                    if (this.editor.isActive('codeBlock')) {
-                        return commands.toggleNode(this.name, 'paragraph', attributes);
-                    }
+                    ({ state, dispatch, commands }) => {
+                        if (this.editor.isActive('codeBlock')) {
+                            return commands.toggleNode(this.name, 'paragraph', attributes);
+                        }
 
-                    const { selection } = state;
-                    const { from, to } = selection;
+                        const { selection } = state;
+                        const { from, to } = selection;
 
-                    // Collect all textblock nodes in the selection
-                    const textBlocks: { node: any; pos: number }[] = [];
-                    state.doc.nodesBetween(from, to, (node, pos) => {
-                        if (node.isTextblock) {
-                            textBlocks.push({ node, pos });
-                            return false; // do not descend into textblocks
+                        const textBlocks: { node: any; pos: number }[] = [];
+                        state.doc.nodesBetween(from, to, (node, pos) => {
+                            if (node.isTextblock) {
+                                textBlocks.push({ node, pos });
+                                return false;
+                            }
+                            return true;
+                        });
+
+                        if (textBlocks.length <= 1) {
+                            return commands.toggleNode(this.name, 'paragraph', attributes);
+                        }
+
+                        const text = textBlocks.map(tb => tb.node.textContent).join('\n');
+                        const start = textBlocks[0].pos;
+                        const lastBlock = textBlocks[textBlocks.length - 1];
+                        const end = lastBlock.pos + lastBlock.node.nodeSize;
+
+                        if (dispatch) {
+                            const codeBlockNode = state.schema.nodes.codeBlock.create(
+                                { language: attributes?.language ?? null },
+                                text ? state.schema.text(text) : undefined
+                            );
+
+                            const tr = state.tr.replaceWith(start, end, codeBlockNode);
+
+                            const selectionPos = Math.min(start + 1, tr.doc.content.size);
+                            const $pos = tr.doc.resolve(selectionPos);
+                            const newSelection = TextSelection.near($pos);
+                            tr.setSelection(newSelection);
+
+                            dispatch(tr);
                         }
                         return true;
-                    });
-
-                    if (textBlocks.length <= 1) {
-                        return commands.toggleNode(this.name, 'paragraph', attributes);
-                    }
-
-                    // Extract text content and join with newlines
-                    const text = textBlocks.map(tb => tb.node.textContent).join('\n');
-                    const start = textBlocks[0].pos;
-                    const lastBlock = textBlocks[textBlocks.length - 1];
-                    const end = lastBlock.pos + lastBlock.node.nodeSize;
-
-                    if (dispatch) {
-                        const codeBlockNode = state.schema.nodes.codeBlock.create(
-                            { language: attributes?.language ?? null },
-                            text ? state.schema.text(text) : undefined
-                        );
-
-                        const tr = state.tr.replaceWith(start, end, codeBlockNode);
-
-                        // Set selection inside the code block
-                        const selectionPos = Math.min(start + 1, tr.doc.content.size);
-                        const $pos = tr.doc.resolve(selectionPos);
-                        const newSelection = TextSelection.near($pos);
-                        tr.setSelection(newSelection);
-
-                        dispatch(tr);
-                    }
-                    return true;
-                },
+                    },
         };
     },
     addInputRules() {
@@ -226,32 +266,26 @@ export const CustomCodeBlock = CodeBlockLowlight.extend<any>({
     },
     addNodeView() {
         return ({ node, editor, getPos }) => {
-            // Container wrapper
             const container = document.createElement('div');
             container.className = 'code-block-wrapper ';
             container.setAttribute('data-node-view-wrapper', '');
 
-            // The actual pre element
             const pre = document.createElement('pre');
             pre.setAttribute('data-language', node.attrs.language || 'plaintext');
 
-            // Code element for content
             const code = document.createElement('code');
             code.className = `hljs language-${node.attrs.language || 'plaintext'}`;
             pre.appendChild(code);
 
-            // === HEADER BAR (language left, copy right) ===
             const header = document.createElement('div');
             header.className = 'code-block-header';
 
-            // Language selector button (LEFT)
             const langButton = document.createElement('button');
             langButton.className = 'code-lang-select';
             langButton.type = 'button';
             const currentLang = CODE_LANGUAGES.find(l => l.value === node.attrs.language) || CODE_LANGUAGES[0];
             langButton.textContent = currentLang.label;
 
-            // Trigger native popup
             langButton.onclick = (e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -261,7 +295,6 @@ export const CustomCodeBlock = CodeBlockLowlight.extend<any>({
                     const pos = getPos();
                     if (typeof pos !== 'number') return null;
 
-                    // Force selection of the code block
                     editor.chain().focus().setNodeSelection(pos).run();
 
                     return {
@@ -285,7 +318,6 @@ export const CustomCodeBlock = CodeBlockLowlight.extend<any>({
                 }
             };
 
-            // Menu button (RIGHT) - 3 vertical dots
             const menuButton = document.createElement('button');
             menuButton.className = 'code-menu-btn';
             menuButton.type = 'button';
@@ -322,13 +354,10 @@ export const CustomCodeBlock = CodeBlockLowlight.extend<any>({
                 }
             };
 
-            // Ensure header is not treated as part of the editor content
             header.contentEditable = 'false';
-
             header.appendChild(langButton);
             header.appendChild(menuButton);
 
-            // === LINE NUMBER GUTTER ===
             const gutter = document.createElement('div');
             gutter.className = 'code-gutter';
             gutter.contentEditable = 'false';
@@ -380,7 +409,6 @@ export const CustomCodeBlock = CodeBlockLowlight.extend<any>({
 
             setTimeout(queueSync, 0);
 
-            // Assemble DOM: header spans full width, gutter + pre sit side-by-side via CSS grid
             container.appendChild(header);
             container.appendChild(gutter);
             container.appendChild(pre);
@@ -389,14 +417,12 @@ export const CustomCodeBlock = CodeBlockLowlight.extend<any>({
                 dom: container,
                 contentDOM: code,
                 ignoreMutation(mutation) {
-                    // Ignore mutations outside contentDOM (header, gutter, etc.)
                     if (!code.contains(mutation.target as Node) && code !== mutation.target) {
                         return true;
                     }
                     return false;
                 },
                 stopEvent: (event) => {
-                    // Prevent ProseMirror from interfering with header/gutter interactions
                     if (header.contains(event.target as Node) || gutter.contains(event.target as Node)) {
                         return true;
                     }

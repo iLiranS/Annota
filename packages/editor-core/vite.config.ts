@@ -1,7 +1,12 @@
-import { defineConfig } from 'vite';
-import { viteSingleFile } from 'vite-plugin-singlefile';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
+import { defineConfig } from 'vite';
+import { viteSingleFile } from 'vite-plugin-singlefile';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const lowlightCore = path.resolve(__dirname, '../../node_modules/lowlight/lib/index.js');
+
 
 export default defineConfig({
     plugins: [
@@ -31,5 +36,16 @@ export default defineConfig({
                 inlineDynamicImports: true,
             },
         },
+    },
+    optimizeDeps: {
+        exclude: ['highlight.js', 'lowlight.js']
+    },
+    resolve: {
+        alias: {
+            // Stub out the all/common re-exports from the root entry point
+            // so only createLowlight gets bundled
+            'lowlight$': lowlightCore,
+
+        }
     },
 });

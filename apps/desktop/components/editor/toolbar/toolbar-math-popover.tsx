@@ -7,7 +7,6 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import type { ToolbarRenderProps } from '@annota/editor-ui';
-import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import { AlertCircle, Sigma } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
@@ -39,6 +38,31 @@ interface MathPopoverProps {
     isBlockMath?: boolean;
 }
 
+let katexInstance: any = null;
+let isLoadingKatex = false;
+const katexCallbacks: ((instance: any) => void)[] = [];
+
+async function loadKatex() {
+    if (katexInstance) return katexInstance;
+    if (isLoadingKatex) {
+        return new Promise<any>((resolve) => {
+            katexCallbacks.push(resolve);
+        });
+    }
+    isLoadingKatex = true;
+    try {
+        const m = await import('katex');
+        katexInstance = m.default || m;
+        katexCallbacks.forEach(cb => cb(katexInstance));
+        katexCallbacks.length = 0;
+    } catch (e) {
+        console.error("Failed to load katex:", e);
+    } finally {
+        isLoadingKatex = false;
+    }
+    return katexInstance;
+}
+
 export function MathPopover({ sendCommand, onOpenChange, visible, currentLatex, isBlockMath = false }: MathPopoverProps) {
     const [latex, setLatex] = useState(currentLatex || '');
     const [internalOpen, setInternalOpen] = useState(false);
@@ -49,6 +73,14 @@ export function MathPopover({ sendCommand, onOpenChange, visible, currentLatex, 
     const [isBlockInput, setIsBlockInput] = useState(isBlockMath);
 
     const open = visible !== undefined ? visible : internalOpen;
+
+    const [katex, setKatex] = useState<any>(katexInstance);
+
+    useEffect(() => {
+        if (open && !katex) {
+            loadKatex().then(setKatex);
+        }
+    }, [open, katex]);
 
     // Debounce latex → debouncedLatex by 600 ms
     useEffect(() => {
@@ -75,6 +107,8 @@ export function MathPopover({ sendCommand, onOpenChange, visible, currentLatex, 
             return;
         }
 
+        if (!katex) return;
+
         try {
             katex.render(debouncedLatex, previewEl, {
                 throwOnError: true,
@@ -90,7 +124,7 @@ export function MathPopover({ sendCommand, onOpenChange, visible, currentLatex, 
                 setKatexError('Invalid LaTeX expression');
             }
         }
-    }, [debouncedLatex, previewEl, isBlockInput]);
+    }, [debouncedLatex, previewEl, isBlockInput, katex]);
 
     const handleOpenChange = (val: boolean) => {
         if (visible === undefined) setInternalOpen(val);

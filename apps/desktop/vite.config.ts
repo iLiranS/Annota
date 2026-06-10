@@ -37,7 +37,7 @@ export default defineConfig(({ mode }): UserConfig => {
       exclude: [
         '@annota/core',
         '@annota/editor-core',
-        '@annota/editor-ui'
+        '@annota/editor-ui',
       ]
     },
     clearScreen: false,

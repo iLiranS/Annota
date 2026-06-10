@@ -14,21 +14,13 @@ import { useAppTheme } from "@/hooks/use-app-theme";
 import { cn } from "@/lib/utils";
 import { Folder, useNotesStore } from "@annota/core";
 import { COLOR_PALETTE } from "@annota/core/constants/colors";
-import { FOLDER_ICONS } from "@annota/core/constants/icons";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import * as Io5 from "react-icons/io5";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+
+import React from "react";
 import { toast } from "sonner";
 import { LocationPickerModal } from "../location-picker-modal";
 
-const ALL_IONICON_KEYS = Object.keys(Io5)
-    .filter(key => key.startsWith('Io'))
-    .map(key => {
-        // Convert IoDocumentTextOutline -> document-text-outline
-        return key
-            .slice(2) // Remove 'Io'
-            .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
-            .toLowerCase();
-    });
+const IconPickerGrid = React.lazy(() => import("../custom-ui/IconPickerGrid"));
 
 interface FolderEditModalProps {
     open: boolean;
@@ -60,15 +52,6 @@ export function FolderEditModal({
         open: false,
         parentId: null
     });
-
-    const filteredIcons = useMemo(() => {
-        if (!iconSearch || iconSearch.trim().length < 2) return FOLDER_ICONS;
-
-        const searchLower = iconSearch.toLowerCase().trim();
-        return ALL_IONICON_KEYS.filter(i =>
-            i.includes(searchLower)
-        ).slice(0, 100); // Limit results for performance
-    }, [iconSearch]);
 
     useEffect(() => {
         if (open) {
@@ -202,39 +185,19 @@ export function FolderEditModal({
                             </Label>
                             <div className="space-y-2">
                                 <Input autoCapitalize="off" autoCorrect="off" autoComplete="off"
-                                    placeholder={`Search ${ALL_IONICON_KEYS.length} icons...`}
+                                    placeholder="Search icons..."
                                     value={iconSearch}
                                     onChange={(e) => setIconSearch(e.target.value)}
                                     className="h-8 placeholder:text-muted-foreground/60 text-xs bg-transparent dark:bg-transparent  border-border/30  focus-visible:ring-0 focus-visible:ring-offset-0"
                                 />
-                                <div className="grid grid-cols-8 gap-1 p-2 rounded-xl border border-border/50  max-h-[140px] overflow-y-auto">
-                                    {filteredIcons.map((iconName) => {
-                                        const active = icon === iconName;
-                                        return (
-                                            <button
-                                                key={iconName}
-                                                type="button"
-                                                onClick={() => setIcon(iconName)}
-                                                className={cn(
-                                                    "flex h-8 w-8 items-center justify-center rounded-lg transition-all",
-                                                    active
-                                                        ? "shadow-sm scale-110 font-bold"
-                                                        : "hover:bg-accent/50 text-muted-foreground hover:text-foreground"
-                                                )}
-                                                style={active ? {
-                                                    backgroundColor: `${color}15`,
-                                                    color: color
-                                                } : undefined}
-                                            >
-                                                <Ionicons name={iconName as any} size={16} />
-                                            </button>
-                                        );
-                                    })}
-                                    {filteredIcons.length === 0 && (
-                                        <div className="col-span-8 py-4 text-center text-[10px] text-muted-foreground/50 italic">
-                                            No icons found for "{iconSearch}"
-                                        </div>
-                                    )}
+                                <div className="flex-1 overflow-y-auto pr-1">
+                                    <Suspense fallback={<div className="h-32 flex items-center justify-center text-sm text-muted-foreground">Loading icons...</div>}>
+                                        <IconPickerGrid
+                                            iconSearch={iconSearch}
+                                            onSelect={(name) => setIcon(name)}
+                                            color={color}
+                                        />
+                                    </Suspense>
                                 </div>
                             </div>
                         </div>

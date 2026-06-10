@@ -1,35 +1,11 @@
+
+import { CODE_LANGUAGES } from '@annota/core/constants/editor-code-languages';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useTheme } from '@react-navigation/native';
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-// Common programming languages supported by lowlight/highlight.js
-const CODE_LANGUAGES = [
-    { value: 'plaintext', label: 'Plain Text' },
-    { value: 'javascript', label: 'JavaScript' },
-    { value: 'typescript', label: 'TypeScript' },
-    { value: 'python', label: 'Python' },
-    { value: 'java', label: 'Java' },
-    { value: 'c', label: 'C' },
-    { value: 'cpp', label: 'C++' },
-    { value: 'csharp', label: 'C#' },
-    { value: 'go', label: 'Go' },
-    { value: 'rust', label: 'Rust' },
-    { value: 'swift', label: 'Swift' },
-    { value: 'kotlin', label: 'Kotlin' },
-    { value: 'ruby', label: 'Ruby' },
-    { value: 'php', label: 'PHP' },
-    { value: 'html', label: 'HTML' },
-    { value: 'css', label: 'CSS' },
-    { value: 'scss', label: 'SCSS' },
-    { value: 'json', label: 'JSON' },
-    { value: 'yaml', label: 'YAML' },
-    { value: 'xml', label: 'XML' },
-    { value: 'markdown', label: 'Markdown' },
-    { value: 'sql', label: 'SQL' },
-    { value: 'bash', label: 'Bash/Shell' },
-    { value: 'dockerfile', label: 'Dockerfile' },
-];
+
 
 interface CodeLanguageSelectorProps {
     currentLanguage: string | null;

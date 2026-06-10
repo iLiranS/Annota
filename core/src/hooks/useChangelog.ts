@@ -5,6 +5,7 @@ import { getDb } from '../db/runtime';
 import { appSettings } from '../db/schema';
 import { useChangelogStore } from '../stores/changelog.store';
 import { isNewerVersion } from '../utils/compareVersions';
+import { getPlatformAdapters } from '../adapters';
 
 let latestChangelogPromise: Promise<any> | null = null;
 let hasCheckedChangelog = false;
@@ -80,9 +81,59 @@ export const useChangelog = (platform: 'mobile' | 'desktop') => {
 
         const checkChangelog = async () => {
             try {
+                const db = getDb();
+                let settings = await db.select().from(appSettings).where(eq(appSettings.id, 1));
+
+                let isUpgrade = false;
+                let lastSeen = '0.0.0';
+
+                if (settings.length === 0) {
+                    try {
+                        await db.insert(appSettings)
+                            .values({ id: 1, lastSeenChangelogVersion: APP_RELEASE_VERSION })
+                            .onConflictDoNothing()
+                            .run();
+                    } catch (e) {
+                        console.warn("[Changelog] Settings init skipped:", e);
+                    }
+                } else {
+                    lastSeen = settings[0].lastSeenChangelogVersion || '0.0.0';
+                    if (isNewerVersion(APP_RELEASE_VERSION, lastSeen)) {
+                        isUpgrade = true;
+                    }
+                }
+
+                // If not an upgrade, check if we checked recently (last 24 hours)
+                const adapters = getPlatformAdapters();
+                const LAST_CHANGELOG_CHECK_KEY = 'annota_last_changelog_check';
+
+                if (!isUpgrade) {
+                    try {
+                        const lastCheckStr = await adapters.secureStore.getItem(LAST_CHANGELOG_CHECK_KEY);
+                        if (lastCheckStr) {
+                            const lastCheck = parseInt(lastCheckStr, 10);
+                            const now = Date.now();
+                            const oneDayMs = 24 * 60 * 60 * 1000;
+                            if (now - lastCheck < oneDayMs) {
+                                console.log('[Changelog] Skipping fetch: already checked within the last 24 hours');
+                                return;
+                            }
+                        }
+                    } catch (err) {
+                        console.warn('[Changelog] Failed to check last check timestamp:', err);
+                    }
+                }
+
                 // 1. Fetch latest version info for the update indicator
                 const entry = await fetchLatestChangelog();
                 if (entry) {
+                    // Update the last checked timestamp in secure storage
+                    try {
+                        await adapters.secureStore.setItem(LAST_CHANGELOG_CHECK_KEY, String(Date.now()));
+                    } catch (err) {
+                        console.warn('[Changelog] Failed to save last check timestamp:', err);
+                    }
+
                     // The API returns either the latest entry directly or a map of entries.
                     // If it has a 'version' field, use it. Otherwise, if it's a map, find the latest key.
                     let latest = entry.version;
@@ -96,24 +147,7 @@ export const useChangelog = (platform: 'mobile' | 'desktop') => {
                 }
 
                 // 2. Check if we should show the "What's New" dialog
-                const db = getDb();
-                let settings = await db.select().from(appSettings).where(eq(appSettings.id, 1));
-
-                if (settings.length === 0) {
-                    try {
-                        await db.insert(appSettings)
-                            .values({ id: 1, lastSeenChangelogVersion: APP_RELEASE_VERSION })
-                            .onConflictDoNothing()
-                            .run();
-                    } catch (e) {
-                        console.warn("[Changelog] Settings init skipped:", e);
-                    }
-                    return;
-                }
-
-                const lastSeen = settings[0].lastSeenChangelogVersion || '0.0.0';
-
-                if (isNewerVersion(APP_RELEASE_VERSION, lastSeen)) {
+                if (isUpgrade) {
                     const data = await fetchChangelog(APP_RELEASE_VERSION);
                     if (data) {
                         setChangelogData(data);

@@ -466,7 +466,7 @@ export const GENERATED_CORE_STYLES = `
 /* Fallback for system dark mode */
 @media (prefers-color-scheme: dark) {
     :root {
-        --hljs-bg: #282c34;
+        --hljs-bg: #212020;
         --hljs-color: #abb2bf;
         --hljs-comment: #5c6370;
         --hljs-keyword: #c678dd;
@@ -481,7 +481,7 @@ export const GENERATED_CORE_STYLES = `
 
 /* Explicit dark mode class (used by Tailwind and our theme hook) */
 .dark {
-    --hljs-bg: #282c34;
+    --hljs-bg: #212020;
     --hljs-color: #abb2bf;
     --hljs-comment: #5c6370;
     --hljs-keyword: #c678dd;
@@ -2592,32 +2592,68 @@ body.is-resizing-image {
 .ProseMirror ul[data-type="taskList"] li>label input[type="checkbox"] {
     width: 18px;
     height: 18px;
+    border-radius: 50%;
+    border: 1.5px solid var(--accent-color);
+    background: transparent;
     appearance: none;
     -webkit-appearance: none;
-    border: 2px solid var(--placeholder-color);
-    border-radius: 4px;
-    background: transparent;
     cursor: pointer;
     position: relative;
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    transition:
+
+        background-color 0.2s ease,
+        transform 0.15s ease;
+
+    &:hover {
+        background-color: color-mix(in srgb, var(--accent-color) 30%, transparent);
+    }
 }
 
 .ProseMirror ul[data-type="taskList"] li>label input[type="checkbox"]:checked {
-    background: var(--accent-color);
-    border-color: var(--accent-color);
+    border-color: var(--placeholder-color);
+}
+
+.ProseMirror ul[data-type="taskList"] li>label input[type="checkbox"]::after {
+    content: '';
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--placeholder-color);
+    position: absolute;
+    left: 50%;
+    top: 50%;
+
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+
+    transition:
+        transform 0.2s cubic-bezier(.34, 1.56, .64, 1),
+        opacity 0.15s ease;
 }
 
 .ProseMirror ul[data-type="taskList"] li>label input[type="checkbox"]:checked::after {
-    content: '';
-    position: absolute;
-    left: 50%;
-    top: 48%;
-    width: 4px;
-    height: 8px;
-    border: solid white;
-    border-width: 0 2px 2px 0;
-    transform: translate(-50%, -50%) rotate(45deg);
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
 }
+
+@keyframes checkbox-pop {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.15);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
 
 .ProseMirror ul[data-type="taskList"] li>div {
     flex: 1;

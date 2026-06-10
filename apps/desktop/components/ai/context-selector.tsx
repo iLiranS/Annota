@@ -4,8 +4,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { CheckCircle2, FileText, Folder, Loader2, Plus, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { Ionicons } from "../ui/ionicons";
+
 import { SearchRepository } from "@annota/core";
+import { Ionicons } from "../ui/ionicons";
 
 interface ContextSelectorProps {
     notes: any[];
@@ -70,7 +71,7 @@ export function ContextSelector({
             const matches = dbNotes
                 .map(dbN => notes.find(n => n.id === dbN.id))
                 .filter((n): n is any => !!n && !n.isDeleted && !n.isPermDeleted);
-            
+
             const sorted = [...matches].sort((a, b) => {
                 const aSelected = selectedNotes.some(sn => sn.id === a.id);
                 const bSelected = selectedNotes.some(sn => sn.id === b.id);
@@ -100,7 +101,7 @@ export function ContextSelector({
             const matches = dbFolders
                 .map(dbF => folders.find(f => f.id === dbF.id))
                 .filter((f): f is any => !!f && !f.isDeleted && !f.isPermDeleted);
-            
+
             const sorted = [...matches].sort((a, b) => {
                 const aHasSelected = notes.filter(n => n.folderId === a.id).some(n => selectedNotes.some(sn => sn.id === n.id));
                 const bHasSelected = notes.filter(n => n.folderId === b.id).some(n => selectedNotes.some(sn => sn.id === n.id));
@@ -171,76 +172,76 @@ export function ContextSelector({
                     ) : (
                         <div className="p-2 space-y-4">
                             {selectedNotes.length > 0 && (
-                            <div className="px-2 pt-1 flex items-center justify-between">
-                                <span className="text-[10px] font-bold uppercase tracking-wider text-primary/70">
-                                    {selectedNotes.length} Selected
-                                </span>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-5 px-1.5 text-[9px] hover:bg-destructive/10 text-destructive rounded-md"
-                                    onClick={onClearAll}
-                                >
-                                    Clear all
-                                </Button>
-                            </div>
-                        )}
+                                <div className="px-2 pt-1 flex items-center justify-between">
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-primary/70">
+                                        {selectedNotes.length} Selected
+                                    </span>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-5 px-1.5 text-[9px] hover:bg-destructive/10 text-destructive rounded-md"
+                                        onClick={onClearAll}
+                                    >
+                                        Clear all
+                                    </Button>
+                                </div>
+                            )}
 
-                        {filteredFolders.length > 0 && (
+                            {filteredFolders.length > 0 && (
+                                <div className="space-y-1">
+                                    <h4 className="px-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 flex items-center gap-1.5">
+                                        <Folder size={10} /> Folders
+                                    </h4>
+                                    {filteredFolders.map(folder => {
+                                        const folderNotes = notes.filter(n => n.folderId === folder.id);
+                                        const allSelected = folderNotes.length > 0 && folderNotes.every(fn => selectedNotes.find(pn => pn.id === fn.id));
+                                        const someSelected = folderNotes.some(fn => selectedNotes.find(pn => pn.id === fn.id));
+
+                                        return (
+                                            <button
+                                                key={folder.id}
+                                                onClick={() => onToggleFolder(folder.id)}
+                                                className={cn(
+                                                    "w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-[11px] transition-colors group",
+                                                    allSelected ? "bg-primary/10 text-primary" : "hover:bg-muted/50 text-muted-foreground hover:text-foreground"
+                                                )}
+                                            >
+                                                <Ionicons name={folder.icon || "folder-outline"} size={12} color={folder.color} />
+                                                <span className="flex-1 truncate">{folder.name}</span>
+                                                {allSelected ? <CheckCircle2 size={12} /> : (someSelected && <div className="h-1.5 w-1.5 rounded-full bg-primary" />)}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
+
                             <div className="space-y-1">
                                 <h4 className="px-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 flex items-center gap-1.5">
-                                    <Folder size={10} /> Folders
+                                    <FileText size={10} /> Notes
                                 </h4>
-                                {filteredFolders.map(folder => {
-                                    const folderNotes = notes.filter(n => n.folderId === folder.id);
-                                    const allSelected = folderNotes.length > 0 && folderNotes.every(fn => selectedNotes.find(pn => pn.id === fn.id));
-                                    const someSelected = folderNotes.some(fn => selectedNotes.find(pn => pn.id === fn.id));
-
-                                    return (
-                                        <button
-                                            key={folder.id}
-                                            onClick={() => onToggleFolder(folder.id)}
-                                            className={cn(
-                                                "w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-[11px] transition-colors group",
-                                                allSelected ? "bg-primary/10 text-primary" : "hover:bg-muted/50 text-muted-foreground hover:text-foreground"
-                                            )}
-                                        >
-                                            <Ionicons name={folder.icon || "folder-outline"} size={12} color={folder.color} />
-                                            <span className="flex-1 truncate">{folder.name}</span>
-                                            {allSelected ? <CheckCircle2 size={12} /> : (someSelected && <div className="h-1.5 w-1.5 rounded-full bg-primary" />)}
-                                        </button>
-                                    );
-                                })}
+                                {filteredNotes.length === 0 ? (
+                                    <p className="px-2 py-4 text-[10px] text-muted-foreground/50 text-center italic">No notes found</p>
+                                ) : (
+                                    filteredNotes.map(note => {
+                                        const isSelected = selectedNotes.some(n => n.id === note.id);
+                                        return (
+                                            <button
+                                                key={note.id}
+                                                onClick={() => onToggleNote(note)}
+                                                className={cn(
+                                                    "w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-[11px] transition-colors group",
+                                                    isSelected ? "bg-primary/10 text-primary" : "hover:bg-muted/50 text-muted-foreground hover:text-foreground"
+                                                )}
+                                            >
+                                                <FileText size={12} className={cn(isSelected ? "text-primary" : "text-muted-foreground/60")} />
+                                                <span className="flex-1 truncate">{note.title || "Untitled"}</span>
+                                                {isSelected && <CheckCircle2 size={12} />}
+                                            </button>
+                                        );
+                                    })
+                                )}
                             </div>
-                        )}
-
-                        <div className="space-y-1">
-                            <h4 className="px-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 flex items-center gap-1.5">
-                                <FileText size={10} /> Notes
-                            </h4>
-                            {filteredNotes.length === 0 ? (
-                                <p className="px-2 py-4 text-[10px] text-muted-foreground/50 text-center italic">No notes found</p>
-                            ) : (
-                                filteredNotes.map(note => {
-                                    const isSelected = selectedNotes.some(n => n.id === note.id);
-                                    return (
-                                        <button
-                                            key={note.id}
-                                            onClick={() => onToggleNote(note)}
-                                            className={cn(
-                                                "w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-[11px] transition-colors group",
-                                                isSelected ? "bg-primary/10 text-primary" : "hover:bg-muted/50 text-muted-foreground hover:text-foreground"
-                                            )}
-                                        >
-                                            <FileText size={12} className={cn(isSelected ? "text-primary" : "text-muted-foreground/60")} />
-                                            <span className="flex-1 truncate">{note.title || "Untitled"}</span>
-                                            {isSelected && <CheckCircle2 size={12} />}
-                                        </button>
-                                    );
-                                })
-                            )}
                         </div>
-                    </div>
                     )}
                 </div>
                 {selectedNotes.length > 0 && (

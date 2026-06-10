@@ -168,7 +168,7 @@ export function BlockMenu({
                                 <Languages className="mr-2 h-4 w-4" />
                                 <span>Change Language</span>
                             </DropdownMenuSubTrigger>
-                            <DropdownMenuSubContent className="max-h-[300px] overflow-y-auto w-48">
+                            <DropdownMenuSubContent className="max-h-[300px] overflow-y-auto premium-scrollbar w-48">
                                 {CODE_LANGUAGES.map((lang) => (
                                     <DropdownMenuItem
                                         key={lang.value || 'auto'}
