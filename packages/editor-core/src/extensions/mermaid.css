@@ -9,6 +9,8 @@
     transition: all 0.2s ease;
     display: flex;
     flex-direction: column;
+    /* Prevents heavy SVG recalculations from bleeding out */
+    contain: content;
 }
 
 .mermaid-menu-btn {

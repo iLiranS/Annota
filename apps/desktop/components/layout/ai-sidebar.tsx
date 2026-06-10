@@ -28,7 +28,7 @@ import { AiChatInput } from "../ai/ai-chat-input";
 import { AiChatListItem } from "../ai/ai-chat-list-item";
 import { AiChatError, AiChatMessage } from "../ai/ai-chat-message";
 
-export function AiSidebar({ width, isResizing, isFloating }: { width?: number, isResizing?: boolean, isFloating?: boolean }) {
+export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: boolean }) {
     const {
         activeProvider,
         isOllamaRunning,
@@ -316,7 +316,6 @@ export function AiSidebar({ width, isResizing, isFloating }: { width?: number, i
         <div className="flex flex-col h-full w-full overflow-hidden">
             <header className={cn(
                 "relative flex gap-2 items-center justify-between shrink-0 h-11  px-2  rounded-lg ",
-                isFloating && "mx-2",
                 activeChat ? ' bg-accent/20 shadow border border-accent/40' : ''
             )}>
                 <div className="flex items-center gap-2 min-w-0 z-10">
@@ -443,7 +442,6 @@ export function AiSidebar({ width, isResizing, isFloating }: { width?: number, i
                             onClearAll={() => setSelectedFolderNotes([])}
                             onStop={stop}
                             disabled={isStreaming}
-                            isFloating={isFloating}
                         />
                     </div>
                 </div>
@@ -480,7 +478,6 @@ export function AiSidebar({ width, isResizing, isFloating }: { width?: number, i
                             onClearAll={() => setSelectedFolderNotes([])}
                             onStop={stop}
                             disabled={isStreaming}
-                            isFloating={isFloating}
                         />
                     </div>
                 </>

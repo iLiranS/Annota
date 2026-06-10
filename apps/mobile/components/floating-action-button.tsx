@@ -49,10 +49,10 @@ export default function FloatingActionButton({
                     pressed && styles.pressed,
                 ]}
             >
-                <Ionicons 
-                    name={icon} 
-                    size={Math.floor(size * 0.5)} 
-                    color="#FFFFFF" 
+                <Ionicons
+                    name={icon}
+                    size={Math.floor(size * 0.5)}
+                    color="#FFFFFF"
                     style={{ marginLeft: 2, marginTop: -1 }}
                 />
             </HapticPressable>

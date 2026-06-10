@@ -63,18 +63,6 @@ export function GeneralSettings() {
                 </h4>
                 <div className="bg-card border rounded-2xl overflow-hidden shadow-sm">
                     <SettingItem
-                        label="Secondary Sidebar Layout"
-                        description="Floating overlays content, Pinned shrinks it"
-                        icon={<PanelRight size={18} />}
-                        iconBg="bg-indigo-500"
-                        value={general.secondarySidebarMode === 'pinned' ? 'Pinned' : 'Floating'}
-                        onClick={() => updateGeneralSettings({
-                            secondarySidebarMode: general.secondarySidebarMode === 'floating' ? 'pinned' : 'floating'
-                        })}
-                        action={<ChevronRight size={16} className="text-muted-foreground" />}
-                    />
-                    <div className="h-[2px] bg-border/50 mx-4" />
-                    <SettingItem
                         label="Compact Mode"
                         description="Show more items in folders and lists"
                         icon={<List size={18} />}

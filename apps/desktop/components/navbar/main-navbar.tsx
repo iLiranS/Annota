@@ -293,8 +293,8 @@ export function MainNavbar() {
                 data-tauri-drag-region
                 className={cn("flex items-center gap-1.5 shrink-0 transition-all duration-300", isRtl ? "flex-row-reverse justify-end" : "justify-end")}
                 style={{
-                    width: general.isSecondarySidebarOpen && general.secondarySidebarMode === 'pinned' ? Math.max(0, secondaryWidth - rightSectionPadding) : 'auto',
-                    minWidth: general.isSecondarySidebarOpen && general.secondarySidebarMode === 'pinned' ? Math.max(0, secondaryWidth - rightSectionPadding) : 'auto'
+                    width: general.isSecondarySidebarOpen ? Math.max(0, secondaryWidth - rightSectionPadding) : 'auto',
+                    minWidth: general.isSecondarySidebarOpen ? Math.max(0, secondaryWidth - rightSectionPadding) : 'auto'
                 }}
             >
                 <Button

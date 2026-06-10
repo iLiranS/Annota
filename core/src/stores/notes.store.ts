@@ -2,21 +2,60 @@ import { create } from 'zustand';
 import { COLOR_PALETTE } from '../../constants/colors';
 import { getPlatformAdapters } from '../adapters';
 import { purgeGuestTombstones, type PendingTaskNote } from '../db';
+import { normalizeStoredContent } from '../db/repositories/notes.repository';
+import { parsePendingTasks } from '../db/repositories/search.repository';
 import type { Folder, FolderInsert, NoteMetadata, Tag } from '../db/schema';
 import { DAILY_NOTES_FOLDER_ID, FolderService, TRASH_FOLDER_ID } from '../services/folders.service';
 import { NoteService } from '../services/notes.service';
-import { TagService } from '../services/tags.service';
 import { SearchService } from '../services/search.service';
+import { TagService } from '../services/tags.service';
 import { SyncScheduler } from '../sync/sync-scheduler';
-import { SortType, sortFolders, sortNotes } from '../utils/sorts';
 import { generatePreview, generateTitle } from '../utils/notes';
-import { normalizeStoredContent } from '../db/repositories/notes.repository';
-import { parsePendingTasks } from '../db/repositories/search.repository';
-
-// In-memory note content cache to bypass SQLCipher/SQLite overhead for reads
-const noteContentCache = new Map<string, string>();
+import { SortType, sortFolders, sortNotes } from '../utils/sorts';
 import { createStorageAdapter } from './config';
 import { useUserStore } from './user.store';
+
+// small lru cache for notes
+class LRUCache<K, V> {
+    private cache = new Map<K, V>();
+    private limit: number;
+
+    constructor(limit: number) {
+        this.limit = limit;
+    }
+
+    get(key: K): V | undefined {
+        if (!this.cache.has(key)) return undefined;
+        const val = this.cache.get(key)!;
+        this.cache.delete(key);
+        this.cache.set(key, val);
+        return val;
+    }
+
+    set(key: K, value: V): void {
+        if (this.cache.has(key)) {
+            this.cache.delete(key);
+        } else if (this.cache.size >= this.limit) {
+            const firstKey = this.cache.keys().next().value;
+            if (firstKey !== undefined) {
+                // console.log("Evicting key from cache due to limit", firstKey);
+                this.cache.delete(firstKey);
+            }
+        }
+        this.cache.set(key, value);
+    }
+
+    delete(key: K): boolean {
+        return this.cache.delete(key);
+    }
+
+    clear(): void {
+        this.cache.clear();
+    }
+}
+
+// In-memory note content cache to bypass SQLCipher/SQLite overhead for reads
+const noteContentCache = new LRUCache<string, string>(25);
 
 
 // Re-export types for convenience
@@ -541,7 +580,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
             // Fetch updated metadata (with new preview)
             const updatedNote = await NoteService.getNoteById(noteId);
-            
+
             // Refresh tasks in store
             const tasks = await SearchService.findNotesWithPendingTasks();
 

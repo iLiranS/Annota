@@ -24,7 +24,7 @@ interface AiChatInputProps {
     onClearAll: () => void;
     onStop?: () => void;
     disabled: boolean;
-    isFloating?: boolean;
+
 }
 
 export function AiChatInput({
@@ -35,7 +35,6 @@ export function AiChatInput({
     onToggleNote,
     onToggleFolder,
     onClearAll,
-    isFloating,
     onStop,
     disabled
 }: AiChatInputProps) {
@@ -138,7 +137,7 @@ export function AiChatInput({
     const showContextError = content.trim().length > 0 && selectedNotes.length === 0 && !chatContext;
     const isNearLimit = content.length > MAX_LENGTH * 0.8;
     return (
-        <div className={cn("flex flex-col gap-2 ", isFloating ? "m-1 " : " ")}>
+        <div className={cn("flex flex-col gap-2 ")}>
             <div className="w-full bg-background border rounded-3xl   focus-within:border-primary/30 group p-1.5 flex flex-col gap-1 transition-all duration-300">
                 {chatContext && (
                     <div className="mx-1 mt-1 px-3 py-2.5 bg-primary/5 border border-primary/10 rounded-2xl relative group/context animate-in fade-in slide-in-from-top-2 duration-300">

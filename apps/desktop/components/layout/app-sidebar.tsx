@@ -211,18 +211,21 @@ export function AppSidebar() {
     }, [isResizing, width, general.appDirection]);
 
 
+    const isRtl = general.appDirection === "rtl";
+
     return (
         <div
             className={cn(
-                "relative flex overflow-hidden mb-2 shrink-0 flex-col  transition-all duration-300 ease-in-out  ",
-
-                !open && "w-0! opacity-0 pointer-events-none border-none",
-                isResizing && "transition-none",
-
+                "absolute top-0 bottom-2 z-20 flex shrink-0 flex-col",
+                isRtl ? "right-0" : "left-0",
+                !open && "opacity-0 pointer-events-none",
+                !isResizing && "transition-[transform,opacity] duration-300 ease-in-out",
             )}
             style={{
-                width: open ? `${width}px` : 0,
-                ["--sidebar-width" as any]: `${width}px`
+                width: `${width}px`,
+                transform: open
+                    ? "none"
+                    : `translateX(${isRtl ? "100%" : "-100%"})`,
             }}
         >
             <Sidebar

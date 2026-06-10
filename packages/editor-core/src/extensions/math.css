@@ -65,6 +65,8 @@
     /* Force LTR rendering */
     direction: ltr !important;
     unicode-bidi: isolate !important;
+    /* Isolates layout, style, and paint for the heavy math block */
+    contain: content;
 }
 
 .katex {

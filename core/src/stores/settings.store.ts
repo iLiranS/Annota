@@ -28,7 +28,6 @@ export interface GeneralSettings {
     hapticFeedback: boolean;
     appDirection: 'ltr' | 'rtl';
     isSecondarySidebarOpen: boolean;
-    secondarySidebarMode: 'floating' | 'pinned';
     isSecondarySidebarSticky: boolean;
     showNotesCountInFolder: boolean;
     isAiEnabled: boolean;
@@ -79,7 +78,6 @@ const DEFAULT_GENERAL_SETTINGS: GeneralSettings = {
     hapticFeedback: true,
     appDirection: 'ltr',
     isSecondarySidebarOpen: false,
-    secondarySidebarMode: 'pinned',
     isSecondarySidebarSticky: true,
     showNotesCountInFolder: true,
     isAiEnabled: false,
