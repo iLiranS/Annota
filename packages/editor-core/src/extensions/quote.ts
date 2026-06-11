@@ -20,7 +20,7 @@ declare module '@tiptap/core' {
     }
 }
 
-const DEFAULT_GRAY_COLOR = COLOR_PALETTE.find(c => c.name === 'Gray')?.value + '15' || '#75757515';
+const DEFAULT_GRAY_COLOR = COLOR_PALETTE.find(c => c.name === 'Gray')?.value + '25' || '#75757525';
 
 export const Quote = Blockquote.extend<any>({
     addAttributes() {

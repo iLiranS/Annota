@@ -8,6 +8,39 @@ import type { DbOrTx } from '../types';
 import { safeGet, safeGetAll } from '../utils';
 import * as FilesRepo from './files.repository';
 import { parsePendingTasks } from './search.repository';
+import { latestVersionCache, noteLinksCache, noteFilesCache } from '../../utils/caches';
+
+function arraysEqual(a: string[], b: string[]): boolean {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+        if (a[i] !== b[i]) return false;
+    }
+    return true;
+}
+
+interface ExtractedLink {
+    targetId: string;
+    blockId: string | null;
+    fullUrl: string;
+}
+
+function extractLinks(content: string): ExtractedLink[] {
+    if (!content) return [];
+    const linkRegex = /href=["'](annota:\/\/note\/([a-zA-Z0-9-]+)(?:\?blockId=([a-zA-Z0-9-]+))?)["']/gi;
+    const linksMap = new Map<string, ExtractedLink>();
+
+    let match;
+    while ((match = linkRegex.exec(content)) !== null) {
+        const fullUrl = match[1];
+        const targetId = match[2];
+        const blockId = match[3] || null;
+
+        if (!linksMap.has(targetId)) {
+            linksMap.set(targetId, { targetId, blockId, fullUrl });
+        }
+    }
+    return Array.from(linksMap.values()).sort((a, b) => a.targetId.localeCompare(b.targetId));
+}
 
 // Re-export types for convenience
 export type { NoteMetadata, NoteVersion } from '../schema';
@@ -71,36 +104,19 @@ function extractFileIdsFromContent(content: string): string[] {
 /**
  * Parses note content to find internal links and updates the note_links table.
  */
-async function updateNoteLinks(sourceId: string, content: string, tx: DbOrTx): Promise<void> {
+async function updateNoteLinks(sourceId: string, links: ExtractedLink[], tx: DbOrTx): Promise<void> {
     // 1. Delete existing links where this note is the source
     await tx.delete(schema.noteLinks).where(eq(schema.noteLinks.sourceId, sourceId)).run();
 
-    // 2. Extract links using regex
-    // Matches href="annota://note/<targetId>" or href="annota://note/<targetId>?blockId=<blockId>"
-    const linkRegex = /href=["']annota:\/\/note\/([a-zA-Z0-9-]+)(?:\?blockId=([a-zA-Z0-9-]+))?["']/gi;
-    const links = new Map<string, string | null>();
-
-    let match;
-    while ((match = linkRegex.exec(content)) !== null) {
-        const targetId = match[1];
-        const blockId = match[2] || null;
-        
-        // A note cannot link to itself
-        if (targetId === sourceId) {
-            continue;
-        }
-
-        if (!links.has(targetId)) {
-            links.set(targetId, blockId);
-        }
-    }
+    // 2. Filter out self-links
+    const filteredLinks = links.filter(l => l.targetId !== sourceId);
 
     // 3. Insert new links
-    if (links.size > 0) {
-        const newLinks = Array.from(links.entries()).map(([targetId, blockId]) => ({
+    if (filteredLinks.length > 0) {
+        const newLinks = filteredLinks.map((link) => ({
             sourceId,
-            targetId,
-            blockId,
+            targetId: link.targetId,
+            blockId: link.blockId,
         }));
 
         await tx.insert(schema.noteLinks)
@@ -155,6 +171,9 @@ export async function upsertSyncedNote(noteFullData: any, tx: DbOrTx = getDb()):
         console.error('[Sync] Cannot upsert note: missing ID', noteFullData);
         return;
     }
+    latestVersionCache.delete(id);
+    noteLinksCache.delete(id);
+    noteFilesCache.delete(id);
     const hyphenlessId = id.replace(/-/g, '');
 
     // 1. Find existing by Hyphenated or Hyphenless
@@ -274,7 +293,7 @@ export async function upsertSyncedNote(noteFullData: any, tx: DbOrTx = getDb()):
     }
 
     await FilesRepo.setFilesForVersion(activeVersionId, fileIds, tx);
-    await updateNoteLinks(metadataDetails.id, content, tx);
+    await updateNoteLinks(metadataDetails.id, extractLinks(content), tx);
     await updateNoteTasks(metadataDetails.id, content, tx);
 
 }
@@ -435,6 +454,9 @@ export async function updateNoteMetadata(noteId: string, updates: Partial<Omit<N
 
 
 export async function softDeleteNote(noteId: string): Promise<void> {
+    latestVersionCache.delete(noteId);
+    noteLinksCache.delete(noteId);
+    noteFilesCache.delete(noteId);
     const note = await getNoteMetadataById(noteId);
     console.log(note);
     if (!note) return;
@@ -456,6 +478,11 @@ export async function softDeleteNote(noteId: string): Promise<void> {
 
 export async function bulkSoftDeleteNotes(noteIds: string[]): Promise<void> {
     if (noteIds.length === 0) return;
+    for (const noteId of noteIds) {
+        latestVersionCache.delete(noteId);
+        noteLinksCache.delete(noteId);
+        noteFilesCache.delete(noteId);
+    }
     const now = new Date();
     await getDb()
         .update(schema.noteMetadata)
@@ -525,6 +552,9 @@ export async function restoreNote(noteId: string, targetFolderId?: string | null
 }
 
 export async function permanentlyDeleteNote(noteId: string): Promise<void> {
+    latestVersionCache.delete(noteId);
+    noteLinksCache.delete(noteId);
+    noteFilesCache.delete(noteId);
     await getDb().transaction(async (tx: DbOrTx) => {
         // We defer all deletions to allow the full object to sync as a tombstone
         await tx.update(schema.noteMetadata)
@@ -631,6 +661,9 @@ export async function getNoteContent(noteId: string): Promise<string> {
     const rawContent = safeResult?.content ?? '';
     const normalized = normalizeStoredContent(rawContent);
 
+    noteLinksCache.set(noteId, extractLinks(normalized).map(l => l.fullUrl));
+    noteFilesCache.set(noteId, extractFileIdsFromContent(normalized));
+
     // Self-heal previously stored rows that lost src attribute.
     if (result && normalized !== rawContent) {
         await getDb().update(schema.noteContent)
@@ -651,7 +684,7 @@ export async function updateNoteContent(
     updatedAt?: Date
 ): Promise<void> {
     const now = updatedAt ?? new Date();
-    const VERSION_THRESHOLD_MS = 10000; // 10 seconds
+    const VERSION_THRESHOLD_MS = 120000; // 2 minutes
     const MAX_VERSIONS = 50;
     const normalizedContent = normalizeStoredContent(content);
     const byteSize = new TextEncoder().encode(normalizedContent).length;
@@ -682,18 +715,29 @@ export async function updateNoteContent(
             .run();
 
         // 3. Handle Versioning
-        // Get latest version (Select only id and createdAt, avoiding heavy content fetch)
-        const latestVersion = await tx.select({
-            id: schema.noteVersions.id,
-            createdAt: schema.noteVersions.createdAt,
-        })
-            .from(schema.noteVersions)
-            .where(eq(schema.noteVersions.noteId, noteId))
-            .orderBy(desc(schema.noteVersions.createdAt))
-            .limit(1)
-            .get();
+        // Get latest version (Try cache first, otherwise select only id and createdAt, avoiding heavy content fetch)
+        let safeLatestVersion = latestVersionCache.get(noteId);
 
-        const safeLatestVersion = safeGet<{ id: string; createdAt: Date }>(latestVersion);
+        if (!safeLatestVersion) {
+            const latestVersion = await tx.select({
+                id: schema.noteVersions.id,
+                createdAt: schema.noteVersions.createdAt,
+            })
+                .from(schema.noteVersions)
+                .where(eq(schema.noteVersions.noteId, noteId))
+                .orderBy(desc(schema.noteVersions.createdAt))
+                .limit(1)
+                .get();
+
+            const dbLatest = safeGet<{ id: string; createdAt: Date }>(latestVersion);
+            if (dbLatest) {
+                safeLatestVersion = {
+                    id: dbLatest.id,
+                    createdAt: dbLatest.createdAt instanceof Date ? dbLatest.createdAt : new Date(dbLatest.createdAt),
+                };
+                latestVersionCache.set(noteId, safeLatestVersion);
+            }
+        }
 
         let activeVersionId: string;
         let didDeleteVersions = false;
@@ -709,6 +753,9 @@ export async function updateNoteContent(
                 createdAt: now,
             }).run();
             activeVersionId = newVersionId;
+
+            // Cache the newly created version
+            latestVersionCache.set(noteId, { id: newVersionId, createdAt: now });
 
             // Enforce Limit (cleanup old versions)
             const versions = await tx.select({ id: schema.noteVersions.id }).from(schema.noteVersions)
@@ -732,16 +779,29 @@ export async function updateNoteContent(
             }
         } else {
             // Case B: Update EXISTING latest version (debounce)
+            // NOTE: We do NOT update the createdAt timestamp here to anchor the version checkpoint.
             await tx.update(schema.noteVersions)
-                .set({ content: normalizedContent, createdAt: now })
-                .where(eq(schema.noteVersions.id, safeLatestVersion.id))
+                .set({ content: normalizedContent })
+                .where(eq(schema.noteVersions.id, safeLatestVersion!.id))
                 .run();
-            activeVersionId = safeLatestVersion.id;
+            activeVersionId = safeLatestVersion!.id;
+
+            // Keep the cache updated but preserve the original creation time
+            latestVersionCache.set(noteId, { id: activeVersionId, createdAt: safeLatestVersion!.createdAt });
         }
 
-        // 4. Sync files to active version (Only sync if new version has files or if we're overwriting latest version)
-        if (fileIds.length > 0 || !isNewVersion) {
+        // 4. Sync files to active version
+        const oldFiles = noteFilesCache.get(noteId);
+        const filesChanged = !oldFiles || !arraysEqual(oldFiles, fileIds);
+
+        if (isNewVersion) {
+            if (fileIds.length > 0) {
+                await FilesRepo.setFilesForVersion(activeVersionId, fileIds, tx);
+            }
+            noteFilesCache.set(noteId, fileIds);
+        } else if (filesChanged) {
             await FilesRepo.setFilesForVersion(activeVersionId, fileIds, tx);
+            noteFilesCache.set(noteId, fileIds);
         }
 
 
@@ -755,7 +815,16 @@ export async function updateNoteContent(
         }
 
         // Update links
-        await updateNoteLinks(noteId, normalizedContent, tx);
+        const newLinks = extractLinks(normalizedContent);
+        const newLinksUrls = newLinks.map(l => l.fullUrl);
+        const oldLinks = noteLinksCache.get(noteId);
+        const linksChanged = !oldLinks || !arraysEqual(oldLinks, newLinksUrls);
+
+        if (linksChanged) {
+            await updateNoteLinks(noteId, newLinks, tx);
+            noteLinksCache.set(noteId, newLinksUrls);
+        }
+
         if (!skipTasksUpdate) {
             await updateNoteTasks(noteId, normalizedContent, tx);
         }
@@ -850,12 +919,14 @@ export async function getNoteVersion(versionId: string) {
 }
 
 export async function deleteNoteVersion(versionId: string): Promise<void> {
+    latestVersionCache.clear();
     await getDb().delete(schema.noteVersions)
         .where(eq(schema.noteVersions.id, versionId))
         .run();
 }
 
 export async function deleteAllNoteVersionsExceptLatest(noteId: string): Promise<void> {
+    latestVersionCache.delete(noteId);
     const versions = await getDb()
         .select({ id: schema.noteVersions.id })
         .from(schema.noteVersions)

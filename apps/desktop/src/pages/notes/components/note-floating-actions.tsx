@@ -10,10 +10,10 @@ import {
 import { Ionicons } from "@/components/ui/ionicons";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { useIsPremium, NoteMetadata, useNotesStore, useSettingsStore } from "@annota/core";
+import { NoteMetadata, useIsPremium, useNotesStore, useSettingsStore } from "@annota/core";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { Check, MoreVertical, Pin, Search, Star, Globe } from "lucide-react";
+import { Check, Globe, MoreVertical, Pin, ScrollText, Search, Star } from "lucide-react";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { VersionHistoryDialog } from "./version-history-dialog";
@@ -34,9 +34,17 @@ export function NoteFloatingActions({
     direction,
 }: NoteFloatingActionsProps) {
     const { updateNoteMetadata } = useNotesStore();
+    const { updateGeneralSettings } = useSettingsStore();
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isTooltipOpen, setIsTooltipOpen] = useState(false);
+
+    const handleOpenInfo = useCallback(() => {
+        updateGeneralSettings({
+            isSecondarySidebarOpen: true,
+            secondarySidebarTab: 'info',
+        });
+    }, [updateGeneralSettings]);
 
     const handleMenuOpenChange = useCallback((open: boolean) => {
         setIsMenuOpen(open);
@@ -146,6 +154,18 @@ export function NoteFloatingActions({
                                 <span className="text-[10px] opacity-60 bg-muted px-1 py-0.5 rounded border border-border">
                                     {MOD}+F
                                 </span>
+                            </DropdownMenuItem>
+
+                            <DropdownMenuItem
+                                className="rounded-lg gap-3 py-2 cursor-pointer"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    handleOpenInfo();
+                                    setIsMenuOpen(false);
+                                }}
+                            >
+                                <ScrollText className="text-muted-foreground" size={18} />
+                                <span className="flex-1 text-sm font-medium">Note info</span>
                             </DropdownMenuItem>
 
                             <DropdownMenuSeparator className="my-1 opacity-50" />

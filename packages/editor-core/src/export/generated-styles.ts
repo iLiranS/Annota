@@ -2070,6 +2070,7 @@ body.is-resizing-image {
     border-radius: 4px;
     max-width: 100%;
     line-height: normal;
+    contain: content;
     /* font-size: 1.2em; */
     -webkit-user-select: text !important;
     user-select: text !important;
