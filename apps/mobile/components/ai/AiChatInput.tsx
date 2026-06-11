@@ -96,11 +96,15 @@ export function AiChatInput({
                 style={styles.contextButton}
                 onPress={onOpenContextSelector}
             >
-                <Ionicons
-                    name={selectedContextNotes.length > 0 ? 'add-circle' : 'add-circle-outline'}
-                    size={24}
-                    color={selectedContextNotes.length > 0 ? colors.primary : colors.text + '40'}
-                />
+                {selectedContextNotes.length > 0 ? (
+                    <View style={[styles.badge, { backgroundColor: colors.primary }]}>
+                        <Text style={styles.badgeText}>{selectedContextNotes.length}</Text>
+                    </View>
+                ) : (
+                    <View style={[styles.badge, { backgroundColor: '#EF4444' }]}>
+                        <Ionicons name="add" size={16} color="#FFF" />
+                    </View>
+                )}
             </TouchableOpacity>
             <TouchableOpacity
                 style={[
@@ -218,46 +222,14 @@ export function AiChatInput({
                         </TouchableOpacity>
                     </View>
                 )}
-                {(initialContext || selectedContextNotes.length > 0) && (
-                    <TouchableOpacity
-                        style={[
-                            styles.activeContextBar,
-                            { borderBottomColor: colors.border + "60", backgroundColor: colors.card },
-                            !chatContext && { borderTopLeftRadius: 24, borderTopRightRadius: 24 }
-                        ]}
-                        onPress={onOpenContextSelector}
-                        activeOpacity={0.7}
-                    >
-                        <Ionicons
-                            name={selectedContextNotes.length > 0 ? 'layers' : 'alert-circle-outline'}
-                            size={14}
-                            color={selectedContextNotes.length > 0 ? colors.primary : '#dc2626'}
-                        />
-                        <Text style={[styles.activeContextTitle, { color: selectedContextNotes.length > 0 ? colors.text + '80' : '#dc2626', marginLeft: 8 }]} numberOfLines={1}>
-                            {selectedContextNotes.length > 0
-                                ? `Using ${selectedContextNotes.length} selected ${selectedContextNotes.length === 1 ? 'note' : 'notes'} as context`
-                                : `Select at least 1 note as context`}
-                        </Text>
-                        {selectedContextNotes.length > 0 && (
-                            <TouchableOpacity
-                                onPress={onClearAllContext}
-                                style={{ marginLeft: 'auto', padding: 4 }}
-                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                            >
-                                <Ionicons name="close-circle" size={20} color={colors.text + '40'} />
-                            </TouchableOpacity>
-                        )}
-                    </TouchableOpacity>
-                )}
-
                 <View
                     style={[
                         isMultilineLayout ? styles.inputContainerMultiline : styles.inputContainerInline,
                         {
                             backgroundColor: colors.card,
                             borderColor: colors.border + '50',
-                            borderTopLeftRadius: (chatContext || initialContext || selectedContextNotes.length > 0) ? 0 : 24,
-                            borderTopRightRadius: (chatContext || initialContext || selectedContextNotes.length > 0) ? 0 : 24,
+                            borderTopLeftRadius: chatContext ? 0 : 24,
+                            borderTopRightRadius: chatContext ? 0 : 24,
                         },
                     ]}
                 >
@@ -355,10 +327,10 @@ const styles = StyleSheet.create({
         marginHorizontal: 16,
         borderRadius: 24,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
-        elevation: 5,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.2,
+        shadowRadius: 18,
+        elevation: 10,
     },
     activeContextBar: {
         flexDirection: 'row',
@@ -427,6 +399,18 @@ const styles = StyleSheet.create({
         height: 36,
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    badge: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    badgeText: {
+        color: '#FFF',
+        fontSize: 12,
+        fontWeight: 'bold',
     },
     webButton: {
         width: 32,

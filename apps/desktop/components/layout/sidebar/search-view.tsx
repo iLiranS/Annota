@@ -56,9 +56,10 @@ export function SearchView({
         return () => window.removeEventListener("focus-global-search", handleFocus);
     }, []);
 
+
     const folderResults = useMemo(() => {
         if (!searchQuery) return [];
-        return dbResults.filter(r => r.type === 'folder');
+        return dbResults.filter(r => r.type === 'folder').slice(0, 20);
     }, [dbResults, searchQuery]);
 
     const noteResults = useMemo(() => {
@@ -77,7 +78,7 @@ export function SearchView({
                 data: note
             }));
         }
-        return dbResults.filter(r => r.type === 'note');
+        return dbResults.filter(r => r.type === 'note').slice(0, 50);
     }, [dbResults, searchQuery, notes]);
 
     const FolderBadge = ({ folderId }: { folderId: string | null }) => {
@@ -170,12 +171,13 @@ export function SearchView({
                     <MediaSidebar />
                 </div>
             ) : (
-                <div data-tauri-drag-region className="flex-1 overflow-y-auto premium-scrollbar px-1">
+                <div className="flex-1 overflow-y-auto premium-scrollbar px-1">
                     {searchQuery && !isSearching && dbResults.length === 0 && (
                         <div className="flex flex-col items-center justify-center py-20 text-center">
                             <p className="text-xs font-bold text-muted-foreground/60">No results found</p>
                         </div>
                     )}
+
 
                     {(folderResults.length > 0 || noteResults.length > 0) && (
                         <SidebarMenu className="gap-4 pb-4">

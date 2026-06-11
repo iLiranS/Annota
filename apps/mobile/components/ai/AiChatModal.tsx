@@ -229,7 +229,7 @@ export default function AiChatModal({ visible, onClose, initialContext, initialF
         const { chatContext } = useAiStore.getState();
         if (selectedContextNotes.length === 0 && !chatContext) return;
 
-        let currentChatId = chatId;
+        let currentChatId = showHistory ? null : chatId;
         if (!currentChatId) {
             currentChatId = generateId();
             const db = getDb();

@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, like, sql } from 'drizzle-orm';
 import { getDb, useDbStore } from '../../stores/db.store';
 import * as schema from '../schema';
 import { safeGetAll } from '../utils';
@@ -62,112 +62,84 @@ export const SearchRepository = {
         return words.map(w => `"${w.replace(/"/g, '""')}"*`).join(` ${operator} `);
     },
 
-    async searchNotes(query: string, folderId: string | null = null, limit: number | null = null): Promise<NoteSearchRow[]> {
+    async searchNotes(query: string, folderId: string | null = null, limit: number | null = 50): Promise<NoteSearchRow[]> {
         const db = getDb();
 
         const executeSearch = async (ftsQuery: string, limit?: number): Promise<NoteSearchRow[]> => {
             const dbStore = useDbStore.getState();
             const isDesktop = (dbStore.nativeDb as any)?.selectAsync !== undefined;
-            let ftsRows: FtsRow[];
 
             if (isDesktop) {
-                // Desktop: Bypass Drizzle proxy, query native db wrapper directly
-                // Rust returns positional arrays: [id, matchedSnippet, score]
+                // Desktop: Bypass Drizzle, query native db wrapper directly
+                const limitClause = limit ? `LIMIT ${limit}` : '';
+                // FIX: Use folder_id
+                const folderClause = folderId ? `AND m.folder_id = '${folderId}'` : '';
+
                 const rawRows = await (dbStore.nativeDb as any).selectAsync(
-                    `SELECT
-                        id,
-                        snippet(notes_fts, 3, '', '', '...', 20) AS matchedSnippet,
-                        rank AS score
-                    FROM notes_fts
-                    WHERE notes_fts MATCH ?
-                    ORDER BY rank
-                    ${limit ? `LIMIT ${limit * 2}` : ''}`,
+                    `SELECT 
+                m.id, 
+                m.title, 
+                m.preview, 
+                m.folder_id, 
+                m.updated_at,
+                snippet(f.notes_fts, 3, '', '', '...', 20) AS matchedSnippet,
+                f.rank AS score
+            FROM notes_fts f
+            JOIN note_metadata m ON f.id = m.id
+            WHERE f.notes_fts MATCH ? 
+              AND m.is_deleted = 0  -- FIX: Use is_deleted
+              AND m.is_perm_deleted = 0 -- FIX: Use is_perm_deleted
+              ${folderClause}
+            ORDER BY f.rank
+            ${limitClause}`,
                     [ftsQuery]
                 ) as any[][];
 
-                ftsRows = rawRows.map(row => ({
+                return rawRows.map(row => ({
                     id: row[0] as string,
-                    matchedSnippet: row[1] as string,
-                    score: -(row[2] as number), // Invert rank to match our 'higher is better' score logic
+                    title: row[1] as string | null,
+                    preview: row[2] as string | null,
+                    folderId: row[3] as string | null,
+                    updatedAt: row[4] ? new Date(row[4]) : null, // Ensured Date object parsing
+                    matchedSnippet: row[5] as string,
+                    score: -(row[6] as number), // Invert rank
                 }));
+
             } else {
                 // Mobile: expo-sqlite natively handles raw named columns
-                ftsRows = await db.all<FtsRow>(sql`
-                    SELECT
-                        id,
-                        snippet(notes_fts, 3, '', '', '...', 20) AS matchedSnippet,
-                        -bm25(notes_fts)                          AS score
-                    FROM notes_fts
-                    WHERE notes_fts MATCH ${ftsQuery}
-                    ORDER BY score DESC
-                    ${limit ? sql`LIMIT ${limit * 2}` : sql``}
-                `);
+                // We use AS to map the snake_case DB columns back to camelCase TS properties
+                const rows = await db.all(sql`
+            SELECT 
+                m.id, 
+                m.title, 
+                m.preview, 
+                m.folder_id AS folderId, 
+                m.updated_at AS updatedAt,
+                snippet(f.notes_fts, 3, '', '', '...', 20) AS matchedSnippet,
+                -bm25(f.notes_fts) AS score
+            FROM notes_fts f
+            JOIN note_metadata m ON f.id = m.id
+            WHERE f.notes_fts MATCH ${ftsQuery}
+              AND m.is_deleted = 0 
+              AND m.is_perm_deleted = 0
+              ${folderId ? sql`AND m.folder_id = ${folderId}` : sql``}
+            ORDER BY score DESC
+            ${limit ? sql`LIMIT ${limit}` : sql``}
+        `);
+
+                return rows as NoteSearchRow[];
             }
-
-            if (ftsRows.length === 0) return [];
-
-            // Dedup in JS — keep first occurrence per id (highest score wins)
-            const seen = new Set<string>();
-            const deduped: FtsRow[] = [];
-            for (const row of ftsRows) {
-                if (row.id && !seen.has(row.id)) {
-                    seen.add(row.id);
-                    deduped.push(row);
-                }
-            }
-
-            const ids = deduped.map((r: FtsRow) => r.id);
-            const ftsMap = new Map<string, FtsRow>(deduped.map((r: FtsRow) => [r.id, r]));
-
-            // Pass 2: fetch metadata via Drizzle (type-safe, no FTS aux functions)
-            const metaConditions = [
-                inArray(schema.noteMetadata.id, ids),
-                eq(schema.noteMetadata.isDeleted, false),
-                eq(schema.noteMetadata.isPermDeleted, false),
-                ...(folderId ? [eq(schema.noteMetadata.folderId, folderId)] : []),
-            ];
-
-            const metaRows: MetaRow[] = await db.select({
-                id: schema.noteMetadata.id,
-                title: schema.noteMetadata.title,
-                preview: schema.noteMetadata.preview,
-                folderId: schema.noteMetadata.folderId,
-                updatedAt: schema.noteMetadata.updatedAt,
-            })
-                .from(schema.noteMetadata)
-                .where(and(...metaConditions))
-                .all();
-
-            // Merge and re-sort by FTS score (metadata query loses ordering)
-            const merged: NoteSearchRow[] = metaRows
-                .filter((m: MetaRow) => m.id !== null)
-                .map((m: MetaRow) => ({
-                    id: m.id!,
-                    title: m.title,
-                    preview: m.preview,
-                    folderId: m.folderId,
-                    updatedAt: m.updatedAt,
-                    matchedSnippet: ftsMap.get(m.id!)?.matchedSnippet ?? null,
-                    score: ftsMap.get(m.id!)?.score ?? 0,
-                }))
-                .sort((a: NoteSearchRow, b: NoteSearchRow) =>
-                    b.score !== a.score
-                        ? b.score - a.score
-                        : (b.updatedAt?.getTime() ?? 0) - (a.updatedAt?.getTime() ?? 0)
-                );
-
-            return limit ? merged.slice(0, limit) : merged;
         };
 
         // PASS 1: Strict Mode — require ALL words to match (AND)
-        let ftsQuery = this._buildFtsQuery(query, 'AND', false);
-        let results = await executeSearch(ftsQuery, limit ?? undefined);
+        const ftsQueryAnd = this._buildFtsQuery(query, 'AND', false);
+        let results = await executeSearch(ftsQueryAnd, limit ?? undefined);
 
         // PASS 2: Waterfall Fallback — OR search with stop words stripped
         if (results.length === 0) {
-            ftsQuery = this._buildFtsQuery(query, 'OR', true);
-            if (ftsQuery !== '""') {
-                results = await executeSearch(ftsQuery, limit ?? 10);
+            const ftsQueryOr = this._buildFtsQuery(query, 'OR', true);
+            if (ftsQueryOr !== '""' && ftsQueryOr !== ftsQueryAnd) {
+                results = await executeSearch(ftsQueryOr, limit ?? 50);
             }
         }
 
@@ -238,10 +210,10 @@ export const SearchRepository = {
     async searchFolders(query: string) {
         const exactMatch = query;
         const startsWithMatch = `${query}%`;
-        const searchTerm = `%${query}%`;
         const conditions = [
             eq(schema.folders.isDeleted, false),
-            eq(schema.folders.isSystem, false)
+            eq(schema.folders.isSystem, false),
+            like(schema.folders.name, `%${query}%`)
         ];
 
         return getDb().select({
@@ -254,13 +226,12 @@ export const SearchRepository = {
                 CASE 
                     WHEN LOWER(${schema.folders.name}) = LOWER(${exactMatch}) THEN 5
                     WHEN LOWER(${schema.folders.name}) LIKE LOWER(${startsWithMatch}) THEN 4
-                    WHEN LOWER(${schema.folders.name}) LIKE LOWER(${searchTerm}) THEN 3
-                    ELSE 0 
+                    ELSE 3
                 END
             `.as('score')
         })
             .from(schema.folders)
-            .where(and(...conditions, sql`score > 0`))
+            .where(and(...conditions))
             .orderBy(desc(sql`score`), desc(schema.folders.updatedAt))
             .all();
     },

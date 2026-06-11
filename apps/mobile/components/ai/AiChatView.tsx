@@ -1,4 +1,4 @@
-import { AiMessage, purifyNoteHtml, useAiStore } from '@annota/core';
+import { AiMessage, useAiStore } from '@annota/core';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from '@react-navigation/native';
 import * as Clipboard from 'expo-clipboard';
@@ -7,19 +7,14 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
     ActivityIndicator,
     FlatList,
-    Keyboard,
-    KeyboardAvoidingView,
     Platform,
     StyleSheet,
     Text,
-    TextInput,
     TouchableOpacity,
     View
 } from 'react-native';
 import Markdown from 'react-native-markdown-display';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
-import { AiContextSelector } from './AiContextSelector';
 
 interface AiChatViewProps {
     messages: AiMessage[];
@@ -573,11 +568,23 @@ export function AiChatView({
                         <View style={[
                             styles.messageBubble,
                             item.role === 'user'
-                                ? [styles.userMessage, { backgroundColor: colors.primary }]
+                                ? [
+                                    styles.userMessage,
+                                    {
+                                        backgroundColor: colors.text + "15",
+                                        borderWidth: 1,
+                                        borderColor: colors.border + '60',
+                                        shadowColor: '#000',
+                                        shadowOffset: { width: 0, height: 4 },
+                                        shadowOpacity: 0.08,
+                                        shadowRadius: 6,
+                                        elevation: 3,
+                                    }
+                                ]
                                 : [styles.aiMessage, { backgroundColor: 'transparent', borderWidth: 0, paddingHorizontal: 0 }]
                         ]}>
                             {item.role === 'user' ? (
-                                <Text selectable style={[styles.messageText, { color: '#FFF' }]}>
+                                <Text selectable style={[styles.messageText, { color: colors.text, fontSize: 14, lineHeight: 20 }]}>
                                     {item.content}
                                 </Text>
                             ) : (
@@ -687,12 +694,8 @@ const styles = StyleSheet.create({
         maxWidth: '85%',
     },
     userMessage: {
-        borderBottomRightRadius: 4,
-        elevation: 1,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
+        paddingHorizontal: 14,
+        paddingVertical: 10,
     },
     aiMessage: {
         width: '100%',

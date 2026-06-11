@@ -284,8 +284,8 @@ export default function NotesList() {
                 return items;
             }
 
-            const searchFolders = dbResults.filter(r => r.type === 'folder');
-            const searchNotes = dbResults.filter(r => r.type === 'note');
+            const searchFolders = dbResults.filter(r => r.type === 'folder').slice(0, 20);
+            const searchNotes = dbResults.filter(r => r.type === 'note').slice(0, 50);
 
             if (searchFolders.length > 0) {
                 items.push({ type: 'section-header', title: 'Folders' });
@@ -651,5 +651,15 @@ const styles = StyleSheet.create({
                 elevation: 4,
             },
         }),
+    },
+    searchInfoBanner: {
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+        marginBottom: 8,
+    },
+    searchInfoText: {
+        fontSize: 12,
+        fontWeight: '500',
     },
 });

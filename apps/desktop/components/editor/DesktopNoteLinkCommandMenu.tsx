@@ -50,7 +50,7 @@ export function DesktopNoteLinkCommandMenu({
         setIsLoading(true);
         const timer = setTimeout(async () => {
             try {
-                const results = await SearchRepository.searchNotes(query);
+                const results = await SearchRepository.searchNotes(query, null, 11);
                 if (active) {
                     const filtered = results.filter(r => r.id !== noteId).slice(0, 10);
                     setDisplayNotes(filtered);

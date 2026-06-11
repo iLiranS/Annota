@@ -34,7 +34,7 @@ export function AiChatMessage({ message, isStreaming, onInsertToNote }: AiChatMe
                     "text-[13px] leading-relaxed rounded-2xl wrap-break-word px-3.5 py-2.5",
                     _isRtl ? "text-right" : "text-left",
                     isUser
-                        ? "max-w-[85%] bg-muted/60 text-foreground rounded-br-sm self-end shadow-sm"
+                        ? "max-w-[85%] bg-muted-foreground/20 text-foreground border border-border/60  self-end shadow-[0_3px_10px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_16px_rgba(0,0,0,0.25)]"
                         : "w-full bg-transparent text-foreground border-none shadow-none px-0"
                 )}
             >
