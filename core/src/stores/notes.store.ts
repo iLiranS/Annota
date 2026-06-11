@@ -488,16 +488,19 @@ export const useNotesStore = create<NotesState>((set, get) => ({
             if (!note) return { error: 'Note not found' };
 
             const isDailyNote = note.folderId === 'system-daily-notes';
-            const hadTasks = get().tasks.some(t => t.noteId === noteId);
-            const hasTasks = parsePendingTasks(content).length > 0;
-            const skipTasksUpdate = !hadTasks && !hasTasks;
+            const oldTaskGroup = get().tasks.find(t => t.noteId === noteId);
+            const oldTasks = oldTaskGroup ? oldTaskGroup.tasks : [];
+            const newTasks = parsePendingTasks(content);
+            const tasksChanged = oldTasks.length !== newTasks.length ||
+                oldTasks.some((t, i) => t.index !== newTasks[i].index || t.text !== newTasks[i].text);
+            const skipTasksUpdate = !tasksChanged;
 
             const normalized = normalizeStoredContent(content);
             const preview = isDailyNote ? generateTitle(normalized) : generatePreview(normalized);
             const title = isDailyNote ? note.title : generateTitle(normalized);
             const now = new Date();
 
-            await NoteService.updateContent(noteId, content, skipTasksUpdate, isDailyNote, now);
+            await NoteService.updateContent(noteId, content, skipTasksUpdate, isDailyNote, now, newTasks);
 
             // Cache the newly saved normalized content
             noteContentCache.set(noteId, normalized);
@@ -532,25 +535,36 @@ export const useNotesStore = create<NotesState>((set, get) => ({
 
     toggleTask: async (noteId, taskIndex) => {
         try {
-            await NoteService.toggleTask(noteId, taskIndex);
+            const note = get().notes.find(n => n.id === noteId);
+            if (!note) return;
 
-            // Invalidate cache since database content has changed
-            noteContentCache.delete(noteId);
+            const isDailyNote = note.folderId === 'system-daily-notes';
+            const now = new Date();
 
-            // Fetch updated metadata (with new preview)
-            const updatedNote = await NoteService.getNoteById(noteId);
+            const initialContent = await get().getNoteContent(noteId);
+            const updatedContent = await NoteService.toggleTask(noteId, taskIndex, isDailyNote, now, initialContent);
+            if (!updatedContent) return;
+
+            // Update cache since database content has changed
+            const normalized = normalizeStoredContent(updatedContent);
+            noteContentCache.set(noteId, normalized);
+
+            // Calculate updated preview/title in memory
+            const preview = isDailyNote ? generateTitle(normalized) : generatePreview(normalized);
+            const title = isDailyNote ? note.title : generateTitle(normalized);
 
             // Refresh tasks in store
             const tasks = await SearchService.findNotesWithPendingTasks();
 
-            if (updatedNote) {
-                set(state => ({
-                    notes: state.notes.map(n => n.id === noteId ? updatedNote : n),
-                    tasks
-                }));
-            } else {
-                set({ tasks });
-            }
+            set(state => ({
+                notes: state.notes.map(n =>
+                    n.id === noteId
+                        ? { ...n, preview, title, isDirty: true, updatedAt: now }
+                        : n
+                ),
+                tasks
+            }));
+
             SyncScheduler.instance?.notifyContentChange();
         } catch (error) {
             console.error('[Store] Failed to toggle task:', error);

@@ -10,6 +10,7 @@ import { isPremiumUser } from '../utils/subscription';
 import * as NoteFileService from './files/note-file.service';
 import { FolderService } from './folders.service';
 import { TagService } from './tags.service';
+import type { PendingTask } from '../db/repositories/search.repository';
 
 
 export const NoteService = {
@@ -141,7 +142,8 @@ export const NoteService = {
         content: string,
         skipTasksUpdate = false,
         isDailyNote?: boolean,
-        updatedAt?: Date
+        updatedAt?: Date,
+        parsedTasks?: PendingTask[]
     ) => {
         const normalized = normalizeStoredContent(content);
         const byteSize = new TextEncoder().encode(normalized).length;
@@ -157,7 +159,7 @@ export const NoteService = {
 
         const preview = resolvedIsDaily ? generateTitle(normalized) : generatePreview(normalized);
         const title = resolvedIsDaily ? undefined : generateTitle(normalized);
-        await notesRepo.updateNoteContent(noteId, content, preview, title, skipTasksUpdate, updatedAt);
+        await notesRepo.updateNoteContent(noteId, content, preview, title, skipTasksUpdate, updatedAt, parsedTasks);
     },
 
     // 4. Soft Delete
@@ -282,8 +284,8 @@ export const NoteService = {
         return metadata;
     },
 
-    toggleTask: async (noteId: string, taskIndex: number): Promise<void> => {
-        const html = await NoteService.getNoteContent(noteId);
+    toggleTask: async (noteId: string, taskIndex: number, isDailyNote?: boolean, updatedAt?: Date, initialContent?: string): Promise<string | null> => {
+        const html = initialContent ?? await NoteService.getNoteContent(noteId);
 
         let occurrence = 0;
         const updated = html.replace(
@@ -298,8 +300,9 @@ export const NoteService = {
             }
         );
 
-        if (updated === html) return; // Nothing changed, bail
+        if (updated === html) return null; // Nothing changed, bail
 
-        await NoteService.updateContent(noteId, updated);
+        await NoteService.updateContent(noteId, updated, false, isDailyNote, updatedAt);
+        return updated;
     }
 };

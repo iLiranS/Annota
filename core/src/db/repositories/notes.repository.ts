@@ -7,7 +7,7 @@ import * as schema from '../schema';
 import type { DbOrTx } from '../types';
 import { safeGet, safeGetAll } from '../utils';
 import * as FilesRepo from './files.repository';
-import { parsePendingTasks } from './search.repository';
+import { parsePendingTasks, type PendingTask } from './search.repository';
 import { latestVersionCache, noteLinksCache, noteFilesCache } from '../../utils/caches';
 
 function arraysEqual(a: string[], b: string[]): boolean {
@@ -129,12 +129,12 @@ async function updateNoteLinks(sourceId: string, links: ExtractedLink[], tx: DbO
 /**
  * Parses note content to find pending tasks and updates the note_tasks table.
  */
-export async function updateNoteTasks(noteId: string, content: string, tx: DbOrTx): Promise<void> {
+export async function updateNoteTasks(noteId: string, content: string, tx: DbOrTx, parsedTasks?: PendingTask[]): Promise<void> {
     // 1. Delete existing tasks where this note is the source
     await tx.delete(schema.noteTasks).where(eq(schema.noteTasks.noteId, noteId)).run();
 
-    // 2. Extract tasks using parsePendingTasks
-    const tasks = parsePendingTasks(content);
+    // 2. Extract tasks using parsePendingTasks or use pre-parsed tasks
+    const tasks = parsedTasks ?? parsePendingTasks(content);
 
     // 3. Insert new tasks
     if (tasks.length > 0) {
@@ -681,7 +681,8 @@ export async function updateNoteContent(
     preview: string,
     title?: string,
     skipTasksUpdate = false,
-    updatedAt?: Date
+    updatedAt?: Date,
+    parsedTasks?: PendingTask[]
 ): Promise<void> {
     const now = updatedAt ?? new Date();
     const VERSION_THRESHOLD_MS = 120000; // 2 minutes
@@ -826,7 +827,7 @@ export async function updateNoteContent(
         }
 
         if (!skipTasksUpdate) {
-            await updateNoteTasks(noteId, normalizedContent, tx);
+            await updateNoteTasks(noteId, normalizedContent, tx, parsedTasks);
         }
     });
 }
