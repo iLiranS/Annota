@@ -1,4 +1,4 @@
-import { getStorageEngine, useDbStore, vacuumDatabase } from '@annota/core';
+import { getStorageEngine, StorageService, useDbStore, vacuumDatabase } from '@annota/core';
 import { appCacheDir, join } from '@tauri-apps/api/path';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { readDir, remove } from '@tauri-apps/plugin-fs';
@@ -58,7 +58,18 @@ export function useDailyCleanup() {
                     // 2. Clean up temporary PDF export files in the cache directory
                     await cleanupPdfExportCache();
 
-                    // 3. Update the last run time
+                    // 3. Run garbage collection to remove orphaned files from disk
+                    //    (covers files deleted from notes before they were synced, etc.)
+                    try {
+                        const deleted = await StorageService.runGarbageCollection();
+                        if (deleted > 0) {
+                            console.log(`[DAILY_CLEANUP] GC removed ${deleted} orphaned file(s)`);
+                        }
+                    } catch (gcErr) {
+                        console.error('[DAILY_CLEANUP] GC failed:', gcErr);
+                    }
+
+                    // 4. Update the last run time
                     await storage.setItem(storageKey, now.toISOString());
                     console.log("[DAILY_CLEANUP] Daily cleanup completed successfully");
                 }

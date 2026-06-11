@@ -258,3 +258,11 @@ export async function getFoldersCount(tx: DbOrTx = getDb()): Promise<number> {
     const safeResult = safeGet<{ count: number }>(result);
     return safeResult?.count ?? 0;
 }
+
+export async function getAllFolders(tx: DbOrTx = getDb()): Promise<Folder[]> {
+    const result = await tx.select()
+        .from(schema.folders)
+        .where(eq(schema.folders.isPermDeleted, false))
+        .all();
+    return safeGetAll<Folder>(result);
+}

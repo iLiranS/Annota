@@ -471,7 +471,7 @@ export async function performSyncPull(masterKey: string, saltHex: string) {
             if (cloudTags.length < 100) hasMoreTags = false;
 
             // Pull Notes
-            let fetchedNoteIds: string[] = [];
+            const changedFileIds = new Set<string>();
             if (cloudNotes.length > 0) {
                 for (let i = 0; i < cloudNotes.length; i += 15) {
                     const chunk = cloudNotes.slice(i, i + 15);
@@ -498,7 +498,6 @@ export async function performSyncPull(masterKey: string, saltHex: string) {
                             noteFullData.publishUpdatedAt = noteFullData.publishUpdatedAt ? new Date(noteFullData.publishUpdatedAt) : null;
                             noteFullData.isPublished = noteFullData.isPublished ? true : false;
                             noteFullData.isDirty = false;
-                            fetchedNoteIds.push(noteFullData.id);
                             parsedNotes.push(noteFullData);
                         } catch (e) {
                             console.error("Failed to decrypt note", row.id, e);
@@ -543,7 +542,10 @@ export async function performSyncPull(masterKey: string, saltHex: string) {
 
                     if (parsedNotes.length > 0) {
                         await db.transaction(async (tx: any) => {
-                            for (const n of parsedNotes) await upsertSyncedNote(n, tx);
+                            for (const n of parsedNotes) {
+                                const noteChangedFileIds = await upsertSyncedNote(n, tx);
+                                for (const fid of noteChangedFileIds) changedFileIds.add(fid);
+                            }
                         });
                     }
                     if (deletedIds.length > 0) didDeleteTombstones = true;
@@ -557,41 +559,32 @@ export async function performSyncPull(masterKey: string, saltHex: string) {
             useSyncStore.getState().updateSyncCursors(currentCursors);
 
             // Background Files Pull
-            if (fetchedNoteIds.length > 0) {
-                console.log(`[Sync] Requesting file links for ${fetchedNoteIds.length} notes`);
-                const { data: cloudLinks, error: linkError } = await storageApi.getUserFileLinks(userId, fetchedNoteIds);
-                // cloudLinks contains all the file ids for the fetched notes, we need to filter for what missing locally
-                if (linkError) {
-                    console.error(`[Sync] Error fetching user file links:`, linkError);
-                    throw linkError;
-                }
-                // for each note-file link we need to check if file is missing - we can do that in parallel
-                if (cloudLinks && cloudLinks.length > 0) {
-                    const uniqueFileIds = Array.from(new Set(cloudLinks.map(l => l.file_id as string)));
-                    const localFiles = await getFilesByIds(uniqueFileIds);
-                    const localFileIds = new Set(localFiles.map((i: any) => i.id));
-                    const missingIds = uniqueFileIds.filter(id => !localFileIds.has(id));
+            if (changedFileIds.size > 0) {
+                const uniqueFileIds = Array.from(changedFileIds);
+                console.log(`[Sync] ${uniqueFileIds.length} changed file ID(s) detected across pulled notes`);
+                const localFiles = await getFilesByIds(uniqueFileIds);
+                const localFileIds = new Set(localFiles.map((i: any) => i.id));
+                const missingIds = uniqueFileIds.filter(id => !localFileIds.has(id));
 
-                    // if there are missing files locally - fetch them
-                    if (missingIds.length > 0) {
-                        const { data: cloudMeta, error: metaError } = await storageApi.getEncryptedFilesMetadata(userId, missingIds);
+                // if there are missing files locally - fetch them
+                if (missingIds.length > 0) {
+                    const { data: cloudMeta, error: metaError } = await storageApi.getEncryptedFilesMetadata(userId, missingIds);
 
-                        if (metaError) {
-                            console.error(`[Sync] Error fetching encrypted files metadata:`, metaError);
-                            throw metaError;
-                        }
+                    if (metaError) {
+                        console.error(`[Sync] Error fetching encrypted files metadata:`, metaError);
+                        throw metaError;
+                    }
 
-                        if (cloudMeta) {
-                            const downloadQueue = cloudMeta.map(meta => ({
-                                fileId: meta.id,
-                                noteId: '',
-                                nonce: meta.nonce,
-                                masterKey,
-                                saltHex,
-                                userId
-                            }));
-                            fileSyncService.queueFilesForDownload(downloadQueue);
-                        }
+                    if (cloudMeta) {
+                        const downloadQueue = cloudMeta.map(meta => ({
+                            fileId: meta.id,
+                            noteId: '',
+                            nonce: meta.nonce,
+                            masterKey,
+                            saltHex,
+                            userId
+                        }));
+                        fileSyncService.queueFilesForDownload(downloadQueue);
                     }
                 }
             }

@@ -19,6 +19,10 @@ export const NoteService = {
         return await notesRepo.getNotesInFolder(folderId, includeDeleted);
     },
 
+    getAllNotes: async (): Promise<NoteMetadata[]> => {
+        return await notesRepo.getAllNotesMetadata();
+    },
+
     healRootFolderIds: async (): Promise<void> => {
         await notesRepo.healRootFolderIds();
     },

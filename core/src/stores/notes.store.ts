@@ -166,58 +166,9 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         }
 
         // 2. Now it is completely safe to open read cursors
-        const allFolders = await FolderService.getFoldersInFolder(null, true);
-        const trashFolders = await FolderService.getFoldersInFolder(TRASH_FOLDER_ID, true);
-        const allNotes = await NoteService.getNotesInFolder(null, true);
+        const folders = await FolderService.getAllFolders();
+        const notes = await NoteService.getAllNotes();
         const allTags = await TagService.getAllTags();
-
-        // Recursively load all folders
-        const loadAllFolders = async (): Promise<Folder[]> => {
-            const result: Folder[] = [];
-            const queue = [...allFolders, ...trashFolders];
-
-            while (queue.length > 0) {
-                const folder = queue.shift()!;
-                result.push(folder);
-                const children = await FolderService.getFoldersInFolder(folder.id, true);
-                queue.push(...children);
-            }
-
-            return result;
-        };
-
-        // Recursively load all notes
-        const loadAllNotes = async (): Promise<NoteMetadata[]> => {
-            const result: NoteMetadata[] = [...allNotes];
-            const allFoldersData = await loadAllFolders();
-
-            for (const folder of allFoldersData) {
-                const notes = await NoteService.getNotesInFolder(folder.id, true);
-                result.push(...notes);
-            }
-
-            return result;
-        };
-
-        const baseFolders = await loadAllFolders();
-        const baseNotes = await loadAllNotes(); // Pulls the regular notes
-        const trashNotes = await NoteService.getNotesInFolder(TRASH_FOLDER_ID, true);
-        const dailyNotes = await NoteService.getNotesInFolder(DAILY_NOTES_FOLDER_ID, true);
-
-        // Deduplicate Folders
-        const allFetchedFolders = [...baseFolders, ...trashFolders];
-        const uniqueFoldersMap = new Map();
-        allFetchedFolders.forEach((f) => uniqueFoldersMap.set(f.id, f));
-        const folders = Array.from(uniqueFoldersMap.values());
-
-        // Combine everything
-        const allFetchedNotes = [...baseNotes, ...trashNotes, ...dailyNotes];
-
-        // DEDUPLICATE: This prevents the "11 notes" bug by ensuring IDs are unique
-        const uniqueNotesMap = new Map();
-        allFetchedNotes.forEach((note) => uniqueNotesMap.set(note.id, note));
-        const notes = Array.from(uniqueNotesMap.values());
-
         const tasks = await SearchService.findNotesWithPendingTasks();
 
         if (!wasInitialized) {

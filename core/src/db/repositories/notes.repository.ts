@@ -165,11 +165,11 @@ export async function clearDirtyNotes(noteIds: string[]): Promise<void> {
         .run();
 }
 
-export async function upsertSyncedNote(noteFullData: any, tx: DbOrTx = getDb()): Promise<void> {
+export async function upsertSyncedNote(noteFullData: any, tx: DbOrTx = getDb()): Promise<string[]> {
     const id = noteFullData.id;
     if (!id) {
         console.error('[Sync] Cannot upsert note: missing ID', noteFullData);
-        return;
+        return [];
     }
     latestVersionCache.delete(id);
     noteLinksCache.delete(id);
@@ -189,7 +189,7 @@ export async function upsertSyncedNote(noteFullData: any, tx: DbOrTx = getDb()):
     if (existing) {
         if (existing.updatedAt > noteFullData.updatedAt) {
             console.log(`[Sync] Local note ${id} is newer, ignoring pulled row.`);
-            return;
+            return [];
         }
 
         // 2. MIGRATION: Upgrade ID and references in noteContent and noteVersions
@@ -241,6 +241,21 @@ export async function upsertSyncedNote(noteFullData: any, tx: DbOrTx = getDb()):
         .get();
 
     const safeLatestVersion = safeGet<{ id: string; content: string }>(latestVersion);
+
+    // Compare new file IDs against the previous local version's file IDs to determine
+    // if the file set has changed. Used by the pull sync to skip getUserFileLinks
+    // when nothing has changed.
+    let filesChanged: boolean;
+    if (!safeLatestVersion || !safeLatestVersion.id) {
+        // Brand-new note — no baseline to compare, must treat as changed
+        filesChanged = fileIds.length > 0;
+    } else {
+        const previousFileIds = await FilesRepo.getFileIdsForVersions([safeLatestVersion.id], tx);
+        const newSorted = [...fileIds].sort();
+        const prevSorted = [...previousFileIds].sort();
+        filesChanged = newSorted.length !== prevSorted.length ||
+            newSorted.some((id, i) => id !== prevSorted[i]);
+    }
 
     let activeVersionId: string;
 
@@ -295,6 +310,10 @@ export async function upsertSyncedNote(noteFullData: any, tx: DbOrTx = getDb()):
     await FilesRepo.setFilesForVersion(activeVersionId, fileIds, tx);
     await updateNoteLinks(metadataDetails.id, extractLinks(content), tx);
     await updateNoteTasks(metadataDetails.id, content, tx);
+
+    // Return the new file IDs only if they differ from the previous local version,
+    // so the caller can skip cloud file-link queries for unchanged notes.
+    return filesChanged ? fileIds : [];
 
 }
 
@@ -1109,4 +1128,12 @@ export async function healRootFolderIds(): Promise<void> {
             eq(schema.noteMetadata.originalFolderId, '')
         ))
         .run();
+}
+
+export async function getAllNotesMetadata(tx: DbOrTx = getDb()): Promise<NoteMetadata[]> {
+    const result = await tx.select()
+        .from(schema.noteMetadata)
+        .where(eq(schema.noteMetadata.isPermDeleted, false))
+        .all();
+    return safeGetAll<NoteMetadata>(result);
 }

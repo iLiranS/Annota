@@ -1,4 +1,4 @@
-import { useDbStore, vacuumDatabase } from '@annota/core';
+import { StorageService, useDbStore, vacuumDatabase } from '@annota/core';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { File as ExpoFile, Directory as ExpoDirectory, Paths } from 'expo-file-system';
 import { useEffect } from 'react';
@@ -81,7 +81,18 @@ export function useDailyCleanup() {
                     // 2. Clean up temporary export/download files
                     await cleanupExportCache();
 
-                    // 3. Update the last run time
+                    // 3. Run garbage collection to remove orphaned files from disk
+                    //    (covers files deleted from notes before they were synced, etc.)
+                    try {
+                        const deleted = await StorageService.runGarbageCollection();
+                        if (deleted > 0) {
+                            console.log(`[DAILY_CLEANUP] GC removed ${deleted} orphaned file(s)`);
+                        }
+                    } catch (gcErr) {
+                        console.error('[DAILY_CLEANUP] GC failed:', gcErr);
+                    }
+
+                    // 4. Update the last run time
                     await AsyncStorage.setItem(storageKey, now.toISOString());
                     console.log("[DAILY_CLEANUP] Daily cleanup completed successfully");
                 }

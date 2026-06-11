@@ -26,6 +26,10 @@ export const FolderService = {
         return await foldersRepo.getFolderById(folderId);
     },
 
+    getAllFolders: async () => {
+        return await foldersRepo.getAllFolders();
+    },
+
     // 1. Create
 
     create: async (folderData: Partial<FolderInsert>, userRole: UserRole, subExpDate: string | null): Promise<Folder> => {
