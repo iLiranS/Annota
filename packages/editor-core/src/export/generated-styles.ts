@@ -291,6 +291,13 @@ export const GENERATED_CORE_STYLES = `
     cursor: pointer;
 }
 
+.ProseMirror u {
+    text-decoration: underline;
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 3px;
+}
+
+
 .ProseMirror a[href^="annota://"],
 .ProseMirror a[href^="annota-dev://"] {
     color: var(--accent-color);
@@ -1012,7 +1019,7 @@ code.hljs {
     opacity: 0.7;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 768px), (pointer: coarse) {
     .details-menu-btn {
         width: 32px;
         height: 32px;
@@ -2021,7 +2028,6 @@ body.is-resizing-image {
 .tiptap-mathematics-render[data-type="inline-math"],
 .math-node {
     display: inline-block;
-    contain: paint;
     align-items: center;
     position: relative;
     vertical-align: middle;
@@ -2029,7 +2035,7 @@ body.is-resizing-image {
     margin: 0 3px;
     border-radius: 4px;
     cursor: pointer !important;
-    line-height: 1;
+    line-height: normal;
     pointer-events: auto;
     white-space: nowrap;
     max-width: 100%;
@@ -2063,8 +2069,8 @@ body.is-resizing-image {
     align-items: center;
     border-radius: 4px;
     max-width: 100%;
-    line-height: 1;
-    font-size: clamp(0.7em, 3cqw, 1.1em);
+    line-height: normal;
+    /* font-size: 1.2em; */
     -webkit-user-select: text !important;
     user-select: text !important;
 }
@@ -2440,7 +2446,7 @@ body.is-resizing-image {
     opacity: 0.7 !important;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 768px), (pointer: coarse) {
     .quote-menu-btn {
         top: 6px;
         inset-inline-end: 6px;

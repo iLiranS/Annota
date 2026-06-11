@@ -76,41 +76,82 @@ function BlockActionMenu({ blockType, onAction, onClose }: { blockType: string, 
     const { colors } = useTheme();
     const actions = getBlockActions(blockType);
 
+    const specialActions = actions.filter((a) => !['copy', 'cut', 'delete'].includes(a.id));
+    const commonActions = actions.filter((a) => ['copy', 'cut', 'delete'].includes(a.id));
+
     return (
         <View>
-            <Text style={{
-                fontSize: 16,
-                fontWeight: '600',
-                color: colors.text,
-                marginBottom: 16,
-                textAlign: 'center'
-            }}>
-                {blockType === 'codeBlock' ? 'Code Block' : blockType === 'details' ? 'Details' : blockType === 'mermaid' ? 'Diagram' : blockType === 'quote' ? 'Quote' : blockType === 'flashcard' ? 'Flashcard' : 'Block Options'}
-            </Text>
+            {/* Special Actions */}
+            {specialActions.length > 0 && (
+                <View style={{ flexDirection: specialActions.length === 2 ? 'row' : 'column', gap: 8, marginBottom: 8 }}>
+                    {specialActions.map((item) => (
+                        <TouchableOpacity
+                            key={item.id}
+                            style={{
+                                flex: specialActions.length === 2 ? 1 : undefined,
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: 12,
+                                borderRadius: 8,
+                                backgroundColor: colors.card,
+                                minHeight: 48,
+                            }}
+                            onPress={() => {
+                                onAction(item.action);
+                                if (item.action !== 'background' && item.action !== 'language') {
+                                    onClose();
+                                }
+                            }}
+                        >
+                            <MaterialIcons name={item.icon as any} size={20} color={colors.text} style={{ marginRight: 8 }} />
+                            <Text style={{ fontSize: 15, color: colors.text, fontWeight: '500' }}>{item.label}</Text>
+                        </TouchableOpacity>
+                    ))}
+                </View>
+            )}
 
-            <View style={{ gap: 8 }}>
-                {actions.map((item) => (
-                    <TouchableOpacity
-                        key={item.id}
-                        style={{
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            padding: 12,
-                            borderRadius: 8,
-                            backgroundColor: colors.card,
-                        }}
-                        onPress={() => {
-                            onAction(item.action);
-                            if (item.action !== 'background' && item.action !== 'language') {
-                                onClose();
-                            }
-                        }}
-                    >
-                        <MaterialIcons name={item.icon as any} size={20} color={colors.text} style={{ marginRight: 12 }} />
-                        <Text style={{ fontSize: 16, color: colors.text }}>{item.label}</Text>
-                    </TouchableOpacity>
-                ))}
-            </View>
+            {/* Common Actions */}
+            {commonActions.length > 0 && (
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                    {commonActions.map((item) => {
+                        const isDelete = item.id === 'delete';
+                        return (
+                            <TouchableOpacity
+                                key={item.id}
+                                style={{
+                                    flex: 1,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    padding: 12,
+                                    borderRadius: 8,
+                                    backgroundColor: colors.card,
+                                    minHeight: 48,
+                                }}
+                                onPress={() => {
+                                    onAction(item.action);
+                                    onClose();
+                                }}
+                            >
+                                <MaterialIcons 
+                                    name={item.icon as any} 
+                                    size={20} 
+                                    color={isDelete ? '#FF453A' : colors.text} 
+                                    style={{ marginRight: 8 }} 
+                                />
+                                <Text style={{ 
+                                    fontSize: 15, 
+                                    color: isDelete ? '#FF453A' : colors.text, 
+                                    fontWeight: '500' 
+                                }}>
+                                    {item.label}
+                                </Text>
+                            </TouchableOpacity>
+                        );
+                    })}
+                </View>
+            )}
         </View>
     );
 }
@@ -133,46 +174,81 @@ function FileActionMenu({ mimeType, onAction, onClose }: { mimeType?: string, on
 
     const filteredActions = isImage ? FILE_ACTIONS : FILE_ACTIONS.filter(a => a.id === 'delete' || a.id === 'copy');
 
+    const specialActions = filteredActions.filter((a) => a.id === 'download' || (a.id === 'copy' && !isImage));
+    const commonActions = filteredActions.filter((a) => !specialActions.includes(a));
 
     return (
         <View>
-            <Text style={{
-                fontSize: 16,
-                fontWeight: '600',
-                color: colors.text,
-                marginBottom: 16,
-                textAlign: 'center'
-            }}>
-                File Options
-            </Text>
+            {/* Special Actions */}
+            {specialActions.length > 0 && (
+                <View style={{ gap: 8, marginBottom: 8 }}>
+                    {specialActions.map((item) => (
+                        <TouchableOpacity
+                            key={item.id}
+                            style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: 12,
+                                borderRadius: 8,
+                                backgroundColor: colors.card,
+                                minHeight: 48,
+                            }}
+                            onPress={() => {
+                                onAction(item.action);
+                                onClose();
+                            }}
+                        >
+                            <MaterialIcons name={item.icon as any} size={20} color={colors.text} style={{ marginRight: 8 }} />
+                            <Text style={{ fontSize: 15, color: colors.text, fontWeight: '500' }}>
+                                {item.id === 'copy' && !isImage ? 'Copy File Path' : item.label}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                </View>
+            )}
 
-            {/* Action buttons */}
-            <View style={{ gap: 8 }}>
-                {filteredActions.map((item) => (
-
-                    <TouchableOpacity
-                        key={item.id}
-                        style={{
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            padding: 12,
-                            borderRadius: 8,
-                            backgroundColor: colors.card,
-                        }}
-                        onPress={() => {
-                            onAction(item.action);
-                            onClose();
-                        }}
-                    >
-                        <MaterialIcons name={item.icon as any} size={20} color={item.id === 'delete' ? '#FF453A' : colors.text} style={{ marginRight: 12 }} />
-                        <Text style={{ fontSize: 16, color: item.id === 'delete' ? '#FF453A' : colors.text }}>
-                            {item.id === 'copy' && !isImage ? 'Copy File Path' : item.label}
-                        </Text>
-                    </TouchableOpacity>
-                ))}
-            </View>
-
-
+            {/* Common Actions */}
+            {commonActions.length > 0 && (
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                    {commonActions.map((item) => {
+                        const isDelete = item.id === 'delete';
+                        return (
+                            <TouchableOpacity
+                                key={item.id}
+                                style={{
+                                    flex: 1,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    padding: 12,
+                                    borderRadius: 8,
+                                    backgroundColor: colors.card,
+                                    minHeight: 48,
+                                }}
+                                onPress={() => {
+                                    onAction(item.action);
+                                    onClose();
+                                }}
+                            >
+                                <MaterialIcons 
+                                    name={item.icon as any} 
+                                    size={20} 
+                                    color={isDelete ? '#FF453A' : colors.text} 
+                                    style={{ marginRight: 8 }} 
+                                />
+                                <Text style={{ 
+                                    fontSize: 15, 
+                                    color: isDelete ? '#FF453A' : colors.text, 
+                                    fontWeight: '500' 
+                                }}>
+                                    {item.label}
+                                </Text>
+                            </TouchableOpacity>
+                        );
+                    })}
+                </View>
+            )}
         </View>
     );
 }

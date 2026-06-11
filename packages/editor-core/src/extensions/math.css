@@ -6,7 +6,6 @@
 .tiptap-mathematics-render[data-type="inline-math"],
 .math-node {
     display: inline-block;
-    contain: paint;
     align-items: center;
     position: relative;
     vertical-align: middle;
@@ -14,7 +13,7 @@
     margin: 0 3px;
     border-radius: 4px;
     cursor: pointer !important;
-    line-height: 1;
+    line-height: normal;
     pointer-events: auto;
     white-space: nowrap;
     max-width: 100%;
@@ -48,8 +47,8 @@
     align-items: center;
     border-radius: 4px;
     max-width: 100%;
-    line-height: 1;
-    font-size: clamp(0.7em, 3cqw, 1.1em);
+    line-height: normal;
+    /* font-size: 1.2em; */
     -webkit-user-select: text !important;
     user-select: text !important;
 }

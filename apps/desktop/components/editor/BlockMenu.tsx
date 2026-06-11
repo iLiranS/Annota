@@ -332,7 +332,7 @@ export function BlockMenu({
                                             key={color.value}
                                             className="h-6 w-6 rounded-full border border-black/10 flex items-center justify-center hover:scale-110 transition-transform"
                                             style={{ backgroundColor: color.value }}
-                                            onClick={() => handleAction("background", { color: isActive ? null : color.value })}
+                                            onClick={() => handleAction("background", { color: isActive ? null : color.value + "25" })}
                                             title={color.name}
                                         >
                                             {isActive && <Check className="h-3 w-3 text-white shadow-sm" />}

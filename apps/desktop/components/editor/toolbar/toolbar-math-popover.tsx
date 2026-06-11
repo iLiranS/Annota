@@ -188,12 +188,12 @@ export function MathPopover({ sendCommand, onOpenChange, visible, currentLatex, 
                         </div>
                     </div>
                     <Textarea
-                        className="text-sm font-mono bg-muted/30 border-input focus-visible:ring-0 focus:ring-0 outline-none resize-none scroll-area"
+                        className="text-sm font-mono bg-muted/30 border-input focus-visible:ring-0 focus:ring-0 outline-none resize-y scroll-area"
                         placeholder="e = mc^2"
                         value={latex}
                         onChange={(e) => setLatex(e.target.value)}
                         onKeyDown={handleKeyDown}
-                        style={{ resize: "none", height: 160 }}
+                        style={{ resize: "vertical", minHeight: 160, maxHeight: 320 }}
                         autoFocus
                     />
                 </div>
@@ -201,7 +201,10 @@ export function MathPopover({ sendCommand, onOpenChange, visible, currentLatex, 
                 <div className="space-y-2 ">
                     <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-70">Preview</label>
                     <div
-                        className="h-[140px] overflow-y-auto custom-scrollbar rounded-xl border bg-muted/10 px-2 transition-all shadow-inner"
+                        className={cn(
+                            "h-[140px] overflow-y-auto custom-scrollbar rounded-xl border bg-muted/10 px-2 transition-all shadow-inner",
+                            latex && !katexError && (isBlockInput ? "flex items-center justify-center" : "pt-4")
+                        )}
                         style={{ fontSize: '1rem' }}
                     >
                         {/* Empty state */}
@@ -227,7 +230,7 @@ export function MathPopover({ sendCommand, onOpenChange, visible, currentLatex, 
                         <div
                             ref={setPreviewEl}
                             className={cn(
-                                "w-fit self-start",
+                                "w-fit",
                                 (!latex || katexError) && "hidden"
                             )}
                         />
@@ -246,7 +249,7 @@ export function MathPopover({ sendCommand, onOpenChange, visible, currentLatex, 
                 </Button>
                 <Button
                     size="sm"
-                    className="px-8 h-10 rounded-full shadow-lg shadow-primary/20 font-semibold"
+                    className="px-8 bg-accent-full hover:brightness-110 hover:bg-accent-full active:scale-95 h-10 rounded-full shadow-lg shadow-primary/20 font-semibold"
                     onClick={() => handleInsert(latex)}
                     disabled={!latex || !!katexError}
                 >

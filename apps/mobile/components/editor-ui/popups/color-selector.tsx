@@ -19,13 +19,14 @@ export function ColorSelector({ title, currentColor, onSelect, onClear }: ColorS
             <View style={styles.colorGrid}>
                 {COLOR_PALETTE.map((colorOption) => {
                     const colorValue = colorOption.value;
+                    const isActive = currentColor?.toLowerCase().startsWith(colorValue.toLowerCase());
                     return (
                         <Pressable
                             key={colorValue}
                             style={[
                                 styles.colorItem,
                                 { backgroundColor: colorValue },
-                                currentColor === colorValue && styles.colorItemSelected,
+                                isActive && styles.colorItemSelected,
                             ]}
                             onPress={() => onSelect(colorValue)}
                         />

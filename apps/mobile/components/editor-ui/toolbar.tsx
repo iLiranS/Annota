@@ -209,7 +209,8 @@ export function EditorToolbar({
                                         onCommand('setNodeSelection', { pos: blockData.pos });
                                     }
                                     if (blockData?.blockType === 'quote') {
-                                        onCommand('setQuoteBackground', { color, pos: blockData?.pos });
+                                        const finalColor = color.endsWith('15') ? color : color + '15';
+                                        onCommand('setQuoteBackground', { color: finalColor, pos: blockData?.pos });
                                     } else {
                                         onCommand('setDetailsBackground', { color, pos: blockData?.pos });
                                     }

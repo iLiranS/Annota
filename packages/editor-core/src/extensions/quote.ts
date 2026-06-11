@@ -1,8 +1,9 @@
-import './quote.css';
-import { Blockquote } from '@tiptap/extension-blockquote';
 import { mergeAttributes } from '@tiptap/core';
+import { Blockquote } from '@tiptap/extension-blockquote';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
+import { COLOR_PALETTE } from '../../../../core/constants/colors';
 import { createBlockMenuButton } from './block-menu-button';
+import './quote.css';
 
 /** Strip the `dir` attribute so quote nodes inherit direction from the editor root */
 function stripDir(attrs: Record<string, any>): Record<string, any> {
@@ -19,12 +20,14 @@ declare module '@tiptap/core' {
     }
 }
 
+const DEFAULT_GRAY_COLOR = COLOR_PALETTE.find(c => c.name === 'Gray')?.value + '15' || '#75757515';
+
 export const Quote = Blockquote.extend<any>({
     addAttributes() {
         return {
             ...this.parent?.(),
             backgroundColor: {
-                default: null,
+                default: DEFAULT_GRAY_COLOR,
                 parseHTML: element => element.getAttribute('data-background-color'),
                 renderHTML: attributes => {
                     if (!attributes.backgroundColor) {
@@ -85,7 +88,7 @@ export const Quote = Blockquote.extend<any>({
                     if (typeof getPos !== 'function') return null;
                     const pos = getPos();
                     if (typeof pos !== 'number') return null;
-                    
+
                     return {
                         pos,
                         message: {
@@ -109,11 +112,11 @@ export const Quote = Blockquote.extend<any>({
                 contentDOM: content,
                 update: (newNode) => {
                     if (newNode.type.name !== node.type.name) return false;
-                    
+
                     if (newNode.attrs.backgroundColor !== node.attrs.backgroundColor) {
                         applyStyles(newNode.attrs.backgroundColor);
                     }
-                    
+
                     node = newNode;
                     return true;
                 },

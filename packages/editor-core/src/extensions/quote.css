@@ -56,7 +56,7 @@
     opacity: 0.7 !important;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 768px), (pointer: coarse) {
     .quote-menu-btn {
         top: 6px;
         inset-inline-end: 6px;
