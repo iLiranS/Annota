@@ -2411,7 +2411,7 @@ body.is-resizing-image {
     /* Must NOT be overflow:hidden — that clips the absolutely-positioned drag handle */
     overflow: visible;
     /* Default background color derived from accent for better visibility */
-    background-color: color-mix(in srgb, var(--accent-color), transparent 85%);
+    background-color: #75757525;
 }
 
 .ProseMirror .quote-wrapper blockquote {
@@ -2447,13 +2447,15 @@ body.is-resizing-image {
     opacity: 0.7 !important;
 }
 
-@media (max-width: 768px), (pointer: coarse) {
+@media (max-width: 768px),
+(pointer: coarse) {
     .quote-menu-btn {
         top: 6px;
         inset-inline-end: 6px;
         width: 32px;
         height: 32px;
     }
+
     .quote-menu-btn svg {
         width: 24px;
         height: 24px;
