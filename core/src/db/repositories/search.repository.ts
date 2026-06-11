@@ -20,22 +20,6 @@ const STOP_WORDS = new Set([
     'note', 'notes', 'document', 'documents', 'tell', 'show', 'find', 'search', 'related', 'stuff'
 ]);
 
-// Typed row returned from the FTS-only pass
-type FtsRow = {
-    id: string;
-    matchedSnippet: string;
-    score: number;
-};
-
-// Typed row returned from the metadata pass
-type MetaRow = {
-    id: string | null;
-    title: string | null;
-    preview: string | null;
-    folderId: string | null;
-    updatedAt: Date | null;
-};
-
 // Final merged result
 export type NoteSearchRow = {
     id: string;
