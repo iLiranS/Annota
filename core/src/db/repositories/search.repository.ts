@@ -62,7 +62,7 @@ export const SearchRepository = {
         return words.map(w => `"${w.replace(/"/g, '""')}"*`).join(` ${operator} `);
     },
 
-    async searchNotes(query: string, folderId: string | null = null): Promise<NoteSearchRow[]> {
+    async searchNotes(query: string, folderId: string | null = null, limit: number | null = null): Promise<NoteSearchRow[]> {
         const db = getDb();
 
         const executeSearch = async (ftsQuery: string, limit?: number): Promise<NoteSearchRow[]> => {
@@ -161,13 +161,13 @@ export const SearchRepository = {
 
         // PASS 1: Strict Mode — require ALL words to match (AND)
         let ftsQuery = this._buildFtsQuery(query, 'AND', false);
-        let results = await executeSearch(ftsQuery);
+        let results = await executeSearch(ftsQuery, limit ?? undefined);
 
         // PASS 2: Waterfall Fallback — OR search with stop words stripped
         if (results.length === 0) {
             ftsQuery = this._buildFtsQuery(query, 'OR', true);
             if (ftsQuery !== '""') {
-                results = await executeSearch(ftsQuery, 10);
+                results = await executeSearch(ftsQuery, limit ?? 10);
             }
         }
 

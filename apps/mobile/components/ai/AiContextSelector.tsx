@@ -6,6 +6,7 @@ import {
     ActivityIndicator,
     FlatList,
     KeyboardAvoidingView,
+    Modal,
     Platform,
     StyleSheet,
     Text,
@@ -50,7 +51,7 @@ export function AiContextSelector({
         const delayDebounce = setTimeout(async () => {
             try {
                 const [notesRaw, foldersRaw] = await Promise.all([
-                    SearchRepository.searchNotes(search),
+                    SearchRepository.searchNotes(search, null, 15),
                     SearchRepository.searchFolders(search)
                 ]);
                 if (active) {
@@ -208,102 +209,109 @@ export function AiContextSelector({
     ];
 
     return (
-        <Animated.View
-            entering={FadeIn}
-            exiting={FadeOut}
-            style={[StyleSheet.absoluteFill, styles.overlay]}
+        <Modal
+            transparent
+            visible={true}
+            animationType="none"
+            onRequestClose={onClose}
         >
-            <TouchableOpacity
-                style={styles.backdrop}
-                activeOpacity={1}
-                onPress={onClose}
-            />
             <Animated.View
-                entering={SlideInDown}
-                exiting={SlideOutDown}
-                style={[styles.container, { backgroundColor: colors.card, borderColor: colors.border }]}
+                entering={FadeIn}
+                exiting={FadeOut}
+                style={[StyleSheet.absoluteFill, styles.overlay]}
             >
-                    <View style={[styles.header, { borderBottomColor: colors.border }]}>
-                        <View style={styles.searchContainer}>
-                            <Ionicons name="search" size={16} color={colors.text + '40'} style={styles.searchIcon} />
-                            <TextInput
-                                placeholder="Search notes or folders..."
-                                placeholderTextColor={colors.text + '40'}
-                                value={search}
-                                onChangeText={setSearch}
-                                style={[styles.searchInput, { color: colors.text }]}
-                            />
-                        </View>
-                        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                            <Ionicons name="close" size={24} color={colors.text + '60'} />
-                        </TouchableOpacity>
-                    </View>
-
-                    <KeyboardAvoidingView
-                        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                        style={{ flex: 1 }}
-                    >
-
-                    {isSearching ? (
-                        <View style={styles.loaderContainer}>
-                            <ActivityIndicator size="small" color={colors.primary} />
-                            <Text style={[styles.loaderText, { color: colors.text + '60' }]}>Searching database...</Text>
-                        </View>
-                    ) : (
-                        <FlatList
-                            data={listData}
-                            keyExtractor={(item, index) => index.toString()}
-                            renderItem={({ item }) => {
-                                switch (item.type) {
-                                    case 'header':
-                                        if (item.count === 0) return null;
-                                        return (
-                                            <View style={styles.selectedHeader}>
-                                                <Text style={[styles.sectionTitle, { color: colors.primary }]}>
-                                                    {item.count} SELECTED
-                                                </Text>
-                                                <TouchableOpacity onPress={onClearAll}>
-                                                    <Text style={[styles.clearText, { color: '#EF4444' }]}>Clear all</Text>
-                                                </TouchableOpacity>
-                                            </View>
-                                        );
-                                    case 'section':
-                                        return (
-                                            <View style={styles.sectionHeader}>
-                                                <Ionicons name={item.icon as any} size={12} color={colors.text + '40'} />
-                                                <Text style={[styles.sectionTitle, { color: colors.text + '40' }]}>
-                                                    {item.title.toUpperCase()}
-                                                </Text>
-                                            </View>
-                                        );
-                                    case 'folder':
-                                        return renderFolderItem({ item: item.data });
-                                    case 'note':
-                                        return renderNoteItem({ item: item.data });
-                                    default:
-                                        return null;
-                                }
-                            }}
-                            contentContainerStyle={styles.listContent}
-                            keyboardShouldPersistTaps="handled"
-                        />
-                    )}
-
-                    {selectedNotes.length > 0 && (
-                        <View style={[styles.footer, { borderTopColor: colors.border }]}>
-                            <TouchableOpacity
-                                style={[styles.confirmButton, { backgroundColor: colors.primary }]}
-                                onPress={onClose}
-                            >
-                                <Text style={styles.confirmButtonText}>
-                                    Confirm Selection ({selectedNotes.length})
-                                </Text>
+                <TouchableOpacity
+                    style={styles.backdrop}
+                    activeOpacity={1}
+                    onPress={onClose}
+                />
+                <Animated.View
+                    entering={SlideInDown}
+                    exiting={SlideOutDown}
+                    style={[styles.container, { backgroundColor: colors.card, borderColor: colors.border }]}
+                >
+                        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+                            <View style={styles.searchContainer}>
+                                <Ionicons name="search" size={16} color={colors.text + '40'} style={styles.searchIcon} />
+                                <TextInput
+                                    placeholder="Search notes or folders..."
+                                    placeholderTextColor={colors.text + '40'}
+                                    value={search}
+                                    onChangeText={setSearch}
+                                    style={[styles.searchInput, { color: colors.text }]}
+                                />
+                            </View>
+                            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                                <Ionicons name="close" size={24} color={colors.text + '60'} />
                             </TouchableOpacity>
                         </View>
-                    )}
-                    </KeyboardAvoidingView>
-                </Animated.View>
-        </Animated.View>
+
+                        <KeyboardAvoidingView
+                            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                            style={{ flex: 1 }}
+                        >
+
+                        {isSearching ? (
+                            <View style={styles.loaderContainer}>
+                                <ActivityIndicator size="small" color={colors.primary} />
+                                <Text style={[styles.loaderText, { color: colors.text + '60' }]}>Searching database...</Text>
+                            </View>
+                        ) : (
+                            <FlatList
+                                data={listData}
+                                keyExtractor={(item, index) => index.toString()}
+                                renderItem={({ item }) => {
+                                    switch (item.type) {
+                                        case 'header':
+                                            if (item.count === 0) return null;
+                                            return (
+                                                <View style={styles.selectedHeader}>
+                                                    <Text style={[styles.sectionTitle, { color: colors.primary }]}>
+                                                        {item.count} SELECTED
+                                                    </Text>
+                                                    <TouchableOpacity onPress={onClearAll}>
+                                                        <Text style={[styles.clearText, { color: '#EF4444' }]}>Clear all</Text>
+                                                    </TouchableOpacity>
+                                                </View>
+                                            );
+                                        case 'section':
+                                            return (
+                                                <View style={styles.sectionHeader}>
+                                                    <Ionicons name={item.icon as any} size={12} color={colors.text + '40'} />
+                                                    <Text style={[styles.sectionTitle, { color: colors.text + '40' }]}>
+                                                        {item.title.toUpperCase()}
+                                                    </Text>
+                                                </View>
+                                            );
+                                        case 'folder':
+                                            return renderFolderItem({ item: item.data });
+                                        case 'note':
+                                            return renderNoteItem({ item: item.data });
+                                        default:
+                                            return null;
+                                    }
+                                }}
+                                contentContainerStyle={styles.listContent}
+                                keyboardShouldPersistTaps="handled"
+                            />
+                        )}
+
+                        {selectedNotes.length > 0 && (
+                            <View style={[styles.footer, { borderTopColor: colors.border }]}>
+                                <TouchableOpacity
+                                    style={[styles.confirmButton, { backgroundColor: colors.primary }]}
+                                    onPress={onClose}
+                                >
+                                    <Text style={styles.confirmButtonText}>
+                                        Confirm Selection ({selectedNotes.length})
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+                        </KeyboardAvoidingView>
+                    </Animated.View>
+            </Animated.View>
+        </Modal>
     );
 }
 

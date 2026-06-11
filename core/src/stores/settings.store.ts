@@ -66,9 +66,9 @@ const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
 
     defaultCodeLanguage: null,
     spellcheck: true,
-    autocorrect: false,
-    autocapitalize: false,
-    autocomplete: false,
+    autocorrect: true,
+    autocapitalize: true,
+    autocomplete: true,
     numberedLines: true,
 };
 

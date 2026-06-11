@@ -46,7 +46,7 @@ export function ContextSelector({
         const delayDebounce = setTimeout(async () => {
             try {
                 const [notesRaw, foldersRaw] = await Promise.all([
-                    SearchRepository.searchNotes(search),
+                    SearchRepository.searchNotes(search, null, 15),
                     SearchRepository.searchFolders(search)
                 ]);
                 if (active) {
@@ -245,9 +245,9 @@ export function ContextSelector({
                     )}
                 </div>
                 {selectedNotes.length > 0 && (
-                    <div className="p-2 border-t border-border/30 bg-muted/20">
+                    <div className="p-2 border-t  border-border/30 bg-muted/20">
                         <Button
-                            className="w-full h-8 text-[11px] font-semibold rounded-xl"
+                            className="w-full bg-accent-full hover:bg-accent-full hover:brightness-110 active:scale-95 h-8 text-[11px] font-semibold rounded-xl"
                             onClick={() => setIsOpen(false)}
                         >
                             Confirm Selection ({selectedNotes.length})

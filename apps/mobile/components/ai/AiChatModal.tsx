@@ -1,13 +1,15 @@
 import { AiChat, aiChats, aiMessages, ANTHROPIC_MODELS, generateId, getDb, GOOGLE_MODELS, OPENAI_MODELS, useAiChat, useAiStore, useNotesStore } from '@annota/core';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { MenuView } from '@react-native-menu/menu';
 import { useTheme } from '@react-navigation/native';
 import { desc, eq } from 'drizzle-orm';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
     Alert,
+    Keyboard,
+    KeyboardAvoidingView,
     Modal,
+    Platform,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -15,7 +17,9 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AiChatHistory } from './AiChatHistory';
+import { AiChatInput } from './AiChatInput';
 import { AiChatView } from './AiChatView';
+import { AiContextSelector } from './AiContextSelector';
 
 interface AiChatModalProps {
     visible: boolean;
@@ -51,7 +55,9 @@ export default function AiChatModal({ visible, onClose, initialContext, initialF
     const [chats, setChats] = useState<AiChat[]>([]);
     const [showHistory, setShowHistory] = useState(true);
     const [selectedContextNotes, setSelectedContextNotes] = useState<any[]>([]);
+    const [isContextSelectorVisible, setIsContextSelectorVisible] = useState(false);
     const { notes } = useNotesStore();
+    const supportsWebSearch = activeProvider === 'openai' || activeProvider === 'google' || activeProvider === 'anthropic';
 
     // Auto-select folder/tag/note context on first open for new chat
     useEffect(() => {
@@ -238,6 +244,7 @@ export default function AiChatModal({ visible, onClose, initialContext, initialF
             await db.insert(aiChats).values(newChat).run();
             setChats(prev => [newChat, ...prev]);
             setChatId(currentChatId);
+            setShowHistory(false);
         }
 
         const text = input;
@@ -256,50 +263,33 @@ export default function AiChatModal({ visible, onClose, initialContext, initialF
             presentationStyle="pageSheet"
             onRequestClose={onClose}
         >
-            <View style={[styles.container, { backgroundColor: colors.background }]}>
-                <View style={[styles.header, { borderBottomColor: colors.border }]}>
+            <KeyboardAvoidingView
+                style={[styles.container, { backgroundColor: colors.background }]}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 30 : 0}
+            >
+                <View style={[styles.header, { borderBottomColor: colors.border + "60" }]}>
                     <View style={styles.headerLeft}>
-                        {!showHistory ? (
+                        {!showHistory && (
                             <TouchableOpacity
                                 onPress={() => setShowHistory(true)}
                                 style={styles.backButton}
                             >
                                 <Ionicons name="chevron-back" size={24} color={colors.text} />
                             </TouchableOpacity>
-                        ) : (
-                            <View style={[styles.aiIcon, { backgroundColor: colors.primary + '15' }]}>
-                                <Ionicons name="sparkles" size={16} color={colors.primary} />
-                            </View>
                         )}
                         <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
                             {showHistory ? 'AI Chats' : (chatId ? (chats.find(c => c.id === chatId)?.title || 'Chat') : 'New Chat')}
                         </Text>
                     </View>
                     <View style={styles.headerRight}>
-                        {!showHistory ? (
-                            <MenuView
-
-                                onPressAction={({ nativeEvent }) => handleSetModel(nativeEvent.event)}
-                                actions={[
-                                    ...(availableModels.length > 0 ? [
-                                        { id: 'header-ollama', title: 'Ollama', attributes: { disabled: true } },
-                                        ...availableModels.map(m => ({ id: m.name, title: m.name, state: (activeProvider === 'ollama' && selectedModel === m.name) ? 'on' as const : 'off' as const })),
-                                    ] : []),
-                                    { id: 'header-openai', title: 'OpenAI', attributes: { disabled: true } },
-                                    ...OPENAI_MODELS.map(m => ({ id: m.value, title: m.label, state: (activeProvider === 'openai' && selectedModelOpenAi === m.value) ? 'on' as const : 'off' as const })),
-                                    { id: 'header-anthropic', title: 'Anthropic', attributes: { disabled: true } },
-                                    ...ANTHROPIC_MODELS.map(m => ({ id: m.value, title: m.label, state: (activeProvider === 'anthropic' && selectedModelAnthropic === m.value) ? 'on' as const : 'off' as const })),
-                                    { id: 'header-google', title: 'Google', attributes: { disabled: true } },
-                                    ...GOOGLE_MODELS.map(m => ({ id: m.value, title: m.label, state: (activeProvider === 'google' && selectedModelGoogle === m.value) ? 'on' as const : 'off' as const })),
-                                ]}
+                        {showHistory && chats.length > 0 && (
+                            <TouchableOpacity
+                                onPress={handleClearAllChats}
+                                style={[styles.clearHeaderButton, { backgroundColor: '#EF444415' }]}
                             >
-                                <TouchableOpacity style={styles.headerButton}>
-                                    <Ionicons name="hardware-chip-outline" size={22} color={colors.primary} />
-                                </TouchableOpacity>
-                            </MenuView>
-                        ) : (
-                            <TouchableOpacity onPress={handleNewChat} style={styles.headerButton}>
-                                <Ionicons name="add" size={26} color={colors.primary} />
+                                <Ionicons name="trash-outline" size={14} color="#EF4444" />
+                                <Text style={{ color: '#EF4444', fontSize: 12, fontWeight: '600' }}>Clear all</Text>
                             </TouchableOpacity>
                         )}
                         <TouchableOpacity onPress={onClose} style={styles.closeButton}>
@@ -308,41 +298,77 @@ export default function AiChatModal({ visible, onClose, initialContext, initialF
                     </View>
                 </View>
 
-                {showHistory ? (
-                    <AiChatHistory
-                        chats={[...chats].sort((a, b) => {
-                            if (a.isPinned && !b.isPinned) return -1;
-                            if (!a.isPinned && b.isPinned) return 1;
-                            return (b.updatedAt?.getTime() || 0) - (a.updatedAt?.getTime() || 0);
-                        })}
-                        onSelectChat={handleSelectChat}
-                        onDeleteChat={handleDeleteChat}
-                        onTogglePin={handleTogglePinChat}
-                        onNewChat={handleNewChat}
-                    />
-                ) : (
-                    <AiChatView
-                        messages={messages}
-                        isStreaming={isStreaming}
-                        error={error}
-                        isConfigured={isConfigured}
-                        input={input}
-                        setInput={setInput}
-                        onSend={handleSend}
-                        onClose={onClose}
-                        initialContext={initialContext}
-                        selectedContextNotes={selectedContextNotes}
+                {!isConfigured && (
+                    <TouchableOpacity
+                        style={[styles.warningBanner, { backgroundColor: '#FEF3C7' }]}
+                        onPress={() => {
+                            onClose();
+                            router.push('/settings/ai');
+                        }}
+                    >
+                        <Ionicons name="warning" size={16} color="#D97706" />
+                        <Text style={styles.warningBannerText}>
+                            {activeProvider ? activeProvider.toUpperCase() : 'AI'} is not configured. Tap to configure API key.
+                        </Text>
+                        <Ionicons name="chevron-forward" size={14} color="#D97706" style={{ marginLeft: 'auto' }} />
+                    </TouchableOpacity>
+                )}
+
+                <View style={{ flex: 1 }}>
+                    {showHistory ? (
+                        <AiChatHistory
+                            chats={[...chats].sort((a, b) => {
+                                if (a.isPinned && !b.isPinned) return -1;
+                                if (!a.isPinned && b.isPinned) return 1;
+                                return (b.updatedAt?.getTime() || 0) - (a.updatedAt?.getTime() || 0);
+                            })}
+                            onSelectChat={handleSelectChat}
+                            onDeleteChat={handleDeleteChat}
+                            onTogglePin={handleTogglePinChat}
+                            onNewChat={handleNewChat}
+                        />
+                    ) : (
+                        <AiChatView
+                            messages={messages}
+                            isStreaming={isStreaming}
+                            error={error}
+                            isConfigured={isConfigured}
+                            onClose={onClose}
+                            currentModelName={currentModelName ?? undefined}
+                            activeProvider={activeProvider ?? undefined}
+                            onInsertToNote={onInsertToNote}
+                        />
+                    )}
+                </View>
+
+                <AiChatInput
+                    input={input}
+                    setInput={setInput}
+                    onSend={handleSend}
+                    onStop={stop}
+                    isStreaming={isStreaming}
+                    isConfigured={isConfigured}
+                    supportsWebSearch={supportsWebSearch}
+                    initialContext={initialContext}
+                    selectedContextNotes={selectedContextNotes}
+                    onClearAllContext={handleClearAllContext}
+                    onOpenContextSelector={() => {
+                        Keyboard.dismiss();
+                        setIsContextSelectorVisible(true);
+                    }}
+                />
+
+                {isContextSelectorVisible && (
+                    <AiContextSelector
+                        selectedNotes={selectedContextNotes}
                         onToggleNote={handleToggleNote}
                         onToggleFolder={handleToggleFolder}
-                        onClearAllContext={handleClearAllContext}
-                        currentModelName={currentModelName ?? undefined}
-                        activeProvider={activeProvider ?? undefined}
-                        onInsertToNote={onInsertToNote}
-                        onStop={stop}
+                        onClearAll={handleClearAllContext}
+                        onClose={() => setIsContextSelectorVisible(false)}
                     />
                 )}
-            </View>
-        </Modal >
+            </KeyboardAvoidingView>
+        </Modal>
     );
 }
 
@@ -386,11 +412,33 @@ const styles = StyleSheet.create({
     headerButton: {
         padding: 6,
     },
+    clearHeaderButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 8,
+        paddingVertical: 6,
+        borderRadius: 8,
+        gap: 4,
+        marginRight: 2,
+    },
     backButton: {
         padding: 4,
         marginLeft: -4,
     },
     closeButton: {
         padding: 6,
-    }
+    },
+    warningBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        gap: 8,
+    },
+    warningBannerText: {
+        color: '#D97706',
+        fontSize: 13,
+        fontWeight: '500',
+        flex: 1,
+    },
 });

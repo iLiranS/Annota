@@ -14,8 +14,8 @@ import { cn } from "@/lib/utils";
 import { AiChat, aiChats, aiMessages, generateId, getDb, useAiStore, useNavigationStore, useNotesStore } from "@annota/core";
 import { desc, eq } from "drizzle-orm";
 import {
-    AlignLeft,
     Bot,
+    ChevronLeft,
     MessageSquare,
     Settings2,
     Trash2
@@ -327,7 +327,7 @@ export function AiSidebar({ width, isResizing }: { width?: number, isResizing?: 
                             onClick={() => setActiveChatId(null)}
                             title="Back to all chats"
                         >
-                            <AlignLeft size={16} strokeWidth={2.5} />
+                            <ChevronLeft size={16} strokeWidth={2.5} />
                         </Button>
                     ) : (
                         <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">

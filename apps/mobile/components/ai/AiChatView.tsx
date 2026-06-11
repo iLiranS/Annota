@@ -7,6 +7,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
     ActivityIndicator,
     FlatList,
+    Keyboard,
     KeyboardAvoidingView,
     Platform,
     StyleSheet,
@@ -25,19 +26,10 @@ interface AiChatViewProps {
     isStreaming: boolean;
     error: string | null;
     isConfigured: boolean;
-    input: string;
-    setInput: (text: string) => void;
-    onSend: () => void;
     onClose: () => void;
-    initialContext?: { title: string, id: string, content: string };
-    selectedContextNotes?: any[];
-    onToggleNote?: (note: any) => void;
-    onToggleFolder?: (folderId: string) => void;
-    onClearAllContext?: () => void;
     currentModelName?: string;
     activeProvider?: string;
     onInsertToNote?: (content: string) => void;
-    onStop?: () => void;
 }
 
 type ContentSegment =
@@ -491,26 +483,14 @@ export function AiChatView({
     isStreaming,
     error,
     isConfigured,
-    input,
-    setInput,
-    onSend,
     onClose,
-    initialContext,
-    selectedContextNotes = [],
-    onToggleNote,
-    onToggleFolder,
-    onClearAllContext,
     currentModelName,
     activeProvider,
-    onInsertToNote,
-    onStop
+    onInsertToNote
 }: AiChatViewProps) {
     const { colors } = useTheme();
-    const insets = useSafeAreaInsets();
     const router = useRouter();
     const flatListRef = useRef<FlatList>(null);
-    const [isContextSelectorVisible, setIsContextSelectorVisible] = useState(false);
-    const [isOptionsVisible, setIsOptionsVisible] = useState(false);
     const { chatContext, setChatContext, webSearchEnabled, setWebSearchEnabled, reasoningEnabled, setReasoningEnabled } = useAiStore();
     const supportsWebSearch = activeProvider === 'openai' || activeProvider === 'google' || activeProvider === 'anthropic';
     const visibleMessages = useMemo(() => messages.filter(m => m.role !== 'system'), [messages]);
@@ -576,18 +556,9 @@ export function AiChatView({
     }, [onInsertToNote]);
 
     return (
-        <KeyboardAvoidingView
+        <View
             style={styles.content}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            keyboardVerticalOffset={Platform.OS === 'ios' ? 30 : 0}
         >
-            {isOptionsVisible && (
-                <TouchableOpacity
-                    activeOpacity={1}
-                    style={[StyleSheet.absoluteFill, { zIndex: 10 }]}
-                    onPress={() => setIsOptionsVisible(false)}
-                />
-            )}
             <FlatList
                 ref={flatListRef}
                 data={visibleMessages}
@@ -669,9 +640,9 @@ export function AiChatView({
                             </TouchableOpacity>
                         </View>
                     ) : (
-                        <View style={styles.placeholderContainer}>
+                        <View style={[styles.placeholderContainer, { width: '100%', alignItems: 'center' }]}>
                             <Ionicons name="sparkles-outline" size={48} color={colors.text + '10'} />
-                            <Text style={[styles.placeholderText, { color: colors.text + '40' }]}>
+                            <Text style={[styles.placeholderText, { color: colors.text + '40', textAlign: 'center' }]}>
                                 Ask {activeProvider ? activeProvider.charAt(0).toUpperCase() + activeProvider.slice(1) : 'Annota AI'} anything about your notes.{'\n'}Using {displayModelName || 'default model'}.
                             </Text>
                         </View>
@@ -687,177 +658,7 @@ export function AiChatView({
                     ) : null
                 }
             />
-            <View
-                style={[
-                    styles.inputWrapper,
-                    {
-                        borderTopColor: colors.border,
-                        backgroundColor: colors.card,
-                        paddingBottom: Math.max(insets.bottom, 8),
-                    },
-                ]}
-            >
-                {chatContext && (
-                    <View style={[styles.activeContextBar, { borderBottomColor: colors.border, backgroundColor: colors.primary + '10' }]}>
-                        <Ionicons
-                            name="chatbox-ellipses"
-                            size={14}
-                            color={colors.primary}
-                        />
-                        <Text style={[styles.activeContextTitle, { color: colors.primary, flex: 1, marginHorizontal: 4 }]} numberOfLines={2}>
-                            {purifyNoteHtml(chatContext.html).trim() || chatContext.text || 'Selected item'}
-                        </Text>
-                        <TouchableOpacity
-                            onPress={() => setChatContext(null)}
-                            style={{ padding: 4 }}
-                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                        >
-                            <Ionicons name="close-circle" size={20} color={colors.primary + '80'} />
-                        </TouchableOpacity>
-                    </View>
-                )}
-                {(initialContext || selectedContextNotes.length > 0) && (
-                    <TouchableOpacity
-                        style={[styles.activeContextBar, { borderBottomColor: colors.border }]}
-                        onPress={() => setIsContextSelectorVisible(true)}
-                        activeOpacity={0.7}
-                    >
-                        <Ionicons
-                            name={selectedContextNotes.length > 0 ? "layers" : "alert-circle-outline"}
-                            size={14}
-                            color={selectedContextNotes.length > 0 ? colors.primary : '#dc2626'}
-                        />
-                        <Text style={[styles.activeContextTitle, { color: selectedContextNotes.length > 0 ? colors.text + '80' : '#dc2626' }]} numberOfLines={1}>
-                            {selectedContextNotes.length > 0
-                                ? `Using ${selectedContextNotes.length} selected ${selectedContextNotes.length === 1 ? 'note' : 'notes'} as context`
-                                : `Select at least 1 note as context`
-                            }
-                        </Text>
-                        {selectedContextNotes.length > 0 && (
-                            <TouchableOpacity
-                                onPress={() => onClearAllContext?.()}
-                                style={{ marginLeft: 'auto', padding: 4 }}
-                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                            >
-                                <Ionicons name="close-circle" size={20} color={colors.text + '40'} />
-                            </TouchableOpacity>
-                        )}
-                    </TouchableOpacity>
-                )}
-                <View style={[styles.inputContainer, { backgroundColor: colors.background + '80', borderColor: colors.border }]}>
-                    <TouchableOpacity
-                        style={styles.contextButton}
-                        onPress={() => setIsContextSelectorVisible(true)}
-                    >
-                        <Ionicons
-                            name={selectedContextNotes.length > 0 ? "add-circle" : "add-circle-outline"}
-                            size={24}
-                            color={selectedContextNotes.length > 0 ? colors.primary : colors.text + '40'}
-                        />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        style={[
-                            styles.webButton,
-                            {
-                                backgroundColor: (webSearchEnabled || reasoningEnabled)
-                                    ? colors.primary + '18'
-                                    : 'transparent',
-                            },
-                        ]}
-                        onPress={() => setIsOptionsVisible(!isOptionsVisible)}
-                        hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
-                    >
-                        <Ionicons
-                            name="options-outline"
-                            size={20}
-                            color={(webSearchEnabled || reasoningEnabled) ? colors.primary : colors.text + '40'}
-                        />
-                    </TouchableOpacity>
-
-                    {isOptionsVisible && (
-                        <View style={[styles.optionsMenu, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                            <TouchableOpacity
-                                style={[styles.optionItem, !supportsWebSearch && { opacity: 0.4 }]}
-                                onPress={() => {
-                                    if (supportsWebSearch) {
-                                        setWebSearchEnabled(!webSearchEnabled);
-                                        setIsOptionsVisible(false);
-                                    }
-                                }}
-                                disabled={!supportsWebSearch}
-                            >
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                                    <Ionicons name="globe-outline" size={16} color={webSearchEnabled ? colors.primary : colors.text + '80'} />
-                                    <Text style={[styles.optionText, { color: colors.text }]}>Web Search</Text>
-                                </View>
-                                {webSearchEnabled && <Ionicons name="checkmark" size={16} color={colors.primary} />}
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={styles.optionItem}
-                                onPress={() => {
-                                    setReasoningEnabled(!reasoningEnabled);
-                                    setIsOptionsVisible(false);
-                                }}
-                            >
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                                    <Ionicons name="hardware-chip-outline" size={16} color={reasoningEnabled ? colors.primary : colors.text + '80'} />
-                                    <Text style={[styles.optionText, { color: colors.text }]}>Reasoning Mode</Text>
-                                </View>
-                                {reasoningEnabled && <Ionicons name="checkmark" size={16} color={colors.primary} />}
-                            </TouchableOpacity>
-                        </View>
-                    )}
-                    <TextInput
-                        style={[styles.input, { color: colors.text }]}
-                        placeholder={
-                            selectedContextNotes.length > 0
-                                ? `Ask about ${selectedContextNotes.length} notes...`
-                                : (chatContext
-                                    ? "Ask about selected context..."
-                                    : "Select at least 1 note to start..."
-                                )
-                        }
-                        placeholderTextColor={colors.text + '40'}
-                        value={input}
-                        onChangeText={setInput}
-                        multiline
-                        editable={!isStreaming}
-                    />
-                    <TouchableOpacity
-                        style={[
-                            styles.sendButton,
-                            {
-                                backgroundColor: (input.trim() && !isStreaming && (selectedContextNotes.length > 0 || chatContext)) || isStreaming
-                                    ? colors.primary
-                                    : colors.text + '10'
-                            }
-                        ]}
-                        onPress={isStreaming ? onStop : onSend}
-                        disabled={
-                            (!input.trim() && !isStreaming) ||
-                            !isConfigured ||
-                            (!isStreaming && selectedContextNotes.length === 0 && !chatContext)
-                        }
-                    >
-                        {isStreaming ? (
-                            <Ionicons name="stop" size={20} color="#FFF" />
-                        ) : (
-                            <Ionicons name="arrow-up" size={20} color={input.trim() && (selectedContextNotes.length > 0 || chatContext) ? '#FFF' : colors.text + '30'} />
-                        )}
-                    </TouchableOpacity>
-                </View>
-            </View>
-
-            {isContextSelectorVisible && (
-                <AiContextSelector
-                    selectedNotes={selectedContextNotes}
-                    onToggleNote={(note) => onToggleNote?.(note)}
-                    onToggleFolder={(folderId) => onToggleFolder?.(folderId)}
-                    onClearAll={() => onClearAllContext?.()}
-                    onClose={() => setIsContextSelectorVisible(false)}
-                />
-            )}
-        </KeyboardAvoidingView>
+        </View>
     );
 }
 
@@ -1051,92 +852,5 @@ const styles = StyleSheet.create({
         fontSize: 13,
         textAlign: 'center',
     },
-    inputWrapper: {
-        borderTopWidth: 1,
-    },
-    activeContextBar: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderBottomWidth: 1,
-        gap: 8,
-    },
-    activeContextTitle: {
-        fontSize: 12,
-        fontWeight: '500',
-    },
-    inputContainer: {
-        flexDirection: 'row',
-        alignItems: 'flex-end',
-        marginHorizontal: 12,
-        marginTop: 12,
-        marginBottom: 4,
-        paddingHorizontal: 4,
-        paddingVertical: 4,
-        borderRadius: 24,
-        borderWidth: 1,
-        gap: 2,
-    },
-    contextButton: {
-        width: 32,
-        height: 32,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 4,
-        marginLeft: 2,
-    },
-    webButton: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 4,
-    },
-    input: {
-        flex: 1,
-        minHeight: 40,
-        maxHeight: 120,
-        paddingHorizontal: 8,
-        paddingTop: 10,
-        paddingBottom: 10,
-        fontSize: 15,
-    },
-    sendButton: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 4,
-        marginRight: 4,
-    },
-    optionsMenu: {
-        position: 'absolute',
-        bottom: 55,
-        left: 45,
-        width: 180,
-        borderRadius: 12,
-        borderWidth: 1,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 12,
-        elevation: 8,
-        padding: 4,
-        zIndex: 20,
-    },
-    optionItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingVertical: 10,
-        paddingHorizontal: 12,
-        borderRadius: 8,
-    },
-    optionText: {
-        fontSize: 14,
-        fontWeight: '500',
-    },
 });
+
