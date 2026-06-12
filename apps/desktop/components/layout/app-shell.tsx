@@ -79,7 +79,6 @@ function AppShellContent() {
         };
     }, [isResizing, resize, stopResizing]);
 
-    const isRtl = general.appDirection === 'rtl';
 
     return (
         <div className="flex flex-1 flex-col overflow-hidden bg-sidebar">
