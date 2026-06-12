@@ -272,6 +272,11 @@ export const FlashcardBlock = Node.create({
 
                 // Short tap with minimal movement = selection intent
                 if (elapsed < 500 && deltaY < 10) {
+                    const target = e.target as HTMLElement | null;
+                    if (target && target.closest('button, input, textarea, .flashcard-card-container, .flashcard-nav-overlay-btn, .flashcard-action-btn')) {
+                        return;
+                    }
+
                     const pos = typeof getPos === 'function' ? getPos() : undefined;
                     if (typeof pos !== 'number') return;
 

@@ -15,6 +15,7 @@ export interface ToolbarRenderProps {
     isBlockMath?: boolean;
     blockData: any;
     onInsertMath: () => void;
+    isKeyboardVisible?: boolean;
 }
 
 export interface TipTapEditorRef {
@@ -100,6 +101,7 @@ export interface TipTapEditorProps {
     /** Callback for when the editor scroller scrolls */
     onScroll?: (event: React.UIEvent<HTMLDivElement>) => void;
     onScrollNative?: (event: any) => void;
+    onEditorReady?: () => void;
 }
 
 export interface EditorState {

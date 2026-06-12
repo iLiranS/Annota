@@ -38,6 +38,7 @@ export function EditorToolbar({
     onAIAction,
     isAIStreaming,
     onStopAI,
+    isKeyboardVisible,
 }: EditorToolbarProps) {
     const { dark, colors } = useTheme();
     const [isLoading, setIsLoading] = useState(false);
@@ -333,14 +334,15 @@ export function EditorToolbar({
                 </>
             )}
 
-            <View
-                style={[
-                    styles.toolbar,
-                    {
-                        backgroundColor: colors.background,
-                    },
-                ]}
-            >
+            {isKeyboardVisible && (
+                <View
+                    style={[
+                        styles.toolbar,
+                        {
+                            backgroundColor: colors.background,
+                        },
+                    ]}
+                >
                 <View style={styles.toolbarContainer}>
                     <ScrollView
                         horizontal
@@ -549,6 +551,7 @@ export function EditorToolbar({
                     </View>
                 </View>
             </View>
+            )}
 
             {/* Popup Modals - rendered outside the toolbar layout */}
             {activePopup === 'youtube' && (

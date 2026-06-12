@@ -395,6 +395,7 @@ export async function performSyncPull(masterKey: string, saltHex: string) {
                     }
 
                     if (parsedFolders.length > 0) {
+                        console.log(`[Sync] Upserting ${parsedFolders.length} folders`);
                         await db.transaction(async (tx: any) => {
                             for (const f of parsedFolders) await upsertSyncedFolder(f, tx);
                         });
@@ -458,6 +459,7 @@ export async function performSyncPull(masterKey: string, saltHex: string) {
                     }
 
                     if (parsedTags.length > 0) {
+                        console.log(`[Sync] Upserting ${parsedTags.length} tags`);
                         await db.transaction(async (tx: any) => {
                             for (const t of parsedTags) await upsertSyncedTag(t, tx);
                         });
@@ -541,7 +543,7 @@ export async function performSyncPull(masterKey: string, saltHex: string) {
                     }
 
                     if (parsedNotes.length > 0) {
-                        console.log(parsedNotes.length)
+                        console.log(`[Sync] Upserting ${parsedNotes.length} notes`);
                         await db.transaction(async (tx: any) => {
                             for (const n of parsedNotes) {
                                 const noteChangedFileIds = await upsertSyncedNote(n, tx);

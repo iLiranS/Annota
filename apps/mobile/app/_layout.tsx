@@ -37,6 +37,7 @@ import {
 } from '@annota/core';
 import { SyncScheduler, getMasterKey, initPlatformAdapters } from '@annota/core/platform';
 import { createMobileAdapters } from '../bootstrap/mobile-adapters';
+import { ensureEditorHtmlCache } from '@annota/editor-ui';
 
 setStorageEngine(AsyncStorage);
 initPlatformAdapters(createMobileAdapters());
@@ -225,6 +226,10 @@ function AppLogicHub() {
   useEffect(() => {
     let isMounted = true;
     let subscription: any = null;
+
+    ensureEditorHtmlCache().catch((err) => {
+      console.error('[RootLayout] Failed to cache editor HTML:', err);
+    });
 
     const initAuth = async () => {
       try {

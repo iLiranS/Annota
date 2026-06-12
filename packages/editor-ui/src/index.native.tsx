@@ -1,6 +1,7 @@
 import React, { forwardRef } from 'react';
 import EditorNative from './Editor.native';
 import { TipTapEditorProps, TipTapEditorRef } from './shared/types';
+import { ensureEditorHtmlCache } from './shared/editor-cache.native';
 
 const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>((props, ref) => {
     return <EditorNative {...props} ref={ref} />;
@@ -9,6 +10,7 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>((
 TipTapEditor.displayName = 'TipTapEditor';
 
 export default TipTapEditor;
-export { TipTapEditor };
+export { TipTapEditor, ensureEditorHtmlCache };
 export * from './shared/types';
 export * from './shared/slash-commands-config';
+

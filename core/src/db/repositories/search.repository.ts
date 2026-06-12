@@ -310,7 +310,6 @@ export type PendingTaskNote = {
  * Extracts the text of each <li data-checked="false"> element.
  */
 export function parsePendingTasks(html: string): PendingTask[] {
-    console.log("[SearchRepository] parsePendingTasks called");
     const tasks: PendingTask[] = [];
     // Match <li data-checked="false">…</li> — greedy-safe with non-greedy inner
     const liRegex = /<li[^>]*data-checked="false"[^>]*>([\s\S]*?)<\/li>/gi;

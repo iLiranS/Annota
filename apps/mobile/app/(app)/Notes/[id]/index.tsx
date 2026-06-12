@@ -20,6 +20,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
+    Animated,
     BackHandler,
     Platform,
     StyleSheet,
@@ -71,6 +72,7 @@ export default function NoteEditor() {
     // Lazy-loaded content state
     const [content, setContent] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(() => Boolean(id));
+    const [isEditorLoaded, setIsEditorLoaded] = useState(false);
 
     // Track the current title for the header (updates as user types)
     const [displayTitle, setDisplayTitle] = useState(currentNote?.title || 'Untitled Note');
@@ -166,6 +168,24 @@ export default function NoteEditor() {
     const shouldAutofocus = content !== null && isInitialEmpty;
     const isContentReady = !id || content !== null;
 
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        if (!isLoading && isContentReady && isEditorLoaded) {
+            Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: 300,
+                useNativeDriver: true,
+            }).start();
+        } else {
+            fadeAnim.setValue(0);
+        }
+    }, [isLoading, isContentReady, isEditorLoaded, fadeAnim]);
+
+    const handleEditorReady = useCallback(() => {
+        setIsEditorLoaded(true);
+    }, []);
+
     const lastSavedContentRef = useRef<string | null>(null);
     const lastScrolledElementIdRef = useRef<string | null>(null);
 
@@ -204,6 +224,7 @@ export default function NoteEditor() {
         };
 
         setIsLoading(Boolean(id));
+        setIsEditorLoaded(false);
         void load();
 
         return () => {
@@ -635,12 +656,13 @@ export default function NoteEditor() {
                 onScrollToElement={handleScrollToElement}
             />
 
-            {isLoading || !isContentReady ? (
+            {!isContentReady ? (
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color={colors.primary} />
                 </View>
             ) : (
-                <View style={styles.editorWrapper}>
+                <View style={{ flex: 1 }}>
+                    <Animated.View style={[styles.editorWrapper, { opacity: fadeAnim, flex: 1 }]}>
                     {/* Search Overlay - absolutely positioned at top of editor */}
                     <SearchOverlay
                         visible={isSearching}
@@ -658,6 +680,7 @@ export default function NoteEditor() {
                     <TipTapEditor
                         ref={editorRef}
                         noteId={id}
+                        onEditorReady={handleEditorReady}
                         editable={currentNote && !currentNote.isPermDeleted && !currentNote.isDeleted}
                         initialContent={content ?? ''}
                         onContentChange={handleContentChange}
@@ -722,8 +745,14 @@ export default function NoteEditor() {
                             return null;
                         }}
                     />
-                </View>
-            )}
+                </Animated.View>
+                {!isEditorLoaded && (
+                    <View style={[StyleSheet.absoluteFill, styles.loadingContainer, { backgroundColor: colors.background }]}>
+                        <ActivityIndicator size="large" color={colors.primary} />
+                    </View>
+                )}
+            </View>
+        )}
         </View>
     );
 }

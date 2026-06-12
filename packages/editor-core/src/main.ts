@@ -39,14 +39,21 @@ function blurEditorForLinkInteraction() {
     }
 }
 
-function handleLinkInteractionStart(e: Event) {
+function handleNonEditInteractionStart(e: Event) {
     const target = e.target as HTMLElement | null;
     if (!target) return;
 
-    const link = target.closest('a') as HTMLAnchorElement | null;
-    if (!link?.href) return;
+    const editor = (window as any).editor;
+    if (editor?.isFocused) return;
 
-    if ('button' in e && typeof (e as PointerEvent).button === 'number' && (e as PointerEvent).button !== 0) {
+    const link = target.closest('a') as HTMLAnchorElement | null;
+    const image = target.closest('img') as HTMLImageElement | null;
+    const menuBtn = target.closest('.image-menu-btn, .details-menu-btn, .flashcard-menu-btn, .block-menu-btn, [class*="-menu-btn"], .details-toggle') as HTMLElement | null;
+    const flashcardInteractive = target.closest('.flashcard-card-container, .flashcard-nav-overlay-btn, .flashcard-edit-btn, .flashcard-nav-btn, .flashcard-order-btn, .flashcard-delete-btn, .flashcard-add-btn, .flashcard-done-btn') as HTMLElement | null;
+
+    if (!link && !image && !menuBtn && !flashcardInteractive) return;
+
+    if (link && 'button' in e && typeof (e as PointerEvent).button === 'number' && (e as PointerEvent).button !== 0) {
         return;
     }
 
@@ -56,9 +63,9 @@ function handleLinkInteractionStart(e: Event) {
     blurEditorForLinkInteraction();
 }
 
-editorEl.addEventListener('pointerdown', handleLinkInteractionStart, true);
-editorEl.addEventListener('touchstart', handleLinkInteractionStart, { capture: true, passive: false });
-editorEl.addEventListener('mousedown', handleLinkInteractionStart, true);
+editorEl.addEventListener('pointerdown', handleNonEditInteractionStart, true);
+editorEl.addEventListener('touchstart', handleNonEditInteractionStart, { capture: true, passive: false });
+editorEl.addEventListener('mousedown', handleNonEditInteractionStart, true);
 editorEl.addEventListener('focusin', function (e) {
     if (Date.now() <= suppressFocusUntil) {
         e.stopPropagation();

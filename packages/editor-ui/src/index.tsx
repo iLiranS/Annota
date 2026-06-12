@@ -8,7 +8,12 @@ const TipTapEditor = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>((
 
 TipTapEditor.displayName = 'TipTapEditor';
 
+export const ensureEditorHtmlCache = async (): Promise<string> => {
+    return '';
+};
+
 export default TipTapEditor;
 export { TipTapEditor };
 export * from './shared/types';
 export * from './shared/slash-commands-config';
+

@@ -1,6 +1,6 @@
 import { useSettingsStore } from '@annota/core';
 import { NoteFileService } from '@annota/core/platform';
-import editorHtml from '@annota/editor-core/dist/editor-html';
+import { ensureEditorHtmlCache, editorCacheFile, getIsEditorHtmlCached, webViewSourceFallback } from './shared/editor-cache.native';
 
 import { useTheme } from '@react-navigation/native';
 import * as DocumentPicker from 'expo-document-picker';
@@ -15,6 +15,7 @@ import { useWebViewBridge } from './hooks/useWebViewBridge';
 import { PopupType, TipTapEditorProps, TipTapEditorRef } from './shared/types';
 import { extractImageIds } from './shared/image-utils';
 import { insertProcessedFile, insertRemoteFile } from './shared/file-insert-utils';
+
 
 export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProps>(
     (props, ref) => {
@@ -31,6 +32,7 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
             colors: propColors,
             editable: editable = true,
             scrollY,
+            onEditorReady,
         } = props;
         const theme = useTheme();
         const colors = propColors || theme.colors;
@@ -51,7 +53,20 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
         const contentResolverRef = useRef<((html: string) => void) | null>(null);
         const [blockData, setBlockData] = useState<any>(null);
         const { width, height } = useWindowDimensions();
-        const webViewSource = useMemo(() => ({ html: editorHtml, baseUrl: 'https://app.local' }), []);
+
+        useEffect(() => {
+            if (!getIsEditorHtmlCached()) {
+                ensureEditorHtmlCache();
+            }
+        }, []);
+
+        const webViewSource = useMemo(() => {
+            if (getIsEditorHtmlCached()) {
+                return { uri: editorCacheFile.uri };
+            }
+            return webViewSourceFallback;
+        }, []);
+
         const [keyboardParams, setKeyboardParams] = useState({ isVisible: false, height: 0 });
         const { isVisible: isKeyboardVisible, height: keyboardHeight } = keyboardParams;
 
@@ -237,6 +252,12 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
             sendMessage,
             onMessage: onBridgeMessage
         });
+
+        useEffect(() => {
+            if (isEditorReady && onEditorReady) {
+                onEditorReady();
+            }
+        }, [isEditorReady, onEditorReady]);
 
         // Sync settings when they change
         useEffect(() => {
@@ -485,11 +506,13 @@ export const EditorNative = React.memo(forwardRef<TipTapEditorRef, TipTapEditorP
                             isBlockMath,
                             blockData,
                             onInsertMath: () => {
+                                Keyboard.dismiss();
                                 setCurrentLatex(null);
                                 setIsBlockMath(false);
                                 setActivePopup('math');
                                 setIsPopupOpen(true);
-                            }
+                            },
+                            isKeyboardVisible
                         })}
                     </View>
                 )}
