@@ -12,6 +12,7 @@ import ThemedText from '@/components/themed-text';
 import { AnnotaIcon } from '@/components/ui/annota-icon';
 import { HapticPressable } from '@/components/ui/haptic-pressable';
 import { useSidebar } from '@/context/sidebar-context';
+import { usePullToSync } from '@/hooks/use-pull-to-sync';
 import {
     DAILY_NOTES_FOLDER_ID,
     NoteMetadata,
@@ -42,7 +43,6 @@ import Animated, {
     FadeOut,
     LinearTransition
 } from 'react-native-reanimated';
-import { usePullToSync } from '@/hooks/use-pull-to-sync';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 

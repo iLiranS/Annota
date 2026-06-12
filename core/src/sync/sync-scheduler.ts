@@ -83,18 +83,6 @@ export class SyncScheduler {
         this.appStateUnsubscribe?.();
         this.netInfoUnsubscribe?.();
 
-        const adapters = getPlatformAdapters();
-
-        // Subscribe to AppState
-        this.appStateUnsubscribe = adapters.appState.subscribe(
-            this.handleAppStateChange,
-        );
-
-        // Subscribe to NetInfo
-        this.netInfoUnsubscribe = adapters.network.subscribe(
-            this.handleNetInfoChange,
-        );
-
         // Register force sync callback on the store to avoid circular imports and dynamic runtime imports when offline
         useSyncStore.setState({
             onForceSync: async () => {
@@ -102,9 +90,23 @@ export class SyncScheduler {
             }
         });
 
-        // Hydrate the sync pointer from storage, then do the initial pull
+        // Hydrate the sync pointer from storage, then register listeners and run initial pull
         useSyncStore.getState().loadSyncCursors(userId).then(() => {
-            if (!this.disposed) this.executeSyncPull();
+            if (this.disposed) return;
+
+            const adapters = getPlatformAdapters();
+
+            // Subscribe to AppState
+            this.appStateUnsubscribe = adapters.appState.subscribe(
+                this.handleAppStateChange,
+            );
+
+            // Subscribe to NetInfo
+            this.netInfoUnsubscribe = adapters.network.subscribe(
+                this.handleNetInfoChange,
+            );
+
+            this.executeSyncPull();
         });
     }
 
@@ -248,6 +250,11 @@ export class SyncScheduler {
     private async executeSyncPush(): Promise<boolean> {
         if (this.disposed) return false;
 
+        if (!useSyncStore.getState().syncUserId) {
+            console.log('[SyncScheduler] Push skipped: syncUserId is not loaded yet');
+            return false;
+        }
+
         if (SyncScheduler._syncDisabled) {
             console.log('[SyncScheduler] Push skipped: sync is disabled via remote config');
             return false;
@@ -276,6 +283,11 @@ export class SyncScheduler {
      */
     private async executeSyncPull(): Promise<boolean> {
         if (this.disposed) return false;
+
+        if (!useSyncStore.getState().syncUserId) {
+            console.log('[SyncScheduler] Pull skipped: syncUserId is not loaded yet');
+            return false;
+        }
 
         if (SyncScheduler._syncDisabled) {
             console.log('[SyncScheduler] Pull skipped: sync is disabled via remote config');

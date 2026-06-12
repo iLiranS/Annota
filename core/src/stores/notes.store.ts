@@ -2,7 +2,6 @@ import { create } from 'zustand';
 import { COLOR_PALETTE } from '../../constants/colors';
 import { getPlatformAdapters } from '../adapters';
 import { purgeGuestTombstones, type PendingTaskNote } from '../db';
-import { normalizeStoredContent } from '../utils/html';
 import { parsePendingTasks } from '../db/repositories/search.repository';
 import type { Folder, FolderInsert, NoteMetadata, Tag } from '../db/schema';
 import { DAILY_NOTES_FOLDER_ID, FolderService, TRASH_FOLDER_ID } from '../services/folders.service';
@@ -10,11 +9,12 @@ import { NoteService } from '../services/notes.service';
 import { SearchService } from '../services/search.service';
 import { TagService } from '../services/tags.service';
 import { SyncScheduler } from '../sync/sync-scheduler';
+import { noteContentCache } from '../utils/caches';
+import { normalizeStoredContent } from '../utils/html';
 import { generatePreview, generateTitle } from '../utils/notes';
 import { SortType, sortFolders, sortNotes } from '../utils/sorts';
 import { createStorageAdapter } from './config';
 import { useUserStore } from './user.store';
-import { noteContentCache } from '../utils/caches';
 
 
 // Re-export types for convenience

@@ -9,7 +9,7 @@ import { removeMasterKey } from '../utils/crypto';
 import * as schema from './schema';
 import { seedSystemData } from './seed';
 import type { DbType } from './types';
-import { parsePendingTasks } from './repositories/search.repository';
+import { runMigrations } from './migrations';
 import { cleanFolderExpandedState } from '../utils/folders';
 
 // SQL for creating tables (CREATE TABLE IF NOT EXISTS)
@@ -148,7 +148,8 @@ export const CREATE_TABLES_SQL = `
     title TEXT NOT NULL DEFAULT 'New Chat',
     is_pinned INTEGER NOT NULL DEFAULT 0,
     created_at INTEGER NOT NULL,
-    updated_at INTEGER NOT NULL
+    updated_at INTEGER NOT NULL,
+    current_context_id TEXT
   );
 
   CREATE TABLE IF NOT EXISTS ai_messages (
@@ -162,8 +163,19 @@ export const CREATE_TABLES_SQL = `
     created_at INTEGER NOT NULL
   );
 
-  -- Virtual table for search
-  CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(id UNINDEXED, title, preview, content);
+  -- Search View & Virtual Table for External Content
+  CREATE VIEW IF NOT EXISTS note_search_view AS
+  SELECT c.rowid AS rowid, m.id AS id, m.title AS title, m.preview AS preview, c.content AS content
+  FROM note_metadata m
+  JOIN note_content c ON m.id = c.id;
+
+  CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(
+    id UNINDEXED,
+    title,
+    preview,
+    content,
+    content='note_search_view'
+  );
 `;
 
 // Initialize database (create tables and seed system data)
@@ -179,164 +191,8 @@ export async function initDatabase(
     // 1. Create all base tables using IF NOT EXISTS
     await nativeDb.execAsync(CREATE_TABLES_SQL);
 
-    // 2. Migration Tracker Setup
-    await nativeDb.execAsync(`
-      CREATE TABLE IF NOT EXISTS _migrations (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL UNIQUE,
-        applied_at INTEGER NOT NULL
-      );
-    `);
-
-    // 3. Define Migrations
-    const migrations = [
-      {
-        name: '001_add_current_context_id',
-        sql: 'ALTER TABLE ai_chats ADD COLUMN current_context_id TEXT;'
-      },
-      {
-        name: '002_remove_tasks_table',
-        sql: 'DROP TABLE IF EXISTS tasks;'
-      },
-      {
-        name: '003_add_fts5_v2',
-        sql: [
-          // 1. Create the unified FTS5 virtual table
-          `CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(id UNINDEXED, title, preview, content);`,
-
-          // 2. Trigger: sync new notes (joins note_metadata for title/preview)
-          `CREATE TRIGGER IF NOT EXISTS notes_fts_ai AFTER INSERT ON note_content BEGIN INSERT INTO notes_fts(id, title, preview, content) SELECT new.id, m.title, m.preview, new.content FROM note_metadata m WHERE m.id = new.id; END;`,
-
-          // 3. Trigger: sync updated content
-          `CREATE TRIGGER IF NOT EXISTS notes_fts_au_content AFTER UPDATE ON note_content BEGIN UPDATE notes_fts SET content = new.content WHERE id = new.id; END;`,
-
-          // 4. Trigger: sync updated metadata (title/preview)
-          `CREATE TRIGGER IF NOT EXISTS notes_fts_au_metadata AFTER UPDATE OF title, preview ON note_metadata BEGIN UPDATE notes_fts SET title = new.title, preview = new.preview WHERE id = new.id; END;`,
-
-          // 5. Trigger: sync deleted notes
-          `CREATE TRIGGER IF NOT EXISTS notes_fts_ad AFTER DELETE ON note_content BEGIN DELETE FROM notes_fts WHERE id = old.id; END;`,
-
-          // 6. Backfill existing data
-          `INSERT OR IGNORE INTO notes_fts(id, title, preview, content) SELECT nc.id, nm.title, nm.preview, nc.content FROM note_content nc JOIN note_metadata nm ON nc.id = nm.id;`
-        ]
-      },
-      {
-        name: '004_add_is_pinned_to_ai_chats',
-        sql: 'ALTER TABLE ai_chats ADD COLUMN is_pinned INTEGER NOT NULL DEFAULT 0;'
-      },
-      {
-        name: '005_add_ai_message_process_fields',
-        sql: [
-          'ALTER TABLE ai_messages ADD COLUMN reasoning_content TEXT;',
-          'ALTER TABLE ai_messages ADD COLUMN tool_calls TEXT;'
-        ]
-      },
-      {
-        name: '006_add_note_links',
-        sql: [
-          `CREATE TABLE IF NOT EXISTS note_links (
-            source_id TEXT NOT NULL,
-            target_id TEXT NOT NULL,
-            block_id TEXT,
-            PRIMARY KEY (source_id, target_id),
-            FOREIGN KEY(source_id) REFERENCES note_metadata(id) ON DELETE CASCADE,
-            FOREIGN KEY(target_id) REFERENCES note_metadata(id) ON DELETE CASCADE
-          );`,
-          `CREATE INDEX IF NOT EXISTS idx_note_links_target ON note_links(target_id);`
-        ]
-      },
-      {
-        name: '007_add_note_tasks',
-        sql: [
-          `CREATE TABLE IF NOT EXISTS note_tasks (
-            note_id TEXT NOT NULL,
-            task_index INTEGER NOT NULL,
-            text TEXT NOT NULL,
-            PRIMARY KEY (note_id, task_index),
-            FOREIGN KEY(note_id) REFERENCES note_metadata(id) ON DELETE CASCADE
-          );`
-        ]
-      },
-      {
-        name: '008_add_publish_fields',
-        sql: [
-          'ALTER TABLE note_metadata ADD COLUMN is_published INTEGER NOT NULL DEFAULT 0;',
-          'ALTER TABLE note_metadata ADD COLUMN publish_updated_at INTEGER;'
-        ]
-      },
-      {
-        name: '009_add_last_synced_file_ids',
-        sql: "ALTER TABLE note_metadata ADD COLUMN last_synced_file_ids TEXT NOT NULL DEFAULT '[]';"
-      }
-    ];
-
-    // 4. Execute Migrations
-    let appliedMigration007 = false;
-    if (nativeDb.selectAsync) {
-      for (const m of migrations) {
-        const alreadyApplied = await nativeDb.selectAsync(
-          'SELECT id FROM _migrations WHERE name = ?',
-          [m.name]
-        );
-
-        if (!alreadyApplied || alreadyApplied.length === 0) {
-          try {
-            // Support array-based migrations (e.g. triggers with internal semicolons)
-            // Each element is executed as a standalone statement, bypassing naive ";" splitting.
-            const statements = Array.isArray(m.sql) ? m.sql : [m.sql];
-            for (const stmt of statements) {
-              if (nativeDb.executeRawAsync) {
-                await nativeDb.executeRawAsync(stmt);
-              } else {
-                await nativeDb.execAsync(stmt);
-              }
-            }
-            await nativeDb.execAsync(
-              `INSERT INTO _migrations (name, applied_at) VALUES ('${m.name}', ${Date.now()});`
-            );
-            console.log(`[DB] Applied migration: ${m.name}`);
-            if (m.name === '007_add_note_tasks') {
-              appliedMigration007 = true;
-            }
-          } catch (e: any) {
-            const errorMsg = (e?.message || String(e)).toLowerCase();
-            // If the column already exists (from a previous ad-hoc attempt), just record it
-            if (errorMsg.includes('duplicate column name') || errorMsg.includes('already exists')) {
-               await nativeDb.execAsync(
-                `INSERT INTO _migrations (name, applied_at) VALUES ('${m.name}', ${Date.now()});`
-              );
-            } else {
-              console.error(`[DB] Migration failed: ${m.name}`, e);
-            }
-          }
-        }
-      }
-    }
-
-    if (appliedMigration007) {
-      console.log('[DB] Migration 007 applied, running note tasks backfill...');
-      try {
-        const noteContents = await drizzleDb.select().from(schema.noteContent).all();
-        console.log(`[DB] Found ${noteContents.length} notes to backfill tasks for.`);
-        for (const row of noteContents) {
-          const tasks = parsePendingTasks(row.content);
-          if (tasks.length > 0) {
-            const newTasks = tasks.map((task) => ({
-              noteId: row.id,
-              taskIndex: task.index,
-              text: task.text,
-            }));
-            await drizzleDb.insert(schema.noteTasks)
-              .values(newTasks)
-              .onConflictDoNothing()
-              .run();
-          }
-        }
-        console.log('[DB] Tasks backfill completed successfully!');
-      } catch (backfillError) {
-        console.error('[DB] Failed to backfill note tasks:', backfillError);
-      }
-    }
+    // 2. Run Database Migrations
+    await runMigrations(nativeDb);
 
     // Seed system data (Trash folder, Daily Notes folder, default settings)
     seedSystemData(drizzleDb);
@@ -344,12 +200,17 @@ export async function initDatabase(
     // 5. FTS Health Check: Ensure FTS is populated if metadata exists
     // This is a safety net for cases where virtual tables weren't correctly migrated (e.g. sqlcipher_export)
     if (nativeDb.selectAsync) {
-      // ── Auto-Heal: Ensure FTS triggers always exist (in case of a reset that skipped migration 003)
+      // Clean up legacy contented triggers if present
+      await nativeDb.execAsync('DROP TRIGGER IF EXISTS notes_fts_ad;');
+
+      // ── Auto-Heal: Ensure FTS triggers always exist (in case of a reset that skipped migrations)
       const ftsTriggers = [
-        `CREATE TRIGGER IF NOT EXISTS notes_fts_ai AFTER INSERT ON note_content BEGIN INSERT INTO notes_fts(id, title, preview, content) SELECT new.id, m.title, m.preview, new.content FROM note_metadata m WHERE m.id = new.id; END;`,
-        `CREATE TRIGGER IF NOT EXISTS notes_fts_au_content AFTER UPDATE ON note_content BEGIN UPDATE notes_fts SET content = new.content WHERE id = new.id; END;`,
-        `CREATE TRIGGER IF NOT EXISTS notes_fts_au_metadata AFTER UPDATE OF title, preview ON note_metadata BEGIN UPDATE notes_fts SET title = new.title, preview = new.preview WHERE id = new.id; END;`,
-        `CREATE TRIGGER IF NOT EXISTS notes_fts_ad AFTER DELETE ON note_content BEGIN DELETE FROM notes_fts WHERE id = old.id; END;`
+        `CREATE TRIGGER IF NOT EXISTS notes_fts_ai AFTER INSERT ON note_content BEGIN INSERT INTO notes_fts(rowid, id, title, preview, content) SELECT new.rowid, new.id, m.title, m.preview, new.content FROM note_metadata m WHERE m.id = new.id; END;`,
+        `CREATE TRIGGER IF NOT EXISTS notes_fts_bd BEFORE DELETE ON note_content BEGIN INSERT INTO notes_fts(notes_fts, rowid, id, title, preview, content) SELECT 'delete', old.rowid, old.id, m.title, m.preview, old.content FROM note_metadata m WHERE m.id = old.id; END;`,
+        `CREATE TRIGGER IF NOT EXISTS notes_fts_bu_content BEFORE UPDATE ON note_content BEGIN INSERT INTO notes_fts(notes_fts, rowid, id, title, preview, content) SELECT 'delete', old.rowid, old.id, m.title, m.preview, old.content FROM note_metadata m WHERE m.id = old.id; END;`,
+        `CREATE TRIGGER IF NOT EXISTS notes_fts_au_content AFTER UPDATE ON note_content BEGIN INSERT INTO notes_fts(rowid, id, title, preview, content) SELECT new.rowid, new.id, m.title, m.preview, new.content FROM note_metadata m WHERE m.id = new.id; END;`,
+        `CREATE TRIGGER IF NOT EXISTS notes_fts_bu_metadata BEFORE UPDATE OF title, preview ON note_metadata BEGIN INSERT INTO notes_fts(notes_fts, rowid, id, title, preview, content) SELECT 'delete', c.rowid, old.id, old.title, old.preview, c.content FROM note_content c WHERE c.id = old.id; END;`,
+        `CREATE TRIGGER IF NOT EXISTS notes_fts_au_metadata AFTER UPDATE OF title, preview ON note_metadata BEGIN INSERT INTO notes_fts(rowid, id, title, preview, content) SELECT c.rowid, new.id, new.title, new.preview, c.content FROM note_content c WHERE c.id = new.id; END;`
       ];
 
       for (const triggerSql of ftsTriggers) {
@@ -368,13 +229,17 @@ export async function initDatabase(
 
       if (ftsCount < metaCount) {
         console.log(`[DB] FTS table is missing notes (${ftsCount}/${metaCount}). Running emergency backfill...`);
-        await nativeDb.execAsync(`
-          INSERT INTO notes_fts(id, title, preview, content) 
-          SELECT nc.id, nm.title, nm.preview, nc.content 
-          FROM note_content nc 
-          JOIN note_metadata nm ON nc.id = nm.id
-          WHERE nc.id NOT IN (SELECT id FROM notes_fts);
-        `);
+        try {
+          await nativeDb.execAsync("INSERT INTO notes_fts(notes_fts) VALUES('rebuild');");
+        } catch {
+          await nativeDb.execAsync(`
+            INSERT INTO notes_fts(id, title, preview, content) 
+            SELECT nc.id, nm.title, nm.preview, nc.content 
+            FROM note_content nc 
+            JOIN note_metadata nm ON nc.id = nm.id
+            WHERE nc.id NOT IN (SELECT id FROM notes_fts);
+          `);
+        }
       }
     }
 
@@ -530,6 +395,14 @@ export async function deleteDatabase(): Promise<void> {
 export async function vacuumDatabase(): Promise<void> {
   try {
     const nativeDb = getExpoDb() as { execAsync: (sql: string) => Promise<void> };
+
+    // Optimize FTS5 index to clean up deleted tombstones and merge segments
+    try {
+      await nativeDb.execAsync("INSERT INTO notes_fts(notes_fts) VALUES('optimize');");
+      console.log('FTS index optimized successfully');
+    } catch (ftsErr) {
+      console.warn('Failed to optimize FTS index:', ftsErr);
+    }
 
     await nativeDb.execAsync('VACUUM;');
     console.log('Database vacuumed successfully');

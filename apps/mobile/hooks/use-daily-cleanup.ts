@@ -1,6 +1,6 @@
-import { StorageService, useDbStore, vacuumDatabase } from '@annota/core';
+import { StorageService, useDbStore } from '@annota/core';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { File as ExpoFile, Directory as ExpoDirectory, Paths } from 'expo-file-system';
+import { Directory as ExpoDirectory, File as ExpoFile, Paths } from 'expo-file-system';
 import { useEffect } from 'react';
 
 async function cleanupExportCache() {
@@ -76,7 +76,7 @@ export function useDailyCleanup() {
 
                 if (shouldRun) {
                     // 1. Vacuum the database to reclaim space
-                    await vacuumDatabase();
+                    // await vacuumDatabase();
 
                     // 2. Clean up temporary export/download files
                     await cleanupExportCache();

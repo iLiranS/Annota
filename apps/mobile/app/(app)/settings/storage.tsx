@@ -19,20 +19,11 @@ export default function StorageSettings() {
     const router = useRouter();
     const { user } = useAuthStore();
     const { colors } = useAppTheme();
-    const [stats, setStats] = useState<{
-        totalFiles: number;
-        totalLinks: number;
-        orphans: number;
-        totalFilesSize: number;
-        totalNotes: number;
-        totalFolders: number;
-        notesSize: number;
-        totalSize: number;
-        dbName: string;
-    } | null>(null);
+    const [stats, setStats] = useState<any>(null);
     const [availableDbs, setAvailableDbs] = useState<string[]>([]);
     const [selectedDb, setSelectedDb] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [showDetailedBreakdown, setShowDetailedBreakdown] = useState(false);
 
     const loadAvailableDbs = async () => {
         const dbs = await StorageService.listDatabases();
@@ -109,6 +100,20 @@ export default function StorageSettings() {
         } catch (error: any) {
             console.error("Manual Sync Error:", error);
             Alert.alert("Sync Failed", error?.message || "An unknown error occurred during sync.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleVacuumDatabase = async () => {
+        setIsLoading(true);
+        try {
+            await StorageService.vacuum();
+            Alert.alert("Success", "Database vacuumed and optimized successfully.");
+            await loadStats();
+        } catch (e) {
+            console.error(e);
+            Alert.alert("Error", "Failed to vacuum database.");
         } finally {
             setIsLoading(false);
         }
@@ -205,6 +210,67 @@ export default function StorageSettings() {
                         value={stats ? formatBytes(stats.notesSize) : '...'}
                         colors={colors}
                     />
+                    {stats && (stats.freelistSize > 0 || stats.noteContentSize > 0 || stats.noteVersionsSize > 0 || stats.aiMessagesSize > 0) && (
+                        <View style={[styles.breakdownContainer, { backgroundColor: colors.card + '50', borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border }]}>
+                            <Text style={[styles.breakdownTitle, { color: colors.text + '80' }]}>Database Space Breakdown</Text>
+                            {stats.noteContentSize > 0 && (
+                                <View style={styles.breakdownRow}>
+                                    <Text style={[styles.breakdownLabel, { color: colors.text + '90' }]}>Active Notes Content</Text>
+                                    <Text style={[styles.breakdownValue, { color: colors.text }]}>{formatBytes(stats.noteContentSize)}</Text>
+                                </View>
+                            )}
+                            {stats.noteVersionsSize > 0 && (
+                                <View style={styles.breakdownRow}>
+                                    <Text style={[styles.breakdownLabel, { color: colors.text + '90' }]}>Notes Version History</Text>
+                                    <Text style={[styles.breakdownValue, { color: colors.text }]}>{formatBytes(stats.noteVersionsSize)}</Text>
+                                </View>
+                            )}
+                            {stats.aiMessagesSize > 0 && (
+                                <View style={styles.breakdownRow}>
+                                    <Text style={[styles.breakdownLabel, { color: colors.text + '90' }]}>AI Chats & Messages</Text>
+                                    <Text style={[styles.breakdownValue, { color: colors.text }]}>{formatBytes(stats.aiMessagesSize)}</Text>
+                                </View>
+                            )}
+                            {stats.freelistSize > 0 && (
+                                <View style={styles.breakdownRow}>
+                                    <Text style={[styles.breakdownLabel, { color: colors.text + '90' }]}>Reclaimable Space (Freelist)</Text>
+                                    <Text style={[styles.breakdownValue, { color: '#10b981', fontWeight: '600' }]}>{formatBytes(stats.freelistSize)}</Text>
+                                </View>
+                            )}
+                        </View>
+                    )}
+                    {stats && stats.tableBreakdown && stats.tableBreakdown.length > 0 && (
+                        <View style={{ borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border }}>
+                            <HapticPressable 
+                                onPress={() => setShowDetailedBreakdown(!showDetailedBreakdown)}
+                                style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 16 }}
+                            >
+                                <Text style={{ fontSize: 10, fontWeight: '700', color: colors.text + '80', textTransform: 'uppercase', letterSpacing: 1 }}>
+                                    Technical Table Breakdown
+                                </Text>
+                                <Ionicons 
+                                    name={showDetailedBreakdown ? "chevron-up" : "chevron-down"} 
+                                    size={14} 
+                                    color={colors.text + '60'} 
+                                />
+                            </HapticPressable>
+                            
+                            {showDetailedBreakdown && (
+                                <View style={{ paddingBottom: 12, paddingHorizontal: 16, gap: 5 }}>
+                                    {stats.tableBreakdown.map((item: any) => (
+                                        <View key={item.name} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <Text numberOfLines={1} style={{ fontSize: 11, color: colors.text + '70', flex: 1, marginRight: 8 }}>
+                                                {item.name}
+                                            </Text>
+                                            <Text style={{ fontSize: 11, color: colors.text, fontWeight: '500' }}>
+                                                {formatBytes(item.bytes)}
+                                            </Text>
+                                        </View>
+                                    ))}
+                                </View>
+                            )}
+                        </View>
+                    )}
                     <Divider colors={colors} />
                     <SettingItem
                         label="Total Size"
@@ -279,6 +345,16 @@ export default function StorageSettings() {
                         </>
                     )}
 
+                    <Divider colors={colors} />
+                    <SettingItem
+                        label="Vacuum Database"
+                        description="Reclaim space (automatically runs daily)"
+                        icon="construct-outline"
+                        iconBg="#059669"
+                        onPress={handleVacuumDatabase}
+                        action={<Ionicons name="chevron-forward" size={16} color={colors.text + '60'} />}
+                        colors={colors}
+                    />
                     <Divider colors={colors} />
                     <SettingItem
                         label="Reset Local Database"
@@ -474,5 +550,30 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(0,0,0,0.3)',
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    breakdownContainer: {
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        gap: 6,
+    },
+    breakdownTitle: {
+        fontSize: 10,
+        fontWeight: '700',
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+        marginBottom: 2,
+    },
+    breakdownRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    breakdownLabel: {
+        fontSize: 13,
+    },
+    breakdownValue: {
+        fontSize: 13,
+        fontWeight: '500',
+        fontVariant: ['tabular-nums'],
     }
 });

@@ -541,6 +541,7 @@ export async function performSyncPull(masterKey: string, saltHex: string) {
                     }
 
                     if (parsedNotes.length > 0) {
+                        console.log(parsedNotes.length)
                         await db.transaction(async (tx: any) => {
                             for (const n of parsedNotes) {
                                 const noteChangedFileIds = await upsertSyncedNote(n, tx);

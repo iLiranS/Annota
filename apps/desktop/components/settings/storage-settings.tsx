@@ -42,6 +42,7 @@ export function StorageSettings() {
     const { handleImportMarkdown, isImporting } = useImportNotes();
     const [stats, setStats] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [isVacuuming, setIsVacuuming] = useState(false);
     const [showResetDialog, setShowResetDialog] = useState(false);
     const [showRemoveKeyDialog, setShowRemoveKeyDialog] = useState(false);
 
@@ -89,6 +90,23 @@ export function StorageSettings() {
         } catch (e) {
             console.error(e);
             toast.error("Failed to remove Master Key");
+        }
+    };
+
+    const handleVacuumDatabase = async () => {
+        setIsLoading(true);
+        setIsVacuuming(true);
+        try {
+            toast.info("Vacuuming database...");
+            await StorageService.vacuum();
+            toast.success("Database vacuumed and optimized");
+            await loadStats();
+        } catch (error) {
+            console.error(error);
+            toast.error("Failed to vacuum database");
+        } finally {
+            setIsLoading(false);
+            setIsVacuuming(false);
         }
     };
 
@@ -161,6 +179,55 @@ export function StorageSettings() {
                         iconBg="bg-amber-500"
                         value={stats ? formatBytes(stats.notesSize) : '...'}
                     />
+                    {stats && (stats.freelistSize > 0 || stats.noteContentSize > 0 || stats.noteVersionsSize > 0 || stats.aiMessagesSize > 0) && (
+                        <div className="bg-muted/30 px-4 py-3 text-xs space-y-2 border-t border-b">
+                            <div className="text-[10px] font-bold text-muted-foreground tracking-wider uppercase mb-1">
+                                Database Space Breakdown
+                            </div>
+                            {stats.noteContentSize > 0 && (
+                                <div className="flex justify-between items-center text-muted-foreground">
+                                    <span>Active Notes Content</span>
+                                    <span className="font-mono text-foreground">{formatBytes(stats.noteContentSize)}</span>
+                                </div>
+                            )}
+                            {stats.noteVersionsSize > 0 && (
+                                <div className="flex justify-between items-center text-muted-foreground">
+                                    <span>Notes Version History</span>
+                                    <span className="font-mono text-foreground">{formatBytes(stats.noteVersionsSize)}</span>
+                                </div>
+                            )}
+                            {stats.aiMessagesSize > 0 && (
+                                <div className="flex justify-between items-center text-muted-foreground">
+                                    <span>AI Chats & Messages</span>
+                                    <span className="font-mono text-foreground">{formatBytes(stats.aiMessagesSize)}</span>
+                                </div>
+                            )}
+                            {stats.freelistSize > 0 && (
+                                <div className="flex justify-between items-center text-muted-foreground">
+                                    <span>Reclaimable Space (Freelist)</span>
+                                    <span className="font-mono text-emerald-600 font-medium">{formatBytes(stats.freelistSize)}</span>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                    {stats && stats.tableBreakdown && stats.tableBreakdown.length > 0 && (
+                        <div className="border-b px-4 py-3 text-xs">
+                            <details className="group">
+                                <summary className="flex items-center justify-between font-bold text-muted-foreground tracking-wider uppercase cursor-pointer select-none">
+                                    <span>Technical Table Breakdown</span>
+                                    <Ionicons name="chevron-down" size={12} className="transition-transform group-open:rotate-180" />
+                                </summary>
+                                <div className="mt-2 space-y-1.5 pt-1 font-mono text-[11px] text-muted-foreground">
+                                    {stats.tableBreakdown.map((item: any) => (
+                                        <div key={item.name} className="flex justify-between items-center">
+                                            <span className="truncate pr-4">{item.name}</span>
+                                            <span className="text-foreground shrink-0">{formatBytes(item.bytes)}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </details>
+                        </div>
+                    )}
                     <Separator />
                     <SettingItem
                         label="Total Size"
@@ -230,6 +297,16 @@ export function StorageSettings() {
                             <Separator />
                         </>
                     )}
+                    <SettingItem
+                        label="Vacuum Database"
+                        description="Reclaim space (automatically runs daily)"
+                        icon={<Ionicons name="construct-outline" size={20} />}
+                        iconBg="bg-emerald-600"
+                        onClick={handleVacuumDatabase}
+                        loading={isVacuuming}
+                        action={<Ionicons name="chevron-forward" size={16} className="text-muted-foreground" />}
+                    />
+                    <Separator />
                     <SettingItem
                         label="Reset Local Database"
                         description="Permanently delete ALL local data"

@@ -69,7 +69,7 @@ TaskManager.defineTask(BACKGROUND_SYNC_TASK, async () => {
     await useUserStore.persist.rehydrate();
     const saltHex = useUserStore.getState().saltHex;
     if (!saltHex) return BackgroundTask.BackgroundTaskResult.Success;
-    await useSyncStore.getState().loadLastSyncAt(session.user.id);
+    await useSyncStore.getState().loadSyncCursors(session.user.id);
 
     await syncPull(key, saltHex);
     await syncPush(key, saltHex);

@@ -12,11 +12,11 @@ import { parsePendingTasks, type PendingTask } from './search.repository';
 
 import {
     arraysEqual,
-    extractLinks,
-    normalizeStoredContent,
     extractFileIdsFromContent,
-    type ExtractedLink,
-    MAX_NOTE_SIZE
+    extractLinks,
+    MAX_NOTE_SIZE,
+    normalizeStoredContent,
+    type ExtractedLink
 } from '../../utils/html';
 
 // Re-export types for convenience
