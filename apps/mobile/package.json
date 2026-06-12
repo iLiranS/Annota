@@ -62,6 +62,7 @@
         "expo-task-manager": "~55.0.10",
         "expo-updates": "~55.0.16",
         "expo-web-browser": "~55.0.10",
+        "isomorphic-webcrypto": "^2.3.8",
         "linkedom": "^0.18.12",
         "react": "19.2.0",
         "react-dom": "19.2.0",

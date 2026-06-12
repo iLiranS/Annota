@@ -1,4 +1,4 @@
-import { stripHtml } from './html';
+import { stripHtml, getByteSize } from './html';
 
 export interface NoteStats {
     words: number;
@@ -62,6 +62,6 @@ export function calculateNoteStats(content: string): NoteStats {
     return {
         words: totalText ? totalText.split(/\s+/).length : 0,
         chars: totalText.length,
-        size: new TextEncoder().encode(content).length
+        size: getByteSize(content)
     };
 }

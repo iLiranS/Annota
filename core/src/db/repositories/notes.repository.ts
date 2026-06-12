@@ -1,6 +1,7 @@
 import { and, desc, eq, getTableColumns, gte, inArray, isNull, lte, or, sql } from 'drizzle-orm';
 import { deleteFile } from '../../services/files/file.service';
 import { getDb } from '../../stores/db.store';
+import { latestVersionCache, noteFilesCache, noteLinksCache } from '../../utils/caches';
 import { generateId } from '../../utils/id';
 import type { NoteMetadata, NoteMetadataInsert } from '../schema';
 import * as schema from '../schema';
@@ -8,93 +9,18 @@ import type { DbOrTx } from '../types';
 import { safeGet, safeGetAll } from '../utils';
 import * as FilesRepo from './files.repository';
 import { parsePendingTasks, type PendingTask } from './search.repository';
-import { latestVersionCache, noteLinksCache, noteFilesCache } from '../../utils/caches';
 
-function arraysEqual(a: string[], b: string[]): boolean {
-    if (a.length !== b.length) return false;
-    for (let i = 0; i < a.length; i++) {
-        if (a[i] !== b[i]) return false;
-    }
-    return true;
-}
-
-interface ExtractedLink {
-    targetId: string;
-    blockId: string | null;
-    fullUrl: string;
-}
-
-function extractLinks(content: string): ExtractedLink[] {
-    if (!content) return [];
-    const linkRegex = /href=["'](annota:\/\/note\/([a-zA-Z0-9-]+)(?:\?blockId=([a-zA-Z0-9-]+))?)["']/gi;
-    const linksMap = new Map<string, ExtractedLink>();
-
-    let match;
-    while ((match = linkRegex.exec(content)) !== null) {
-        const fullUrl = match[1];
-        const targetId = match[2];
-        const blockId = match[3] || null;
-
-        if (!linksMap.has(targetId)) {
-            linksMap.set(targetId, { targetId, blockId, fullUrl });
-        }
-    }
-    return Array.from(linksMap.values()).sort((a, b) => a.targetId.localeCompare(b.targetId));
-}
+import {
+    arraysEqual,
+    extractLinks,
+    normalizeStoredContent,
+    extractFileIdsFromContent,
+    type ExtractedLink,
+    MAX_NOTE_SIZE
+} from '../../utils/html';
 
 // Re-export types for convenience
 export type { NoteMetadata, NoteVersion } from '../schema';
-
-export const MAX_NOTE_SIZE = 145000;
-export const MAX_CONTENT_SIZE = MAX_NOTE_SIZE; // Deprecated, keep for compat if needed, otherwise use MAX_NOTE_SIZE everywhere
-export function normalizeStoredContent(content: string): string {
-    if (!content) return content ?? '';
-
-    // 1. Handle legacy image nodes: Keep data-image-id, strip heavy base64 src
-    let normalized = content.replace(/<img\b[^>]*>/gi, (imgTag) => {
-        if (!/data-image-id\s*=\s*["'][^"']+["']/i.test(imgTag)) {
-            return imgTag;
-        }
-
-        let tag = imgTag
-            .replace(/\s+src\s*=\s*(["']).*?\1/gi, ' src=""')
-            .replace(/\s+src\s*=\s*[^\s>]+/gi, ' src=""');
-
-        if (!/\s+src\s*=/i.test(tag)) {
-            tag = tag.replace(/\s*\/?>$/, (end) => ` src=""${end}`);
-        }
-
-        return tag;
-    });
-
-    // 2. Handle file-attachment nodes (already clean, but ensure consistency if needed)
-    // No heavy payload stripping needed for now as they don't use src.
-
-    return normalized;
-}
-
-/**
- * Extracts all file IDs (images or general attachments) from the HTML content.
- * Searches for data-image-id (legacy) and fileId/file-id (new).
- */
-function extractFileIdsFromContent(content: string): string[] {
-    const ids = new Set<string>();
-
-    // Legacy image IDs: data-image-id="..."
-    const imageIdRegex = /data-image-id\s*=\s*(["'])(.*?)\1/gi;
-    let match;
-    while ((match = imageIdRegex.exec(content)) !== null) {
-        ids.add(match[2]);
-    }
-
-    // New file attachment IDs: fileId="..." or file-id="..."
-    const fileIdRegex = /(?:fileid|file-id)\s*=\s*(["'])(.*?)\1/gi;
-    while ((match = fileIdRegex.exec(content)) !== null) {
-        ids.add(match[2]);
-    }
-
-    return Array.from(ids);
-}
 
 
 
@@ -696,7 +622,7 @@ export async function getNoteContent(noteId: string): Promise<string> {
 
 export async function updateNoteContent(
     noteId: string,
-    content: string,
+    normalizedContent: string,
     preview: string,
     title?: string,
     skipTasksUpdate = false,
@@ -706,12 +632,6 @@ export async function updateNoteContent(
     const now = updatedAt ?? new Date();
     const VERSION_THRESHOLD_MS = 120000; // 2 minutes
     const MAX_VERSIONS = 50;
-    const normalizedContent = normalizeStoredContent(content);
-    const byteSize = new TextEncoder().encode(normalizedContent).length;
-    if (byteSize > MAX_NOTE_SIZE) {
-        console.warn(`[Repo] Skipping note content update for ${noteId} due to size: ${byteSize} bytes`);
-        return;
-    }
 
     // Extract file IDs from canonical content
     const fileIds = extractFileIdsFromContent(normalizedContent);
@@ -1110,7 +1030,7 @@ export async function removeTagFromAllNotes(tagId: string, tx: DbOrTx = getDb())
 
 export async function healRootFolderIds(): Promise<void> {
     const db = getDb();
-    
+
     // Self-heal notes where folderId is 'root' or empty string
     await db.update(schema.noteMetadata)
         .set({ folderId: null, isDirty: true })
@@ -1119,7 +1039,7 @@ export async function healRootFolderIds(): Promise<void> {
             eq(schema.noteMetadata.folderId, '')
         ))
         .run();
-        
+
     // Also self-heal originalFolderId
     await db.update(schema.noteMetadata)
         .set({ originalFolderId: null, isDirty: true })

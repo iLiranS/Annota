@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { COLOR_PALETTE } from '../../constants/colors';
 import { getPlatformAdapters } from '../adapters';
 import { purgeGuestTombstones, type PendingTaskNote } from '../db';
-import { normalizeStoredContent } from '../db/repositories/notes.repository';
+import { normalizeStoredContent } from '../utils/html';
 import { parsePendingTasks } from '../db/repositories/search.repository';
 import type { Folder, FolderInsert, NoteMetadata, Tag } from '../db/schema';
 import { DAILY_NOTES_FOLDER_ID, FolderService, TRASH_FOLDER_ID } from '../services/folders.service';
@@ -446,15 +446,19 @@ export const useNotesStore = create<NotesState>((set, get) => ({
                 oldTasks.some((t, i) => t.index !== newTasks[i].index || t.text !== newTasks[i].text);
             const skipTasksUpdate = !tasksChanged;
 
-            const normalized = normalizeStoredContent(content);
-            const preview = isDailyNote ? generateTitle(normalized) : generatePreview(normalized);
-            const title = isDailyNote ? note.title : generateTitle(normalized);
             const now = new Date();
 
-            await NoteService.updateContent(noteId, content, skipTasksUpdate, isDailyNote, now, newTasks);
+            const { preview, title, normalizedContent } = await NoteService.updateContent(
+                noteId,
+                content,
+                skipTasksUpdate,
+                isDailyNote,
+                now,
+                newTasks
+            );
 
             // Cache the newly saved normalized content
-            noteContentCache.set(noteId, normalized);
+            noteContentCache.set(noteId, normalizedContent);
 
             let tasks = get().tasks;
             if (!skipTasksUpdate) {
@@ -464,7 +468,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
             set(state => ({
                 notes: state.notes.map(n =>
                     n.id === noteId
-                        ? { ...n, preview, title, isDirty: true, updatedAt: now }
+                        ? { ...n, preview, title: title !== undefined ? title : n.title, isDirty: true, updatedAt: now }
                         : n
                 ),
                 tasks

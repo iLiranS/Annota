@@ -1,7 +1,7 @@
 import { freeNotesLimit, premiumNotesLimit } from '../../constants/config';
 import * as FilesRepo from '../db/repositories/files.repository';
 import * as notesRepo from '../db/repositories/notes.repository';
-import { MAX_NOTE_SIZE, normalizeStoredContent } from '../db/repositories/notes.repository';
+import { MAX_NOTE_SIZE, normalizeStoredContent, getByteSize } from '../utils/html';
 import type { NoteMetadata } from '../db/schema';
 import { insertNoteMetadataSchema } from '../db/validators/notes';
 import type { UserRole } from '../stores/user.store';
@@ -148,9 +148,9 @@ export const NoteService = {
         isDailyNote?: boolean,
         updatedAt?: Date,
         parsedTasks?: PendingTask[]
-    ) => {
+    ): Promise<{ preview: string; title?: string; normalizedContent: string }> => {
         const normalized = normalizeStoredContent(content);
-        const byteSize = new TextEncoder().encode(normalized).length;
+        const byteSize = getByteSize(normalized);
         if (byteSize > MAX_NOTE_SIZE) {
             throw new Error(`Note content exceeds the limit of ${MAX_NOTE_SIZE.toLocaleString()} bytes (currently ${byteSize.toLocaleString()} bytes).`);
         }
@@ -163,7 +163,8 @@ export const NoteService = {
 
         const preview = resolvedIsDaily ? generateTitle(normalized) : generatePreview(normalized);
         const title = resolvedIsDaily ? undefined : generateTitle(normalized);
-        await notesRepo.updateNoteContent(noteId, content, preview, title, skipTasksUpdate, updatedAt, parsedTasks);
+        await notesRepo.updateNoteContent(noteId, normalized, preview, title, skipTasksUpdate, updatedAt, parsedTasks);
+        return { preview, title, normalizedContent: normalized };
     },
 
     // 4. Soft Delete

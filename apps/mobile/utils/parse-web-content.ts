@@ -59,30 +59,71 @@ export async function parseWebContent(url: string): Promise<ParsedWebContent> {
     writable: true,
   });
 
-  // Strip all elements containing inline binary/base64 data (data: or blob: URIs)
-  // in src, srcset, or data attributes to prevent storing raw binary files in the database.
+  // Traverse and sanitize all elements in the document to prevent XSS and database bloat.
   // We wrap the NodeListOf elements in Array.from to satisfy the TypeScript compilation environment.
-  const elementsWithSrc = Array.from(document.querySelectorAll('[src]'));
-  for (const el of elementsWithSrc) {
-    const src = el.getAttribute('src');
-    if (src && (src.startsWith('data:') || src.startsWith('blob:'))) {
-      el.remove();
-    }
-  }
+  const allElements = Array.from(document.querySelectorAll('*'));
+  for (const el of allElements) {
+    const tagName = el.tagName.toLowerCase();
 
-  const elementsWithSrcset = Array.from(document.querySelectorAll('[srcset]'));
-  for (const el of elementsWithSrcset) {
-    const srcset = el.getAttribute('srcset');
-    if (srcset && (srcset.includes('data:') || srcset.includes('blob:'))) {
+    // 1. Remove dangerous elements
+    if (
+      [
+        'script',
+        'style',
+        'iframe',
+        'frame',
+        'object',
+        'embed',
+        'link',
+        'meta',
+        'form',
+        'input',
+        'button',
+        'select',
+        'textarea',
+      ].includes(tagName)
+    ) {
       el.remove();
+      continue;
     }
-  }
 
-  const elementsWithData = Array.from(document.querySelectorAll('[data]'));
-  for (const el of elementsWithData) {
-    const dataVal = el.getAttribute('data');
-    if (dataVal && (dataVal.startsWith('data:') || dataVal.startsWith('blob:'))) {
-      el.remove();
+    // 2. Strip event handler attributes (anything starting with 'on')
+    const attrs = Array.from(el.attributes);
+    for (const attr of attrs) {
+      if (attr.name.startsWith('on')) {
+        el.removeAttribute(attr.name);
+      }
+    }
+
+    // 3. Clean href/src/srcset/data attributes to prevent base64 blobs and unsafe protocols
+    if (el.hasAttribute('href')) {
+      const href = el.getAttribute('href') || '';
+      const hasProtocol = /^[a-z0-9+.-]+:/i.test(href);
+      if (hasProtocol && !/^(https?|mailto|tel):/i.test(href)) {
+        el.removeAttribute('href');
+      }
+    }
+
+    if (el.hasAttribute('src')) {
+      const src = el.getAttribute('src') || '';
+      const hasProtocol = /^[a-z0-9+.-]+:/i.test(src);
+      if (hasProtocol && !/^(https?):/i.test(src)) {
+        el.removeAttribute('src');
+      }
+    }
+
+    if (el.hasAttribute('srcset')) {
+      const srcset = el.getAttribute('srcset') || '';
+      if (srcset.includes('data:') || srcset.includes('blob:')) {
+        el.removeAttribute('srcset');
+      }
+    }
+
+    if (el.hasAttribute('data')) {
+      const dataVal = el.getAttribute('data') || '';
+      if (dataVal.startsWith('data:') || dataVal.startsWith('blob:')) {
+        el.removeAttribute('data');
+      }
     }
   }
 

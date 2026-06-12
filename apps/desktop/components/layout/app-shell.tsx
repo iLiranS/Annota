@@ -49,8 +49,8 @@ function AppShellContent() {
         if (!isResizingRef.current) return;
 
         const newWidth = directionRef.current === "rtl"
-            ? e.clientX
-            : window.innerWidth - e.clientX;
+            ? e.clientX - 8
+            : window.innerWidth - e.clientX - 8;
 
         if (newWidth >= 300 && newWidth <= 800) {
             // Write directly to the DOM — zero React re-renders during drag
@@ -128,8 +128,7 @@ function AppShellContent() {
                         <div
                             onMouseDown={startResizing}
                             className={cn(
-                                "absolute top-0 bottom-0 w-1 hover:bg-border cursor-col-resize z-50 flex items-center justify-center group",
-                                isRtl ? "right-0 translate-x-1/2" : "left-0 -translate-x-1/2"
+                                "absolute top-0 bottom-0 w-1 hover:bg-border cursor-col-resize z-50   -translate-x-2 rtl:translate-x-2 flex items-center justify-center group",
                             )}
                         />
                     )}
