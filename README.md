@@ -6,23 +6,23 @@ A private, local-first mobile note-taking application designed for speed, privac
 
 ## ✨ Core Features
 
--   🏠 **Local-First & Offline**: Everything is stored directly on the device using SQLite. No external cloud dependencies, ensuring maximum privacy and instant access.
--   ✍️ **Desktop-Class Rich Text**: Full TipTap integration providing advanced formatting, tables, and media support within a mobile-optimized interface.
--   📁 **Hierarchical Organization**: A flexible folder system allowing for deep nesting and structured note management.
--   🧷 **Smart File Handling**: Automatic double hashing and deduplication. Files are stored locally, Images resized for performance, and referenced via persistent IDs.
--   ⚡ **Aggressive Caching**: Uses Zustand for a dual-layer state management system—fetching from the database while keeping everything in-memory for zero-latency interactions.
-- 🌐 **Server**:(Optional) Supabase for sync and backup w/ end to end encryption (client side) with auto cleanup to minimize storage.
+- ✍️ **Rich Editor & / Commands**: Markdown support, block-based elements, instant slash commands, and seamless layout. Create interactive study flashcards manually or generate them via AI.
+- 📁 **Organization & Links**: Organize your workflow with folders, tags, tabs, and backlinks. Link between notes or specific blocks within them.
+- 🎨 **Customization**: Personalize your space with accent colors, custom editor fonts, and more.
+- 🤖 **AI Assistant**: Leverage the power of the AI chatbot and quick in-editor actions.
+- 🖼️ **Image Gallery**: Organize, search, and preview all your media assets in one place.
+- 🔒 **E2E Encrypted Syncing**: Keep your notes up to date across all devices automatically. Fully end-to-end encrypted on the device and on the server—the server sees nothing.
+- 📜 **Version History**: Easily track changes, restore, or view older note versions.
+- 📤 **Import / Export**: Import or export to Markdown, HTML, and PDF, or publish notes online as shareable links (Pro).
+- 🏠 **Local-First & Offline**: SQLite-backed on-device database ensuring maximum privacy and instant access without any cloud dependency.
 
 ## 🛠 Tech Stack
 
--   **Frontend**: React Native + Expo (Mobile) , Tauri (Desktop)
--   **Editor**: TipTap + Extensions.
--   **State**: Zustand (Store + Persistence).
--   **Database**: SQLite via Drizzle ORM.
--   **Storage**: Local file system for media.
--   **Backend**: Supabase (Optional)
+- **Mobile Client**: Expo & React Native, SQLite (`expo-sqlite`) via Drizzle ORM, state management via Zustand, and Secure Store. See [apps/mobile/package.json](./apps/mobile/package.json).
+- **Desktop Client**: Tauri, React, Vite, Tailwind CSS, Radix UI. See [apps/desktop/package.json](./apps/desktop/package.json).
+- **Editor Core**: Custom TipTap-based block editor, extended with KaTeX math, Mermaid diagrams, syntax highlighting (lowlight), tables, and GFM markdown conversion (Turndown/Marked). See [packages/editor-core/package.json](./packages/editor-core/package.json).
+- **Backend (Optional)**: Supabase for end-to-end encrypted cloud synchronization and sharing.
 
-## 
 
 ## Environment Variables
 
@@ -47,11 +47,7 @@ To enable sync and backup features, follow these setup guides in order:
 6. [Roles & Indexes](./docs/Supabase_setup/6__roles___indexes.md)
 7. [Storage Buckets](./docs/Supabase_setup/7__storage_buckets.md)
 8. [Scheduled Tasks & Cron Jobs](./docs/Supabase_setup/8__scheduled_tasks__cron_jobs_.md)
-
-> [!WARNING]
-> Some database functions and triggers outlined in these guides have newer, more secure versions that have not yet been integrated into this documentation. These will be updated soon to reflect the most secure implementation patterns.
-
-*Note: Full local support without any Supabase setup is coming soon.*
+9. [Published Notes](./docs/Supabase_setup/9__published_notes.md) (optional)
 
 
 ## Run Locally

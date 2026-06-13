@@ -48,7 +48,13 @@ CREATE POLICY "Users can manage their own note_files"
 ON public.note_files FOR ALL TO authenticated 
 USING (auth.uid() = user_id) 
 WITH CHECK (auth.uid() = user_id);
-```
+
+-- Published Notes
+CREATE POLICY "Users can manage their own published notes" 
+ON public.published_notes FOR ALL TO authenticated 
+USING (auth.uid() = user_id) 
+WITH CHECK (auth.uid() = user_id);
+
 
 #### Profile Policies (Restricted Access)
 

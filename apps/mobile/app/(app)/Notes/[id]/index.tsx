@@ -22,6 +22,7 @@ import {
     ActivityIndicator,
     Animated,
     BackHandler,
+    Easing,
     Platform,
     StyleSheet,
     Text,
@@ -169,18 +170,28 @@ export default function NoteEditor() {
     const isContentReady = !id || content !== null;
 
     const fadeAnim = useRef(new Animated.Value(0)).current;
+    const slideAnim = useRef(new Animated.Value(12)).current;
 
     useEffect(() => {
         if (!isLoading && isContentReady && isEditorLoaded) {
-            Animated.timing(fadeAnim, {
-                toValue: 1,
-                duration: 300,
-                useNativeDriver: true,
-            }).start();
+            Animated.parallel([
+                Animated.timing(fadeAnim, {
+                    toValue: 1,
+                    duration: 350,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(slideAnim, {
+                    toValue: 0,
+                    duration: 350,
+                    easing: Easing.out(Easing.cubic),
+                    useNativeDriver: true,
+                }),
+            ]).start();
         } else {
             fadeAnim.setValue(0);
+            slideAnim.setValue(12);
         }
-    }, [isLoading, isContentReady, isEditorLoaded, fadeAnim]);
+    }, [isLoading, isContentReady, isEditorLoaded]);
 
     const handleEditorReady = useCallback(() => {
         setIsEditorLoaded(true);
@@ -662,97 +673,97 @@ export default function NoteEditor() {
                 </View>
             ) : (
                 <View style={{ flex: 1 }}>
-                    <Animated.View style={[styles.editorWrapper, { opacity: fadeAnim, flex: 1 }]}>
-                    {/* Search Overlay - absolutely positioned at top of editor */}
-                    <SearchOverlay
-                        visible={isSearching}
-                        onClose={handleCloseSearch}
-                        searchTerm={searchTerm}
-                        onSearchTermChange={handleSearchTermChange}
-                        resultCount={searchResultCount}
-                        currentResultIndex={currentSearchIndex}
-                        onNext={handleSearchNext}
-                        onPrev={handleSearchPrev}
-                        topOffset={HEADER_HEIGHT}
-                        showTabs={false}
-                    />
+                    <Animated.View style={[styles.editorWrapper, { opacity: fadeAnim, flex: 1, transform: [{ translateY: slideAnim }] }]}>
+                        {/* Search Overlay - absolutely positioned at top of editor */}
+                        <SearchOverlay
+                            visible={isSearching}
+                            onClose={handleCloseSearch}
+                            searchTerm={searchTerm}
+                            onSearchTermChange={handleSearchTermChange}
+                            resultCount={searchResultCount}
+                            currentResultIndex={currentSearchIndex}
+                            onNext={handleSearchNext}
+                            onPrev={handleSearchPrev}
+                            topOffset={HEADER_HEIGHT}
+                            showTabs={false}
+                        />
 
-                    <TipTapEditor
-                        ref={editorRef}
-                        noteId={id}
-                        onEditorReady={handleEditorReady}
-                        editable={currentNote && !currentNote.isPermDeleted && !currentNote.isDeleted}
-                        initialContent={content ?? ''}
-                        onContentChange={handleContentChange}
-                        onSearchResults={handleSearchResults}
-                        onSlashCommand={setSlashCommandState}
-                        onTagCommand={setTagCommandState}
-                        onNoteLinkCommand={setNoteLinkCommandState}
-                        contentPaddingTop={0}
-                        placeholder="Start typing..."
-                        autofocus={shouldAutofocus}
-                        onGalleryVisibilityChange={setIsGalleryOpen}
-                        onCopyBlockLink={handleCopyBlockLink}
-                        onScrollNative={handleScrollNative}
-                        onOpenLink={handleOpenLink}
-                        renderHeader={() => {
-                            const hasTags = appliedTagIds.length > 0;
-                            return (
-                                <View style={{ marginTop: insets.top + 44, zIndex: 10, marginBottom: -44 }}>
-                                    {hasTags && (
-                                        <NoteTags
+                        <TipTapEditor
+                            ref={editorRef}
+                            noteId={id}
+                            onEditorReady={handleEditorReady}
+                            editable={currentNote && !currentNote.isPermDeleted && !currentNote.isDeleted}
+                            initialContent={content ?? ''}
+                            onContentChange={handleContentChange}
+                            onSearchResults={handleSearchResults}
+                            onSlashCommand={setSlashCommandState}
+                            onTagCommand={setTagCommandState}
+                            onNoteLinkCommand={setNoteLinkCommandState}
+                            contentPaddingTop={0}
+                            placeholder="Start typing..."
+                            autofocus={shouldAutofocus}
+                            onGalleryVisibilityChange={setIsGalleryOpen}
+                            onCopyBlockLink={handleCopyBlockLink}
+                            onScrollNative={handleScrollNative}
+                            onOpenLink={handleOpenLink}
+                            renderHeader={() => {
+                                const hasTags = appliedTagIds.length > 0;
+                                return (
+                                    <View style={{ marginTop: insets.top + 44, zIndex: 10, marginBottom: -44 }}>
+                                        {hasTags && (
+                                            <NoteTags
+                                                noteId={id}
+                                            />
+                                        )}
+                                    </View>
+                                );
+                            }}
+                            renderToolbar={(props: ToolbarRenderProps) => <EditorToolbar {...props} onAIAction={handleAIAction} isAIStreaming={isAiStreaming} onStopAI={stopAiMessage} />}
+                            renderImageGallery={(props: any) => <ImageGallery {...props} />}
+                            renderSlashCommandMenu={() => {
+                                if (tagCommandState.active && tagCommandState.range) {
+                                    return (
+                                        <TagCommandMenu
                                             noteId={id}
+                                            query={tagCommandState.query || ''}
+                                            range={tagCommandState.range}
+                                            sendCommand={(cmd, params) => editorRef.current?.onCommand(cmd, params)}
+                                            onClose={() => setTagCommandState({ active: false })}
                                         />
-                                    )}
-                                </View>
-                            );
-                        }}
-                        renderToolbar={(props: ToolbarRenderProps) => <EditorToolbar {...props} onAIAction={handleAIAction} isAIStreaming={isAiStreaming} onStopAI={stopAiMessage} />}
-                        renderImageGallery={(props: any) => <ImageGallery {...props} />}
-                        renderSlashCommandMenu={() => {
-                            if (tagCommandState.active && tagCommandState.range) {
-                                return (
-                                    <TagCommandMenu
-                                        noteId={id}
-                                        query={tagCommandState.query || ''}
-                                        range={tagCommandState.range}
-                                        sendCommand={(cmd, params) => editorRef.current?.onCommand(cmd, params)}
-                                        onClose={() => setTagCommandState({ active: false })}
-                                    />
-                                );
-                            }
-                            if (slashCommandState.active && slashCommandState.range) {
-                                return (
-                                    <SlashCommandMenu
-                                        query={slashCommandState.query || ''}
-                                        range={slashCommandState.range}
-                                        sendCommand={(cmd, params) => editorRef.current?.onCommand(cmd, params)}
-                                        onClose={() => setSlashCommandState({ active: false })}
-                                    />
-                                );
-                            }
-                            if (noteLinkCommandState.active && noteLinkCommandState.range) {
-                                return (
-                                    <NoteLinkCommandMenu
-                                        noteId={id}
-                                        query={noteLinkCommandState.query || ''}
-                                        range={noteLinkCommandState.range}
-                                        sendCommand={(cmd, params) => editorRef.current?.onCommand(cmd, params)}
-                                        onClose={() => setNoteLinkCommandState({ active: false })}
-                                    />
-                                );
-                            }
-                            return null;
-                        }}
-                    />
-                </Animated.View>
-                {!isEditorLoaded && (
-                    <View style={[StyleSheet.absoluteFill, styles.loadingContainer, { backgroundColor: colors.background }]}>
-                        <ActivityIndicator size="large" color={colors.primary} />
-                    </View>
-                )}
-            </View>
-        )}
+                                    );
+                                }
+                                if (slashCommandState.active && slashCommandState.range) {
+                                    return (
+                                        <SlashCommandMenu
+                                            query={slashCommandState.query || ''}
+                                            range={slashCommandState.range}
+                                            sendCommand={(cmd, params) => editorRef.current?.onCommand(cmd, params)}
+                                            onClose={() => setSlashCommandState({ active: false })}
+                                        />
+                                    );
+                                }
+                                if (noteLinkCommandState.active && noteLinkCommandState.range) {
+                                    return (
+                                        <NoteLinkCommandMenu
+                                            noteId={id}
+                                            query={noteLinkCommandState.query || ''}
+                                            range={noteLinkCommandState.range}
+                                            sendCommand={(cmd, params) => editorRef.current?.onCommand(cmd, params)}
+                                            onClose={() => setNoteLinkCommandState({ active: false })}
+                                        />
+                                    );
+                                }
+                                return null;
+                            }}
+                        />
+                    </Animated.View>
+                    {!isEditorLoaded && (
+                        <View style={[StyleSheet.absoluteFill, styles.loadingContainer, { backgroundColor: colors.background }]}>
+                            <ActivityIndicator size="large" color={colors.primary} />
+                        </View>
+                    )}
+                </View>
+            )}
         </View>
     );
 }

@@ -6,7 +6,7 @@ Annota uses several PostgreSQL functions and triggers to enforce business logic,
 
 These functions are bound to specific tables and execute automatically during `INSERT`, `UPDATE`, or `DELETE` events.
 
-**1\.** `handle_new_user` **(Auth Trigger)** Fired automatically when a new user signs up in Supabase Auth. It provisions their Annota profile, assigns the default `beta` role, and generates a cryptographic salt.
+**1\.** `handle_new_user` **(Auth Trigger)** Fired automatically when a new user signs up in Supabase Auth.
 
 *   **Table:** `auth.users` (Supabase system table)
     
@@ -15,12 +15,11 @@ These functions are bound to specific tables and execute automatically during `I
 
 ```sql
 BEGIN
-  INSERT INTO public.profiles (id, role, salt, sub_exp_date)
+  INSERT INTO public.profiles (id, role, salt)
   VALUES (
     new.id, 
-    'beta', 
-    encode(extensions.gen_random_bytes(16), 'hex'),
-    now() + interval '1 month'
+    'free', 
+    encode(extensions.gen_random_bytes(16), 'hex')
   );
   RETURN new;
 END;
@@ -53,13 +52,13 @@ BEGIN
     u_role := 'free';
   END IF;
 
-  -- Default to free if role is null
+  -- Default to free if role is somehow null or unrecognized
   IF u_role IS NULL THEN
       u_role := 'free';
   END IF;
 
   -- Matrix: Set the maximum allowed items based on Role AND Table
-  IF u_role IN ('pro', 'beta') THEN
+  IF u_role IN ('pro', 'beta','admin') THEN
     CASE TG_TABLE_NAME
       WHEN 'encrypted_notes' THEN max_limit := 7500;
       WHEN 'encrypted_folders' THEN max_limit := 1000;
@@ -69,14 +68,14 @@ BEGIN
   ELSE
     -- Free tier limits
     CASE TG_TABLE_NAME
-      WHEN 'encrypted_notes' THEN max_limit := 100;
-      WHEN 'encrypted_folders' THEN max_limit := 20;
-      WHEN 'encrypted_tags' THEN max_limit := 20;
-      ELSE max_limit := 20; -- Fallback
+      WHEN 'encrypted_notes' THEN max_limit := 50;
+      WHEN 'encrypted_folders' THEN max_limit := 10;
+      WHEN 'encrypted_tags' THEN max_limit := 10;
+      ELSE max_limit := 10; -- Fallback
     END CASE;
   END IF;
 
-  -- Dynamically count the user's ACTIVE items for the specific table
+-- Dynamically count the user's ACTIVE items for the specific table
   query_str := format('SELECT count(*) FROM %I WHERE user_id = $1 AND is_deleted = false', TG_TABLE_NAME);
   EXECUTE query_str INTO current_count USING NEW.user_id;
 
@@ -143,7 +142,7 @@ BEGIN
     SET storage_used_bytes = storage_used_bytes + COALESCE(NEW.size_bytes, 0)
     WHERE id = NEW.user_id;
     
-  -- Handle file overwrites/updates
+  -- Handle file overwrites/updates (rare in E2EE, but good to have)
   ELSIF TG_OP = 'UPDATE' THEN
     UPDATE public.profiles
     SET storage_used_bytes = storage_used_bytes 
@@ -151,8 +150,10 @@ BEGIN
                              + COALESCE(NEW.size_bytes, 0)
     WHERE id = NEW.user_id;
 
-  -- Handle file deletions
+  -- Handle file deletions (e.g., from your orphan cleanup cron job)
+-- Handle file deletions
   ELSIF TG_OP = 'DELETE' THEN
+    -- Only update if the profile still exists to prevent issues during cascade user deletion
     IF EXISTS (SELECT 1 FROM public.profiles WHERE id = OLD.user_id) THEN
       UPDATE public.profiles
       SET storage_used_bytes = storage_used_bytes - COALESCE(OLD.size_bytes, 0)
@@ -168,11 +169,17 @@ END;
 
 These functions are executed directly from the frontend via `supabase.rpc()`.
 
-**1\.** `pull_sync_data` Optimized fetching mechanism for the client. Returns all modified entities since the provided timestamps and IDs (using cursors for pagination) in a single JSON payload. RLS is automatically applied based on the authenticated user.
+**1\.** `pull_sync_data` Optimized fetching mechanism using cursor-based pagination. Returns all modified entities since the provided timestamps and IDs in a single JSON payload.
 
 SQL
 
 ```sql
+CREATE OR REPLACE FUNCTION public.pull_sync_data(
+  p_last_sync timestamp,
+  p_folders_time timestamp, p_folders_id uuid,
+  p_notes_id uuid,
+  p_tags_time timestamp, p_tags_id uuid
+) RETURNS json LANGUAGE plpgsql AS $$
 declare
   v_folders json;
   v_notes json;
@@ -180,7 +187,7 @@ declare
   v_actual_folders_time timestamp;
   v_actual_tags_time timestamp;
 begin
-  -- Fallback for legacy clients calling with only p_last_sync
+  -- Fallback for legacy clients
   v_actual_folders_time := case when p_folders_time = '1970-01-01'::timestamp then p_last_sync else p_folders_time end;
   v_actual_tags_time := case when p_tags_time = '1970-01-01'::timestamp then p_last_sync else p_tags_time end;
 
@@ -188,24 +195,21 @@ begin
     select * from encrypted_folders 
     where (updated_at > v_actual_folders_time) 
        or (updated_at = v_actual_folders_time and id > p_folders_id)
-    order by updated_at asc, id asc
-    limit 100
+    order by updated_at asc, id asc limit 100
   ) t;
 
   select json_agg(t) into v_notes from (
     select * from encrypted_notes 
-    where (updated_at > p_last_sync)  -- p_last_sync acts as p_notes_time here
+    where (updated_at > p_last_sync) 
        or (updated_at = p_last_sync and id > p_notes_id)
-    order by updated_at asc, id asc
-    limit 100
+    order by updated_at asc, id asc limit 100
   ) t;
 
   select json_agg(t) into v_tags from (
     select * from encrypted_tags 
     where (updated_at > v_actual_tags_time) 
        or (updated_at = v_actual_tags_time and id > p_tags_id)
-    order by updated_at asc, id asc
-    limit 100
+    order by updated_at asc, id asc limit 100
   ) t;
 
   return json_build_object(
@@ -214,106 +218,99 @@ begin
     'tags', coalesce(v_tags, '[]'::json)
   );
 end;
+$$;
 ```
 
-**2\.** `replace_note_files` Safely overwrites all file attachments for a specific note. Ensures the caller owns the note.
+**2\.** `replace_note_files` Safely overwrites file attachments for a note. Includes strict validation to ensure the file exists and is owned by the calling user.
 
 SQL
 
 ```sql
+CREATE OR REPLACE FUNCTION public.replace_note_files(
+  p_note_id uuid, p_user_id uuid, p_file_ids text[]
+) RETURNS void LANGUAGE plpgsql AS $$
 BEGIN
   IF auth.uid() IS NULL OR auth.uid() <> p_user_id THEN
-    RAISE EXCEPTION 'Not authorized to replace note files for this user';
+    RAISE EXCEPTION 'Not authorized';
   END IF;
 
-  IF NOT EXISTS (
-    SELECT 1 FROM public.encrypted_notes n
-    WHERE n.id = p_note_id AND n.user_id = p_user_id
-  ) THEN
-    RAISE EXCEPTION 'Note % not found for user %', p_note_id, p_user_id;
+  IF NOT EXISTS (SELECT 1 FROM public.encrypted_notes WHERE id = p_note_id AND user_id = p_user_id) THEN
+    RAISE EXCEPTION 'Note not found';
   END IF;
 
-  DELETE FROM public.note_files
-  WHERE note_id = p_note_id AND user_id = p_user_id;
+  DELETE FROM public.note_files WHERE note_id = p_note_id AND user_id = p_user_id;
 
   INSERT INTO public.note_files (note_id, file_id, user_id)
   SELECT p_note_id, file_id, p_user_id
-  FROM (
-    SELECT DISTINCT unnest(COALESCE(p_file_ids, ARRAY[]::text[])) AS file_id
-  ) ids
-  WHERE ids.file_id IS NOT NULL AND ids.file_id <> '';
+  FROM (SELECT DISTINCT unnest(COALESCE(p_file_ids, ARRAY[]::text[])) AS file_id) ids
+  WHERE ids.file_id <> '' AND EXISTS (
+      SELECT 1 FROM public.encrypted_files ef WHERE ef.id = ids.file_id AND ef.user_id = p_user_id
+  );
 END;
+$$;
 ```
 
-**3\.** `reset_user_data` Wipes all application data for the calling user, allowing for a clean slate without deleting their auth account.
+**3\.** `reset_user_data` Wipes all application data for the calling user, allowing for a clean slate.
 
 SQL
 
 ```sql
+CREATE OR REPLACE FUNCTION public.reset_user_data() RETURNS void LANGUAGE plpgsql AS $$
 DECLARE
     calling_user_id uuid := auth.uid();
 BEGIN
-    IF calling_user_id IS NULL THEN
-        RAISE EXCEPTION 'Not authenticated';
-    END IF;
+    IF calling_user_id IS NULL THEN RAISE EXCEPTION 'Not authenticated'; END IF;
 
-    -- Delete Application Data
     DELETE FROM note_files WHERE user_id = calling_user_id;
     DELETE FROM encrypted_files WHERE user_id = calling_user_id;
     DELETE FROM encrypted_tags WHERE user_id = calling_user_id;
     DELETE FROM encrypted_folders WHERE user_id = calling_user_id;
     DELETE FROM encrypted_notes WHERE user_id = calling_user_id;
 END;
+$$;
 ```
 
 #### **C. Maintenance Functions (Cron / Edge Functions)**
 
 These functions are designed to be run periodically by a server-side process or pg\_cron to clean up the database.
 
-**1\.** `cleanup_deleted_encrypted_data` Purges completely deleted data older than 3 months, and shreds (empties the payload of) encrypted data marked as deleted older than 7 days.
+**1\.** `cleanup_deleted_encrypted_data` Purges tombstoned data older than 3 months and shreds encrypted payloads for items older than 7 days.
 
 SQL
 
 ```sql
+CREATE OR REPLACE FUNCTION public.cleanup_deleted_encrypted_data() RETURNS void LANGUAGE plpgsql AS $$
 BEGIN
-  -- 1. PURGE ANCIENT TOMBSTONES (Older than 3 months)
+  -- 1. PURGE ANCIENT TOMBSTONES
   DELETE FROM public.encrypted_notes WHERE is_deleted = true AND updated_at < NOW() - INTERVAL '3 months';
   DELETE FROM public.encrypted_folders WHERE is_deleted = true AND updated_at < NOW() - INTERVAL '3 months';
   DELETE FROM public.encrypted_tags WHERE is_deleted = true AND updated_at < NOW() - INTERVAL '3 months';
 
-  -- 2. SEVER FILES TIES (Older than 7 days)
-  DELETE FROM public.note_files
-  WHERE note_id IN (
-    SELECT id FROM public.encrypted_notes 
-    WHERE is_deleted = true AND updated_at < NOW() - INTERVAL '7 days'
+  -- 2. SEVER FILES TIES
+  DELETE FROM public.note_files WHERE note_id IN (
+    SELECT id FROM public.encrypted_notes WHERE is_deleted = true AND updated_at < NOW() - INTERVAL '7 days'
   );
 
-  -- 3. CREATE SKINNY TOMBSTONES (Older than 7 days)
-  UPDATE public.encrypted_notes 
-  SET encrypted_data = '', nonce = '' 
-  WHERE is_deleted = true AND updated_at < NOW() - INTERVAL '7 days' AND encrypted_data != '';
-
-  UPDATE public.encrypted_folders 
-  SET encrypted_data = '', nonce = '' 
-  WHERE is_deleted = true AND updated_at < NOW() - INTERVAL '7 days' AND encrypted_data != '';
-
-  UPDATE public.encrypted_tags 
-  SET encrypted_data = '', nonce = '' 
-  WHERE is_deleted = true AND updated_at < NOW() - INTERVAL '7 days' AND encrypted_data != '';
+  -- 3. CREATE SKINNY TOMBSTONES
+  UPDATE public.encrypted_notes SET encrypted_data = '', nonce = '' WHERE is_deleted = true AND updated_at < NOW() - INTERVAL '7 days' AND encrypted_data != '';
+  UPDATE public.encrypted_folders SET encrypted_data = '', nonce = '' WHERE is_deleted = true AND updated_at < NOW() - INTERVAL '7 days' AND encrypted_data != '';
+  UPDATE public.encrypted_tags SET encrypted_data = '', nonce = '' WHERE is_deleted = true AND updated_at < NOW() - INTERVAL '7 days' AND encrypted_data != '';
 END;
+$$;
 ```
 
-**2\.** `get_orphaned_files_for_deletion` Returns a list of files that have no note attachments and have existed for more than 7 days, likely for a storage bucket cleanup script.
+**2\.** `get_orphaned_files_for_deletion` Returns a list of files with no remaining note attachments, intended for storage bucket cleanup.
 
 SQL
 
 ```sql
-select id, user_id
+CREATE OR REPLACE FUNCTION public.get_orphaned_files_for_deletion() 
+RETURNS TABLE(id text, user_id uuid) LANGUAGE sql AS $$
+  select i.id, i.user_id
   from public.encrypted_files i
-  where not exists (
-    select 1 from public.note_files ni where ni.file_id = i.id
-  )
-AND i.created_at < NOW() - INTERVAL '7 days';
+  where not exists (select 1 from public.note_files ni where ni.file_id = i.id)
+  AND i.created_at < NOW() - INTERVAL '7 days';
+$$;
 ```
 
 * * *
