@@ -120,21 +120,18 @@ export function AiChatInput({
 
     const handleSend = useCallback(async () => {
         if (!content.trim() || disabled) return;
-        if (selectedNotes.length === 0 && !chatContext) return;
         onSend(content);
         setContent('');
-    }, [content, onSend, disabled, selectedNotes, chatContext]);
+    }, [content, onSend, disabled]);
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            if (selectedNotes.length > 0 || chatContext) {
-                handleSend();
-            }
+            handleSend();
         }
     };
 
-    const showContextError = content.trim().length > 0 && selectedNotes.length === 0 && !chatContext;
+    const showContextError = false;
     const isNearLimit = content.length > MAX_LENGTH * 0.8;
     return (
         <div className={cn("flex flex-col gap-2 ")}>
@@ -172,7 +169,7 @@ export function AiChatInput({
                                 ? `Ask about ${selectedNotes.length} notes...`
                                 : (chatContext
                                     ? "Ask about selected context..."
-                                    : "Select at least 1 note to start chatting..."
+                                    : "Ask a general question..."
                                 )
                             )
                     }
@@ -370,14 +367,13 @@ export function AiChatInput({
                             onClick={() => disabled ? onStop?.() : handleSend()}
                             disabled={
                                 (!disabled && !content.trim()) ||
-                                (!disabled && !currentModelName) ||
-                                (!disabled && selectedNotes.length === 0 && !chatContext)
+                                (!disabled && !currentModelName)
                             }
                             size="icon"
                             className={cn(
                                 "h-7 w-7 rounded-full transition-all shrink-0 shadow-sm",
                                 disabled ? "bg-foreground text-background hover:bg-foreground/90" :
-                                    (content.trim() && currentModelName && (selectedNotes.length > 0 || chatContext)) ? "bg-primary text-primary-foreground shadow-md hover:scale-105 active:scale-95" : "bg-muted text-muted-foreground/30"
+                                    (content.trim() && currentModelName) ? "bg-primary text-primary-foreground shadow-md hover:scale-105 active:scale-95" : "bg-muted text-muted-foreground/30"
                             )}
                         >
                             {disabled ? (

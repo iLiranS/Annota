@@ -239,7 +239,7 @@ export function buildHistoryWindow(messages: AiMessage[], tokenBudget = 3000): A
         
         // Always include the latest message so we never send an empty window
         const isLatest = i === conversational.length - 1;
-        if (!isLatest && tokens + estimated > tokenBudget) break;
+        if (!isLatest && (tokens + estimated > tokenBudget || window.length >= 15)) break;
 
         window.unshift(conversational[i]);
         tokens += estimated;

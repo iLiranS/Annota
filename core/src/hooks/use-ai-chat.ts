@@ -255,14 +255,7 @@ export function useAiChat(chatId: string | null) {
         const effectiveChatId = overrideChatId || chatId;
         if (!effectiveChatId) return;
 
-        const { activeProvider, chatContext } = useAiStore.getState();
-        const hasExplicitNotes = selectedFolderNotes && selectedFolderNotes.length > 0;
-        const hasInlineContext = Boolean(manualContext || chatContext);
-
-        if (!hasExplicitNotes && !hasInlineContext) {
-            setError("Please select at least one note to start chatting.");
-            return;
-        }
+        const { activeProvider } = useAiStore.getState();
 
         const adapter = createAiProvider(activeProvider);
         const isEphemeral = effectiveChatId === 'inline-assistant' || effectiveMode === 'rewrite';
@@ -365,7 +358,15 @@ export function useAiChat(chatId: string | null) {
         setError(null);
 
         try {
-            const systemInstructions = AI_ACTION_PROMPTS[effectiveMode as keyof typeof AI_ACTION_PROMPTS] || AI_ACTION_PROMPTS.default;
+            const { chatContext, setChatContext } = useAiStore.getState();
+            const hasContext = Boolean(
+                (selectedFolderNotes && selectedFolderNotes.length > 0) ||
+                manualContext ||
+                chatContext
+            );
+            const systemInstructions = hasContext
+                ? (AI_ACTION_PROMPTS[effectiveMode as keyof typeof AI_ACTION_PROMPTS] || AI_ACTION_PROMPTS.default)
+                : AI_ACTION_PROMPTS.general;
             const budgetConfig = getContextBudgetConfig(effectiveMode, selectedFolderNotes?.length ?? 0);
             const historyBudget = Math.min(
                 budgetConfig.historyTargetTokens,
@@ -412,7 +413,6 @@ export function useAiChat(chatId: string | null) {
                 );
             }
 
-            const { chatContext, setChatContext } = useAiStore.getState();
             if (chatContext && !isEphemeral) {
                 referencedContextText = truncateSelectedChatContext(
                     purifyNoteHtml(chatContext.html).trim() || chatContext.text || ''

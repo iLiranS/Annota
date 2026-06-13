@@ -101,8 +101,8 @@ export function AiChatInput({
                         <Text style={styles.badgeText}>{selectedContextNotes.length}</Text>
                     </View>
                 ) : (
-                    <View style={[styles.badge, { backgroundColor: '#EF4444' }]}>
-                        <Ionicons name="add" size={16} color="#FFF" />
+                    <View style={[styles.badge, { borderWidth: 1.5, borderColor: colors.text + '30', backgroundColor: 'transparent' }]}>
+                        <Ionicons name="add" size={14} color={colors.text + '60'} />
                     </View>
                 )}
             </TouchableOpacity>
@@ -165,10 +165,7 @@ export function AiChatInput({
                 styles.sendButton,
                 {
                     backgroundColor:
-                        (input.trim() &&
-                            !isStreaming &&
-                            (selectedContextNotes.length > 0 || chatContext)) ||
-                            isStreaming
+                        (input.trim() && !isStreaming) || isStreaming
                             ? colors.primary
                             : colors.text + '10',
                 },
@@ -176,8 +173,7 @@ export function AiChatInput({
             onPress={isStreaming ? onStop : onSend}
             disabled={
                 (!input.trim() && !isStreaming) ||
-                !isConfigured ||
-                (!isStreaming && selectedContextNotes.length === 0 && !chatContext)
+                !isConfigured
             }
         >
             {isStreaming ? (
@@ -187,7 +183,7 @@ export function AiChatInput({
                     name="arrow-up"
                     size={20}
                     color={
-                        input.trim() && (selectedContextNotes.length > 0 || chatContext)
+                        input.trim()
                             ? '#FFF'
                             : colors.text + '30'
                     }
@@ -245,7 +241,7 @@ export function AiChatInput({
                                 ? `Ask about ${selectedContextNotes.length} notes...`
                                 : chatContext
                                     ? 'Ask about selected context...'
-                                    : 'Select at least 1 note to start...'
+                                    : 'Ask a general question...'
                         }
                         placeholderTextColor={colors.text + '40'}
                         value={input}
