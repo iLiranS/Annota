@@ -1,6 +1,6 @@
 // Bump this string every time you push an EAS Update OR a Tauri build.
 // This is the version your Next.js changelog.json will look for.
-export const APP_RELEASE_VERSION = "1.0.0";
+export const APP_RELEASE_VERSION = "1.0.2";
 
 // ~ LOCAL LIMITS ~ 
 // Later we can make these dynamic based backend app-config storage bucket

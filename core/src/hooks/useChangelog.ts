@@ -5,7 +5,6 @@ import { getDb } from '../db/runtime';
 import { appSettings } from '../db/schema';
 import { useChangelogStore } from '../stores/changelog.store';
 import { isNewerVersion } from '../utils/compareVersions';
-import { getPlatformAdapters } from '../adapters';
 
 let latestChangelogPromise: Promise<any> | null = null;
 let hasCheckedChangelog = false;
@@ -37,10 +36,7 @@ export const useChangelog = (platform: 'mobile' | 'desktop') => {
     const setIsLoading = useChangelogStore(s => s.setLoading);
     const changelogData = useChangelogStore(s => s.changelogData);
     const setChangelogData = useChangelogStore(s => s.setData);
-    const latestVersion = useChangelogStore(s => s.latestVersion);
-    const setLatestVersion = useChangelogStore(s => s.setLatestVersion);
-    const dismissedUpdateVersion = useChangelogStore(s => s.dismissedUpdateVersion);
-    const dismissUpdate = useChangelogStore(s => s.dismissUpdate);
+
 
     const fetchChangelog = useCallback(async (version: string) => {
         setIsLoading(true);
@@ -103,50 +99,8 @@ export const useChangelog = (platform: 'mobile' | 'desktop') => {
                     }
                 }
 
-                // If not an upgrade, check if we checked recently (last 24 hours)
-                const adapters = getPlatformAdapters();
-                const LAST_CHANGELOG_CHECK_KEY = 'annota_last_changelog_check';
 
-                if (!isUpgrade) {
-                    try {
-                        const lastCheckStr = await adapters.secureStore.getItem(LAST_CHANGELOG_CHECK_KEY);
-                        if (lastCheckStr) {
-                            const lastCheck = parseInt(lastCheckStr, 10);
-                            const now = Date.now();
-                            const oneDayMs = 24 * 60 * 60 * 1000;
-                            if (now - lastCheck < oneDayMs) {
-                                console.log('[Changelog] Skipping fetch: already checked within the last 24 hours');
-                                return;
-                            }
-                        }
-                    } catch (err) {
-                        console.warn('[Changelog] Failed to check last check timestamp:', err);
-                    }
-                }
 
-                // 1. Fetch latest version info for the update indicator
-                const entry = await fetchLatestChangelog();
-                if (entry) {
-                    // Update the last checked timestamp in secure storage
-                    try {
-                        await adapters.secureStore.setItem(LAST_CHANGELOG_CHECK_KEY, String(Date.now()));
-                    } catch (err) {
-                        console.warn('[Changelog] Failed to save last check timestamp:', err);
-                    }
-
-                    // The API returns either the latest entry directly or a map of entries.
-                    // If it has a 'version' field, use it. Otherwise, if it's a map, find the latest key.
-                    let latest = entry.version;
-                    if (!latest) {
-                        const versions = Object.keys(entry).filter(v => /^\d+\.\d+\.\d+/.test(v));
-                        if (versions.length > 0) {
-                            latest = versions.sort((a, b) => isNewerVersion(b, a) ? 1 : -1)[0];
-                        }
-                    }
-                    if (latest) setLatestVersion(latest);
-                }
-
-                // 2. Check if we should show the "What's New" dialog
                 if (isUpgrade) {
                     const data = await fetchChangelog(APP_RELEASE_VERSION);
                     if (data) {
@@ -186,10 +140,6 @@ export const useChangelog = (platform: 'mobile' | 'desktop') => {
         }
     };
 
-    const updateAvailable = latestVersion 
-        ? isNewerVersion(latestVersion, APP_RELEASE_VERSION) && latestVersion !== dismissedUpdateVersion 
-        : false;
-
     return {
         isOpen,
         isLoading,
@@ -197,9 +147,6 @@ export const useChangelog = (platform: 'mobile' | 'desktop') => {
         markAsSeen,
         setIsOpen,
         openManual,
-        latestVersion,
-        updateAvailable,
-        dismissUpdate,
         currentVersion: APP_RELEASE_VERSION
     };
 };

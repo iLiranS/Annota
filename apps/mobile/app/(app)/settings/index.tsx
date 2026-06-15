@@ -1,6 +1,6 @@
 import SettingItem from '@/components/settings/setting-item';
 import { useAppTheme } from '@/hooks/use-app-theme';
-import { APP_RELEASE_VERSION, useChangelog } from '@annota/core';
+import { APP_RELEASE_VERSION } from '@annota/core';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -10,7 +10,6 @@ export default function SettingsIndex() {
     const router = useRouter();
     const { colors } = useAppTheme();
     const insets = useSafeAreaInsets();
-    const { openManual } = useChangelog('mobile');
 
     return (
         <ScrollView

@@ -4,7 +4,7 @@ import { useParams } from "react-router-dom";
 import { Sidebar, SidebarContent, useSidebar } from "@/components/ui/sidebar";
 import { useCreateNote } from "@/hooks/use-create-note";
 import { useSmartNavigate } from "@/hooks/use-smart-navigate";
-import { DAILY_NOTES_FOLDER_ID, TRASH_FOLDER_ID, useChangelog, useNavigationStore, useNotesStore, useSearchStore, useSettingsStore, useSyncStore, useUserStore, type Folder } from "@annota/core";
+import { DAILY_NOTES_FOLDER_ID, TRASH_FOLDER_ID, useNavigationStore, useNotesStore, useSearchStore, useSettingsStore, useSyncStore, useUserStore, type Folder } from "@annota/core";
 
 
 // Modular Components
@@ -46,7 +46,6 @@ export function AppSidebar() {
     const signOut = useUserStore((s) => s.signOut);
     const showOfflineBanner = !isOnline && !isGuest;
     const { createAndNavigate: createNote } = useCreateNote();
-    const { updateAvailable, latestVersion, currentVersion, dismissUpdate } = useChangelog('desktop');
 
     const currentFolderId = selectedFolderId || undefined;
     const tagId = selectedTagId;
@@ -320,10 +319,6 @@ export function AppSidebar() {
                         showOfflineBanner={showOfflineBanner}
                         retryCooldown={retryCooldown}
                         onRetry={handleRetry}
-                        updateAvailable={updateAvailable}
-                        latestVersion={latestVersion}
-                        currentVersion={currentVersion}
-                        dismissUpdate={dismissUpdate}
                         authRequired={authRequired}
                         onReauthenticate={signOut}
                         isGuest={isGuest}
