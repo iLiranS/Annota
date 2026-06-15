@@ -27,23 +27,20 @@ export default function AccountSettingsScreen() {
     const [isDisplayNameModalVisible, setIsDisplayNameModalVisible] = React.useState(false);
     const [guestDisplayName, setGuestDisplayName] = React.useState('');
 
-    const [userRole, setUserRole] = React.useState<string | null>(null);
     const [storeDisplayName, setStoreDisplayName] = React.useState<string | null>(null);
     const [isDeleting, setIsDeleting] = React.useState(false);
 
     React.useEffect(() => {
         if (session) {
             const fetchData = async () => {
-                const [role, name] = await Promise.all([
+                const [_, name] = await Promise.all([
                     useAuthStore.getState().getUserRole(),
                     useAuthStore.getState().getDisplayName()
                 ]);
-                setUserRole(role);
                 setStoreDisplayName(name);
             };
             fetchData();
         } else {
-            setUserRole(null);
             setStoreDisplayName(null);
         }
     }, [session]);
@@ -232,20 +229,18 @@ export default function AccountSettingsScreen() {
                                 <SettingItem
                                     label="Account Role"
                                     icon={
-                                        userRole?.toLowerCase() === 'pro' ? 'star' :
-                                            userRole?.toLowerCase() === 'beta' ? 'flask' :
-                                                userRole?.toLowerCase() === 'admin' ? 'hammer' :
-                                                    'shield-checkmark-outline'
+                                        isAdmin ? 'hammer' :
+                                            isPremium ? 'star' :
+                                                'shield-checkmark-outline'
                                     }
                                     type="value"
                                     onPress={() => { }}
-                                    value={<RoleBadge role={userRole || ''} colors={colors} />}
+                                    value={<RoleBadge role={isAdmin ? 'admin' : (isPremium ? 'pro' : (role ? 'free' : ''))} colors={colors} />}
                                     iconColor="#FFFFFF"
                                     iconBackgroundColor={
-                                        userRole?.toLowerCase() === 'pro' ? '#DAA520' :
-                                            userRole?.toLowerCase() === 'beta' ? '#5856D6' :
-                                                userRole?.toLowerCase() === 'admin' ? '#FF3B30' :
-                                                    '#FF9500'
+                                        isAdmin ? '#FF3B30' :
+                                            isPremium ? '#DAA520' :
+                                                '#FF9500'
                                     }
                                 />
                                 <SettingItem

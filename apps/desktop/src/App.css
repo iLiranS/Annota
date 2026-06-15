@@ -272,6 +272,7 @@ body {
 
 .premium-scrollbar::-webkit-scrollbar {
   width: 4px;
+  height: 4px;
 }
 
 .premium-scrollbar::-webkit-scrollbar-track {

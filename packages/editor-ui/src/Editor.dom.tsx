@@ -597,6 +597,7 @@ export const EditorDom = React.memo(forwardRef<TipTapEditorRef, TipTapEditorProp
                     dir={direction} style={{
                         flex: 1,
                         overflowY: 'auto',
+                        overflowX: 'hidden',
                         scrollPaddingBottom: 100
                     }}>
                     <div style={{

@@ -132,7 +132,7 @@ export function ContextSelector({
                     variant="ghost"
                     size="sm"
                     className={cn(
-                        "h-7 flex items-center justify-center transition-all border border-transparent hover:border-border/50 bg-muted/30 hover:bg-muted/50 rounded-full",
+                        "h-7 flex items-center  justify-center transition-all border border-transparent hover:border-border/50 bg-muted/30 hover:bg-muted/50 rounded-full",
                         selectedNotes.length > 0
                             ? "px-2 bg-primary/10 text-primary min-w-[28px] border-primary/20 hover:bg-primary/20"
                             : "w-7 p-0",
@@ -149,11 +149,11 @@ export function ContextSelector({
                     )}
                 </Button>
             </PopoverTrigger>
-            <PopoverContent side="top" align="start" className="w-[280px] p-0 rounded-2xl border-border/40 shadow-2xl bg-popover/95 backdrop-blur-md overflow-hidden">
+            <PopoverContent side="top" align="start" className="w-[280px] bg-note-bg/70 backdrop-blur-md p-0 rounded-2xl  border-border/40 shadow-2xl  overflow-hidden">
                 <div className="p-3 border-b border-border/30 bg-muted/20">
                     <div className="relative">
                         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={13} />
-                        <Input
+                        <Input autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck="false"
                             placeholder="Search notes or folders..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
@@ -203,7 +203,7 @@ export function ContextSelector({
                                                 onClick={() => onToggleFolder(folder.id)}
                                                 className={cn(
                                                     "w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-[11px] transition-colors group",
-                                                    allSelected ? "bg-primary/10 text-primary" : "hover:bg-muted/50 text-muted-foreground hover:text-foreground"
+                                                    allSelected ? "bg-primary/10 text-primary" : "hover:bg-primary/10 text-muted-foreground hover:text-foreground"
                                                 )}
                                             >
                                                 <Ionicons name={folder.icon || "folder-outline"} size={12} color={folder.color} />
@@ -230,7 +230,7 @@ export function ContextSelector({
                                                 onClick={() => onToggleNote(note)}
                                                 className={cn(
                                                     "w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-[11px] transition-colors group",
-                                                    isSelected ? "bg-primary/10 text-primary" : "hover:bg-muted/50 text-muted-foreground hover:text-foreground"
+                                                    isSelected ? "bg-primary/10 text-primary" : "hover:bg-primary/10 text-muted-foreground hover:text-foreground"
                                                 )}
                                             >
                                                 <FileText size={12} className={cn(isSelected ? "text-primary" : "text-muted-foreground/60")} />

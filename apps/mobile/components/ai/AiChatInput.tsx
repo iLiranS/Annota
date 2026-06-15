@@ -141,14 +141,14 @@ export function AiChatInput({
             >
                 <TouchableOpacity style={[styles.modelPill, { borderColor: colors.border + '60', backgroundColor: colors.border + '10' }]}>
                     <Ionicons name="hardware-chip-outline" size={13} color={colors.text + '60'} />
-                    <Text 
+                    <Text
                         style={[
-                            styles.modelPillText, 
-                            { 
+                            styles.modelPillText,
+                            {
                                 color: colors.text + '80',
                                 maxWidth: isMultilineLayout ? 240 : 100
                             }
-                        ]} 
+                        ]}
                         numberOfLines={1}
                     >
                         {displayModelName}
@@ -241,7 +241,7 @@ export function AiChatInput({
                                 ? `Ask about ${selectedContextNotes.length} notes...`
                                 : chatContext
                                     ? 'Ask about selected context...'
-                                    : 'Ask a general question...'
+                                    : 'Ask a general question...(no note context)'
                         }
                         placeholderTextColor={colors.text + '40'}
                         value={input}

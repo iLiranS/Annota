@@ -169,7 +169,7 @@ export function AiChatInput({
                                 ? `Ask about ${selectedNotes.length} notes...`
                                 : (chatContext
                                     ? "Ask about selected context..."
-                                    : "Ask a general question..."
+                                    : "Ask a general question... (no note context)"
                                 )
                             )
                     }
@@ -210,7 +210,7 @@ export function AiChatInput({
                                     />
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="start" className="w-48 rounded-xl border-border/50 shadow-xl bg-popover/95 backdrop-blur-md p-1.5">
+                            <DropdownMenuContent align="start" className="w-48 rounded-xl border-border/50 shadow-xl bg-note-bg/70 backdrop-blur-md p-1.5">
                                 <DropdownMenuItem
                                     className="text-xs rounded-lg cursor-pointer flex items-center justify-between"
                                     onClick={(e) => {
@@ -255,7 +255,7 @@ export function AiChatInput({
                                     <ChevronDown size={10} className="opacity-50 shrink-0" />
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="start" className="w-64 max-h-[350px] overflow-y-auto rounded-xl border-border/50 shadow-xl bg-popover/95 backdrop-blur-md p-1.5 custom-scrollbar">
+                            <DropdownMenuContent align="start" className="w-64 max-h-[350px] overflow-y-auto rounded-xl border-border/50 shadow-xl bg-note-bg/70 backdrop-blur-md p-1.5 custom-scrollbar">
                                 {availableModels.length > 0 && (
                                     <>
                                         <DropdownMenuLabel className="text-[10px] font-bold tracking-wider text-muted-foreground/70 uppercase px-2 py-1">

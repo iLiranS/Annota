@@ -180,10 +180,11 @@ function compactReasoningContext(reasoningContent: string, maxChars = 420): stri
 
 function buildProviderHistoryMessage(message: AiMessage): AiMessage {
     let cleanContent = message.content || '';
-    const MAX_MESSAGE_CHARS = 4000; // Cap at 4,000 characters (~2,000 tokens) to prevent single-turn bloat
+    const MAX_MESSAGE_CHARS = 600;
+    const MESSAGE_TOKEN_BUDGET = 300;
 
     if (cleanContent.length > MAX_MESSAGE_CHARS) {
-        cleanContent = cleanContent.slice(0, MAX_MESSAGE_CHARS) + '\n\n[... message truncated due to length ...]';
+        cleanContent = structuredSample(cleanContent, MESSAGE_TOKEN_BUDGET);
     }
 
     if (message.role !== 'assistant') {
@@ -495,9 +496,9 @@ export function structuredSample(noteContent: string, budget = 10000): string {
 
     return [
         noteContent.slice(0, third),
-        '\n\n[...]\n\n',
+        ' [...] ',
         noteContent.slice(midStart, midStart + third),
-        '\n\n[...]\n\n',
+        ' [...] ',
         noteContent.slice(-third),
     ].join('');
 }

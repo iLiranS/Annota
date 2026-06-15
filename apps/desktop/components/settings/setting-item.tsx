@@ -30,18 +30,16 @@ export function SettingItem({
         <div
             onClick={loading ? undefined : onClick}
             className={cn(
-                "group flex items-center justify-between p-3 rounded-xl transition-all duration-200",
-                // Apply the "round border" cancellation of first and last only if the setting item is not the only child
-                "not-last:rounded-b-none rounded-t-none",
-                onClick && !active && !loading ? "cursor-pointer hover:bg-primary/5" : "",
-                active ? "bg-primary/10" : "",
+                "group flex items-center justify-between px-4 py-3.5 transition-all duration-200 select-none",
+                onClick && !active && !loading ? "cursor-pointer hover:bg-muted/50 dark:hover:bg-muted/15" : "",
+                active ? "bg-primary/10 text-primary" : "",
                 loading ? "opacity-60" : ""
             )}
         >
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3.5">
                 <div className={cn(
-                    "flex h-9 w-9 items-center justify-center rounded-lg text-white shadow-sm transition-transform",
-                    !loading && "group-hover:scale-105",
+                    "flex h-9 w-9 items-center justify-center rounded-lg text-white shadow-sm transition-transform duration-200",
+                    !loading && "group-hover:scale-105 group-hover:rotate-1",
                     iconBg
                 )}>
                     {loading ? (
@@ -50,16 +48,16 @@ export function SettingItem({
                 </div>
                 <div className="flex flex-col text-left">
                     <span className={cn(
-                        "text-sm font-medium",
-                        danger ? "text-destructive" : "text-foreground"
+                        "text-sm font-medium tracking-tight",
+                        danger ? "text-destructive" : "text-foreground/95"
                     )}>
                         {label}
                     </span>
-                    {description && <span className="text-xs text-muted-foreground">{description}</span>}
+                    {description && <span className="text-xs text-muted-foreground/90 mt-0.5">{description}</span>}
                 </div>
             </div>
             <div className="flex items-center gap-2">
-                {value !== undefined && <div className="text-sm text-muted-foreground mr-1">{value}</div>}
+                {value !== undefined && <div className="text-sm font-medium text-muted-foreground/80 mr-1.5">{value}</div>}
                 {action}
             </div>
         </div>
